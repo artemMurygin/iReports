@@ -1,0 +1,113 @@
+model BitrixDeal {
+  id                Int              @id @unique
+  title             String
+  opportunity       Int?
+  stageId           Int              @map("stage_id")
+  stage             BitrixStage      @relation(fields: [stageId], references: [id])
+  assignedById      Int              @map("assigned_by_id")
+  assignedBy        BitrixEmployee   @relation(fields: [assignedById], references: [id])
+  contactId         Int              @map("contact_id")
+  sourceId          Int?             @map("source_id")
+  source            BitrixSource?    @relation(fields: [sourceId], references: [id])
+  leadSourceId      Int?             @map("lead_source_id")
+  leadSource        BitrixEnumValue? @relation("DealLeadSource", fields: [leadSourceId], references: [id])
+  brandId           Int?             @map("brand_id")
+  brand             BitrixEnumValue? @relation("DealBrand", fields: [brandId], references: [id])
+  deviceTypeId      Int?             @map("device_type_id")
+  deviceType        BitrixEnumValue? @relation("DealDeviceType", fields: [deviceTypeId], references: [id])
+  deviceModelId     Int?             @map("device_model_id")
+  deviceModel       BitrixEnumValue? @relation("DealDeviceModel", fields: [deviceModelId], references: [id])
+  deviceMalfunction String?          @map("device_malfunction")
+  createdAt         DateTime         @map("created_at")
+  updatedAt         DateTime?        @updatedAt @map("updated_at")
+
+  @@map("bitrix_deals")
+}
+
+model BitrixEmployee {
+  id         Int          @id
+  firstName  String
+  lastName   String
+  BitrixDeal BitrixDeal[]
+
+  @@map("bitrix_employees")
+}
+
+model BitrixEnumValue {
+  id               Int          @id
+  fieldName        String       @map("field_name")
+  value            String
+  sort             Int
+  leadSourceDeals  BitrixDeal[] @relation("DealLeadSource")
+  brandDeals       BitrixDeal[] @relation("DealBrand")
+  deviceTypeDeals  BitrixDeal[] @relation("DealDeviceType")
+  deviceModelDeals BitrixDeal[] @relation("DealDeviceModel")
+
+  @@map("bitrix_enum_values")
+}
+
+model BitrixStage {
+  id         Int          @id
+  name       String
+  sort       Int
+  color      String
+  systemType String       @map("system_type")
+  entityId   String       @map("entity_id")
+  deals      BitrixDeal[]
+
+  @@map("bitrix_stages")
+}
+
+model BitrixSource {
+  id    Int          @id
+  name  String
+  sort  Int
+  deals BitrixDeal[]
+
+  @@map("bitrix_sources")
+}
+
+// // deals.stage_id -> stages.status_id
+// Deal.belongsTo(Stage, { foreignKey: 'stageId', targetKey: 'statusId', as: 'stage' });
+// Stage.hasMany(Deal, { foreignKey: 'stageId', sourceKey: 'statusId', as: 'deals' });
+//
+// // deals.source_id -> sources.status_id
+// Deal.belongsTo(Source, { foreignKey: 'sourceId', targetKey: 'statusId', as: 'source' });
+// Source.hasMany(Deal, { foreignKey: 'sourceId', sourceKey: 'statusId', as: 'deals' });
+//
+// export { sequelize, Deal, Stage, Source, BitrixEnumValue };
+//
+// //
+// // id: Number(d.ID),
+// // title: d.TITLE,
+// // stageId: d.STAGE_ID,
+// // opportunity: d.OPPORTUNITY ? parseFloat(d.OPPORTUNITY) : null,
+// // assignedById: d.ASSIGNED_BY_ID ? Number(d.ASSIGNED_BY_ID) : null,
+// // companyId: d.COMPANY_ID ? Number(d.COMPANY_ID) : null,
+// // contactId: d.CONTACT_ID ? Number(d.CONTACT_ID) : null,
+// // dateCreate: d.DATE_CREATE ? new Date(d.DATE_CREATE) : null,
+// // dateModify: d.DATE_MODIFY ? new Date(d.DATE_MODIFY) : null,
+// // sourceId: d.SOURCE_ID || null,
+// // leadSourceId: d.UF_CRM_1742462651851 || null,
+// // brandId: d.UF_CRM_1730472738 || null,
+// // deviceTypeId: d.UF_CRM_1703248170106 || null,
+// // deviceModel: d.UF_CRM_1703248232698 || null,
+// // deviceFault: d.UF_CRM_1703248682036 || null,
+// // rawData: {
+// //   "ID": "157264",
+// //   "TITLE": "Закрыто | iPhone 11 - Замена дисплея +",
+// //   "STAGE_ID": "1",
+// //   "SOURCE_ID": "10|AVITO",
+// //   "COMPANY_ID": null,
+// //   "CONTACT_ID": "108204",
+// //   "CURRENCY_ID": "RUB",
+// //   "DATE_CREATE": "2026-03-05T12:53:01+03:00",
+// //   "DATE_MODIFY": "2026-03-07T16:51:42+03:00",
+// //   "OPPORTUNITY": "7590.00",
+// //   "ASSIGNED_BY_ID": "14",
+// //   "UF_CRM_1730472738": "460",
+// //   "UF_CRM_1703248170106": "44",
+// //   "UF_CRM_1703248232698": "11",
+// //   "UF_CRM_1703248682036": "Замена дисплея",
+// //   "UF_CRM_1742462651851": "532"
+// // },
