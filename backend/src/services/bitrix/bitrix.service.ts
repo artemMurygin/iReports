@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { bitrix } from '../shared/axios.instance'
-import { Filter } from '../types/bitrix.types';
+import { bitrix } from '../../shared/axios.instance'
+import { BitrixDealSchema, Filter, RawBitrixDeal } from './bitrix.types';
 
 
 class BitrixService {
@@ -12,14 +12,6 @@ class BitrixService {
     ];
     private static BITRIX_DELAY_MS = 500;
     private static sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-    async* fetchCreatedDeals(fromDate: undefined | Date = undefined) {
-        yield* this._fetchDeals(fromDate, 'CREATE');
-    }
-
-    async* fetchModifiedDeals(fromDate: undefined | Date = undefined) {
-        yield* this._fetchDeals(fromDate, 'MODIFY');
-    }
     private async* _fetchDeals(fromDate: undefined | Date = undefined, fromField: 'MODIFY' | 'CREATE')  {
         const filter: Filter = { CATEGORY_ID: 0 };
 
@@ -33,7 +25,11 @@ class BitrixService {
                     params: { select: BitrixService.DEAL_FIELDS, filter, start },
                 });
 
-                yield data.result;
+                const deals = data.result.map((deal: unknown)=>{
+                    return BitrixDealSchema.parse(deal)
+                });
+
+                yield deals;
 
                 if (data.next == null) break;
 
@@ -47,6 +43,14 @@ class BitrixService {
                 throw new Error(`Bitrix24 network error (HTTP ${status ?? 'N/A'}): ${detail}`);
             }
         }
+    }
+
+    async* fetchCreatedDeals(fromDate: undefined | Date = undefined) {
+        yield* this._fetchDeals(fromDate, 'CREATE');
+    }
+
+    async* fetchModifiedDeals(fromDate: undefined | Date = undefined) {
+        yield* this._fetchDeals(fromDate, 'MODIFY');
     }
 
     async fetchEmployees() {

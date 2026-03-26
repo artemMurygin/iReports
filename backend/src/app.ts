@@ -1,12 +1,16 @@
+import 'dotenv/config';
 import express from 'express';
-import { serverConfig } from './config/server.js';
-import router from './routes/index.js';
+import { serverConfig } from './config/server';
+import router from './routes/index';
+import Deals from './services/deals.service';
 
 const app = express();
 
-app.use(express.json());
+serverConfig(app)
+
 app.use('/api', router);
 
-app.listen(serverConfig.port, () => {
-  console.log(`Server running on port ${serverConfig.port}`);
+app.listen(process.env.PORT, () => {
+  console.log(`Server running on port ${process.env.PORT}`);
 });
+
