@@ -1,11 +1,24 @@
-/tmp
-/out-tsc
+# Environment
+.env
+.env.*
+!.env.example
 
-/node_modules
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-/.pnp
-.pnp.js
 
-.vscode/*
+# Prisma generated
+backend/prisma/generated/

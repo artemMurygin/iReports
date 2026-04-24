@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-iReports}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-iReports}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Uncomment to expose DB port for local debugging:
+    # ports:
+    #   - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-iReports}
+      PORT: 3000
+      CORS_ORIGIN: https://ireports.murygin.tech
+      BITRIX24_WEBHOOK_URL: ${BITRIX24_WEBHOOK_URL}
+      SECRET_ACCESS: ${SECRET_ACCESS}
+      SECRET_REFRESH: ${SECRET_REFRESH}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: https://api.myrugin.tech
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

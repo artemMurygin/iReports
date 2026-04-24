@@ -1,21 +1,22 @@
 model BitrixDeal {
-  id           Int              @id @unique
-  title        String?
-  opportunity  Int?
-  stageId      String?          @map("stage_id")
-  stage        BitrixStage?     @relation(fields: [stageId], references: [id])
-  assignedById Int?             @map("assigned_by_id")
-  assignedBy   BitrixEmployee?  @relation(fields: [assignedById], references: [id])
-  contactId    Int?             @map("contact_id")
-  sourceId     String?          @map("source_id")
-  source       BitrixSource?    @relation(fields: [sourceId], references: [id])
-  leadSourceId Int?             @map("lead_source_id")
-  leadSource   BitrixEnumValue? @relation("DealLeadSource", fields: [leadSourceId], references: [id])
-  brandId      Int?             @map("brand_id")
-  brand        BitrixEnumValue? @relation("DealBrand", fields: [brandId], references: [id])
-  deviceTypeId Int?             @map("device_type_id")
-  deviceType   BitrixEnumValue? @relation("DealDeviceType", fields: [deviceTypeId], references: [id])
-  deviceModel  String?          @map("device_model")
+  id               Int                   @id @unique
+  title            String?
+  opportunity      Int?
+  categoryId       Int
+  stageId          String?               @map("stage_id")
+  stage            BitrixStage?          @relation(fields: [stageId], references: [id])
+  assignedById     Int?                  @map("assigned_by_id")
+  assignedBy       BitrixEmployee?       @relation(fields: [assignedById], references: [id])
+  contactId        Int?                  @map("contact_id")
+  pointOfContactId String?               @map("point_of_contact_id")
+  pointOfContact   BitrixPointOfContact? @relation(fields: [pointOfContactId], references: [id])
+  leadSourceId     Int?                  @map("lead_source_id")
+  leadSource       BitrixLeadSources?    @relation(fields: [leadSourceId], references: [id])
+  brandId          Int?                  @map("brand_id")
+  brand            BitrixEnumValue?      @relation("DealBrand", fields: [brandId], references: [id])
+  deviceTypeId     Int?                  @map("device_type_id")
+  deviceType       BitrixDeviceTypes?    @relation(fields: [deviceTypeId], references: [id])
+  deviceModel      String?               @map("device_model")
 
   deviceMalfunction String?   @map("device_malfunction")
   createdAt         DateTime  @map("created_at")
@@ -28,19 +29,18 @@ model BitrixEmployee {
   id         Int          @id
   firstName  String
   lastName   String
-  BitrixDeal BitrixDeal[]
+  department Int
+  bitrixDeal BitrixDeal[]
 
   @@map("bitrix_employees")
 }
 
 model BitrixEnumValue {
-  id              Int          @id
-  fieldName       String       @map("field_name")
-  value           String
-  sort            Int
-  leadSourceDeals BitrixDeal[] @relation("DealLeadSource")
-  brandDeals      BitrixDeal[] @relation("DealBrand")
-  deviceTypeDeals BitrixDeal[] @relation("DealDeviceType")
+  id         Int          @id
+  fieldName  String       @map("field_name")
+  value      String
+  sort       Int
+  brandDeals BitrixDeal[] @relation("DealBrand")
 
   @@map("bitrix_enum_values")
 }
@@ -57,11 +57,27 @@ model BitrixStage {
   @@map("bitrix_stages")
 }
 
-model BitrixSource {
+model BitrixPointOfContact {
   id    String       @id
   name  String
   sort  Int
   deals BitrixDeal[]
 
-  @@map("bitrix_sources")
+  @@map("bitrix_point_of_contacts")
+}
+
+model BitrixDeviceTypes {
+  id    Int          @id
+  name  String
+  deals BitrixDeal[]
+
+  @@map("bitrix_device_types")
+}
+
+model BitrixLeadSources {
+  id    Int          @id
+  name  String
+  deals BitrixDeal[]
+
+  @@map("bitrix_lead_sources")
 }
