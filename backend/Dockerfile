@@ -24,6 +24,8 @@ COPY --from=builder /app/prisma/migrations ./prisma/migrations
 COPY --from=builder /app/prisma/schema ./prisma/schema
 COPY prisma.config.ts ./
 
+COPY --from=builder /app/package.json ./package.json
+
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
