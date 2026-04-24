@@ -18,6 +18,7 @@ export class ReportsService {
         assignedById: inFilter(managerIds),
         deviceTypeId: inFilter(modelIds),
         stageId: inFilter(stageIds),
+        categoryId: 0,
       },
       include: {
         stage: true,
