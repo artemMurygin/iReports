@@ -44,7 +44,7 @@ services:
         VITE_API_URL: https://api.myrugin.tech
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "3001:80"
     depends_on:
       - backend
 
