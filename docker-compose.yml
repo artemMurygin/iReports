@@ -41,7 +41,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: https://api.myrugin.tech
+        VITE_API_URL: https://api.murygin.tech
     restart: unless-stopped
     ports:
       - "3001:80"
