@@ -8,7 +8,7 @@ async function bootstrap() {
   const dealsService = app.get(DealsService);
   await dealsService.uploadInitBitrixData();
 
-  const fromDate = new Date('2026-01-01');
+  const fromDate = new Date('2025-01-01');
   await dealsService.uploadCreatedDeals(fromDate);
 
   await app.close();
