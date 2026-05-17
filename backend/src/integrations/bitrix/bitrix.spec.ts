@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Bitrix } from './bitrix';
+import { BitrixHttpService } from './bitrix.instance';
 
 describe('Bitrix', () => {
-  let provider: Bitrix;
+  let provider: BitrixHttpService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [Bitrix],
+      providers: [BitrixHttpService],
     }).compile();
 
-    provider = module.get<Bitrix>(Bitrix);
+    provider = module.get<BitrixHttpService>(BitrixHttpService);
   });
 
   it('should be defined', () => {

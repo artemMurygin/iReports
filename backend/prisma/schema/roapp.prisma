@@ -1,0 +1,202 @@
+model RoappEmployee {
+  id        Int    @id @default(autoincrement())
+  firstName String @map("first_name") @db.VarChar(255)
+  lastName  String @map("last_name") @db.VarChar(255)
+
+  ordersAsManager RoappOrder[]         @relation("OrderManager")
+  ordersAsCreator RoappOrder[]         @relation("OrderCreatedBy")
+  ordersAsCloser  RoappOrder[]         @relation("OrderClosedBy")
+  productsOrders  RoappProductsOrder[]
+  serviceOrders   RoappServiceOrder[]
+
+  @@map("roapp_employees")
+}
+
+model RoappOrderType {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  orders RoappOrder[]
+
+  @@map("roapp_order_types")
+}
+
+model RoappMarketingSource {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  orders RoappOrder[]
+
+  @@map("roapp_marketing_sources")
+}
+
+model RoappOrderStatus {
+  id       Int    @id @default(autoincrement())
+  name     String @db.VarChar(255)
+  color    String @db.VarChar(255)
+  grupName String @map("grup_name") @db.VarChar(255)
+
+  orders RoappOrder[]
+
+  @@map("roapp_order_statuses")
+}
+
+model RoappProduct {
+  id            Int    @id
+  name          String @db.VarChar(255)
+  engeneerBonus Int    @map("engeneer_bonus")
+  price         Int
+  categoryId    Int?   @map("category_id")
+
+  category       RoappProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  productsOrders RoappProductsOrder[]
+
+  @@index([categoryId])
+  @@map("roapp_products")
+}
+
+model RoappService {
+  id            Int     @id
+  name          String  @db.VarChar(255)
+  engeneerBonus Int     @map("engeneer_bonus")
+  price         Int
+  warranty      String @db.VarChar(64)
+  duration      Int
+  inCatalog     Boolean @map("in_catalog")
+  categoryId    Int?    @map("category_id")
+  workTypeId    Int?    @map("work_type_id")
+  brandId       Int?    @map("brand_id")
+  deviceId      Int?    @map("device_id")
+  serviceTypeId Int?    @map("service_type_id")
+  seriesId      Int?    @map("series_id")
+
+  category    RoappServiceCategory? @relation("category", fields: [categoryId], references: [id], onDelete: SetNull)
+  workType    RoappServiceCategory? @relation("workType", fields: [workTypeId], references: [id], onDelete: SetNull)
+  brand       RoappServiceCategory? @relation("brand", fields: [brandId], references: [id], onDelete: SetNull)
+  device      RoappServiceCategory? @relation("device", fields: [deviceId], references: [id], onDelete: SetNull)
+  serviceType RoappServiceCategory? @relation("serviceType", fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  series      RoappServiceCategory? @relation("series", fields: [seriesId], references: [id], onDelete: SetNull)
+
+  serviceOrders RoappServiceOrder[]
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([deviceId])
+  @@index([serviceTypeId])
+  @@index([seriesId])
+  @@map("roapp_service")
+}
+
+model RoappServiceCategory {
+  id       Int    @id
+  name     String
+  parentId Int?   @map("parent_id")
+  depth    Int    @default(0)
+
+  parent   RoappServiceCategory?  @relation("ServiceCategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children RoappServiceCategory[] @relation("ServiceCategoryHierarchy")
+
+  // обратные relation для каждого уровня
+  services           RoappService[] @relation("category")
+  servicesAsWorkType RoappService[] @relation("workType")
+  servicesAsBrand    RoappService[] @relation("brand")
+  servicesAsDevice   RoappService[] @relation("device")
+  servicesAsType     RoappService[] @relation("serviceType")
+  servicesAsSeries   RoappService[] @relation("series")
+
+  @@index([parentId])
+  @@map("roapp_service_categories")
+}
+
+model RoappProductCategory {
+  id       Int    @id
+  name     String
+  parentId Int?   @map("parent_id")
+
+  parent   RoappProductCategory?  @relation("ProductCategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children RoappProductCategory[] @relation("ProductCategoryHierarchy")
+
+  products RoappProduct[]
+
+  @@index([parentId])
+  @@map("roapp_product_categories")
+}
+
+model RoappOrder {
+  id                  Int       @id @default(autoincrement())
+  label               String    @db.VarChar(255)
+  bitrixDealId        Int?      @unique @map("bitrix_deal_id")
+  clientId            Int?      @map("client_id")
+  statusId            Int       @map("status_id")
+  managerId           Int?      @map("manager_id")
+  createdById         Int       @map("created_by_id")
+  closedById          Int?      @map("closed_by_id")
+  orderTypeId         Int       @map("order_type_id")
+  marketingSource     Int?      @map("ad_campaign_id")
+  malfunction         String?   @db.VarChar(255)
+  discountSum         Int?      @map("discount_sum")
+  payed               Int?
+  cost                Int?
+  engineerSalary      Int?      @map("engineer_salary")
+  managerSalary       Int?      @map("manager_salary")
+  deviceBrand         String?   @map("device_brand") @db.VarChar(255)
+  deviceModel         String?   @map("device_model") @db.VarChar(255)
+  deviceSerial        String?   @map("device_serial") @db.VarChar(255)
+  deviceColor         String?   @map("device_color") @db.VarChar(255)
+  failReason          String?   @map("fail_reason") @db.VarChar(255)
+  serviceSupplierName String?   @map("service_supplier_name") @db.VarChar(255)
+  onlineManager       String?   @map("online_manager") @db.VarChar(255)
+  dueDate             DateTime? @map("due_date") @db.Date
+  doneAt              DateTime? @map("done_at") @db.Date
+  closedAt            DateTime? @map("closed_at") @db.Date
+  modifiedAt          DateTime? @map("modified_at") @db.Date
+  createdAt           DateTime? @map("created_at") @db.Date
+
+  // Relations
+  bitrixDeal BitrixDeal?           @relation(fields: [bitrixDealId], references: [id])
+  status     RoappOrderStatus?     @relation(fields: [statusId], references: [id])
+  manager    RoappEmployee?        @relation("OrderManager", fields: [managerId], references: [id])
+  createdBy  RoappEmployee?        @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  closedBy   RoappEmployee?        @relation("OrderClosedBy", fields: [closedById], references: [id])
+  orderType  RoappOrderType?       @relation(fields: [orderTypeId], references: [id])
+  adCampaign RoappMarketingSource? @relation(fields: [marketingSource], references: [id])
+
+  productsOrders RoappProductsOrder[]
+  serviceOrders  RoappServiceOrder[]
+
+  @@map("roapp_orders")
+}
+
+model RoappProductsOrder {
+  id         Int @id @default(autoincrement())
+  orderId    Int @map("order_id")
+  productId  Int @map("product_id")
+  quantity   Int
+  price      Int
+  cost       Int
+  engineerId Int @map("engineer_id")
+
+  order    RoappOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product  RoappProduct  @relation(fields: [productId], references: [id])
+  engineer RoappEmployee @relation(fields: [engineerId], references: [id])
+
+  @@map("roapp_products_orders")
+}
+
+model RoappServiceOrder {
+  id         Int     @id @default(autoincrement())
+  orderId    Int     @map("order_id")
+  serviceId  Int     @map("service_id")
+  quantity   Int
+  price      Int
+  cost       Int
+  discount   Int
+  inCatalog  Boolean @map("in_catalog")
+  engineerId Int     @map("engineer_id")
+
+  order    RoappOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service  RoappService  @relation(fields: [serviceId], references: [id])
+  engineer RoappEmployee @relation(fields: [engineerId], references: [id])
+
+  @@map("roapp_service_orders")
+}

@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { getServiceFunnelReportDTO } from './dto/getServiceFunnelReport.dto';
 

@@ -1,0 +1,95 @@
+import { z } from 'zod';
+
+export const OrderSchema = z
+  .object({
+    id: z.number().int().positive(),
+    number: z.string(),
+    status: z.object({
+      id: z.number().int(),
+      name: z.string(),
+      color: z.string(),
+    }),
+    status_overdue: z.boolean(),
+
+    created_at: z.string(),
+    created_by_id: z.number().int(),
+    modified_at: z.string(),
+    done_at: z.string().nullable(),
+    closed_at: z.string().nullable(),
+    closed_by_id: z.number().int().nullable(),
+
+    branch_id: z.number().int(),
+
+    order_type: z.object({
+      id: z.number().int(),
+      name: z.string(),
+    }),
+
+    manager_id: z.number().int().nullable(),
+    assignee_id: z.number().int().nullable(),
+    asset: z.unknown().nullable(),
+
+    client: z.object({
+      id: z.number().int(),
+      is_organization: z.boolean(),
+      name: z.string(),
+      first_name: z.string(),
+      last_name: z.string(),
+      email: z.string(), // не .email() — приходит пустая строка
+      phone: z.array(z.string()),
+      address: z.string(),
+      discount_code: z.string(),
+      custom_fields: z.record(z.string(), z.unknown()),
+    }),
+
+    payer: z.unknown().nullable(),
+    scheduled_for: z.string().nullable(),
+    scheduled_to: z.string().nullable(),
+    resource: z.unknown().nullable(),
+
+    malfunction: z.string(),
+    manager_notes: z.string(),
+    engineer_notes: z.string(),
+    address: z.string(),
+    resume: z.string(),
+
+    estimated_price: z.string(), // приходит строкой "1.00"
+    due_date: z.string().nullable(),
+    overdue: z.boolean(),
+    discount_sum: z.number(),
+    payed: z.string(),
+    warranty_date: z.string().nullable(),
+    urgent: z.boolean(),
+
+    custom_fields: z.record(z.string(), z.string()),
+
+    is_deduction_required: z.boolean(),
+    ad_campaign_id: z.number().int().nullable(),
+    total: z.string(),
+  })
+  .transform((d) => ({
+    id: d.id,
+    label: d.number,
+    bitrixDealId: d.custom_fields.f6162589 ?? null,
+    clientId: d.client.id,
+    statusId: d.status.id,
+    managerId: d.manager_id,
+    createdById: d.created_by_id,
+    closedById: d.closed_by_id,
+    orderTypeId: d.order_type.id,
+    marketingSource: d.ad_campaign_id,
+    malfunction: d.malfunction,
+    discountSum: d.discount_sum,
+    payed: d.payed,
+    deviceBrand: d.custom_fields.f138462 ?? null,
+    deviceModel: d.custom_fields.f138457 ?? null,
+    deviceSerial: d.custom_fields.f138470 ?? null,
+    deviceColor: d.custom_fields.f297762 ?? null,
+    failReason: d.custom_fields.f7639343 ?? null,
+    serviceSupplierName: d.custom_fields.f10532346 ?? null,
+    onlineManager: d.custom_fields.f7960378 ?? null,
+    dueDate: d.due_date,
+    doneAt: d.done_at,
+    modifiedAt: d.modified_at,
+    createdAt: d.created_at,
+  }));

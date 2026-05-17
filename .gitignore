@@ -3,6 +3,8 @@
 .env.*
 !.env.example
 
+.toDo.md
+
 # Dependencies
 node_modules/
 

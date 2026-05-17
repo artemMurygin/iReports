@@ -1,5 +1,5 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
-import { BitrixHttpService } from './bitrix';
+import { BitrixHttpService } from './bitrix.instance';
 import { Filter } from './types';
 import { BitrixDealSchema } from './schema';
 import { delay } from '../../utils/delay';
@@ -41,7 +41,7 @@ export class BitrixService {
     fromDate: undefined | Date = undefined,
     fromField: 'MODIFY' | 'CREATE',
   ) {
-    const filter: Filter = { CATEGORY_ID: 0 };
+    const filter: Filter = { CATEGORY_ID: [0, 16, 10, 2] };
     if (fromDate) {
       const moscowDate = new Date(fromDate.getTime() + 3 * 60 * 60 * 1000);
       filter[`>=DATE_${fromField}`] = moscowDate.toISOString().slice(0, 19);
@@ -100,7 +100,7 @@ export class BitrixService {
   async fetchStages() {
     return await this._fetchData('/crm.status.list', {
       params: {
-        filter: { ENTITY_ID: 'DEAL_STAGE' },
+        filter: {},
       },
     });
   }

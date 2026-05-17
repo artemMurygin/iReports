@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BitrixService } from './bitrix.service';
 import { BitrixController } from './bitrix.controller';
-import { BitrixHttpService } from './bitrix';
+import { BitrixHttpService } from './bitrix.instance';
 
 @Module({
   controllers: [BitrixController],
