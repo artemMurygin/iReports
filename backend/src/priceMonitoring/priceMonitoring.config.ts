@@ -20,10 +20,10 @@ export const IPAD_MACBOOK_PATTERNS: RegExp[] = [
 // ─── Google Sheets ────────────────────────────────────────────────────────────
 
 /** ID гугл-таблицы с ценами магазина */
-export const SPREADSHEET_ID = '1gFyiCcOPpU1Mbo6Hr7lmLln72OKYg8vePWgRUaiXyxo';
+export const SPREADSHEET_ID = '1kuHPwbQ1LGlNPqBHNuKrVNhUpaOi62kB8uqw8KJu1EY';
 
 /** GID листа с товарами (для получения имени листа) */
-export const SHEET_GID = 914941590;
+export const SHEET_GID = 2068051743;
 
 // ─── AI ───────────────────────────────────────────────────────────────────────
 

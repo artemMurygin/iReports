@@ -13,14 +13,15 @@ export class BitrixAuthService {
 
   async saveInstallation(body: BitrixInstallDto): Promise<void> {
     const expiresAt = new Date(Date.now() + Number(body.AUTH_EXPIRES) * 1000);
-    const clientEndpoint = `https://${body.DOMAIN}/rest/`;
+    const domain = 'irepair.bitrix24.ru';
+    const clientEndpoint = `https://${domain}/rest/`;
     const serverEndpoint = 'https://oauth.bitrix.info/rest/';
 
     await this.db.bitrixInstallation.upsert({
       where: { memberId: body.member_id },
       create: {
         memberId: body.member_id,
-        domain: body.DOMAIN,
+        domain,
         accessToken: body.AUTH_ID,
         refreshToken: body.REFRESH_ID,
         clientEndpoint,
@@ -28,7 +29,7 @@ export class BitrixAuthService {
         accessExpiresAt: expiresAt,
       },
       update: {
-        domain: body.DOMAIN,
+        domain,
         accessToken: body.AUTH_ID,
         refreshToken: body.REFRESH_ID,
         clientEndpoint,
