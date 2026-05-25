@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { DealsModule } from '../deals/deals.module';
+import { BitrixSyncModule } from '../sync/bitrix/bitrix.module';
 import { CronService } from './cron.service';
 
 @Module({
-  imports: [DealsModule],
+  imports: [BitrixSyncModule],
   providers: [CronService],
 })
 export class CronModule {}

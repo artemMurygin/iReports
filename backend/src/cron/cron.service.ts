@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { DealsService } from '../deals/deals.service';
+import { BitrixSyncService } from '../sync/bitrix/bitrix.service';
 
 @Injectable()
 export class CronService {
   private readonly logger = new Logger(CronService.name);
   private failedSince: Date | null = null;
 
-  constructor(private readonly DealsService: DealsService) {}
+  constructor(private readonly DealsService: BitrixSyncService) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async getUpdatesFromBitrix() {

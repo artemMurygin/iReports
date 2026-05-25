@@ -40,7 +40,7 @@ async function bootstrap() {
     throw new Error();
   }
 
-  // await bitrix.uploadCreatedDeals(fromDate);
+  await bitrix.uploadCreatedDeals(fromDate);
   // await roapp.uploadEmployees();
   // await roapp.uploadMarketingSources();
   // await roapp.uploadOrderStatuses();
