@@ -9,8 +9,8 @@ import {
   Sse,
 } from '@nestjs/common';
 import type { JobProgressEvent } from './priceMonitoring.types';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { interval, merge, Observable, Subject } from 'rxjs';
+import { finalize, map, takeUntil } from 'rxjs/operators';
 import { PriceMonitoringService } from './priceMonitoring.service';
 import { PriceMonitoringProgressService } from './priceMonitoring.progress.service';
 import { UpdateShopProductsCostsDTO } from './dto/updateShopProductsCosts.dto';
@@ -47,6 +47,21 @@ export class PriceMonitoringController {
   getProgress(@Param('uuid') uuid: string): Observable<MessageEvent> {
     const subject = this.progressService.getSubject(uuid);
     if (!subject) throw new NotFoundException(`Job ${uuid} not found`);
-    return subject.asObservable().pipe(map((event) => ({ data: event })));
+
+    // Сигнал для остановки heartbeat при завершении задачи
+    const done$ = new Subject<void>();
+
+    const events$ = subject.asObservable().pipe(
+      finalize(() => done$.next()),
+      map((event) => ({ data: event } as MessageEvent)),
+    );
+
+    // Heartbeat каждые 20 сек чтобы Nginx не закрыл соединение по таймауту
+    const heartbeat$ = interval(20_000).pipe(
+      takeUntil(done$),
+      map(() => ({ data: { type: 'heartbeat' } } as MessageEvent)),
+    );
+
+    return merge(events$, heartbeat$);
   }
 }
