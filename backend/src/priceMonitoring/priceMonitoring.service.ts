@@ -54,9 +54,6 @@ export class PriceMonitoringService {
     };
 
     try {
-      emit('resetCosts', 'Сброс закупочных цен...');
-      await this.resetCostsToNull();
-
       emit('parseXlsx', 'Парсинг прайса...');
       const categories = await this.parseXlsx(fileBase64);
 
@@ -364,10 +361,12 @@ export class PriceMonitoringService {
       }));
 
     if (updates.length === 0) {
-      console.log('Нет позиций для обновления в таблице');
+      console.log('Нет позиций для обновления в таблице — цены не изменены');
       return;
     }
 
+    // Сброс происходит только если есть что записывать — старые цены не затираются зря
+    await this.resetCostsToNull();
     await this.sheets.updateRows(SPREADSHEET_ID, updates);
     console.log(`Обновлено в таблице: ${updates.length} строк`);
   }
