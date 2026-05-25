@@ -83,3 +83,18 @@ model BitrixLeadSources {
 
   @@map("bitrix_lead_sources")
 }
+
+model BitrixInstallation {
+  id              Int      @id @default(autoincrement())
+  memberId        String   @unique @map("member_id")
+  domain          String
+  accessToken     String   @map("access_token")
+  refreshToken    String   @map("refresh_token")
+  clientEndpoint  String   @map("client_endpoint")
+  serverEndpoint  String   @map("server_endpoint")
+  accessExpiresAt DateTime @map("access_expires_at")
+  installedAt     DateTime @default(now()) @map("installed_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("bitrix_installations")
+}

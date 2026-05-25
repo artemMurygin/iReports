@@ -22,5 +22,8 @@ dist/
 *.log
 npm-debug.log*
 
+#AI
+.cludeignore
+
 # Prisma generated
 backend/prisma/generated/

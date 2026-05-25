@@ -23,18 +23,6 @@ export default defineConfig({
     },
   plugins: [
       react(),
-      tailwindcss(),
-      {
-          name: 'handle-post',
-          configureServer(server) {
-              server.middlewares.use((req, res, next) => {
-                  // Принять POST и отдать обычную HTML-страницу
-                  if (req.method === 'POST') {
-                      req.method = 'GET';
-                  }
-                  next();
-              });
-          }
-      }
-      ],
+      tailwindcss()
+  ],
 })

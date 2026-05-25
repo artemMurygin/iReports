@@ -10,8 +10,6 @@ export class RoappSyncService {
     private readonly Roapp: RoappService,
   ) {}
 
-  async upload
-
   async uploadEmployees() {
     try {
       const employees = await this.Roapp.fetchEmployees();

@@ -11,6 +11,10 @@ import { BitrixSyncModule } from './sync/bitrix/bitrix.module';
 import { RoappSyncModule } from './sync/roapp/roapp.module';
 import { RoappModule } from './integrations/roapp/roapp.module';
 import { CustomApiRoappSyncModule } from './sync/custom-api-roapp/custom-api-roapp.module';
+import { PriceMonitoringModule } from './priceMonitoring/priceMonitoring.module';
+import { AiModule } from './integrations/ai/ai.module';
+import { GoogleSheetsModule } from './integrations/google-sheets/google-sheets.module';
+import { MoyskladModule } from './integrations/moySklad/moysklad.module';
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { CustomApiRoappSyncModule } from './sync/custom-api-roapp/custom-api-roa
     BitrixSyncModule,
     RoappSyncModule,
     CustomApiRoappSyncModule,
+    PriceMonitoringModule,
+    AiModule,
+    GoogleSheetsModule,
+    MoyskladModule,
   ],
   controllers: [AppController],
   providers: [AppService],

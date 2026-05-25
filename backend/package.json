@@ -19,7 +19,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "initial": "nest build && node dist/src/utils/initialUploadData.js",
-    "initialProd": "node dist/src/utils/initialUploadData.js"
+    "initialProd": "node dist/src/utils/initialUploadData.js",
+    "load:embeddings": "nest build && node dist/src/utils/loadMoySkladEmbeddings.js",
+    "load:embeddings:prod": "node dist/src/utils/loadMoySkladEmbeddings.js",
+    "price:monitoring": "nest build && node dist/src/utils/runPriceMonitoring.js",
+    "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -33,11 +37,14 @@
     "axios": "^1.13.6",
     "class-validator": "^0.14.1",
     "dotenv": "^17.3.1",
+    "googleapis": "^171.4.0",
     "nestjs-zod": "^5.2.1",
+    "openai": "^6.38.0",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "tsx": "^4.21.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
