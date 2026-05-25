@@ -65,14 +65,21 @@ export class AiService {
           ]
         : messages;
 
+      const requestOptions = options.headers
+        ? { headers: options.headers }
+        : undefined;
+
       if (options.stream) {
-        const stream = await this.ai.client.chat.completions.create({
-          model: options.model ?? 'cx/gpt-5.4',
-          messages: allMessages,
-          temperature: options.temperature ?? 0.7,
-          max_tokens: options.maxTokens,
-          stream: true,
-        });
+        const stream = await this.ai.client.chat.completions.create(
+          {
+            model: options.model ?? 'cx/gpt-5.4',
+            messages: allMessages,
+            temperature: options.temperature ?? 0.7,
+            max_tokens: options.maxTokens,
+            stream: true,
+          },
+          requestOptions,
+        );
 
         let result = '';
         for await (const chunk of stream) {
@@ -81,12 +88,15 @@ export class AiService {
         return result;
       }
 
-      const response = await this.ai.client.chat.completions.create({
-        model: options.model ?? 'cx/gpt-5.4',
-        messages: allMessages,
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens,
-      });
+      const response = await this.ai.client.chat.completions.create(
+        {
+          model: options.model ?? 'cx/gpt-5.4',
+          messages: allMessages,
+          temperature: options.temperature ?? 0.7,
+          max_tokens: options.maxTokens,
+        },
+        requestOptions,
+      );
 
       return response.choices[0].message.content ?? '';
     } catch (error) {

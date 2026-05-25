@@ -395,6 +395,7 @@ export class PriceMonitoringService {
           temperature: 0,
           maxTokens: 30000,
           stream: true,
+          headers: { 'X-OmniRoute-No-Cache': 'true' },
         });
 
         const matched = parseMatchingResponse(raw, group.category);

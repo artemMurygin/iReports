@@ -9,6 +9,7 @@ export type ChatOptions = {
   maxTokens?: number;
   systemPrompt?: string;
   stream?: boolean;
+  headers?: Record<string, string>;
 };
 
 export type EmbeddingOptions = {
