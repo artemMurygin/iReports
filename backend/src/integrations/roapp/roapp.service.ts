@@ -35,10 +35,11 @@ export class RoappService {
     fromDate: Date | undefined,
     createdOrUpdated: 'created' | 'updated',
   ) {
-    let params: Params = { requestPage: 1 };
+    const params: Params = {
+      requestPage: 1,
+      [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']: fromDate,
+    };
 
-    if (createdOrUpdated === 'created') params.created_at = fromDate;
-    if (createdOrUpdated === 'updated') params.modified_at = fromDate;
     while (true) {
       try {
         const {

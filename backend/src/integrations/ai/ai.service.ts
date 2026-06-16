@@ -1,3 +1,4 @@
+require('dotenv');
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { AiHttpService } from './ai.instance';
 import { ChatMessage, ChatOptions, EmbeddingOptions } from './ai.types';
@@ -112,7 +113,10 @@ export class AiService {
         const stream = await this.withRetry(() =>
           this.ai.client.chat.completions.create(
             {
-              model: options.model ?? 'cx/gpt-5.4',
+              model:
+                options.model ??
+                process.env.OMNIROUTE_BASE_MODEL ??
+                'cx/gpt-5.5-medium',
               messages: allMessages,
               temperature: options.temperature ?? 0.7,
               max_tokens: options.maxTokens,
@@ -132,7 +136,10 @@ export class AiService {
       const response = await this.withRetry(() =>
         this.ai.client.chat.completions.create(
           {
-            model: options.model ?? 'cx/gpt-5.4',
+            model:
+              options.model ??
+              process.env.OMNIROUTE_BASE_MODEL ??
+              'cx/gpt-5.5-medium',
             messages: allMessages,
             temperature: options.temperature ?? 0.7,
             max_tokens: options.maxTokens,

@@ -390,7 +390,6 @@ export class PriceMonitoringService {
         );
 
         const raw = await this.ai.ask(prompt, {
-          model: 'cx/gpt-5.4',
           temperature: 0,
           maxTokens: 30000,
           stream: true,

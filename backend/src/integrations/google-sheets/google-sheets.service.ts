@@ -6,11 +6,6 @@ import { GetRowsOptions, RangeData, SheetRow } from './google-sheets.types';
 export class GoogleSheetsService {
   constructor(private googleSheets: GoogleSheetsHttpService) {}
 
-  /**
-   * Получить строки из диапазона таблицы.
-   * @param spreadsheetId — ID таблицы из URL
-   * @param options.range — A1-нотация, например 'Sheet1!A1:Z'
-   */
   async getRows(
     spreadsheetId: string,
     options: GetRowsOptions,
@@ -30,15 +25,7 @@ export class GoogleSheetsService {
     }
   }
 
-  /**
-   * Обновить несколько диапазонов за один запрос (batchUpdate).
-   * @param spreadsheetId — ID таблицы
-   * @param data — массив { range, values }, где range в A1-нотации
-   */
-  async updateRows(
-    spreadsheetId: string,
-    data: RangeData[],
-  ): Promise<void> {
+  async updateRows(spreadsheetId: string, data: RangeData[]): Promise<void> {
     try {
       await this.googleSheets.sheets.spreadsheets.values.batchUpdate({
         spreadsheetId,
@@ -54,24 +41,13 @@ export class GoogleSheetsService {
     }
   }
 
-  /**
-   * Обновить одну ячейку.
-   * @param spreadsheetId — ID таблицы
-   * @param cell — A1-нотация ячейки, например 'Sheet1!B5'
-   * @param value — новое значение
-   */
-  async getSheetNameByGid(
-    spreadsheetId: string,
-    gid: number,
-  ): Promise<string> {
+  async getSheetNameByGid(spreadsheetId: string, gid: number): Promise<string> {
     try {
       const { data } = await this.googleSheets.sheets.spreadsheets.get({
         spreadsheetId,
       });
 
-      const sheet = data.sheets?.find(
-        (s) => s.properties?.sheetId === gid,
-      );
+      const sheet = data.sheets?.find((s) => s.properties?.sheetId === gid);
 
       if (!sheet?.properties?.title) {
         throw new BadGatewayException(`Sheet with gid ${gid} not found`);
