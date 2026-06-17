@@ -9,21 +9,21 @@ export class CronService {
 
   constructor(private readonly DealsService: BitrixSyncService) {}
 
-  // @Cron(CronExpression.EVERY_5_MINUTES)
-  // // async getUpdatesFromBitrix() {
-  // //   const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
-  // //
-  // //   try {
-  // //     await this.DealsService.uploadModifiedDeals(since);
-  // //     this.logger.log('Successfully fetched updated deals from Bitrix24');
-  //     this.failedSince = null;
-  //   } catch (error) {
-  //     if (!this.failedSince) {
-  //       this.failedSince = since;
-  //     }
-  //     this.logger.error(
-  //       `Failed to fetch updated deals from Bitrix24: ${error.message}. Will retry next tick from ${this.failedSince.toISOString()}`,
-  //     );
-  //   }
-  // }
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async getUpdatesFromBitrix() {
+    const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
+
+    try {
+      await this.DealsService.uploadModifiedDeals(since);
+      this.logger.log('Successfully fetched updated deals from Bitrix24');
+      this.failedSince = null;
+    } catch (error) {
+      if (!this.failedSince) {
+        this.failedSince = since;
+      }
+      this.logger.error(
+        `Failed to fetch updated deals from Bitrix24: ${error.message}. Will retry next tick from ${this.failedSince.toISOString()}`,
+      );
+    }
+  }
 }
