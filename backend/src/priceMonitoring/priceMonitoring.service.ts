@@ -4,6 +4,11 @@ import { AiService } from '../integrations/ai/ai.service';
 import { DatabaseService } from '../database/database.service';
 import { GoogleSheetsService } from '../integrations/google-sheets/google-sheets.service';
 import { MoyskladService } from '../integrations/moySklad/moysklad.service';
+import { RoappService } from '../integrations/roapp/roapp.service';
+import { CustomApiRoappService } from '../integrations/custom-api-roapp/custom-api-roapp.service';
+import { Service } from '../integrations/roapp/schemas/services.schema';
+import { Category } from '../integrations/roapp/schemas/serviceCatalog.schema';
+import { UpdateServicePricesInRoappItem } from './dto/updateServicePricesInRoapp.dto';
 import { PriceMonitoringProgressService } from './priceMonitoring.progress.service';
 import {
   AiMatchItem,
@@ -29,6 +34,23 @@ import {
 } from './priceMonitoring.prompts';
 import { delay } from '../utils/delay';
 
+const SERVICE_PRICE_HEADERS = [
+  'Штрих-код',
+  'Тип',
+  'Наименование',
+  'Описание',
+  'Единица измерения',
+  'Категория',
+  'Гарантия',
+  'Период гарантии',
+  'Продолжительность (минуты)',
+  'Себестоимость',
+  'Сумма вознаграждения',
+  'Процент вознаграждения',
+  'Расчет процента от',
+  'Стандартная цена',
+];
+
 @Injectable()
 export class PriceMonitoringService {
   constructor(
@@ -36,6 +58,8 @@ export class PriceMonitoringService {
     private readonly db: DatabaseService,
     private readonly sheets: GoogleSheetsService,
     private readonly moysklad: MoyskladService,
+    private readonly roapp: RoappService,
+    private readonly customApiRoapp: CustomApiRoappService,
     private readonly progress: PriceMonitoringProgressService,
   ) {}
 
@@ -84,6 +108,81 @@ export class PriceMonitoringService {
       // job оставляем в Map — клиент ещё может запросить latest через polling
       setTimeout(() => this.progress.delete(uuid), 60_000);
     }
+  }
+
+  async updateServicePricesInRoapp(items: UpdateServicePricesInRoappItem[]) {
+    const servicesById = new Map<number, Service>();
+    for await (const batch of this.roapp.fetchServices()) {
+      for (const s of batch) servicesById.set(s.id, s);
+    }
+
+    const categoryPathById = await this.buildServiceCategoryPaths();
+
+    const rows = items.flatMap((item) => {
+      const service = servicesById.get(item.id);
+      if (!service) {
+        console.warn(`Roapp service ${item.id} not found, skipping row`);
+        return [];
+      }
+
+      return [
+        [
+          '', // Штрих-код
+          'Услуга', // Тип
+          service.name, // Наименование
+          '', // Описание
+          'pcs', // Единица измерения
+          categoryPathById.get(service.categoryId) ?? '', // Категория
+          service.warrantyPeriod, // Гарантия
+          service.warrantyUnit, // Период гарантии
+          '', // Продолжительность (минуты)
+          0, // Себестоимость
+          item.serviceCost, // Сумма вознаграждения
+          '', // Процент вознаграждения
+          '', // Расчет процента от
+          item.price, // Стандартная цена
+        ],
+      ];
+    });
+
+    const sheet = XLSX.utils.aoa_to_sheet([SERVICE_PRICE_HEADERS, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Services');
+    const buffer = XLSX.write(workbook, {
+      type: 'buffer',
+      bookType: 'xlsx',
+    }) as Buffer;
+
+    return this.customApiRoapp.updateServices(buffer);
+  }
+
+  private async buildServiceCategoryPaths(): Promise<Map<number, string>> {
+    const categories: Category[] = [];
+    for await (const batch of this.roapp.fetchServicesCategories()) {
+      categories.push(...batch);
+    }
+    const categoryMap = new Map(categories.map((c) => [c.id, c]));
+
+    const pathCache = new Map<number, string>();
+    const buildPath = (categoryId: number): string => {
+      if (pathCache.has(categoryId)) return pathCache.get(categoryId)!;
+      const category = categoryMap.get(categoryId);
+      if (!category) return '';
+
+      const parentPath = category.parent_id
+        ? buildPath(category.parent_id)
+        : '';
+      const path = parentPath
+        ? `${parentPath} > ${category.title}`
+        : category.title;
+
+      pathCache.set(categoryId, path);
+      return path;
+    };
+
+    const result = new Map<number, string>();
+    for (const id of categoryMap.keys()) result.set(id, buildPath(id));
+    return result;
   }
 
   private async resetCostsToNull(): Promise<void> {

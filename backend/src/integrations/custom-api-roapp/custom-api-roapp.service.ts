@@ -24,4 +24,27 @@ export class CustomApiRoappService {
       );
     }
   }
+
+  async updateServices(file: Buffer): Promise<unknown> {
+    try {
+      const formData = new FormData();
+      formData.append(
+        'file',
+        new Blob([new Uint8Array(file)], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }),
+        'services.xlsx',
+      );
+
+      const { data } = await this.customApiRoapp.instance.post(
+        '/updateServices',
+        formData,
+      );
+      return data;
+    } catch (error) {
+      throw new BadGatewayException(
+        `Failed to update services in CustomApiRoapp: ${error.message}`,
+      );
+    }
+  }
 }

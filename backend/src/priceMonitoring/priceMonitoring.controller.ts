@@ -14,6 +14,7 @@ import { finalize, map, takeUntil } from 'rxjs/operators';
 import { PriceMonitoringService } from './priceMonitoring.service';
 import { PriceMonitoringProgressService } from './priceMonitoring.progress.service';
 import { UpdateShopProductsCostsDTO } from './dto/updateShopProductsCosts.dto';
+import { UpdateServicePricesInRoappDTO } from './dto/updateServicePricesInRoapp.dto';
 
 @Controller('price-monitoring')
 export class PriceMonitoringController {
@@ -27,6 +28,11 @@ export class PriceMonitoringController {
     const id = crypto.randomUUID();
     this.priceMonitoringService.updateShopProductsCosts(body.file, id);
     return { id };
+  }
+
+  @Post('update-service-price')
+  updateServicePricesInRoapp(@Body() body: UpdateServicePricesInRoappDTO) {
+    return this.priceMonitoringService.updateServicePricesInRoapp(body);
   }
 
   @Get(':uuid/status')
@@ -53,13 +59,13 @@ export class PriceMonitoringController {
 
     const events$ = subject.asObservable().pipe(
       finalize(() => done$.next()),
-      map((event) => ({ data: event } as MessageEvent)),
+      map((event) => ({ data: event }) as MessageEvent),
     );
 
     // Heartbeat каждые 20 сек чтобы Nginx не закрыл соединение по таймауту
     const heartbeat$ = interval(20_000).pipe(
       takeUntil(done$),
-      map(() => ({ data: { type: 'heartbeat' } } as MessageEvent)),
+      map(() => ({ data: { type: 'heartbeat' } }) as MessageEvent),
     );
 
     return merge(events$, heartbeat$);

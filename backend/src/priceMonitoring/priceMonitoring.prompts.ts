@@ -295,3 +295,60 @@ export function buildMatchingPrompt(
     }
   }
 }
+
+// ─── Приведение названий товаров Apple к единому формату ─────────────────────
+
+/**
+ * Строит промпт для приведения названий товаров Apple к единому стандартному формату.
+ */
+export function buildFormatNamesPrompt(names: string[]): string {
+  return `Ты приводишь названия товаров Apple к единому стандартному формату.
+
+  Правила форматирования:
+
+  **MacBook:**
+  Apple MacBook [Air/Pro/Neo] [13/14/15/16]" [Цвет] ([Процессор], [RAM]GB, [SSD])
+  Пример: Apple MacBook Air 13" Midnight (M5, 16GB, 512GB)
+
+  **iPad:**
+  Apple iPad [Air/Pro/Mini/classic] [11/13]" [Цвет] [Wi-Fi/Wi-Fi+Cellular] [Память]GB ([Процессор], [Год])
+  Пример: Apple iPad Air 11" Space Gray Wi-Fi 128GB (M4, 2026)
+
+  **iPhone:**
+  Apple iPhone [модель] [память]GB [Цвет] ([SIM-тип])
+  Пример: Apple iPhone 16 Pro Max 256GB Desert Titanium (nano SIM+eSIM)
+
+  **Apple Watch:**
+  Apple Watch [серия] [размер]mm [Цвет корпуса] ([ремешок])
+  Пример: Apple Watch Series 11 42mm Black (Sport Band Black)
+
+  **AirPods:**
+  Apple AirPods [модель] [цвет если есть]
+  Пример: Apple AirPods Pro 3
+
+  **iMac:**
+  Apple iMac [Цвет] ([Процессор], [CPU-cores]/[GPU-cores], [RAM]GB, [SSD])
+  Пример: Apple iMac Silver (M4, 8-Core CPU/8-Core GPU, 16GB, 256GB)
+
+  **Аксессуары (Pencil, Keyboard, Mouse, Trackpad, Display):**
+  Apple [название аксессуара] [цвет если есть]
+  Пример: Apple Pencil Pro
+
+  Отформатируй следующие названия. Верни ТОЛЬКО JSON-массив строк в том же порядке, без пояснений и markdown:
+  ${JSON.stringify(names)}`;
+}
+
+/**
+ * Парсит JSON-ответ AI со списком отформатированных названий.
+ * При ошибке парсинга возвращает исходные названия без изменений.
+ */
+export function parseFormatNamesResponse(
+  response: string,
+  fallbackNames: string[],
+): string[] {
+  try {
+    return JSON.parse(response.trim()) as string[];
+  } catch {
+    return fallbackNames;
+  }
+}

@@ -6,6 +6,12 @@ function getPeriod(unit: 'days' | 'months' | 'years') {
   else return ' год';
 }
 
+function getPeriodAbbrev(unit: 'days' | 'months' | 'years') {
+  if (unit === 'days') return 'дн.';
+  if (unit === 'months') return 'мес.';
+  else return 'г.';
+}
+
 const warrantySchema = z.object({
   period: z.number().int(),
   unit: z.enum(['days', 'months', 'years']),
@@ -34,6 +40,8 @@ export const ServiceSchema = z
     name: d.title,
     price: d.prices['543835'] ?? 0,
     warranty: d.warranty.period + getPeriod(d.warranty.unit),
+    warrantyPeriod: d.warranty.period,
+    warrantyUnit: getPeriodAbbrev(d.warranty.unit),
     duration: d.duration,
   }));
 
