@@ -254,7 +254,17 @@
                 style="padding:10px;background:#fff;color:#2955af;border:1.5px solid #2955af;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
             ⬇ Обновить начисления мастеров в Таблице
         </button>
+        <div style="position:relative;display:flex;align-items:center;">
+            <button onclick="createServicesInRoapp()" id="createServicesBtn"
+                    style="flex:1;padding:10px;background:#fff;color:#e65100;border:1.5px solid #e65100;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                🛠 Создать услуги в Ремонлайн
+            </button>
+            <span title="Создаёт услуги в RemOnline для всех строк, где в столбце ID (E) указано «Создать».&#10;&#10;Обязательные поля: Тип устройства (G), Модель устройства (H), Качество запчасти (I), Наименование услуги (J), Категория (K, формат: Категория &gt; Подкатегория &gt; ... &gt; Последняя), Срок гарантии (L), Период гарантии (M: «дн.» или «мес.»), Начисление мастеру (BU), Цена услуги (AY).&#10;Необязательно: Номер модели (N).&#10;&#10;Название услуги собирается по шаблону: [Наименование] [Тип устройства] [Модель устройства] [Качество запчасти] ([Номер модели]).&#10;&#10;После обработки в столбец ID записывается ID созданной услуги либо «ОШИБКА: ...» с описанием проблемы."
+                  style="margin-left:8px;width:20px;height:20px;flex-shrink:0;border-radius:50%;background:#eee;color:#666;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;user-select:none;">ⓘ</span>
+        </div>
     </div>
+
+    <div id="createServicesSummary" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;background:#f7f9f7;border:1px solid #e0e0e0;font-size:12px;color:#333;line-height:1.7;"></div>
 
     <div id="roSummary" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;background:#f7f9f7;border:1px solid #e0e0e0;font-size:12px;color:#333;line-height:1.7;"></div>
 
@@ -561,15 +571,24 @@
     function buildCategoryTree(categories) {
         const byParent = new Map();
         const byId = new Map();
+        const byName = new Map();
 
         categories.forEach((category) => {
             byId.set(category.id, category);
+            byName.set(category.name.trim(), category.id);
             const parentKey = category.parentId ?? null;
             if (!byParent.has(parentKey)) byParent.set(parentKey, []);
             byParent.get(parentKey).push(category);
         });
 
-        return { byParent, byId };
+        return { byParent, byId, byName };
+    }
+
+    async function ensureCategoriesLoaded() {
+        if (categoriesLoaded) return;
+        const categories = await runServerFunction('getServiceCategories');
+        categoryTree = buildCategoryTree(categories);
+        categoriesLoaded = true;
     }
 
     function removeCategoryLevelsFrom(level) {
@@ -644,9 +663,7 @@
         if (!categoriesLoaded) {
             setAddServiceStatus('Загрузка категорий...', '#888');
             try {
-                const categories = await runServerFunction('getServiceCategories');
-                categoryTree = buildCategoryTree(categories);
-                categoriesLoaded = true;
+                await ensureCategoriesLoaded();
                 setAddServiceStatus('', '');
             } catch (err) {
                 setAddServiceStatus('❌ ' + (err && err.message ? err.message : err), '#c62828');
@@ -672,6 +689,157 @@
             setAddServiceStatus('❌ ' + (err && err.message ? err.message : err), '#c62828');
         } finally {
             resetBtn('saveCategoryBtn', 'Записать категорию');
+        }
+    }
+
+    // ── МАССОВОЕ СОЗДАНИЕ УСЛУГ В РЕМОНЛАЙН ────────────────────────
+
+    const RO_PRICE_KEY = '543835';
+    const CREATE_SERVICE_REQUIRED_FIELDS = [
+        ['deviceType', 'Тип устройства (G)'],
+        ['deviceModel', 'Модель устройства (H)'],
+        ['partQuality', 'Качество запчасти (I)'],
+        ['name', 'Наименование услуги (J)'],
+        ['category', 'Категория (K)'],
+        ['warranty', 'Срок гарантии (L)'],
+        ['warrantyPeriod', 'Период гарантии (M)'],
+        ['engineerBonus', 'Начисление мастеру (BU)'],
+        ['price', 'Цена услуги (AY)'],
+    ];
+
+    function isEmptyCell(value) {
+        return value === '' || value === null || value === undefined;
+    }
+
+    function toNumber(value) {
+        if (typeof value === 'number') return isFinite(value) ? value : null;
+        if (typeof value !== 'string') return null;
+        const normalized = value.replace(/\s+/g, '').replace(',', '.');
+        if (normalized === '') return null;
+        const num = Number(normalized);
+        return isFinite(num) ? num : null;
+    }
+
+    function parseWarrantyPeriod(value) {
+        const normalized = String(value).trim().toLowerCase();
+        if (normalized.startsWith('дн')) return 0;
+        if (normalized.startsWith('мес')) return 1;
+        return null;
+    }
+
+    function resolveCategoryId(categoryPath) {
+        const segments = String(categoryPath).split('>').map((s) => s.trim()).filter(Boolean);
+        if (segments.length === 0) return null;
+        return categoryTree.byName.get(segments[segments.length - 1]) ?? null;
+    }
+
+    function buildServiceTitle(row) {
+        const parts = [row.name, row.deviceType, row.deviceModel, row.partQuality]
+            .map((p) => String(p).trim())
+            .filter(Boolean);
+        let title = parts.join(' ');
+        if (!isEmptyCell(row.modelNumber)) title += ` (${String(row.modelNumber).trim()})`;
+        return title;
+    }
+
+    function buildCreateServicePayload(row) {
+        const missing = CREATE_SERVICE_REQUIRED_FIELDS
+            .filter(([key]) => isEmptyCell(row[key]))
+            .map(([, label]) => label);
+        if (missing.length > 0) {
+            throw new Error('Не заполнены поля: ' + missing.join(', '));
+        }
+
+        const categoryId = resolveCategoryId(row.category);
+        if (categoryId === null) {
+            throw new Error('Категория не найдена: ' + row.category);
+        }
+
+        const warrantyPeriod = parseWarrantyPeriod(row.warrantyPeriod);
+        if (warrantyPeriod === null) {
+            throw new Error('Период гарантии указан неверно (укажите «дн.» или «мес.»): ' + row.warrantyPeriod);
+        }
+
+        const warranty = toNumber(row.warranty);
+        const engineerBonus = toNumber(row.engineerBonus);
+        const price = toNumber(row.price);
+        if (warranty === null || engineerBonus === null || price === null) {
+            throw new Error('Срок гарантии, начисление мастеру и цена услуги должны быть числами');
+        }
+
+        return {
+            category_id: categoryId,
+            earnings_sum: engineerBonus,
+            prices: { [RO_PRICE_KEY]: price },
+            title: buildServiceTitle(row),
+            warranty: warranty,
+            warranty_period: warrantyPeriod,
+        };
+    }
+
+    function renderCreateServicesSummary(created, errors, total) {
+        const el = document.getElementById('createServicesSummary');
+        el.innerHTML =
+            `Обработано: <b>${total}</b><br>` +
+            `Создано: <b>${created}</b><br>` +
+            `Ошибок: <b>${errors}</b>`;
+        el.style.borderColor = errors > 0 ? '#e65100' : '#e0e0e0';
+        el.style.display = 'block';
+    }
+
+    async function createServicesInRoapp() {
+        showLoader('Создаём услуги в Ремонлайн');
+        setBtnLoading('createServicesBtn', 'Создание...');
+        setStatus('', '');
+        document.getElementById('createServicesSummary').style.display = 'none';
+
+        try {
+            updateLoader('Загружаем категории услуг...');
+            addLogLine('Загружаем категории услуг...');
+            await ensureCategoriesLoaded();
+
+            updateLoader('Читаем строки из таблицы...');
+            addLogLine('Читаем строки из таблицы...');
+            const rows = await runServerFunction('getCreateServiceRows');
+
+            if (rows.length === 0) {
+                hideLoader();
+                setStatus('⚠️ Нет строк со значением "Создать" в столбце ID', '#e65100');
+                resetBtn('createServicesBtn', '🛠 Создать услуги в Ремонлайн');
+                return;
+            }
+
+            let created = 0;
+            let errors = 0;
+
+            for (const row of rows) {
+                updateLoader(`Обработка строки ${row.row} (${created + errors + 1}/${rows.length})...`);
+
+                try {
+                    const payload = buildCreateServicePayload(row);
+                    const result = await runServerFunction('createServiceInRoapp', payload);
+                    await runServerFunction('writeCreateServiceResult', row.row, result.entityId);
+                    created++;
+                    addLogLine(`Строка ${row.row}: создано (ID ${result.entityId})`);
+                } catch (err) {
+                    const message = err && err.message ? err.message : String(err);
+                    await runServerFunction('writeCreateServiceResult', row.row, 'ОШИБКА: ' + message);
+                    errors++;
+                    addLogLine(`Строка ${row.row}: ошибка — ${message}`);
+                }
+            }
+
+            hideLoader();
+            renderCreateServicesSummary(created, errors, rows.length);
+            setStatus(
+                errors === 0 ? '✅ Все услуги созданы!' : '⚠️ Завершено с ошибками',
+                errors === 0 ? '#2e7d32' : '#e65100'
+            );
+        } catch (err) {
+            hideLoader();
+            setStatus('❌ ' + (err && err.message ? err.message : err), '#c62828');
+        } finally {
+            resetBtn('createServicesBtn', '🛠 Создать услуги в Ремонлайн');
         }
     }
 

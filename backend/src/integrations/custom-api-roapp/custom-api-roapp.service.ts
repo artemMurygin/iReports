@@ -9,6 +9,11 @@ import {
   UpdateServicesResponse,
   updateServicesResponseSchema,
 } from './dto/updateServices-custom-api-roapp.dto';
+import {
+  CreateServiceRequest,
+  CreateServiceResponse,
+  createServiceResponseSchema,
+} from './dto/createService-custom-api-roapp.dto';
 
 @Injectable()
 export class CustomApiRoappService {
@@ -48,6 +53,22 @@ export class CustomApiRoappService {
     } catch (error) {
       throw new BadGatewayException(
         `Failed to update services in CustomApiRoapp: ${error.message}`,
+      );
+    }
+  }
+
+  async createService(
+    body: CreateServiceRequest,
+  ): Promise<CreateServiceResponse> {
+    try {
+      const { data } = await this.customApiRoapp.instance.post(
+        '/createService',
+        body,
+      );
+      return createServiceResponseSchema.parse(data);
+    } catch (error) {
+      throw new BadGatewayException(
+        `Failed to create service in CustomApiRoapp: ${error.message}`,
       );
     }
   }
