@@ -254,13 +254,23 @@
                 style="padding:10px;background:#fff;color:#2955af;border:1.5px solid #2955af;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
             ⬇ Обновить начисления мастеров в Таблице
         </button>
-        <button disabled id="createServiceBtn"
-                style="padding:10px;background:#fff;color:#888;border:1.5px solid #ccc;border-radius:8px;font-size:13px;font-weight:600;cursor:not-allowed;">
-            ➕ Создать новую услугу
-        </button>
     </div>
 
     <div id="roSummary" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;background:#f7f9f7;border:1px solid #e0e0e0;font-size:12px;color:#333;line-height:1.7;"></div>
+
+    <div id="addServicePanel" style="display:none;margin-top:14px;padding:12px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;">
+        <div id="categorySelects"></div>
+        <button onclick="saveCategoryToActiveCell()" id="saveCategoryBtn"
+                style="width:100%;padding:9px;background:#2955af;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">
+            Записать категорию
+        </button>
+        <div id="addServiceStatus" style="margin-top:8px;font-size:12px;text-align:center;min-height:16px;"></div>
+    </div>
+
+    <button onclick="toggleAddServiceMenu()" id="createServiceBtn"
+            style="width:100%;margin-top:10px;padding:10px;background:#fff;color:#4CAF50;border:1.5px solid #4CAF50;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        ➕ Добавить новую услугу
+    </button>
 </div>
 
 <div id="status" style="margin-top:12px;font-size:13px;text-align:center;min-height:18px;"></div>
@@ -540,6 +550,128 @@
             hideLoader();
             setStatus('❌ ' + (err && err.message ? err.message : err), '#c62828');
             resetBtn('uploadAccrualsBtn', '⬆ Обновить начисления мастеров');
+        }
+    }
+
+    // ── ДОБАВЛЕНИЕ НОВОЙ УСЛУГИ: ВЫБОР КАТЕГОРИИ ──────────────────
+
+    let categoryTree = null;       // { byParent: Map<parentId|null, Category[]>, byId: Map<id, Category> }
+    let categoriesLoaded = false;
+
+    function buildCategoryTree(categories) {
+        const byParent = new Map();
+        const byId = new Map();
+
+        categories.forEach((category) => {
+            byId.set(category.id, category);
+            const parentKey = category.parentId ?? null;
+            if (!byParent.has(parentKey)) byParent.set(parentKey, []);
+            byParent.get(parentKey).push(category);
+        });
+
+        return { byParent, byId };
+    }
+
+    function removeCategoryLevelsFrom(level) {
+        document.querySelectorAll('#categorySelects select').forEach((select) => {
+            if (Number(select.dataset.level) >= level) select.remove();
+        });
+    }
+
+    function renderCategoryLevel(parentId, level) {
+        removeCategoryLevelsFrom(level);
+
+        const children = categoryTree.byParent.get(parentId) || [];
+        if (children.length === 0) return;
+
+        const select = document.createElement('select');
+        select.dataset.level = level;
+        select.style = 'display:block;width:100%;padding:8px;margin-bottom:6px;border:1px solid #ccc;border-radius:6px;font-size:13px;background:#fff;';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '— выберите —';
+        select.appendChild(placeholder);
+
+        children
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+            .forEach((category) => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                select.appendChild(option);
+            });
+
+        select.addEventListener('change', () => {
+            removeCategoryLevelsFrom(level + 1);
+            if (select.value) renderCategoryLevel(Number(select.value), level + 1);
+        });
+
+        document.getElementById('categorySelects').appendChild(select);
+    }
+
+    function getSelectedCategoryPath() {
+        const selects = Array.from(document.querySelectorAll('#categorySelects select'))
+            .sort((a, b) => Number(a.dataset.level) - Number(b.dataset.level));
+
+        const names = [];
+        for (const select of selects) {
+            if (!select.value) break;
+            const category = categoryTree.byId.get(Number(select.value));
+            if (category) names.push(category.name.replace(/\s+$/, ''));
+        }
+        return names.join(' > ');
+    }
+
+    function setAddServiceStatus(msg, color) {
+        const el = document.getElementById('addServiceStatus');
+        el.textContent = msg;
+        el.style.color = color;
+    }
+
+    async function toggleAddServiceMenu() {
+        const panel = document.getElementById('addServicePanel');
+        if (panel.style.display !== 'none') {
+            panel.style.display = 'none';
+            return;
+        }
+
+        panel.style.display = 'block';
+        document.getElementById('categorySelects').innerHTML = '';
+        setAddServiceStatus('', '');
+
+        if (!categoriesLoaded) {
+            setAddServiceStatus('Загрузка категорий...', '#888');
+            try {
+                const categories = await runServerFunction('getServiceCategories');
+                categoryTree = buildCategoryTree(categories);
+                categoriesLoaded = true;
+                setAddServiceStatus('', '');
+            } catch (err) {
+                setAddServiceStatus('❌ ' + (err && err.message ? err.message : err), '#c62828');
+                return;
+            }
+        }
+
+        renderCategoryLevel(null, 0);
+    }
+
+    async function saveCategoryToActiveCell() {
+        const path = getSelectedCategoryPath();
+        if (!path) {
+            setAddServiceStatus('⚠️ Выберите категорию', '#e65100');
+            return;
+        }
+
+        setBtnLoading('saveCategoryBtn', 'Запись...');
+        try {
+            await runServerFunction('writeCategoryPathToActiveCell', path);
+            setAddServiceStatus('✅ Категория записана в ячейку', '#2e7d32');
+        } catch (err) {
+            setAddServiceStatus('❌ ' + (err && err.message ? err.message : err), '#c62828');
+        } finally {
+            resetBtn('saveCategoryBtn', 'Записать категорию');
         }
     }
 

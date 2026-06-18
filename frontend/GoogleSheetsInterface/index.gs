@@ -187,3 +187,17 @@ function applyAccrualsUpdates(entries, earningsById) {
 
   return updatedIds;
 }
+
+function getServiceCategories() {
+  const response = UrlFetchApp.fetch(BASE_URL + '/roapp/service-categories', {
+    method: 'GET',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+  });
+  return JSON.parse(response.getContentText());
+}
+
+function writeCategoryPathToActiveCell(path) {
+  SpreadsheetApp.getActiveSheet().getActiveCell().setValue(path);
+  return 'OK';
+}

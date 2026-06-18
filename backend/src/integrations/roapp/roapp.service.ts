@@ -138,6 +138,20 @@ export class RoappService {
     yield* this._fetchCategories('/catalog/products/categories');
   }
 
+  async fetchAllServiceCategories(): Promise<
+    { id: number; name: string; parentId: number | null }[]
+  > {
+    const categories: z.infer<typeof CategorySchema>[] = [];
+    for await (const batch of this.fetchServicesCategories()) {
+      categories.push(...batch);
+    }
+    return categories.map((c) => ({
+      id: c.id,
+      name: c.title,
+      parentId: c.parent_id,
+    }));
+  }
+
   async *_fetchCategories(url: string) {
     let requestPage = 1;
 
