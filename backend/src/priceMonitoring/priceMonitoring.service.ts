@@ -405,6 +405,7 @@ export class PriceMonitoringService {
     return items
       .filter((item) => item.price != null && item.externalId != null)
       .map((item) => ({
+        name: item.moyskladName,
         meta: {
           href: `${MS}/product/${item.externalId}`,
           type: 'product',
