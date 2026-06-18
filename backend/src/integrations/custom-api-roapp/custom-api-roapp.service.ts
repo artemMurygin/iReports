@@ -5,6 +5,10 @@ import {
   serviceBonusesForEngeneersSchema,
 } from './dto/fetchServiceBonusesForEngeneers-custom-api-roapp.dto';
 import { CustomApiRoappHttpService } from './custom-api-roapp.instance';
+import {
+  UpdateServicesResponse,
+  updateServicesResponseSchema,
+} from './dto/updateServices-custom-api-roapp.dto';
 
 @Injectable()
 export class CustomApiRoappService {
@@ -25,7 +29,7 @@ export class CustomApiRoappService {
     }
   }
 
-  async updateServices(file: Buffer): Promise<unknown> {
+  async updateServices(file: Buffer): Promise<UpdateServicesResponse> {
     try {
       const formData = new FormData();
       formData.append(
@@ -40,7 +44,7 @@ export class CustomApiRoappService {
         '/updateServices',
         formData,
       );
-      return data;
+      return updateServicesResponseSchema.parse(data);
     } catch (error) {
       throw new BadGatewayException(
         `Failed to update services in CustomApiRoapp: ${error.message}`,

@@ -98,7 +98,9 @@ export class MoyskladService {
       }
     } catch (error) {
       throw new BadGatewayException(
-        `Failed to batch update products in MoySklad: ${error.message}`,
+        `Failed to batch update products in MoySklad: ${error.message} - ${JSON.stringify(
+          error.response?.data,
+        )}`,
       );
     }
   }
