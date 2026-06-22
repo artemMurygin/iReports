@@ -1,5 +1,7 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 import { MoyskladHttpService } from './moysklad.instance';
 import { MoyskladListParams } from './moysklad.types';
 import { CustomerOrderSchema } from './schemas/customerOrders.schema';
@@ -14,6 +16,33 @@ const PAGE_LIMIT = 1000;
 @Injectable()
 export class MoyskladService {
   constructor(private moysklad: MoyskladHttpService) {}
+
+  private async dumpError(error: unknown): Promise<void> {
+    const seen = new WeakSet();
+    const serialized = JSON.stringify(
+      error,
+      (_key, value) => {
+        if (value instanceof Error) {
+          const plain: Record<string, unknown> = {
+            name: value.name,
+            message: value.message,
+            stack: value.stack,
+          };
+          for (const key of Object.keys(value)) {
+            plain[key] = (value as unknown as Record<string, unknown>)[key];
+          }
+          return plain;
+        }
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) return '[Circular]';
+          seen.add(value);
+        }
+        return value;
+      },
+      2,
+    );
+    await fs.writeFile(join(__dirname, 'error.json'), serialized);
+  }
 
   async *fetchCustomerOrders(updatedFrom?: Date) {
     yield* this._fetchPaged(
@@ -40,6 +69,7 @@ export class MoyskladService {
       });
       return rows.map((e: unknown) => EmployeeSchema.parse(e));
     } catch (error) {
+      await this.dumpError(error);
       throw new BadGatewayException(
         `Failed to fetch employees from MoySklad: ${error.message}`,
       );
@@ -79,6 +109,7 @@ export class MoyskladService {
         offset = fetched;
         await delay(500);
       } catch (error) {
+        await this.dumpError(error);
         throw new BadGatewayException(
           `Failed to fetch assortment from MoySklad: ${error.message}`,
         );
@@ -97,6 +128,7 @@ export class MoyskladService {
         if (i + CHUNK < updates.length) await delay(300);
       }
     } catch (error) {
+      await this.dumpError(error);
       throw new BadGatewayException(
         `Failed to batch update products in MoySklad: ${error.message}`,
       );
@@ -131,6 +163,7 @@ export class MoyskladService {
         offset = fetched;
         await delay(300);
       } catch (error) {
+        await this.dumpError(error);
         throw new BadGatewayException(
           `Failed to fetch ${url} from MoySklad: ${error.message}`,
         );

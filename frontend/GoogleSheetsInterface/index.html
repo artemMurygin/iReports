@@ -174,6 +174,53 @@
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
 
+        /* ── ПОДСКАЗКА (ТУЛТИП) ───────────────────────────────────── */
+        .info-tooltip {
+            position: relative;
+            display: inline-flex;
+            flex-shrink: 0;
+        }
+
+        .info-tooltip-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #eee;
+            color: #666;
+            font-size: 12px;
+            font-style: italic;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            user-select: none;
+        }
+
+        .info-tooltip-content {
+            display: none;
+            position: absolute;
+            top: 26px;
+            right: 0;
+            width: 240px;
+            padding: 10px 12px;
+            background: #333;
+            color: #fff;
+            font-size: 11.5px;
+            font-weight: 400;
+            font-style: normal;
+            line-height: 1.5;
+            text-align: left;
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+            z-index: 50;
+        }
+
+        .info-tooltip:hover .info-tooltip-content,
+        .info-tooltip:focus-within .info-tooltip-content {
+            display: block;
+        }
+
         /* ── ОСТАЛЬНОЕ ────────────────────────────────────────────── */
         button:disabled { cursor: not-allowed; }
     </style>
@@ -254,13 +301,25 @@
                 style="padding:10px;background:#fff;color:#2955af;border:1.5px solid #2955af;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
             ⬇ Обновить начисления мастеров в Таблице
         </button>
-        <div style="position:relative;display:flex;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
             <button onclick="createServicesInRoapp()" id="createServicesBtn"
                     style="flex:1;padding:10px;background:#fff;color:#e65100;border:1.5px solid #e65100;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 🛠 Создать услуги в Ремонлайн
             </button>
-            <span title="Создаёт услуги в RemOnline для всех строк, где в столбце ID (E) указано «Создать».&#10;&#10;Обязательные поля: Тип устройства (G), Модель устройства (H), Качество запчасти (I), Наименование услуги (J), Категория (K, формат: Категория &gt; Подкатегория &gt; ... &gt; Последняя), Срок гарантии (L), Период гарантии (M: «дн.» или «мес.»), Начисление мастеру (BU), Цена услуги (AY).&#10;Необязательно: Номер модели (N).&#10;&#10;Название услуги собирается по шаблону: [Наименование] [Тип устройства] [Модель устройства] [Качество запчасти] ([Номер модели]).&#10;&#10;После обработки в столбец ID записывается ID созданной услуги либо «ОШИБКА: ...» с описанием проблемы."
-                  style="margin-left:8px;width:20px;height:20px;flex-shrink:0;border-radius:50%;background:#eee;color:#666;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;user-select:none;">ⓘ</span>
+            <div class="info-tooltip">
+                <span class="info-tooltip-icon">i</span>
+                <div class="info-tooltip-content">
+                    Создаёт услуги в RemOnline для всех строк, где в столбце ID (E) указано «Создать».
+                    <br><br>
+                    <b>Обязательные поля:</b> Тип устройства (G), Модель устройства (H), Качество запчасти (I), Наименование услуги (J), Категория (K, формат: Категория &gt; Подкатегория &gt; ... &gt; Последняя), Срок гарантии (L), Период гарантии (M: «дн.» или «мес.»), Начисление мастеру (BU), Цена услуги (AY).
+                    <br>
+                    <b>Необязательно:</b> Номер модели (N).
+                    <br><br>
+                    Название услуги: [Наименование] [Тип устройства] [Модель устройства] [Качество запчасти] ([Номер модели]).
+                    <br><br>
+                    После обработки в столбец ID записывается ID созданной услуги либо «ОШИБКА: ...» с описанием проблемы.
+                </div>
+            </div>
         </div>
     </div>
 

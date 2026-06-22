@@ -51,6 +51,7 @@ pids
 *.pid
 *.seed
 *.pid.lock
+src/integrations/moySklad/error.json
 
 .cloudeignore
 
