@@ -55,10 +55,7 @@ const JSON_FOOTER = `Формат ответа: отправляй только 
 
 // ─── iPhone ──────────────────────────────────────────────────────────────────
 
-function buildIphonePrompt(
-  priceList: string,
-  nomenclature: string,
-): string {
+function buildIphonePrompt(priceList: string, nomenclature: string): string {
   return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
 
 Твоя задача: для каждого товара из прайса найти наиболее подходящий товар из номенклатуры и вернуть результат.
@@ -83,10 +80,7 @@ ${FORMAT_PRICE_TO_SYSTEM}`;
 
 // ─── MacBook ─────────────────────────────────────────────────────────────────
 
-function buildMacbookPrompt(
-  priceList: string,
-  nomenclature: string,
-): string {
+function buildMacbookPrompt(priceList: string, nomenclature: string): string {
   return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
 
 Твоя задача: для каждого товара из номенклатуры найти наиболее подходящий товар из прайса и вернуть его закупочную цену.
@@ -112,10 +106,7 @@ ${FORMAT_SYSTEM_TO_PRICE}`;
 
 // ─── iPad ─────────────────────────────────────────────────────────────────────
 
-function buildIpadPrompt(
-  priceList: string,
-  nomenclature: string,
-): string {
+function buildIpadPrompt(priceList: string, nomenclature: string): string {
   return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
 
 Твоя задача: для каждого товара из номенклатуры найти наиболее подходящий товар из прайса и вернуть его закупочную цену.
@@ -147,10 +138,7 @@ ${FORMAT_SYSTEM_TO_PRICE}`;
 
 // ─── Watch ────────────────────────────────────────────────────────────────────
 
-function buildWatchPrompt(
-  priceList: string,
-  nomenclature: string,
-): string {
+function buildWatchPrompt(priceList: string, nomenclature: string): string {
   return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
 
 Твоя задача: для каждого товара из номенклатуры найти наиболее подходящий товар из прайса и вернуть его закупочную цену.
@@ -186,10 +174,7 @@ ${FORMAT_SYSTEM_TO_PRICE}`;
 
 // ─── AirPods ──────────────────────────────────────────────────────────────────
 
-function buildAirpodsPrompt(
-  priceList: string,
-  nomenclature: string,
-): string {
+function buildAirpodsPrompt(priceList: string, nomenclature: string): string {
   return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
 
 Твоя задача: для каждого товара из номенклатуры найди наиболее подходящий товар из прайса и верни его закупочную цену.
@@ -200,15 +185,12 @@ function buildAirpodsPrompt(
 - AirPods Pro 3 → соответствует "AirPods Pro 3"
 - AirPods 4 (без ANC) → соответствует "AirPods 4"
 - AirPods 4 ANC → соответствует "AirPods 4 ANC"
-- AirPods 3 Lightning, AirPods 3 Magsafe → в прайсе нет, ставь null
-- AirPods 2 → в прайсе нет, ставь null
 - AirPods Max (USB-C) 2024 по цветам:
   - голубой = Blue → "Airpods Max Blue 2024 USB-C"
   - темная ночь = Midnight → "Airpods Max Midnight 2024 USB-C"
   - сияющая звезда = Starlight → "Airpods Max Starlight 2024 USB-C"
   - оранжевый = Orange → "Airpods Max Orange 2024 USB-C"
   - фиолетовый = Purple → "Airpods Max Purple 2024 USB-C"
-- AirPods Max 2 (2026) — в прайсе нет, ставь null
 - Кейсы, отдельные наушники (L/R) — в прайсе нет, ставь null
 - Верни ТОЛЬКО JSON массив, без пояснений и без markdown блоков
 
@@ -237,7 +219,10 @@ export function parseMatchingResponse(
   try {
     items = JSON.parse(raw.trim()) as AiMatchItem[];
   } catch {
-    console.error(`[${category}] Не удалось распарсить ответ AI:`, raw.slice(0, 200));
+    console.error(
+      `[${category}] Не удалось распарсить ответ AI:`,
+      raw.slice(0, 200),
+    );
     return [];
   }
 
