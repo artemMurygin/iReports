@@ -375,7 +375,8 @@ export class PriceMonitoringService {
     uuid: string,
   ): Promise<void> {
     for (const group of categories) {
-      const filter = CATEGORY_MS_FILTER[group.category];
+      // Только product — variant/bundle ведут на чужой entity-эндпоинт и валят batch-обновление 404-кой.
+      const filter = `${CATEGORY_MS_FILTER[group.category]};type=product`;
       const rows: { id: string; name: string }[] = [];
 
       for await (const page of this.moysklad.fetchAssortment(filter)) {
