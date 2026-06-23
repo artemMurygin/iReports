@@ -1,4 +1,5 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
+import axios from 'axios';
 import { z } from 'zod';
 import { promises as fs } from 'fs';
 import { join } from 'path';
@@ -18,9 +19,21 @@ export class MoyskladService {
   constructor(private moysklad: MoyskladHttpService) {}
 
   private async dumpError(error: unknown): Promise<void> {
+    // AxiosError.toJSON() runs before our replacer and strips `response`
+    // (status/data from the actual server reply), so it must be captured separately.
+    const dumpTarget = axios.isAxiosError(error)
+      ? {
+          ...error,
+          response: error.response && {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data,
+          },
+        }
+      : error;
     const seen = new WeakSet();
     const serialized = JSON.stringify(
-      error,
+      dumpTarget,
       (_key, value) => {
         if (value instanceof Error) {
           const plain: Record<string, unknown> = {
