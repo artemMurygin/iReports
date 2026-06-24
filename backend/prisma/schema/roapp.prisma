@@ -153,7 +153,6 @@ model RoappOrder {
   createdAt           DateTime? @map("created_at") @db.Date
 
   // Relations
-  bitrixDeal BitrixDeal?           @relation(fields: [bitrixDealId], references: [id])
   status     RoappOrderStatus?     @relation(fields: [statusId], references: [id])
   manager    RoappEmployee?        @relation("OrderManager", fields: [managerId], references: [id])
   createdBy  RoappEmployee?        @relation("OrderCreatedBy", fields: [createdById], references: [id])
@@ -184,15 +183,16 @@ model RoappProductsOrder {
 }
 
 model RoappServiceOrder {
-  id         Int     @id @default(autoincrement())
-  orderId    Int     @map("order_id")
-  serviceId  Int     @map("service_id")
-  quantity   Int
-  price      Int
-  cost       Int
-  discount   Int
-  inCatalog  Boolean @map("in_catalog")
-  engineerId Int     @map("engineer_id")
+  id             Int     @id @default(autoincrement())
+  orderId        Int     @map("order_id")
+  serviceId      Int     @map("service_id")
+  quantity       Int
+  price          Int
+  cost           Int
+  discount       Int
+  inCatalog      Boolean @map("in_catalog")
+  engineerId     Int     @map("engineer_id")
+  engeneerSalary Int     @map("engeneer_salary")
 
   order    RoappOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   service  RoappService  @relation(fields: [serviceId], references: [id])

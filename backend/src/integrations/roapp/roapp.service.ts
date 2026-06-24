@@ -21,23 +21,27 @@ export class RoappService {
     fromDate: Date | undefined,
     createdOrUpdated: 'created' | 'updated',
   ) {
-    yield this._fetchOrders(fromDate, 'created');
+    yield* this._fetchOrders(fromDate, 'created');
   }
 
   async *fetchUpdatedOrders(
     fromDate: Date | undefined,
     createdOrUpdated: 'created' | 'updated',
   ) {
-    yield this._fetchOrders(fromDate, 'updated');
+    yield* this._fetchOrders(fromDate, 'updated');
   }
 
   async *_fetchOrders(
     fromDate: Date | undefined,
     createdOrUpdated: 'created' | 'updated',
   ) {
+    // Roapp принимает ISO-дату без миллисекунд: %Y-%m-%dT%H:%M:%SZ
+    const isoDateWithoutMs = fromDate?.toISOString().replace(/\.\d{3}Z$/, 'Z');
+
     const params: Params = {
       requestPage: 1,
-      [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']: fromDate,
+      [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']:
+        isoDateWithoutMs,
     };
 
     while (true) {
@@ -46,9 +50,7 @@ export class RoappService {
           data: { data: deals, paging },
         } = await this.roApp.instance.get(`/orders`, { params });
 
-        yield deals.map((deal: unknown) => {
-          OrderSchema.parse(deal);
-        });
+        yield deals.map((deal: unknown) => OrderSchema.parse(deal));
 
         const { page, total_pages } = paging;
         if (page === total_pages) break;
@@ -56,6 +58,7 @@ export class RoappService {
         params.requestPage++;
         await delay(500);
       } catch (error) {
+        console.log(error);
         throw new BadGatewayException(
           `Failed to fetch sources from Roapp: ${error.message}`,
         );

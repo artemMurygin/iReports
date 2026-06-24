@@ -21,26 +21,27 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.createApplicationContext(AppModule);
-  const bitrix = app.get(BitrixSyncService);
-  // const roapp = app.get(RoappSyncService);
-  // const customRoApp = app.get(CustomApiRoappSyncService);
+  // const bitrix = app.get(BitrixSyncService);
+  const roapp = app.get(RoappSyncService);
+  const customRoApp = app.get(CustomApiRoappSyncService);
 
-  const log = new UploadLogger('Инициализация данных Bitrix');
-  try {
-    log.start();
-    log.tick(await bitrix.uploadEmployees());
-    log.tick(await bitrix.uploadStages());
-    log.tick(await bitrix.uploadDeviceTypes());
-    log.tick(await bitrix.uploadLeadSources());
-    log.tick(await bitrix.uploadEnums());
-    log.tick(await bitrix.uploadSources());
-    log.done();
-  } catch (error) {
-    log.error(error);
-    throw new Error();
-  }
+  const log = new UploadLogger('Инициализация данных');
+  // log.start();
+  // try {
+  //   log.start();
+  //   log.tick(await bitrix.uploadEmployees());
+  //   log.tick(await bitrix.uploadStages());
+  //   log.tick(await bitrix.uploadDeviceTypes());
+  //   log.tick(await bitrix.uploadLeadSources());
+  //   log.tick(await bitrix.uploadEnums());
+  //   log.tick(await bitrix.uploadSources());
+  // log.done();
+  // } catch (error) {
+  //   log.error(error);
+  //   throw new Error();
+  // }
 
-  await bitrix.uploadCreatedDeals(fromDate);
+  // await bitrix.uploadCreatedDeals(fromDate);
   // await roapp.uploadEmployees();
   // await roapp.uploadMarketingSources();
   // await roapp.uploadOrderStatuses();
@@ -49,6 +50,8 @@ async function bootstrap() {
   // await roapp.uploadServiceCategories();
   // await roapp.uploadServices();
   // await roapp.uploadProducts();
+  // await roapp.uploadCreatedOrders(fromDate);
+  await roapp.uploadOrderItems();
   // await customRoApp.uploadServicesBonuses();
   await app.close();
 }

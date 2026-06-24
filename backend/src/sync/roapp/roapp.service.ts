@@ -1,7 +1,16 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { z } from 'zod';
 import { DatabaseService } from '../../database/database.service';
 import { RoappService } from '../../integrations/roapp/roapp.service';
+import { OrderSchema } from '../../integrations/roapp/schemas/orders.schema';
+import { OrderItemSchema } from '../../integrations/roapp/schemas/orderItems.schema';
 import { UploadLogger } from '../../utils/logger';
+import { delay } from '../../utils/delay';
+
+type ParsedOrder = z.infer<typeof OrderSchema>;
+type ParsedOrderItem = z.infer<typeof OrderItemSchema>;
+type ProductItem = Extract<ParsedOrderItem, { productId: number }>;
+type ServiceItem = Extract<ParsedOrderItem, { serviceId: number }>;
 
 @Injectable()
 export class RoappSyncService {
@@ -97,26 +106,6 @@ export class RoappSyncService {
         `Ошибка синхронизации маркетинговых источников: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
-  }
-
-  private topoSort<T extends { id: number; parent_id: number | null }>(
-    items: T[],
-  ): T[] {
-    const map = new Map(items.map((i) => [i.id, i]));
-    const visited = new Set<number>();
-    const result: T[] = [];
-
-    const visit = (item: T) => {
-      if (visited.has(item.id)) return;
-      if (item.parent_id !== null && map.has(item.parent_id)) {
-        visit(map.get(item.parent_id)!);
-      }
-      visited.add(item.id);
-      result.push(item);
-    };
-
-    items.forEach(visit);
-    return result;
   }
 
   async uploadServiceCategories() {
@@ -219,7 +208,7 @@ export class RoappSyncService {
               create: {
                 id: s.id,
                 name: s.name,
-                engeneerBonus: s.id ?? 0,
+                engeneerBonus: 0,
                 price: s.price ?? 0,
                 warranty: s.warranty,
                 duration: s.duration,
@@ -284,5 +273,182 @@ export class RoappSyncService {
       log.error(err instanceof Error ? err : new Error(String(err)));
       throw err;
     }
+  }
+
+  async uploadCreatedOrders(fromDate?: Date) {
+    return this._uploadOrders(fromDate, (d) =>
+      this.Roapp.fetchCreatedOrders(d, 'created'),
+    );
+  }
+
+  async uploadUpdatedOrders(fromDate?: Date) {
+    return this._uploadOrders(fromDate, (d) =>
+      this.Roapp.fetchUpdatedOrders(d, 'updated'),
+    );
+  }
+
+  private async _uploadOrders(
+    fromDate: Date | undefined,
+    fetcher: (fromDate: Date | undefined) => AsyncGenerator<ParsedOrder[]>,
+  ) {
+    const log = new UploadLogger('Заказы');
+    log.start();
+    try {
+      for await (const orders of fetcher(fromDate)) {
+        await Promise.all(
+          orders.map(({ id, ...fields }) =>
+            this.DB.roappOrder.upsert({
+              where: { id },
+              create: { id, ...fields },
+              update: fields,
+            }),
+          ),
+        );
+        log.tick(orders.length);
+      }
+      log.done();
+    } catch (err) {
+      log.error(err instanceof Error ? err : new Error(String(err)));
+      throw err;
+    }
+  }
+
+  async uploadOrderItems(orderIds?: number[]) {
+    const orders = orderIds
+      ? await this.DB.roappOrder.findMany({
+          where: { id: { in: orderIds } },
+          select: { id: true, payed: true },
+        })
+      : await this.DB.roappOrder.findMany({
+          select: { id: true, payed: true },
+        });
+
+    const serviceBonusById = new Map(
+      (
+        await this.DB.roappService.findMany({
+          select: { id: true, engeneerBonus: true },
+        })
+      ).map((s) => [s.id, s.engeneerBonus]),
+    );
+
+    const log = new UploadLogger('Позиции заказов');
+    log.start();
+    try {
+      for (const order of orders) {
+        const items = (await this.Roapp.fetchOrderItems(order.id)).filter(
+          (item): item is NonNullable<typeof item> => item != null,
+        );
+
+        await this.DB.roappProductsOrder.deleteMany({
+          where: { orderId: order.id },
+        });
+        await this.DB.roappServiceOrder.deleteMany({
+          where: { orderId: order.id },
+        });
+
+        const products = items.filter(
+          (item): item is ProductItem => 'productId' in item,
+        );
+        const services = items.filter(
+          (item): item is ServiceItem => 'serviceId' in item,
+        );
+
+        if (products.length) {
+          await this.DB.roappProductsOrder.createMany({
+            data: products.map((p) => ({
+              orderId: order.id,
+              productId: p.productId,
+              quantity: p.quantity,
+              price: p.price,
+              cost: p.cost,
+              engineerId: p.engineerId,
+            })),
+          });
+        }
+
+        const missingServiceIds = [
+          ...new Set(
+            services
+              .map((s) => s.serviceId)
+              .filter((id) => !serviceBonusById.has(id)),
+          ),
+        ];
+
+        for (const serviceId of missingServiceIds) {
+          const item = services.find((s) => s.serviceId === serviceId)!;
+          await this.DB.roappService.create({
+            data: {
+              id: serviceId,
+              name: item.serviceName,
+              engeneerBonus: 0,
+              price: item.price,
+              warranty: '',
+              duration: 0,
+              inCatalog: false,
+            },
+          });
+          serviceBonusById.set(serviceId, 0);
+        }
+
+        const serviceRows = services.map((s) => ({
+          orderId: order.id,
+          serviceId: s.serviceId,
+          quantity: s.quantity,
+          price: s.price,
+          cost: s.cost,
+          discount: s.discount,
+          inCatalog: s.inCatalog,
+          engineerId: s.engineerId,
+          engeneerSalary: (serviceBonusById.get(s.serviceId) ?? 0) * s.quantity,
+        }));
+
+        if (serviceRows.length) {
+          await this.DB.roappServiceOrder.createMany({ data: serviceRows });
+        }
+
+        const cost = Math.round(
+          products.reduce((sum, p) => sum + p.cost * p.quantity, 0),
+        );
+        const engineerSalary = serviceRows.reduce(
+          (sum, s) => sum + s.engeneerSalary,
+          0,
+        );
+        const managerSalary = Math.round(
+          0.1 * ((order.payed ?? 0) - cost - engineerSalary),
+        );
+
+        await this.DB.roappOrder.update({
+          where: { id: order.id },
+          data: { cost, engineerSalary, managerSalary },
+        });
+
+        log.tick(items.length);
+        await delay(500);
+      }
+      log.done();
+    } catch (err) {
+      log.error(err instanceof Error ? err : new Error(String(err)));
+      throw err;
+    }
+  }
+
+  private topoSort<T extends { id: number; parent_id: number | null }>(
+    items: T[],
+  ): T[] {
+    const map = new Map(items.map((i) => [i.id, i]));
+    const visited = new Set<number>();
+    const result: T[] = [];
+
+    const visit = (item: T) => {
+      if (visited.has(item.id)) return;
+      if (item.parent_id !== null && map.has(item.parent_id)) {
+        visit(map.get(item.parent_id)!);
+      }
+      visited.add(item.id);
+      result.push(item);
+    };
+
+    items.forEach(visit);
+    return result;
   }
 }

@@ -20,8 +20,6 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "initial": "nest build && node dist/src/utils/initialUploadData.js",
     "initialProd": "node dist/src/utils/initialUploadData.js",
-    "load:embeddings": "nest build && node dist/src/utils/loadMoySkladEmbeddings.js",
-    "load:embeddings:prod": "node dist/src/utils/loadMoySkladEmbeddings.js",
     "price:monitoring": "nest build && node dist/src/utils/runPriceMonitoring.js",
     "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js"
   },
@@ -84,6 +82,9 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

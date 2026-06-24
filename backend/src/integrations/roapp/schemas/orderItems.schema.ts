@@ -38,7 +38,7 @@ const writeOffSchema = z.object({
 const discountSchema = z.object({
   type: z.enum(['percentage', 'value']),
   percentage: z.number(),
-  amount: z.string().transform((value) => z.number(value)),
+  amount: z.string().transform((value) => Number(value)),
   sponsor: z.string(), // "staff", возможно есть и другие
 });
 
@@ -55,9 +55,9 @@ export const OrderItemSchema = z
     created_at: z.string(),
     assignee_id: z.number().int(),
 
-    quantity: z.string().transform((value) => z.number(value)),
-    price: z.string().transform((value) => z.number(value)),
-    cost: z.string().transform((value) => z.number(value)),
+    quantity: z.string().transform((value) => Number(value)),
+    price: z.string().transform((value) => Number(value)),
+    cost: z.string().transform((value) => Number(value)),
 
     margin_id: z.number().int().nullable(),
     is_deduction_required: z.boolean(),
@@ -78,6 +78,7 @@ export const OrderItemSchema = z
       return {
         id: d.id,
         serviceId: d.entity.id,
+        serviceName: d.entity.title,
         quantity: d.quantity,
         price: d.price,
         cost: d.cost,

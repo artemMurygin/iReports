@@ -1,5 +1,5 @@
 export type Params = {
-  modified_at?: Date;
-  created_at?: Date;
+  modified_at?: string;
+  created_at?: string;
   requestPage: number;
 };

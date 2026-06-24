@@ -457,7 +457,7 @@ export class PriceMonitoringService {
     const updates = matched
       .filter((item) => item.price != null && idToSheetRow.has(item.externalId))
       .map((item) => ({
-        range: `${sheetName}!AN${idToSheetRow.get(item.externalId)}`,
+        range: `${sheetName}!AO${idToSheetRow.get(item.externalId)}`,
         values: [[String(item.price)]],
       }));
 

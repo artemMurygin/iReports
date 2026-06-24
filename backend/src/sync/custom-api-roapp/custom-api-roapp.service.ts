@@ -38,10 +38,3 @@ export class CustomApiRoappSyncService {
     }
   }
 }
-
-// await Promise.all(
-//   bonuses.map(({ id, bonus }) => {
-//     log.tick(1);
-
-//   }),
-// );
