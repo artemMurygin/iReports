@@ -61,4 +61,19 @@ export class DealsService {
   async getDealsSources() {
     return this.DB.bitrixLeadSources.findMany();
   }
+
+  async getStageGroups() {
+    const stages = await this.DB.bitrixStage.findMany({
+      where: {
+        entityId: 'DEAL_STAGE',
+        stageGroupId: { not: null },
+      },
+      select: { stageGroupId: true, stageGroupName: true },
+      distinct: ['stageGroupId'],
+    });
+
+    return stages
+      .filter((s) => s.stageGroupId && s.stageGroupName)
+      .map((s) => ({ id: s.stageGroupId!, name: s.stageGroupName! }));
+  }
 }

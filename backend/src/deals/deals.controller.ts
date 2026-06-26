@@ -43,4 +43,9 @@ export class DealsController {
   async getSources() {
     return this.dealsService.getDealsSources();
   }
+
+  @Get('stage-groups')
+  async getStageGroups() {
+    return this.dealsService.getStageGroups();
+  }
 }

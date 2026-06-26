@@ -17,7 +17,7 @@ export class CustomApiRoappSyncService {
     log.start();
     try {
       const bonuses =
-        await this.CustomApiRoapp.fetchServicesBonusesForEngeneers();
+        await this.CustomApiRoapp.getServiceBonusesForEngeneers();
       fs.writeFileSync(
         path.join(__dirname, 'bonusLog.json'),
         JSON.stringify(bonuses, null, 2),

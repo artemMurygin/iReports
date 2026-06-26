@@ -46,13 +46,15 @@ model BitrixEnumValue {
 }
 
 model BitrixStage {
-  id         String       @id
-  name       String
-  sort       Int
-  color      String
-  systemType String       @map("system_type")
-  entityId   String       @map("entity_id")
-  deals      BitrixDeal[]
+  id             String       @id
+  name           String
+  sort           Int
+  color          String
+  systemType     String       @map("system_type")
+  entityId       String       @map("entity_id")
+  stageGroupId   String?      @map("stage_group_id")
+  stageGroupName String?      @map("stage_group_name")
+  deals          BitrixDeal[]
 
   @@map("bitrix_stages")
 }

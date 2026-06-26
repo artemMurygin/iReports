@@ -166,8 +166,12 @@ export class BitrixSyncService {
     try {
       const stages = await this.Bitrix.fetchStages();
       await Promise.all(
-        stages.map((s: any) =>
-          this.DB.bitrixStage.upsert({
+        stages.map((s: any) => {
+          const { stageGroupId, stageGroupName } = this.resolveStageGroup(
+            s.ENTITY_ID,
+            s.COLOR ?? '',
+          );
+          return this.DB.bitrixStage.upsert({
             where: { id: s.STATUS_ID },
             create: {
               id: s.STATUS_ID,
@@ -176,15 +180,19 @@ export class BitrixSyncService {
               color: s.COLOR ?? '',
               systemType: s.SYSTEM_TYPE ?? '',
               entityId: s.ENTITY_ID,
+              stageGroupId,
+              stageGroupName,
             },
             update: {
               name: s.NAME,
               sort: Number(s.SORT),
               color: s.COLOR ?? '',
               systemType: s.SYSTEM_TYPE ?? '',
+              stageGroupId,
+              stageGroupName,
             },
-          }),
-        ),
+          });
+        }),
       );
       return stages.length;
     } catch (err) {
@@ -192,6 +200,29 @@ export class BitrixSyncService {
         `Ошибка синхронизации стейджей: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+  }
+
+  private resolveStageGroup(
+    entityId: string,
+    color: string,
+  ): { stageGroupId: string | null; stageGroupName: string | null } {
+    if (entityId !== 'DEAL_STAGE' && entityId !== 'STATUS')
+      return { stageGroupId: null, stageGroupName: null };
+
+    const map: Record<string, { id: string; name: string }> = {
+      '#C6DF9C': { id: 'new', name: 'Новые' },
+      '#ACD372': { id: 'inWork', name: 'В работе' },
+      '#588528': { id: 'waitingForVisit', name: 'Записан на ремонт' },
+      '#3E6617': { id: 'repairing', name: 'Ремонтируются' },
+      '#005824': { id: 'won', name: 'Успешная сделка' },
+      '#FE5957': { id: 'lose', name: 'Проигранная сделка' },
+      '#FF0000': { id: 'nonTarget', name: 'нецелевой лид' },
+    };
+
+    const entry = map[color.toUpperCase()];
+    return entry
+      ? { stageGroupId: entry.id, stageGroupName: entry.name }
+      : { stageGroupId: null, stageGroupName: null };
   }
 
   async uploadSources() {

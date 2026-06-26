@@ -39,7 +39,7 @@ export class RoappService {
     const isoDateWithoutMs = fromDate?.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
     const params: Params = {
-      requestPage: 1,
+      page: 1,
       [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']:
         isoDateWithoutMs,
     };
@@ -55,7 +55,7 @@ export class RoappService {
         const { page, total_pages } = paging;
         if (page === total_pages) break;
 
-        params.requestPage++;
+        params.page++;
         await delay(500);
       } catch (error) {
         console.log(error);

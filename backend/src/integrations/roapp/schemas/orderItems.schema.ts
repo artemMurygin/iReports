@@ -10,7 +10,7 @@ const uomSchema = z.object({
 // Сущность (товар или услуга)
 const entitySchema = z.object({
   id: z.number().int(),
-  type: z.enum(['product', 'service']),
+  type: z.string(),
   code: z.string(),
   sku: z.string(),
   sn_accounting: z.boolean(),

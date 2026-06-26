@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+function toStringOrNull(value: string | number | boolean | null | undefined) {
+  return value == null ? null : String(value);
+}
+
 export const OrderSchema = z
   .object({
     id: z.number().int().positive(),
@@ -61,7 +65,10 @@ export const OrderSchema = z
     warranty_date: z.string().nullable(),
     urgent: z.boolean(),
 
-    custom_fields: z.record(z.string(), z.string()),
+    custom_fields: z.record(
+      z.string(),
+      z.union([z.string(), z.number(), z.boolean()]).nullable(),
+    ),
 
     is_deduction_required: z.boolean(),
     ad_campaign_id: z.number().int().nullable(),
@@ -84,13 +91,13 @@ export const OrderSchema = z
     malfunction: d.malfunction,
     discountSum: d.discount_sum,
     payed: Math.round(Number(d.payed)),
-    deviceBrand: d.custom_fields.f138462 ?? null,
-    deviceModel: d.custom_fields.f138457 ?? null,
-    deviceSerial: d.custom_fields.f138470 ?? null,
-    deviceColor: d.custom_fields.f297762 ?? null,
-    failReason: d.custom_fields.f7639343 ?? null,
-    serviceSupplierName: d.custom_fields.f10532346 ?? null,
-    onlineManager: d.custom_fields.f7960378 ?? null,
+    deviceBrand: toStringOrNull(d.custom_fields.f138462),
+    deviceModel: toStringOrNull(d.custom_fields.f138457),
+    deviceSerial: toStringOrNull(d.custom_fields.f138470),
+    deviceColor: toStringOrNull(d.custom_fields.f297762),
+    failReason: toStringOrNull(d.custom_fields.f7639343),
+    serviceSupplierName: toStringOrNull(d.custom_fields.f10532346),
+    onlineManager: toStringOrNull(d.custom_fields.f7960378),
     dueDate: d.due_date ? new Date(d.due_date) : null,
     doneAt: d.done_at ? new Date(d.done_at) : null,
     modifiedAt: new Date(d.modified_at),

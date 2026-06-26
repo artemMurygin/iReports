@@ -21,39 +21,35 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.createApplicationContext(AppModule);
-  // const bitrix = app.get(BitrixSyncService);
+  const bitrix = app.get(BitrixSyncService);
   const roapp = app.get(RoappSyncService);
   const customRoApp = app.get(CustomApiRoappSyncService);
 
   const log = new UploadLogger('Инициализация данных');
-  // log.start();
-  // try {
-  //   log.start();
-  //   log.tick(await bitrix.uploadEmployees());
-  //   log.tick(await bitrix.uploadStages());
-  //   log.tick(await bitrix.uploadDeviceTypes());
-  //   log.tick(await bitrix.uploadLeadSources());
-  //   log.tick(await bitrix.uploadEnums());
-  //   log.tick(await bitrix.uploadSources());
-  // log.done();
-  // } catch (error) {
-  //   log.error(error);
-  //   throw new Error();
-  // }
+  try {
+    // log.tick(await bitrix.uploadEmployees());
+    log.tick(await bitrix.uploadStages());
+    // log.tick(await bitrix.uploadDeviceTypes());
+    // log.tick(await bitrix.uploadLeadSources());
+    // log.tick(await bitrix.uploadEnums());
+    // log.tick(await bitrix.uploadSources());
+    // await bitrix.uploadCreatedDeals(fromDate);
+    // await roapp.uploadEmployees();
+    // await roapp.uploadMarketingSources();
+    // await roapp.uploadOrderStatuses();
+    // await roapp.uploadOrderTypes();
+    // await roapp.uploadProductCategories();
+    // await roapp.uploadServiceCategories();
+    // await roapp.uploadServices();
+    // await roapp.uploadProducts();
+    // await customRoApp.uploadServicesBonuses();
+    // await roapp.uploadCreatedOrders(fromDate);
+    // await roapp.uploadOrderItems();
 
-  // await bitrix.uploadCreatedDeals(fromDate);
-  // await roapp.uploadEmployees();
-  // await roapp.uploadMarketingSources();
-  // await roapp.uploadOrderStatuses();
-  // await roapp.uploadOrderTypes();
-  // await roapp.uploadProductCategories();
-  // await roapp.uploadServiceCategories();
-  // await roapp.uploadServices();
-  // await roapp.uploadProducts();
-  // await roapp.uploadCreatedOrders(fromDate);
-  await roapp.uploadOrderItems();
-  // await customRoApp.uploadServicesBonuses();
-  await app.close();
+    await app.close();
+  } catch (error) {
+    throw new Error();
+  }
 }
 
 bootstrap();

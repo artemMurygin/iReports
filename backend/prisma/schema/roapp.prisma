@@ -125,7 +125,7 @@ model RoappProductCategory {
 model RoappOrder {
   id                  Int       @id @default(autoincrement())
   label               String    @db.VarChar(255)
-  bitrixDealId        Int?      @unique @map("bitrix_deal_id")
+  bitrixDealId        Int?      @map("bitrix_deal_id")
   clientId            Int?      @map("client_id")
   statusId            Int       @map("status_id")
   managerId           Int?      @map("manager_id")

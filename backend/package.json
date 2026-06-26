@@ -21,7 +21,8 @@
     "initial": "nest build && node dist/src/utils/initialUploadData.js",
     "initialProd": "node dist/src/utils/initialUploadData.js",
     "price:monitoring": "nest build && node dist/src/utils/runPriceMonitoring.js",
-    "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js"
+    "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js",
+    "export:roapp-orders": "nest build && node dist/src/utils/exportRoappOrders.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

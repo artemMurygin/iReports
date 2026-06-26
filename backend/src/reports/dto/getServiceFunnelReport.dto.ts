@@ -19,6 +19,7 @@ const getServiceFunnelReportSchema = z.object({
   sourceIds: queryNumbersArray,
   modelIds: queryNumbersArray,
   stageIds: queryStringsArray,
+  stageGroupIds: queryStringsArray,
 });
 
 export class getServiceFunnelReportDTO extends createZodDto(

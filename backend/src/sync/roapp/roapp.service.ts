@@ -2,6 +2,8 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { z } from 'zod';
 import { DatabaseService } from '../../database/database.service';
 import { RoappService } from '../../integrations/roapp/roapp.service';
+import { CustomApiRoappService } from '../../integrations/custom-api-roapp/custom-api-roapp.service';
+import { ServiceBonusById } from '../../integrations/custom-api-roapp/schemas/serviceBonusById.schema';
 import { OrderSchema } from '../../integrations/roapp/schemas/orders.schema';
 import { OrderItemSchema } from '../../integrations/roapp/schemas/orderItems.schema';
 import { UploadLogger } from '../../utils/logger';
@@ -17,6 +19,7 @@ export class RoappSyncService {
   constructor(
     private readonly DB: DatabaseService,
     private readonly Roapp: RoappService,
+    private readonly CustomApiRoapp: CustomApiRoappService,
   ) {}
 
   async uploadEmployees() {
@@ -314,115 +317,16 @@ export class RoappSyncService {
   }
 
   async uploadOrderItems(orderIds?: number[]) {
-    const orders = orderIds
-      ? await this.DB.roappOrder.findMany({
-          where: { id: { in: orderIds } },
-          select: { id: true, payed: true },
-        })
-      : await this.DB.roappOrder.findMany({
-          select: { id: true, payed: true },
-        });
-
-    const serviceBonusById = new Map(
-      (
-        await this.DB.roappService.findMany({
-          select: { id: true, engeneerBonus: true },
-        })
-      ).map((s) => [s.id, s.engeneerBonus]),
-    );
+    const orders = await this.getOrdersToUpdateItems(orderIds);
+    const serviceBonusById = await this.getServicesIdsAndEngeneerSalary();
 
     const log = new UploadLogger('Позиции заказов');
     log.start();
+
     try {
       for (const order of orders) {
-        const items = (await this.Roapp.fetchOrderItems(order.id)).filter(
-          (item): item is NonNullable<typeof item> => item != null,
-        );
-
-        await this.DB.roappProductsOrder.deleteMany({
-          where: { orderId: order.id },
-        });
-        await this.DB.roappServiceOrder.deleteMany({
-          where: { orderId: order.id },
-        });
-
-        const products = items.filter(
-          (item): item is ProductItem => 'productId' in item,
-        );
-        const services = items.filter(
-          (item): item is ServiceItem => 'serviceId' in item,
-        );
-
-        if (products.length) {
-          await this.DB.roappProductsOrder.createMany({
-            data: products.map((p) => ({
-              orderId: order.id,
-              productId: p.productId,
-              quantity: p.quantity,
-              price: p.price,
-              cost: p.cost,
-              engineerId: p.engineerId,
-            })),
-          });
-        }
-
-        const missingServiceIds = [
-          ...new Set(
-            services
-              .map((s) => s.serviceId)
-              .filter((id) => !serviceBonusById.has(id)),
-          ),
-        ];
-
-        for (const serviceId of missingServiceIds) {
-          const item = services.find((s) => s.serviceId === serviceId)!;
-          await this.DB.roappService.create({
-            data: {
-              id: serviceId,
-              name: item.serviceName,
-              engeneerBonus: 0,
-              price: item.price,
-              warranty: '',
-              duration: 0,
-              inCatalog: false,
-            },
-          });
-          serviceBonusById.set(serviceId, 0);
-        }
-
-        const serviceRows = services.map((s) => ({
-          orderId: order.id,
-          serviceId: s.serviceId,
-          quantity: s.quantity,
-          price: s.price,
-          cost: s.cost,
-          discount: s.discount,
-          inCatalog: s.inCatalog,
-          engineerId: s.engineerId,
-          engeneerSalary: (serviceBonusById.get(s.serviceId) ?? 0) * s.quantity,
-        }));
-
-        if (serviceRows.length) {
-          await this.DB.roappServiceOrder.createMany({ data: serviceRows });
-        }
-
-        const cost = Math.round(
-          products.reduce((sum, p) => sum + p.cost * p.quantity, 0),
-        );
-        const engineerSalary = serviceRows.reduce(
-          (sum, s) => sum + s.engeneerSalary,
-          0,
-        );
-        const managerSalary = Math.round(
-          0.1 * ((order.payed ?? 0) - cost - engineerSalary),
-        );
-
-        await this.DB.roappOrder.update({
-          where: { id: order.id },
-          data: { cost, engineerSalary, managerSalary },
-        });
-
-        log.tick(items.length);
+        const itemsCount = await this.uploadOrderItem(order, serviceBonusById);
+        log.tick(itemsCount);
         await delay(500);
       }
       log.done();
@@ -430,6 +334,144 @@ export class RoappSyncService {
       log.error(err instanceof Error ? err : new Error(String(err)));
       throw err;
     }
+  }
+
+  private async uploadOrderItem(
+    order: { id: number; payed: number | null },
+    serviceBonusById: Map<number, number>,
+  ) {
+    const items = (await this.Roapp.fetchOrderItems(order.id)).filter(
+      (item): item is NonNullable<typeof item> => item != null,
+    );
+
+    const products = items.filter(
+      (item): item is ProductItem => 'productId' in item,
+    );
+    const services = items.filter(
+      (item): item is ServiceItem => 'serviceId' in item,
+    );
+
+    const missingServiceIds = [
+      ...new Set(
+        services
+          .map((s) => s.serviceId)
+          .filter((id) => !serviceBonusById.has(id)),
+      ),
+    ];
+
+    const missingServices: ServiceBonusById[] = [];
+    for (const id of missingServiceIds) {
+      const service = await this.CustomApiRoapp.getServiceBonusById(id);
+      missingServices.push(service);
+      serviceBonusById.set(service.id, service.bonus);
+    }
+
+    await this.DB.$transaction(async (tx) => {
+      await tx.roappProductsOrder.deleteMany({
+        where: { orderId: order.id },
+      });
+      await tx.roappServiceOrder.deleteMany({
+        where: { orderId: order.id },
+      });
+
+      if (products.length) {
+        await tx.roappProductsOrder.createMany({
+          data: products.map((p) => ({
+            orderId: order.id,
+            productId: p.productId,
+            quantity: p.quantity,
+            price: p.price,
+            cost: p.cost,
+            engineerId: p.engineerId,
+          })),
+        });
+      }
+
+      if (missingServices.length) {
+        await tx.roappService.createMany({
+          data: missingServices.map((service) => ({
+            id: service.id,
+            name: service.name,
+            engeneerBonus: service.bonus,
+            price: service.price,
+            warranty: service.warranty,
+            duration: service.durationHours,
+            inCatalog: true,
+            categoryId: service.categoryId,
+          })),
+        });
+      }
+
+      const serviceRows = services.map((s) => ({
+        orderId: order.id,
+        serviceId: s.serviceId,
+        quantity: s.quantity,
+        price: s.price,
+        cost: s.cost,
+        discount: s.discount,
+        inCatalog: s.inCatalog,
+        engineerId: s.engineerId,
+        engeneerSalary: (serviceBonusById.get(s.serviceId) ?? 0) * s.quantity,
+      }));
+
+      if (serviceRows.length) {
+        await tx.roappServiceOrder.createMany({ data: serviceRows });
+      }
+
+      const { cost, engineerSalary, managerSalary } = this.calculateOrderKPIs(
+        products,
+        serviceRows,
+        order.payed,
+      );
+
+      await tx.roappOrder.update({
+        where: { id: order.id },
+        data: { cost, engineerSalary, managerSalary },
+      });
+    });
+
+    return items.length;
+  }
+
+  private async getOrdersToUpdateItems(orderIds?: number[]) {
+    if (orderIds) {
+      return this.DB.roappOrder.findMany({
+        where: { id: { in: orderIds }, managerSalary: null },
+        select: { id: true, payed: true },
+      });
+    }
+    return this.DB.roappOrder.findMany({
+      select: { id: true, payed: true },
+    });
+  }
+
+  private async getServicesIdsAndEngeneerSalary() {
+    return new Map(
+      (
+        await this.DB.roappService.findMany({
+          select: { id: true, engeneerBonus: true },
+        })
+      ).map((s) => [s.id, s.engeneerBonus]),
+    );
+  }
+
+  private calculateOrderKPIs(
+    products: ProductItem[],
+    serviceRows: { engeneerSalary: number }[],
+    payed: number | null,
+  ) {
+    const cost = Math.round(
+      products.reduce((sum, p) => sum + p.cost * p.quantity, 0),
+    );
+    const engineerSalary = serviceRows.reduce(
+      (sum, s) => sum + s.engeneerSalary,
+      0,
+    );
+    const managerSalary = Math.round(
+      0.1 * ((payed ?? 0) - cost - engineerSalary),
+    );
+
+    return { cost, engineerSalary, managerSalary };
   }
 
   private topoSort<T extends { id: number; parent_id: number | null }>(

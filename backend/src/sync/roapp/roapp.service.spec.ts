@@ -3,6 +3,7 @@ import { InternalServerErrorException } from '@nestjs/common';
 import { RoappSyncService } from './roapp.service';
 import { DatabaseService } from '../../database/database.service';
 import { RoappService } from '../../integrations/roapp/roapp.service';
+import { CustomApiRoappService } from '../../integrations/custom-api-roapp/custom-api-roapp.service';
 
 jest.mock('../../utils/logger', () => ({
   UploadLogger: jest.fn().mockImplementation(() => ({
@@ -46,6 +47,9 @@ describe('RoappSyncService', () => {
     fetchCreatedOrders: jest.Mock;
     fetchUpdatedOrders: jest.Mock;
     fetchOrderItems: jest.Mock;
+  };
+  let customApiRoapp: {
+    getServiceBonusById: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -91,12 +95,16 @@ describe('RoappSyncService', () => {
       fetchUpdatedOrders: jest.fn(),
       fetchOrderItems: jest.fn(),
     };
+    customApiRoapp = {
+      getServiceBonusById: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoappSyncService,
         { provide: DatabaseService, useValue: db },
         { provide: RoappService, useValue: roapp },
+        { provide: CustomApiRoappService, useValue: customApiRoapp },
       ],
     }).compile();
 
