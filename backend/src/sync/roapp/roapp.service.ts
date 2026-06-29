@@ -430,7 +430,7 @@ export class RoappSyncService {
         await tx.roappService.createMany({
           data: hiddenServices.map((service) => ({
             id: service.serviceId,
-            name: service.name,
+            name: service.serviceName,
             engeneerBonus: 0,
             price: service.price,
             warranty: '',
