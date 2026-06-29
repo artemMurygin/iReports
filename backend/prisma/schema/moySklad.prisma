@@ -1,9 +1,0 @@
-model MoySkladNomenclatureEmbedding {
-  id         Int                          @id @default(autoincrement())
-  externalId String? // ID из таблицы номенклатуры склада (пока без FK)
-  name       String
-  embedding  Unsupported("vector(1536)")?
-  createdAt  DateTime                     @default(now())
-
-  @@map("moySklad_nomenclature_embeddings")
-}
