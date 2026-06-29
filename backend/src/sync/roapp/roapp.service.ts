@@ -293,8 +293,9 @@ export class RoappSyncService {
   private async _uploadOrders(
     fromDate: Date | undefined,
     fetcher: (fromDate: Date | undefined) => AsyncGenerator<ParsedOrder[]>,
-  ) {
+  ): Promise<number[]> {
     const log = new UploadLogger('Заказы');
+    const uploadedIds: number[] = [];
     log.start();
     try {
       for await (const orders of fetcher(fromDate)) {
@@ -307,6 +308,7 @@ export class RoappSyncService {
             }),
           ),
         );
+        uploadedIds.push(...orders.map((o) => o.id));
         log.tick(orders.length);
       }
       log.done();
@@ -314,6 +316,7 @@ export class RoappSyncService {
       log.error(err instanceof Error ? err : new Error(String(err)));
       throw err;
     }
+    return uploadedIds;
   }
 
   async uploadOrderItems(orderIds?: number[]) {
@@ -348,7 +351,12 @@ export class RoappSyncService {
       (item): item is ProductItem => 'productId' in item,
     );
     const services = items.filter(
-      (item): item is ServiceItem => 'serviceId' in item,
+      (item): item is ServiceItem =>
+        'serviceId' in item && item.inCatalog === true,
+    );
+    const hiddenServices = items.filter(
+      (item): item is ServiceItem =>
+        'serviceId' in item && item.inCatalog === false,
     );
 
     const missingServiceIds = [
@@ -362,9 +370,28 @@ export class RoappSyncService {
     const missingServices: ServiceBonusById[] = [];
     for (const id of missingServiceIds) {
       const service = await this.CustomApiRoapp.getServiceBonusById(id);
+      if (!service) {
+        serviceBonusById.set(id, 0);
+        continue;
+      }
       missingServices.push(service);
       serviceBonusById.set(service.id, service.bonus);
     }
+
+    const existingProductIds = products.length
+      ? new Set(
+          (
+            await this.DB.roappProduct.findMany({
+              where: { id: { in: products.map((p) => p.productId) } },
+              select: { id: true },
+            })
+          ).map((p) => p.id),
+        )
+      : new Set<number>();
+
+    const validProducts = products.filter((p) =>
+      existingProductIds.has(p.productId),
+    );
 
     await this.DB.$transaction(async (tx) => {
       await tx.roappProductsOrder.deleteMany({
@@ -397,6 +424,21 @@ export class RoappSyncService {
             warranty: service.warranty,
             duration: service.durationHours,
             inCatalog: true,
+            categoryId: service.categoryId,
+          })),
+        });
+      }
+
+      if (hiddenServices.length) {
+        await tx.roappService.createMany({
+          data: missingServices.map((service) => ({
+            id: service.id,
+            name: service.name,
+            engeneerBonus: service.bonus,
+            price: service.price,
+            warranty: service.warranty,
+            duration: service.durationHours,
+            inCatalog: false,
             categoryId: service.categoryId,
           })),
         });

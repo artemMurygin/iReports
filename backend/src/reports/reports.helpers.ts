@@ -130,7 +130,7 @@ function getPeriodBucketStart(date: Date, groupBy: PeriodGroupBy): Date {
   return d;
 }
 
-function getPeriodBucketKey(date: Date, groupBy: PeriodGroupBy): string {
+export function getPeriodBucketKey(date: Date, groupBy: PeriodGroupBy): string {
   return getPeriodBucketStart(date, groupBy).toISOString().slice(0, 10);
 }
 
@@ -142,7 +142,7 @@ function incrementPeriod(date: Date, groupBy: PeriodGroupBy): Date {
   return next;
 }
 
-function generatePeriodKeys(
+export function generatePeriodKeys(
   momentFrom: Date,
   momentTo: Date,
   groupBy: PeriodGroupBy,

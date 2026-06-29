@@ -1,5 +1,6 @@
 import type { Deal } from '@/types/deal.ts';
 import { useMemo } from 'react';
+import { C_BRAND, C_POSITIVE, C_NEGATIVE, C_NEUTRAL } from '@/shared/constants/chartColors.ts';
 
 export interface FunnelRowData {
     id: string
@@ -65,11 +66,11 @@ function computeFunnel(deals: Deal[]): FunnelRowData[] {
     const conv = (a: number, b: number) => b > 0 ? Math.round((a / b) * 100) : 0
 
     return [
-        { id: 'all',       label: 'Всего заявок',       count: acc.allCount,       revenue: acc.allRevenue,       conversion: null,                                isBranch: false, color: '#94a3b8' },
-        { id: 'target',    label: 'Целевых заявок',      count: acc.targetCount,    revenue: acc.targetRevenue,    conversion: conv(acc.targetCount, acc.allCount),  isBranch: false, color: '#3b82f6' },
-        { id: 'came',      label: 'Приехали на ремонт',  count: acc.cameCount,      revenue: acc.cameRevenue,      conversion: conv(acc.cameCount, acc.targetCount), isBranch: false, color: '#f59e0b' },
-        { id: 'won',       label: 'Оплатили заказ',      count: acc.wonCount,       revenue: acc.wonRevenue,       conversion: conv(acc.wonCount, acc.cameCount),    isBranch: false, color: '#22c55e' },
-        { id: 'lose',      label: 'Отказные сделки',     count: acc.loseCount,      revenue: acc.loseRevenue,      conversion: null,                                isBranch: true,  color: '#ef4444' },
-        { id: 'nonTarget', label: 'Нецелевые сделки',    count: acc.nonTargetCount, revenue: acc.nonTargetRevenue, conversion: null,                                isBranch: true,  color: '#9ca3af' },
+        { id: 'all',       label: 'Всего заявок',       count: acc.allCount,       revenue: acc.allRevenue,       conversion: null,                                isBranch: false, color: C_NEUTRAL  },
+        { id: 'target',    label: 'Целевых заявок',      count: acc.targetCount,    revenue: acc.targetRevenue,    conversion: conv(acc.targetCount, acc.allCount),  isBranch: false, color: C_BRAND    },
+        { id: 'came',      label: 'Приехали на ремонт',  count: acc.cameCount,      revenue: acc.cameRevenue,      conversion: conv(acc.cameCount, acc.targetCount), isBranch: false, color: C_BRAND    },
+        { id: 'won',       label: 'Оплатили заказ',      count: acc.wonCount,       revenue: acc.wonRevenue,       conversion: conv(acc.wonCount, acc.cameCount),    isBranch: false, color: C_POSITIVE },
+        { id: 'lose',      label: 'Отказные сделки',     count: acc.loseCount,      revenue: acc.loseRevenue,      conversion: null,                                isBranch: true,  color: C_NEGATIVE },
+        { id: 'nonTarget', label: 'Нецелевые сделки',    count: acc.nonTargetCount, revenue: acc.nonTargetRevenue, conversion: null,                                isBranch: true,  color: C_NEUTRAL  },
     ]
 }

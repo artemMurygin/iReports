@@ -27,25 +27,24 @@ async function bootstrap() {
 
   const log = new UploadLogger('Инициализация данных');
   try {
-    // log.tick(await bitrix.uploadEmployees());
-    log.tick(await bitrix.uploadStages());
-    // log.tick(await bitrix.uploadDeviceTypes());
-    // log.tick(await bitrix.uploadLeadSources());
-    // log.tick(await bitrix.uploadEnums());
-    // log.tick(await bitrix.uploadSources());
-    // await bitrix.uploadCreatedDeals(fromDate);
-    // await roapp.uploadEmployees();
-    // await roapp.uploadMarketingSources();
-    // await roapp.uploadOrderStatuses();
-    // await roapp.uploadOrderTypes();
-    // await roapp.uploadProductCategories();
-    // await roapp.uploadServiceCategories();
-    // await roapp.uploadServices();
-    // await roapp.uploadProducts();
-    // await customRoApp.uploadServicesBonuses();
-    // await roapp.uploadCreatedOrders(fromDate);
-    // await roapp.uploadOrderItems();
-
+    await bitrix.uploadEmployees();
+    await bitrix.uploadStages();
+    await bitrix.uploadDeviceTypes();
+    await bitrix.uploadLeadSources();
+    await bitrix.uploadEnums();
+    await bitrix.uploadSources();
+    await bitrix.uploadCreatedDeals(fromDate);
+    await roapp.uploadEmployees();
+    await roapp.uploadMarketingSources();
+    await roapp.uploadOrderStatuses();
+    await roapp.uploadOrderTypes();
+    await roapp.uploadProductCategories();
+    await roapp.uploadServiceCategories();
+    await roapp.uploadServices();
+    await roapp.uploadProducts();
+    await customRoApp.uploadServicesBonuses();
+    const ordersIds = await roapp.uploadCreatedOrders(fromDate);
+    await roapp.uploadOrderItems(ordersIds);
     await app.close();
   } catch (error) {
     throw new Error();

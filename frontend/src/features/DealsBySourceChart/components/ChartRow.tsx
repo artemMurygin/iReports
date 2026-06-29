@@ -17,7 +17,7 @@ export function ChartRow({ item, max }: Props) {
             >
                 {name}
             </span>
-            <div className="flex-1 h-7 flex bg-gray-100 rounded-md overflow-hidden">
+            <div className="flex-1 h-7 flex rounded-md overflow-hidden" style={{ backgroundColor: 'var(--c-track)' }}>
                 <div
                     className="h-full flex items-center justify-start px-2 rounded-md transition-all"
                     style={{

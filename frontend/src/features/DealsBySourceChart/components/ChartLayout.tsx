@@ -8,7 +8,7 @@ type Props = {
 export function ChartLayout(props: Props){
     const { children } = props
     return (
-        <Card className="flex-1 shadow-sm flex flex-col min-h-0 max-h-[450px] overflow-auto">
+        <Card className="flex-1 shadow-sm flex flex-col min-h-0">
             {children}
         </ Card>
     )

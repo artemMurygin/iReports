@@ -7,5 +7,6 @@ import { CustomApiRoappModule } from '../../integrations/custom-api-roapp/custom
   controllers: [],
   providers: [RoappSyncService],
   imports: [RoappModule, CustomApiRoappModule],
+  exports: [RoappSyncService],
 })
 export class RoappSyncModule {}

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 
 const NAV = [
     { label: 'Воронка продаж', to: '/', disabled: false },
-    { label: 'Отчёт по услугам', to: '/services', disabled: true },
+    { label: 'Аналитика услуг', to: '/services', disabled: false },
     { label: 'Отчёт по зарплатам', to: '/salaries', disabled: true },
 ]
 

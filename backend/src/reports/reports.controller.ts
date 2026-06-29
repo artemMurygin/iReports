@@ -12,8 +12,13 @@ export class ReportsController {
     return this.reportsService.getServiceFunnelReport(filter);
   }
 
-  @Get('services-sold')
-  getServicesSoldReport(@Query() filter: getServicesSoldReportDTO) {
-    return this.reportsService.getServicesSoldReport(filter);
+  @Get('service-categories')
+  getServiceCategories() {
+    return this.reportsService.getServiceCategories();
+  }
+
+  @Get('services-analytics')
+  getServicesAnalytics(@Query() filter: getServicesSoldReportDTO) {
+    return this.reportsService.getServicesAnalytics(filter);
   }
 }

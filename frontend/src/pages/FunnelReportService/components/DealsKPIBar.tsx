@@ -1,12 +1,13 @@
 import { KpiCard } from '@/pages/FunnelReportService/components/KpiCard.tsx';
 import type { DashboardKPI } from '@/pages/FunnelReportService/types.ts';
+import { Grid } from '@/shared/ui/Grid';
 
 export function DealsKPIBar({ KPI }: { KPI: Partial<DashboardKPI> }) {
     return (
-        <div className="flex gap-2">
+        <Grid className="gap-2 grid-cols-5 xl:grid-cols-10">
             <KpiCard
                 label="Всего"
-                value={KPI.nonTargetDeals + KPI.targetedLeads}
+                value={(KPI.nonTargetDeals ?? '') + (KPI.targetedLeads ?? '')}
             />
             <KpiCard
                 label="Нецелевые"
@@ -42,8 +43,8 @@ export function DealsKPIBar({ KPI }: { KPI: Partial<DashboardKPI> }) {
             />
             <KpiCard
                 label="Конверсия"
-                value={`${KPI.conversionRate ?? ''}%`}
+                value={`${KPI.conversionRate ?? ''} %`}
             />
-        </ div>
+        </ Grid>
     )
 }

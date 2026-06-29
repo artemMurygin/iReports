@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { Layout } from './Layout'
 import { FunnelReportService } from '@/pages/FunnelReportService/FunnelReportService.tsx';
+import { ServicesAnalytics } from '@/pages/ServicesAnalytics/ServicesAnalytics.tsx';
 
 
 export const router = createBrowserRouter([
@@ -11,6 +12,10 @@ export const router = createBrowserRouter([
             {
                 index: true,
                 element: <FunnelReportService />,
+            },
+            {
+                path: 'services',
+                element: <ServicesAnalytics />,
             },
         ],
     },

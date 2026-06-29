@@ -16,7 +16,7 @@ export function FunnelRow({ item, max }: Props) {
             >
                 {label}
             </span>
-            <div className="flex-1 h-7 flex justify-center bg-gray-100 rounded-md overflow-hidden">
+            <div className="flex-1 h-7 flex justify-center rounded-md overflow-hidden" style={{ backgroundColor: 'var(--c-track)' }}>
                 <div
                     className="h-full flex items-center justify-center px-2 rounded-md transition-all"
                     style={{

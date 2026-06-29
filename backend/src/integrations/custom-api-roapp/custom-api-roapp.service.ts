@@ -38,11 +38,14 @@ export class CustomApiRoappService {
     }
   }
 
-  async getServiceBonusById(id: number): Promise<ServiceBonusById> {
+  async getServiceBonusById(id: number): Promise<ServiceBonusById | null> {
     try {
       const { data } = await this.customApiRoapp.instance.get(
         `/getServicesBonuses/${id}`,
       );
+      if (data?.message) {
+        return null;
+      }
       return ServiceBonusByIdSchema.parse(data);
     } catch (error) {
       throw new BadGatewayException(

@@ -1,5 +1,6 @@
 import type { Deal } from '@/types/deal.ts';
 import { useMemo } from 'react';
+import { C_BRAND } from '@/shared/constants/chartColors.ts';
 
 export interface LeadsBySourceItem {
     sourceId: string
@@ -11,24 +12,6 @@ export interface LeadsBySourceItem {
 }
 
 export function useStats(deals: Deal[]) {
-    const SOURCE_COLORS = [
-        "#D2C3A5",
-        "#BFAE8E",
-        "#7ED957",
-        "#6EE7A2",
-        "#4CD37A",
-        "#38C172",
-        "#AAB7BC",
-        "#2DAA5F",
-        "#8C7B5A",
-        "#6F7F86",
-        "#5A5A5A",
-        "#3E4549",
-        "#2F3437",
-        "#1F2326",
-        "#1A1E20"
-    ];
-
     const data = useMemo(() => computeLeadsBySource(deals), [deals])
 
     function computeLeadsBySource(deals: Deal[]): LeadsBySourceItem[] {
@@ -46,13 +29,13 @@ export function useStats(deals: Deal[]) {
         }
         return Array.from(map.entries())
             .sort(([, a], [, b]) => b.count - a.count)
-            .map(([sourceId, v], i) => ({
+            .map(([sourceId, v]) => ({
                 sourceId,
                 name: v.name,
                 count: v.count,
                 revenue: v.revenue,
                 wonCount: v.wonCount,
-                color: SOURCE_COLORS[i % SOURCE_COLORS.length],
+                color: C_BRAND,
             }))
     }
 
