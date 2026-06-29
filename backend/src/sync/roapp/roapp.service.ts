@@ -431,16 +431,17 @@ export class RoappSyncService {
 
       if (hiddenServices.length) {
         await tx.roappService.createMany({
-          data: missingServices.map((service) => ({
-            id: service.id,
+          data: hiddenServices.map((service) => ({
+            id: service.serviceId,
             name: service.name,
-            engeneerBonus: service.bonus,
+            engeneerBonus: 0,
             price: service.price,
-            warranty: service.warranty,
-            duration: service.durationHours,
+            warranty: '',
+            duration: 0,
             inCatalog: false,
-            categoryId: service.categoryId,
+            categoryId: null,
           })),
+          skipDuplicates: true,
         });
       }
 
