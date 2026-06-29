@@ -398,9 +398,9 @@ export class RoappSyncService {
         where: { orderId: order.id },
       });
 
-      if (products.length) {
+      if (validProducts.length) {
         await tx.roappProductsOrder.createMany({
-          data: products.map((p) => ({
+          data: validProducts.map((p) => ({
             orderId: order.id,
             productId: p.productId,
             quantity: p.quantity,
