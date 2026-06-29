@@ -50,25 +50,38 @@ export class BitrixService {
     let start = 0;
 
     while (true) {
+      const { data } = await this._getWithRetry('/crm.deal.list', {
+        params: { select: this.DEAL_FIELDS, filter, start },
+      });
+
+      const deals = data.result.map((deal: unknown) =>
+        BitrixDealSchema.parse(deal),
+      );
+
+      yield deals;
+
+      if (data.next == null) break;
+
+      start = data.next;
+      await delay(this.bitrix.BITRIX_DELAY_MS);
+    }
+  }
+
+  private async _getWithRetry(
+    url: string,
+    config?: AxiosRequestConfig,
+    retries = 4,
+  ): Promise<any> {
+    for (let attempt = 0; attempt < retries; attempt++) {
       try {
-        const { data } = await this.bitrix.instance.get('/crm.deal.list', {
-          params: { select: this.DEAL_FIELDS, filter, start },
-        });
-
-        const deals = data.result.map((deal: unknown) => {
-          return BitrixDealSchema.parse(deal);
-        });
-
-        yield deals;
-
-        if (data.next == null) break;
-
-        start = data.next;
-        await delay(this.bitrix.BITRIX_DELAY_MS);
+        return await this.bitrix.instance.get(url, config);
       } catch (err) {
-        throw new BadGatewayException(
-          `Failed to fetch sources from Bitrix24: ${err.message}`,
-        );
+        if (attempt === retries - 1) {
+          throw new BadGatewayException(
+            `Failed to fetch from Bitrix24: ${err.message}`,
+          );
+        }
+        await delay(2_000 * (attempt + 1));
       }
     }
   }
@@ -114,13 +127,7 @@ export class BitrixService {
   }
 
   private async _fetchData(url: string, params?: AxiosRequestConfig) {
-    try {
-      const { data } = await this.bitrix.instance.get(url, params);
-      return data.result;
-    } catch (err) {
-      throw new BadGatewayException(
-        `Failed to fetch sources from Bitrix24: ${err.message}`,
-      );
-    }
+    const { data } = await this._getWithRetry(url, params);
+    return data.result;
   }
 }

@@ -67,7 +67,7 @@ export function useFilters(){
             setSources(sourcesRes.data)
             setDeviceTypes(modelsRes.data)
             setStageGroups(stageGroupsRes.data)
-        }).catch(error => setError(error))
+        }).catch(err => setError(err?.message ?? 'Не удалось загрузить данные'))
     }, []);
 
     return {

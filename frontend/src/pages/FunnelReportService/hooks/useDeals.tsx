@@ -71,7 +71,7 @@ export function useDeals(
                 })
                 .catch(error => {
                     if (!axios.isCancel(error)) {
-                        setError(error)
+                        setError(error?.message ?? 'Не удалось загрузить данные')
                         setLoading(false)
                     }
                 })
