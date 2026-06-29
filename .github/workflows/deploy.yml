@@ -18,6 +18,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ../iRepair/iReports/iReports/
+            git fetch
             git pull origin main
             docker compose down
             docker compose build

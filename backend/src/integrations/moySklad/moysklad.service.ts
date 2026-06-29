@@ -10,6 +10,8 @@ import { ProductSchema } from './schemas/products.schema';
 import { ServiceSchema } from './schemas/services.schema';
 import { EmployeeSchema } from './schemas/employees.schema';
 import { CounterpartySchema } from './schemas/counterparties.schema';
+import { DemandSchema } from './schemas/demands.schema';
+import { ProductFolderSchema } from './schemas/productFolders.schema';
 import { delay } from '../../utils/delay';
 
 const PAGE_LIMIT = 1000;
@@ -69,6 +71,10 @@ export class MoyskladService {
     yield* this._fetchPaged('/entity/product', ProductSchema);
   }
 
+  async *fetchProductFolders() {
+    yield* this._fetchPaged('/entity/productfolder', ProductFolderSchema);
+  }
+
   async *fetchServices() {
     yield* this._fetchPaged('/entity/service', ServiceSchema);
   }
@@ -95,6 +101,13 @@ export class MoyskladService {
       CounterpartySchema,
       updatedFrom,
     );
+  }
+
+  async *fetchDemands(updatedFrom?: Date) {
+    yield* this._fetchPaged('/entity/demand', DemandSchema, updatedFrom, {
+      expand: 'positions,positions.assortment',
+      fields: 'stock',
+    });
   }
 
   async *fetchAssortment(
@@ -152,12 +165,14 @@ export class MoyskladService {
     url: string,
     schema: T,
     updatedFrom?: Date,
+    extraParams?: Record<string, string>,
   ): AsyncGenerator<z.output<T>[]> {
     let offset = 0;
 
-    const baseParams: Partial<MoyskladListParams> = {
+    const baseParams: Partial<MoyskladListParams> & Record<string, unknown> = {
       limit: PAGE_LIMIT,
       ...(updatedFrom && { updatedFrom: updatedFrom.toISOString() }),
+      ...extraParams,
     };
 
     while (true) {
