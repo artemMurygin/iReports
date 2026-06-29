@@ -32,7 +32,7 @@ export class CronService {
       }
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to fetch updated deals from Bitrix24: ${message}. Will retry next tick from ${this.failedSince.toISOString()}`,
+        `Failed to fetch updated deals: ${message}. Will retry next tick from ${this.failedSince.toISOString()}`,
       );
       logCronError('getUpdatesDeals', error, { since: since.toISOString() });
     }

@@ -27,13 +27,13 @@ async function bootstrap() {
 
   const log = new UploadLogger('Инициализация данных');
   try {
-    await bitrix.uploadEmployees();
-    await bitrix.uploadStages();
-    await bitrix.uploadDeviceTypes();
-    await bitrix.uploadLeadSources();
-    await bitrix.uploadEnums();
-    await bitrix.uploadSources();
-    await bitrix.uploadCreatedDeals(fromDate);
+    // await bitrix.uploadEmployees();
+    // await bitrix.uploadStages();
+    // await bitrix.uploadDeviceTypes();
+    // await bitrix.uploadLeadSources();
+    // await bitrix.uploadEnums();
+    // await bitrix.uploadSources();
+    // await bitrix.uploadCreatedDeals(fromDate);
     await roapp.uploadEmployees();
     await roapp.uploadMarketingSources();
     await roapp.uploadOrderStatuses();
