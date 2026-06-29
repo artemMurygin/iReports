@@ -370,10 +370,7 @@ export class RoappSyncService {
     const missingServices: ServiceBonusById[] = [];
     for (const id of missingServiceIds) {
       const service = await this.CustomApiRoapp.getServiceBonusById(id);
-      if (!service) {
-        serviceBonusById.set(id, 0);
-        continue;
-      }
+      if (!service) continue;
       missingServices.push(service);
       serviceBonusById.set(service.id, service.bonus);
     }
@@ -445,17 +442,19 @@ export class RoappSyncService {
         });
       }
 
-      const serviceRows = services.map((s) => ({
-        orderId: order.id,
-        serviceId: s.serviceId,
-        quantity: s.quantity,
-        price: s.price,
-        cost: s.cost,
-        discount: s.discount,
-        inCatalog: s.inCatalog,
-        engineerId: s.engineerId,
-        engeneerSalary: (serviceBonusById.get(s.serviceId) ?? 0) * s.quantity,
-      }));
+      const serviceRows = services
+        .filter((s) => serviceBonusById.has(s.serviceId))
+        .map((s) => ({
+          orderId: order.id,
+          serviceId: s.serviceId,
+          quantity: s.quantity,
+          price: s.price,
+          cost: s.cost,
+          discount: s.discount,
+          inCatalog: s.inCatalog,
+          engineerId: s.engineerId,
+          engeneerSalary: serviceBonusById.get(s.serviceId)! * s.quantity,
+        }));
 
       if (serviceRows.length) {
         await tx.roappServiceOrder.createMany({ data: serviceRows });
