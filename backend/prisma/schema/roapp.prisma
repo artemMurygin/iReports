@@ -133,7 +133,7 @@ model RoappOrder {
   closedById          Int?      @map("closed_by_id")
   orderTypeId         Int       @map("order_type_id")
   marketingSource     Int?      @map("ad_campaign_id")
-  malfunction         String?   @db.VarChar(255)
+  malfunction         String?   @db.Text
   discountSum         Int?      @map("discount_sum")
   payed               Int?
   cost                Int?
@@ -143,7 +143,7 @@ model RoappOrder {
   deviceModel         String?   @map("device_model") @db.VarChar(255)
   deviceSerial        String?   @map("device_serial") @db.VarChar(255)
   deviceColor         String?   @map("device_color") @db.VarChar(255)
-  failReason          String?   @map("fail_reason") @db.VarChar(255)
+  failReason          String?   @map("fail_reason") @db.Text
   serviceSupplierName String?   @map("service_supplier_name") @db.VarChar(255)
   onlineManager       String?   @map("online_manager") @db.VarChar(255)
   dueDate             DateTime? @map("due_date") @db.Date
