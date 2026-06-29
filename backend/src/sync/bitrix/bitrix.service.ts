@@ -36,11 +36,22 @@ export class BitrixSyncService {
     const log = new UploadLogger(label);
     log.start();
 
+    const sources = await this.DB.bitrixPointOfContact.findMany({
+      select: { id: true },
+    });
+    const validSourceIds = new Set(sources.map((s) => s.id));
+
     try {
       for await (const deals of fetcher(fromDate)) {
         await Promise.all(
           deals.map((deal: RawBitrixDeal) => {
             const data = this.mapFields(deal);
+            if (
+              data.pointOfContactId &&
+              !validSourceIds.has(data.pointOfContactId)
+            ) {
+              data.pointOfContactId = null;
+            }
             return this.DB.bitrixDeal.upsert({
               where: { id: Number(deal.ID) },
               create: data,
