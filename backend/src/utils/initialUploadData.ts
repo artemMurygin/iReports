@@ -39,17 +39,17 @@ async function bootstrap() {
     }
 
     if (erp.includes('R')) {
-      await roapp.uploadEmployees();
-      await roapp.uploadMarketingSources();
-      await roapp.uploadOrderStatuses();
-      await roapp.uploadOrderTypes();
-      await roapp.uploadProductCategories();
-      await roapp.uploadServiceCategories();
-      await roapp.uploadServices();
-      await roapp.uploadProducts();
-      await customRoApp.uploadServicesBonuses();
-      const ordersIds = await roapp.uploadCreatedOrders(fromDate);
-      await roapp.uploadOrderItems(ordersIds);
+      // await roapp.uploadEmployees();
+      // await roapp.uploadMarketingSources();
+      // await roapp.uploadOrderStatuses();
+      // await roapp.uploadOrderTypes();
+      // await roapp.uploadProductCategories();
+      // await roapp.uploadServiceCategories();
+      // await roapp.uploadServices();
+      // await roapp.uploadProducts();
+      // await customRoApp.uploadServicesBonuses();
+      // const ordersIds = await roapp.uploadCreatedOrders(fromDate);
+      await roapp.uploadOrderItems();
     }
 
     await app.close();

@@ -174,7 +174,7 @@ export class MoyskladService {
         if (fetched >= meta.size) break;
 
         offset = fetched;
-        await delay(300);
+        await delay(400);
       } catch (error) {
         await this.dumpError(error);
         throw new BadGatewayException(
