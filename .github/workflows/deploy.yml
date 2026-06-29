@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to server
+        id: deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -21,3 +22,17 @@ jobs:
             docker compose down
             docker compose build
             docker compose up -d
+
+      - name: Notify Telegram
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            TEXT="✅ *iReports* задеплоен успешно%0A🌿 Branch: \`${{ github.ref_name }}\`%0A📝 Commit: \`${{ github.sha }}\`%0A👤 Author: ${{ github.actor }}"
+          else
+            TEXT="❌ *iReports* деплой упал%0A🌿 Branch: \`${{ github.ref_name }}\`%0A📝 Commit: \`${{ github.sha }}\`%0A👤 Author: ${{ github.actor }}"
+          fi
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$TEXT" \
+            -d parse_mode="Markdown"

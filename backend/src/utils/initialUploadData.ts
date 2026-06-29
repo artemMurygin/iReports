@@ -54,7 +54,8 @@ async function bootstrap() {
 
     await app.close();
   } catch (error) {
-    throw new Error();
+    console.error(error);
+    process.exit(1);
   }
 }
 
