@@ -355,8 +355,7 @@ export class RoappSyncService {
         'serviceId' in item && item.inCatalog === true,
     );
     const hiddenServices = items.filter(
-      (item): item is ServiceItem =>
-        'serviceId' in item && item.inCatalog === false,
+      (item): item is ServiceItem => 'serviceId' in item && !item.inCatalog,
     );
 
     const missingServiceIds = [
