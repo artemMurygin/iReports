@@ -1,0 +1,117 @@
+model MoySkladEmployee {
+  id         String  @id
+  name       String
+  firstName  String? @map("first_name")
+  lastName   String? @map("last_name")
+  middleName String? @map("middle_name")
+  email      String?
+  phone      String?
+  position   String?
+  archived   Boolean @default(false)
+
+  onlineDemands  MoySkladDemand[] @relation("DemandOnlineManager")
+  offlineDemands MoySkladDemand[] @relation("DemandOfflineManager")
+
+  @@map("moy_sklad_employees")
+}
+
+model MoySkladProductFolder {
+  id       String  @id
+  name     String
+  pathName String  @map("path_name")
+  parentId String? @map("parent_id")
+  archived Boolean @default(false)
+
+  parent   MoySkladProductFolder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children MoySkladProductFolder[] @relation("FolderTree")
+  products MoySkladProduct[]
+  services MoySkladService[]
+
+  @@map("moy_sklad_product_folders")
+}
+
+model MoySkladProduct {
+  id          String   @id
+  name        String
+  code        String?
+  article     String?
+  description String?  @db.Text
+  salePrice   Int      @map("sale_price")
+  buyPrice    Int      @map("buy_price")
+  folderId    String?  @map("folder_id")
+  archived    Boolean  @default(false)
+  updatedAt   DateTime @map("updated_at")
+
+  folder    MoySkladProductFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  positions MoySkladDemandPosition[]
+
+  @@map("moy_sklad_products")
+}
+
+model MoySkladService {
+  id          String   @id
+  name        String
+  code        String?
+  description String?  @db.Text
+  salePrice   Int      @map("sale_price")
+  folderId    String?  @map("folder_id")
+  archived    Boolean  @default(false)
+  updatedAt   DateTime @map("updated_at")
+
+  folder    MoySkladProductFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  positions MoySkladDemandPosition[]
+
+  @@map("moy_sklad_services")
+}
+
+model MoySkladDemand {
+  id               String    @id
+  name             String
+  moment           DateTime
+  createdAt        DateTime  @map("created_at")
+  sum              Int
+  payedSum         Int       @map("payed_sum")
+  agentId          String?   @map("agent_id")
+  agentName        String?   @map("agent_name")
+  stateId          String?   @map("state_id")
+  stateName        String?   @map("state_name")
+  salesChannelId   String?   @map("sales_channel_id")
+  salesChannelName String?   @map("sales_channel_name")
+  onlineManagerId  String?   @map("online_manager_id")
+  offlineManagerId String?   @map("offline_manager_id")
+  customerOrderId  String?   @map("customer_order_id")
+  description      String?   @db.Text
+
+  onlineManager  MoySkladEmployee?      @relation("DemandOnlineManager", fields: [onlineManagerId], references: [id], onDelete: SetNull)
+  offlineManager MoySkladEmployee?      @relation("DemandOfflineManager", fields: [offlineManagerId], references: [id], onDelete: SetNull)
+  positions      MoySkladDemandPosition[]
+
+  @@index([moment])
+  @@index([onlineManagerId])
+  @@index([offlineManagerId])
+  @@index([salesChannelId])
+  @@map("moy_sklad_demands")
+}
+
+model MoySkladDemandPosition {
+  id             String  @id
+  demandId       String  @map("demand_id")
+  productId      String? @map("product_id")
+  serviceId      String? @map("service_id")
+  assortmentName String  @map("assortment_name")
+  quantity       Float
+  price          Int
+  discount       Float   @default(0)
+  sum            Int
+  cost           Int
+  profit         Int
+
+  demand  MoySkladDemand   @relation(fields: [demandId], references: [id], onDelete: Cascade)
+  product MoySkladProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  service MoySkladService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([demandId])
+  @@index([productId])
+  @@index([serviceId])
+  @@map("moy_sklad_demand_positions")
+}

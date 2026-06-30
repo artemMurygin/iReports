@@ -5,6 +5,7 @@ import { BitrixSyncService } from '../sync/bitrix/bitrix.service';
 import { UploadLogger } from './logger';
 import { RoappSyncService } from '../sync/roapp/roapp.service';
 import { CustomApiRoappSyncService } from '../sync/custom-api-roapp/custom-api-roapp.service';
+import { MoySkladSyncService } from '../sync/moySklad/moySklad.service';
 
 async function bootstrap() {
   const dateArg = process.argv[2];
@@ -25,6 +26,7 @@ async function bootstrap() {
   const bitrix = app.get(BitrixSyncService);
   const roapp = app.get(RoappSyncService);
   const customRoApp = app.get(CustomApiRoappSyncService);
+  const moySklad = app.get(MoySkladSyncService);
 
   const log = new UploadLogger('Инициализация данных');
   try {
@@ -36,6 +38,14 @@ async function bootstrap() {
       await bitrix.uploadEnums();
       await bitrix.uploadSources();
       await bitrix.uploadCreatedDeals(fromDate);
+    }
+
+    if (erp.includes('M')) {
+      await moySklad.uploadEmployees();
+      await moySklad.uploadProductFolders();
+      await moySklad.uploadProducts();
+      await moySklad.uploadServices();
+      await moySklad.uploadDemands(fromDate);
     }
 
     if (erp.includes('R')) {
