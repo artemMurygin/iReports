@@ -176,20 +176,19 @@ export function SettingsView() {
     const [newScaleName, setNewScaleName] = useState('')
 
     async function reload() {
-        const [rRes, sRes, dRes, mRes, rsRes, rpRes] = await Promise.all([
+        const [rRes, sRes, dRes] = await Promise.all([
             salaryApi.getRules(),
             salaryApi.getScales(),
             salaryApi.getDirections(),
-            salaryApi.getMoySkladFolders(),
-            salaryApi.getRoappServiceCategories(),
-            salaryApi.getRoappProductCategories(),
         ])
         setRules(rRes.data)
         setScales(sRes.data)
         setDirections(dRes.data)
-        setMoySkladFolders(mRes.data)
-        setRoappServiceCategories(rsRes.data)
-        setRoappProductCategories(rpRes.data)
+
+        // Категории — некритичные, грузим отдельно чтобы не блокировать основные данные
+        salaryApi.getMoySkladFolders().then((r) => setMoySkladFolders(r.data)).catch(() => {})
+        salaryApi.getRoappServiceCategories().then((r) => setRoappServiceCategories(r.data)).catch(() => {})
+        salaryApi.getRoappProductCategories().then((r) => setRoappProductCategories(r.data)).catch(() => {})
     }
 
     useEffect(() => {
