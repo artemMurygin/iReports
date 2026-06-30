@@ -8,6 +8,7 @@ model RoappEmployee {
   ordersAsCloser  RoappOrder[]         @relation("OrderClosedBy")
   productsOrders  RoappProductsOrder[]
   serviceOrders   RoappServiceOrder[]
+  bitrixEmployee  BitrixEmployee?
 
   @@map("roapp_employees")
 }
@@ -103,6 +104,7 @@ model RoappServiceCategory {
   servicesAsDevice   RoappService[] @relation("device")
   servicesAsType     RoappService[] @relation("serviceType")
   servicesAsSeries   RoappService[] @relation("series")
+  targets            SalaryReportTarget[]
 
   @@index([parentId])
   @@map("roapp_service_categories")
@@ -117,6 +119,7 @@ model RoappProductCategory {
   children RoappProductCategory[] @relation("ProductCategoryHierarchy")
 
   products RoappProduct[]
+  targets  SalaryReportTarget[]
 
   @@index([parentId])
   @@map("roapp_product_categories")

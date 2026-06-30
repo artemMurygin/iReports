@@ -11,6 +11,7 @@ model MoySkladEmployee {
 
   onlineDemands  MoySkladDemand[] @relation("DemandOnlineManager")
   offlineDemands MoySkladDemand[] @relation("DemandOfflineManager")
+  bitrixEmployee BitrixEmployee?
 
   @@map("moy_sklad_employees")
 }
@@ -26,6 +27,7 @@ model MoySkladProductFolder {
   children MoySkladProductFolder[] @relation("FolderTree")
   products MoySkladProduct[]
   services MoySkladService[]
+  targets  SalaryReportTarget[]
 
   @@map("moy_sklad_product_folders")
 }
