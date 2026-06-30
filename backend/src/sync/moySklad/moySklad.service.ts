@@ -254,41 +254,79 @@ export class MoySkladSyncService {
               where: { demandId: demand.id },
             });
 
-            if (positions.length) {
-              await tx.moySkladDemandPosition.createMany({
-                data: positions
-                  .filter((p) => p.assortment != null)
-                  .map((p) => {
-                    const qty = p.quantity;
-                    const price = Math.round(p.price);
-                    const discount = p.discount;
-                    const sum = Math.round(price * qty * (1 - discount / 100));
-                    const buyPrice = Math.round(p.stock?.cost ?? 0);
-                    const cost = Math.round(buyPrice * qty);
-                    const profit = sum - cost;
-                    const assortmentType = p.assortment!.meta.type;
+            const validPositions = positions.filter(
+              (p) => p.assortment != null,
+            );
 
-                    return {
-                      id: p.id,
-                      demandId: demand.id,
-                      productId:
-                        assortmentType === 'product'
-                          ? p.assortment!.id
-                          : null,
-                      serviceId:
-                        assortmentType === 'service'
-                          ? p.assortment!.id
-                          : null,
-                      assortmentName: p.assortment!.name,
-                      quantity: qty,
-                      price,
-                      discount,
-                      sum,
-                      cost,
-                      profit,
-                    };
-                  }),
-              });
+            if (validPositions.length) {
+              const productIds = validPositions
+                .filter((p) => p.assortment!.meta.type === 'product')
+                .map((p) => p.assortment!.id);
+              const serviceIds = validPositions
+                .filter((p) => p.assortment!.meta.type === 'service')
+                .map((p) => p.assortment!.id);
+
+              const existingProductIds = productIds.length
+                ? new Set(
+                    (
+                      await tx.moySkladProduct.findMany({
+                        where: { id: { in: productIds } },
+                        select: { id: true },
+                      })
+                    ).map((p) => p.id),
+                  )
+                : new Set<string>();
+
+              const existingServiceIds = serviceIds.length
+                ? new Set(
+                    (
+                      await tx.moySkladService.findMany({
+                        where: { id: { in: serviceIds } },
+                        select: { id: true },
+                      })
+                    ).map((s) => s.id),
+                  )
+                : new Set<string>();
+
+              const rows = validPositions
+                .filter((p) => {
+                  const type = p.assortment!.meta.type;
+                  if (type === 'product')
+                    return existingProductIds.has(p.assortment!.id);
+                  if (type === 'service')
+                    return existingServiceIds.has(p.assortment!.id);
+                  return false;
+                })
+                .map((p) => {
+                  const qty = p.quantity;
+                  const price = Math.round(p.price);
+                  const discount = p.discount;
+                  const sum = Math.round(price * qty * (1 - discount / 100));
+                  const buyPrice = Math.round(p.stock?.cost ?? 0);
+                  const cost = Math.round(buyPrice * qty);
+                  const profit = sum - cost;
+                  const assortmentType = p.assortment!.meta.type;
+
+                  return {
+                    id: p.id,
+                    demandId: demand.id,
+                    productId:
+                      assortmentType === 'product' ? p.assortment!.id : null,
+                    serviceId:
+                      assortmentType === 'service' ? p.assortment!.id : null,
+                    assortmentName: p.assortment!.name,
+                    quantity: qty,
+                    price,
+                    discount,
+                    sum,
+                    cost,
+                    profit,
+                  };
+                });
+
+              if (rows.length) {
+                await tx.moySkladDemandPosition.createMany({ data: rows });
+              }
             }
           });
 
