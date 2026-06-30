@@ -4,7 +4,7 @@ import { NavLink } from 'react-router-dom';
 const NAV = [
     { label: 'Воронка продаж', to: '/', disabled: false },
     { label: 'Аналитика услуг', to: '/services', disabled: false },
-    { label: 'Отчёт по зарплатам', to: '/salaries', disabled: true },
+    { label: 'Отчёт по зарплатам', to: '/salaries', disabled: false },
 ]
 
 export function Header(){
