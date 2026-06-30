@@ -104,10 +104,13 @@ export class MoyskladService {
   }
 
   async *fetchDemands(updatedFrom?: Date) {
-    yield* this._fetchPaged('/entity/demand', DemandSchema, updatedFrom, {
-      expand: 'positions,positions.assortment',
-      fields: 'stock',
-    });
+    yield* this._fetchPaged(
+      '/entity/demand',
+      DemandSchema,
+      updatedFrom,
+      { expand: 'positions,positions.assortment', fields: 'stock' },
+      100,
+    );
   }
 
   async *fetchAssortment(
@@ -166,11 +169,12 @@ export class MoyskladService {
     schema: T,
     updatedFrom?: Date,
     extraParams?: Record<string, string>,
+    pageSize: number = PAGE_LIMIT,
   ): AsyncGenerator<z.output<T>[]> {
     let offset = 0;
 
     const baseParams: Partial<MoyskladListParams> & Record<string, unknown> = {
-      limit: PAGE_LIMIT,
+      limit: pageSize,
       ...(updatedFrom && { updatedFrom: updatedFrom.toISOString() }),
       ...extraParams,
     };
