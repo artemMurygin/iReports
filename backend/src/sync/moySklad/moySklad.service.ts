@@ -259,43 +259,74 @@ export class MoySkladSyncService {
             );
 
             if (validPositions.length) {
-              const productIds = validPositions
-                .filter((p) => p.assortment!.meta.type === 'product')
-                .map((p) => p.assortment!.id);
-              const serviceIds = validPositions
-                .filter((p) => p.assortment!.meta.type === 'service')
-                .map((p) => p.assortment!.id);
+              const productPositions = validPositions.filter(
+                (p) => p.assortment!.meta.type === 'product',
+              );
+              const servicePositions = validPositions.filter(
+                (p) => p.assortment!.meta.type === 'service',
+              );
 
-              const existingProductIds = productIds.length
-                ? new Set(
-                    (
-                      await tx.moySkladProduct.findMany({
-                        where: { id: { in: productIds } },
-                        select: { id: true },
-                      })
-                    ).map((p) => p.id),
-                  )
-                : new Set<string>();
+              if (productPositions.length) {
+                const existingProductIds = new Set(
+                  (
+                    await tx.moySkladProduct.findMany({
+                      where: {
+                        id: { in: productPositions.map((p) => p.assortment!.id) },
+                      },
+                      select: { id: true },
+                    })
+                  ).map((p) => p.id),
+                );
+                const missingProducts = productPositions.filter(
+                  (p) => !existingProductIds.has(p.assortment!.id),
+                );
+                if (missingProducts.length) {
+                  await tx.moySkladProduct.createMany({
+                    data: missingProducts.map((p) => ({
+                      id: p.assortment!.id,
+                      name: p.assortment!.name,
+                      salePrice: 0,
+                      buyPrice: 0,
+                      archived: false,
+                      updatedAt: new Date(),
+                    })),
+                    skipDuplicates: true,
+                  });
+                }
+              }
 
-              const existingServiceIds = serviceIds.length
-                ? new Set(
-                    (
-                      await tx.moySkladService.findMany({
-                        where: { id: { in: serviceIds } },
-                        select: { id: true },
-                      })
-                    ).map((s) => s.id),
-                  )
-                : new Set<string>();
+              if (servicePositions.length) {
+                const existingServiceIds = new Set(
+                  (
+                    await tx.moySkladService.findMany({
+                      where: {
+                        id: { in: servicePositions.map((p) => p.assortment!.id) },
+                      },
+                      select: { id: true },
+                    })
+                  ).map((s) => s.id),
+                );
+                const missingServices = servicePositions.filter(
+                  (p) => !existingServiceIds.has(p.assortment!.id),
+                );
+                if (missingServices.length) {
+                  await tx.moySkladService.createMany({
+                    data: missingServices.map((p) => ({
+                      id: p.assortment!.id,
+                      name: p.assortment!.name,
+                      salePrice: 0,
+                      archived: false,
+                      updatedAt: new Date(),
+                    })),
+                    skipDuplicates: true,
+                  });
+                }
+              }
 
               const rows = validPositions
                 .filter((p) => {
                   const type = p.assortment!.meta.type;
-                  if (type === 'product')
-                    return existingProductIds.has(p.assortment!.id);
-                  if (type === 'service')
-                    return existingServiceIds.has(p.assortment!.id);
-                  return false;
+                  return type === 'product' || type === 'service';
                 })
                 .map((p) => {
                   const qty = p.quantity;
