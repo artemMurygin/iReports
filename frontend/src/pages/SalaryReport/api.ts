@@ -21,9 +21,19 @@ export const salaryApi = {
         api.get<MotivationTarget[]>('/salary-report/targets', {
             params: directionId ? { directionId } : {},
         }),
-    createTarget: (data: { directionId: number; metric: 'revenue' | 'margin'; moySkladFolderId?: string }) =>
+    createTarget: (data: { directionId: number; metric: 'revenue' | 'margin'; moySkladFolderId?: string; roappServiceCategoryId?: number; roappProductCategoryId?: number }) =>
         api.post<MotivationTarget>('/salary-report/targets', data),
+    ensureTarget: (data: { directionId: number; metric: 'revenue' | 'margin'; moySkladFolderId?: string; roappServiceCategoryId?: number; roappProductCategoryId?: number }) =>
+        api.post<MotivationTarget>('/salary-report/targets/ensure', data),
     deleteTarget: (id: number) => api.delete(`/salary-report/targets/${id}`),
+
+    // Category lookups
+    getMoySkladFolders: () =>
+        api.get<{ id: string; name: string; pathName: string; parentId: string | null }[]>('/salary-report/categories/moy-sklad-folders'),
+    getRoappServiceCategories: () =>
+        api.get<{ id: number; name: string; parentId: number | null; depth: number }[]>('/salary-report/categories/roapp-service'),
+    getRoappProductCategories: () =>
+        api.get<{ id: number; name: string; parentId: number | null }[]>('/salary-report/categories/roapp-products'),
 
     // Scales
     getScales: () => api.get<CoefficientScale[]>('/salary-report/scales'),

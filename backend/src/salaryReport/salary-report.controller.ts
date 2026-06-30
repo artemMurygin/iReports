@@ -62,6 +62,26 @@ export class SalaryReportController {
     return this.service.createTarget(dto);
   }
 
+  @Post('targets/ensure')
+  ensureTarget(@Body() dto: CreateTargetDto) {
+    return this.service.ensureTarget(dto);
+  }
+
+  @Get('categories/moy-sklad-folders')
+  getMoySkladFolders() {
+    return this.service.findMoySkladFolders();
+  }
+
+  @Get('categories/roapp-service')
+  getRoappServiceCategories() {
+    return this.service.findRoappServiceCategories();
+  }
+
+  @Get('categories/roapp-products')
+  getRoappProductCategories() {
+    return this.service.findRoappProductCategories();
+  }
+
   @Patch('targets/:id')
   updateTarget(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTargetDto) {
     return this.service.updateTarget(id, dto);

@@ -115,9 +115,57 @@ export class SalaryReportService {
       include: {
         direction: true,
         scale: { include: { points: { orderBy: { fulfillmentPct: 'asc' } } } },
-        items: { include: { target: true } },
+        items: {
+          include: {
+            target: {
+              include: {
+                direction: true,
+                moySkladFolder: { select: { id: true, name: true } },
+                roappServiceCategory: { select: { id: true, name: true } },
+                roappProductCategory: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
       },
       orderBy: { id: 'asc' },
+    });
+  }
+
+  async ensureTarget(dto: CreateTargetDto) {
+    const existing = await this.db.salaryReportTarget.findFirst({
+      where: {
+        directionId: dto.directionId,
+        metric: dto.metric,
+        moySkladFolderId: dto.moySkladFolderId ?? null,
+        roappServiceCategoryId: dto.roappServiceCategoryId ?? null,
+        roappProductCategoryId: dto.roappProductCategoryId ?? null,
+      },
+      include: { direction: true },
+    });
+    if (existing) return existing;
+    return this.createTarget(dto);
+  }
+
+  findMoySkladFolders() {
+    return this.db.moySkladProductFolder.findMany({
+      where: { archived: false },
+      select: { id: true, name: true, pathName: true, parentId: true },
+      orderBy: { pathName: 'asc' },
+    });
+  }
+
+  findRoappServiceCategories() {
+    return this.db.roappServiceCategory.findMany({
+      select: { id: true, name: true, parentId: true, depth: true },
+      orderBy: [{ depth: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  findRoappProductCategories() {
+    return this.db.roappProductCategory.findMany({
+      select: { id: true, name: true, parentId: true },
+      orderBy: { name: 'asc' },
     });
   }
 
