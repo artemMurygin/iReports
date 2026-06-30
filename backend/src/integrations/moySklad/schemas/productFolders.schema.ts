@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ProductFolderSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     name: z.string(),
     externalCode: z.string(),
     code: z.string().optional().nullable(),

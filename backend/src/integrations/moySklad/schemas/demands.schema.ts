@@ -13,8 +13,8 @@ const MetaWrapperSchema = z.object({ meta: MetaSchema });
 
 const DemandPositionSchema = z.object({
   meta: MetaSchema,
-  id: z.string().uuid(),
-  accountId: z.string().uuid(),
+  id: z.string(),
+  accountId: z.string(),
   quantity: z.number(),
   price: z.number(),
   discount: z.number(),
@@ -24,7 +24,7 @@ const DemandPositionSchema = z.object({
   assortment: z
     .object({
       meta: MetaSchema,
-      id: z.string().uuid(),
+      id: z.string(),
       name: z.string(),
     })
     .passthrough()
@@ -88,7 +88,7 @@ const DemandAttributeSchema = z.union([
   // fallback для возможных новых атрибутов
   z.object({
     meta: MetaSchema,
-    id: z.string().uuid(),
+    id: z.string(),
     name: z.string(),
     type: z.string(),
     value: z.unknown(),
@@ -102,12 +102,12 @@ const LinkedPaymentSchema = z.object({
 });
 
 export const DemandSchema = z.object({
-  accountId: z.string().uuid(),
+  accountId: z.string(),
   agent: MetaWrapperSchema,
   applicable: z.boolean(),
   created: z.string().datetime({ offset: true }),
   externalCode: z.string().max(255),
-  id: z.string().uuid(),
+  id: z.string(),
   meta: MetaSchema,
   moment: z.string().datetime({ offset: true }),
   name: z.string().max(255),

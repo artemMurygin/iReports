@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const EmployeeSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     name: z.string(),
     externalCode: z.string(),
     updated: z.string(),

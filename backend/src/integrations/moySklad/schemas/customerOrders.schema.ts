@@ -6,7 +6,7 @@ const MetaRefSchema = z.object({
 
 export const CustomerOrderSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string(),
     name: z.string(),
     externalCode: z.string(),
     moment: z.string(),
