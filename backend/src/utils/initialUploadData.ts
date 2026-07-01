@@ -48,7 +48,7 @@ async function bootstrap() {
       // await roapp.uploadServices();
       // await roapp.uploadProducts();
       // await customRoApp.uploadServicesBonuses();
-      // const ordersIds = await roapp.uploadCreatedOrders(fromDate);
+      const ordersIds = await roapp.uploadCreatedOrders(fromDate);
       await roapp.uploadOrderItems();
     }
 
