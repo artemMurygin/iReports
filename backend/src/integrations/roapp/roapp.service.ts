@@ -35,13 +35,13 @@ export class RoappService {
     fromDate: Date | undefined,
     createdOrUpdated: 'created' | 'updated',
   ) {
-    // Roapp принимает ISO-дату без миллисекунд: %Y-%m-%dT%H:%M:%SZ
-    const isoDateWithoutMs = fromDate?.toISOString().replace(/\.\d{3}Z$/, 'Z');
+    const isoDate = fromDate?.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
     const params: Params = {
       page: 1,
-      [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']:
-        isoDateWithoutMs,
+      ...(isoDate && {
+        [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']: [isoDate],
+      }),
     };
 
     while (true) {
