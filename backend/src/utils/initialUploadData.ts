@@ -29,12 +29,12 @@ async function bootstrap() {
   const log = new UploadLogger('Инициализация данных');
   try {
     if (erp.includes('B')) {
-      await bitrix.uploadEmployees();
-      await bitrix.uploadStages();
-      await bitrix.uploadDeviceTypes();
-      await bitrix.uploadLeadSources();
-      await bitrix.uploadEnums();
-      await bitrix.uploadSources();
+      // await bitrix.uploadEmployees();
+      // await bitrix.uploadStages();
+      // await bitrix.uploadDeviceTypes();
+      // await bitrix.uploadLeadSources();
+      // await bitrix.uploadEnums();
+      // await bitrix.uploadSources();
       await bitrix.uploadCreatedDeals(fromDate);
     }
 
@@ -47,7 +47,7 @@ async function bootstrap() {
       // await roapp.uploadServiceCategories();
       // await roapp.uploadServices();
       // await roapp.uploadProducts();
-      // await customRoApp.uploadServicesBonuses();
+      await customRoApp.uploadServicesBonuses();
       const ordersIds = await roapp.uploadCreatedOrders(fromDate);
       await roapp.uploadOrderItems(ordersIds);
     }
