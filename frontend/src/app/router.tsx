@@ -2,8 +2,6 @@ import { createBrowserRouter } from 'react-router-dom'
 import { Layout } from './Layout'
 import { FunnelReportService } from '@/pages/FunnelReportService/FunnelReportService.tsx';
 import { ServicesAnalytics } from '@/pages/ServicesAnalytics/ServicesAnalytics.tsx';
-import { SalaryReport } from '@/pages/SalaryReport/SalaryReport.tsx';
-
 
 export const router = createBrowserRouter([
     {
@@ -17,10 +15,6 @@ export const router = createBrowserRouter([
             {
                 path: 'services',
                 element: <ServicesAnalytics />,
-            },
-            {
-                path: 'salaries',
-                element: <SalaryReport />,
             },
         ],
     },
