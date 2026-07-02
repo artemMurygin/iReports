@@ -26,31 +26,29 @@ model BitrixDeal {
 }
 
 model BitrixDepartment {
-  id        Int              @id
-  name      String
+  id   Int    @id
+  name String
 
-  employees     BitrixEmployee[]
-  employeeRules SalaryReportEmployeeRule[]
+  employees BitrixEmployee[]
 
   @@map("bitrix_departments")
 }
 
 model BitrixEmployee {
-  id           Int     @id
+  id           Int    @id
   firstName    String
   lastName     String
-  departmentId Int     @map("department")
+  departmentId Int    @map("department")
 
-  roappId    Int?    @unique @map("roapp_id")
-  moySkladId String? @unique @map("moy_sklad_id")
+  roappId         Int?    @unique @map("roapp_id")
+  moySkladId      String? @unique @map("moy_sklad_id")
+  roappOnlineName String? @unique @map("roapp_online_name")
 
-  department       BitrixDepartment   @relation(fields: [departmentId], references: [id])
-  roappEmployee    RoappEmployee?     @relation(fields: [roappId], references: [id], onDelete: SetNull)
-  moySkladEmployee MoySkladEmployee?  @relation(fields: [moySkladId], references: [id], onDelete: SetNull)
+  department       BitrixDepartment  @relation(fields: [departmentId], references: [id])
+  roappEmployee    RoappEmployee?    @relation(fields: [roappId], references: [id], onDelete: SetNull)
+  moySkladEmployee MoySkladEmployee? @relation(fields: [moySkladId], references: [id], onDelete: SetNull)
 
-  bitrixDeal    BitrixDeal[]
-  employeeRules SalaryReportEmployeeRule[]
-  salaryResults SalaryReportResult[]
+  bitrixDeal BitrixDeal[]
 
   @@map("bitrix_employees")
 }

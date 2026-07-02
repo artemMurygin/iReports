@@ -1,0 +1,292 @@
+// Модуль расчёта ЗП и мотивации. См. ARCHITECTURE.md в корне репозитория.
+// Денежные суммы — целые рубли (integer), знаковые для штрафов/корректировок.
+
+enum Direction {
+  SERVICE
+  SHOP
+
+  @@map("salary_direction")
+}
+
+enum GoalType {
+  KPI
+  TASK
+
+  @@map("salary_goal_type")
+}
+
+enum KpiDirection {
+  SALES
+  TURNOVER
+
+  @@map("salary_kpi_direction")
+}
+
+enum KpiStat {
+  REVENUE
+  MARGIN
+  MARGIN_MINUS_ENGINEER
+  PCS
+  COSTS
+
+  @@map("salary_kpi_stat")
+}
+
+enum Scope {
+  PERSONAL
+  DEPARTMENT
+  COMPANY
+
+  @@map("salary_scope")
+}
+
+enum RewardType {
+  PERCENT
+  FIX
+
+  @@map("salary_reward_type")
+}
+
+enum ProgressionMode {
+  FIXED
+  LINEAR
+  MULTIPLIER
+
+  @@map("salary_progression_mode")
+}
+
+// FIXED/ADVANCE зарезервированы под оклад/аванс — не реализуются в MVP
+enum AccrualType {
+  HOURLY
+  BONUS
+  PENALTY
+  ADJUSTMENT
+  FIXED
+  ADVANCE
+
+  @@map("salary_accrual_type")
+}
+
+enum RuleStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+
+  @@map("salary_rule_status")
+}
+
+enum ManagerRole {
+  OFFLINE
+  ONLINE
+  BOTH
+
+  @@map("salary_manager_role")
+}
+
+// PROJECTED — считается на лету, CLOSED — снапшот закрытого месяца
+enum ReportStatus {
+  PROJECTED
+  CLOSED
+
+  @@map("salary_report_status")
+}
+
+model SalaryRule {
+  id         Int        @id @default(autoincrement())
+  name       String
+  payPerHour Int?       @map("pay_per_hour") // null = без почасовой части
+  isRegular  Boolean    @default(false) @map("is_regular") // применяется каждый месяц
+  validFrom  DateTime   @map("valid_from")
+  validTo    DateTime?  @map("valid_to") // null = бессрочно
+  status     RuleStatus @default(DRAFT)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  goals       Goal[]
+  assignments RuleAssignment[]
+
+  @@index([status, validFrom, validTo])
+  @@map("salary_rules")
+}
+
+// Назначение правила: сотрудник ИЛИ отдел (bitrix_employees / bitrix_departments, без FK — разные схемы синка)
+model RuleAssignment {
+  id           Int        @id @default(autoincrement())
+  ruleId       Int        @map("rule_id")
+  rule         SalaryRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  employeeId   Int?       @map("employee_id") // -> bitrix_employees.id
+  departmentId Int?       @map("department_id") // -> bitrix_departments.id
+
+  @@index([ruleId])
+  @@index([employeeId])
+  @@index([departmentId])
+  @@map("salary_rule_assignments")
+}
+
+model Goal {
+  id        Int        @id @default(autoincrement())
+  ruleId    Int        @map("rule_id")
+  rule      SalaryRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  type      GoalType
+  direction Direction
+  scope     Scope      @default(PERSONAL)
+  name      String
+  sortOrder Int        @default(0) @map("sort_order")
+
+  // --- только для type = KPI ---
+  kpiDirection  KpiDirection? @map("kpi_direction")
+  measureStat   KpiStat?      @map("measure_stat") // ЧТО меряем для % выполнения плана
+  categoryExtId String?       @map("category_ext_id") // id категории в источнике (int сервиса / text магазина), каст вручную по direction
+  managerRole   ManagerRole   @default(OFFLINE) @map("manager_role")
+
+  rewardId Int
+  reward   Reward @relation(fields: [rewardId], references: [id])
+
+  // --- только для type = TASK ---
+  taskCompletions TaskCompletion[]
+
+  @@index([ruleId])
+  @@index([rewardId])
+  @@map("salary_goals")
+}
+
+model Reward {
+  id            Int        @id @default(autoincrement())
+  name          String
+  type          RewardType
+  value         Int // базовый % (в сотых, напр. 1000 = 10%) или фикс-сумма (рубли)
+  baseStat      KpiStat?   @map("base_stat") // база для percent: от чего считаем (напр. MARGIN_MINUS_ENGINEER)
+  categoryExtId String?    @map("category_ext_id") // id категории-ограничителя базы (каст по direction цели)
+  minAmount     Int?       @map("min_amount") // нижний порог выплаты (гарант), опционально
+  maxAmount     Int?       @map("max_amount") // потолок выплаты, опционально
+
+  tiers RewardProgressionTier[]
+  goals Goal[]
+
+  @@map("salary_rewards")
+}
+
+// Кусочная функция «% выполнения плана → коэффициент к базовому %»
+model RewardProgressionTier {
+  id       Int             @id @default(autoincrement())
+  rewardId Int             @map("reward_id")
+  reward   Reward          @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  fromPct  Int             @map("from_pct") // включительно, целые проценты
+  toPct    Int?            @map("to_pct") // null = +бесконечность
+  mode     ProgressionMode
+  coef     Float? // FIXED/MULTIPLIER: коэффициент
+  coefFrom Float?          @map("coef_from") // LINEAR: коэф. на fromPct
+  coefTo   Float?          @map("coef_to") // LINEAR: коэф. на toPct
+
+  @@index([rewardId])
+  @@map("salary_reward_progression_tiers")
+}
+
+model PlanTarget {
+  id            Int       @id @default(autoincrement())
+  period        String // 'YYYY-MM'
+  direction     Direction
+  scope         Scope
+  employeeId    Int?      @map("employee_id") // для PERSONAL
+  departmentId  Int?      @map("department_id") // для DEPARTMENT
+  categoryExtId String?   @map("category_ext_id") // id категории в источнике, каст по direction
+  stat          KpiStat
+  planValue     Int       @map("plan_value") // план (fact считается на лету из источников)
+
+  @@unique([period, direction, scope, employeeId, departmentId, categoryExtId, stat])
+  @@map("salary_plan_targets")
+}
+
+model WorkShift {
+  id           Int       @id @default(autoincrement())
+  employeeId   Int       @map("employee_id") // -> bitrix_employees.id
+  date         DateTime  @db.Date
+  plannedStart DateTime? @map("planned_start") // плановое начало смены
+  plannedEnd   DateTime? @map("planned_end")
+  plannedHours Float     @map("planned_hours") // плановые часы (для прогноза)
+  actualHours  Float?    @map("actual_hours") // фактически отработано (для текущей ставки)
+  status       String    @default("planned") // planned | worked | absent | vacation | sick
+  note         String?
+
+  @@unique([employeeId, date])
+  @@index([employeeId, date])
+  @@map("salary_work_shifts")
+}
+
+model TaskCompletion {
+  id           Int       @id @default(autoincrement())
+  goalId       Int       @map("goal_id")
+  goal         Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  employeeId   Int       @map("employee_id")
+  period       String // 'YYYY-MM'
+  completed    Boolean   @default(false)
+  completedAt  DateTime? @map("completed_at")
+  approvedById Int?      @map("approved_by_id")
+
+  @@unique([goalId, employeeId, period])
+  @@map("salary_task_completions")
+}
+
+model SalaryReport {
+  id         Int          @id @default(autoincrement())
+  employeeId Int          @map("employee_id")
+  period     String // 'YYYY-MM'
+  status     ReportStatus @default(PROJECTED)
+  factTotal  Int          @map("fact_total") // начислено на текущий момент
+  projected  Int // прогноз до конца месяца
+  closedAt   DateTime?    @map("closed_at")
+
+  lineItems SalaryLineItem[]
+
+  @@unique([employeeId, period])
+  @@map("salary_reports")
+}
+
+// Каждая строка = отдельное начисление со ссылкой на источник (для «за что?»)
+model SalaryLineItem {
+  id          Int          @id @default(autoincrement())
+  reportId    Int          @map("report_id")
+  report      SalaryReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  accrualType AccrualType  @map("accrual_type")
+  goalId      Int?         @map("goal_id")
+  rewardId    Int?         @map("reward_id")
+  sourceType  String?      @map("source_type") // 'roapp_order' | 'moysklad_demand' | 'manual' | 'schedule'
+  sourceId    String?      @map("source_id") // id заказа/продажи
+  label       String // человекочитаемо: «10% маржи по заказу #123»
+  factAmount  Int          @map("fact_amount") // начислено сейчас
+  projected   Int // прогноз
+  meta        Json? // planPct, factPct, coef, base — для расшифровки
+
+  @@index([reportId])
+  @@map("salary_line_items")
+}
+
+// Штрафы и ручные корректировки
+model SalaryAdjustment {
+  id          Int         @id @default(autoincrement())
+  employeeId  Int         @map("employee_id")
+  period      String
+  accrualType AccrualType @map("accrual_type") // PENALTY | ADJUSTMENT
+  amount      Int // может быть отрицательным (штраф)
+  reason      String
+  createdById Int         @map("created_by_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([employeeId, period])
+  @@map("salary_adjustments")
+}
+
+// Заглушка оборачиваемости — заполняется будущей интеграцией с МойСклад (остатки/обороты).
+// До интеграции таблица пустая; ветка turnover в движке возвращает "нет данных".
+model TurnoverSnapshot {
+  id            Int     @id @default(autoincrement())
+  period        String // 'YYYY-MM'
+  categoryExtId String? @map("category_ext_id")
+  productId     String? @map("product_id") // -> moy_sklad_products.id
+  avgStockCost  Int     @map("avg_stock_cost") // средний остаток по себестоимости
+  cogs          Int // себестоимость проданного за период
+  turnoverDays  Float?  @map("turnover_days") // дни оборачиваемости
+
+  @@index([period])
+  @@map("salary_turnover_snapshots")
+}

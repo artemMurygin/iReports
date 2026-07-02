@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MoneySchema } from './common.schema';
 
 const MetaSchema = z.object({
   href: z.string().url(),
@@ -16,11 +17,11 @@ const DemandPositionSchema = z.object({
   id: z.string(),
   accountId: z.string(),
   quantity: z.number(),
-  price: z.number(),
+  price: MoneySchema,
   discount: z.number(),
   vat: z.number().int(),
   vatEnabled: z.boolean(),
-  overhead: z.number().optional(),
+  overhead: MoneySchema.optional(),
   assortment: z
     .object({
       meta: MetaSchema,
@@ -31,7 +32,7 @@ const DemandPositionSchema = z.object({
     .optional(),
   stock: z
     .object({
-      cost: z.number(),
+      cost: MoneySchema,
       quantity: z.number(),
       reserve: z.number(),
       intransit: z.number(),
@@ -98,7 +99,7 @@ const DemandAttributeSchema = z.union([
 // Платёж, привязанный к отгрузке
 const LinkedPaymentSchema = z.object({
   meta: MetaSchema,
-  linkedSum: z.number().optional(),
+  linkedSum: MoneySchema.optional(),
 });
 
 export const DemandSchema = z.object({
@@ -113,13 +114,13 @@ export const DemandSchema = z.object({
   name: z.string().max(255),
   organization: MetaWrapperSchema,
   owner: MetaWrapperSchema,
-  payedSum: z.number(),
+  payedSum: MoneySchema,
   positions: PositionsSchema,
   printed: z.boolean(),
   published: z.boolean(),
   rate: RateSchema,
   shared: z.boolean(),
-  sum: z.number(),
+  sum: MoneySchema,
   updated: z.string(),
 
   agentAccount: MetaWrapperSchema.nullable().optional(),
@@ -134,7 +135,7 @@ export const DemandSchema = z.object({
   organizationAccount: MetaWrapperSchema.nullable().optional(),
   overhead: z
     .object({
-      sum: z.number(),
+      sum: MoneySchema,
       distribution: z.enum(['weight', 'volume', 'price']),
     })
     .nullable()
@@ -161,7 +162,7 @@ export const DemandSchema = z.object({
     .optional(),
   vatEnabled: z.boolean().optional(),
   vatIncluded: z.boolean().optional(),
-  vatSum: z.number().optional(),
+  vatSum: MoneySchema.optional(),
 });
 
 export type Demand = z.infer<typeof DemandSchema>;

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MoneySchema } from './common.schema';
 
 export const CounterpartySchema = z
   .object({
@@ -14,7 +15,7 @@ export const CounterpartySchema = z
     email: z.string().optional().nullable(),
     actualAddress: z.string().optional().nullable(),
 
-    salesAmount: z.number().optional().nullable(),
+    salesAmount: MoneySchema.optional().nullable(),
   })
   .transform((d) => ({
     id: d.id,

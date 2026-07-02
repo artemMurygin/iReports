@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MoneySchema } from './common.schema';
 
 export const ServiceSchema = z
   .object({
@@ -13,7 +14,7 @@ export const ServiceSchema = z
     salePrices: z
       .array(
         z.object({
-          value: z.number(),
+          value: MoneySchema,
           priceType: z.object({ name: z.string() }),
         }),
       )

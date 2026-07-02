@@ -61,7 +61,7 @@ model RoappService {
   name          String  @db.VarChar(255)
   engeneerBonus Int     @map("engeneer_bonus")
   price         Int
-  warranty      String @db.VarChar(64)
+  warranty      String  @db.VarChar(64)
   duration      Int
   inCatalog     Boolean @map("in_catalog")
   categoryId    Int?    @map("category_id")
@@ -104,7 +104,6 @@ model RoappServiceCategory {
   servicesAsDevice   RoappService[] @relation("device")
   servicesAsType     RoappService[] @relation("serviceType")
   servicesAsSeries   RoappService[] @relation("series")
-  targets            SalaryReportTarget[]
 
   @@index([parentId])
   @@map("roapp_service_categories")
@@ -119,7 +118,6 @@ model RoappProductCategory {
   children RoappProductCategory[] @relation("ProductCategoryHierarchy")
 
   products RoappProduct[]
-  targets  SalaryReportTarget[]
 
   @@index([parentId])
   @@map("roapp_product_categories")

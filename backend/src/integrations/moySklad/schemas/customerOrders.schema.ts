@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MoneySchema } from './common.schema';
 
 const MetaRefSchema = z.object({
   meta: z.object({ href: z.string() }),
@@ -12,8 +13,8 @@ export const CustomerOrderSchema = z
     moment: z.string(),
     created: z.string(),
     updated: z.string(),
-    sum: z.number(),
-    vatSum: z.number().optional(),
+    sum: MoneySchema,
+    vatSum: MoneySchema.optional(),
 
     state: MetaRefSchema.optional().nullable(),
     organization: MetaRefSchema,

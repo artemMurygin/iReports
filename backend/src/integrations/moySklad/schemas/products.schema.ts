@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MoneySchema } from './common.schema';
 
 export const ProductSchema = z
   .object({
@@ -14,7 +15,7 @@ export const ProductSchema = z
     salePrices: z
       .array(
         z.object({
-          value: z.number(),
+          value: MoneySchema,
           priceType: z.object({ name: z.string() }),
         }),
       )
@@ -22,7 +23,7 @@ export const ProductSchema = z
       .default([]),
 
     buyPrice: z
-      .object({ value: z.number(), currency: z.object({ meta: z.object({ href: z.string() }) }) })
+      .object({ value: MoneySchema, currency: z.object({ meta: z.object({ href: z.string() }) }) })
       .optional()
       .nullable(),
 

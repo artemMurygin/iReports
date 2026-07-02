@@ -17,6 +17,8 @@ import { AiModule } from './integrations/ai/ai.module';
 import { GoogleSheetsModule } from './integrations/google-sheets/google-sheets.module';
 import { MoyskladModule } from './integrations/moySklad/moysklad.module';
 import { MoySkladSyncModule } from './sync/moySklad/moySklad.module';
+import { SalaryModule } from './salary/salary.module';
+
 @Module({
   imports: [
     DatabaseModule,
@@ -34,6 +36,7 @@ import { MoySkladSyncModule } from './sync/moySklad/moySklad.module';
     GoogleSheetsModule,
     MoyskladModule,
     MoySkladSyncModule,
+    SalaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

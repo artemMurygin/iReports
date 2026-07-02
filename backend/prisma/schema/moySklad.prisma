@@ -27,7 +27,6 @@ model MoySkladProductFolder {
   children MoySkladProductFolder[] @relation("FolderTree")
   products MoySkladProduct[]
   services MoySkladService[]
-  targets  SalaryReportTarget[]
 
   @@map("moy_sklad_product_folders")
 }
@@ -67,25 +66,25 @@ model MoySkladService {
 }
 
 model MoySkladDemand {
-  id               String    @id
+  id               String   @id
   name             String
   moment           DateTime
-  createdAt        DateTime  @map("created_at")
+  createdAt        DateTime @map("created_at")
   sum              Int
-  payedSum         Int       @map("payed_sum")
-  agentId          String?   @map("agent_id")
-  agentName        String?   @map("agent_name")
-  stateId          String?   @map("state_id")
-  stateName        String?   @map("state_name")
-  salesChannelId   String?   @map("sales_channel_id")
-  salesChannelName String?   @map("sales_channel_name")
-  onlineManagerId  String?   @map("online_manager_id")
-  offlineManagerId String?   @map("offline_manager_id")
-  customerOrderId  String?   @map("customer_order_id")
-  description      String?   @db.Text
+  payedSum         Int      @map("payed_sum")
+  agentId          String?  @map("agent_id")
+  agentName        String?  @map("agent_name")
+  stateId          String?  @map("state_id")
+  stateName        String?  @map("state_name")
+  salesChannelId   String?  @map("sales_channel_id")
+  salesChannelName String?  @map("sales_channel_name")
+  onlineManagerId  String?  @map("online_manager_id")
+  offlineManagerId String?  @map("offline_manager_id")
+  customerOrderId  String?  @map("customer_order_id")
+  description      String?  @db.Text
 
-  onlineManager  MoySkladEmployee?      @relation("DemandOnlineManager", fields: [onlineManagerId], references: [id], onDelete: SetNull)
-  offlineManager MoySkladEmployee?      @relation("DemandOfflineManager", fields: [offlineManagerId], references: [id], onDelete: SetNull)
+  onlineManager  MoySkladEmployee?        @relation("DemandOnlineManager", fields: [onlineManagerId], references: [id], onDelete: SetNull)
+  offlineManager MoySkladEmployee?        @relation("DemandOfflineManager", fields: [offlineManagerId], references: [id], onDelete: SetNull)
   positions      MoySkladDemandPosition[]
 
   @@index([moment])
