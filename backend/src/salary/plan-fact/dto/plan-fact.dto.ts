@@ -14,7 +14,17 @@ const period = z
   .string()
   .regex(/^\d{4}-\d{2}$/, 'Период должен быть в формате YYYY-MM');
 
-const planFactQuerySchema = z.object({ period, direction: direction.optional(), scope });
+const commaSeparatedInts = z
+  .string()
+  .transform((s) => s.split(',').map((v) => parseInt(v, 10)))
+  .pipe(z.array(z.number().int().positive()));
+
+const planFactQuerySchema = z.object({
+  period,
+  scope: scope.optional(),
+  employeeIds: commaSeparatedInts.optional(),
+  departmentIds: commaSeparatedInts.optional(),
+});
 
 const planTargetItemSchema = z.object({
   period,

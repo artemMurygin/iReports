@@ -57,7 +57,6 @@ describe('PlanFactService', () => {
     const service = await buildService(db);
     const [row] = await service.getTable({
       period: PERIOD,
-      direction: 'SERVICE' as never,
       scope: 'PERSONAL' as never,
     });
 
@@ -84,7 +83,6 @@ describe('PlanFactService', () => {
     const service = await buildService(db);
     const [row] = await service.getTable({
       period: PERIOD,
-      direction: 'SERVICE' as never,
       scope: 'PERSONAL' as never,
     });
 
@@ -125,7 +123,6 @@ describe('PlanFactService', () => {
     const service = await buildService(db);
     const [row] = await service.getTable({
       period: PERIOD,
-      direction: 'SHOP' as never,
       scope: 'DEPARTMENT' as never,
     });
 
@@ -163,7 +160,6 @@ describe('PlanFactService', () => {
     const service = await buildService(db);
     const [row] = await service.getTable({
       period: PERIOD,
-      direction: 'SERVICE' as never,
       scope: 'COMPANY' as never,
     });
 

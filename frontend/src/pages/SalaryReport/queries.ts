@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import { salaryApi } from './api'
-import type { Direction, Scope } from './types'
+import type { Scope } from './types'
 
 export const employeesQuery = queryOptions({
     queryKey: ['salary', 'employees'],
@@ -26,7 +26,7 @@ export const categoriesQuery = (direction: Direction) =>
         staleTime: 5 * 60_000,
     })
 
-export const planFactQuery = (params: { period: string; direction?: Direction; scope: Scope }) =>
+export const planFactQuery = (params: { period: string; scope?: Scope; employeeIds?: number[]; departmentIds?: number[] }) =>
     queryOptions({
         queryKey: ['salary', 'plan-fact', params],
         queryFn: () => salaryApi.getPlanFact(params).then((r) => r.data),

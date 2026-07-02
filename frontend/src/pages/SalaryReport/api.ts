@@ -38,8 +38,15 @@ export const salaryApi = {
     createReward: (data: Partial<Reward>) => api.post<Reward>('/rewards', data),
     updateReward: (id: number, data: Partial<Reward>) => api.patch<Reward>(`/rewards/${id}`, data),
 
-    getPlanFact: (params: { period: string; direction?: Direction; scope: Scope }) =>
-        api.get<PlanFactRow[]>('/plan-fact', { params }),
+    getPlanFact: (params: { period: string; scope?: Scope; employeeIds?: number[]; departmentIds?: number[] }) =>
+        api.get<PlanFactRow[]>('/plan-fact', {
+            params: {
+                period: params.period,
+                ...(params.scope ? { scope: params.scope } : {}),
+                ...(params.employeeIds?.length ? { employeeIds: params.employeeIds.join(',') } : {}),
+                ...(params.departmentIds?.length ? { departmentIds: params.departmentIds.join(',') } : {}),
+            },
+        }),
     bulkCreatePlanTargets: (items: Array<Partial<PlanFactRow>>) =>
         api.post('/plan-targets', { items }),
     updatePlanTarget: (id: number, data: Partial<PlanFactRow>) =>

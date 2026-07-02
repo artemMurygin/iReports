@@ -34,10 +34,22 @@ export class PlanFactService {
 
   async getTable(filter: {
     period: string;
-    direction?: Direction;
-    scope: Scope;
+    scope?: Scope;
+    employeeIds?: number[];
+    departmentIds?: number[];
   }) {
-    const targets = await this.db.planTarget.findMany({ where: filter });
+    const targets = await this.db.planTarget.findMany({
+      where: {
+        period: filter.period,
+        ...(filter.scope ? { scope: filter.scope } : {}),
+        ...(filter.employeeIds?.length
+          ? { employeeId: { in: filter.employeeIds } }
+          : {}),
+        ...(filter.departmentIds?.length
+          ? { departmentId: { in: filter.departmentIds } }
+          : {}),
+      },
+    });
     const { start, endExclusive } = parsePeriod(filter.period);
 
     const categoryTreeCache = new Map<Direction, CategoryEdge[]>();
