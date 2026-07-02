@@ -31,10 +31,6 @@ interface Props {
 export function ServicesTable({ services }: Props) {
     const sorted = [...services].sort((a, b) => b.totalCount - a.totalCount)
     const maxCount = sorted[0]?.totalCount ?? 1
-    const totalCount = sorted.reduce((s, r) => s + r.totalCount, 0)
-    const totalRevenue = sorted.reduce((s, r) => s + r.totalRevenue, 0)
-    const totalProfit = sorted.reduce((s, r) => s + r.totalProfit, 0)
-    const totalBonus = sorted.reduce((s, r) => s + r.totalEngineerBonus, 0)
 
     if (sorted.length === 0) {
         return (
@@ -58,22 +54,8 @@ export function ServicesTable({ services }: Props) {
                             Услуги
                         </CardTitle>
                         <p className="mt-0.5 text-sm text-gray-500">
-                            {sorted.length} {sorted.length === 1 ? 'услуга' : sorted.length < 5 ? 'услуги' : 'услуг'} · итого {totalCount} продаж
+                            {sorted.length} {sorted.length === 1 ? 'услуга' : sorted.length < 5 ? 'услуги' : 'услуг'}
                         </p>
-                    </div>
-                    <div className="flex items-center gap-6 text-right shrink-0">
-                        <div>
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Выручка</p>
-                            <p className="text-base font-semibold text-gray-900 tabular-nums">{fmtMoney(totalRevenue)}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Прибыль</p>
-                            <p className={`text-base font-semibold tabular-nums ${profitColor(totalProfit)}`}>{fmtMoney(totalProfit)}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Мастерам</p>
-                            <p className="text-base font-semibold text-gray-700 tabular-nums">{fmtMoney(totalBonus)}</p>
-                        </div>
                     </div>
                 </div>
             </CardHeader>
@@ -81,16 +63,18 @@ export function ServicesTable({ services }: Props) {
                 <div className="overflow-auto max-h-[920px]">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 sticky top-0 z-10">
+                            <TableRow className="bg-gray-50 sticky top-0">
                                 <TableHead className="w-8 text-center text-gray-400 font-bold">#</TableHead>
                                 <TableHead className="min-w-[220px] font-bold text-gray-700">Услуга</TableHead>
                                 <TableHead className="text-right w-24 font-bold text-gray-700" title="Количество продаж">Продажи</TableHead>
-                                <TableHead className="w-32 font-bold text-gray-700" title="Динамика продаж по периодам">Тренд</TableHead>
-                                <TableHead className="text-right w-32 font-bold text-gray-700" title="Средняя стоимость одной услуги">Ср. цена</TableHead>
-                                <TableHead className="text-right w-36 font-bold text-gray-700" title="Средний чек заказа, содержащего эту услугу">Ср. чек заказа</TableHead>
-                                <TableHead className="text-right w-36 font-bold text-gray-700" title="Суммарная выручка по заказам с услугой">Выручка</TableHead>
-                                <TableHead className="text-right w-32 font-bold text-gray-700" title="Прибыль по заказам с услугой">Прибыль</TableHead>
-                                <TableHead className="text-right w-32 font-bold text-gray-700" title="Начисление мастеру">Мастеру</TableHead>
+                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Динамика продаж по периодам">Тренд</TableHead>
+                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Текущая цена услуги по прайсу">Розничная <br />цена</TableHead>
+                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Средняя стоимость одной услуги">Средняя <br />цена продажи</TableHead>
+                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Начисление мастеру">Начисление <br />мастеру</TableHead>
+                                <TableHead className="text-right w-36 font-bold text-gray-700 break-words" title="Средний чек заказа, содержащего эту услугу">Средний чек <br />заказов</TableHead>
+                                <TableHead className="text-right w-36 font-bold text-gray-700" title="Суммарная выручка по заказам с услугой">Выручка <br />заказов</TableHead>
+                                <TableHead className="text-right w-32 font-bold text-gray-700" title="Прибыль по заказам с услугой">Прибыль <br />заказов</TableHead>
+
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -101,10 +85,10 @@ export function ServicesTable({ services }: Props) {
                                         <TableCell className="text-center text-xs text-gray-300 tabular-nums">
                                             {idx + 1}
                                         </TableCell>
-                                        <TableCell className="font-medium text-gray-900 py-3">
+                                        <TableCell className="font-medium text-gray-900 py-3 max-w-[500px]">
                                             <span className="line-clamp-2 leading-snug">{service.serviceName}</span>
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-center">
                                             <div className="flex flex-col items-end gap-0.5">
                                                 <span className="tabular-nums font-semibold text-gray-900 text-sm">
                                                     {service.totalCount}
@@ -120,8 +104,14 @@ export function ServicesTable({ services }: Props) {
                                         <TableCell>
                                             <SparklineCell breakdown={service.breakdown} />
                                         </TableCell>
-                                        <TableCell className="text-right tabular-nums text-sm text-gray-600">
+                                        <TableCell className="text-center tabular-nums text-sm text-gray-600">
+                                            {fmtMoney(service.priceListPrice)}
+                                        </TableCell>
+                                        <TableCell className="text-center tabular-nums text-sm text-gray-600">
                                             {fmtMoney(service.avgServicePrice)}
+                                        </TableCell>
+                                        <TableCell className="text-center tabular-nums text-sm text-gray-600">
+                                            {fmtMoney(service.engeneerBonus)}
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums text-sm text-gray-600">
                                             {fmtMoney(service.avgOrderCheck)}
@@ -132,9 +122,7 @@ export function ServicesTable({ services }: Props) {
                                         <TableCell className={`text-right tabular-nums text-sm font-medium ${profitColor(service.totalProfit)}`}>
                                             {fmtMoney(service.totalProfit)}
                                         </TableCell>
-                                        <TableCell className="text-right tabular-nums text-sm text-gray-600">
-                                            {fmtMoney(service.totalEngineerBonus)}
-                                        </TableCell>
+
                                     </TableRow>
                                 )
                             })}

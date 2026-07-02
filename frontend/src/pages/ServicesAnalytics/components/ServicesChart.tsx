@@ -17,8 +17,8 @@ type ChartMode = 'count' | 'avgPrice' | 'revenue'
 
 const MODES: { value: ChartMode; label: string }[] = [
     { value: 'count', label: 'Количество' },
-    { value: 'avgPrice', label: 'Средний чек' },
-    { value: 'revenue', label: 'Выручка' },
+    { value: 'avgPrice', label: 'Средняя цена' },
+    { value: 'revenue', label: 'Выручка по заказам' },
 ]
 
 const TITLES: Record<ChartMode, string> = {

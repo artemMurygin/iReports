@@ -28,7 +28,8 @@ export interface ServiceAnalyticsEntry {
     totalCount: number
     totalRevenue: number
     totalProfit: number
-    totalEngineerBonus: number
+    engeneerBonus: number
+    priceListPrice: number
     avgServicePrice: number
     avgOrderCheck: number
     breakdown: ServiceBreakdownPoint[]

@@ -15,7 +15,6 @@ type ServiceOrderRow = {
   orderId: number;
   quantity: number;
   price: number;
-  engeneerSalary: number;
   orderPayed: number;
   orderCost: number;
 };
@@ -79,8 +78,14 @@ export class ReportsService {
     const periods = generatePeriodKeys(momentFrom, momentTo, groupBy);
 
     const services = [...serviceMap.entries()].map(
-      ([serviceId, { name, categoryId, rows }]) => ({
+      ([
         serviceId,
+        { name, categoryId, engeneerBonus, priceListPrice, rows },
+      ]) => ({
+        serviceId,
+        engeneerBonus,
+        priceListPrice,
+        // engeneerSalary: rows.engeneerSalary,
         serviceName: name,
         categoryId,
         ...this.calcServiceMetrics(rows),
@@ -95,7 +100,10 @@ export class ReportsService {
     const { momentFrom, momentTo, categoryIds, serviceIds } = filter;
     return this.DB.roappServiceOrder.findMany({
       where: {
-        order: { closedAt: { gte: momentFrom, lte: momentTo } },
+        order: {
+          closedAt: { gte: momentFrom, lte: momentTo },
+          orderTypeId: 17199,
+        },
         serviceId: inFilter(serviceIds),
         service: categoryIds.length
           ? { categoryId: inFilter(categoryIds) }
@@ -106,8 +114,14 @@ export class ReportsService {
         orderId: true,
         quantity: true,
         price: true,
-        engeneerSalary: true,
-        service: { select: { name: true, categoryId: true } },
+        service: {
+          select: {
+            name: true,
+            categoryId: true,
+            engeneerBonus: true,
+            price: true,
+          },
+        },
         order: { select: { closedAt: true, payed: true, cost: true } },
       },
     });
@@ -121,6 +135,8 @@ export class ReportsService {
       {
         name: string;
         categoryId: number | null;
+        engeneerBonus: number;
+        priceListPrice: number;
         rows: ServiceOrderRow[];
       }
     >();
@@ -129,6 +145,8 @@ export class ReportsService {
       const entry = serviceMap.get(row.serviceId) ?? {
         name: row.service.name,
         categoryId: row.service.categoryId,
+        engeneerBonus: row.service.engeneerBonus,
+        priceListPrice: row.service.price,
         rows: [] as ServiceOrderRow[],
       };
       entry.rows.push({
@@ -136,7 +154,6 @@ export class ReportsService {
         orderId: row.orderId,
         quantity: row.quantity,
         price: row.price,
-        engeneerSalary: row.engeneerSalary,
         orderPayed: row.order.payed ?? 0,
         orderCost: row.order.cost ?? 0,
       });
@@ -177,7 +194,6 @@ export class ReportsService {
 
   private calcServiceMetrics(rows: ServiceOrderRow[]) {
     const totalCount = rows.reduce((s, r) => s + r.quantity, 0);
-    const totalEngineerBonus = rows.reduce((s, r) => s + r.engeneerSalary, 0);
     const priceWeightedSum = rows.reduce((s, r) => s + r.price * r.quantity, 0);
     const avgServicePrice =
       totalCount > 0 ? Math.round(priceWeightedSum / totalCount) : 0;
@@ -203,7 +219,6 @@ export class ReportsService {
       totalCount,
       totalRevenue,
       totalProfit,
-      totalEngineerBonus,
       avgServicePrice,
       avgOrderCheck,
     };
