@@ -2,7 +2,12 @@ import axios from 'axios'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/shared/axios.instance'
-import type { ServicesFilters, ServicesAnalyticsResponse, ServiceAnalyticsEntry, ServiceCategory } from '../types'
+import type {
+    ServicesFilters,
+    ServicesAnalyticsResponse,
+    ServiceAnalyticsEntry,
+    ServiceCategory,
+} from '../types'
 import { buildChartSeries, resolveDescendantIds } from '../utils/categoryTree'
 
 const DEBOUNCE_MS = 1000
@@ -80,7 +85,10 @@ export function useServicesAnalytics(filters: ServicesFilters, categories: Servi
                             setDisplayedServices(newServices)
                             setDisplayedCategoryId(categoryId)
                             setAnimPhase('entering')
-                            animTimerRef.current = setTimeout(() => setAnimPhase('visible'), ENTER_MS)
+                            animTimerRef.current = setTimeout(
+                                () => setAnimPhase('visible'),
+                                ENTER_MS,
+                            )
                         }, EXIT_MS)
                     }
                 })
@@ -121,12 +129,22 @@ export function useServicesAnalytics(filters: ServicesFilters, categories: Servi
         animPhase === 'exiting'
             ? 'animate-out fade-out-0 slide-out-to-bottom-2 [animation-duration:220ms] [animation-fill-mode:forwards] pointer-events-none'
             : animPhase === 'entering'
-                ? 'animate-in fade-in-0 slide-in-from-bottom-2 [animation-duration:380ms]'
-                : ''
+              ? 'animate-in fade-in-0 slide-in-from-bottom-2 [animation-duration:380ms]'
+              : ''
 
-    const blurClass = isRefreshing && animPhase === 'visible'
-        ? 'blur-[1.5px] transition-[filter] duration-500 pointer-events-none'
-        : 'blur-0 transition-[filter] duration-300'
+    const blurClass =
+        isRefreshing && animPhase === 'visible'
+            ? 'blur-[1.5px] transition-[filter] duration-500 pointer-events-none'
+            : 'blur-0 transition-[filter] duration-300'
 
-    return { services, displayedServices, series, loading, error, isInitialLoad, animClass, blurClass }
+    return {
+        services,
+        displayedServices,
+        series,
+        loading,
+        error,
+        isInitialLoad,
+        animClass,
+        blurClass,
+    }
 }

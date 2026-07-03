@@ -8,7 +8,15 @@ interface Props {
 function SparkTooltip({ active, payload }: any) {
     if (!active || !payload?.length) return null
     return (
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 4, padding: '3px 7px', fontSize: 11 }}>
+        <div
+            style={{
+                background: '#fff',
+                border: '1px solid #e5e7eb',
+                borderRadius: 4,
+                padding: '3px 7px',
+                fontSize: 11,
+            }}
+        >
             {payload[0].payload.period}: <strong>{payload[0].value}</strong>
         </div>
     )

@@ -65,28 +65,34 @@ function TreeNodeRow({
             >
                 <button
                     className="flex items-center justify-center w-4 h-4 shrink-0"
-                    onClick={(e) => { e.stopPropagation(); if (node.children.length) setExpanded((v) => !v) }}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        if (node.children.length) setExpanded((v) => !v)
+                    }}
                 >
                     {node.children.length > 0 ? (
-                        expanded
-                            ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                            : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                        expanded ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                        ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                        )
                     ) : null}
                 </button>
                 <span className="flex-1 truncate" onClick={() => onSelect(String(node.id))}>
                     {node.name}
                 </span>
             </div>
-            {expanded && node.children.map((child) => (
-                <TreeNodeRow
-                    key={child.id}
-                    node={child}
-                    selectedId={selectedId}
-                    expandedIds={expandedIds}
-                    onSelect={onSelect}
-                    depth={depth + 1}
-                />
-            ))}
+            {expanded &&
+                node.children.map((child) => (
+                    <TreeNodeRow
+                        key={child.id}
+                        node={child}
+                        selectedId={selectedId}
+                        expandedIds={expandedIds}
+                        onSelect={onSelect}
+                        depth={depth + 1}
+                    />
+                ))}
         </div>
     )
 }
@@ -101,7 +107,8 @@ export function CategoryTreeSelect({ categories, selectedId, onChange }: Props) 
     const [open, setOpen] = useState(false)
     const tree = useMemo(() => buildTree(categories), [categories])
     const selectedName = useMemo(
-        () => selectedId ? categories.find((c) => String(c.id) === selectedId)?.name ?? null : null,
+        () =>
+            selectedId ? (categories.find((c) => String(c.id) === selectedId)?.name ?? null) : null,
         [selectedId, categories],
     )
     const expandedIds = useMemo(
@@ -114,10 +121,17 @@ export function CategoryTreeSelect({ categories, selectedId, onChange }: Props) 
             <PopoverTrigger asChild>
                 <button className="flex items-center justify-between gap-2 h-9 px-3 rounded-md border border-gray-200 w-[240px] cursor-pointer hover:border-gray-300 transition-colors text-sm text-gray-700">
                     <Layers className="w-4 h-4 text-gray-500 shrink-0" />
-                    <span className="flex-1 truncate text-left">{selectedName ?? 'Все категории'}</span>
+                    <span className="flex-1 truncate text-left">
+                        {selectedName ?? 'Все категории'}
+                    </span>
                     {selectedId && (
-                        <X className="w-4 h-4 text-gray-400 hover:text-gray-600 shrink-0"
-                            onClick={(e) => { e.stopPropagation(); onChange(null) }} />
+                        <X
+                            className="w-4 h-4 text-gray-400 hover:text-gray-600 shrink-0"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onChange(null)
+                            }}
+                        />
                     )}
                 </button>
             </PopoverTrigger>
@@ -128,7 +142,10 @@ export function CategoryTreeSelect({ categories, selectedId, onChange }: Props) 
                         node={node}
                         selectedId={selectedId}
                         expandedIds={expandedIds}
-                        onSelect={(id) => { onChange(id); setOpen(false) }}
+                        onSelect={(id) => {
+                            onChange(id)
+                            setOpen(false)
+                        }}
                         depth={0}
                     />
                 ))}

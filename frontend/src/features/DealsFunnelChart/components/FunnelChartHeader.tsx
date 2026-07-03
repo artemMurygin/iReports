@@ -1,4 +1,4 @@
-import { CardDescription, CardHeader, CardTitle } from '@/shared/ui/card.tsx';
+import { CardDescription, CardHeader, CardTitle } from '@/shared/ui/card.tsx'
 
 type Props = {
     title: string

@@ -1,12 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/shared/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { SparklineCell } from './SparklineCell'
 import type { ServiceAnalyticsEntry } from '../types'
 
@@ -39,7 +32,9 @@ export function ServicesTable({ services }: Props) {
                     <CardTitle className="text-base font-semibold text-gray-900">Услуги</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-center text-sm text-gray-400 py-8">Нет данных за выбранный период</p>
+                    <p className="text-center text-sm text-gray-400 py-8">
+                        Нет данных за выбранный период
+                    </p>
                 </CardContent>
             </Card>
         )
@@ -54,7 +49,12 @@ export function ServicesTable({ services }: Props) {
                             Услуги
                         </CardTitle>
                         <p className="mt-0.5 text-sm text-gray-500">
-                            {sorted.length} {sorted.length === 1 ? 'услуга' : sorted.length < 5 ? 'услуги' : 'услуг'}
+                            {sorted.length}{' '}
+                            {sorted.length === 1
+                                ? 'услуга'
+                                : sorted.length < 5
+                                  ? 'услуги'
+                                  : 'услуг'}
                         </p>
                     </div>
                 </div>
@@ -64,29 +64,86 @@ export function ServicesTable({ services }: Props) {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gray-50 sticky top-0">
-                                <TableHead className="w-8 text-center text-gray-400 font-bold">#</TableHead>
-                                <TableHead className="min-w-[220px] font-bold text-gray-700">Услуга</TableHead>
-                                <TableHead className="text-right w-24 font-bold text-gray-700" title="Количество продаж">Продажи</TableHead>
-                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Динамика продаж по периодам">Тренд</TableHead>
-                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Текущая цена услуги по прайсу">Розничная <br />цена</TableHead>
-                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Средняя стоимость одной услуги">Средняя <br />цена продажи</TableHead>
-                                <TableHead className="text-center w-32 font-bold text-gray-700" title="Начисление мастеру">Начисление <br />мастеру</TableHead>
-                                <TableHead className="text-right w-36 font-bold text-gray-700 break-words" title="Средний чек заказа, содержащего эту услугу">Средний чек <br />заказов</TableHead>
-                                <TableHead className="text-right w-36 font-bold text-gray-700" title="Суммарная выручка по заказам с услугой">Выручка <br />заказов</TableHead>
-                                <TableHead className="text-right w-32 font-bold text-gray-700" title="Прибыль по заказам с услугой">Прибыль <br />заказов</TableHead>
-
+                                <TableHead className="w-8 text-center text-gray-400 font-bold">
+                                    #
+                                </TableHead>
+                                <TableHead className="min-w-[220px] font-bold text-gray-700">
+                                    Услуга
+                                </TableHead>
+                                <TableHead
+                                    className="text-right w-24 font-bold text-gray-700"
+                                    title="Количество продаж"
+                                >
+                                    Продажи
+                                </TableHead>
+                                <TableHead
+                                    className="text-center w-32 font-bold text-gray-700"
+                                    title="Динамика продаж по периодам"
+                                >
+                                    Тренд
+                                </TableHead>
+                                <TableHead
+                                    className="text-center w-32 font-bold text-gray-700"
+                                    title="Текущая цена услуги по прайсу"
+                                >
+                                    Розничная <br />
+                                    цена
+                                </TableHead>
+                                <TableHead
+                                    className="text-center w-32 font-bold text-gray-700"
+                                    title="Средняя стоимость одной услуги"
+                                >
+                                    Средняя <br />
+                                    цена продажи
+                                </TableHead>
+                                <TableHead
+                                    className="text-center w-32 font-bold text-gray-700"
+                                    title="Начисление мастеру"
+                                >
+                                    Начисление <br />
+                                    мастеру
+                                </TableHead>
+                                <TableHead
+                                    className="text-right w-36 font-bold text-gray-700 break-words"
+                                    title="Средний чек заказа, содержащего эту услугу"
+                                >
+                                    Средний чек <br />
+                                    заказов
+                                </TableHead>
+                                <TableHead
+                                    className="text-right w-36 font-bold text-gray-700"
+                                    title="Суммарная выручка по заказам с услугой"
+                                >
+                                    Выручка <br />
+                                    заказов
+                                </TableHead>
+                                <TableHead
+                                    className="text-right w-32 font-bold text-gray-700"
+                                    title="Прибыль по заказам с услугой"
+                                >
+                                    Прибыль <br />
+                                    заказов
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {sorted.map((service, idx) => {
-                                const barWidth = maxCount > 0 ? Math.round((service.totalCount / maxCount) * 100) : 0
+                                const barWidth =
+                                    maxCount > 0
+                                        ? Math.round((service.totalCount / maxCount) * 100)
+                                        : 0
                                 return (
-                                    <TableRow key={service.serviceId} className="group hover:bg-gray-50/80 transition-colors">
+                                    <TableRow
+                                        key={service.serviceId}
+                                        className="group hover:bg-gray-50/80 transition-colors"
+                                    >
                                         <TableCell className="text-center text-xs text-gray-300 tabular-nums">
                                             {idx + 1}
                                         </TableCell>
                                         <TableCell className="font-medium text-gray-900 py-3 max-w-[500px]">
-                                            <span className="line-clamp-2 leading-snug">{service.serviceName}</span>
+                                            <span className="line-clamp-2 leading-snug">
+                                                {service.serviceName}
+                                            </span>
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex flex-col items-end gap-0.5">
@@ -119,10 +176,11 @@ export function ServicesTable({ services }: Props) {
                                         <TableCell className="text-right tabular-nums text-sm font-medium text-gray-900">
                                             {fmtMoney(service.totalRevenue)}
                                         </TableCell>
-                                        <TableCell className={`text-right tabular-nums text-sm font-medium ${profitColor(service.totalProfit)}`}>
+                                        <TableCell
+                                            className={`text-right tabular-nums text-sm font-medium ${profitColor(service.totalProfit)}`}
+                                        >
                                             {fmtMoney(service.totalProfit)}
                                         </TableCell>
-
                                     </TableRow>
                                 )
                             })}

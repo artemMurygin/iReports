@@ -27,7 +27,9 @@ export function ServicesAnalytics() {
             />
             <CategoryBreadcrumbs
                 breadcrumbs={breadcrumbs}
-                onChange={(id) => setFilters({ ...filters, selectedCategoryId: id, serviceIds: [] })}
+                onChange={(id) =>
+                    setFilters({ ...filters, selectedCategoryId: id, serviceIds: [] })
+                }
             />
             {isInitialLoad ? (
                 <PageLoader />

@@ -24,21 +24,21 @@ function revive(parsed: Record<string, unknown>): ServicesFilters {
     return {
         dateRange: {
             from: parseDate(dr?.from) ?? defaults.dateRange.from,
-            to:   parseDate(dr?.to)   ?? defaults.dateRange.to,
+            to: parseDate(dr?.to) ?? defaults.dateRange.to,
         },
-        selectedCategoryId: typeof parsed.selectedCategoryId === 'string'
-            ? parsed.selectedCategoryId
-            : null,
+        selectedCategoryId:
+            typeof parsed.selectedCategoryId === 'string' ? parsed.selectedCategoryId : null,
         serviceIds: Array.isArray(parsed.serviceIds) ? parsed.serviceIds : [],
-        groupBy: groupBy === 'day' || groupBy === 'week' || groupBy === 'month'
-            ? groupBy
-            : defaults.groupBy,
+        groupBy:
+            groupBy === 'day' || groupBy === 'week' || groupBy === 'month'
+                ? groupBy
+                : defaults.groupBy,
     }
 }
 
 export function useServiceFilters() {
     const [filters, setFiltersState] = useState<ServicesFilters>(() =>
-        loadFilters(STORAGE_KEY, makeDefaultFilters(), revive)
+        loadFilters(STORAGE_KEY, makeDefaultFilters(), revive),
     )
 
     const setFilters = (value: ServicesFilters) => {

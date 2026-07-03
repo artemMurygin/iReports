@@ -1,7 +1,7 @@
-import { useState } from "react"
-import { Check, ChevronDown, Search, X } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
+import { useState } from 'react'
+import { Check, ChevronDown, Search, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 
 export interface MultiSelectOption {
     value: string
@@ -22,7 +22,7 @@ export function MultiSelect({
     selected,
     onChange,
     placeholder,
-    width = "w-[180px]",
+    width = 'w-[180px]',
     searchable = false,
 }: MultiSelectProps) {
     const [open, setOpen] = useState(false)
@@ -30,44 +30,52 @@ export function MultiSelect({
 
     const toggle = (value: string) => {
         onChange(
-            selected.includes(value)
-                ? selected.filter((v) => v !== value)
-                : [...selected, value]
+            selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value],
         )
     }
 
-    const filtered = searchable && query.trim()
-        ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
-        : options
+    const filtered =
+        searchable && query.trim()
+            ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+            : options
 
     const label =
         selected.length === 0
             ? placeholder
             : selected.length === 1
-                ? options.find((o) => o.value === selected[0])?.label ?? '1 выбран'
-                : `${selected.length} выбрано`
+              ? (options.find((o) => o.value === selected[0])?.label ?? '1 выбран')
+              : `${selected.length} выбрано`
 
     return (
-        <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQuery('') }}>
+        <Popover
+            open={open}
+            onOpenChange={(v) => {
+                setOpen(v)
+                if (!v) setQuery('')
+            }}
+        >
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "flex items-center justify-between gap-2 h-9 px-3 rounded-md border border-gray-200 cursor-pointer hover:border-gray-300 transition-colors text-sm text-gray-700",
-                        width
+                        'flex items-center justify-between gap-2 h-9 px-3 rounded-md border border-gray-200 cursor-pointer hover:border-gray-300 transition-colors text-sm text-gray-700',
+                        width,
                     )}
                 >
                     <span className="truncate">{label}</span>
                     {selected.length > 0 ? (
                         <X
                             className="w-4 h-4 text-gray-400 hover:text-gray-600 shrink-0"
-                            onClick={(e) => { e.stopPropagation(); onChange([]) }}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onChange([])
+                            }}
                         />
                     ) : (
                         <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
                     )}
                 </button>
             </PopoverTrigger>
-            <PopoverContent className={cn("p-1", width)} align="start">
+            <PopoverContent className={cn('p-1', width)} align="start">
                 {searchable && (
                     <div className="flex items-center gap-2 px-2 py-1.5 mb-1 border-b border-gray-100">
                         <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -99,8 +107,10 @@ export function MultiSelect({
                             >
                                 <div
                                     className={cn(
-                                        "flex items-center justify-center w-4 h-4 rounded border shrink-0",
-                                        isSelected ? "bg-primary border-primary" : "border-gray-300"
+                                        'flex items-center justify-center w-4 h-4 rounded border shrink-0',
+                                        isSelected
+                                            ? 'bg-primary border-primary'
+                                            : 'border-gray-300',
                                     )}
                                 >
                                     {isSelected && <Check className="w-3 h-3 text-white" />}

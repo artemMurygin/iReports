@@ -10,7 +10,14 @@ interface TablePaginationProps {
     onPageChange: (updater: (prev: number) => number) => void
 }
 
-export function TablePagination({ page, totalPages, total, rangeFrom, rangeTo, onPageChange }: TablePaginationProps) {
+export function TablePagination({
+    page,
+    totalPages,
+    total,
+    rangeFrom,
+    rangeTo,
+    onPageChange,
+}: TablePaginationProps) {
     return (
         <div className="flex items-center justify-between px-5 py-4">
             <span className="text-sm text-gray-500">

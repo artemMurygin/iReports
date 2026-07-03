@@ -17,7 +17,9 @@ export function CategoryBreadcrumbs({ breadcrumbs, onChange }: Props) {
                     <div key={crumb.id ?? 'root'} className="flex items-center gap-1">
                         {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0" />}
                         {isLast ? (
-                            <span className="font-medium text-gray-900 truncate max-w-[200px]">{crumb.name}</span>
+                            <span className="font-medium text-gray-900 truncate max-w-[200px]">
+                                {crumb.name}
+                            </span>
                         ) : (
                             <button
                                 onClick={() => onChange(crumb.id)}

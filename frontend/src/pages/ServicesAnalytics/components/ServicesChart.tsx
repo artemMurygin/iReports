@@ -34,8 +34,16 @@ const DESCRIPTIONS: Record<ChartMode, string> = {
 }
 
 const COLORS = [
-    '#38d97b', '#2563eb', '#f59e0b', '#ef4444', '#8b5cf6',
-    '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
+    '#38d97b',
+    '#2563eb',
+    '#f59e0b',
+    '#ef4444',
+    '#8b5cf6',
+    '#06b6d4',
+    '#ec4899',
+    '#14b8a6',
+    '#f97316',
+    '#6366f1',
 ]
 
 function formatPeriod(period: string): string {
@@ -44,7 +52,10 @@ function formatPeriod(period: string): string {
     return `${parts[1]}.${parts[0]}`
 }
 
-function getPointValue(b: { count: number; avgPrice: number; revenue: number }, mode: ChartMode): number {
+function getPointValue(
+    b: { count: number; avgPrice: number; revenue: number },
+    mode: ChartMode,
+): number {
     if (mode === 'count') return b.count
     if (mode === 'avgPrice') return b.avgPrice
     return b.revenue
@@ -56,7 +67,10 @@ function buildChartData(series: ChartSeriesEntry[], mode: ChartMode) {
     return periods.map((period, i) => {
         const row: Record<string, string | number> = { period, label: formatPeriod(period) }
         for (const s of series) {
-            row[s.name] = getPointValue(s.breakdown[i] ?? { count: 0, avgPrice: 0, revenue: 0 }, mode)
+            row[s.name] = getPointValue(
+                s.breakdown[i] ?? { count: 0, avgPrice: 0, revenue: 0 },
+                mode,
+            )
         }
         return row
     })
@@ -81,7 +95,15 @@ function MiniTooltip({ active, payload, label, mode }: any) {
     if (!active || !payload?.length) return null
     const val = mode === 'count' ? payload[0].value : `${ruFmt(Number(payload[0].value))} ₽`
     return (
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 10px', fontSize: 11 }}>
+        <div
+            style={{
+                background: '#fff',
+                border: '1px solid #e5e7eb',
+                borderRadius: 6,
+                padding: '6px 10px',
+                fontSize: 11,
+            }}
+        >
             <p style={{ color: '#6b7280', marginBottom: 2 }}>{label}</p>
             <p style={{ fontWeight: 600, color: '#111827' }}>{val}</p>
         </div>
@@ -94,7 +116,15 @@ function fmtCompact(n: number): string {
     return `${n.toLocaleString('ru-RU')} ₽`
 }
 
-function SingleSeriesChart({ series, mode, color }: { series: ChartSeriesEntry; mode: ChartMode; color: string }) {
+function SingleSeriesChart({
+    series,
+    mode,
+    color,
+}: {
+    series: ChartSeriesEntry
+    mode: ChartMode
+    color: string
+}) {
     const data = buildSingleSeriesData(series, mode)
     const isMoney = mode !== 'count'
 
@@ -112,21 +142,33 @@ function SingleSeriesChart({ series, mode, color }: { series: ChartSeriesEntry; 
                 <div className="flex items-center gap-2 shrink-0 text-xs tabular-nums whitespace-nowrap">
                     <span
                         title="Кол-во продаж"
-                        className={mode === 'count' ? 'font-semibold text-gray-900 bg-gray-100 rounded px-1.5 py-0.5' : 'text-gray-300'}
+                        className={
+                            mode === 'count'
+                                ? 'font-semibold text-gray-900 bg-gray-100 rounded px-1.5 py-0.5'
+                                : 'text-gray-300'
+                        }
                     >
                         {totalCount} шт
                     </span>
                     <span className="text-gray-200">·</span>
                     <span
                         title="Средний чек"
-                        className={mode === 'avgPrice' ? 'font-semibold text-gray-900 bg-gray-100 rounded px-1.5 py-0.5' : 'text-gray-300'}
+                        className={
+                            mode === 'avgPrice'
+                                ? 'font-semibold text-gray-900 bg-gray-100 rounded px-1.5 py-0.5'
+                                : 'text-gray-300'
+                        }
                     >
                         {fmtCompact(avgPrice)}
                     </span>
                     <span className="text-gray-200">·</span>
                     <span
                         title="Выручка"
-                        className={mode === 'revenue' ? 'font-semibold text-gray-900 bg-gray-100 rounded px-1.5 py-0.5' : 'text-gray-300'}
+                        className={
+                            mode === 'revenue'
+                                ? 'font-semibold text-gray-900 bg-gray-100 rounded px-1.5 py-0.5'
+                                : 'text-gray-300'
+                        }
                     >
                         {fmtCompact(totalRevenue)}
                     </span>
@@ -160,19 +202,61 @@ function SingleSeriesChart({ series, mode, color }: { series: ChartSeriesEntry; 
 
 function BigTooltip({ active, payload, label, mode }: any) {
     if (!active || !payload?.length) return null
-    const sorted = [...payload].sort((a: any, b: any) => (Number(b.value) || 0) - (Number(a.value) || 0))
+    const sorted = [...payload].sort(
+        (a: any, b: any) => (Number(b.value) || 0) - (Number(a.value) || 0),
+    )
     const isMoney = mode !== 'count'
     return (
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: 12, maxWidth: 280 }}>
+        <div
+            style={{
+                background: '#fff',
+                border: '1px solid #e5e7eb',
+                borderRadius: 8,
+                padding: '8px 12px',
+                fontSize: 12,
+                maxWidth: 280,
+            }}
+        >
             <p style={{ marginBottom: 6, fontWeight: 600, color: '#374151' }}>{label}</p>
             {sorted.map((entry: any) => {
                 const key = String(entry.dataKey ?? entry.name ?? '')
                 const val = isMoney ? `${ruFmt(Number(entry.value))} ₽` : entry.value
                 return (
-                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color ?? 'transparent', display: 'inline-block', flexShrink: 0 }} />
-                        <span style={{ color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{key}:</span>
-                        <span style={{ fontWeight: 600, color: '#111827', marginLeft: 'auto', paddingLeft: 12 }}>{val}</span>
+                    <div
+                        key={key}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}
+                    >
+                        <span
+                            style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                background: entry.color ?? 'transparent',
+                                display: 'inline-block',
+                                flexShrink: 0,
+                            }}
+                        />
+                        <span
+                            style={{
+                                color: '#6b7280',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: 160,
+                            }}
+                        >
+                            {key}:
+                        </span>
+                        <span
+                            style={{
+                                fontWeight: 600,
+                                color: '#111827',
+                                marginLeft: 'auto',
+                                paddingLeft: 12,
+                            }}
+                        >
+                            {val}
+                        </span>
                     </div>
                 )
             })}
@@ -216,7 +300,14 @@ export function ServicesChart({ series }: Props) {
                 {series.length > 1 ? (
                     <div className="grid grid-cols-2 gap-3">
                         {series.map((s, i) => (
-                            <div key={s.id} className={series.length % 2 !== 0 && i === series.length - 1 ? 'col-span-2' : ''}>
+                            <div
+                                key={s.id}
+                                className={
+                                    series.length % 2 !== 0 && i === series.length - 1
+                                        ? 'col-span-2'
+                                        : ''
+                                }
+                            >
                                 <SingleSeriesChart
                                     series={s}
                                     mode={mode}
@@ -245,7 +336,9 @@ export function ServicesChart({ series }: Props) {
                                         stackId="a"
                                     />
                                 ))}
-                                <Tooltip content={(props) => <BigTooltip {...props} mode={mode} />} />
+                                <Tooltip
+                                    content={(props) => <BigTooltip {...props} mode={mode} />}
+                                />
                             </AreaChart>
                         ) : (
                             <LineChart data={buildChartData(series, mode)}>
@@ -267,7 +360,9 @@ export function ServicesChart({ series }: Props) {
                                         activeDot={{ r: 5 }}
                                     />
                                 ))}
-                                <Tooltip content={(props) => <BigTooltip {...props} mode={mode} />} />
+                                <Tooltip
+                                    content={(props) => <BigTooltip {...props} mode={mode} />}
+                                />
                             </LineChart>
                         )}
                     </ResponsiveContainer>

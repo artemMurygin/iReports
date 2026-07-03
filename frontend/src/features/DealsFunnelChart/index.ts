@@ -1,1 +1,1 @@
-export { DealsFunnelChart } from './components/DealsFunnelChart.tsx';
+export { DealsFunnelChart } from './components/DealsFunnelChart.tsx'

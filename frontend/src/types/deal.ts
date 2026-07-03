@@ -1,31 +1,31 @@
 export interface ApiEmployee {
-  id: number
-  firstName: string
-  lastName: string
+    id: number
+    firstName: string
+    lastName: string
 }
 
 export interface ApiStage {
-  id: string
-  name: string
-  sort: number
-  color: string
-  systemType: string
-  stageGroupId?: string
-  stageGroupName?: string
+    id: string
+    name: string
+    sort: number
+    color: string
+    systemType: string
+    stageGroupId?: string
+    stageGroupName?: string
 }
 
 export type ApiStageExtended = ApiStage
 
 export interface ApiSource {
-  id: string
-  name: string
-  sort: number
+    id: string
+    name: string
+    sort: number
 }
 
 export interface ApiPointOfContact {
-  id: string
-  name: string
-  sort: number
+    id: string
+    name: string
+    sort: number
 }
 
 export interface ApiEnumValue {
@@ -43,8 +43,8 @@ export interface Deal {
     deviceModel: string | null
     deviceMalfunction: string | null
     createdAt: string
-    updatedAt: string | null,
-    pointOfContact: ApiPointOfContact | null,
+    updatedAt: string | null
+    pointOfContact: ApiPointOfContact | null
     stage: ApiStage
     assignedBy: ApiEmployee | null
     source: ApiSource | null
@@ -54,6 +54,6 @@ export interface Deal {
 }
 
 export interface DealsResponse {
-  total: number
-  deals: Deal[]
+    total: number
+    deals: Deal[]
 }

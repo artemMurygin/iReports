@@ -1,4 +1,9 @@
-import type { ServiceCategory, ServiceAnalyticsEntry, ChartSeriesEntry, ServiceBreakdownPoint } from '../types'
+import type {
+    ServiceCategory,
+    ServiceAnalyticsEntry,
+    ChartSeriesEntry,
+    ServiceBreakdownPoint,
+} from '../types'
 
 export function resolveDescendantIds(categories: ServiceCategory[], selectedId: string): number[] {
     const rootId = Number(selectedId)
@@ -16,7 +21,10 @@ export function resolveDescendantIds(categories: ServiceCategory[], selectedId: 
     return ids
 }
 
-export function getDirectChildren(categories: ServiceCategory[], parentId: string | null): ServiceCategory[] {
+export function getDirectChildren(
+    categories: ServiceCategory[],
+    parentId: string | null,
+): ServiceCategory[] {
     const numId = parentId !== null ? Number(parentId) : null
     return categories.filter((c) => c.parentId === numId)
 }

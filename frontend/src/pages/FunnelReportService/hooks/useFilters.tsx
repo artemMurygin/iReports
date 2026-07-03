@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import type { DashboardFilters } from '@/pages/FunnelReportService/types.ts';
-import { api } from '@/shared/axios.instance.ts';
-import type { ApiStageExtended } from '@/types/deal.ts';
-import { startOfMonth } from 'date-fns';
-import { loadFilters, saveFilters, parseDate } from '@/shared/lib/persistFilters.ts';
+import { useEffect, useState } from 'react'
+import type { DashboardFilters } from '@/pages/FunnelReportService/types.ts'
+import { api } from '@/shared/axios.instance.ts'
+import type { ApiStageExtended } from '@/types/deal.ts'
+import { startOfMonth } from 'date-fns'
+import { loadFilters, saveFilters, parseDate } from '@/shared/lib/persistFilters.ts'
 
 const STORAGE_KEY = 'filters:funnel-report'
 
@@ -26,19 +26,19 @@ function revive(parsed: Record<string, unknown>): DashboardFilters {
     return {
         dateRange: {
             from: parseDate(dr?.from) ?? defaults.dateRange.from,
-            to:   parseDate(dr?.to)   ?? defaults.dateRange.to,
+            to: parseDate(dr?.to) ?? defaults.dateRange.to,
         },
-        managers:    Array.isArray(parsed.managers)    ? parsed.managers    : [],
-        sources:     Array.isArray(parsed.sources)     ? parsed.sources     : [],
+        managers: Array.isArray(parsed.managers) ? parsed.managers : [],
+        sources: Array.isArray(parsed.sources) ? parsed.sources : [],
         deviceTypes: Array.isArray(parsed.deviceTypes) ? parsed.deviceTypes : [],
-        stages:      Array.isArray(parsed.stages)      ? parsed.stages      : [],
+        stages: Array.isArray(parsed.stages) ? parsed.stages : [],
         stageGroups: Array.isArray(parsed.stageGroups) ? parsed.stageGroups : [],
     }
 }
 
-export function useFilters(){
+export function useFilters() {
     const [filters, setFiltersState] = useState<DashboardFilters>(() =>
-        loadFilters(STORAGE_KEY, makeDefaultFilters(), revive)
+        loadFilters(STORAGE_KEY, makeDefaultFilters(), revive),
     )
     const [employees, setEmployees] = useState([])
     const [sources, setSources] = useState([])
@@ -56,19 +56,21 @@ export function useFilters(){
 
     useEffect(() => {
         Promise.all([
-            api.get("/deals/stages"),
-            api.get("/deals/managers"),
-            api.get("/deals/sources"),
-            api.get("/deals/models"),
-            api.get("/deals/stage-groups"),
-        ]).then(([stagesRes, managersRes, sourcesRes, modelsRes, stageGroupsRes]) => {
-            setStages(stagesRes.data)
-            setEmployees(managersRes.data)
-            setSources(sourcesRes.data)
-            setDeviceTypes(modelsRes.data)
-            setStageGroups(stageGroupsRes.data)
-        }).catch(err => setError(err?.message ?? 'Не удалось загрузить данные'))
-    }, []);
+            api.get('/deals/stages'),
+            api.get('/deals/managers'),
+            api.get('/deals/sources'),
+            api.get('/deals/models'),
+            api.get('/deals/stage-groups'),
+        ])
+            .then(([stagesRes, managersRes, sourcesRes, modelsRes, stageGroupsRes]) => {
+                setStages(stagesRes.data)
+                setEmployees(managersRes.data)
+                setSources(sourcesRes.data)
+                setDeviceTypes(modelsRes.data)
+                setStageGroups(stageGroupsRes.data)
+            })
+            .catch((err) => setError(err?.message ?? 'Не удалось загрузить данные'))
+    }, [])
 
     return {
         filters,
@@ -80,6 +82,6 @@ export function useFilters(){
         setFilters,
         setError,
         error,
-        defaultFilters
+        defaultFilters,
     }
 }

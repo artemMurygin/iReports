@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react';
-import { api } from '@/shared/axios.instance.ts';
-import type { DashboardFilters, DashboardKPI } from '@/pages/FunnelReportService/types.ts';
+import axios from 'axios'
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react'
+import { api } from '@/shared/axios.instance.ts'
+import type { DashboardFilters, DashboardKPI } from '@/pages/FunnelReportService/types.ts'
 
 const DEBOUNCE_MS = 1000
 const EXIT_MS = 220
@@ -35,7 +35,7 @@ export function useDeals(
             abortControllerRef.current = controller
             const { dateRange, stages, managers, sources, deviceTypes, stageGroups } = filters
 
-            api.get("/reports/service-funnel", {
+            api.get('/reports/service-funnel', {
                 signal: controller.signal,
                 params: {
                     momentFrom: dateRange.from,
@@ -47,7 +47,7 @@ export function useDeals(
                     stageGroupIds: stageGroups,
                 },
             })
-                .then(response => {
+                .then((response) => {
                     const { KPI, deals: newDeals } = response.data
 
                     if (animTimerRef.current) clearTimeout(animTimerRef.current)
@@ -65,11 +65,14 @@ export function useDeals(
                             setDeals(newDeals)
                             setKPI(KPI)
                             setAnimPhase('entering')
-                            animTimerRef.current = setTimeout(() => setAnimPhase('visible'), ENTER_MS)
+                            animTimerRef.current = setTimeout(
+                                () => setAnimPhase('visible'),
+                                ENTER_MS,
+                            )
                         }, EXIT_MS)
                     }
                 })
-                .catch(error => {
+                .catch((error) => {
                     if (!axios.isCancel(error)) {
                         setError(error?.message ?? 'Не удалось загрузить данные')
                         setLoading(false)
@@ -90,12 +93,13 @@ export function useDeals(
         animPhase === 'exiting'
             ? 'animate-out fade-out-0 slide-out-to-bottom-2 [animation-duration:220ms] [animation-fill-mode:forwards] pointer-events-none'
             : animPhase === 'entering'
-                ? 'animate-in fade-in-0 slide-in-from-bottom-2 [animation-duration:380ms]'
-                : ''
+              ? 'animate-in fade-in-0 slide-in-from-bottom-2 [animation-duration:380ms]'
+              : ''
 
-    const blurClass = isRefreshing && animPhase === 'visible'
-        ? 'blur-[1.5px] transition-[filter] duration-500 pointer-events-none'
-        : 'blur-0 transition-[filter] duration-300'
+    const blurClass =
+        isRefreshing && animPhase === 'visible'
+            ? 'blur-[1.5px] transition-[filter] duration-500 pointer-events-none'
+            : 'blur-0 transition-[filter] duration-300'
 
     return { loading, isInitialLoad, animClass, blurClass, deals, KPI }
 }

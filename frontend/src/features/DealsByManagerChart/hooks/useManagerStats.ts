@@ -14,7 +14,10 @@ export interface ManagerStatItem {
 
 export function useManagerStats(deals: Deal[]) {
     const data = useMemo(() => {
-        const map = new Map<string, { name: string; totalCount: number; wonCount: number; revenue: number }>()
+        const map = new Map<
+            string,
+            { name: string; totalCount: number; wonCount: number; revenue: number }
+        >()
 
         for (const deal of deals) {
             const id = deal.assignedBy ? String(deal.assignedBy.id) : 'unknown'

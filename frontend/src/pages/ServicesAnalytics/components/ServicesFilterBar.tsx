@@ -16,7 +16,10 @@ interface Props {
 }
 
 export function ServicesFilterBar({ filters, categories, services, onChange, onReset }: Props) {
-    const serviceOptions = services.map((s) => ({ value: String(s.serviceId), label: s.serviceName }))
+    const serviceOptions = services.map((s) => ({
+        value: String(s.serviceId),
+        label: s.serviceName,
+    }))
 
     return (
         <div className="sticky top-16 z-10 flex items-center gap-4 px-6 py-3 bg-white border-b border-gray-200 shrink-0">
@@ -58,7 +61,12 @@ export function ServicesFilterBar({ filters, categories, services, onChange, onR
 
             <div className="flex-1" />
 
-            <Button variant="ghost" size="sm" onClick={onReset} className="text-gray-500 hover:text-gray-700">
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={onReset}
+                className="text-gray-500 hover:text-gray-700"
+            >
                 Сбросить фильтры
             </Button>
         </div>

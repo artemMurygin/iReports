@@ -1,6 +1,6 @@
-import { type ReactNode } from "react"
-import { ErrorLayout } from '@/shared/ui/ErrorLayout.tsx';
-import { PageLoader } from '@/pages/ServicesAnalytics/components/PageLoader.tsx';
+import { type ReactNode } from 'react'
+import { ErrorLayout } from '@/shared/ui/ErrorLayout.tsx'
+import { PageLoader } from '@/pages/ServicesAnalytics/components/PageLoader.tsx'
 
 type Props = {
     isInitialLoad?: boolean
@@ -11,7 +11,14 @@ type Props = {
     children?: ReactNode
 }
 
-export function FunnelReportServiceLayout({ isInitialLoad, animClass = '', blurClass = '', filterBar, error, children }: Props) {
+export function FunnelReportServiceLayout({
+    isInitialLoad,
+    animClass = '',
+    blurClass = '',
+    filterBar,
+    error,
+    children,
+}: Props) {
     return (
         <main className="flex flex-col flex-1">
             {filterBar}

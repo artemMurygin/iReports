@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import { CardContent } from '@/shared/ui/card.tsx';
-import type { FunnelRowData } from '../hooks/useFunnelStats.ts';
+import type { ReactNode } from 'react'
+import { CardContent } from '@/shared/ui/card.tsx'
+import type { FunnelRowData } from '../hooks/useFunnelStats.ts'
 
 type Props = {
     mainRows: FunnelRowData[]
@@ -13,8 +13,13 @@ export function FunnelChartBody({ mainRows, branchRows, renderRow }: Props) {
 
     return (
         <CardContent className="flex-1 flex flex-col gap-3 pt-2 overflow-y-auto min-h-0">
-            <div className="flex items-center gap-3 text-xs text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
-                <span className="shrink-0" style={{ width: 160 }}>Этап</span>
+            <div
+                className="flex items-center gap-3 text-xs text-gray-400"
+                style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+                <span className="shrink-0" style={{ width: 160 }}>
+                    Этап
+                </span>
                 <span className="flex-1">Кол-во</span>
                 <div className="flex gap-3 shrink-0">
                     <span className="w-[100px] text-right">Сумма</span>
@@ -22,9 +27,7 @@ export function FunnelChartBody({ mainRows, branchRows, renderRow }: Props) {
                 </div>
             </div>
 
-            {!hasData && (
-                <p className="text-sm text-gray-400 py-4 text-center">Нет данных</p>
-            )}
+            {!hasData && <p className="text-sm text-gray-400 py-4 text-center">Нет данных</p>}
 
             {mainRows.map((row) => renderRow(row))}
 
