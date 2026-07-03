@@ -45,7 +45,7 @@ async function bootstrap() {
       await moySklad.uploadProductFolders();
       await moySklad.uploadProducts();
       await moySklad.uploadServices();
-      await moySklad.uploadDemands(fromDate);
+      await moySklad.uploadCreatedDemands(fromDate);
     }
 
     if (erp.includes('R')) {
@@ -58,8 +58,8 @@ async function bootstrap() {
       // await roapp.uploadServices();
       // await roapp.uploadProducts();
       // await customRoApp.uploadServicesBonuses();
-      // const ordersIds = await roapp.uploadCreatedOrders(fromDate);
-      await roapp.uploadOrderItems();
+      const ordersIds = await roapp.uploadCreatedOrders(fromDate);
+      await roapp.uploadOrderItems(ordersIds);
     }
 
     await app.close();

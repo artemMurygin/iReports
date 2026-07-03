@@ -24,7 +24,7 @@ import { salaryApi } from '../api'
 import { employeesQuery, departmentsQuery, categoriesQuery } from '../queries'
 import { EmployeeSelect } from './EmployeeSelect'
 import { MultiSelect } from './MultiSelect'
-import type { Direction, KpiStat, Scope } from '../types'
+import type { Direction, KpiStat, PlanFactRow, Scope } from '../types'
 
 const STAT_LABELS: Record<KpiStat, string> = {
     REVENUE: 'Выручка',
@@ -345,10 +345,11 @@ function newBlock(direction: Direction = 'SERVICE'): DirectionBlock {
 
 interface Props {
     period: string
+    existingRows: PlanFactRow[]
     onClose: () => void
 }
 
-export function CreatePlanModal({ period, onClose }: Props) {
+export function CreatePlanModal({ period, existingRows, onClose }: Props) {
     const { data: employees = [] } = useQuery(employeesQuery)
     const { data: departments = [] } = useQuery(departmentsQuery)
 
@@ -361,6 +362,13 @@ export function CreatePlanModal({ period, onClose }: Props) {
     const { mutate, isPending } = useMutation({
         mutationFn: () => {
             if (!entityId) return Promise.reject(new Error('no-entity'))
+
+            const duplicate = existingRows.some((row) =>
+                entityType === 'employee'
+                    ? row.scope === 'PERSONAL' && row.employeeId === entityId
+                    : row.scope === 'DEPARTMENT' && row.departmentId === entityId,
+            )
+            if (duplicate) return Promise.reject(new Error('duplicate'))
             const scope: Scope = entityType === 'employee' ? 'PERSONAL' : 'DEPARTMENT'
 
             const items = blocks.flatMap((b) => {
@@ -399,6 +407,7 @@ export function CreatePlanModal({ period, onClose }: Props) {
         },
         onError: (e: Error) => {
             if (e.message === 'no-entity') toast.error('Выберите сотрудника или отдел')
+            else if (e.message === 'duplicate') toast.error('План на этот месяц уже существует')
             else if (e.message === 'empty') toast.error('Добавьте хотя бы одну категорию или выберите «Всё направление»')
             else toast.error('Не удалось создать план')
         },

@@ -27,6 +27,9 @@ const DemandPositionSchema = z.object({
       meta: MetaSchema,
       id: z.string(),
       name: z.string(),
+      // Присутствует только для assortment.meta.type === 'variant' —
+      // ссылка на родительский товар (используется для наследования folderId).
+      product: MetaWrapperSchema.optional(),
     })
     .passthrough()
     .optional(),

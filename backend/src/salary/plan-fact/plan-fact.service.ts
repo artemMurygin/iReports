@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import {
   Direction,
@@ -10,6 +10,7 @@ import { collectSubtreeIds, CategoryEdge } from '../calculation/category-tree';
 import { castCategoryExtId } from '../calculation/metrics/category-cast';
 import { calcServiceOrderMetric } from '../calculation/metrics/service-metrics';
 import { calcShopPositionMetric } from '../calculation/metrics/shop-metrics';
+import { realpath, writeFileSync } from 'node:fs';
 
 function sum(values: number[]): number {
   return values.reduce((a, b) => a + b, 0);
@@ -30,6 +31,8 @@ type PlanTargetRow = {
 // с учётом scope (сотрудник конкретный / весь отдел / вся компания).
 @Injectable()
 export class PlanFactService {
+  private readonly logger = new Logger(PlanFactService.name);
+
   constructor(private readonly db: DatabaseService) {}
 
   async getTable(filter: {
@@ -50,6 +53,7 @@ export class PlanFactService {
           : {}),
       },
     });
+
     const { start, endExclusive } = parsePeriod(filter.period);
 
     const categoryTreeCache = new Map<Direction, CategoryEdge[]>();
@@ -67,6 +71,7 @@ export class PlanFactService {
               select: { id: true, parentId: true },
             });
       categoryTreeCache.set(direction, tree);
+
       return tree;
     };
 
@@ -88,10 +93,14 @@ export class PlanFactService {
     target: Pick<PlanTargetRow, 'direction' | 'categoryExtId'>,
     loadCategoryTree: (direction: Direction) => Promise<CategoryEdge[]>,
   ): Promise<(number | string)[] | null> {
-    if (!target.categoryExtId) return null;
+    if (!target.categoryExtId) {
+      return null;
+    }
     const rootId = castCategoryExtId(target.direction, target.categoryExtId);
     const tree = await loadCategoryTree(target.direction);
-    return [...collectSubtreeIds(tree, rootId)];
+    const ids = [...collectSubtreeIds(tree, rootId)];
+
+    return ids;
   }
 
   private async resolveServiceEngineerIds(
@@ -115,19 +124,40 @@ export class PlanFactService {
   private async resolveShopManagerIds(
     target: Pick<PlanTargetRow, 'scope' | 'employeeId' | 'departmentId'>,
   ): Promise<string[] | null> {
-    if (target.scope === Scope.COMPANY) return null;
+    if (target.scope === Scope.COMPANY) {
+      this.logger.debug(
+        'resolveShopManagerIds: scope=COMPANY -> без фильтра по менеджеру',
+      );
+      return null;
+    }
     if (target.scope === Scope.PERSONAL) {
       const employee = await this.db.bitrixEmployee.findUnique({
         where: { id: target.employeeId! },
       });
-      return employee?.moySkladId != null ? [employee.moySkladId] : [];
+      const ids = employee?.moySkladId != null ? [employee.moySkladId] : [];
+      this.logger.debug(
+        `resolveShopManagerIds: scope=PERSONAL employeeId=${target.employeeId} ` +
+          `bitrixEmployee.moySkladId=${employee?.moySkladId ?? 'null'} -> managerIds=${JSON.stringify(ids)}`,
+      );
+      if (employee && employee.moySkladId == null) {
+        this.logger.warn(
+          `resolveShopManagerIds: у сотрудника employeeId=${target.employeeId} не заполнен moySkladId ` +
+            `-> факт по МойСклад для него всегда будет 0`,
+        );
+      }
+      return ids;
     }
     const employees = await this.db.bitrixEmployee.findMany({
       where: { departmentId: target.departmentId! },
     });
-    return employees
+    const ids = employees
       .map((e) => e.moySkladId)
       .filter((id): id is string => id != null);
+    this.logger.debug(
+      `resolveShopManagerIds: scope=DEPARTMENT departmentId=${target.departmentId} ` +
+        `сотрудников=${employees.length} с moySkladId=${ids.length} -> managerIds=${JSON.stringify(ids)}`,
+    );
+    return ids;
   }
 
   private async computeFact(
@@ -140,49 +170,70 @@ export class PlanFactService {
 
     if (target.direction === Direction.SERVICE) {
       const engineerIds = await this.resolveServiceEngineerIds(target);
-      if (engineerIds !== null && engineerIds.length === 0) return 0;
-
+      if (engineerIds !== null && engineerIds.length === 0) {
+        return 0;
+      }
+      console.log('Дата start', start);
+      console.log('Дата endExclusive', endExclusive);
       const rows = await this.db.roappServiceOrder.findMany({
         where: {
-          ...(engineerIds ? { engineerId: { in: engineerIds } } : {}),
-          order: { closedAt: { gte: start, lt: endExclusive } },
-          ...(categoryIds
-            ? { service: { categoryId: { in: categoryIds as number[] } } }
-            : {}),
+          order: {
+            closedAt: { gte: start, lt: endExclusive },
+            orderTypeId: 17199,
+          },
         },
         select: {
+          orderId: true,
           price: true,
           quantity: true,
           discount: true,
           cost: true,
           engeneerSalary: true,
+          order: {
+            select: {
+              label: true,
+            },
+          },
         },
       });
-      return sum(rows.map((r) => calcServiceOrderMetric(target.stat, r)));
+      const orders = new Array(...new Set(rows.map((i) => i.order.label)));
+      const ordersfromDB = await this.db.roappOrder.findMany({
+        where: {
+          payed: { gt: 0 },
+          closedAt: { gte: start, lt: endExclusive },
+        },
+      });
+      console.log(orders.length);
+      console.log('из дб' + ordersfromDB.map((i) => i.label));
+      const factValue = sum(
+        rows.map((r) => calcServiceOrderMetric(target.stat, r)),
+      );
+
+      return factValue;
     }
 
     const managerIds = await this.resolveShopManagerIds(target);
-    if (managerIds !== null && managerIds.length === 0) return 0;
+    if (managerIds !== null && managerIds.length === 0) {
+      return 0;
+    }
 
     const rows = await this.db.moySkladDemandPosition.findMany({
       where: {
-        demand: {
-          moment: { gte: start, lt: endExclusive },
-          ...(managerIds
-            ? {
-                OR: [
-                  { onlineManagerId: { in: managerIds } },
-                  { offlineManagerId: { in: managerIds } },
-                ],
-              }
-            : {}),
-        },
+        demand: { moment: { gte: start, lt: endExclusive } },
         ...(categoryIds
-          ? { product: { folderId: { in: categoryIds as string[] } } }
+          ? {
+              OR: [
+                { product: { folderId: { in: categoryIds as string[] } } },
+                { service: { folderId: { in: categoryIds as string[] } } },
+              ],
+            }
           : {}),
       },
       select: { sum: true, cost: true, profit: true, quantity: true },
     });
-    return sum(rows.map((r) => calcShopPositionMetric(target.stat, r)));
+    const factValue = sum(
+      rows.map((r) => calcShopPositionMetric(target.stat, r)),
+    );
+    return factValue;
   }
 }

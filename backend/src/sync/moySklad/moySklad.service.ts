@@ -4,6 +4,7 @@ import { DatabaseService } from '../../database/database.service';
 import { MoyskladService } from '../../integrations/moySklad/moysklad.service';
 import { UploadLogger } from '../../utils/logger';
 import { ProductFolderSchema } from '../../integrations/moySklad/schemas/productFolders.schema';
+import { Demand } from '../../integrations/moySklad/schemas/demands.schema';
 
 type ParsedFolder = z.infer<typeof ProductFolderSchema>;
 
@@ -182,11 +183,28 @@ export class MoySkladSyncService {
     }
   }
 
-  async uploadDemands(fromDate?: Date) {
+  async uploadCreatedDemands(fromDate?: Date) {
+    return this._uploadDemands(
+      fromDate,
+      this.MoySklad.fetchCreatedDemands.bind(this.MoySklad),
+    );
+  }
+
+  async uploadUpdatedDemands(fromDate?: Date) {
+    return this._uploadDemands(
+      fromDate,
+      this.MoySklad.fetchUpdatedDemands.bind(this.MoySklad),
+    );
+  }
+
+  private async _uploadDemands(
+    fromDate: Date | undefined,
+    fetcher: (fromDate?: Date) => AsyncGenerator<Demand[]>,
+  ) {
     const log = new UploadLogger('МойСклад: Отгрузки');
     log.start();
     try {
-      for await (const batch of this.MoySklad.fetchDemands(fromDate)) {
+      for await (const batch of fetcher(fromDate)) {
         for (const demand of batch) {
           const onlineManagerAttr = demand.attributes?.find(
             (a) => a.id === ONLINE_MANAGER_ATTR_ID,
@@ -260,7 +278,9 @@ export class MoySkladSyncService {
 
             if (validPositions.length) {
               const productPositions = validPositions.filter(
-                (p) => p.assortment!.meta.type === 'product',
+                (p) =>
+                  p.assortment!.meta.type === 'product' ||
+                  p.assortment!.meta.type === 'variant',
               );
               const servicePositions = validPositions.filter(
                 (p) => p.assortment!.meta.type === 'service',
@@ -281,15 +301,51 @@ export class MoySkladSyncService {
                   (p) => !existingProductIds.has(p.assortment!.id),
                 );
                 if (missingProducts.length) {
+                  // Модификация (variant) не приходит в /entity/product и никогда не
+                  // будет докатана uploadProducts() — если не унаследовать folderId у
+                  // родительского товара сейчас, такой placeholder навсегда останется
+                  // без категории и будет выпадать из отчётов, отфильтрованных по ней.
+                  const parentIdByPositionId = new Map(
+                    missingProducts.map((p) => [
+                      p.id,
+                      p.assortment!.meta.type === 'variant'
+                        ? extractIdFromHref(p.assortment!.product?.meta.href)
+                        : null,
+                    ]),
+                  );
+                  const parentIds = [
+                    ...new Set(
+                      [...parentIdByPositionId.values()].filter(
+                        (id): id is string => id != null,
+                      ),
+                    ),
+                  ];
+                  const parentFolderById = new Map(
+                    parentIds.length
+                      ? (
+                          await tx.moySkladProduct.findMany({
+                            where: { id: { in: parentIds } },
+                            select: { id: true, folderId: true },
+                          })
+                        ).map((p) => [p.id, p.folderId])
+                      : [],
+                  );
+
                   await tx.moySkladProduct.createMany({
-                    data: missingProducts.map((p) => ({
-                      id: p.assortment!.id,
-                      name: p.assortment!.name,
-                      salePrice: 0,
-                      buyPrice: 0,
-                      archived: false,
-                      updatedAt: new Date(),
-                    })),
+                    data: missingProducts.map((p) => {
+                      const parentId = parentIdByPositionId.get(p.id) ?? null;
+                      return {
+                        id: p.assortment!.id,
+                        name: p.assortment!.name,
+                        salePrice: 0,
+                        buyPrice: 0,
+                        folderId: parentId
+                          ? (parentFolderById.get(parentId) ?? null)
+                          : null,
+                        archived: false,
+                        updatedAt: new Date(),
+                      };
+                    }),
                     skipDuplicates: true,
                   });
                 }
@@ -326,7 +382,11 @@ export class MoySkladSyncService {
               const rows = validPositions
                 .filter((p) => {
                   const type = p.assortment!.meta.type;
-                  return type === 'product' || type === 'service';
+                  return (
+                    type === 'product' ||
+                    type === 'variant' ||
+                    type === 'service'
+                  );
                 })
                 .map((p) => {
                   const qty = p.quantity;
@@ -342,7 +402,10 @@ export class MoySkladSyncService {
                     id: p.id,
                     demandId: demand.id,
                     productId:
-                      assortmentType === 'product' ? p.assortment!.id : null,
+                      assortmentType === 'product' ||
+                      assortmentType === 'variant'
+                        ? p.assortment!.id
+                        : null,
                     serviceId:
                       assortmentType === 'service' ? p.assortment!.id : null,
                     assortmentName: p.assortment!.name,

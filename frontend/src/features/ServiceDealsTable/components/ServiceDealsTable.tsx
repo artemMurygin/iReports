@@ -7,6 +7,7 @@ import { TableHeader } from '../components/TableHeader'
 import { TableBody } from '../components/TableBody'
 import { TableRow } from '../components/TableRow'
 import { TablePagination } from '../components/TablePagination'
+import { DealsFunnelChart } from '@/features/DealsFunnelChart';
 
 interface ServiceDealsTableProps {
     deals: Deal[]
@@ -17,30 +18,34 @@ function Root({ deals }: ServiceDealsTableProps) {
     const { openDeal } = useBX24()
 
     return (
-        <ServiceDealsTableContext.Provider value={{ openDeal }}>
-            <TableLayout
-                total={deals.length}
-                header={<TableHeader />}
-                body={
-                    <TableBody
-                        paginated={pagination.paginated}
-                        renderRow={(deal, idx) => (
-                            <TableRow key={deal.id} deal={deal} isEven={idx % 2 === 1} />
-                        )}
-                    />
-                }
-                footer={
-                    <TablePagination
-                        page={pagination.page}
-                        totalPages={pagination.totalPages}
-                        total={deals.length}
-                        rangeFrom={pagination.rangeFrom}
-                        rangeTo={pagination.rangeTo}
-                        onPageChange={pagination.setPage}
-                    />
-                }
-            />
-        </ServiceDealsTableContext.Provider>
+        <>
+            <DealsFunnelChart deals={}></DealsFunnelChart>
+            <ServiceDealsTableContext.Provider value={{ openDeal }}>
+                <TableLayout
+                    total={deals.length}
+                    header={<TableHeader />}
+                    body={
+                        <TableBody
+                            paginated={pagination.paginated}
+                            renderRow={(deal, idx) => (
+                                <TableRow key={deal.id} deal={deal} isEven={idx % 2 === 1} />
+                            )}
+                        />
+                    }
+                    footer={
+                        <TablePagination
+                            page={pagination.page}
+                            totalPages={pagination.totalPages}
+                            total={deals.length}
+                            rangeFrom={pagination.rangeFrom}
+                            rangeTo={pagination.rangeTo}
+                            onPageChange={pagination.setPage}
+                        />
+                    }
+                />
+            </ServiceDealsTableContext.Provider>
+        </>
+
     )
 }
 

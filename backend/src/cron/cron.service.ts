@@ -46,7 +46,7 @@ export class CronService {
     const since = this.msFailedSince ?? new Date(Date.now() - 60 * 5 * 1000);
 
     try {
-      await this.MoySklad.uploadDemands(since);
+      await this.MoySklad.uploadUpdatedDemands(since);
       this.logger.log('Successfully fetched updated demands from MoySklad');
       this.msFailedSince = null;
     } catch (error) {

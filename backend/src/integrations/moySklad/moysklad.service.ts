@@ -103,12 +103,31 @@ export class MoyskladService {
     );
   }
 
-  async *fetchDemands(updatedFrom?: Date) {
+  async *fetchCreatedDemands(fromDate?: Date) {
+    yield* this._fetchDemands(fromDate, 'created');
+  }
+
+  async *fetchUpdatedDemands(fromDate?: Date) {
+    yield* this._fetchDemands(fromDate, 'updated');
+  }
+
+  private async *_fetchDemands(
+    fromDate: Date | undefined,
+    fromField: 'created' | 'updated',
+  ) {
+    const extraParams: Record<string, string> = {
+      expand: 'positions,positions.assortment',
+      fields: 'stock',
+    };
+    if (fromDate) {
+      extraParams.filter = `${fromField}>=${this.formatMoyskladDateTime(fromDate)}`;
+    }
+
     yield* this._fetchPaged(
       '/entity/demand',
       DemandSchema,
-      updatedFrom,
-      { expand: 'positions,positions.assortment', fields: 'stock' },
+      undefined,
+      extraParams,
       100,
     );
   }
@@ -164,6 +183,15 @@ export class MoyskladService {
     }
   }
 
+  // МойСклад ожидает даты в формате "YYYY-MM-DD HH:mm:ss", а не ISO 8601
+  private formatMoyskladDateTime(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return (
+      `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}` +
+      ` ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+    );
+  }
+
   private async *_fetchPaged<T extends z.ZodTypeAny>(
     url: string,
     schema: T,
@@ -175,7 +203,9 @@ export class MoyskladService {
 
     const baseParams: Partial<MoyskladListParams> & Record<string, unknown> = {
       limit: pageSize,
-      ...(updatedFrom && { updatedFrom: updatedFrom.toISOString() }),
+      ...(updatedFrom && {
+        updatedFrom: this.formatMoyskladDateTime(updatedFrom),
+      }),
       ...extraParams,
     };
 
