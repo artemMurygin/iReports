@@ -57,19 +57,26 @@ export function WorkScheduleView() {
 
     // Initialise editable rows whenever server data or period changes
     useEffect(() => {
-        setRows(serverShifts ? shiftsToRows(serverShifts, period) : daysInMonth(period).map((date) => ({
-            date,
-            plannedHours: '',
-            actualHours: '',
-            status: 'planned',
-            note: '',
-        })))
+        setRows(
+            serverShifts
+                ? shiftsToRows(serverShifts, period)
+                : daysInMonth(period).map((date) => ({
+                      date,
+                      plannedHours: '',
+                      actualHours: '',
+                      status: 'planned',
+                      note: '',
+                  })),
+        )
     }, [serverShifts, period])
 
-    const totals = useMemo(() => ({
-        planned: rows.reduce((s, r) => s + (Number(r.plannedHours) || 0), 0),
-        actual: rows.reduce((s, r) => s + (Number(r.actualHours) || 0), 0),
-    }), [rows])
+    const totals = useMemo(
+        () => ({
+            planned: rows.reduce((s, r) => s + (Number(r.plannedHours) || 0), 0),
+            actual: rows.reduce((s, r) => s + (Number(r.actualHours) || 0), 0),
+        }),
+        [rows],
+    )
 
     function updateRow(date: string, patch: Partial<ShiftRow>) {
         setRows((prev) => prev.map((r) => (r.date === date ? { ...r, ...patch } : r)))
@@ -134,12 +141,16 @@ export function WorkScheduleView() {
                     <TableBody>
                         {rows.map((row) => (
                             <TableRow key={row.date}>
-                                <TableCell className="tabular-nums">{row.date.slice(8, 10)}</TableCell>
+                                <TableCell className="tabular-nums">
+                                    {row.date.slice(8, 10)}
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <input
                                         type="number"
                                         value={row.plannedHours}
-                                        onChange={(e) => updateRow(row.date, { plannedHours: e.target.value })}
+                                        onChange={(e) =>
+                                            updateRow(row.date, { plannedHours: e.target.value })
+                                        }
                                         className="w-16 h-8 px-2 text-right rounded border border-gray-200 tabular-nums"
                                     />
                                 </TableCell>
@@ -147,23 +158,33 @@ export function WorkScheduleView() {
                                     <input
                                         type="number"
                                         value={row.actualHours}
-                                        onChange={(e) => updateRow(row.date, { actualHours: e.target.value })}
+                                        onChange={(e) =>
+                                            updateRow(row.date, { actualHours: e.target.value })
+                                        }
                                         className="w-16 h-8 px-2 text-right rounded border border-gray-200 tabular-nums"
                                     />
                                 </TableCell>
                                 <TableCell>
                                     <select
                                         value={row.status}
-                                        onChange={(e) => updateRow(row.date, { status: e.target.value })}
+                                        onChange={(e) =>
+                                            updateRow(row.date, { status: e.target.value })
+                                        }
                                         className="h-8 px-2 rounded border border-gray-200 text-sm"
                                     >
-                                        {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                        {STATUSES.map((s) => (
+                                            <option key={s} value={s}>
+                                                {s}
+                                            </option>
+                                        ))}
                                     </select>
                                 </TableCell>
                                 <TableCell>
                                     <input
                                         value={row.note}
-                                        onChange={(e) => updateRow(row.date, { note: e.target.value })}
+                                        onChange={(e) =>
+                                            updateRow(row.date, { note: e.target.value })
+                                        }
                                         className="w-full h-8 px-2 rounded border border-gray-200 text-sm"
                                     />
                                 </TableCell>

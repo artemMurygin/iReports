@@ -13,7 +13,15 @@ import { CreatePlanModal } from './CreatePlanModal'
 import { MonthPicker } from '@/shared/ui/month-picker'
 import { currentPeriod } from '../utils/period'
 import { money } from '../utils/format'
-import type { CategoryNode, Department, Direction, Employee, KpiStat, PlanFactRow, Scope } from '../types'
+import type {
+    CategoryNode,
+    Department,
+    Direction,
+    Employee,
+    KpiStat,
+    PlanFactRow,
+    Scope,
+} from '../types'
 
 const KPI_STATS: KpiStat[] = ['REVENUE', 'MARGIN', 'MARGIN_MINUS_ENGINEER', 'PCS', 'COSTS']
 
@@ -25,9 +33,12 @@ const STAT_LABELS: Record<KpiStat, string> = {
     COSTS: 'Затраты',
 }
 
-const DIRECTION_STYLE: Record<Direction, { label: string; bg: string; tagBg: string; color: string }> = {
-    SERVICE: { label: 'Сервис',  bg: '#eff6ff', tagBg: '#dbeafe', color: '#2563eb' },
-    SHOP:    { label: 'Магазин', bg: '#f5f3ff', tagBg: '#ede9fe', color: '#7c3aed' },
+const DIRECTION_STYLE: Record<
+    Direction,
+    { label: string; bg: string; tagBg: string; color: string }
+> = {
+    SERVICE: { label: 'Сервис', bg: '#eff6ff', tagBg: '#dbeafe', color: '#2563eb' },
+    SHOP: { label: 'Магазин', bg: '#f5f3ff', tagBg: '#ede9fe', color: '#7c3aed' },
 }
 
 type EntityFilter = 'all' | 'employee' | 'department'
@@ -45,7 +56,8 @@ function fmtPeriod(period: string): string {
 function getExpectedPct(period: string): number {
     const [y, m] = period.split('-').map(Number)
     const now = new Date()
-    const yr = now.getFullYear(), mo = now.getMonth() + 1
+    const yr = now.getFullYear(),
+        mo = now.getMonth() + 1
     if (y > yr || (y === yr && m > mo)) return 0
     if (y < yr || (y === yr && m < mo)) return 100
     const days = new Date(y, m, 0).getDate()
@@ -56,7 +68,8 @@ function getMonthProgress(period: string) {
     const [y, m] = period.split('-').map(Number)
     const daysInMonth = new Date(y, m, 0).getDate()
     const now = new Date()
-    const yr = now.getFullYear(), mo = now.getMonth() + 1
+    const yr = now.getFullYear(),
+        mo = now.getMonth() + 1
     if (y > yr || (y === yr && m > mo)) return { day: 0, daysInMonth }
     if (y < yr || (y === yr && m < mo)) return { day: daysInMonth, daysInMonth }
     return { day: now.getDate(), daysInMonth }
@@ -228,7 +241,11 @@ interface PlanGroup {
     shopRows: PlanFactRow[]
 }
 
-function groupRows(rows: PlanFactRow[], employees: Employee[], departments: Department[]): PlanGroup[] {
+function groupRows(
+    rows: PlanFactRow[],
+    employees: Employee[],
+    departments: Department[],
+): PlanGroup[] {
     const empMap = new Map(employees.map((e) => [e.id, e]))
     const deptMap = new Map(departments.map((d) => [d.id, d]))
     const map = new Map<string, PlanGroup>()
@@ -250,7 +267,15 @@ function groupRows(rows: PlanFactRow[], employees: Employee[], departments: Depa
         }
 
         if (!map.has(key)) {
-            map.set(key, { key, scope: row.scope, employeeId: row.employeeId, departmentId: row.departmentId, entityName, serviceRows: [], shopRows: [] })
+            map.set(key, {
+                key,
+                scope: row.scope,
+                employeeId: row.employeeId,
+                departmentId: row.departmentId,
+                entityName,
+                serviceRows: [],
+                shopRows: [],
+            })
         }
         const g = map.get(key)!
         if (row.direction === 'SERVICE') g.serviceRows.push(row)
@@ -262,7 +287,15 @@ function groupRows(rows: PlanFactRow[], employees: Employee[], departments: Depa
 
 // ─── CategorySelect (для формы редактирования) ────────────────────────────────
 
-function CategorySelect({ direction, value, onChange }: { direction: Direction; value: string; onChange: (v: string) => void }) {
+function CategorySelect({
+    direction,
+    value,
+    onChange,
+}: {
+    direction: Direction
+    value: string
+    onChange: (v: string) => void
+}) {
     const { data: categories = [], isLoading } = useQuery(categoriesQuery(direction))
     return (
         <select
@@ -273,7 +306,9 @@ function CategorySelect({ direction, value, onChange }: { direction: Direction; 
         >
             <option value="">Всё направление</option>
             {categories.map((c: CategoryNode) => (
-                <option key={c.id} value={String(c.id)}>{c.name}</option>
+                <option key={c.id} value={String(c.id)}>
+                    {c.name}
+                </option>
             ))}
         </select>
     )
@@ -281,9 +316,22 @@ function CategorySelect({ direction, value, onChange }: { direction: Direction; 
 
 // ─── PlanRowForm (inline edit) ────────────────────────────────────────────────
 
-function PlanRowForm({ period, scope, employees, departments, initial, onSuccess, onCancel }: {
-    period: string; scope: Scope; employees: Employee[]; departments: Department[]
-    initial: PlanFactRow; onSuccess: () => void; onCancel: () => void
+function PlanRowForm({
+    period,
+    scope,
+    employees,
+    departments,
+    initial,
+    onSuccess,
+    onCancel,
+}: {
+    period: string
+    scope: Scope
+    employees: Employee[]
+    departments: Department[]
+    initial: PlanFactRow
+    onSuccess: () => void
+    onCancel: () => void
 }) {
     const [direction, setDirection] = useState<Direction>(initial.direction)
     const [employeeId, setEmployeeId] = useState<number | null>(initial.employeeId)
@@ -295,49 +343,121 @@ function PlanRowForm({ period, scope, employees, departments, initial, onSuccess
     const { mutate, isPending } = useMutation({
         mutationFn: () =>
             salaryApi.updatePlanTarget(initial.id, {
-                direction, scope,
+                direction,
+                scope,
                 employeeId: scope === 'PERSONAL' ? employeeId : null,
                 departmentId: scope === 'DEPARTMENT' ? departmentId : null,
                 categoryExtId: categoryExtId || null,
-                stat, planValue: Number(planValue),
+                stat,
+                planValue: Number(planValue),
             }),
-        onSuccess: () => { toast.success('Строка плана обновлена'); onSuccess() },
+        onSuccess: () => {
+            toast.success('Строка плана обновлена')
+            onSuccess()
+        },
         onError: () => toast.error('Не удалось обновить план'),
     })
 
-    const sel = 'h-9 px-3 rounded-md border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-amber-300'
+    const sel =
+        'h-9 px-3 rounded-md border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-amber-300'
 
     return (
         <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50/60 mb-3">
-            <select value={direction} onChange={(e) => { setDirection(e.target.value as Direction); setCategoryExtId('') }} className={sel}>
+            <select
+                value={direction}
+                onChange={(e) => {
+                    setDirection(e.target.value as Direction)
+                    setCategoryExtId('')
+                }}
+                className={sel}
+            >
                 <option value="SERVICE">Сервис</option>
                 <option value="SHOP">Магазин</option>
             </select>
-            {scope === 'PERSONAL' && <EmployeeSelect employees={employees} value={employeeId} onChange={setEmployeeId} />}
+            {scope === 'PERSONAL' && (
+                <EmployeeSelect employees={employees} value={employeeId} onChange={setEmployeeId} />
+            )}
             {scope === 'DEPARTMENT' && (
-                <select value={departmentId ?? ''} onChange={(e) => setDepartmentId(Number(e.target.value))} className={`${sel} min-w-48`}>
+                <select
+                    value={departmentId ?? ''}
+                    onChange={(e) => setDepartmentId(Number(e.target.value))}
+                    className={`${sel} min-w-48`}
+                >
                     <option value="">Выберите отдел</option>
-                    {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    {departments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                            {d.name}
+                        </option>
+                    ))}
                 </select>
             )}
-            <CategorySelect direction={direction} value={categoryExtId} onChange={setCategoryExtId} />
-            <select value={stat} onChange={(e) => setStat(e.target.value as KpiStat)} className={sel}>
-                {KPI_STATS.map((s) => <option key={s} value={s}>{STAT_LABELS[s]}</option>)}
+            <CategorySelect
+                direction={direction}
+                value={categoryExtId}
+                onChange={setCategoryExtId}
+            />
+            <select
+                value={stat}
+                onChange={(e) => setStat(e.target.value as KpiStat)}
+                className={sel}
+            >
+                {KPI_STATS.map((s) => (
+                    <option key={s} value={s}>
+                        {STAT_LABELS[s]}
+                    </option>
+                ))}
             </select>
-            <input type="number" value={planValue} onChange={(e) => setPlanValue(e.target.value)} placeholder="План"
-                className="h-9 px-3 rounded-md border border-gray-200 text-sm w-32 tabular-nums bg-white focus:outline-none focus:ring-1 focus:ring-amber-300" />
-            <Button variant="ghost" size="sm" onClick={onCancel} disabled={isPending} className="text-gray-500">Отмена</Button>
-            <Button size="sm" onClick={() => { if (!planValue) { toast.error('Укажите значение'); return }; mutate() }} disabled={isPending}>Сохранить</Button>
+            <input
+                type="number"
+                value={planValue}
+                onChange={(e) => setPlanValue(e.target.value)}
+                placeholder="План"
+                className="h-9 px-3 rounded-md border border-gray-200 text-sm w-32 tabular-nums bg-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+            />
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCancel}
+                disabled={isPending}
+                className="text-gray-500"
+            >
+                Отмена
+            </Button>
+            <Button
+                size="sm"
+                onClick={() => {
+                    if (!planValue) {
+                        toast.error('Укажите значение')
+                        return
+                    }
+                    mutate()
+                }}
+                disabled={isPending}
+            >
+                Сохранить
+            </Button>
         </div>
     )
 }
 
 // ─── DirectionSection ─────────────────────────────────────────────────────────
 
-function DirectionSection({ direction, rows, categoryNameMap, expectedPct, editingRowId, onEdit, onDelete }: {
-    direction: Direction; rows: PlanFactRow[]; categoryNameMap: Map<string, string>
-    expectedPct: number; editingRowId: number | null
-    onEdit: (row: PlanFactRow) => void; onDelete: (id: number) => void
+function DirectionSection({
+    direction,
+    rows,
+    categoryNameMap,
+    expectedPct,
+    editingRowId,
+    onEdit,
+    onDelete,
+}: {
+    direction: Direction
+    rows: PlanFactRow[]
+    categoryNameMap: Map<string, string>
+    expectedPct: number
+    editingRowId: number | null
+    onEdit: (row: PlanFactRow) => void
+    onDelete: (id: number) => void
 }) {
     const style = DIRECTION_STYLE[direction]
 
@@ -354,8 +474,14 @@ function DirectionSection({ direction, rows, categoryNameMap, expectedPct, editi
     return (
         <div>
             {/* Direction header */}
-            <div className="flex items-center px-5 py-2.5 border-b border-slate-100" style={{ background: style.bg }}>
-                <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ color: style.color, background: style.tagBg }}>
+            <div
+                className="flex items-center px-5 py-2.5 border-b border-slate-100"
+                style={{ background: style.bg }}
+            >
+                <span
+                    className="text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{ color: style.color, background: style.tagBg }}
+                >
                     {style.label}
                 </span>
             </div>
@@ -365,11 +491,21 @@ function DirectionSection({ direction, rows, categoryNameMap, expectedPct, editi
                 className="grid items-center gap-3 px-5 py-2 border-b border-slate-100 bg-slate-50/60"
                 style={{ gridTemplateColumns: COLS }}
             >
-                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">Метрика</span>
-                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">Прогресс</span>
-                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider text-right">План</span>
-                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider text-right">Факт</span>
-                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider text-center">Вып.</span>
+                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Метрика
+                </span>
+                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Прогресс
+                </span>
+                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider text-right">
+                    План
+                </span>
+                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider text-right">
+                    Факт
+                </span>
+                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider text-center">
+                    Вып.
+                </span>
             </div>
 
             {/* Category groups */}
@@ -385,7 +521,8 @@ function DirectionSection({ direction, rows, categoryNameMap, expectedPct, editi
 
                     {/* Metric rows */}
                     {catRows.map((row) => {
-                        const factPct = row.planValue > 0 ? (row.factValue / row.planValue) * 100 : 0
+                        const factPct =
+                            row.planValue > 0 ? (row.factValue / row.planValue) * 100 : 0
                         const c = statusColor(factPct, expectedPct)
                         const isEditing = editingRowId === row.id
 
@@ -400,8 +537,14 @@ function DirectionSection({ direction, rows, categoryNameMap, expectedPct, editi
                                 <span className="text-sm font-medium text-slate-700">
                                     {STAT_LABELS[row.stat] ?? row.stat}
                                 </span>
-                                <ProgressBar factValue={row.factValue} planValue={row.planValue} expectedPct={expectedPct} />
-                                <span className="text-sm text-slate-500 text-right tabular-nums">{money(row.planValue)}</span>
+                                <ProgressBar
+                                    factValue={row.factValue}
+                                    planValue={row.planValue}
+                                    expectedPct={expectedPct}
+                                />
+                                <span className="text-sm text-slate-500 text-right tabular-nums">
+                                    {money(row.planValue)}
+                                </span>
                                 <span
                                     className="text-sm text-right tabular-nums"
                                     style={{
@@ -412,15 +555,25 @@ function DirectionSection({ direction, rows, categoryNameMap, expectedPct, editi
                                     {money(row.factValue)}
                                 </span>
                                 <div className="flex justify-center">
-                                    <StatusBadge factValue={row.factValue} planValue={row.planValue} expectedPct={expectedPct} />
+                                    <StatusBadge
+                                        factValue={row.factValue}
+                                        planValue={row.planValue}
+                                        expectedPct={expectedPct}
+                                    />
                                 </div>
 
                                 {/* Hover actions */}
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => onEdit(row)} className="p-1 rounded hover:bg-slate-100 text-slate-300 hover:text-slate-600">
+                                    <button
+                                        onClick={() => onEdit(row)}
+                                        className="p-1 rounded hover:bg-slate-100 text-slate-300 hover:text-slate-600"
+                                    >
                                         <Pencil className="size-3.5" />
                                     </button>
-                                    <button onClick={() => onDelete(row.id)} className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500">
+                                    <button
+                                        onClick={() => onDelete(row.id)}
+                                        className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"
+                                    >
                                         <Trash2 className="size-3.5" />
                                     </button>
                                 </div>
@@ -435,13 +588,30 @@ function DirectionSection({ direction, rows, categoryNameMap, expectedPct, editi
 
 // ─── PlanCard ─────────────────────────────────────────────────────────────────
 
-function PlanCard({ group, period, expectedPct, employees, departments, categoryNameMap, editingRow, onEdit, onDelete, onEditSuccess, onEditCancel }: {
-    group: PlanGroup; period: string; expectedPct: number
-    employees: Employee[]; departments: Department[]
+function PlanCard({
+    group,
+    period,
+    expectedPct,
+    employees,
+    departments,
+    categoryNameMap,
+    editingRow,
+    onEdit,
+    onDelete,
+    onEditSuccess,
+    onEditCancel,
+}: {
+    group: PlanGroup
+    period: string
+    expectedPct: number
+    employees: Employee[]
+    departments: Department[]
     categoryNameMap: Map<string, string>
     editingRow: PlanFactRow | null
-    onEdit: (row: PlanFactRow) => void; onDelete: (id: number) => void
-    onEditSuccess: () => void; onEditCancel: () => void
+    onEdit: (row: PlanFactRow) => void
+    onDelete: (id: number) => void
+    onEditSuccess: () => void
+    onEditCancel: () => void
 }) {
     const isEditing =
         editingRow !== null &&
@@ -450,7 +620,12 @@ function PlanCard({ group, period, expectedPct, employees, departments, category
         editingRow.departmentId === group.departmentId
 
     const editingRowId = isEditing ? editingRow!.id : null
-    const scopeLabel = group.scope === 'PERSONAL' ? 'Сотрудник' : group.scope === 'DEPARTMENT' ? 'Отдел' : 'Компания'
+    const scopeLabel =
+        group.scope === 'PERSONAL'
+            ? 'Сотрудник'
+            : group.scope === 'DEPARTMENT'
+              ? 'Отдел'
+              : 'Компания'
     const ScopeIcon = group.scope === 'PERSONAL' ? User : Building2
 
     return (
@@ -458,27 +633,38 @@ function PlanCard({ group, period, expectedPct, employees, departments, category
             {/* Card header */}
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className={`flex items-center justify-center size-9 rounded-xl border shrink-0 ${
-                        group.scope === 'PERSONAL' ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-200'
-                    }`}>
+                    <div
+                        className={`flex items-center justify-center size-9 rounded-xl border shrink-0 ${
+                            group.scope === 'PERSONAL'
+                                ? 'bg-slate-50 border-slate-200'
+                                : 'bg-slate-50 border-slate-200'
+                        }`}
+                    >
                         <ScopeIcon className="size-4 text-slate-500" />
                     </div>
                     <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 text-sm leading-tight truncate">{group.entityName}</p>
+                        <p className="font-semibold text-slate-900 text-sm leading-tight truncate">
+                            {group.entityName}
+                        </p>
                         <p className="text-xs text-slate-400 mt-0.5">{scopeLabel}</p>
                     </div>
                 </div>
-                <p className="text-sm text-slate-400 font-medium shrink-0 capitalize">{fmtPeriod(period)}</p>
+                <p className="text-sm text-slate-400 font-medium shrink-0 capitalize">
+                    {fmtPeriod(period)}
+                </p>
             </div>
 
             {/* Inline edit form */}
             {isEditing && (
                 <div className="px-5 pt-4">
                     <PlanRowForm
-                        period={period} scope={editingRow!.scope}
-                        employees={employees} departments={departments}
+                        period={period}
+                        scope={editingRow!.scope}
+                        employees={employees}
+                        departments={departments}
                         initial={editingRow!}
-                        onSuccess={onEditSuccess} onCancel={onEditCancel}
+                        onSuccess={onEditSuccess}
+                        onCancel={onEditCancel}
                     />
                 </div>
             )}
@@ -486,12 +672,26 @@ function PlanCard({ group, period, expectedPct, employees, departments, category
             {/* Direction sections */}
             <div className="divide-y divide-slate-100">
                 {group.serviceRows.length > 0 && (
-                    <DirectionSection direction="SERVICE" rows={group.serviceRows} categoryNameMap={categoryNameMap}
-                        expectedPct={expectedPct} editingRowId={editingRowId} onEdit={onEdit} onDelete={onDelete} />
+                    <DirectionSection
+                        direction="SERVICE"
+                        rows={group.serviceRows}
+                        categoryNameMap={categoryNameMap}
+                        expectedPct={expectedPct}
+                        editingRowId={editingRowId}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                    />
                 )}
                 {group.shopRows.length > 0 && (
-                    <DirectionSection direction="SHOP" rows={group.shopRows} categoryNameMap={categoryNameMap}
-                        expectedPct={expectedPct} editingRowId={editingRowId} onEdit={onEdit} onDelete={onDelete} />
+                    <DirectionSection
+                        direction="SHOP"
+                        rows={group.shopRows}
+                        categoryNameMap={categoryNameMap}
+                        expectedPct={expectedPct}
+                        editingRowId={editingRowId}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                    />
                 )}
             </div>
         </div>
@@ -514,9 +714,16 @@ export function PlanFactView() {
 
     const queryParams = {
         period,
-        scope: entityFilter === 'employee' ? ('PERSONAL' as Scope) : entityFilter === 'department' ? ('DEPARTMENT' as Scope) : undefined,
-        employeeIds: entityFilter === 'employee' && selectedIds.length > 0 ? selectedIds : undefined,
-        departmentIds: entityFilter === 'department' && selectedIds.length > 0 ? selectedIds : undefined,
+        scope:
+            entityFilter === 'employee'
+                ? ('PERSONAL' as Scope)
+                : entityFilter === 'department'
+                  ? ('DEPARTMENT' as Scope)
+                  : undefined,
+        employeeIds:
+            entityFilter === 'employee' && selectedIds.length > 0 ? selectedIds : undefined,
+        departmentIds:
+            entityFilter === 'department' && selectedIds.length > 0 ? selectedIds : undefined,
     }
 
     const { data: rows = [], isLoading, isError } = useQuery(planFactQuery(queryParams))
@@ -531,47 +738,77 @@ export function PlanFactView() {
         return map
     }, [serviceCategories, shopCategories])
 
-    const groups = useMemo(() => groupRows(rows, employees, departments), [rows, employees, departments])
+    const groups = useMemo(
+        () => groupRows(rows, employees, departments),
+        [rows, employees, departments],
+    )
     const expectedPct = useMemo(() => getExpectedPct(period), [period])
 
     const { mutate: deletePlanTarget } = useMutation({
         mutationFn: (id: number) => salaryApi.deletePlanTarget(id),
         onSuccess: (_, id) => {
             toast.success('Строка плана удалена')
-            queryClient.setQueryData(queryKey, (prev: PlanFactRow[] | undefined) => prev?.filter((r) => r.id !== id))
+            queryClient.setQueryData(queryKey, (prev: PlanFactRow[] | undefined) =>
+                prev?.filter((r) => r.id !== id),
+            )
         },
         onError: () => toast.error('Не удалось удалить строку плана'),
     })
 
-    const employeeOptions = employees.map((e) => ({ id: e.id, label: `${e.lastName} ${e.firstName}` }))
+    const employeeOptions = employees.map((e) => ({
+        id: e.id,
+        label: `${e.lastName} ${e.firstName}`,
+    }))
     const departmentOptions = departments.map((d) => ({ id: d.id, label: d.name }))
 
-    const selectCls = 'h-9 px-3 rounded-md border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300'
+    const selectCls =
+        'h-9 px-3 rounded-md border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300'
 
     return (
         <>
             {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                 <div>
-                    <h2 className="text-[22px] font-bold text-slate-900 tracking-tight leading-none mb-1">План / Факт</h2>
+                    <h2 className="text-[22px] font-bold text-slate-900 tracking-tight leading-none mb-1">
+                        План / Факт
+                    </h2>
                     {!isLoading && (
                         <span className="text-sm text-slate-400">
-                            {groups.length} {groups.length === 1 ? 'план' : groups.length < 5 ? 'плана' : 'планов'} · <span className="capitalize">{fmtPeriod(period)}</span>
+                            {groups.length}{' '}
+                            {groups.length === 1 ? 'план' : groups.length < 5 ? 'плана' : 'планов'}{' '}
+                            · <span className="capitalize">{fmtPeriod(period)}</span>
                         </span>
                     )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap mt-1">
                     <MonthPicker value={period} onChange={setPeriod} />
-                    <select value={entityFilter} onChange={(e) => { setEntityFilter(e.target.value as EntityFilter); setSelectedIds([]) }} className={selectCls}>
+                    <select
+                        value={entityFilter}
+                        onChange={(e) => {
+                            setEntityFilter(e.target.value as EntityFilter)
+                            setSelectedIds([])
+                        }}
+                        className={selectCls}
+                    >
                         <option value="all">Все</option>
                         <option value="employee">Сотрудники</option>
                         <option value="department">Отделы</option>
                     </select>
                     {entityFilter === 'employee' && (
-                        <MultiSelect options={employeeOptions} selected={selectedIds} onChange={(ids) => setSelectedIds(ids.map(Number))} placeholder="Все сотрудники" />
+                        <MultiSelect
+                            options={employeeOptions}
+                            selected={selectedIds}
+                            onChange={(ids) => setSelectedIds(ids.map(Number))}
+                            placeholder="Все сотрудники"
+                        />
                     )}
                     {entityFilter === 'department' && (
-                        <MultiSelect options={departmentOptions} selected={selectedIds} onChange={(ids) => setSelectedIds(ids.map(Number))} placeholder="Все отделы" />
+                        <MultiSelect
+                            options={departmentOptions}
+                            selected={selectedIds}
+                            onChange={(ids) => setSelectedIds(ids.map(Number))}
+                            placeholder="Все отделы"
+                        />
                     )}
                     <button
                         onClick={() => setIsModalOpen(true)}
@@ -589,8 +826,8 @@ export function PlanFactView() {
                 </div>
             )}
 
-            {!isError && (
-                isLoading ? (
+            {!isError &&
+                (isLoading ? (
                     <p className="text-sm text-slate-400 text-center py-16">Загрузка…</p>
                 ) : groups.length === 0 ? (
                     <div className="flex flex-col items-center py-16">
@@ -610,22 +847,32 @@ export function PlanFactView() {
                             {groups.map((group) => (
                                 <PlanCard
                                     key={group.key}
-                                    group={group} period={period} expectedPct={expectedPct}
-                                    employees={employees} departments={departments}
+                                    group={group}
+                                    period={period}
+                                    expectedPct={expectedPct}
+                                    employees={employees}
+                                    departments={departments}
                                     categoryNameMap={categoryNameMap}
                                     editingRow={editingRow}
-                                    onEdit={setEditingRow} onDelete={deletePlanTarget}
-                                    onEditSuccess={() => { setEditingRow(null); queryClient.invalidateQueries({ queryKey }) }}
+                                    onEdit={setEditingRow}
+                                    onDelete={deletePlanTarget}
+                                    onEditSuccess={() => {
+                                        setEditingRow(null)
+                                        queryClient.invalidateQueries({ queryKey })
+                                    }}
                                     onEditCancel={() => setEditingRow(null)}
                                 />
                             ))}
                         </div>
                     </>
-                )
-            )}
+                ))}
 
             {isModalOpen && (
-                <CreatePlanModal period={period} existingRows={rows} onClose={() => setIsModalOpen(false)} />
+                <CreatePlanModal
+                    period={period}
+                    existingRows={rows}
+                    onClose={() => setIsModalOpen(false)}
+                />
             )}
         </>
     )

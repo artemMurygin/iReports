@@ -309,7 +309,9 @@ function DirectionBlockEditor({
 
             {block.allDirection ? (
                 <div className="mt-1 border border-gray-100 rounded-lg px-3 py-2.5">
-                    <p className="text-xs font-medium text-gray-500 mb-1.5">Метрики для всего направления</p>
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">
+                        Метрики для всего направления
+                    </p>
                     <MetricsEditor
                         metrics={block.allDirectionMetrics}
                         onUpdate={(m) => onUpdate({ ...block, allDirectionMetrics: m })}
@@ -408,7 +410,8 @@ export function CreatePlanModal({ period, existingRows, onClose }: Props) {
         onError: (e: Error) => {
             if (e.message === 'no-entity') toast.error('Выберите сотрудника или отдел')
             else if (e.message === 'duplicate') toast.error('План на этот месяц уже существует')
-            else if (e.message === 'empty') toast.error('Добавьте хотя бы одну категорию или выберите «Всё направление»')
+            else if (e.message === 'empty')
+                toast.error('Добавьте хотя бы одну категорию или выберите «Всё направление»')
             else toast.error('Не удалось создать план')
         },
     })
@@ -440,7 +443,10 @@ export function CreatePlanModal({ period, existingRows, onClose }: Props) {
                         </p>
                         <div className="flex gap-4 mb-3">
                             {(['employee', 'department'] as const).map((type) => (
-                                <label key={type} className="flex items-center gap-2 cursor-pointer">
+                                <label
+                                    key={type}
+                                    className="flex items-center gap-2 cursor-pointer"
+                                >
                                     <input
                                         type="radio"
                                         name="entityType"
@@ -493,11 +499,15 @@ export function CreatePlanModal({ period, existingRows, onClose }: Props) {
                                     block={block}
                                     onUpdate={(updated) =>
                                         setBlocks((prev) =>
-                                            prev.map((b) => (b.localId === block.localId ? updated : b)),
+                                            prev.map((b) =>
+                                                b.localId === block.localId ? updated : b,
+                                            ),
                                         )
                                     }
                                     onRemove={() =>
-                                        setBlocks((prev) => prev.filter((b) => b.localId !== block.localId))
+                                        setBlocks((prev) =>
+                                            prev.filter((b) => b.localId !== block.localId),
+                                        )
                                     }
                                     canRemove={blocks.length > 1}
                                 />

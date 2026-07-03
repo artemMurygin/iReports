@@ -1,4 +1,4 @@
-import { type Deal } from '@/types/deal'
+import { type Deal } from '@/kernel/types'
 import { ServiceDealsTableContext } from '../context'
 import { usePagination } from '../hooks/usePagination'
 import { useBX24 } from '../hooks/useBX24'
@@ -7,7 +7,6 @@ import { TableHeader } from '../components/TableHeader'
 import { TableBody } from '../components/TableBody'
 import { TableRow } from '../components/TableRow'
 import { TablePagination } from '../components/TablePagination'
-import { DealsFunnelChart } from '@/features/DealsFunnelChart';
 
 interface ServiceDealsTableProps {
     deals: Deal[]
@@ -19,7 +18,6 @@ function Root({ deals }: ServiceDealsTableProps) {
 
     return (
         <>
-            <DealsFunnelChart deals={}></DealsFunnelChart>
             <ServiceDealsTableContext.Provider value={{ openDeal }}>
                 <TableLayout
                     total={deals.length}
@@ -45,7 +43,6 @@ function Root({ deals }: ServiceDealsTableProps) {
                 />
             </ServiceDealsTableContext.Provider>
         </>
-
     )
 }
 

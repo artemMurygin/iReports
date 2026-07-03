@@ -1,6 +1,6 @@
-import type { Deal } from '@/types/deal.ts'
+import type { Deal } from '@/kernel/types'
 import { useMemo } from 'react'
-import { C_BRAND } from '@/shared/constants/chartColors.ts'
+import { C_BRAND } from '@/kernel/chartColors'
 
 export interface ManagerStatItem {
     managerId: string
@@ -14,7 +14,10 @@ export interface ManagerStatItem {
 
 export function useManagerStats(deals: Deal[]) {
     const data = useMemo(() => {
-        const map = new Map<string, { name: string; totalCount: number; wonCount: number; revenue: number }>()
+        const map = new Map<
+            string,
+            { name: string; totalCount: number; wonCount: number; revenue: number }
+        >()
 
         for (const deal of deals) {
             const id = deal.assignedBy ? String(deal.assignedBy.id) : 'unknown'

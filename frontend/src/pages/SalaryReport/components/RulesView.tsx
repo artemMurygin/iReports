@@ -54,8 +54,7 @@ function CreateRuleForm({ employees, departments, onSuccess, onCancel }: CreateR
             toast.error('Укажите название правила')
             return
         }
-        const hasAssignment =
-            assignTarget === 'employee' ? !!employeeId : !!departmentId
+        const hasAssignment = assignTarget === 'employee' ? !!employeeId : !!departmentId
         if (!hasAssignment) {
             toast.error('Выберите сотрудника или отдел')
             return
@@ -90,14 +89,20 @@ function CreateRuleForm({ employees, departments, onSuccess, onCancel }: CreateR
                 <div className="flex items-center gap-2">
                     <select
                         value={assignTarget}
-                        onChange={(e) => setAssignTarget(e.target.value as 'employee' | 'department')}
+                        onChange={(e) =>
+                            setAssignTarget(e.target.value as 'employee' | 'department')
+                        }
                         className="h-9 px-3 rounded border border-gray-200 text-sm"
                     >
                         <option value="employee">Сотрудник</option>
                         <option value="department">Отдел</option>
                     </select>
                     {assignTarget === 'employee' ? (
-                        <EmployeeSelect employees={employees} value={employeeId} onChange={setEmployeeId} />
+                        <EmployeeSelect
+                            employees={employees}
+                            value={employeeId}
+                            onChange={setEmployeeId}
+                        />
                     ) : (
                         <select
                             value={departmentId ?? ''}
@@ -106,7 +111,9 @@ function CreateRuleForm({ employees, departments, onSuccess, onCancel }: CreateR
                         >
                             <option value="">Выберите отдел</option>
                             {departments.map((d) => (
-                                <option key={d.id} value={d.id}>{d.name}</option>
+                                <option key={d.id} value={d.id}>
+                                    {d.name}
+                                </option>
                             ))}
                         </select>
                     )}
@@ -164,8 +171,12 @@ function PayPerHourEditor({ rule, onSaved }: PayPerHourEditorProps) {
                     className="h-6 w-24 px-2 rounded border border-gray-200 text-xs tabular-nums"
                 />
                 <span className="text-gray-400">₽/час</span>
-                <Button variant="ghost" size="xs" onClick={() => mutate()} disabled={isPending}>ОК</Button>
-                <Button variant="ghost" size="xs" onClick={() => setEditing(false)}>✕</Button>
+                <Button variant="ghost" size="xs" onClick={() => mutate()} disabled={isPending}>
+                    ОК
+                </Button>
+                <Button variant="ghost" size="xs" onClick={() => setEditing(false)}>
+                    ✕
+                </Button>
             </span>
         )
     }
@@ -237,36 +248,48 @@ function RuleCard({ rule, onUpdated }: RuleCardProps) {
 
     const { mutate: deleteRule } = useMutation({
         mutationFn: () => salaryApi.deleteRule(rule.id),
-        onSuccess: () => { toast.success('Правило удалено'); onUpdated() },
+        onSuccess: () => {
+            toast.success('Правило удалено')
+            onUpdated()
+        },
         onError: () => toast.error('Не удалось удалить правило'),
     })
 
     const { mutate: deleteGoal } = useMutation({
         mutationFn: (goalId: number) => salaryApi.deleteGoal(goalId),
-        onSuccess: () => { toast.success('Цель удалена'); onUpdated() },
+        onSuccess: () => {
+            toast.success('Цель удалена')
+            onUpdated()
+        },
         onError: () => toast.error('Не удалось удалить цель'),
     })
 
     const { mutate: changeStatus } = useMutation({
         mutationFn: (status: RuleStatus) => salaryApi.updateRule(rule.id, { status }),
-        onSuccess: () => { toast.success('Статус обновлён'); onUpdated() },
+        onSuccess: () => {
+            toast.success('Статус обновлён')
+            onUpdated()
+        },
         onError: () => toast.error('Не удалось изменить статус'),
     })
 
     const statusClass =
-        rule.status === 'ACTIVE'   ? 'bg-emerald-100 text-emerald-700'
-        : rule.status === 'ARCHIVED' ? 'bg-gray-100 text-gray-500'
-        :                              'bg-amber-100 text-amber-700'
+        rule.status === 'ACTIVE'
+            ? 'bg-emerald-100 text-emerald-700'
+            : rule.status === 'ARCHIVED'
+              ? 'bg-gray-100 text-gray-500'
+              : 'bg-amber-100 text-amber-700'
 
     return (
         <Card>
             <CardHeader className="cursor-pointer" onClick={() => setExpanded((v) => !v)}>
                 <CardTitle className="flex items-center justify-between text-sm font-medium">
                     <span className="flex items-center gap-2">
-                        {expanded
-                            ? <ChevronDown className="size-4 text-gray-400" />
-                            : <ChevronRight className="size-4 text-gray-400" />
-                        }
+                        {expanded ? (
+                            <ChevronDown className="size-4 text-gray-400" />
+                        ) : (
+                            <ChevronRight className="size-4 text-gray-400" />
+                        )}
                         {rule.name}
                     </span>
                     <span className="flex items-center gap-3 text-xs text-gray-400 font-normal">
@@ -288,7 +311,11 @@ function RuleCard({ rule, onUpdated }: RuleCardProps) {
                             className="p-1 rounded hover:bg-red-100"
                             onClick={(e) => {
                                 e.stopPropagation()
-                                if (confirm('Удалить правило со всеми целями? Это действие необратимо.')) {
+                                if (
+                                    confirm(
+                                        'Удалить правило со всеми целями? Это действие необратимо.',
+                                    )
+                                ) {
                                     deleteRule()
                                 }
                             }}
@@ -313,7 +340,10 @@ function RuleCard({ rule, onUpdated }: RuleCardProps) {
                                 ruleId={rule.id}
                                 goal={goal}
                                 onCancel={() => setEditingGoal(null)}
-                                onCreated={() => { setEditingGoal(null); onUpdated() }}
+                                onCreated={() => {
+                                    setEditingGoal(null)
+                                    onUpdated()
+                                }}
                             />
                         ) : (
                             <GoalRow
@@ -321,7 +351,8 @@ function RuleCard({ rule, onUpdated }: RuleCardProps) {
                                 goal={goal}
                                 onEdit={setEditingGoal}
                                 onDelete={(id) => {
-                                    if (confirm('Удалить цель? Это действие необратимо.')) deleteGoal(id)
+                                    if (confirm('Удалить цель? Это действие необратимо.'))
+                                        deleteGoal(id)
                                 }}
                             />
                         ),
@@ -331,7 +362,10 @@ function RuleCard({ rule, onUpdated }: RuleCardProps) {
                         <GoalForm
                             ruleId={rule.id}
                             onCancel={() => setAddingGoal(false)}
-                            onCreated={() => { setAddingGoal(false); onUpdated() }}
+                            onCreated={() => {
+                                setAddingGoal(false)
+                                onUpdated()
+                            }}
                         />
                     ) : (
                         !editingGoal && (
@@ -380,7 +414,10 @@ export function RulesView() {
                 <CreateRuleForm
                     employees={employees}
                     departments={departments}
-                    onSuccess={() => { setCreating(false); invalidateRules() }}
+                    onSuccess={() => {
+                        setCreating(false)
+                        invalidateRules()
+                    }}
                     onCancel={() => setCreating(false)}
                 />
             )}

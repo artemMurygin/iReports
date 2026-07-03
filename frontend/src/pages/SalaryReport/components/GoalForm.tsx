@@ -3,11 +3,20 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Lock } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/twUtils'
 import { salaryApi } from '../api'
 import { categoriesQuery } from '../queries'
 import { ProgressionCurveEditor } from './ProgressionCurveEditor'
-import type { Direction, Goal, GoalType, KpiDirection, KpiStat, ManagerRole, ProgressionTier, RewardType } from '../types'
+import type {
+    Direction,
+    Goal,
+    GoalType,
+    KpiDirection,
+    KpiStat,
+    ManagerRole,
+    ProgressionTier,
+    RewardType,
+} from '../types'
 
 interface Props {
     ruleId: number
@@ -26,7 +35,8 @@ const KPI_STAT_LABELS: Record<KpiStat, string> = {
     COSTS: 'Затраты',
 }
 
-const selectCls = 'h-8 px-2 rounded-lg border border-gray-200 text-sm bg-white disabled:opacity-50 focus:outline-none focus:border-gray-400'
+const selectCls =
+    'h-8 px-2 rounded-lg border border-gray-200 text-sm bg-white disabled:opacity-50 focus:outline-none focus:border-gray-400'
 const labelCls = 'text-xs font-medium text-gray-500'
 const fieldCls = 'flex flex-col gap-1'
 
@@ -45,14 +55,23 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
     const [rewardName, setRewardName] = useState(goal?.reward.name ?? 'Вознаграждение')
     const [rewardType, setRewardType] = useState<RewardType>(goal?.reward.type ?? 'PERCENT')
     const [rewardValue, setRewardValue] = useState(goal?.reward.value ?? 1000)
-    const [baseStat, setBaseStat] = useState<KpiStat>(goal?.reward.baseStat ?? 'MARGIN_MINUS_ENGINEER')
+    const [baseStat, setBaseStat] = useState<KpiStat>(
+        goal?.reward.baseStat ?? 'MARGIN_MINUS_ENGINEER',
+    )
     const [tiers, setTiers] = useState<ProgressionTier[]>(
         goal?.reward.tiers.length
             ? goal.reward.tiers
             : [
                   { fromPct: 0, toPct: 70, mode: 'FIXED', coef: 0.5, coefFrom: null, coefTo: null },
                   { fromPct: 70, toPct: 120, mode: 'LINEAR', coef: null, coefFrom: 0.5, coefTo: 1 },
-                  { fromPct: 120, toPct: null, mode: 'MULTIPLIER', coef: 1.2, coefFrom: null, coefTo: null },
+                  {
+                      fromPct: 120,
+                      toPct: null,
+                      mode: 'MULTIPLIER',
+                      coef: 1.2,
+                      coefFrom: null,
+                      coefTo: null,
+                  },
               ],
     )
 
@@ -97,8 +116,13 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
             onCreated()
         },
         onError: (e) => {
-            const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-            toast.error(Array.isArray(message) ? message.join('; ') : message ?? 'Не удалось сохранить цель')
+            const message = (e as { response?: { data?: { message?: string } } })?.response?.data
+                ?.message
+            toast.error(
+                Array.isArray(message)
+                    ? message.join('; ')
+                    : (message ?? 'Не удалось сохранить цель'),
+            )
         },
     })
 
@@ -116,15 +140,22 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
     }
 
     return (
-        <div aria-busy={saving} className="flex flex-col gap-4 p-4 rounded-lg border border-emerald-200 bg-emerald-50/30">
-
+        <div
+            aria-busy={saving}
+            className="flex flex-col gap-4 p-4 rounded-lg border border-emerald-200 bg-emerald-50/30"
+        >
             {/* A — Название */}
             <div className={fieldCls}>
-                <label htmlFor="goal-name" className={labelCls}>Название цели</label>
+                <label htmlFor="goal-name" className={labelCls}>
+                    Название цели
+                </label>
                 <input
                     id="goal-name"
                     value={name}
-                    onChange={(e) => { setName(e.target.value); if (nameError) setNameError(false) }}
+                    onChange={(e) => {
+                        setName(e.target.value)
+                        if (nameError) setNameError(false)
+                    }}
                     disabled={saving}
                     aria-invalid={nameError}
                     aria-describedby={nameError ? 'goal-name-error' : undefined}
@@ -135,7 +166,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                     )}
                 />
                 {nameError && (
-                    <p id="goal-name-error" className="text-xs text-red-500">Укажите название цели</p>
+                    <p id="goal-name-error" className="text-xs text-red-500">
+                        Укажите название цели
+                    </p>
                 )}
             </div>
 
@@ -153,13 +186,17 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                                 <Lock className="size-3 text-gray-400" />
                                 {direction === 'SERVICE' ? 'Сервис' : 'Магазин'}
                             </span>
-                            <span className="text-xs text-gray-400">Нельзя изменить после создания</span>
+                            <span className="text-xs text-gray-400">
+                                Нельзя изменить после создания
+                            </span>
                         </div>
                     </div>
                 ) : (
                     <>
                         <div className={fieldCls}>
-                            <label htmlFor="goal-type" className={labelCls}>Тип</label>
+                            <label htmlFor="goal-type" className={labelCls}>
+                                Тип
+                            </label>
                             <select
                                 id="goal-type"
                                 value={type}
@@ -172,7 +209,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                             </select>
                         </div>
                         <div className={fieldCls}>
-                            <label htmlFor="goal-direction" className={labelCls}>Направление</label>
+                            <label htmlFor="goal-direction" className={labelCls}>
+                                Направление
+                            </label>
                             <select
                                 id="goal-direction"
                                 value={direction}
@@ -187,7 +226,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                     </>
                 )}
                 <div className={fieldCls}>
-                    <label htmlFor="goal-manager-role" className={labelCls}>Менеджер</label>
+                    <label htmlFor="goal-manager-role" className={labelCls}>
+                        Менеджер
+                    </label>
                     <select
                         id="goal-manager-role"
                         value={managerRole}
@@ -206,7 +247,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
             {type === 'KPI' && (
                 <div className="flex flex-wrap items-end gap-3">
                     <div className={fieldCls}>
-                        <label htmlFor="goal-kpi-dir" className={labelCls}>Направление KPI</label>
+                        <label htmlFor="goal-kpi-dir" className={labelCls}>
+                            Направление KPI
+                        </label>
                         <select
                             id="goal-kpi-dir"
                             value={kpiDirection}
@@ -219,7 +262,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                         </select>
                     </div>
                     <div className={fieldCls}>
-                        <label htmlFor="goal-measure" className={labelCls}>Метрика</label>
+                        <label htmlFor="goal-measure" className={labelCls}>
+                            Метрика
+                        </label>
                         <select
                             id="goal-measure"
                             value={measureStat}
@@ -228,12 +273,16 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                             className={selectCls}
                         >
                             {KPI_STATS.map((s) => (
-                                <option key={s} value={s}>{KPI_STAT_LABELS[s]}</option>
+                                <option key={s} value={s}>
+                                    {KPI_STAT_LABELS[s]}
+                                </option>
                             ))}
                         </select>
                     </div>
                     <div className={fieldCls}>
-                        <label htmlFor="goal-category" className={labelCls}>Категория</label>
+                        <label htmlFor="goal-category" className={labelCls}>
+                            Категория
+                        </label>
                         <select
                             id="goal-category"
                             value={categoryExtId ?? ''}
@@ -243,7 +292,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                         >
                             <option value="">Всё направление</option>
                             {categories.map((c) => (
-                                <option key={String(c.id)} value={String(c.id)}>{c.name}</option>
+                                <option key={String(c.id)} value={String(c.id)}>
+                                    {c.name}
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -255,7 +306,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
             {/* D — Вознаграждение */}
             <div className="flex flex-wrap items-end gap-3">
                 <div className={cn(fieldCls, 'flex-1 min-w-40')}>
-                    <label htmlFor="reward-name" className={labelCls}>Название вознаграждения</label>
+                    <label htmlFor="reward-name" className={labelCls}>
+                        Название вознаграждения
+                    </label>
                     <input
                         id="reward-name"
                         value={rewardName}
@@ -265,7 +318,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                     />
                 </div>
                 <div className={fieldCls}>
-                    <label htmlFor="reward-type" className={labelCls}>Тип</label>
+                    <label htmlFor="reward-type" className={labelCls}>
+                        Тип
+                    </label>
                     <select
                         id="reward-type"
                         value={rewardType}
@@ -292,7 +347,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                 </div>
                 {rewardType === 'PERCENT' && (
                     <div className={fieldCls}>
-                        <label htmlFor="base-stat" className={labelCls}>База расчёта</label>
+                        <label htmlFor="base-stat" className={labelCls}>
+                            База расчёта
+                        </label>
                         <select
                             id="base-stat"
                             value={baseStat}
@@ -301,7 +358,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
                             className={selectCls}
                         >
                             {KPI_STATS.map((s) => (
-                                <option key={s} value={s}>{KPI_STAT_LABELS[s]}</option>
+                                <option key={s} value={s}>
+                                    {KPI_STAT_LABELS[s]}
+                                </option>
                             ))}
                         </select>
                     </div>

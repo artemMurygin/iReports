@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
-import { type Deal } from '@/types/deal'
+import { type Deal } from '@/kernel/types'
 import { useServiceDealsTable } from '../context'
 import { getInitials, formatDate, formatAmount } from '../utils'
 
@@ -19,9 +19,7 @@ export function TableRow({ deal, isEven }: TableRowProps) {
                 isEven ? 'bg-gray-50' : 'bg-white',
             ].join(' ')}
         >
-            <div className="w-[130px] px-3 text-sm text-gray-500">
-                {formatDate(deal.createdAt)}
-            </div>
+            <div className="w-[130px] px-3 text-sm text-gray-500">{formatDate(deal.createdAt)}</div>
             <div className="flex-1 px-3 text-sm font-medium text-gray-900 truncate">
                 {deal.title ?? '—'}
             </div>

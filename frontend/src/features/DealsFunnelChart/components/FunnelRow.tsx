@@ -1,4 +1,4 @@
-import type { FunnelRowData } from '../hooks/useFunnelStats.ts';
+import type { FunnelRowData } from '../hooks/useFunnelStats.ts'
 
 type Props = {
     item: FunnelRowData
@@ -16,7 +16,10 @@ export function FunnelRow({ item, max }: Props) {
             >
                 {label}
             </span>
-            <div className="flex-1 h-7 flex justify-center rounded-md overflow-hidden" style={{ backgroundColor: 'var(--c-track)' }}>
+            <div
+                className="flex-1 h-7 flex justify-center rounded-md overflow-hidden"
+                style={{ backgroundColor: 'var(--c-track)' }}
+            >
                 <div
                     className="h-full flex items-center justify-center px-2 rounded-md transition-all"
                     style={{
@@ -26,13 +29,19 @@ export function FunnelRow({ item, max }: Props) {
                     }}
                 >
                     {count > 0 && (
-                        <span className="text-[11px] font-semibold text-white whitespace-nowrap" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        <span
+                            className="text-[11px] font-semibold text-white whitespace-nowrap"
+                            style={{ fontFamily: 'Inter, sans-serif' }}
+                        >
                             {count} шт.
                         </span>
                     )}
                 </div>
             </div>
-            <div className="flex gap-3 shrink-0 text-xs text-gray-500 font-semibold" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div
+                className="flex gap-3 shrink-0 text-xs text-gray-500 font-semibold"
+                style={{ fontFamily: 'Inter, sans-serif' }}
+            >
                 <span className="w-[100px] text-right">{revenue.toLocaleString('ru-RU')} Р.</span>
                 <span className="w-[50px] text-right text-gray-400">
                     {conversion !== null ? `↓ ${conversion}%` : '—'}

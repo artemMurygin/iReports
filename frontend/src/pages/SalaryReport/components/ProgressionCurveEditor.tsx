@@ -1,5 +1,13 @@
 import { Plus, Trash2 } from 'lucide-react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+    CartesianGrid,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts'
 import { Button } from '@/shared/ui/button'
 import type { ProgressionMode, ProgressionTier } from '../types'
 import { progressionCoef } from '../utils/progressionCoef'
@@ -96,7 +104,9 @@ export function ProgressionCurveEditor({ tiers, onChange }: Props) {
 
                         <select
                             value={tier.mode}
-                            onChange={(e) => updateTier(i, { mode: e.target.value as ProgressionMode })}
+                            onChange={(e) =>
+                                updateTier(i, { mode: e.target.value as ProgressionMode })
+                            }
                             className="h-8 px-2 rounded border border-gray-200"
                         >
                             {MODES.map((m) => (
@@ -113,7 +123,9 @@ export function ProgressionCurveEditor({ tiers, onChange }: Props) {
                                     step="0.01"
                                     value={tier.coefFrom ?? ''}
                                     placeholder="coefFrom"
-                                    onChange={(e) => updateTier(i, { coefFrom: Number(e.target.value) })}
+                                    onChange={(e) =>
+                                        updateTier(i, { coefFrom: Number(e.target.value) })
+                                    }
                                     className="w-20 h-8 px-2 rounded border border-gray-200 tabular-nums"
                                 />
                                 <input
@@ -121,7 +133,9 @@ export function ProgressionCurveEditor({ tiers, onChange }: Props) {
                                     step="0.01"
                                     value={tier.coefTo ?? ''}
                                     placeholder="coefTo"
-                                    onChange={(e) => updateTier(i, { coefTo: Number(e.target.value) })}
+                                    onChange={(e) =>
+                                        updateTier(i, { coefTo: Number(e.target.value) })
+                                    }
                                     className="w-20 h-8 px-2 rounded border border-gray-200 tabular-nums"
                                 />
                             </>

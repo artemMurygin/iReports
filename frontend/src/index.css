@@ -1,8 +1,8 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/roboto";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/roboto';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -75,16 +75,16 @@
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
     /* Semantic chart tokens */
-    --c-brand:    hsl(211, 53%, 49%);
+    --c-brand: hsl(211, 53%, 49%);
     --c-positive: hsl(160, 69%, 36%);
-    --c-negative: hsl(11,  53%, 52%);
-    --c-neutral:  hsl(225,  4%, 45%);
-    --c-track:    hsl(240,  9%, 95%);
+    --c-negative: hsl(11, 53%, 52%);
+    --c-neutral: hsl(225, 4%, 45%);
+    --c-track: hsl(240, 9%, 95%);
     /* Categorical chart tokens */
     --chart-1: hsl(211, 53%, 49%);
     --chart-2: hsl(160, 69%, 36%);
-    --chart-3: hsl(38,  56%, 52%);
-    --chart-4: hsl(11,  53%, 52%);
+    --chart-3: hsl(38, 56%, 52%);
+    --chart-4: hsl(11, 53%, 52%);
     --chart-5: hsl(244, 36%, 62%);
     --chart-6: hsl(162, 27%, 49%);
     --radius: 0.45rem;
@@ -118,16 +118,16 @@
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
     /* Semantic chart tokens — lighter, less saturated for dark bg */
-    --c-brand:    hsl(211, 41%, 61%);
+    --c-brand: hsl(211, 41%, 61%);
     --c-positive: hsl(160, 57%, 48%);
-    --c-negative: hsl(11,  41%, 64%);
-    --c-neutral:  hsl(225,  4%, 57%);
-    --c-track:    hsl(240,  6%, 18%);
+    --c-negative: hsl(11, 41%, 64%);
+    --c-neutral: hsl(225, 4%, 57%);
+    --c-track: hsl(240, 6%, 18%);
     /* Categorical chart tokens */
     --chart-1: hsl(211, 41%, 61%);
     --chart-2: hsl(160, 57%, 48%);
-    --chart-3: hsl(38,  44%, 64%);
-    --chart-4: hsl(11,  41%, 64%);
+    --chart-3: hsl(38, 44%, 64%);
+    --chart-4: hsl(11, 41%, 64%);
     --chart-5: hsl(244, 24%, 72%);
     --chart-6: hsl(162, 18%, 59%);
     --sidebar: oklch(0.205 0 0);
@@ -141,13 +141,13 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
+    body {
+        @apply bg-background text-foreground;
     }
-  html {
-    @apply font-sans;
+    html {
+        @apply font-sans;
     }
 }

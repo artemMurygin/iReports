@@ -1,7 +1,7 @@
-import type { Deal } from '@/types/deal'
+import type { Deal } from '@/kernel/types'
 import { useManagerStats } from '../hooks/useManagerStats'
-import { ChartHeader } from '@/features/DealsBySourceChart/components/ChartHeader'
-import { ChartLayout } from '@/features/DealsBySourceChart/components/ChartLayout'
+import { ChartHeader } from '@/shared/ui/ChartHeader'
+import { ChartLayout } from '@/shared/ui/ChartLayout'
 import { CardContent } from '@/shared/ui/card'
 import { ManagerRow } from './ManagerRow'
 
@@ -19,8 +19,13 @@ export function DealsByManagerChart({ deals }: Props) {
                 description="Конверсия, кол-во сделок и выручка"
             />
             <CardContent className="flex-1 flex flex-col gap-3 pt-2 min-h-0">
-                <div className="flex items-center gap-3 text-xs text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    <span className="shrink-0" style={{ width: 130 }}>Менеджер</span>
+                <div
+                    className="flex items-center gap-3 text-xs text-gray-400"
+                    style={{ fontFamily: 'Inter, sans-serif' }}
+                >
+                    <span className="shrink-0" style={{ width: 130 }}>
+                        Менеджер
+                    </span>
                     <span className="flex-1">Конверсия</span>
                     <div className="flex gap-3 shrink-0">
                         <span className="w-[60px] text-right">Сделки</span>

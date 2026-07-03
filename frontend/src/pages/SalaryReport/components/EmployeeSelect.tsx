@@ -10,7 +10,10 @@ interface Props {
 
 export function EmployeeSelect({ employees, value, onChange, placeholder = 'Сотрудник' }: Props) {
     return (
-        <Select value={value ? String(value) : undefined} onValueChange={(v) => onChange(Number(v))}>
+        <Select
+            value={value ? String(value) : undefined}
+            onValueChange={(v) => onChange(Number(v))}
+        >
             <SelectTrigger className="min-w-56">
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>

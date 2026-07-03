@@ -44,8 +44,11 @@ function LineItemRow({ item }: { item: SalaryLineItem }) {
             >
                 <span className="flex items-center gap-1.5 text-gray-700">
                     {hasMeta ? (
-                        open ? <ChevronDown className="size-3.5 text-gray-300 shrink-0" />
-                              : <ChevronRight className="size-3.5 text-gray-300 shrink-0" />
+                        open ? (
+                            <ChevronDown className="size-3.5 text-gray-300 shrink-0" />
+                        ) : (
+                            <ChevronRight className="size-3.5 text-gray-300 shrink-0" />
+                        )
                     ) : (
                         <span className="w-3.5 shrink-0" />
                     )}
@@ -87,7 +90,9 @@ function LineItemGroup({ type, items }: { type: AccrualType; items: SalaryLineIt
                 <span>{GROUP_LABELS[type] ?? type}</span>
                 <span className="tabular-nums">{money(subtotal, true)}</span>
             </div>
-            {items.map((item) => <LineItemRow key={item.id} item={item} />)}
+            {items.map((item) => (
+                <LineItemRow key={item.id} item={item} />
+            ))}
         </div>
     )
 }
@@ -194,7 +199,8 @@ export function SalaryView() {
     })
 
     function handleClose() {
-        if (!confirm(`Закрыть месяц ${period}? После закрытия расчёт нельзя будет пересчитать.`)) return
+        if (!confirm(`Закрыть месяц ${period}? После закрытия расчёт нельзя будет пересчитать.`))
+            return
         closeMonth()
     }
 
@@ -219,12 +225,8 @@ export function SalaryView() {
             </div>
 
             {/* States */}
-            {!employeeId && (
-                <p className="text-sm text-gray-400">Выберите сотрудника.</p>
-            )}
-            {employeeId && reportLoading && (
-                <p className="text-sm text-gray-400">Загрузка…</p>
-            )}
+            {!employeeId && <p className="text-sm text-gray-400">Выберите сотрудника.</p>}
+            {employeeId && reportLoading && <p className="text-sm text-gray-400">Загрузка…</p>}
             {employeeId && reportError && (
                 <p className="text-sm text-red-500">Не удалось загрузить отчёт по ЗП</p>
             )}

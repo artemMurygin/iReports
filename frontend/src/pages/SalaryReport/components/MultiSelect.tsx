@@ -1,7 +1,10 @@
 import { ChevronDown } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 
-export interface SelectOption { id: number | string; label: string }
+export interface SelectOption {
+    id: number | string
+    label: string
+}
 
 interface Props {
     options: SelectOption[]

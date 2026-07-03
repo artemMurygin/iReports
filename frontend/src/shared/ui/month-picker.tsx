@@ -9,11 +9,7 @@ interface Props {
     onChange: (period: string) => void
 }
 
-const MONTHS = [
-    'Янв', 'Фев', 'Мар', 'Апр',
-    'Май', 'Июн', 'Июл', 'Авг',
-    'Сен', 'Окт', 'Ноя', 'Дек',
-]
+const MONTHS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
 
 function fmtPeriod(period: string): string {
     const [y, m] = period.split('-')
@@ -34,7 +30,13 @@ export function MonthPicker({ value, onChange }: Props) {
     }
 
     return (
-        <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setYear(selYear) }}>
+        <Popover
+            open={open}
+            onOpenChange={(o) => {
+                setOpen(o)
+                if (o) setYear(selYear)
+            }}
+        >
             <PopoverTrigger asChild>
                 <button className="flex items-center h-9 px-3 rounded-md border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer shrink-0 capitalize">
                     {fmtPeriod(value)}
