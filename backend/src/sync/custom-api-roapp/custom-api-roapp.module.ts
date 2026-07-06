@@ -5,5 +5,6 @@ import { CustomApiRoappModule } from '../../integrations/custom-api-roapp/custom
 @Module({
   providers: [CustomApiRoappSyncService],
   imports: [CustomApiRoappModule],
+  exports: [CustomApiRoappSyncService],
 })
 export class CustomApiRoappSyncModule {}
