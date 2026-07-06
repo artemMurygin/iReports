@@ -178,9 +178,13 @@ function KpiCard({
     )
 }
 
-function KpiSummaryCards({ rows, period }: { rows: PlanFactRow[]; period: string }) {
+function KpiSummaryCards({
+ rows, period 
+}: { rows: PlanFactRow[]; period: string }) {
     const expectedPct = getExpectedPct(period)
-    const { day, daysInMonth } = getMonthProgress(period)
+    const {
+ day, daysInMonth 
+} = getMonthProgress(period)
 
     const totalPlanRev = useMemo(
         () => rows.filter((r) => r.stat === 'REVENUE').reduce((s, r) => s + r.planValue, 0),
@@ -296,7 +300,9 @@ function CategorySelect({
     value: string
     onChange: (v: string) => void
 }) {
-    const { data: categories = [], isLoading } = useQuery(categoriesQuery(direction))
+    const {
+ data: categories = [], isLoading 
+} = useQuery(categoriesQuery(direction))
     return (
         <select
             value={value}
@@ -340,7 +346,9 @@ function PlanRowForm({
     const [stat, setStat] = useState<KpiStat>(initial.stat)
     const [planValue, setPlanValue] = useState(String(initial.planValue))
 
-    const { mutate, isPending } = useMutation({
+    const {
+ mutate, isPending 
+} = useMutation({
         mutationFn: () =>
             salaryApi.updatePlanTarget(initial.id, {
                 direction,
@@ -726,7 +734,9 @@ export function PlanFactView() {
             entityFilter === 'department' && selectedIds.length > 0 ? selectedIds : undefined,
     }
 
-    const { data: rows = [], isLoading, isError } = useQuery(planFactQuery(queryParams))
+    const {
+ data: rows = [], isLoading, isError 
+} = useQuery(planFactQuery(queryParams))
     const queryKey = planFactQuery(queryParams).queryKey
 
     const { data: serviceCategories = [] } = useQuery(categoriesQuery('SERVICE'))

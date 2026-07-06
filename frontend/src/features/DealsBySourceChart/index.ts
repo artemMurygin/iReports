@@ -1,1 +1,1 @@
-export { DealsBySourceChart } from './components/DealsBySourceChart.tsx'
+export { DealsBySourceChart } from '@/features/DealsBySourceChart/ui/DealsBySourceChart.tsx'

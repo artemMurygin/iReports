@@ -82,7 +82,9 @@ function LineItemRow({ item }: { item: SalaryLineItem }) {
 
 // ─── LineItemGroup ─────────────────────────────────────────────────────────────
 
-function LineItemGroup({ type, items }: { type: AccrualType; items: SalaryLineItem[] }) {
+function LineItemGroup({
+ type, items 
+}: { type: AccrualType; items: SalaryLineItem[] }) {
     const subtotal = items.reduce((s, i) => s + i.factAmount, 0)
     return (
         <div className="border-b border-gray-100 last:border-0">
@@ -106,12 +108,16 @@ interface AdjustmentFormProps {
     onCancel: () => void
 }
 
-function AdjustmentForm({ employeeId, period, onSuccess, onCancel }: AdjustmentFormProps) {
+function AdjustmentForm({
+ employeeId, period, onSuccess, onCancel 
+}: AdjustmentFormProps) {
     const [adjType, setAdjType] = useState<'PENALTY' | 'ADJUSTMENT'>('PENALTY')
     const [amount, setAmount] = useState('')
     const [reason, setReason] = useState('')
 
-    const { mutate, isPending } = useMutation({
+    const {
+ mutate, isPending 
+} = useMutation({
         mutationFn: () =>
             salaryApi.createAdjustment({
                 employeeId,
@@ -189,7 +195,9 @@ export function SalaryView() {
         enabled: !!employeeId,
     })
 
-    const { mutate: closeMonth, isPending: closing } = useMutation({
+    const {
+ mutate: closeMonth, isPending: closing 
+} = useMutation({
         mutationFn: () => salaryApi.closeSalaryReport(employeeId!, period),
         onSuccess: ({ data }) => {
             queryClient.setQueryData(salaryReportQuery(employeeId!, period).queryKey, data)

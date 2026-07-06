@@ -2,7 +2,7 @@ import * as React from 'react'
 import * as RechartsPrimitive from 'recharts'
 import type { TooltipValueType } from 'recharts'
 
-import { cn } from '@/shared/lib/twUtils'
+import { cn } from '@/shared/lib/tw'
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const
@@ -75,7 +75,9 @@ function ChartContainer({
     )
 }
 
-const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+const ChartStyle = ({
+ id, config 
+}: { id: string; config: ChartConfig }) => {
     const colorConfig = Object.entries(config).filter(([, config]) => config.theme ?? config.color)
 
     if (!colorConfig.length) {

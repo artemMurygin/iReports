@@ -16,7 +16,9 @@ function fmtPeriod(period: string): string {
     return format(new Date(Number(y), Number(m) - 1), 'LLLL yyyy', { locale: ru })
 }
 
-export function MonthPicker({ value, onChange }: Props) {
+export function MonthPicker({
+ value, onChange 
+}: Props) {
     const [open, setOpen] = useState(false)
     const [year, setYear] = useState(() => Number(value.split('-')[0]))
 

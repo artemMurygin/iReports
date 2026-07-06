@@ -9,7 +9,9 @@ interface Props {
     onUpdated: (employee: Employee) => void
 }
 
-export function OnlineNameMapping({ employees, onUpdated }: Props) {
+export function OnlineNameMapping({
+ employees, onUpdated 
+}: Props) {
     const [editingId, setEditingId] = useState<number | null>(null)
     const [draft, setDraft] = useState('')
 

@@ -33,8 +33,7 @@ export class DealsService {
   }
 
   async getDeviceTypes() {
-    const deviceTypes = await this.DB.bitrixDeviceTypes.findMany();
-    return deviceTypes;
+    return this.DB.bitrixDeviceTypes.findMany();
   }
 
   async getDealsManagers() {

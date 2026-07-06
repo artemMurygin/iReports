@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Lock } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/shared/lib/twUtils'
+import { cn } from '@/shared/lib/tw'
 import { salaryApi } from '../api'
 import { categoriesQuery } from '../queries'
 import { ProgressionCurveEditor } from './ProgressionCurveEditor'
@@ -40,7 +40,9 @@ const selectCls =
 const labelCls = 'text-xs font-medium text-gray-500'
 const fieldCls = 'flex flex-col gap-1'
 
-export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
+export function GoalForm({
+ ruleId, goal, onCreated, onCancel 
+}: Props) {
     const isEdit = goal != null
 
     const [type, setType] = useState<GoalType>(goal?.type ?? 'KPI')
@@ -80,7 +82,9 @@ export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
         enabled: type === 'KPI',
     })
 
-    const { mutate, isPending: saving } = useMutation({
+    const {
+ mutate, isPending: saving 
+} = useMutation({
         mutationFn: async () => {
             const rewardPayload = {
                 name: rewardName,

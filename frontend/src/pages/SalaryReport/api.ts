@@ -1,4 +1,4 @@
-import { api } from '@/shared/axios.instance'
+import { api } from '@/shared/api/axios.instance'
 import type {
     CategoryNode,
     Department,

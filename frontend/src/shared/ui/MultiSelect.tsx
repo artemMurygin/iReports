@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
-import { cn } from '@/shared/lib/twUtils'
+import { cn } from '@/shared/lib/tw'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 
 export interface MultiSelectOption {

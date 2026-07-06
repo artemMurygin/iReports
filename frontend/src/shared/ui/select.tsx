@@ -1,14 +1,16 @@
 import * as React from 'react'
 import { Select as SelectPrimitive } from 'radix-ui'
 
-import { cn } from '@/shared/lib/twUtils'
+import { cn } from '@/shared/lib/tw'
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react'
 
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
     return <SelectPrimitive.Root data-slot="select" {...props} />
 }
 
-function SelectGroup({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Group>) {
+function SelectGroup({
+ className, ...props 
+}: React.ComponentProps<typeof SelectPrimitive.Group>) {
     return (
         <SelectPrimitive.Group
             data-slot="select-group"
@@ -86,7 +88,9 @@ function SelectContent({
     )
 }
 
-function SelectLabel({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Label>) {
+function SelectLabel({
+ className, ...props 
+}: React.ComponentProps<typeof SelectPrimitive.Label>) {
     return (
         <SelectPrimitive.Label
             data-slot="select-label"

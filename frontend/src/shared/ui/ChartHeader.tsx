@@ -7,7 +7,9 @@ type Props = {
     actions?: ReactNode
 }
 
-export function ChartHeader({ title, description, actions }: Props) {
+export function ChartHeader({
+ title, description, actions 
+}: Props) {
     return (
         <CardHeader className="pb-2 shrink-0">
             <div className="flex items-start justify-between gap-2">

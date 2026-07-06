@@ -57,3 +57,29 @@ export interface DealsResponse {
     total: number
     deals: Deal[]
 }
+
+export interface ServiceBreakdownPoint {
+    period: string
+    count: number
+    avgPrice: number
+    revenue: number
+}
+
+export interface ServiceAnalyticsEntry {
+    serviceId: number
+    serviceName: string
+    categoryId: number | null
+    totalCount: number
+    totalRevenue: number
+    totalProfit: number
+    totalEngineerBonus: number
+    avgServicePrice: number
+    avgOrderCheck: number
+    breakdown: ServiceBreakdownPoint[]
+}
+
+export interface ChartSeriesEntry {
+    id: string
+    name: string
+    breakdown: ServiceBreakdownPoint[]
+}

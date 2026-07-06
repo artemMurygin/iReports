@@ -1,4 +1,4 @@
-import { cn } from '@/shared/lib/twUtils'
+import { cn } from '@/shared/lib/tw'
 
 interface SpinnerProps {
     className?: string

@@ -137,7 +137,9 @@ function SortableCategoryEntry({
     entry: CategoryEntry
     onUpdateMetrics: (metrics: MetricRow[]) => void
 }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    const {
+ attributes, listeners, setNodeRef, transform, transition, isDragging 
+} = useSortable({
         id: entry.id,
     })
 
@@ -182,7 +184,9 @@ function CategoryEntriesEditor({
     )
 
     function handleDragEnd(event: DragEndEvent) {
-        const { active, over } = event
+        const {
+ active, over 
+} = event
         if (over && active.id !== over.id) {
             const oldIdx = entries.findIndex((e) => e.id === active.id)
             const newIdx = entries.findIndex((e) => e.id === over.id)
@@ -231,7 +235,9 @@ function DirectionBlockEditor({
     onRemove: () => void
     canRemove: boolean
 }) {
-    const { data: categories = [], isLoading } = useQuery(categoriesQuery(block.direction))
+    const {
+ data: categories = [], isLoading 
+} = useQuery(categoriesQuery(block.direction))
 
     const categoryOptions = categories.map((c) => ({ id: String(c.id), label: c.name }))
     const selectedCategoryIds = block.entries.map((e) => e.id)
@@ -351,7 +357,9 @@ interface Props {
     onClose: () => void
 }
 
-export function CreatePlanModal({ period, existingRows, onClose }: Props) {
+export function CreatePlanModal({
+ period, existingRows, onClose 
+}: Props) {
     const { data: employees = [] } = useQuery(employeesQuery)
     const { data: departments = [] } = useQuery(departmentsQuery)
 
@@ -361,7 +369,9 @@ export function CreatePlanModal({ period, existingRows, onClose }: Props) {
 
     const queryClient = useQueryClient()
 
-    const { mutate, isPending } = useMutation({
+    const {
+ mutate, isPending 
+} = useMutation({
         mutationFn: () => {
             if (!entityId) return Promise.reject(new Error('no-entity'))
 

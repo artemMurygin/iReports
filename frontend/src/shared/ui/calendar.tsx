@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from 'react-day-picker'
 
-import { cn } from '@/shared/lib/twUtils'
+import { cn } from '@/shared/lib/tw'
 import { Button, buttonVariants } from '@/shared/ui/button'
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from 'lucide-react'
 
@@ -118,7 +118,9 @@ function Calendar({
                 ...classNames,
             }}
             components={{
-                Root: ({ className, rootRef, ...props }) => {
+                Root: ({
+ className, rootRef, ...props 
+}) => {
                     return (
                         <div
                             data-slot="calendar"
@@ -128,7 +130,9 @@ function Calendar({
                         />
                     )
                 },
-                Chevron: ({ className, orientation, ...props }) => {
+                Chevron: ({
+ className, orientation, ...props 
+}) => {
                     if (orientation === 'left') {
                         return <ChevronLeftIcon className={cn('size-4', className)} {...props} />
                     }
@@ -140,7 +144,9 @@ function Calendar({
                     return <ChevronDownIcon className={cn('size-4', className)} {...props} />
                 },
                 DayButton: ({ ...props }) => <CalendarDayButton locale={locale} {...props} />,
-                WeekNumber: ({ children, ...props }) => {
+                WeekNumber: ({
+ children, ...props 
+}) => {
                     return (
                         <td {...props}>
                             <div className="flex size-(--cell-size) items-center justify-center text-center">

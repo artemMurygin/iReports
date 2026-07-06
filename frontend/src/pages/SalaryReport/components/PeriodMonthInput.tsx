@@ -3,7 +3,9 @@ interface Props {
     onChange: (period: string) => void
 }
 
-export function PeriodMonthInput({ value, onChange }: Props) {
+export function PeriodMonthInput({
+ value, onChange 
+}: Props) {
     return (
         <input
             type="month"

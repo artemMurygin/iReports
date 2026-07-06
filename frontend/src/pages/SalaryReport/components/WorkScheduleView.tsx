@@ -82,7 +82,9 @@ export function WorkScheduleView() {
         setRows((prev) => prev.map((r) => (r.date === date ? { ...r, ...patch } : r)))
     }
 
-    const { mutate: saveSchedule, isPending: saving } = useMutation({
+    const {
+ mutate: saveSchedule, isPending: saving 
+} = useMutation({
         mutationFn: () => {
             const shifts = rows
                 .filter((r) => r.plannedHours !== '')

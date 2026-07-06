@@ -22,7 +22,9 @@ export function Header() {
                 </span>
             </div>
             <nav className="flex items-center gap-1">
-                {NAV.map(({ label, to, disabled }) =>
+                {NAV.map(({
+ label, to, disabled 
+}) =>
                     disabled ? (
                         <span
                             key={to}

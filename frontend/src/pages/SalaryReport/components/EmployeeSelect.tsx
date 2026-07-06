@@ -8,7 +8,9 @@ interface Props {
     placeholder?: string
 }
 
-export function EmployeeSelect({ employees, value, onChange, placeholder = 'Сотрудник' }: Props) {
+export function EmployeeSelect({
+ employees, value, onChange, placeholder = 'Сотрудник' 
+}: Props) {
     return (
         <Select
             value={value ? String(value) : undefined}

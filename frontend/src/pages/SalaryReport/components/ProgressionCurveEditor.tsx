@@ -29,7 +29,9 @@ function buildCurvePoints(tiers: ProgressionTier[]) {
     return points
 }
 
-export function ProgressionCurveEditor({ tiers, onChange }: Props) {
+export function ProgressionCurveEditor({
+ tiers, onChange 
+}: Props) {
     const points = buildCurvePoints(tiers)
 
     function updateTier(index: number, patch: Partial<ProgressionTier>) {
