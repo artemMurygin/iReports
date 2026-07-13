@@ -5,9 +5,7 @@ type Props = {
     description: string
 }
 
-export function FunnelChartHeader({
- title, description 
-}: Props) {
+export function FunnelChartHeader({ title, description }: Props) {
     return (
         <CardHeader className="pb-2 shrink-0">
             <div className="flex flex-col gap-1">

@@ -11,9 +11,7 @@ export function TabButton({ active, onClick, children }: TabButtonProps) {
         <button
             onClick={onClick}
             className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                active
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
         >
             {children}

@@ -14,10 +14,7 @@ export function DealsByManagerChart({ deals }: Props) {
 
     return (
         <ChartLayout>
-            <ChartHeader
-                title="Показатели по менеджерам"
-                description="Конверсия, кол-во сделок и выручка"
-            />
+            <ChartHeader title="Показатели по менеджерам" description="Конверсия, кол-во сделок и выручка" />
             <CardContent className="flex-1 flex flex-col gap-3 pt-2 min-h-0">
                 <div
                     className="flex items-center gap-3 text-xs text-gray-400"
@@ -32,9 +29,7 @@ export function DealsByManagerChart({ deals }: Props) {
                         <span className="w-[90px] text-right">Выручка</span>
                     </div>
                 </div>
-                {!data.length && (
-                    <p className="text-sm text-gray-400 py-4 text-center">Нет данных</p>
-                )}
+                {!data.length && <p className="text-sm text-gray-400 py-4 text-center">Нет данных</p>}
                 {data.map((item) => (
                     <ManagerRow key={item.managerId} item={item} />
                 ))}

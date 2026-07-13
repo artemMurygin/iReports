@@ -23,12 +23,7 @@ export function DealsTable({ deals }: ServiceDealsTableProps) {
                 <TableBody
                     paginated={pagination.paginated}
                     renderRow={(deal, idx) => (
-                        <TableRow
-                            key={deal.id}
-                            deal={deal}
-                            isEven={idx % 2 === 1}
-                            onClick={openDeal}
-                        />
+                        <TableRow key={deal.id} deal={deal} isEven={idx % 2 === 1} onClick={openDeal} />
                     )}
                 />
             }

@@ -14,9 +14,7 @@ interface Props {
     className?: string
 }
 
-export function MultiSelect({
- options, selected, onChange, placeholder, className 
-}: Props) {
+export function MultiSelect({ options, selected, onChange, placeholder, className }: Props) {
     function toggle(id: number | string) {
         onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id])
     }
@@ -57,9 +55,7 @@ export function MultiSelect({
                             <span className="truncate">{opt.label}</span>
                         </label>
                     ))}
-                    {options.length === 0 && (
-                        <p className="text-xs text-gray-400 text-center py-3">Нет элементов</p>
-                    )}
+                    {options.length === 0 && <p className="text-xs text-gray-400 text-center py-3">Нет элементов</p>}
                 </div>
             </PopoverContent>
         </Popover>

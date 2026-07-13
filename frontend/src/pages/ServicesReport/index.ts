@@ -1,1 +1,1 @@
-export { ServicesAnalytics } from './ui/ServicesAnalytics'
+export { ServicesAnalytics } from './mediator/ServicesAnalytics'

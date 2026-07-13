@@ -12,14 +12,7 @@ type Props = {
     body?: ReactNode
 }
 
-export function Layout({
-    isInitialLoad,
-    isRefreshing = false,
-    dataVersion = 0,
-    header,
-    error,
-    body,
-}: Props) {
+export function Layout({ isInitialLoad, isRefreshing = false, dataVersion = 0, header, error, body }: Props) {
     return (
         <main className="flex flex-col flex-1">
             {header}
@@ -33,11 +26,17 @@ export function Layout({
                         animate={{
                             opacity: 1,
                             y: 0,
-                            filter: isRefreshing ? 'blur(1.5px)' : 'blur(0px)',
+                            filter: isRefreshing ? 'blur(1.5px)' : 'blur(1 px)',
                             transition: { duration: 0.5, ease: 'easeOut' },
                         }}
-                        exit={{ opacity: 0, y: 8, transition: { duration: 0.22, ease: 'easeIn' } }}
-                        style={{ pointerEvents: isRefreshing ? 'none' : 'auto' }}
+                        exit={{
+                            opacity: 0,
+                            y: 8,
+                            transition: { duration: 0.22, ease: 'easeIn' },
+                        }}
+                        style={{
+                            pointerEvents: isRefreshing ? 'none' : 'auto',
+                        }}
                         className="flex flex-col gap-6 p-6"
                     >
                         {error && <ErrorLayout error={error} />}

@@ -6,13 +6,8 @@ import { useDebounce } from '@/shared/hooks/useDebounce'
 
 const DEBOUNCE_MS = 1000
 
-export function useDeals(
-    filters: DashboardFilters,
-    setError: Dispatch<SetStateAction<string | null>>,
-) {
-    const {
- debouncedValue: debouncedFilters, isDebouncing 
-} = useDebounce(filters, DEBOUNCE_MS)
+export function useDeals(filters: DashboardFilters, setError: Dispatch<SetStateAction<string | null>>) {
+    const { debouncedValue: debouncedFilters, isDebouncing } = useDebounce(filters, DEBOUNCE_MS)
 
     const {
         data,

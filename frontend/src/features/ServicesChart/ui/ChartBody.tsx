@@ -18,17 +18,9 @@ export function ChartBody({ series, mode }: Props) {
                     {series.map((s, i) => (
                         <div
                             key={s.id}
-                            className={
-                                series.length % 2 !== 0 && i === series.length - 1
-                                    ? 'col-span-2'
-                                    : ''
-                            }
+                            className={series.length % 2 !== 0 && i === series.length - 1 ? 'col-span-2' : ''}
                         >
-                            <SeriesCard
-                                series={s}
-                                mode={mode}
-                                color={CHART_COLORS[i % CHART_COLORS.length]}
-                            />
+                            <SeriesCard series={s} mode={mode} color={CHART_COLORS[i % CHART_COLORS.length]} />
                         </div>
                     ))}
                 </div>

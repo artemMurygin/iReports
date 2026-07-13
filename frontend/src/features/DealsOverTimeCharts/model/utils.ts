@@ -10,8 +10,7 @@ export function getDateKey(dateStr: string, period: 'day' | 'week'): string {
     monday.setDate(date.getDate() + diffToMonday)
     const sunday = new Date(monday)
     sunday.setDate(monday.getDate() + 6)
-    const fmt = (d: Date) =>
-        `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
+    const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
     return `${fmt(monday)}-${fmt(sunday)}`
 }
 

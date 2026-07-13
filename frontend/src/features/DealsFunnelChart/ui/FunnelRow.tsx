@@ -10,10 +10,7 @@ export function FunnelRow({ item, max }: Props) {
 
     return (
         <div className="flex items-center gap-3">
-            <span
-                className="text-s text-gray-700 shrink-0"
-                style={{ width: 160, fontFamily: 'Inter, sans-serif' }}
-            >
+            <span className="text-s text-gray-700 shrink-0" style={{ width: 160, fontFamily: 'Inter, sans-serif' }}>
                 {label}
             </span>
             <div

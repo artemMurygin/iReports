@@ -1,9 +1,5 @@
 import { useMemo } from 'react'
-import type {
-    BreadcrumbItem,
-    ServiceCategory,
-    ServicesFilters,
-} from '@/pages/ServicesReport/model/types.ts'
+import type { BreadcrumbItem, ServiceCategory, ServicesFilters } from '@/pages/ServicesReport/model/types.ts'
 
 export function useBreadcrumbs(categories: ServiceCategory[], filters: ServicesFilters) {
     const breadcrumbs = useMemo(
@@ -11,17 +7,12 @@ export function useBreadcrumbs(categories: ServiceCategory[], filters: ServicesF
         [categories, filters.selectedCategoryId],
     )
 
-    function buildBreadcrumbs(
-        categories: ServiceCategory[],
-        selectedId: string | null,
-    ): BreadcrumbItem[] {
+    function buildBreadcrumbs(categories: ServiceCategory[], selectedId: string | null): BreadcrumbItem[] {
         const crumbs: BreadcrumbItem[] = [{ id: null, name: 'Все' }]
         if (selectedId === null) return crumbs
 
         const path: ServiceCategory[] = []
-        let current: ServiceCategory | undefined = categories.find(
-            (c) => c.id === Number(selectedId),
-        )
+        let current: ServiceCategory | undefined = categories.find((c) => c.id === Number(selectedId))
         while (current) {
             path.unshift(current)
             const parentId = current.parentId

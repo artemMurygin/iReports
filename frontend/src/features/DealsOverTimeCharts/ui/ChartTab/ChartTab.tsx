@@ -1,12 +1,4 @@
-import {
-    CartesianGrid,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    ResponsiveContainer,
-    Tooltip,
-} from 'recharts'
+import { CartesianGrid, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import type { LeadsEntry } from '../../model/types'
 import { TOP_N, TOP_COLORS, MUTED_STROKE } from '../../model/config'
 import { EndLabel } from './EndLabel'
@@ -32,11 +24,7 @@ export function ChartTab({ data, ranked, topSources, tailSources, dataLength }: 
                         axisLine={false}
                         tick={{ fontSize: 11, fill: MUTED_STROKE }}
                     />
-                    <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fontSize: 11, fill: MUTED_STROKE }}
-                    />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: MUTED_STROKE }} />
 
                     {tailSources.map((source) => (
                         <Line
@@ -80,12 +68,7 @@ export function ChartTab({ data, ranked, topSources, tailSources, dataLength }: 
 
                     <Tooltip
                         content={({ active, payload, label }) => (
-                            <ChartTooltip
-                                active={active}
-                                label={label}
-                                payload={payload}
-                                topSources={topSources}
-                            />
+                            <ChartTooltip active={active} label={label} payload={payload} topSources={topSources} />
                         )}
                     />
                 </LineChart>

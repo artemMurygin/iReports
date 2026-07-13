@@ -59,13 +59,7 @@ interface DirectionBlock {
 
 // ─── MetricsEditor (shared) ───────────────────────────────────────────────────
 
-function MetricsEditor({
-    metrics,
-    onUpdate,
-}: {
-    metrics: MetricRow[]
-    onUpdate: (m: MetricRow[]) => void
-}) {
+function MetricsEditor({ metrics, onUpdate }: { metrics: MetricRow[]; onUpdate: (m: MetricRow[]) => void }) {
     const inputCls =
         'h-8 px-2.5 rounded-md border border-gray-200 text-sm w-32 tabular-nums bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400'
     const selectCls =
@@ -89,11 +83,7 @@ function MetricsEditor({
         <div className="space-y-1.5">
             {metrics.map((m, mi) => (
                 <div key={mi} className="flex items-center gap-2">
-                    <select
-                        value={m.stat}
-                        onChange={(e) => update(mi, 'stat', e.target.value)}
-                        className={selectCls}
-                    >
+                    <select value={m.stat} onChange={(e) => update(mi, 'stat', e.target.value)} className={selectCls}>
                         {ALL_STATS.map((s) => (
                             <option key={s} value={s}>
                                 {STAT_LABELS[s]}
@@ -137,9 +127,7 @@ function SortableCategoryEntry({
     entry: CategoryEntry
     onUpdateMetrics: (metrics: MetricRow[]) => void
 }) {
-    const {
- attributes, listeners, setNodeRef, transform, transition, isDragging 
-} = useSortable({
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: entry.id,
     })
 
@@ -180,13 +168,13 @@ function CategoryEntriesEditor({
 }) {
     const sensors = useSensors(
         useSensor(PointerSensor),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
     )
 
     function handleDragEnd(event: DragEndEvent) {
-        const {
- active, over 
-} = event
+        const { active, over } = event
         if (over && active.id !== over.id) {
             const oldIdx = entries.findIndex((e) => e.id === active.id)
             const newIdx = entries.findIndex((e) => e.id === over.id)
@@ -204,10 +192,7 @@ function CategoryEntriesEditor({
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext
-                items={entries.map((e) => e.id)}
-                strategy={verticalListSortingStrategy}
-            >
+            <SortableContext items={entries.map((e) => e.id)} strategy={verticalListSortingStrategy}>
                 <div className="mt-2 border border-gray-100 rounded-lg overflow-hidden divide-y divide-gray-100">
                     {entries.map((entry) => (
                         <SortableCategoryEntry
@@ -235,11 +220,12 @@ function DirectionBlockEditor({
     onRemove: () => void
     canRemove: boolean
 }) {
-    const {
- data: categories = [], isLoading 
-} = useQuery(categoriesQuery(block.direction))
+    const { data: categories = [], isLoading } = useQuery(categoriesQuery(block.direction))
 
-    const categoryOptions = categories.map((c) => ({ id: String(c.id), label: c.name }))
+    const categoryOptions = categories.map((c) => ({
+        id: String(c.id),
+        label: c.name,
+    }))
     const selectedCategoryIds = block.entries.map((e) => e.id)
 
     function handleDirectionChange(dir: Direction) {
@@ -315,9 +301,7 @@ function DirectionBlockEditor({
 
             {block.allDirection ? (
                 <div className="mt-1 border border-gray-100 rounded-lg px-3 py-2.5">
-                    <p className="text-xs font-medium text-gray-500 mb-1.5">
-                        Метрики для всего направления
-                    </p>
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">Метрики для всего направления</p>
                     <MetricsEditor
                         metrics={block.allDirectionMetrics}
                         onUpdate={(m) => onUpdate({ ...block, allDirectionMetrics: m })}
@@ -357,9 +341,7 @@ interface Props {
     onClose: () => void
 }
 
-export function CreatePlanModal({
- period, existingRows, onClose 
-}: Props) {
+export function CreatePlanModal({ period, existingRows, onClose }: Props) {
     const { data: employees = [] } = useQuery(employeesQuery)
     const { data: departments = [] } = useQuery(departmentsQuery)
 
@@ -369,9 +351,7 @@ export function CreatePlanModal({
 
     const queryClient = useQueryClient()
 
-    const {
- mutate, isPending 
-} = useMutation({
+    const { mutate, isPending } = useMutation({
         mutationFn: () => {
             if (!entityId) return Promise.reject(new Error('no-entity'))
 
@@ -448,15 +428,10 @@ export function CreatePlanModal({
                 <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
                     {/* Entity type */}
                     <div>
-                        <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
-                            Цель плана
-                        </p>
+                        <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Цель плана</p>
                         <div className="flex gap-4 mb-3">
                             {(['employee', 'department'] as const).map((type) => (
-                                <label
-                                    key={type}
-                                    className="flex items-center gap-2 cursor-pointer"
-                                >
+                                <label key={type} className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="radio"
                                         name="entityType"
@@ -509,15 +484,11 @@ export function CreatePlanModal({
                                     block={block}
                                     onUpdate={(updated) =>
                                         setBlocks((prev) =>
-                                            prev.map((b) =>
-                                                b.localId === block.localId ? updated : b,
-                                            ),
+                                            prev.map((b) => (b.localId === block.localId ? updated : b)),
                                         )
                                     }
                                     onRemove={() =>
-                                        setBlocks((prev) =>
-                                            prev.filter((b) => b.localId !== block.localId),
-                                        )
+                                        setBlocks((prev) => prev.filter((b) => b.localId !== block.localId))
                                     }
                                     canRemove={blocks.length > 1}
                                 />

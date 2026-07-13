@@ -5,7 +5,11 @@ import { DateRangePicker } from '@/shared/ui/date-range-picker'
 import type { ServiceCategory, ServicesFilters } from '@/pages/ServicesReport/model/types.ts'
 
 type GroupBy = 'day' | 'week' | 'month'
-const GROUP_BY_LABELS: Record<GroupBy, string> = { day: 'День', week: 'Неделя', month: 'Месяц' }
+const GROUP_BY_LABELS: Record<GroupBy, string> = {
+    day: 'День',
+    week: 'Неделя',
+    month: 'Месяц',
+}
 
 interface Props {
     filters: ServicesFilters
@@ -15,9 +19,7 @@ interface Props {
     onReset: () => void
 }
 
-export function ServicesFilterBar({
- filters, categories, services, onChange, onReset
-}: Props) {
+export function ServicesFilterBar({ filters, categories, services, onChange, onReset }: Props) {
     const serviceOptions = services.map((s) => ({
         value: String(s.serviceId),
         label: s.serviceName,
@@ -25,17 +27,12 @@ export function ServicesFilterBar({
 
     return (
         <div className="sticky top-16 z-10 flex items-center gap-4 px-6 py-3 bg-white border-b border-gray-200 shrink-0">
-            <DateRangePicker
-                value={filters.dateRange}
-                onChange={(dateRange) => onChange({ ...filters, dateRange })}
-            />
+            <DateRangePicker value={filters.dateRange} onChange={(dateRange) => onChange({ ...filters, dateRange })} />
 
             <CategoryTreeSelect
                 categories={categories}
                 selectedId={filters.selectedCategoryId}
-                onChange={(selectedCategoryId) =>
-                    onChange({ ...filters, selectedCategoryId, serviceIds: [] })
-                }
+                onChange={(selectedCategoryId) => onChange({ ...filters, selectedCategoryId, serviceIds: [] })}
             />
 
             {services.length > 0 && (
@@ -63,12 +60,7 @@ export function ServicesFilterBar({
 
             <div className="flex-1" />
 
-            <Button
-                variant="ghost"
-                size="sm"
-                onClick={onReset}
-                className="text-gray-500 hover:text-gray-700"
-            >
+            <Button variant="ghost" size="sm" onClick={onReset} className="text-gray-500 hover:text-gray-700">
                 Сбросить фильтры
             </Button>
         </div>

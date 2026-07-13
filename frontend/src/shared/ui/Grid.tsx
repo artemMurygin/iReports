@@ -33,9 +33,7 @@ const GAP_CLASS: Record<number, string> = {
     8: 'gap-8',
 }
 
-export function Grid({
- cols, gap, height, children 
-}: Props) {
+export function Grid({ cols, gap, height, children }: Props) {
     const colsClass = (cols && COLS_CLASS[cols]) || 'grid-cols-1'
     const gapClass = (gap && GAP_CLASS[gap]) || 'gap-4'
     const heightClass = height ? height : 'h-full'

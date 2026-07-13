@@ -1,28 +1,13 @@
 import type { ServiceAnalyticsEntry, ServiceBreakdownPoint, ChartSeriesEntry } from '@/kernel/types'
+import { getDirectChildren as getDirectChildrenById, getSubtreeIds } from '@/shared/lib/tree.ts'
 import type { ServiceCategory } from './types'
 
 export function resolveDescendantIds(categories: ServiceCategory[], selectedId: string): number[] {
-    const rootId = Number(selectedId)
-    const ids: number[] = [rootId]
-    const queue: number[] = [rootId]
-    while (queue.length > 0) {
-        const current = queue.shift()!
-        for (const cat of categories) {
-            if (cat.parentId === current) {
-                ids.push(cat.id)
-                queue.push(cat.id)
-            }
-        }
-    }
-    return ids
+    return getSubtreeIds(categories, Number(selectedId))
 }
 
-export function getDirectChildren(
-    categories: ServiceCategory[],
-    parentId: string | null,
-): ServiceCategory[] {
-    const numId = parentId !== null ? Number(parentId) : null
-    return categories.filter((c) => c.parentId === numId)
+export function getDirectChildren(categories: ServiceCategory[], parentId: string | null): ServiceCategory[] {
+    return getDirectChildrenById(categories, parentId !== null ? Number(parentId) : null)
 }
 
 function mergePeriodBreakdowns(entries: ServiceAnalyticsEntry[]): ServiceBreakdownPoint[] {
@@ -40,7 +25,10 @@ function mergePeriodBreakdowns(entries: ServiceAnalyticsEntry[]): ServiceBreakdo
 }
 
 function enrichBreakdown(breakdown: ServiceBreakdownPoint[]): ServiceBreakdownPoint[] {
-    return breakdown.map((b) => ({ ...b, revenue: Math.round(b.count * b.avgPrice) }))
+    return breakdown.map((b) => ({
+        ...b,
+        revenue: Math.round(b.count * b.avgPrice),
+    }))
 }
 
 export function buildChartSeries(
@@ -61,17 +49,15 @@ export function buildChartSeries(
         return { series }
     }
 
-    const childrenHaveSubcategories = directChildren.some((child) =>
-        categories.some((c) => c.parentId === child.id),
+    const childrenHaveSubcategories = directChildren.some(
+        (child) => getDirectChildrenById(categories, child.id).length > 0,
     )
 
     if (childrenHaveSubcategories) {
         const series: ChartSeriesEntry[] = []
         for (const child of directChildren) {
             const childIds = resolveDescendantIds(categories, String(child.id))
-            const childServices = services.filter(
-                (s) => s.categoryId !== null && childIds.includes(s.categoryId),
-            )
+            const childServices = services.filter((s) => s.categoryId !== null && childIds.includes(s.categoryId))
             if (!childServices.length) continue
             series.push({
                 id: String(child.id),

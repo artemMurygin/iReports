@@ -13,12 +13,12 @@ const MONTHS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'И�
 
 function fmtPeriod(period: string): string {
     const [y, m] = period.split('-')
-    return format(new Date(Number(y), Number(m) - 1), 'LLLL yyyy', { locale: ru })
+    return format(new Date(Number(y), Number(m) - 1), 'LLLL yyyy', {
+        locale: ru,
+    })
 }
 
-export function MonthPicker({
- value, onChange 
-}: Props) {
+export function MonthPicker({ value, onChange }: Props) {
     const [open, setOpen] = useState(false)
     const [year, setYear] = useState(() => Number(value.split('-')[0]))
 
@@ -68,9 +68,7 @@ export function MonthPicker({
                                 key={i}
                                 onClick={() => select(i)}
                                 className={`px-2 py-1.5 text-sm rounded-md transition-colors ${
-                                    isSelected
-                                        ? 'bg-gray-900 text-white'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    isSelected ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'
                                 }`}
                             >
                                 {name}

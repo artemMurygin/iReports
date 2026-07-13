@@ -9,9 +9,7 @@ interface Props {
 
 type SparkTooltipProps = Pick<TooltipContentProps<number, string>, 'active' | 'payload'>
 
-function SparkTooltip({
- active, payload
-}: SparkTooltipProps) {
+function SparkTooltip({ active, payload }: SparkTooltipProps) {
     if (!active || !payload?.length) return null
     return (
         <div

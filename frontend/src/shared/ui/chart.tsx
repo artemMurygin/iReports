@@ -15,10 +15,7 @@ export type ChartConfig = Record<
     {
         label?: React.ReactNode
         icon?: React.ComponentType
-    } & (
-        | { color?: string; theme?: never }
-        | { color?: never; theme: Record<keyof typeof THEMES, string> }
-    )
+    } & ({ color?: string; theme?: never } | { color?: never; theme: Record<keyof typeof THEMES, string> })
 >
 
 type ChartContextProps = {
@@ -75,9 +72,7 @@ function ChartContainer({
     )
 }
 
-const ChartStyle = ({
- id, config 
-}: { id: string; config: ChartConfig }) => {
+const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     const colorConfig = Object.entries(config).filter(([, config]) => config.theme ?? config.color)
 
     if (!colorConfig.length) {
@@ -129,10 +124,7 @@ function ChartTooltipContent({
         indicator?: 'line' | 'dot' | 'dashed'
         nameKey?: string
         labelKey?: string
-    } & Omit<
-        RechartsPrimitive.DefaultTooltipContentProps<TooltipValueType, TooltipNameType>,
-        'accessibilityLayer'
-    >) {
+    } & Omit<RechartsPrimitive.DefaultTooltipContentProps<TooltipValueType, TooltipNameType>, 'accessibilityLayer'>) {
     const { config } = useChart()
 
     const tooltipLabel = React.useMemo(() => {
@@ -143,17 +135,10 @@ function ChartTooltipContent({
         const [item] = payload
         const key = `${labelKey ?? item?.dataKey ?? item?.name ?? 'value'}`
         const itemConfig = getPayloadConfigFromPayload(config, item, key)
-        const value =
-            !labelKey && typeof label === 'string'
-                ? (config[label]?.label ?? label)
-                : itemConfig?.label
+        const value = !labelKey && typeof label === 'string' ? (config[label]?.label ?? label) : itemConfig?.label
 
         if (labelFormatter) {
-            return (
-                <div className={cn('font-medium', labelClassName)}>
-                    {labelFormatter(value, payload)}
-                </div>
-            )
+            return <div className={cn('font-medium', labelClassName)}>{labelFormatter(value, payload)}</div>
         }
 
         if (!value) {
@@ -209,8 +194,7 @@ function ChartTooltipContent({
                                                             'w-1': indicator === 'line',
                                                             'w-0 border-[1.5px] border-dashed bg-transparent':
                                                                 indicator === 'dashed',
-                                                            'my-0.5':
-                                                                nestLabel && indicator === 'dashed',
+                                                            'my-0.5': nestLabel && indicator === 'dashed',
                                                         },
                                                     )}
                                                     style={
@@ -334,11 +318,4 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
     return configLabelKey in config ? config[configLabelKey] : config[key]
 }
 
-export {
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-    ChartLegend,
-    ChartLegendContent,
-    ChartStyle,
-}
+export { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartStyle }

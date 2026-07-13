@@ -17,10 +17,7 @@ export function DealsBySourceChart({ deals }: Props) {
     return (
         <ChartLayout>
             <ChartHeader title="Источники лидов" description="Распределение по рекламным каналам" />
-            <ChartBody
-                data={sorted}
-                renderRow={(item) => <ChartRow key={item.sourceId} item={item} max={max} />}
-            />
+            <ChartBody data={sorted} renderRow={(item) => <ChartRow key={item.sourceId} item={item} max={max} />} />
         </ChartLayout>
     )
 }

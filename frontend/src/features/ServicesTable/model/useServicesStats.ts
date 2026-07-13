@@ -10,6 +10,13 @@ export function useServicesStats(services: ServiceAnalyticsEntry[]) {
         const totalProfit = sorted.reduce((s, r) => s + r.totalProfit, 0)
         const totalBonus = sorted.reduce((s, r) => s + r.totalEngineerBonus, 0)
 
-        return { sorted, maxCount, totalCount, totalRevenue, totalProfit, totalBonus }
+        return {
+            sorted,
+            maxCount,
+            totalCount,
+            totalRevenue,
+            totalProfit,
+            totalBonus,
+        }
     }, [services])
 }

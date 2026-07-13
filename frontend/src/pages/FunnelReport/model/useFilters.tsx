@@ -3,14 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import type { DashboardFilters } from '@/pages/FunnelReport/model/types.ts'
 import { api } from '@/pages/FunnelReport/model/api.ts'
 import { startOfMonth } from 'date-fns'
-import { loadDataFromStorage, saveDataToStorage } from '@/shared/lib/storage.ts'
 
-const STORAGE_KEY = 'filters:funnel-report'
 const today = new Date()
-const defaults: DashboardFilters = {
+export const defaults: DashboardFilters = {
     dateRange: {
         from: startOfMonth(today),
-        to: new Date(),
+        to: today,
     },
     managers: [],
     sources: [],
@@ -20,17 +18,8 @@ const defaults: DashboardFilters = {
 }
 
 export function useFilters() {
-    const [filters, setFiltersState] = useState<DashboardFilters>(() => {
-        const data = loadDataFromStorage<DashboardFilters>(STORAGE_KEY)
-        if (!data) return defaults
-        return data
-    })
+    const [filters, setFilters] = useState<DashboardFilters>(defaults)
     const [error, setError] = useState<string | null>(null)
-
-    const setFilters = (value: DashboardFilters) => {
-        saveDataToStorage(STORAGE_KEY, value)
-        setFiltersState(value)
-    }
 
     const { data, error: queryError } = useQuery(api.getFilterOptions())
 
@@ -44,6 +33,10 @@ export function useFilters() {
     const stages = data?.stages ?? []
     const stageGroups = data?.stageGroups ?? []
 
+    const resetHandler = () => {
+        setFilters(defaults)
+    }
+
     return {
         filters,
         employees,
@@ -51,9 +44,9 @@ export function useFilters() {
         deviceTypes,
         stages,
         stageGroups,
-        setFilters,
         setError,
         error,
-        defaults,
+        resetHandler,
+        setFilters,
     }
 }

@@ -15,10 +15,7 @@ export function ManagerRow({ item }: Props) {
             >
                 {name}
             </span>
-            <div
-                className="flex-1 h-7 flex rounded-md overflow-hidden"
-                style={{ backgroundColor: 'var(--c-track)' }}
-            >
+            <div className="flex-1 h-7 flex rounded-md overflow-hidden" style={{ backgroundColor: 'var(--c-track)' }}>
                 <div
                     className="h-full flex items-center justify-start px-2 rounded-md transition-all"
                     style={{
@@ -40,9 +37,7 @@ export function ManagerRow({ item }: Props) {
                 style={{ fontFamily: 'Inter, sans-serif' }}
             >
                 <span className="w-[60px] text-right tabular-nums">{totalCount} шт.</span>
-                <span className="w-[90px] text-right tabular-nums">
-                    {revenue.toLocaleString('ru-RU')} ₽
-                </span>
+                <span className="w-[90px] text-right tabular-nums">{revenue.toLocaleString('ru-RU')} ₽</span>
             </div>
         </div>
     )

@@ -20,9 +20,7 @@ interface CreateRuleFormProps {
     onCancel: () => void
 }
 
-function CreateRuleForm({
- employees, departments, onSuccess, onCancel 
-}: CreateRuleFormProps) {
+function CreateRuleForm({ employees, departments, onSuccess, onCancel }: CreateRuleFormProps) {
     const [name, setName] = useState('')
     const [payPerHour, setPayPerHour] = useState('')
     const [validFrom, setValidFrom] = useState(() => new Date().toISOString().slice(0, 10))
@@ -30,9 +28,7 @@ function CreateRuleForm({
     const [employeeId, setEmployeeId] = useState<number | null>(null)
     const [departmentId, setDepartmentId] = useState<number | null>(null)
 
-    const {
- mutate, isPending 
-} = useMutation({
+    const { mutate, isPending } = useMutation({
         mutationFn: () => {
             const assignment =
                 assignTarget === 'employee'
@@ -93,20 +89,14 @@ function CreateRuleForm({
                 <div className="flex items-center gap-2">
                     <select
                         value={assignTarget}
-                        onChange={(e) =>
-                            setAssignTarget(e.target.value as 'employee' | 'department')
-                        }
+                        onChange={(e) => setAssignTarget(e.target.value as 'employee' | 'department')}
                         className="h-9 px-3 rounded border border-gray-200 text-sm"
                     >
                         <option value="employee">Сотрудник</option>
                         <option value="department">Отдел</option>
                     </select>
                     {assignTarget === 'employee' ? (
-                        <EmployeeSelect
-                            employees={employees}
-                            value={employeeId}
-                            onChange={setEmployeeId}
-                        />
+                        <EmployeeSelect employees={employees} value={employeeId} onChange={setEmployeeId} />
                     ) : (
                         <select
                             value={departmentId ?? ''}
@@ -142,15 +132,11 @@ interface PayPerHourEditorProps {
     onSaved: () => void
 }
 
-function PayPerHourEditor({
- rule, onSaved 
-}: PayPerHourEditorProps) {
+function PayPerHourEditor({ rule, onSaved }: PayPerHourEditorProps) {
     const [editing, setEditing] = useState(false)
     const [draft, setDraft] = useState('')
 
-    const {
- mutate, isPending 
-} = useMutation({
+    const { mutate, isPending } = useMutation({
         mutationFn: () =>
             salaryApi.updateRule(rule.id, {
                 payPerHour: draft.trim() === '' ? null : Number(draft),
@@ -211,9 +197,7 @@ interface GoalRowProps {
     onDelete: (goalId: number) => void
 }
 
-function GoalRow({
- goal, onEdit, onDelete 
-}: GoalRowProps) {
+function GoalRow({ goal, onEdit, onDelete }: GoalRowProps) {
     return (
         <div className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 text-sm group">
             <span>
@@ -251,9 +235,7 @@ interface RuleCardProps {
     onUpdated: () => void
 }
 
-function RuleCard({
- rule, onUpdated 
-}: RuleCardProps) {
+function RuleCard({ rule, onUpdated }: RuleCardProps) {
     const [expanded, setExpanded] = useState(false)
     const [addingGoal, setAddingGoal] = useState(false)
     const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
@@ -323,11 +305,7 @@ function RuleCard({
                             className="p-1 rounded hover:bg-red-100"
                             onClick={(e) => {
                                 e.stopPropagation()
-                                if (
-                                    confirm(
-                                        'Удалить правило со всеми целями? Это действие необратимо.',
-                                    )
-                                ) {
+                                if (confirm('Удалить правило со всеми целями? Это действие необратимо.')) {
                                     deleteRule()
                                 }
                             }}
@@ -341,9 +319,7 @@ function RuleCard({
 
             {expanded && (
                 <CardContent className="flex flex-col gap-2">
-                    {rule.goals.length === 0 && (
-                        <p className="text-sm text-gray-400">Целей пока нет</p>
-                    )}
+                    {rule.goals.length === 0 && <p className="text-sm text-gray-400">Целей пока нет</p>}
 
                     {rule.goals.map((goal) =>
                         editingGoal?.id === goal.id ? (
@@ -363,8 +339,7 @@ function RuleCard({
                                 goal={goal}
                                 onEdit={setEditingGoal}
                                 onDelete={(id) => {
-                                    if (confirm('Удалить цель? Это действие необратимо.'))
-                                        deleteGoal(id)
+                                    if (confirm('Удалить цель? Это действие необратимо.')) deleteGoal(id)
                                 }}
                             />
                         ),
@@ -406,9 +381,7 @@ export function RulesView() {
     const queryClient = useQueryClient()
     const { data: employees = [] } = useQuery(employeesQuery)
     const { data: departments = [] } = useQuery(departmentsQuery)
-    const {
- data: rules = [], isLoading, isError 
-} = useQuery(rulesQuery)
+    const { data: rules = [], isLoading, isError } = useQuery(rulesQuery)
 
     function invalidateRules() {
         queryClient.invalidateQueries({ queryKey: rulesQuery.queryKey })

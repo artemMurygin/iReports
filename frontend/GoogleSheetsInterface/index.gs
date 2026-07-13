@@ -1,16 +1,11 @@
 const BASE_URL = 'https://api.murygin.tech'
 
 function onOpen() {
-    SpreadsheetApp.getUi()
-        .createMenu('Таблица → МС / РЕМ')
-        .addItem('Запустить', 'showUploadForm')
-        .addToUi()
+    SpreadsheetApp.getUi().createMenu('Таблица → МС / РЕМ').addItem('Запустить', 'showUploadForm').addToUi()
 }
 
 function showUploadForm() {
-    const html = HtmlService.createHtmlOutputFromFile('upload')
-        .setTitle('Интеграции с ERP')
-        .setWidth(500)
+    const html = HtmlService.createHtmlOutputFromFile('upload').setTitle('Интеграции с ERP').setWidth(500)
     SpreadsheetApp.getUi().showSidebar(html)
 }
 
@@ -74,9 +69,7 @@ function uploadPricesToRO() {
 
     const numRows = lastRow - ACCRUALS_FIRST_ROW + 1
     const ids = sheet.getRange(ACCRUALS_FIRST_ROW, ACCRUALS_ID_COLUMN, numRows, 1).getValues()
-    const newPrices = sheet
-        .getRange(ACCRUALS_FIRST_ROW, RO_NEW_PRICE_COLUMN, numRows, 1)
-        .getValues()
+    const newPrices = sheet.getRange(ACCRUALS_FIRST_ROW, RO_NEW_PRICE_COLUMN, numRows, 1).getValues()
     const accruals = sheet.getRange(ACCRUALS_FIRST_ROW, ACCRUALS_SUM_COLUMN, numRows, 1).getValues()
     console.log('uploadPricesToRO: numRows=%s', numRows)
 
@@ -116,11 +109,7 @@ function uploadPricesToRO() {
         payload: JSON.stringify(items),
         muteHttpExceptions: true,
     })
-    console.log(
-        'uploadPricesToRO: response code=%s, body=%s',
-        response.getResponseCode(),
-        response.getContentText(),
-    )
+    console.log('uploadPricesToRO: response code=%s, body=%s', response.getResponseCode(), response.getContentText())
 
     const result = JSON.parse(response.getContentText())
 
@@ -165,7 +154,11 @@ function getAccrualsSheetEntries() {
     ids.forEach(function (row, i) {
         const id = row[0]
         if (id === '' || id === null) return
-        entries.push({ id: String(id), row: ACCRUALS_FIRST_ROW + i, value: oldSums[i][0] })
+        entries.push({
+            id: String(id),
+            row: ACCRUALS_FIRST_ROW + i,
+            value: oldSums[i][0],
+        })
     })
 
     return entries

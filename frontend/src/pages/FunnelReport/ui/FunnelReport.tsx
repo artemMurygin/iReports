@@ -12,23 +12,10 @@ import { DealsByStage } from '@/features/DealsByStage'
 import { KpiCard } from '@/shared/ui/KpiCard.tsx'
 
 export function FunnelReport() {
-    const {
-        filters,
-        employees,
-        sources,
-        deviceTypes,
-        stages,
-        stageGroups,
-        setFilters,
-        setError,
-        error,
-        defaults,
-    } = useFilters()
+    const { filters, employees, sources, deviceTypes, stages, stageGroups, setError, error, resetHandler, setFilters } =
+        useFilters()
 
-    const { loading, isInitialLoad, isRefreshing, dataVersion, KPI, deals } = useDeals(
-        filters,
-        setError,
-    )
+    const { loading, isInitialLoad, isRefreshing, dataVersion, KPI, deals } = useDeals(filters, setError)
 
     return (
         <Layout
@@ -46,7 +33,7 @@ export function FunnelReport() {
                     stageGroups={stageGroups}
                     loading={loading}
                     onChange={setFilters}
-                    onReset={() => setFilters(defaults)}
+                    onReset={() => resetHandler()}
                 />
             }
             body={
@@ -60,10 +47,7 @@ export function FunnelReport() {
                         <KpiCard label="В ремонте" value={KPI.inService ?? ''} />
                         <KpiCard label="Успешные" value={KPI.won ?? ''} />
                         <KpiCard label="Отказы" value={KPI.lose ?? ''} />
-                        <KpiCard
-                            label="Выручка"
-                            value={KPI.revenue?.toLocaleString('Ru-ru') ?? ''}
-                        />
+                        <KpiCard label="Выручка" value={KPI.revenue?.toLocaleString('Ru-ru') ?? ''} />
                         <KpiCard label="Конверсия" value={`${KPI.conversionRate ?? ''} %`} />
                     </Grid>
                     <DealsOverTimeCharts deals={deals} />

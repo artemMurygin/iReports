@@ -23,8 +23,7 @@ interface Props {
 }
 
 export function ServicesTable({ services }: Props) {
-    const { sorted, maxCount, totalCount, totalRevenue, totalProfit, totalBonus } =
-        useServicesStats(services)
+    const { sorted, maxCount, totalCount, totalRevenue, totalProfit, totalBonus } = useServicesStats(services)
 
     if (sorted.length === 0) {
         return (
@@ -33,9 +32,7 @@ export function ServicesTable({ services }: Props) {
                     <CardTitle className="text-base font-semibold text-gray-900">Услуги</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-center text-sm text-gray-400 py-8">
-                        Нет данных за выбранный период
-                    </p>
+                    <p className="text-center text-sm text-gray-400 py-8">Нет данных за выбранный период</p>
                 </CardContent>
             </Card>
         )
@@ -46,17 +43,10 @@ export function ServicesTable({ services }: Props) {
             <CardHeader className="pb-3 border-b border-gray-100">
                 <div className="flex items-baseline justify-between gap-4">
                     <div>
-                        <CardTitle className="text-xl font-extrabold text-gray-900 tracking-tight">
-                            Услуги
-                        </CardTitle>
+                        <CardTitle className="text-xl font-extrabold text-gray-900 tracking-tight">Услуги</CardTitle>
                         <p className="mt-0.5 text-sm text-gray-500">
-                            {sorted.length}{' '}
-                            {sorted.length === 1
-                                ? 'услуга'
-                                : sorted.length < 5
-                                  ? 'услуги'
-                                  : 'услуг'}{' '}
-                            · итого {totalCount} продаж
+                            {sorted.length} {sorted.length === 1 ? 'услуга' : sorted.length < 5 ? 'услуги' : 'услуг'} ·
+                            итого {totalCount} продаж
                         </p>
                     </div>
                     <div className="flex items-center gap-6 text-right shrink-0">
@@ -68,19 +58,13 @@ export function ServicesTable({ services }: Props) {
                         </div>
                         <div>
                             <p className="text-xs text-gray-400 uppercase tracking-wide">Прибыль</p>
-                            <p
-                                className={`text-base font-semibold tabular-nums ${profitColor(totalProfit)}`}
-                            >
+                            <p className={`text-base font-semibold tabular-nums ${profitColor(totalProfit)}`}>
                                 {fmtMoney(totalProfit)}
                             </p>
                         </div>
                         <div>
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">
-                                Мастерам
-                            </p>
-                            <p className="text-base font-semibold text-gray-700 tabular-nums">
-                                {fmtMoney(totalBonus)}
-                            </p>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">Мастерам</p>
+                            <p className="text-base font-semibold text-gray-700 tabular-nums">{fmtMoney(totalBonus)}</p>
                         </div>
                     </div>
                 </div>
@@ -90,22 +74,15 @@ export function ServicesTable({ services }: Props) {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gray-50 sticky top-0 z-10">
-                                <TableHead className="w-8 text-center text-gray-400 font-bold">
-                                    #
-                                </TableHead>
-                                <TableHead className="min-w-[220px] font-bold text-gray-700">
-                                    Услуга
-                                </TableHead>
+                                <TableHead className="w-8 text-center text-gray-400 font-bold">#</TableHead>
+                                <TableHead className="min-w-[220px] font-bold text-gray-700">Услуга</TableHead>
                                 <TableHead
                                     className="text-right w-24 font-bold text-gray-700"
                                     title="Количество продаж"
                                 >
                                     Продажи
                                 </TableHead>
-                                <TableHead
-                                    className="w-32 font-bold text-gray-700"
-                                    title="Динамика продаж по периодам"
-                                >
+                                <TableHead className="w-32 font-bold text-gray-700" title="Динамика продаж по периодам">
                                     Тренд
                                 </TableHead>
                                 <TableHead
@@ -142,10 +119,7 @@ export function ServicesTable({ services }: Props) {
                         </TableHeader>
                         <TableBody>
                             {sorted.map((service, idx) => {
-                                const barWidth =
-                                    maxCount > 0
-                                        ? Math.round((service.totalCount / maxCount) * 100)
-                                        : 0
+                                const barWidth = maxCount > 0 ? Math.round((service.totalCount / maxCount) * 100) : 0
                                 return (
                                     <TableRow
                                         key={service.serviceId}
@@ -155,9 +129,7 @@ export function ServicesTable({ services }: Props) {
                                             {idx + 1}
                                         </TableCell>
                                         <TableCell className="font-medium text-gray-900 py-3">
-                                            <span className="line-clamp-2 leading-snug">
-                                                {service.serviceName}
-                                            </span>
+                                            <span className="line-clamp-2 leading-snug">{service.serviceName}</span>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex flex-col items-end gap-0.5">
@@ -167,7 +139,9 @@ export function ServicesTable({ services }: Props) {
                                                 <div className="w-16 h-1 rounded-full bg-gray-100 overflow-hidden">
                                                     <div
                                                         className="h-full rounded-full bg-emerald-400"
-                                                        style={{ width: `${barWidth}%` }}
+                                                        style={{
+                                                            width: `${barWidth}%`,
+                                                        }}
                                                     />
                                                 </div>
                                             </div>

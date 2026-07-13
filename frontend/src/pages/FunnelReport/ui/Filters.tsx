@@ -27,10 +27,7 @@ export function Filters({
 }: FilterBarProps) {
     return (
         <Layout>
-            <DateRangePicker
-                value={filters.dateRange}
-                onChange={(dateRange) => onChange({ ...filters, dateRange })}
-            />
+            <DateRangePicker value={filters.dateRange} onChange={(dateRange) => onChange({ ...filters, dateRange })} />
             <MultiSelect
                 options={getOptions.call(employees)}
                 selected={filters.managers}
@@ -56,19 +53,17 @@ export function Filters({
                 placeholder="Все этапы"
             />
             <MultiSelect
-                options={stageGroups.map((g) => ({ value: g.id, label: g.name }))}
+                options={stageGroups.map((g) => ({
+                    value: g.id,
+                    label: g.name,
+                }))}
                 selected={filters.stageGroups}
                 onChange={(stageGroups) => onChange({ ...filters, stageGroups })}
                 placeholder="Все группы"
             />
             <div className="flex-1" />
             {loading && <SpinnerInlineSm label="Обновление..." />}
-            <Button
-                variant="ghost"
-                size="sm"
-                onClick={onReset}
-                className="text-gray-500 hover:text-gray-700"
-            >
+            <Button variant="ghost" size="sm" onClick={onReset} className="text-gray-500 hover:text-gray-700">
                 Сбросить фильтры
             </Button>
         </Layout>

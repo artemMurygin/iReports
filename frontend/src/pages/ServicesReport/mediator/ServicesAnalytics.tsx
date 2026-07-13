@@ -8,12 +8,23 @@ import { ServicesChart } from '@/features/ServicesChart'
 import { ServicesTable } from '@/features/ServicesTable'
 
 export function ServicesAnalytics() {
-    const { filters, categories, setFilters, setError, error, defaults } = useFilters()
-    const { breadcrumbs } = useBreadcrumbs(categories, filters)
-
-    const { services, series, isInitialLoad, isRefreshing, dataVersion } = useServicesAnalytics(
+    const {
         filters,
+        debouncedFilters,
+        isDebouncing,
+        resolvedCategoryIds,
         categories,
+        setFilters,
+        setError,
+        error,
+        defaults,
+    } = useFilters()
+    const { breadcrumbs } = useBreadcrumbs(categories, filters)
+    const { services, series, isInitialLoad, isRefreshing, dataVersion } = useServicesAnalytics(
+        debouncedFilters,
+        categories,
+        resolvedCategoryIds,
+        isDebouncing,
         setError,
     )
 
@@ -35,7 +46,11 @@ export function ServicesAnalytics() {
                     <CategoryBreadcrumbs
                         breadcrumbs={breadcrumbs}
                         onChange={(id) =>
-                            setFilters({ ...filters, selectedCategoryId: id, serviceIds: [] })
+                            setFilters({
+                                ...filters,
+                                selectedCategoryId: id,
+                                serviceIds: [],
+                            })
                         }
                     />
                 </>

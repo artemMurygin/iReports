@@ -14,17 +14,12 @@ export function Header() {
                 <div className="flex items-center justify-center w-8 h-8 bg-[#38d97b] rounded-lg">
                     <BarChart3 className="w-[18px] h-[18px] text-white" />
                 </div>
-                <span
-                    className="text-lg font-semibold text-gray-900"
-                    style={{ fontFamily: 'Inter, sans-serif' }}
-                >
+                <span className="text-lg font-semibold text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
                     iRepair
                 </span>
             </div>
             <nav className="flex items-center gap-1">
-                {NAV.map(({
- label, to, disabled 
-}) =>
+                {NAV.map(({ label, to, disabled }) =>
                     disabled ? (
                         <span
                             key={to}

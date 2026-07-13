@@ -279,9 +279,7 @@
 
         <!-- ВКЛАДКИ -->
         <div class="tabs">
-            <button class="tab-btn active" id="tabBtnMs" onclick="switchTab('ms')">
-                Мой склад
-            </button>
+            <button class="tab-btn active" id="tabBtnMs" onclick="switchTab('ms')">Мой склад</button>
             <button class="tab-btn" id="tabBtnRo" onclick="switchTab('ro')">Ремонлайн</button>
         </div>
 
@@ -322,8 +320,8 @@
             </div>
 
             <p style="margin: 4px 0 14px; font-size: 13px; color: #888; line-height: 1.5">
-                В таблице обязательно должны быть страницы "Apple(iPhone, Watch)" и "Apple (iPad,
-                Macbook)". Формат: .xlsx, .xls.
+                В таблице обязательно должны быть страницы "Apple(iPhone, Watch)" и "Apple (iPad, Macbook)". Формат:
+                .xlsx, .xls.
             </p>
 
             <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none" />
@@ -459,21 +457,19 @@
                     <div class="info-tooltip">
                         <span class="info-tooltip-icon">i</span>
                         <div class="info-tooltip-content">
-                            Создаёт услуги в RemOnline для всех строк, где в столбце ID (E) указано
-                            «Создать».
+                            Создаёт услуги в RemOnline для всех строк, где в столбце ID (E) указано «Создать».
                             <br /><br />
-                            <b>Обязательные поля:</b> Тип устройства (G), Модель устройства (H),
-                            Качество запчасти (I), Наименование услуги (J), Категория (K, формат:
-                            Категория &gt; Подкатегория &gt; ... &gt; Последняя), Срок гарантии (L),
-                            Период гарантии (M: «дн.» или «мес.»), Начисление мастеру (BU), Цена
-                            услуги (AY).
+                            <b>Обязательные поля:</b> Тип устройства (G), Модель устройства (H), Качество запчасти (I),
+                            Наименование услуги (J), Категория (K, формат: Категория &gt; Подкатегория &gt; ... &gt;
+                            Последняя), Срок гарантии (L), Период гарантии (M: «дн.» или «мес.»), Начисление мастеру
+                            (BU), Цена услуги (AY).
                             <br />
                             <b>Необязательно:</b> Номер модели (N). <br /><br />
-                            Название услуги: [Наименование] [Тип устройства] [Модель устройства]
-                            [Качество запчасти] ([Номер модели]).
+                            Название услуги: [Наименование] [Тип устройства] [Модель устройства] [Качество запчасти]
+                            ([Номер модели]).
                             <br /><br />
-                            После обработки в столбец ID записывается ID созданной услуги либо
-                            «ОШИБКА: ...» с описанием проблемы.
+                            После обработки в столбец ID записывается ID созданной услуги либо «ОШИБКА: ...» с описанием
+                            проблемы.
                         </div>
                     </div>
                 </div>
@@ -564,10 +560,7 @@
             </button>
         </div>
 
-        <div
-            id="status"
-            style="margin-top: 12px; font-size: 13px; text-align: center; min-height: 18px"
-        ></div>
+        <div id="status" style="margin-top: 12px; font-size: 13px; text-align: center; min-height: 18px"></div>
 
         <script>
             const BASE_URL = 'https://api.murygin.tech'
@@ -795,9 +788,7 @@
                         hideLoader()
                         renderRoSummary(result.count)
                         setStatus(
-                            result.success
-                                ? '✅ Цены выгружены в Ремонлайн!'
-                                : '❌ Выгрузка завершилась с ошибкой',
+                            result.success ? '✅ Цены выгружены в Ремонлайн!' : '❌ Выгрузка завершилась с ошибкой',
                             result.success ? '#2e7d32' : '#c62828',
                         )
                         resetBtn('uploadRoBtn', '⬆ Загрузить цены в RO')
@@ -813,9 +804,7 @@
             function runServerFunction(name) {
                 const args = Array.prototype.slice.call(arguments, 1)
                 return new Promise((resolve, reject) => {
-                    const call = google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(reject)
+                    const call = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)
                     call[name].apply(call, args)
                 })
             }
@@ -836,20 +825,12 @@
 
                     updateLoader('Сравниваем и обновляем таблицу...')
                     addLogLine('Сравниваем и обновляем таблицу...')
-                    const updatedIds = await runServerFunction(
-                        'applyAccrualsUpdates',
-                        entries,
-                        earningsById,
-                    )
+                    const updatedIds = await runServerFunction('applyAccrualsUpdates', entries, earningsById)
 
                     hideLoader()
                     if (updatedIds.length) {
                         setStatus(
-                            '✅ Обновлено начислений: ' +
-                                updatedIds.length +
-                                ' (ID: ' +
-                                updatedIds.join(', ') +
-                                ')',
+                            '✅ Обновлено начислений: ' + updatedIds.length + ' (ID: ' + updatedIds.join(', ') + ')',
                             '#2e7d32',
                         )
                     } else {
@@ -932,9 +913,9 @@
             }
 
             function getSelectedCategoryPath() {
-                const selects = Array.from(
-                    document.querySelectorAll('#categorySelects select'),
-                ).sort((a, b) => Number(a.dataset.level) - Number(b.dataset.level))
+                const selects = Array.from(document.querySelectorAll('#categorySelects select')).sort(
+                    (a, b) => Number(a.dataset.level) - Number(b.dataset.level),
+                )
 
                 const names = []
                 for (const select of selects) {
@@ -968,10 +949,7 @@
                         await ensureCategoriesLoaded()
                         setAddServiceStatus('', '')
                     } catch (err) {
-                        setAddServiceStatus(
-                            '❌ ' + (err && err.message ? err.message : err),
-                            '#c62828',
-                        )
+                        setAddServiceStatus('❌ ' + (err && err.message ? err.message : err), '#c62828')
                         return
                     }
                 }
@@ -1051,9 +1029,9 @@
             }
 
             function buildCreateServicePayload(row) {
-                const missing = CREATE_SERVICE_REQUIRED_FIELDS.filter(([key]) =>
-                    isEmptyCell(row[key]),
-                ).map(([, label]) => label)
+                const missing = CREATE_SERVICE_REQUIRED_FIELDS.filter(([key]) => isEmptyCell(row[key])).map(
+                    ([, label]) => label,
+                )
                 if (missing.length > 0) {
                     throw new Error('Не заполнены поля: ' + missing.join(', '))
                 }
@@ -1065,19 +1043,14 @@
 
                 const warrantyPeriod = parseWarrantyPeriod(row.warrantyPeriod)
                 if (warrantyPeriod === null) {
-                    throw new Error(
-                        'Период гарантии указан неверно (укажите «дн.» или «мес.»): ' +
-                            row.warrantyPeriod,
-                    )
+                    throw new Error('Период гарантии указан неверно (укажите «дн.» или «мес.»): ' + row.warrantyPeriod)
                 }
 
                 const warranty = toNumber(row.warranty)
                 const engineerBonus = toNumber(row.engineerBonus)
                 const price = toNumber(row.price)
                 if (warranty === null || engineerBonus === null || price === null) {
-                    throw new Error(
-                        'Срок гарантии, начисление мастеру и цена услуги должны быть числами',
-                    )
+                    throw new Error('Срок гарантии, начисление мастеру и цена услуги должны быть числами')
                 }
 
                 return {
@@ -1093,9 +1066,7 @@
             function renderCreateServicesSummary(created, errors, total) {
                 const el = document.getElementById('createServicesSummary')
                 el.innerHTML =
-                    `Обработано: <b>${total}</b><br>` +
-                    `Создано: <b>${created}</b><br>` +
-                    `Ошибок: <b>${errors}</b>`
+                    `Обработано: <b>${total}</b><br>` + `Создано: <b>${created}</b><br>` + `Ошибок: <b>${errors}</b>`
                 el.style.borderColor = errors > 0 ? '#e65100' : '#e0e0e0'
                 el.style.display = 'block'
             }
@@ -1126,27 +1097,17 @@
                     let errors = 0
 
                     for (const row of rows) {
-                        updateLoader(
-                            `Обработка строки ${row.row} (${created + errors + 1}/${rows.length})...`,
-                        )
+                        updateLoader(`Обработка строки ${row.row} (${created + errors + 1}/${rows.length})...`)
 
                         try {
                             const payload = buildCreateServicePayload(row)
                             const result = await runServerFunction('createServiceInRoapp', payload)
-                            await runServerFunction(
-                                'writeCreateServiceResult',
-                                row.row,
-                                result.entityId,
-                            )
+                            await runServerFunction('writeCreateServiceResult', row.row, result.entityId)
                             created++
                             addLogLine(`Строка ${row.row}: создано (ID ${result.entityId})`)
                         } catch (err) {
                             const message = err && err.message ? err.message : String(err)
-                            await runServerFunction(
-                                'writeCreateServiceResult',
-                                row.row,
-                                'ОШИБКА: ' + message,
-                            )
+                            await runServerFunction('writeCreateServiceResult', row.row, 'ОШИБКА: ' + message)
                             errors++
                             addLogLine(`Строка ${row.row}: ошибка — ${message}`)
                         }

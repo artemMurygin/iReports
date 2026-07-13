@@ -9,7 +9,9 @@ export function GridTab({ ranked, renderItem }: GridTabProps) {
     return (
         <div
             className="grid gap-3"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}
+            style={{
+                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            }}
         >
             {ranked.map((source) => renderItem(source))}
         </div>

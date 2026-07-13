@@ -58,9 +58,7 @@ function LineItemRow({ item }: { item: SalaryLineItem }) {
                     <span className={item.factAmount < 0 ? 'text-red-600' : 'text-gray-900'}>
                         {money(item.factAmount, true)}
                     </span>
-                    <span className="text-gray-400 text-xs w-24 text-right">
-                        прогноз {money(item.projected, true)}
-                    </span>
+                    <span className="text-gray-400 text-xs w-24 text-right">прогноз {money(item.projected, true)}</span>
                 </span>
             </button>
 
@@ -82,9 +80,7 @@ function LineItemRow({ item }: { item: SalaryLineItem }) {
 
 // ─── LineItemGroup ─────────────────────────────────────────────────────────────
 
-function LineItemGroup({
- type, items 
-}: { type: AccrualType; items: SalaryLineItem[] }) {
+function LineItemGroup({ type, items }: { type: AccrualType; items: SalaryLineItem[] }) {
     const subtotal = items.reduce((s, i) => s + i.factAmount, 0)
     return (
         <div className="border-b border-gray-100 last:border-0">
@@ -108,16 +104,12 @@ interface AdjustmentFormProps {
     onCancel: () => void
 }
 
-function AdjustmentForm({
- employeeId, period, onSuccess, onCancel 
-}: AdjustmentFormProps) {
+function AdjustmentForm({ employeeId, period, onSuccess, onCancel }: AdjustmentFormProps) {
     const [adjType, setAdjType] = useState<'PENALTY' | 'ADJUSTMENT'>('PENALTY')
     const [amount, setAmount] = useState('')
     const [reason, setReason] = useState('')
 
-    const {
- mutate, isPending 
-} = useMutation({
+    const { mutate, isPending } = useMutation({
         mutationFn: () =>
             salaryApi.createAdjustment({
                 employeeId,
@@ -195,9 +187,7 @@ export function SalaryView() {
         enabled: !!employeeId,
     })
 
-    const {
- mutate: closeMonth, isPending: closing 
-} = useMutation({
+    const { mutate: closeMonth, isPending: closing } = useMutation({
         mutationFn: () => salaryApi.closeSalaryReport(employeeId!, period),
         onSuccess: ({ data }) => {
             queryClient.setQueryData(salaryReportQuery(employeeId!, period).queryKey, data)
@@ -207,13 +197,14 @@ export function SalaryView() {
     })
 
     function handleClose() {
-        if (!confirm(`Закрыть месяц ${period}? После закрытия расчёт нельзя будет пересчитать.`))
-            return
+        if (!confirm(`Закрыть месяц ${period}? После закрытия расчёт нельзя будет пересчитать.`)) return
         closeMonth()
     }
 
     function invalidateReport() {
-        queryClient.invalidateQueries({ queryKey: salaryReportQuery(employeeId!, period).queryKey })
+        queryClient.invalidateQueries({
+            queryKey: salaryReportQuery(employeeId!, period).queryKey,
+        })
     }
 
     const groups = report ? groupLineItems(report.lineItems) : []
@@ -235,9 +226,7 @@ export function SalaryView() {
             {/* States */}
             {!employeeId && <p className="text-sm text-gray-400">Выберите сотрудника.</p>}
             {employeeId && reportLoading && <p className="text-sm text-gray-400">Загрузка…</p>}
-            {employeeId && reportError && (
-                <p className="text-sm text-red-500">Не удалось загрузить отчёт по ЗП</p>
-            )}
+            {employeeId && reportError && <p className="text-sm text-red-500">Не удалось загрузить отчёт по ЗП</p>}
 
             {/* Report */}
             {report && (
@@ -270,13 +259,9 @@ export function SalaryView() {
 
                     <div className="rounded-lg border border-gray-100 overflow-hidden">
                         {groups.length === 0 ? (
-                            <p className="text-sm text-gray-400 p-6 text-center">
-                                Нет начислений за этот период
-                            </p>
+                            <p className="text-sm text-gray-400 p-6 text-center">Нет начислений за этот период</p>
                         ) : (
-                            groups.map(([type, items]) => (
-                                <LineItemGroup key={type} type={type} items={items} />
-                            ))
+                            groups.map(([type, items]) => <LineItemGroup key={type} type={type} items={items} />)
                         )}
                     </div>
 

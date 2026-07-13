@@ -7,10 +7,7 @@ export function formatPeriod(period: string): string {
     return `${parts[1]}.${parts[0]}`
 }
 
-export function getPointValue(
-    b: { count: number; avgPrice: number; revenue: number },
-    mode: ChartMode,
-): number {
+export function getPointValue(b: { count: number; avgPrice: number; revenue: number }, mode: ChartMode): number {
     if (mode === 'count') return b.count
     if (mode === 'avgPrice') return b.avgPrice
     return b.revenue
@@ -20,12 +17,12 @@ export function buildChartData(series: ChartSeriesEntry[], mode: ChartMode) {
     if (!series.length) return []
     const periods = series[0].breakdown.map((b) => b.period)
     return periods.map((period, i) => {
-        const row: Record<string, string | number> = { period, label: formatPeriod(period) }
+        const row: Record<string, string | number> = {
+            period,
+            label: formatPeriod(period),
+        }
         for (const s of series) {
-            row[s.name] = getPointValue(
-                s.breakdown[i] ?? { count: 0, avgPrice: 0, revenue: 0 },
-                mode,
-            )
+            row[s.name] = getPointValue(s.breakdown[i] ?? { count: 0, avgPrice: 0, revenue: 0 }, mode)
         }
         return row
     })

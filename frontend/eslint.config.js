@@ -33,8 +33,18 @@ export default defineConfig([
             'boundaries/root-path': 'src',
             'boundaries/elements': [
                 { type: 'app', mode: 'folder', pattern: 'app' },
-                { type: 'pages', mode: 'folder', pattern: 'pages/*', capture: ['page'] },
-                { type: 'features', mode: 'folder', pattern: 'features/*', capture: ['feature'] },
+                {
+                    type: 'pages',
+                    mode: 'folder',
+                    pattern: 'pages/*',
+                    capture: ['page'],
+                },
+                {
+                    type: 'features',
+                    mode: 'folder',
+                    pattern: 'features/*',
+                    capture: ['feature'],
+                },
                 { type: 'kernel', mode: 'folder', pattern: 'kernel' },
                 { type: 'shared', mode: 'folder', pattern: 'shared' },
             ],
@@ -55,22 +65,13 @@ export default defineConfig([
                             // страница может использовать свои же модули, фичи и нижние слои,
                             // но не модули другой страницы (кросс-импорт между pages запрещён)
                             from: 'pages',
-                            allow: [
-                                ['pages', { page: '${from.page}' }],
-                                'features',
-                                'kernel',
-                                'shared',
-                            ],
+                            allow: [['pages', { page: '${from.page}' }], 'features', 'kernel', 'shared'],
                         },
                         {
                             // фича может использовать себя же и нижние слои,
                             // но не другую фичу (кросс-импорт между features запрещён)
                             from: 'features',
-                            allow: [
-                                ['features', { feature: '${from.feature}' }],
-                                'kernel',
-                                'shared',
-                            ],
+                            allow: [['features', { feature: '${from.feature}' }], 'kernel', 'shared'],
                         },
                         {
                             // kernel ничего не принимает извне, кросс-импорт внутри слоя разрешён

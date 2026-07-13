@@ -1,14 +1,4 @@
-import {
-    AreaChart,
-    Area,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-} from 'recharts'
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import type { TooltipContentProps } from 'recharts'
 import type { ChartSeriesEntry } from '@/kernel/types'
 import { CHART_COLORS } from '@/kernel/chartColors'
@@ -25,9 +15,7 @@ type BigTooltipProps = Pick<TooltipContentProps<number, string>, 'active' | 'pay
     mode: ChartMode
 }
 
-function BigTooltip({
- active, payload, label, mode
-}: BigTooltipProps) {
+function BigTooltip({ active, payload, label, mode }: BigTooltipProps) {
     if (!active || !payload?.length) return null
     const sorted = [...payload].sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
     const isMoney = mode !== 'count'
@@ -49,7 +37,12 @@ function BigTooltip({
                 return (
                     <div
                         key={key}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            marginBottom: 3,
+                        }}
                     >
                         <span
                             style={{

@@ -6,9 +6,7 @@ interface Props {
     onChange: (id: string | null) => void
 }
 
-export function CategoryBreadcrumbs({
- breadcrumbs, onChange
-}: Props) {
+export function CategoryBreadcrumbs({ breadcrumbs, onChange }: Props) {
     if (breadcrumbs.length <= 1) return null
 
     return (
@@ -19,9 +17,7 @@ export function CategoryBreadcrumbs({
                     <div key={crumb.id ?? 'root'} className="flex items-center gap-1">
                         {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0" />}
                         {isLast ? (
-                            <span className="font-medium text-gray-900 truncate max-w-[200px]">
-                                {crumb.name}
-                            </span>
+                            <span className="font-medium text-gray-900 truncate max-w-[200px]">{crumb.name}</span>
                         ) : (
                             <button
                                 onClick={() => onChange(crumb.id)}

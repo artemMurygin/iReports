@@ -15,9 +15,7 @@ function fmt(date: Date | undefined): string {
     return format(date, 'd MMMM yyyy', { locale: ru })
 }
 
-export function DateRangePicker({
- value, onChange 
-}: Props) {
+export function DateRangePicker({ value, onChange }: Props) {
     const [fromOpen, setFromOpen] = useState(false)
     const [toOpen, setToOpen] = useState(false)
 

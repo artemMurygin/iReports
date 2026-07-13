@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
-import type { ServicesAnalyticsResponse, ServiceCategory, ServicesFilters } from './types.ts'
+import type { ServiceCategory, ServicesAnalyticsResponse, ServicesFilters } from './types.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
 
 export const api = {
@@ -10,7 +10,9 @@ export const api = {
             staleTime: 30 * 60 * 1000,
             queryFn: async ({ signal }): Promise<ServiceCategory[]> =>
                 apiInstance
-                    .get<ServiceCategory[]>('/reports/service-categories', { signal })
+                    .get<ServiceCategory[]>('/reports/service-categories', {
+                        signal,
+                    })
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить категории услуг ' + error)
@@ -19,7 +21,9 @@ export const api = {
 
     getServicesAnalytics: (filters: ServicesFilters, resolvedCategoryIds: number[]) => {
         const {
-            dateRange, groupBy, serviceIds,
+            dateRange: { from, to },
+            groupBy,
+            serviceIds,
         } = filters
 
         return queryOptions({
@@ -29,8 +33,8 @@ export const api = {
                     .get<ServicesAnalyticsResponse>('/reports/services-analytics', {
                         signal,
                         params: {
-                            momentFrom: dateRange.from,
-                            momentTo: dateRange.to,
+                            momentFrom: from,
+                            momentTo: to,
                             groupBy,
                             categoryIds: resolvedCategoryIds,
                             serviceIds: serviceIds.map(Number),

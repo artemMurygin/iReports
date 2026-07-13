@@ -12,11 +12,7 @@ export function Footer({ pts, globalMax, lineColor }: MiniCardFooterProps) {
         <ResponsiveContainer width="100%" height={52}>
             <AreaChart data={pts} margin={{ top: 2, right: 2, bottom: 0, left: 2 }}>
                 <YAxis domain={[0, globalMax || 1]} hide />
-                <Tooltip
-                    content={({ active, payload }) => (
-                        <MiniCardTooltip active={active} payload={payload} />
-                    )}
-                />
+                <Tooltip content={({ active, payload }) => <MiniCardTooltip active={active} payload={payload} />} />
                 <Area
                     type="linear"
                     dataKey="v"

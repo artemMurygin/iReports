@@ -29,9 +29,7 @@ export function MultiSelect({
     const [query, setQuery] = useState('')
 
     const toggle = (value: string) => {
-        onChange(
-            selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value],
-        )
+        onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value])
     }
 
     const filtered =
@@ -108,9 +106,7 @@ export function MultiSelect({
                                 <div
                                     className={cn(
                                         'flex items-center justify-center w-4 h-4 rounded border shrink-0',
-                                        isSelected
-                                            ? 'bg-primary border-primary'
-                                            : 'border-gray-300',
+                                        isSelected ? 'bg-primary border-primary' : 'border-gray-300',
                                     )}
                                 >
                                     {isSelected && <Check className="w-3 h-3 text-white" />}

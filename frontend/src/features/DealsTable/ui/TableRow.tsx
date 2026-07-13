@@ -18,9 +18,7 @@ export function TableRow({ deal, isEven, onClick }: TableRowProps) {
             ].join(' ')}
         >
             <div className="w-[130px] px-3 text-sm text-gray-500">{formatDate(deal.createdAt)}</div>
-            <div className="flex-1 px-3 text-sm font-medium text-gray-900 truncate">
-                {deal.title ?? '—'}
-            </div>
+            <div className="flex-1 px-3 text-sm font-medium text-gray-900 truncate">{deal.title ?? '—'}</div>
             <div className="w-[180px] px-3 flex items-center gap-2">
                 {deal.assignedBy && (
                     <>

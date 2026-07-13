@@ -40,9 +40,7 @@ const selectCls =
 const labelCls = 'text-xs font-medium text-gray-500'
 const fieldCls = 'flex flex-col gap-1'
 
-export function GoalForm({
- ruleId, goal, onCreated, onCancel 
-}: Props) {
+export function GoalForm({ ruleId, goal, onCreated, onCancel }: Props) {
     const isEdit = goal != null
 
     const [type, setType] = useState<GoalType>(goal?.type ?? 'KPI')
@@ -57,15 +55,27 @@ export function GoalForm({
     const [rewardName, setRewardName] = useState(goal?.reward.name ?? 'Вознаграждение')
     const [rewardType, setRewardType] = useState<RewardType>(goal?.reward.type ?? 'PERCENT')
     const [rewardValue, setRewardValue] = useState(goal?.reward.value ?? 1000)
-    const [baseStat, setBaseStat] = useState<KpiStat>(
-        goal?.reward.baseStat ?? 'MARGIN_MINUS_ENGINEER',
-    )
+    const [baseStat, setBaseStat] = useState<KpiStat>(goal?.reward.baseStat ?? 'MARGIN_MINUS_ENGINEER')
     const [tiers, setTiers] = useState<ProgressionTier[]>(
         goal?.reward.tiers.length
             ? goal.reward.tiers
             : [
-                  { fromPct: 0, toPct: 70, mode: 'FIXED', coef: 0.5, coefFrom: null, coefTo: null },
-                  { fromPct: 70, toPct: 120, mode: 'LINEAR', coef: null, coefFrom: 0.5, coefTo: 1 },
+                  {
+                      fromPct: 0,
+                      toPct: 70,
+                      mode: 'FIXED',
+                      coef: 0.5,
+                      coefFrom: null,
+                      coefTo: null,
+                  },
+                  {
+                      fromPct: 70,
+                      toPct: 120,
+                      mode: 'LINEAR',
+                      coef: null,
+                      coefFrom: 0.5,
+                      coefTo: 1,
+                  },
                   {
                       fromPct: 120,
                       toPct: null,
@@ -82,9 +92,7 @@ export function GoalForm({
         enabled: type === 'KPI',
     })
 
-    const {
- mutate, isPending: saving 
-} = useMutation({
+    const { mutate, isPending: saving } = useMutation({
         mutationFn: async () => {
             const rewardPayload = {
                 name: rewardName,
@@ -120,13 +128,8 @@ export function GoalForm({
             onCreated()
         },
         onError: (e) => {
-            const message = (e as { response?: { data?: { message?: string } } })?.response?.data
-                ?.message
-            toast.error(
-                Array.isArray(message)
-                    ? message.join('; ')
-                    : (message ?? 'Не удалось сохранить цель'),
-            )
+            const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+            toast.error(Array.isArray(message) ? message.join('; ') : (message ?? 'Не удалось сохранить цель'))
         },
     })
 
@@ -190,9 +193,7 @@ export function GoalForm({
                                 <Lock className="size-3 text-gray-400" />
                                 {direction === 'SERVICE' ? 'Сервис' : 'Магазин'}
                             </span>
-                            <span className="text-xs text-gray-400">
-                                Нельзя изменить после создания
-                            </span>
+                            <span className="text-xs text-gray-400">Нельзя изменить после создания</span>
                         </div>
                     </div>
                 ) : (

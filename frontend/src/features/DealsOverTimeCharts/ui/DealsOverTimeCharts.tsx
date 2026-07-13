@@ -13,17 +13,8 @@ interface DealsOverTimeLinearChartProps {
 }
 
 export function DealsOverTimeCharts({ deals }: DealsOverTimeLinearChartProps) {
-    const {
-        activeTab,
-        setActiveTab,
-        ranked,
-        dayData,
-        globalMaxDay,
-        weekData,
-        weekDataLen,
-        topSources,
-        tailSources,
-    } = useDealsOverTime(deals)
+    const { activeTab, setActiveTab, ranked, dayData, globalMaxDay, weekData, weekDataLen, topSources, tailSources } =
+        useDealsOverTime(deals)
 
     return (
         <Layout
@@ -33,16 +24,10 @@ export function DealsOverTimeCharts({ deals }: DealsOverTimeLinearChartProps) {
                     description="Динамика по рекламным источникам"
                     tabsActions={
                         <>
-                            <TabButton
-                                active={activeTab === 'grid'}
-                                onClick={() => setActiveTab('grid')}
-                            >
+                            <TabButton active={activeTab === 'grid'} onClick={() => setActiveTab('grid')}>
                                 По дням
                             </TabButton>
-                            <TabButton
-                                active={activeTab === 'chart'}
-                                onClick={() => setActiveTab('chart')}
-                            >
+                            <TabButton active={activeTab === 'chart'} onClick={() => setActiveTab('chart')}>
                                 Топ-{TOP_N} по неделям
                             </TabButton>
                         </>
@@ -54,12 +39,7 @@ export function DealsOverTimeCharts({ deals }: DealsOverTimeLinearChartProps) {
                     <GridTab
                         ranked={ranked}
                         renderItem={(source) => (
-                            <MiniCard
-                                key={source}
-                                source={source}
-                                data={dayData}
-                                globalMax={globalMaxDay}
-                            />
+                            <MiniCard key={source} source={source} data={dayData} globalMax={globalMaxDay} />
                         )}
                     />
                 ) : (

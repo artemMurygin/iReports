@@ -13,15 +13,7 @@ import { CreatePlanModal } from './CreatePlanModal'
 import { MonthPicker } from '@/shared/ui/month-picker'
 import { currentPeriod } from '../utils/period'
 import { money } from '../utils/format'
-import type {
-    CategoryNode,
-    Department,
-    Direction,
-    Employee,
-    KpiStat,
-    PlanFactRow,
-    Scope,
-} from '../types'
+import type { CategoryNode, Department, Direction, Employee, KpiStat, PlanFactRow, Scope } from '../types'
 
 const KPI_STATS: KpiStat[] = ['REVENUE', 'MARGIN', 'MARGIN_MINUS_ENGINEER', 'PCS', 'COSTS']
 
@@ -33,12 +25,19 @@ const STAT_LABELS: Record<KpiStat, string> = {
     COSTS: 'Затраты',
 }
 
-const DIRECTION_STYLE: Record<
-    Direction,
-    { label: string; bg: string; tagBg: string; color: string }
-> = {
-    SERVICE: { label: 'Сервис', bg: '#eff6ff', tagBg: '#dbeafe', color: '#2563eb' },
-    SHOP: { label: 'Магазин', bg: '#f5f3ff', tagBg: '#ede9fe', color: '#7c3aed' },
+const DIRECTION_STYLE: Record<Direction, { label: string; bg: string; tagBg: string; color: string }> = {
+    SERVICE: {
+        label: 'Сервис',
+        bg: '#eff6ff',
+        tagBg: '#dbeafe',
+        color: '#2563eb',
+    },
+    SHOP: {
+        label: 'Магазин',
+        bg: '#f5f3ff',
+        tagBg: '#ede9fe',
+        color: '#7c3aed',
+    },
 }
 
 type EntityFilter = 'all' | 'employee' | 'department'
@@ -50,7 +49,9 @@ const COLS = '140px 1fr 116px 116px 58px'
 
 function fmtPeriod(period: string): string {
     const [y, m] = period.split('-')
-    return format(new Date(Number(y), Number(m) - 1), 'LLLL yyyy', { locale: ru })
+    return format(new Date(Number(y), Number(m) - 1), 'LLLL yyyy', {
+        locale: ru,
+    })
 }
 
 function getExpectedPct(period: string): number {
@@ -104,7 +105,11 @@ function ProgressBar({
             {fillPct > 0 && (
                 <div
                     className="absolute inset-y-0 left-0 rounded-full"
-                    style={{ width: `${fillPct}%`, background: color, minWidth: 3 }}
+                    style={{
+                        width: `${fillPct}%`,
+                        background: color,
+                        minWidth: 3,
+                    }}
                 />
             )}
             {markerPct > 0 && markerPct < 100 && (
@@ -167,10 +172,7 @@ function KpiCard({
     return (
         <div className="bg-white border border-slate-200 rounded-xl px-5 py-4">
             <p className="text-xs font-medium text-slate-400 mb-1.5">{label}</p>
-            <p
-                className="text-xl font-bold tracking-tight leading-none"
-                style={{ color: valueColor ?? '#0f172a' }}
-            >
+            <p className="text-xl font-bold tracking-tight leading-none" style={{ color: valueColor ?? '#0f172a' }}>
                 {value}
             </p>
             {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
@@ -178,13 +180,9 @@ function KpiCard({
     )
 }
 
-function KpiSummaryCards({
- rows, period 
-}: { rows: PlanFactRow[]; period: string }) {
+function KpiSummaryCards({ rows, period }: { rows: PlanFactRow[]; period: string }) {
     const expectedPct = getExpectedPct(period)
-    const {
- day, daysInMonth 
-} = getMonthProgress(period)
+    const { day, daysInMonth } = getMonthProgress(period)
 
     const totalPlanRev = useMemo(
         () => rows.filter((r) => r.stat === 'REVENUE').reduce((s, r) => s + r.planValue, 0),
@@ -245,11 +243,7 @@ interface PlanGroup {
     shopRows: PlanFactRow[]
 }
 
-function groupRows(
-    rows: PlanFactRow[],
-    employees: Employee[],
-    departments: Department[],
-): PlanGroup[] {
+function groupRows(rows: PlanFactRow[], employees: Employee[], departments: Department[]): PlanGroup[] {
     const empMap = new Map(employees.map((e) => [e.id, e]))
     const deptMap = new Map(departments.map((d) => [d.id, d]))
     const map = new Map<string, PlanGroup>()
@@ -300,9 +294,7 @@ function CategorySelect({
     value: string
     onChange: (v: string) => void
 }) {
-    const {
- data: categories = [], isLoading 
-} = useQuery(categoriesQuery(direction))
+    const { data: categories = [], isLoading } = useQuery(categoriesQuery(direction))
     return (
         <select
             value={value}
@@ -346,9 +338,7 @@ function PlanRowForm({
     const [stat, setStat] = useState<KpiStat>(initial.stat)
     const [planValue, setPlanValue] = useState(String(initial.planValue))
 
-    const {
- mutate, isPending 
-} = useMutation({
+    const { mutate, isPending } = useMutation({
         mutationFn: () =>
             salaryApi.updatePlanTarget(initial.id, {
                 direction,
@@ -399,16 +389,8 @@ function PlanRowForm({
                     ))}
                 </select>
             )}
-            <CategorySelect
-                direction={direction}
-                value={categoryExtId}
-                onChange={setCategoryExtId}
-            />
-            <select
-                value={stat}
-                onChange={(e) => setStat(e.target.value as KpiStat)}
-                className={sel}
-            >
+            <CategorySelect direction={direction} value={categoryExtId} onChange={setCategoryExtId} />
+            <select value={stat} onChange={(e) => setStat(e.target.value as KpiStat)} className={sel}>
                 {KPI_STATS.map((s) => (
                     <option key={s} value={s}>
                         {STAT_LABELS[s]}
@@ -422,13 +404,7 @@ function PlanRowForm({
                 placeholder="План"
                 className="h-9 px-3 rounded-md border border-gray-200 text-sm w-32 tabular-nums bg-white focus:outline-none focus:ring-1 focus:ring-amber-300"
             />
-            <Button
-                variant="ghost"
-                size="sm"
-                onClick={onCancel}
-                disabled={isPending}
-                className="text-gray-500"
-            >
+            <Button variant="ghost" size="sm" onClick={onCancel} disabled={isPending} className="text-gray-500">
                 Отмена
             </Button>
             <Button
@@ -482,10 +458,7 @@ function DirectionSection({
     return (
         <div>
             {/* Direction header */}
-            <div
-                className="flex items-center px-5 py-2.5 border-b border-slate-100"
-                style={{ background: style.bg }}
-            >
+            <div className="flex items-center px-5 py-2.5 border-b border-slate-100" style={{ background: style.bg }}>
                 <span
                     className="text-xs font-semibold px-3 py-1 rounded-full"
                     style={{ color: style.color, background: style.tagBg }}
@@ -499,12 +472,8 @@ function DirectionSection({
                 className="grid items-center gap-3 px-5 py-2 border-b border-slate-100 bg-slate-50/60"
                 style={{ gridTemplateColumns: COLS }}
             >
-                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Метрика
-                </span>
-                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Прогресс
-                </span>
+                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">Метрика</span>
+                <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">Прогресс</span>
                 <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider text-right">
                     План
                 </span>
@@ -529,8 +498,7 @@ function DirectionSection({
 
                     {/* Metric rows */}
                     {catRows.map((row) => {
-                        const factPct =
-                            row.planValue > 0 ? (row.factValue / row.planValue) * 100 : 0
+                        const factPct = row.planValue > 0 ? (row.factValue / row.planValue) * 100 : 0
                         const c = statusColor(factPct, expectedPct)
                         const isEditing = editingRowId === row.id
 
@@ -628,12 +596,7 @@ function PlanCard({
         editingRow.departmentId === group.departmentId
 
     const editingRowId = isEditing ? editingRow!.id : null
-    const scopeLabel =
-        group.scope === 'PERSONAL'
-            ? 'Сотрудник'
-            : group.scope === 'DEPARTMENT'
-              ? 'Отдел'
-              : 'Компания'
+    const scopeLabel = group.scope === 'PERSONAL' ? 'Сотрудник' : group.scope === 'DEPARTMENT' ? 'Отдел' : 'Компания'
     const ScopeIcon = group.scope === 'PERSONAL' ? User : Building2
 
     return (
@@ -643,9 +606,7 @@ function PlanCard({
                 <div className="flex items-center gap-3 min-w-0">
                     <div
                         className={`flex items-center justify-center size-9 rounded-xl border shrink-0 ${
-                            group.scope === 'PERSONAL'
-                                ? 'bg-slate-50 border-slate-200'
-                                : 'bg-slate-50 border-slate-200'
+                            group.scope === 'PERSONAL' ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-200'
                         }`}
                     >
                         <ScopeIcon className="size-4 text-slate-500" />
@@ -657,9 +618,7 @@ function PlanCard({
                         <p className="text-xs text-slate-400 mt-0.5">{scopeLabel}</p>
                     </div>
                 </div>
-                <p className="text-sm text-slate-400 font-medium shrink-0 capitalize">
-                    {fmtPeriod(period)}
-                </p>
+                <p className="text-sm text-slate-400 font-medium shrink-0 capitalize">{fmtPeriod(period)}</p>
             </div>
 
             {/* Inline edit form */}
@@ -728,15 +687,11 @@ export function PlanFactView() {
                 : entityFilter === 'department'
                   ? ('DEPARTMENT' as Scope)
                   : undefined,
-        employeeIds:
-            entityFilter === 'employee' && selectedIds.length > 0 ? selectedIds : undefined,
-        departmentIds:
-            entityFilter === 'department' && selectedIds.length > 0 ? selectedIds : undefined,
+        employeeIds: entityFilter === 'employee' && selectedIds.length > 0 ? selectedIds : undefined,
+        departmentIds: entityFilter === 'department' && selectedIds.length > 0 ? selectedIds : undefined,
     }
 
-    const {
- data: rows = [], isLoading, isError 
-} = useQuery(planFactQuery(queryParams))
+    const { data: rows = [], isLoading, isError } = useQuery(planFactQuery(queryParams))
     const queryKey = planFactQuery(queryParams).queryKey
 
     const { data: serviceCategories = [] } = useQuery(categoriesQuery('SERVICE'))
@@ -748,19 +703,14 @@ export function PlanFactView() {
         return map
     }, [serviceCategories, shopCategories])
 
-    const groups = useMemo(
-        () => groupRows(rows, employees, departments),
-        [rows, employees, departments],
-    )
+    const groups = useMemo(() => groupRows(rows, employees, departments), [rows, employees, departments])
     const expectedPct = useMemo(() => getExpectedPct(period), [period])
 
     const { mutate: deletePlanTarget } = useMutation({
         mutationFn: (id: number) => salaryApi.deletePlanTarget(id),
         onSuccess: (_, id) => {
             toast.success('Строка плана удалена')
-            queryClient.setQueryData(queryKey, (prev: PlanFactRow[] | undefined) =>
-                prev?.filter((r) => r.id !== id),
-            )
+            queryClient.setQueryData(queryKey, (prev: PlanFactRow[] | undefined) => prev?.filter((r) => r.id !== id))
         },
         onError: () => toast.error('Не удалось удалить строку плана'),
     })
@@ -769,7 +719,10 @@ export function PlanFactView() {
         id: e.id,
         label: `${e.lastName} ${e.firstName}`,
     }))
-    const departmentOptions = departments.map((d) => ({ id: d.id, label: d.name }))
+    const departmentOptions = departments.map((d) => ({
+        id: d.id,
+        label: d.name,
+    }))
 
     const selectCls =
         'h-9 px-3 rounded-md border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300'
@@ -784,9 +737,8 @@ export function PlanFactView() {
                     </h2>
                     {!isLoading && (
                         <span className="text-sm text-slate-400">
-                            {groups.length}{' '}
-                            {groups.length === 1 ? 'план' : groups.length < 5 ? 'плана' : 'планов'}{' '}
-                            · <span className="capitalize">{fmtPeriod(period)}</span>
+                            {groups.length} {groups.length === 1 ? 'план' : groups.length < 5 ? 'плана' : 'планов'} ·{' '}
+                            <span className="capitalize">{fmtPeriod(period)}</span>
                         </span>
                     )}
                 </div>
@@ -868,7 +820,9 @@ export function PlanFactView() {
                                     onDelete={deletePlanTarget}
                                     onEditSuccess={() => {
                                         setEditingRow(null)
-                                        queryClient.invalidateQueries({ queryKey })
+                                        queryClient.invalidateQueries({
+                                            queryKey,
+                                        })
                                     }}
                                     onEditCancel={() => setEditingRow(null)}
                                 />
@@ -878,11 +832,7 @@ export function PlanFactView() {
                 ))}
 
             {isModalOpen && (
-                <CreatePlanModal
-                    period={period}
-                    existingRows={rows}
-                    onClose={() => setIsModalOpen(false)}
-                />
+                <CreatePlanModal period={period} existingRows={rows} onClose={() => setIsModalOpen(false)} />
             )}
         </>
     )

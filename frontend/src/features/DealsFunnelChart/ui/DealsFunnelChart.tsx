@@ -14,10 +14,7 @@ export function DealsFunnelChart({ deals }: Props) {
 
     return (
         <FunnelChartLayout>
-            <FunnelChartHeader
-                title="Воронка продаж"
-                description="Прохождение заявок по этапам сделки"
-            />
+            <FunnelChartHeader title="Воронка продаж" description="Прохождение заявок по этапам сделки" />
             <FunnelChartBody
                 mainRows={mainRows}
                 branchRows={branchRows}

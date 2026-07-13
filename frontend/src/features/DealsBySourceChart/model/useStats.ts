@@ -15,14 +15,16 @@ export function useStats(deals: Deal[]) {
     const data = useMemo(() => computeLeadsBySource(deals), [deals])
 
     function computeLeadsBySource(deals: Deal[]): LeadsBySourceItem[] {
-        const map = new Map<
-            string,
-            { name: string; count: number; revenue: number; wonCount: number }
-        >()
+        const map = new Map<string, { name: string; count: number; revenue: number; wonCount: number }>()
         for (const deal of deals) {
             const id = deal.leadSource ? String(deal.leadSource.id) : 'unknown'
             const name = deal.leadSource?.name ?? 'Неизвестно'
-            const prev = map.get(id) ?? { name, count: 0, revenue: 0, wonCount: 0 }
+            const prev = map.get(id) ?? {
+                name,
+                count: 0,
+                revenue: 0,
+                wonCount: 0,
+            }
             map.set(id, {
                 name,
                 count: prev.count + 1,

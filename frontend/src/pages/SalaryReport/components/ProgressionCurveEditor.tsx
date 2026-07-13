@@ -1,13 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
-import {
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Button } from '@/shared/ui/button'
 import type { ProgressionMode, ProgressionTier } from '../types'
 import { progressionCoef } from '../utils/progressionCoef'
@@ -29,9 +21,7 @@ function buildCurvePoints(tiers: ProgressionTier[]) {
     return points
 }
 
-export function ProgressionCurveEditor({
- tiers, onChange 
-}: Props) {
+export function ProgressionCurveEditor({ tiers, onChange }: Props) {
     const points = buildCurvePoints(tiers)
 
     function updateTier(index: number, patch: Partial<ProgressionTier>) {
@@ -47,7 +37,14 @@ export function ProgressionCurveEditor({
         const fromPct = last ? (last.toPct ?? last.fromPct + 30) : 0
         onChange([
             ...tiers,
-            { fromPct, toPct: null, mode: 'FIXED', coef: 1, coefFrom: null, coefTo: null },
+            {
+                fromPct,
+                toPct: null,
+                mode: 'FIXED',
+                coef: 1,
+                coefFrom: null,
+                coefTo: null,
+            },
         ])
     }
 
@@ -57,12 +54,7 @@ export function ProgressionCurveEditor({
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis
-                            dataKey="pct"
-                            tickFormatter={(v) => `${v}%`}
-                            tick={{ fontSize: 11 }}
-                            stroke="#9ca3af"
-                        />
+                        <XAxis dataKey="pct" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} stroke="#9ca3af" />
                         <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
                         <Tooltip
                             formatter={(value) => [Number(value).toFixed(2), 'коэффициент']}
@@ -87,7 +79,11 @@ export function ProgressionCurveEditor({
                         <input
                             type="number"
                             value={tier.fromPct}
-                            onChange={(e) => updateTier(i, { fromPct: Number(e.target.value) })}
+                            onChange={(e) =>
+                                updateTier(i, {
+                                    fromPct: Number(e.target.value),
+                                })
+                            }
                             className="w-16 h-8 px-2 rounded border border-gray-200 tabular-nums"
                         />
                         <span className="text-gray-400">–</span>
@@ -107,7 +103,9 @@ export function ProgressionCurveEditor({
                         <select
                             value={tier.mode}
                             onChange={(e) =>
-                                updateTier(i, { mode: e.target.value as ProgressionMode })
+                                updateTier(i, {
+                                    mode: e.target.value as ProgressionMode,
+                                })
                             }
                             className="h-8 px-2 rounded border border-gray-200"
                         >
@@ -126,7 +124,9 @@ export function ProgressionCurveEditor({
                                     value={tier.coefFrom ?? ''}
                                     placeholder="coefFrom"
                                     onChange={(e) =>
-                                        updateTier(i, { coefFrom: Number(e.target.value) })
+                                        updateTier(i, {
+                                            coefFrom: Number(e.target.value),
+                                        })
                                     }
                                     className="w-20 h-8 px-2 rounded border border-gray-200 tabular-nums"
                                 />
@@ -136,7 +136,9 @@ export function ProgressionCurveEditor({
                                     value={tier.coefTo ?? ''}
                                     placeholder="coefTo"
                                     onChange={(e) =>
-                                        updateTier(i, { coefTo: Number(e.target.value) })
+                                        updateTier(i, {
+                                            coefTo: Number(e.target.value),
+                                        })
                                     }
                                     className="w-20 h-8 px-2 rounded border border-gray-200 tabular-nums"
                                 />
@@ -147,7 +149,11 @@ export function ProgressionCurveEditor({
                                 step="0.01"
                                 value={tier.coef ?? ''}
                                 placeholder="coef"
-                                onChange={(e) => updateTier(i, { coef: Number(e.target.value) })}
+                                onChange={(e) =>
+                                    updateTier(i, {
+                                        coef: Number(e.target.value),
+                                    })
+                                }
                                 className="w-20 h-8 px-2 rounded border border-gray-200 tabular-nums"
                             />
                         )}

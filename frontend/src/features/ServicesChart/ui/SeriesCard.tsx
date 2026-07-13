@@ -1,12 +1,4 @@
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-} from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import type { TooltipContentProps } from 'recharts'
 import type { ChartSeriesEntry } from '@/kernel/types'
 import { buildSingleSeriesData, fmtCompact, ruFmt } from '@/features/ServicesChart/model/chartFormat.ts'
@@ -22,9 +14,7 @@ type MiniTooltipProps = Pick<TooltipContentProps<number, string>, 'active' | 'pa
     mode: ChartMode
 }
 
-function MiniTooltip({
- active, payload, label, mode
-}: MiniTooltipProps) {
+function MiniTooltip({ active, payload, label, mode }: MiniTooltipProps) {
     if (!active || !payload?.length) return null
     const val = mode === 'count' ? payload[0].value : `${ruFmt(Number(payload[0].value))} ₽`
     return (

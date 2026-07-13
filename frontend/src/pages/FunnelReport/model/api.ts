@@ -10,22 +10,25 @@ export const api = {
             queryKey: ['funnel', 'filter-options'],
             staleTime: 30 * 60 * 1000,
             queryFn: async ({ signal }): Promise<FilterOptionsResponse> => {
-                const [stagesRes, employeesRes, sourcesRes, deviceTypesRes, stageGroupsRes] =
-                    await Promise.all([
-                        apiInstance.get<ApiStageExtended[]>('/deals/stages', { signal }),
-                        apiInstance.get<ApiEmployee[]>('/deals/managers', { signal }),
-                        apiInstance.get<ApiEnumValue[]>('/deals/sources', { signal }),
-                        apiInstance.get<Pick<ApiEnumValue, 'id' | 'name'>[]>('/deals/models', {
-                            signal,
-                        }),
-                        apiInstance.get<{ id: string; name: string }[]>('/deals/stage-groups', {
-                            signal,
-                        }),
-                    ]).catch((error) => {
-                        throw new ApiError(
-                            'Не удалось загрузить KPIs и сделки по БИТРИКС24 ' + error,
-                        )
-                    })
+                const [stagesRes, employeesRes, sourcesRes, deviceTypesRes, stageGroupsRes] = await Promise.all([
+                    apiInstance.get<ApiStageExtended[]>('/deals/stages', {
+                        signal,
+                    }),
+                    apiInstance.get<ApiEmployee[]>('/deals/managers', {
+                        signal,
+                    }),
+                    apiInstance.get<ApiEnumValue[]>('/deals/sources', {
+                        signal,
+                    }),
+                    apiInstance.get<Pick<ApiEnumValue, 'id' | 'name'>[]>('/deals/models', {
+                        signal,
+                    }),
+                    apiInstance.get<{ id: string; name: string }[]>('/deals/stage-groups', {
+                        signal,
+                    }),
+                ]).catch((error) => {
+                    throw new ApiError('Не удалось загрузить KPIs и сделки по БИТРИКС24 ' + error)
+                })
 
                 return {
                     stages: stagesRes.data,
@@ -65,9 +68,7 @@ export const api = {
                     })
                     .then((r) => r.data)
                     .catch((error) => {
-                        throw new ApiError(
-                            'Не удалось загрузить KPIs и сделки по БИТРИКС24 ' + error,
-                        )
+                        throw new ApiError('Не удалось загрузить KPIs и сделки по БИТРИКС24 ' + error)
                     }),
         })
     },

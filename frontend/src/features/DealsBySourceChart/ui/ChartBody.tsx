@@ -12,10 +12,7 @@ export function ChartBody(props: Props) {
 
     return (
         <CardContent className="flex flex-col gap-3 pt-2 overflow-y-auto min-h-0">
-            <div
-                className="flex items-center gap-3 text-xs text-gray-400"
-                style={{ fontFamily: 'Inter, sans-serif' }}
-            >
+            <div className="flex items-center gap-3 text-xs text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
                 <span className="shrink-0" style={{ width: 150 }}>
                     Источник
                 </span>

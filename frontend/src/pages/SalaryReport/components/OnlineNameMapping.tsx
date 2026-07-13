@@ -9,16 +9,16 @@ interface Props {
     onUpdated: (employee: Employee) => void
 }
 
-export function OnlineNameMapping({
- employees, onUpdated 
-}: Props) {
+export function OnlineNameMapping({ employees, onUpdated }: Props) {
     const [editingId, setEditingId] = useState<number | null>(null)
     const [draft, setDraft] = useState('')
 
     async function handleSave(employee: Employee) {
         const name = draft.trim() || null
         try {
-            const res = await salaryApi.updateEmployee(employee.id, { roappOnlineName: name })
+            const res = await salaryApi.updateEmployee(employee.id, {
+                roappOnlineName: name,
+            })
             onUpdated(res.data)
             toast.success('Сохранено')
             setEditingId(null)
@@ -30,8 +30,8 @@ export function OnlineNameMapping({
     return (
         <div className="flex flex-col gap-1">
             <p className="text-xs text-gray-500 mb-1">
-                Укажите имя онлайн-менеджера из Roapp для каждого сотрудника, чтобы мотивация по
-                онлайн-роли считалась корректно.
+                Укажите имя онлайн-менеджера из Roapp для каждого сотрудника, чтобы мотивация по онлайн-роли считалась
+                корректно.
             </p>
             {employees.map((emp) => (
                 <div
@@ -54,26 +54,16 @@ export function OnlineNameMapping({
                                 placeholder="имя в Roapp"
                                 className="h-6 px-2 rounded border border-gray-200 text-xs w-40"
                             />
-                            <button
-                                className="p-1 rounded hover:bg-emerald-100"
-                                onClick={() => handleSave(emp)}
-                            >
+                            <button className="p-1 rounded hover:bg-emerald-100" onClick={() => handleSave(emp)}>
                                 <Check className="size-3.5 text-emerald-600" />
                             </button>
-                            <button
-                                className="p-1 rounded hover:bg-gray-200"
-                                onClick={() => setEditingId(null)}
-                            >
+                            <button className="p-1 rounded hover:bg-gray-200" onClick={() => setEditingId(null)}>
                                 <X className="size-3.5 text-gray-400" />
                             </button>
                         </span>
                     ) : (
                         <span className="flex items-center gap-1.5">
-                            <span
-                                className={
-                                    emp.roappOnlineName ? 'text-gray-600' : 'text-gray-300 italic'
-                                }
-                            >
+                            <span className={emp.roappOnlineName ? 'text-gray-600' : 'text-gray-300 italic'}>
                                 {emp.roappOnlineName ?? 'не задано'}
                             </span>
                             <button
