@@ -9,6 +9,7 @@ import { DealsFunnelChart } from '@/features/DealsFunnelChart';
 import { DealsByManagerChart } from '@/features/DealsByManagerChart';
 import { ServiceDealsTable } from '@/features/ServiceDealsTable';
 import { Grid } from '@/shared/ui/Grid.tsx';
+import { DealsByStage } from '@/pages/FunnelReportService/components/DealsByStage.tsx';
 
 
 export function FunnelReportService() {
@@ -73,12 +74,8 @@ export function FunnelReportService() {
                     </>
                 }
             />
-
+            <DealsByStage deals={deals} />
             <ServiceDealsTable deals={deals} />
-            {/*<DealsByStage deals={deals} />*/}
-
-
-
         </FunnelReportServiceLayout>
     )
 }
