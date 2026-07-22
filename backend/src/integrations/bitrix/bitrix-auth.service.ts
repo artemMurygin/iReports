@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import axios from 'axios';
-import { DatabaseService } from '../../database/database.service';
+import { DatabaseService } from '../../infrustructure/database/database.service';
 import { BitrixInstallDto } from './dto/bitrix-install.dto';
 
 @Injectable()

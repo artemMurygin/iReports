@@ -6,10 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && tsc-alias -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "nest start --watch",
+    "start:dev": "concurrently -k -n tsc,nest \"tsc-alias -p tsconfig.build.json -w\" \"nest start --watch\"",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -18,15 +18,16 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "initial": "nest build && node dist/src/utils/initialUploadData.js",
-    "initialProd": "node dist/src/utils/initialUploadData.js",
+    "initial": "nest build && node dist/src/shared/initialUploadData.js",
+    "initialProd": "node dist/src/shared/initialUploadData.js",
     "price:monitoring": "nest build && node dist/src/utils/runPriceMonitoring.js",
     "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js",
-    "export:roapp-orders": "nest build && node dist/src/utils/exportRoappOrders.js"
+    "export:roapp-orders": "nest build && node dist/src/shared/exportRoappOrders.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/event-emitter": "^3.1.0",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.1",
@@ -57,6 +58,7 @@
     "@types/node": "^22.10.7",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^6.0.2",
+    "concurrently": "^10.0.3",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -69,6 +71,7 @@
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.9.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
@@ -85,7 +88,8 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "moduleNameMapper": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
+      "^(\\.{1,2}/.*)\\.js$": "$1",
+      "^@/(.*)$": "<rootDir>/$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

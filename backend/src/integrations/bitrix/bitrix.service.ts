@@ -2,7 +2,7 @@ import { BadGatewayException, Injectable } from '@nestjs/common';
 import { BitrixHttpService } from './bitrix.instance';
 import { Filter } from './types';
 import { BitrixDealSchema } from './schema';
-import { delay } from '../../utils/delay';
+import { delay } from '../../shared/delay';
 import type { AxiosRequestConfig } from 'axios';
 
 @Injectable()
