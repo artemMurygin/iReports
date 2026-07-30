@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { LEAD_REPOSITORY } from './domain/sales.repositories.port';
+import { LEAD_REPOSITORY } from './domain/ports/sales.repositories.port';
 import { LeadRepository } from './infrastructure/sales.repositories';
 
 @Module({

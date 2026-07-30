@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ExceptionBase } from '@libs/exceptions';
+import { ExceptionBase } from '@/shared/exceptions/exception.base';
 import { RequestContextService } from '../context/AppRequestContext';
-import { ApiErrorResponse } from '@src/libs/api/api-error.response';
+import { ApiErrorResponse } from '@/shared/exceptions/exeption.api';
 
 export class ExceptionInterceptor implements NestInterceptor {
   private readonly logger: Logger = new Logger(ExceptionInterceptor.name);

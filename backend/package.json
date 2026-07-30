@@ -38,6 +38,8 @@
     "class-validator": "^0.14.1",
     "dotenv": "^17.3.1",
     "googleapis": "^171.4.0",
+    "nanoid": "^3.3.16",
+    "nestjs-request-context": "^4.0.0",
     "nestjs-zod": "^5.2.1",
     "openai": "^6.38.0",
     "pg": "^8.20.0",

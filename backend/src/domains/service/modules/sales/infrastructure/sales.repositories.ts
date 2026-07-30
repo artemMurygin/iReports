@@ -5,8 +5,8 @@ import { DealEntity } from '../domain/entities/deal.entity';
 import {
   DealRepositoryPort,
   LeadRepositoryPort,
-} from '../domain/sales.repositories.port';
-import { DealMapper, LeadMapper } from './sales.mappers';
+} from '../domain/ports/sales.repositories.port';
+import { DealMapper, LeadMapper } from '../sales.mappers';
 
 // Bitrix CATEGORY_ID воронки "Сервис" (см. также CATEGORY_ID: [0, 16, 10, 2]
 // в src/integrations/bitrix/bitrix.service.ts, откуда синхронизируются все воронки).

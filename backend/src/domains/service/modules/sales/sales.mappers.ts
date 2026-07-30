@@ -1,28 +1,28 @@
 import {
   BitrixDeal,
-  BitrixStage,
-  BitrixPointOfContact,
-  BitrixLeadSources,
-  BitrixEnumValue,
   BitrixDeviceTypes,
+  BitrixEnumValue,
+  BitrixLeadSources,
+  BitrixPointOfContact,
+  BitrixStage,
+  RoappMarketingSource,
   RoappOrder,
   RoappOrderStatus,
   RoappOrderType,
-  RoappMarketingSource,
-} from '../../../../../../prisma/generated/prisma/schema/client';
+} from './../../../../../prisma/generated/prisma/schema/client';
 import { Mapper } from '@/shared/domain/mapper.interface';
-import { LeadEntity } from '../domain/entities/lead.entity';
-import { DealEntity } from '../domain/entities/deal.entity';
-import { Stage } from '../domain/value-objects/stage.value-object';
-import { LeadSource } from '../domain/value-objects/lead-source.value-object';
-import { PointOfContact } from '../domain/value-objects/point-of-contact.value-object';
-import { LeadDeviceInfo } from '../domain/value-objects/lead-device-info.value-object';
-import { Status } from '../domain/value-objects/status.value-object';
-import { OrderType } from '../domain/value-objects/order-type.value-object';
-import { MarketingSource } from '../domain/value-objects/marketing-source.object-value';
-import { DeviceInfo } from '../domain/value-objects/device-infovalue-object';
-import { Finance } from '../domain/value-objects/finance.value-object';
-import { DealTimeline } from '../domain/value-objects/deal-timeline.value-object';
+import { LeadEntity } from './domain/entities/lead.entity';
+import { DealEntity } from './domain/entities/deal.entity';
+import { Stage } from './domain/value-objects/stage.value-object';
+import { LeadSource } from './domain/value-objects/lead-source.value-object';
+import { PointOfContact } from './domain/value-objects/point-of-contact.value-object';
+import { LeadDeviceInfo } from './domain/value-objects/lead-device-info.value-object';
+import { Status } from './domain/value-objects/status.value-object';
+import { OrderType } from './domain/value-objects/order-type.value-object';
+import { MarketingSource } from './domain/value-objects/marketing-source.object-value';
+import { DeviceInfo } from './domain/value-objects/device-infovalue-object';
+import { Finance } from './domain/value-objects/finance.value-object';
+import { DealTimeline } from './domain/value-objects/deal-timeline.value-object';
 
 export type BitrixDealRow = BitrixDeal & {
   stage: BitrixStage | null;
@@ -119,7 +119,10 @@ export class DealMapper implements Mapper<DealEntity, RoappOrder> {
           name: row.orderType?.name ?? '',
         }),
         marketingSource: row.adCampaign
-          ? new MarketingSource({ id: row.adCampaign.id, name: row.adCampaign.name })
+          ? new MarketingSource({
+              id: row.adCampaign.id,
+              name: row.adCampaign.name,
+            })
           : null,
         deviceInfo: new DeviceInfo({
           brand: row.deviceBrand,

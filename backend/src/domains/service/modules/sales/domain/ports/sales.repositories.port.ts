@@ -1,5 +1,5 @@
-import { LeadEntity } from './entities/lead.entity';
-import { DealEntity } from './entities/deal.entity';
+import { LeadEntity } from '../entities/lead.entity';
+import { DealEntity } from '../entities/deal.entity';
 // Порт: читает уже синхронизированные Bitrix-сделки как домен "Lead".
 // Запись в БД (fetch из Bitrix + upsert) — не забота этого домена, см. src1/sync/bitrix.
 export interface LeadRepositoryPort {

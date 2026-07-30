@@ -1,6 +1,9 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RequestContextMiddleware } from 'nestjs-request-context';
 import { LoggerMiddleware } from './shared/logger.middleware';
+import { ContextInterceptor } from './shared/application/context/ContextInterceptor';
 import { DatabaseModule } from './infrustructure/database/database.module';
 import { BitrixModule } from './integrations/bitrix/bitrix.module';
 import { AiModule } from './integrations/ai/ai.module';
@@ -46,9 +49,18 @@ import { ReportsModule } from './TODO/reports/reports.module';
     // CronModule,
     // SalaryModule,
   ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ContextInterceptor,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
+    // RequestContextMiddleware должен отработать первым, чтобы
+    // AsyncLocalStorage-контекст был доступен во всех последующих
+    // middleware/interceptors/controllers этого запроса.
+    consumer.apply(RequestContextMiddleware, LoggerMiddleware).forRoutes('*');
   }
 }
