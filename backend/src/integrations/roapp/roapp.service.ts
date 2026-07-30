@@ -1,4 +1,5 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { z } from 'zod';
 import { RoappHttpService } from './roapp.instace';
 import { EmployeesShortSchema } from './schemas/employees.schema';
@@ -15,7 +16,11 @@ import { Params } from './roapp.types';
 
 @Injectable()
 export class RoappService {
-  constructor(private roApp: RoappHttpService) {}
+  constructor(
+    private roApp: RoappHttpService,
+    @InjectPinoLogger(RoappService.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   async *fetchCreatedOrders(
     fromDate: Date | undefined,
@@ -58,7 +63,7 @@ export class RoappService {
         params.page++;
         await delay(500);
       } catch (error) {
-        console.log(error);
+        this.logger.error({ err: error }, 'Roapp request failed');
         throw new BadGatewayException(
           `Failed to fetch sources from Roapp: ${error.message}`,
         );

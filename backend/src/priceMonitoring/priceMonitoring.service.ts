@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import * as XLSX from 'xlsx';
 import { AiService } from '../integrations/ai/ai.service';
 import { DatabaseService } from '../database/database.service';
@@ -61,6 +62,8 @@ export class PriceMonitoringService {
     private readonly roapp: RoappService,
     private readonly customApiRoapp: CustomApiRoappService,
     private readonly progress: PriceMonitoringProgressService,
+    @InjectPinoLogger(PriceMonitoringService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   async updateShopProductsCosts(
@@ -73,7 +76,7 @@ export class PriceMonitoringService {
       message: string,
       status: JobProgressEvent['status'] = 'progress',
     ) => {
-      console.log(`[${uuid}] [${step}] ${message}`);
+      this.logger.debug({ uuid, step }, message);
       this.progress.emit(uuid, { step, message, status });
     };
 
@@ -86,7 +89,7 @@ export class PriceMonitoringService {
 
       emit('matchCategories', 'Сопоставление с номенклатурой...');
       const matched = await this.matchAllCategories(categories, uuid);
-      console.log(`Итого сопоставлено: ${matched.length} позиций`);
+      this.logger.info({ uuid, matchedCount: matched.length }, 'Итого сопоставлено позиций');
 
       const updates = this.buildMoySkladUpdates(matched);
       emit(
@@ -94,14 +97,14 @@ export class PriceMonitoringService {
         `Обновление МойСклад (${updates.length} позиций)...`,
       );
       await this.moysklad.batchUpdateProducts(updates);
-      console.log(`МойСклад обновлён`);
+      this.logger.info({ uuid }, 'МойСклад обновлён');
 
       emit('writeSheet', 'Запись результатов в таблицу...');
       await this.writeResultsToSheet(matched);
 
       emit('done', 'Готово', 'done');
     } catch (e) {
-      console.error(`[${uuid}] Ошибка:`, e);
+      this.logger.error({ uuid, err: e }, 'Ошибка обновления цен');
       emit('error', e?.message ?? String(e), 'error');
     } finally {
       this.progress.getSubject(uuid)?.complete();
@@ -121,7 +124,10 @@ export class PriceMonitoringService {
     const rows = items.flatMap((item) => {
       const service = servicesById.get(item.id);
       if (!service) {
-        console.warn(`Roapp service ${item.id} not found, skipping row`);
+        this.logger.warn(
+          { itemId: item.id },
+          'Roapp service not found, skipping row',
+        );
         return [];
       }
 
@@ -210,27 +216,42 @@ export class PriceMonitoringService {
     }));
 
     await this.sheets.updateRows(SPREADSHEET_ID, updates);
-    console.log(`Сброшено "Закуп" до 0: ${updates.length} строк`);
+    this.logger.info({ rowsCount: updates.length }, 'Сброшено "Закуп" до 0');
   }
 
   private async parseXlsx(fileBase64: string): Promise<CategoryGroup[]> {
     try {
       const buffer = Buffer.from(fileBase64, 'base64');
       const workbook = XLSX.read(buffer, { type: 'buffer' });
-      console.log(`Листы в файле: ${workbook.SheetNames.join(', ')}`);
+      this.logger.info(
+        { sheets: workbook.SheetNames },
+        'Листы в файле прайса',
+      );
 
       const iphoneWatchRows = this.parseIphoneWatchSheet(workbook);
-      console.log(`iPhone/Watch: ${iphoneWatchRows.length} строк`);
+      this.logger.info(
+        { rowsCount: iphoneWatchRows.length },
+        'iPhone/Watch строк распарсено',
+      );
 
       const ipadMacbookRows = await this.parseIpadMacbookSheet(workbook);
-      console.log(`iPad/MacBook: ${ipadMacbookRows.length} строк`);
+      this.logger.info(
+        { rowsCount: ipadMacbookRows.length },
+        'iPad/MacBook строк распарсено',
+      );
 
       const rows = [...iphoneWatchRows, ...ipadMacbookRows];
-      console.log(`Всего строк после парсинга: ${rows.length}`);
+      this.logger.info({ rowsCount: rows.length }, 'Всего строк после парсинга');
 
       const categories = this.categorize(rows);
-      console.log(
-        `Категории: ${categories.map((c) => `${c.category}(${c.priceRows.length})`).join(', ')}`,
+      this.logger.info(
+        {
+          categories: categories.map((c) => ({
+            category: c.category,
+            count: c.priceRows.length,
+          })),
+        },
+        'Категории после парсинга',
       );
 
       return categories;
@@ -288,7 +309,10 @@ export class PriceMonitoringService {
 
     if (matched.length === 0) return [];
 
-    console.log(`Форматирование ${matched.length} строк через AI...`);
+    this.logger.info(
+      { rowsCount: matched.length },
+      'Форматирование строк через AI',
+    );
     const formattedNames = await this.formatNamesViaAi(
       matched.map((r) => r.name),
     );
@@ -385,7 +409,7 @@ export class PriceMonitoringService {
       await delay(350);
       group.moySkladCatalogRows = rows;
       const msg = `МС [${group.category}]: ${rows.length} товаров`;
-      console.log(msg);
+      this.logger.info({ uuid, category: group.category, rowsCount: rows.length }, msg);
       this.progress.emit(uuid, {
         step: 'loadCatalog',
         message: msg,
@@ -462,14 +486,14 @@ export class PriceMonitoringService {
       }));
 
     if (updates.length === 0) {
-      console.log('Нет позиций для обновления в таблице — цены не изменены');
+      this.logger.info('Нет позиций для обновления в таблице — цены не изменены');
       return;
     }
 
     // Сброс происходит только если есть что записывать — старые цены не затираются зря
     await this.resetCostsToNull();
     await this.sheets.updateRows(SPREADSHEET_ID, updates);
-    console.log(`Обновлено в таблице: ${updates.length} строк`);
+    this.logger.info({ rowsCount: updates.length }, 'Обновлено в таблице');
   }
 
   private async matchAllCategories(
@@ -478,7 +502,7 @@ export class PriceMonitoringService {
   ): Promise<MatchedProduct[]> {
     const results = await Promise.allSettled(
       categories.map(async (group) => {
-        console.log(`[${group.category}] Отправка запроса к AI...`);
+        this.logger.info({ uuid, category: group.category }, 'Отправка запроса к AI');
         this.progress.emit(uuid, {
           step: 'matchCategories',
           message: `Сопоставление [${group.category}]...`,
@@ -498,8 +522,9 @@ export class PriceMonitoringService {
         });
 
         const matched = parseMatchingResponse(raw, group.category);
-        console.log(
-          `[${group.category}] Сопоставлено: ${matched.length} позиций`,
+        this.logger.info(
+          { uuid, category: group.category, matchedCount: matched.length },
+          'Сопоставлено позиций',
         );
         this.progress.emit(uuid, {
           step: 'matchCategories',
@@ -513,9 +538,9 @@ export class PriceMonitoringService {
     return results.flatMap((result, i) => {
       if (result.status === 'fulfilled') return result.value;
 
-      console.error(
-        `[${categories[i].category}] Ошибка AI-сопоставления:`,
-        result.reason,
+      this.logger.error(
+        { uuid, category: categories[i].category, err: result.reason },
+        'Ошибка AI-сопоставления',
       );
       return [];
     });

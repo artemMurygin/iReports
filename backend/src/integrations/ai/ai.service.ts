@@ -1,5 +1,6 @@
 require('dotenv');
-import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AiHttpService } from './ai.instance';
 import { ChatMessage, ChatOptions, EmbeddingOptions } from './ai.types';
 
@@ -8,9 +9,11 @@ const RETRY_INITIAL_DELAY_MS = 3000;
 
 @Injectable()
 export class AiService {
-  private readonly logger = new Logger(AiService.name);
-
-  constructor(private ai: AiHttpService) {}
+  constructor(
+    private ai: AiHttpService,
+    @InjectPinoLogger(AiService.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   /**
    * Повторяет fn при 504 Gateway Timeout с экспоненциальным бэкоффом.

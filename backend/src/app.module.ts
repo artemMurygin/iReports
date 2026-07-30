@@ -1,5 +1,7 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { LoggerMiddleware } from './common/logger.middleware';
+import { Module } from '@nestjs/common';
+import { LoggerModule } from 'nestjs-pino';
+import { buildPinoHttpOptions } from './common/logger/pino.config';
+import { MetricsModule } from './common/metrics/metrics.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
@@ -19,6 +21,8 @@ import { MoyskladModule } from './integrations/moySklad/moysklad.module';
 
 @Module({
   imports: [
+    LoggerModule.forRoot({ pinoHttp: buildPinoHttpOptions() }),
+    MetricsModule,
     DatabaseModule,
     BitrixModule,
     RoappModule,
@@ -37,8 +41,4 @@ import { MoyskladModule } from './integrations/moySklad/moysklad.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

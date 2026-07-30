@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from '../app.module';
 import { BitrixSyncService } from '../sync/bitrix/bitrix.service';
 import { UploadLogger } from './logger';
@@ -66,7 +67,7 @@ async function bootstrap() {
 
     await app.close();
   } catch (error) {
-    console.error(error);
+    app.get(Logger).error({ err: error }, 'initialUploadData failed');
     process.exit(1);
   }
 }

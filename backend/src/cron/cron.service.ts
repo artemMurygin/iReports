@@ -1,17 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { BitrixSyncService } from '../sync/bitrix/bitrix.service';
 import { ProdCron } from './utils';
 import { RoappSyncService } from '../sync/roapp/roapp.service';
 import { CustomApiRoappSyncService } from '../sync/custom-api-roapp/custom-api-roapp.service';
-import { logCronError } from './cron-file-logger';
 
 const MAX_CONSECUTIVE_FAILURES = 3;
 
 @Injectable()
 export class CronService {
-  private readonly logger = new Logger(CronService.name);
-
   private bitrixFailedSince: Date | null = null;
   private bitrixConsecutiveFailures = 0;
 
@@ -22,6 +20,8 @@ export class CronService {
     private readonly Bitrix: BitrixSyncService,
     private readonly ROApp: RoappSyncService,
     private readonly CustomApiRoApp: CustomApiRoappSyncService,
+    @InjectPinoLogger(CronService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   @ProdCron(CronExpression.EVERY_5_MINUTES)
@@ -36,7 +36,7 @@ export class CronService {
 
     try {
       await this.Bitrix.uploadModifiedDeals(since);
-      this.logger.log('Successfully fetched updated deals from Bitrix24');
+      this.logger.info('Successfully fetched updated deals from Bitrix24');
       this.bitrixFailedSince = null;
       this.bitrixConsecutiveFailures = 0;
     } catch (error) {
@@ -44,13 +44,16 @@ export class CronService {
         this.bitrixFailedSince = since;
       }
       this.bitrixConsecutiveFailures += 1;
-      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to fetch updated deals from Bitrix24 (попытка ${this.bitrixConsecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}): ${message}. Will retry next tick from ${this.bitrixFailedSince.toISOString()}`,
+        {
+          context: 'cron',
+          task: 'getUpdatesDeals:bitrix',
+          err: error,
+          since: since.toISOString(),
+          attempt: this.bitrixConsecutiveFailures,
+        },
+        `Failed to fetch updated deals from Bitrix24 (попытка ${this.bitrixConsecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}). Will retry next tick from ${this.bitrixFailedSince.toISOString()}`,
       );
-      logCronError('getUpdatesDeals:bitrix', error, {
-        since: since.toISOString(),
-      });
 
       if (this.bitrixConsecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
         await this.reloadBitrixReferenceData();
@@ -64,7 +67,7 @@ export class CronService {
     try {
       const ordersIds = await this.ROApp.uploadUpdatedOrders(since);
       await this.ROApp.uploadOrderItems(ordersIds);
-      this.logger.log('Successfully fetched updated deals from ROApp');
+      this.logger.info('Successfully fetched updated deals from ROApp');
       this.roappFailedSince = null;
       this.roappConsecutiveFailures = 0;
     } catch (error) {
@@ -72,13 +75,16 @@ export class CronService {
         this.roappFailedSince = since;
       }
       this.roappConsecutiveFailures += 1;
-      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to fetch updated deals from ROApp (попытка ${this.roappConsecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}): ${message}. Will retry next tick from ${this.roappFailedSince.toISOString()}`,
+        {
+          context: 'cron',
+          task: 'getUpdatesDeals:roapp',
+          err: error,
+          since: since.toISOString(),
+          attempt: this.roappConsecutiveFailures,
+        },
+        `Failed to fetch updated deals from ROApp (попытка ${this.roappConsecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}). Will retry next tick from ${this.roappFailedSince.toISOString()}`,
       );
-      logCronError('getUpdatesDeals:roapp', error, {
-        since: since.toISOString(),
-      });
 
       if (this.roappConsecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
         await this.reloadRoappReferenceData();
@@ -97,13 +103,12 @@ export class CronService {
       await this.Bitrix.uploadLeadSources();
       await this.Bitrix.uploadEnums();
       await this.Bitrix.uploadSources();
-      this.logger.log('Справочники Bitrix24 успешно перезагружены');
+      this.logger.info('Справочники Bitrix24 успешно перезагружены');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Не удалось перезагрузить справочники Bitrix24: ${message}`,
+        { context: 'cron', task: 'reloadBitrixReferenceData', err: error },
+        'Не удалось перезагрузить справочники Bitrix24',
       );
-      logCronError('reloadBitrixReferenceData', error);
     } finally {
       // Сбрасываем счётчик в любом случае, чтобы не перезагружать справочники на каждом тике,
       // если проблема не в них — следующая перезагрузка произойдёт снова после 3 ошибок подряд.
@@ -125,13 +130,12 @@ export class CronService {
       await this.ROApp.uploadServices();
       await this.ROApp.uploadProducts();
       await this.CustomApiRoApp.uploadServicesBonuses();
-      this.logger.log('Справочники ROApp успешно перезагружены');
+      this.logger.info('Справочники ROApp успешно перезагружены');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Не удалось перезагрузить справочники ROApp: ${message}`,
+        { context: 'cron', task: 'reloadRoappReferenceData', err: error },
+        'Не удалось перезагрузить справочники ROApp',
       );
-      logCronError('reloadRoappReferenceData', error);
     } finally {
       this.roappConsecutiveFailures = 0;
     }

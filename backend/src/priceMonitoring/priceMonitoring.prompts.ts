@@ -1,3 +1,4 @@
+import { rootLogger } from '../common/logger/root-logger';
 import {
   AiMatchItem,
   CategoryKey,
@@ -219,15 +220,15 @@ export function parseMatchingResponse(
   try {
     items = JSON.parse(raw.trim()) as AiMatchItem[];
   } catch {
-    console.error(
-      `[${category}] Не удалось распарсить ответ AI:`,
-      raw.slice(0, 200),
+    rootLogger.error(
+      { category, rawPreview: raw.slice(0, 200) },
+      'Не удалось распарсить ответ AI',
     );
     return [];
   }
 
   if (!Array.isArray(items)) {
-    console.error(`[${category}] Ответ AI — не массив`);
+    rootLogger.error({ category }, 'Ответ AI — не массив');
     return [];
   }
 
