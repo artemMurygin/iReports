@@ -12,15 +12,12 @@ import { Category } from '../integrations/roapp/schemas/serviceCatalog.schema';
 import { UpdateServicePricesInRoappItem } from './dto/updateServicePricesInRoapp.dto';
 import { PriceMonitoringProgressService } from './priceMonitoring.progress.service';
 import {
-  AiMatchItem,
   CategoryGroup,
   CategoryKey,
   JobProgressEvent,
   MatchedProduct,
   ProductRow,
-  VectorCandidate,
 } from './priceMonitoring.types';
-import { Subject } from 'rxjs';
 import {
   CATEGORY_MS_FILTER,
   IPAD_MACBOOK_PATTERNS,
@@ -89,7 +86,10 @@ export class PriceMonitoringService {
 
       emit('matchCategories', 'Сопоставление с номенклатурой...');
       const matched = await this.matchAllCategories(categories, uuid);
-      this.logger.info({ uuid, matchedCount: matched.length }, 'Итого сопоставлено позиций');
+      this.logger.info(
+        { uuid, matchedCount: matched.length },
+        'Итого сопоставлено позиций',
+      );
 
       const updates = this.buildMoySkladUpdates(matched);
       emit(
@@ -116,7 +116,10 @@ export class PriceMonitoringService {
   async updateServicePricesInRoapp(items: UpdateServicePricesInRoappItem[]) {
     const servicesById = new Map<number, Service>();
     for await (const batch of this.roapp.fetchServices()) {
-      for (const s of batch) servicesById.set(s.id, s);
+      for (const s of batch) {
+        this.logger.debug(`Услушги из РЕМОНЛАЙН ${s}`);
+        servicesById.set(s.id, s);
+      }
     }
 
     const categoryPathById = await this.buildServiceCategoryPaths();
@@ -223,10 +226,7 @@ export class PriceMonitoringService {
     try {
       const buffer = Buffer.from(fileBase64, 'base64');
       const workbook = XLSX.read(buffer, { type: 'buffer' });
-      this.logger.info(
-        { sheets: workbook.SheetNames },
-        'Листы в файле прайса',
-      );
+      this.logger.info({ sheets: workbook.SheetNames }, 'Листы в файле прайса');
 
       const iphoneWatchRows = this.parseIphoneWatchSheet(workbook);
       this.logger.info(
@@ -241,7 +241,10 @@ export class PriceMonitoringService {
       );
 
       const rows = [...iphoneWatchRows, ...ipadMacbookRows];
-      this.logger.info({ rowsCount: rows.length }, 'Всего строк после парсинга');
+      this.logger.info(
+        { rowsCount: rows.length },
+        'Всего строк после парсинга',
+      );
 
       const categories = this.categorize(rows);
       this.logger.info(
@@ -409,7 +412,10 @@ export class PriceMonitoringService {
       await delay(350);
       group.moySkladCatalogRows = rows;
       const msg = `МС [${group.category}]: ${rows.length} товаров`;
-      this.logger.info({ uuid, category: group.category, rowsCount: rows.length }, msg);
+      this.logger.info(
+        { uuid, category: group.category, rowsCount: rows.length },
+        msg,
+      );
       this.progress.emit(uuid, {
         step: 'loadCatalog',
         message: msg,
@@ -486,7 +492,9 @@ export class PriceMonitoringService {
       }));
 
     if (updates.length === 0) {
-      this.logger.info('Нет позиций для обновления в таблице — цены не изменены');
+      this.logger.info(
+        'Нет позиций для обновления в таблице — цены не изменены',
+      );
       return;
     }
 
@@ -502,7 +510,10 @@ export class PriceMonitoringService {
   ): Promise<MatchedProduct[]> {
     const results = await Promise.allSettled(
       categories.map(async (group) => {
-        this.logger.info({ uuid, category: group.category }, 'Отправка запроса к AI');
+        this.logger.info(
+          { uuid, category: group.category },
+          'Отправка запроса к AI',
+        );
         this.progress.emit(uuid, {
           step: 'matchCategories',
           message: `Сопоставление [${group.category}]...`,

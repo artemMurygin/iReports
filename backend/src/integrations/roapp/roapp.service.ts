@@ -16,6 +16,8 @@ import { Params } from './roapp.types';
 
 @Injectable()
 export class RoappService {
+  name = 'Remonline service';
+
   constructor(
     private roApp: RoappHttpService,
     @InjectPinoLogger(RoappService.name)
@@ -45,7 +47,9 @@ export class RoappService {
     const params: Params = {
       page: 1,
       ...(isoDate && {
-        [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']: [isoDate],
+        [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']: [
+          isoDate,
+        ],
       }),
     };
 
@@ -105,6 +109,7 @@ export class RoappService {
         requestPage++;
         await delay(500);
       } catch (error) {
+        this.logger.error(error);
         throw new BadGatewayException(
           `Failed to fetch sources from Roapp: ${error.message}`,
         );
