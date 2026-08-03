@@ -27,7 +27,11 @@ export const ProductSchema = z
     category_id: z.number().int(),
 
     cost: z.string(), // "0.00"
-    prices: z.record(z.string(), z.string()), // { "31038": "0.00", ... }
+    // Roapp (PHP) сериализует пустой ассоциативный массив как [], а не {}
+    prices: z.preprocess(
+      (v) => (Array.isArray(v) ? {} : v),
+      z.record(z.string(), z.string()), // { "31038": "0.00", ... }
+    ),
 
     barcodes: z.array(barcodeSchema),
 
