@@ -5,8 +5,8 @@ import { ROAPP_GATEWAY } from './roapp-gateway.port';
 import { RoappGatewayAdapter } from './roapp-gateway.adapter';
 
 @Module({
-  imports: [RoappModule, CustomApiRoappModule],
-  providers: [{ provide: ROAPP_GATEWAY, useClass: RoappGatewayAdapter }],
-  exports: [ROAPP_GATEWAY],
+    imports: [RoappModule, CustomApiRoappModule],
+    providers: [{ provide: ROAPP_GATEWAY, useClass: RoappGatewayAdapter }],
+    exports: [ROAPP_GATEWAY],
 })
 export class RoappGatewayModule {}

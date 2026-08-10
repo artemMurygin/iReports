@@ -1,16 +1,16 @@
 import { ValueObject } from '@/shared/domain/value-object.base';
 
 export type MarketingSourceProps = {
-  id: number;
-  name: string;
+    id: number;
+    name: string;
 };
 
 export class MarketingSource extends ValueObject<MarketingSourceProps> {
-  getName() {
-    return this.props.name;
-  }
+    getName() {
+        return this.props.name;
+    }
 
-  getId() {
-    return this.props.id;
-  }
+    getId() {
+        return this.props.id;
+    }
 }

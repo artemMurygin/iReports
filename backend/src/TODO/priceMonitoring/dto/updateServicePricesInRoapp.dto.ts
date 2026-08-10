@@ -2,19 +2,19 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 const updateServicePricesInRoappItemSchema = z.object({
-  id: z.number().int().positive(),
-  price: z.number(),
-  serviceCost: z.number(),
+    id: z.number().int().positive(),
+    price: z.number(),
+    serviceCost: z.number(),
 });
 
 const updateServicePricesInRoappSchema = z.array(
-  updateServicePricesInRoappItemSchema,
+    updateServicePricesInRoappItemSchema,
 );
 
 export class UpdateServicePricesInRoappDTO extends createZodDto(
-  updateServicePricesInRoappSchema,
+    updateServicePricesInRoappSchema,
 ) {}
 
 export type UpdateServicePricesInRoappItem = z.infer<
-  typeof updateServicePricesInRoappItemSchema
+    typeof updateServicePricesInRoappItemSchema
 >;

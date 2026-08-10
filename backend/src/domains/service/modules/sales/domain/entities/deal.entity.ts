@@ -8,26 +8,26 @@ import { DealTimeline } from '../value-objects/deal-timeline.value-object';
 import { AggregateID } from '@/shared/domain/entity.base';
 
 type DealProps = {
-  label: string;
-  status: Status;
-  orderType: OrderType;
-  marketingSource: MarketingSource | null;
-  deviceInfo: DeviceInfo;
-  finance: Finance;
-  timeline: DealTimeline;
-  bitrixDealId: number | null;
-  clientId: number | null;
-  managerId: number | null;
-  createdById: number;
-  closedById: number | null;
-  malfunction: string | null;
-  failReason: string | null;
-  serviceSupplierName: string | null;
-  onlineManager: string | null;
+    label: string;
+    status: Status;
+    orderType: OrderType;
+    marketingSource: MarketingSource | null;
+    deviceInfo: DeviceInfo;
+    finance: Finance;
+    timeline: DealTimeline;
+    bitrixDealId: number | null;
+    clientId: number | null;
+    managerId: number | null;
+    createdById: number;
+    closedById: number | null;
+    malfunction: string | null;
+    failReason: string | null;
+    serviceSupplierName: string | null;
+    onlineManager: string | null;
 };
 
 export class DealEntity extends AggregateRoot<DealProps> {
-  protected _id: AggregateID;
+    declare protected _id: AggregateID;
 
-  validate(): void {}
+    validate(): void {}
 }

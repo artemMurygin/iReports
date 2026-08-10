@@ -3,10 +3,10 @@ import { RoappService } from './roapp.service';
 
 @Controller('roapp')
 export class RoappController {
-  constructor(private readonly roapp: RoappService) {}
+    constructor(private readonly roapp: RoappService) {}
 
-  @Get('service-categories')
-  getServiceCategories() {
-    return this.roapp.fetchAllServiceCategories();
-  }
+    @Get('service-categories')
+    getServiceCategories() {
+        return this.roapp.fetchAllServiceCategories();
+    }
 }

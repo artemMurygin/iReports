@@ -15,230 +15,243 @@ import { Params } from './roapp.types';
 
 @Injectable()
 export class RoappService {
-  constructor(private roApp: RoappHttpService) {}
+    constructor(private roApp: RoappHttpService) {}
 
-  async *fetchCreatedOrders(
-    fromDate: Date | undefined,
-    createdOrUpdated: 'created' | 'updated',
-  ) {
-    yield* this._fetchOrders(fromDate, 'created');
-  }
-
-  async *fetchUpdatedOrders(
-    fromDate: Date | undefined,
-    createdOrUpdated: 'created' | 'updated',
-  ) {
-    yield* this._fetchOrders(fromDate, 'updated');
-  }
-
-  async *_fetchOrders(
-    fromDate: Date | undefined,
-    createdOrUpdated: 'created' | 'updated',
-  ) {
-    // Roapp принимает ISO-дату без миллисекунд: %Y-%m-%dT%H:%M:%SZ
-    const isoDateWithoutMs = fromDate?.toISOString().replace(/\.\d{3}Z$/, 'Z');
-
-    const params: Params = {
-      page: 1,
-      [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']:
-        isoDateWithoutMs,
-    };
-
-    while (true) {
-      try {
-        const {
-          data: { data: deals, paging },
-        } = await this.roApp.instance.get(`/orders`, { params });
-
-        yield deals.map((deal: unknown) => OrderSchema.parse(deal));
-
-        const { page, total_pages } = paging;
-        if (page === total_pages) break;
-
-        params.page++;
-        await delay(500);
-      } catch (error) {
-        console.log(error);
-        throw new BadGatewayException(
-          `Failed to fetch sources from Roapp: ${error.message}`,
-        );
-      }
+    async *fetchCreatedOrders(
+        fromDate: Date | undefined,
+        createdOrUpdated: 'created' | 'updated',
+    ) {
+        yield* this._fetchOrders(fromDate, 'created');
     }
-  }
 
-  async fetchOrderItems(
-    orderId: number,
-  ): Promise<z.infer<typeof OrderItemSchema>[]> {
-    try {
-      const { data: items } = await this.roApp.instance.get(
-        `/orders/${orderId}/items`,
-      );
-      return items.map((item: unknown) => OrderItemSchema.parse(item));
-    } catch (error) {
-      throw new BadGatewayException(
-        `Failed to fetch sources from Roapp: ${error.message}`,
-      );
+    async *fetchUpdatedOrders(
+        fromDate: Date | undefined,
+        createdOrUpdated: 'created' | 'updated',
+    ) {
+        yield* this._fetchOrders(fromDate, 'updated');
     }
-  }
 
-  async *fetchServices() {
-    let requestPage = 1;
+    async *_fetchOrders(
+        fromDate: Date | undefined,
+        createdOrUpdated: 'created' | 'updated',
+    ) {
+        // Roapp принимает ISO-дату без миллисекунд: %Y-%m-%dT%H:%M:%SZ
+        const isoDateWithoutMs = fromDate
+            ?.toISOString()
+            .replace(/\.\d{3}Z$/, 'Z');
 
-    while (true) {
-      try {
-        const {
-          data: { data: services, paging },
-        } = await this.roApp.instance.get('/catalog/services', {
-          params: { page: requestPage },
-        });
+        const params: Params = {
+            page: 1,
+            [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']:
+                isoDateWithoutMs,
+        };
 
-        yield services.map((service: unknown) => ServiceSchema.parse(service));
+        while (true) {
+            try {
+                const {
+                    data: { data: deals, paging },
+                } = await this.roApp.instance.get(`/orders`, { params });
 
-        const { page, total_pages } = paging;
-        if (page === total_pages) break;
+                yield deals.map((deal: unknown) => OrderSchema.parse(deal));
 
-        requestPage++;
-        await delay(500);
-      } catch (error) {
-        throw new BadGatewayException(
-          `Failed to fetch sources from Roapp: ${error.message}`,
-        );
-      }
+                const { page, total_pages } = paging;
+                if (page === total_pages) break;
+
+                params.page++;
+                await delay(500);
+            } catch (error) {
+                console.log(error);
+                throw new BadGatewayException(
+                    `Failed to fetch sources from Roapp: ${error.message}`,
+                );
+            }
+        }
     }
-  }
 
-  async *fetchProducts() {
-    let requestPage = 1;
-
-    while (true) {
-      try {
-        const {
-          data: { data: services, paging },
-        } = await this.roApp.instance.get('/catalog/products', {
-          params: { page: requestPage },
-        });
-
-        yield services.map((service: unknown) => ProductSchema.parse(service));
-
-        const { page, total_pages } = paging;
-        if (page === total_pages) break;
-
-        requestPage++;
-        await delay(500);
-      } catch (error) {
-        throw new BadGatewayException(
-          `Failed to fetch sources from Roapp: ${error.message}`,
-        );
-      }
+    async fetchOrderItems(
+        orderId: number,
+    ): Promise<z.infer<typeof OrderItemSchema>[]> {
+        try {
+            const { data: items } = await this.roApp.instance.get(
+                `/orders/${orderId}/items`,
+            );
+            return items.map((item: unknown) => OrderItemSchema.parse(item));
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch sources from Roapp: ${error.message}`,
+            );
+        }
     }
-  }
 
-  async *fetchServicesCategories() {
-    yield* this._fetchCategories('/catalog/services/categories');
-  }
+    async *fetchServices() {
+        let requestPage = 1;
 
-  async *fetchProductsCategories() {
-    yield* this._fetchCategories('/catalog/products/categories');
-  }
+        while (true) {
+            try {
+                const {
+                    data: { data: services, paging },
+                } = await this.roApp.instance.get('/catalog/services', {
+                    params: { page: requestPage },
+                });
 
-  async fetchAllServiceCategories(): Promise<
-    { id: number; name: string; parentId: number | null }[]
-  > {
-    const categories: z.infer<typeof CategorySchema>[] = [];
-    for await (const batch of this.fetchServicesCategories()) {
-      categories.push(...batch);
+                yield services.map((service: unknown) =>
+                    ServiceSchema.parse(service),
+                );
+
+                const { page, total_pages } = paging;
+                if (page === total_pages) break;
+
+                requestPage++;
+                await delay(500);
+            } catch (error) {
+                throw new BadGatewayException(
+                    `Failed to fetch sources from Roapp: ${error.message}`,
+                );
+            }
+        }
     }
-    return categories.map((c) => ({
-      id: c.id,
-      name: c.title,
-      parentId: c.parent_id,
-    }));
-  }
 
-  async *_fetchCategories(url: string) {
-    let requestPage = 1;
+    async *fetchProducts() {
+        let requestPage = 1;
 
-    while (true) {
-      try {
-        const {
-          data: { data: serviceCatalog, paging },
-        } = await this.roApp.instance.get(url, {
-          params: { page: requestPage },
-        });
+        while (true) {
+            try {
+                const {
+                    data: { data: services, paging },
+                } = await this.roApp.instance.get('/catalog/products', {
+                    params: { page: requestPage },
+                });
 
-        yield serviceCatalog.map((item: unknown) => CategorySchema.parse(item));
+                yield services.map((service: unknown) =>
+                    ProductSchema.parse(service),
+                );
 
-        const { page, total_pages } = paging;
-        if (page === total_pages) break;
+                const { page, total_pages } = paging;
+                if (page === total_pages) break;
 
-        requestPage++;
-        await delay(500);
-      } catch (error) {
-        throw new BadGatewayException(
-          `Failed to fetch sources from Roapp: ${error.message}`,
-        );
-      }
+                requestPage++;
+                await delay(500);
+            } catch (error) {
+                throw new BadGatewayException(
+                    `Failed to fetch sources from Roapp: ${error.message}`,
+                );
+            }
+        }
     }
-  }
 
-  async fetchEmployees(): Promise<z.infer<typeof EmployeesShortSchema>[]> {
-    try {
-      const {
-        data: { data: employees },
-      } = await this.roApp.instance.get('/company/employees');
-      return employees.map((employee: unknown) =>
-        EmployeesShortSchema.parse(employee),
-      );
-    } catch (error) {
-      throw new BadGatewayException(
-        `Failed to fetch sources from Roapp: ${error.message}`,
-      );
+    async *fetchServicesCategories() {
+        yield* this._fetchCategories('/catalog/services/categories');
     }
-  }
 
-  async fetchOrderTypes(): Promise<z.infer<typeof OrderTypesSchema>[]> {
-    try {
-      const { data: orderTypes } =
-        await this.roApp.instance.get('/orders/types');
-      return orderTypes.map((orderType: unknown) =>
-        OrderTypesSchema.parse(orderType),
-      );
-    } catch (error) {
-      throw new BadGatewayException(
-        `Failed to fetch orderTypes from Roapp: ${error.message}`,
-      );
+    async *fetchProductsCategories() {
+        yield* this._fetchCategories('/catalog/products/categories');
     }
-  }
 
-  async fetchOrderStatuses(): Promise<z.infer<typeof OrderStatusesSchema>[]> {
-    try {
-      const { data: orderTypes } =
-        await this.roApp.instance.get('/orders/statuses');
-      return orderTypes.map((orderType: unknown) =>
-        OrderStatusesSchema.parse(orderType),
-      );
-    } catch (error) {
-      throw new BadGatewayException(
-        `Failed to fetch sources from Roapp: ${error.message}`,
-      );
+    async fetchAllServiceCategories(): Promise<
+        { id: number; name: string; parentId: number | null }[]
+    > {
+        const categories: z.infer<typeof CategorySchema>[] = [];
+        for await (const batch of this.fetchServicesCategories()) {
+            categories.push(...batch);
+        }
+        return categories.map((c) => ({
+            id: c.id,
+            name: c.title,
+            parentId: c.parent_id,
+        }));
     }
-  }
 
-  async fetchMarketingSources(): Promise<
-    z.infer<typeof MarketingSourcesShortSchema>[]
-  > {
-    try {
-      const res = await fetch('https://api.roapp.io/marketing/campaigns/', {
-        headers: { Authorization: `Bearer ${process.env.ROAPP_TOKEN}` },
-      });
-      const { data: marketingSources } = await res.json();
-      return marketingSources.map((marketingSource: unknown) =>
-        MarketingSourcesShortSchema.parse(marketingSource),
-      );
-    } catch (error) {
-      throw new BadGatewayException(
-        `Failed to fetch sources from Roapp: ${error.message}`,
-      );
+    async *_fetchCategories(url: string) {
+        let requestPage = 1;
+
+        while (true) {
+            try {
+                const {
+                    data: { data: serviceCatalog, paging },
+                } = await this.roApp.instance.get(url, {
+                    params: { page: requestPage },
+                });
+
+                yield serviceCatalog.map((item: unknown) =>
+                    CategorySchema.parse(item),
+                );
+
+                const { page, total_pages } = paging;
+                if (page === total_pages) break;
+
+                requestPage++;
+                await delay(500);
+            } catch (error) {
+                throw new BadGatewayException(
+                    `Failed to fetch sources from Roapp: ${error.message}`,
+                );
+            }
+        }
     }
-  }
+
+    async fetchEmployees(): Promise<z.infer<typeof EmployeesShortSchema>[]> {
+        try {
+            const {
+                data: { data: employees },
+            } = await this.roApp.instance.get('/company/employees');
+            return employees.map((employee: unknown) =>
+                EmployeesShortSchema.parse(employee),
+            );
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch sources from Roapp: ${error.message}`,
+            );
+        }
+    }
+
+    async fetchOrderTypes(): Promise<z.infer<typeof OrderTypesSchema>[]> {
+        try {
+            const { data: orderTypes } =
+                await this.roApp.instance.get('/orders/types');
+            return orderTypes.map((orderType: unknown) =>
+                OrderTypesSchema.parse(orderType),
+            );
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch orderTypes from Roapp: ${error.message}`,
+            );
+        }
+    }
+
+    async fetchOrderStatuses(): Promise<z.infer<typeof OrderStatusesSchema>[]> {
+        try {
+            const { data: orderTypes } =
+                await this.roApp.instance.get('/orders/statuses');
+            return orderTypes.map((orderType: unknown) =>
+                OrderStatusesSchema.parse(orderType),
+            );
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch sources from Roapp: ${error.message}`,
+            );
+        }
+    }
+
+    async fetchMarketingSources(): Promise<
+        z.infer<typeof MarketingSourcesShortSchema>[]
+    > {
+        try {
+            const res = await fetch(
+                'https://api.roapp.io/marketing/campaigns/',
+                {
+                    headers: {
+                        Authorization: `Bearer ${process.env.ROAPP_TOKEN}`,
+                    },
+                },
+            );
+            const { data: marketingSources } = await res.json();
+            return marketingSources.map((marketingSource: unknown) =>
+                MarketingSourcesShortSchema.parse(marketingSource),
+            );
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch sources from Roapp: ${error.message}`,
+            );
+        }
+    }
 }

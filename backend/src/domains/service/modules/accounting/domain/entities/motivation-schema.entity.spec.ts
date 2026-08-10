@@ -17,6 +17,7 @@ describe('MotivationSchema', () => {
                 const rule = PayPerHoursEntity.create({
                     type: 'PayPerHour',
                     name: 'Почасовая ставка',
+                    targetRole: 'ENGINEER',
                     config: { price: 500 },
                 });
 

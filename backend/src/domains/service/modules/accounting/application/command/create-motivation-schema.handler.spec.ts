@@ -86,11 +86,13 @@ describe('CreateMotivationSchemaHandler', () => {
                     {
                         type: 'PayPerHour',
                         name: 'Часы',
+                        targetRole: 'ENGINEER',
                         config: { price: 100 },
                     },
                     {
                         type: 'ServiceCompleted',
                         name: 'Услуги',
+                        targetRole: 'ENGINEER',
                         config: { award: { type: 'ServiceFixed' } },
                     },
                 ],

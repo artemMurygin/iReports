@@ -22,6 +22,7 @@ describe('MotivationSchemaMapper', () => {
                         motivationSchemaId: 'schema-1',
                         type: 'PayPerHour',
                         name: 'Часы',
+                        targetRole: 'ENGINEER',
                         props: { hours: 2, price: 300 },
                         createdAt,
                         updatedAt,
@@ -38,7 +39,21 @@ describe('MotivationSchemaMapper', () => {
                 name: 'Оклад',
             });
             expect(props.rules).toHaveLength(1);
-            expect(props.rules[0].calculate()).toBe(600);
+            expect(
+                props.rules[0].calculate({
+                    employee: { id: 7, identities: [] },
+                    period: {
+                        direction: 'service',
+                        period: '2026-08',
+                        from: new Date('2026-08-01T00:00:00.000Z'),
+                        to: new Date('2026-08-31T23:59:59.999Z'),
+                        status: 'OPEN',
+                    },
+                    mode: 'FACT',
+                    erpData: undefined,
+                    salesPerformance: null,
+                }).amount,
+            ).toBe(600);
         });
 
         it('восстанавливает схему без правил как пустой список', () => {

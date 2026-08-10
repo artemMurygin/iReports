@@ -4,7 +4,7 @@ import { MoySkladSyncService } from './moysklad-sync.service';
 import { MoySkladSyncCron } from './moysklad-sync.cron';
 
 @Module({
-  imports: [MoyskladModule],
-  providers: [MoySkladSyncService, MoySkladSyncCron],
+    imports: [MoyskladModule],
+    providers: [MoySkladSyncService, MoySkladSyncCron],
 })
 export class MoySkladSyncModule {}

@@ -9,6 +9,7 @@ describe('SalaryRuleFactory', () => {
         const rule = SalaryRuleFactory.create({
             type: 'PayPerHour',
             name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
             config: { price: 100 },
         });
 
@@ -19,6 +20,7 @@ describe('SalaryRuleFactory', () => {
         const rule = SalaryRuleFactory.create({
             type: 'ServiceCompleted',
             name: 'За услугу',
+            targetRole: 'ENGINEER',
             config: { award: { type: 'ServiceFixed' } },
         });
 
@@ -34,6 +36,7 @@ describe('SalaryRuleFactory', () => {
                     // сущность ещё не реализована).
                     type: 'OrderPayed' as never,
                     name: 'За оплаченный заказ',
+                    targetRole: 'ENGINEER' as never,
                     config: {} as never,
                 }),
             ).toThrow(NotFoundException);

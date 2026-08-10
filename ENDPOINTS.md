@@ -2,6 +2,9 @@
 
 Все пути указаны от корня, глобальный префикс не задан.
 
+## domains/service/modules/accounting (`/accounting`)
+- `GET /accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника за период (`period` — `YYYY-MM`): итог и разбивка по правилам мотивационной схемы, пара «факт/прогноз»
+
 ## deals (`/deals`)
 - `GET /deals?from&to` — список сделок за период
 - `GET /deals/stages` — этапы

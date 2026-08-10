@@ -4,7 +4,7 @@ import { RoappSyncService } from './roapp-sync.service';
 import { RoappSyncCron } from './roapp-sync.cron';
 
 @Module({
-  imports: [RoappGatewayModule],
-  providers: [RoappSyncService, RoappSyncCron],
+    imports: [RoappGatewayModule],
+    providers: [RoappSyncService, RoappSyncCron],
 })
 export class RoappSyncModule {}

@@ -1,0 +1,18 @@
+# Используется сборкой backend (docker-compose.yml: backend.build.context: .)
+# Сборка frontend использует свой собственный frontend/.dockerignore (context: ./frontend)
+
+**/node_modules
+**/dist
+**/*.log
+.env
+**/.env
+.git
+.idea
+.vscode
+.github
+
+# Не нужен для сборки backend
+frontend
+
+# Старая версия backend, не участвует в сборке
+backend/deprecated

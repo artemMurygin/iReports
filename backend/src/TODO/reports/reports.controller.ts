@@ -5,20 +5,20 @@ import { getServicesSoldReportDTO } from './dto/getServicesSoldReport.dto';
 
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+    constructor(private readonly reportsService: ReportsService) {}
 
-  @Get('service-funnel')
-  getServiceFunnelReport(@Query() filter: getServiceFunnelReportDTO) {
-    return this.reportsService.getServiceFunnelReport(filter);
-  }
+    @Get('service-funnel')
+    getServiceFunnelReport(@Query() filter: getServiceFunnelReportDTO) {
+        return this.reportsService.getServiceFunnelReport(filter);
+    }
 
-  @Get('service-categories')
-  getServiceCategories() {
-    return this.reportsService.getServiceCategories();
-  }
+    @Get('service-categories')
+    getServiceCategories() {
+        return this.reportsService.getServiceCategories();
+    }
 
-  @Get('services-analytics')
-  getServicesAnalytics(@Query() filter: getServicesSoldReportDTO) {
-    return this.reportsService.getServicesAnalytics(filter);
-  }
+    @Get('services-analytics')
+    getServicesAnalytics(@Query() filter: getServicesSoldReportDTO) {
+        return this.reportsService.getServicesAnalytics(filter);
+    }
 }

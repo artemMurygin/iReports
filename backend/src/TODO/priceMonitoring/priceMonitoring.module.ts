@@ -9,14 +9,14 @@ import { RoappModule } from '../../domains/service/integrations/roapp/roapp.modu
 import { CustomApiRoappModule } from '../../domains/service/integrations/custom-api-roapp/custom-api-roapp.module';
 
 @Module({
-  imports: [
-    AiModule,
-    GoogleSheetsModule,
-    MoyskladModule,
-    RoappModule,
-    CustomApiRoappModule,
-  ],
-  controllers: [PriceMonitoringController],
-  providers: [PriceMonitoringService, PriceMonitoringProgressService],
+    imports: [
+        AiModule,
+        GoogleSheetsModule,
+        MoyskladModule,
+        RoappModule,
+        CustomApiRoappModule,
+    ],
+    controllers: [PriceMonitoringController],
+    providers: [PriceMonitoringService, PriceMonitoringProgressService],
 })
 export class PriceMonitoringModule {}

@@ -1,6 +1,0 @@
-node_modules
-dist
-deprecated
-.env
-*.log
-.git

@@ -1,36 +1,36 @@
 import { ValueObject } from '@/shared/domain/value-object.base';
 
 export type LeadDeviceInfoProps = {
-  deviceTypeId: number | null;
-  deviceType: string | null;
-  brandId: number | null;
-  brand: string | null;
-  model: string | null;
-  malfunction: string | null;
+    deviceTypeId: number | null;
+    deviceType: string | null;
+    brandId: number | null;
+    brand: string | null;
+    model: string | null;
+    malfunction: string | null;
 };
 
 export class LeadDeviceInfo extends ValueObject<LeadDeviceInfoProps> {
-  getDeviceTypeId() {
-    return this.props.deviceTypeId;
-  }
+    getDeviceTypeId() {
+        return this.props.deviceTypeId;
+    }
 
-  getDeviceType() {
-    return this.props.deviceType;
-  }
+    getDeviceType() {
+        return this.props.deviceType;
+    }
 
-  getBrandId() {
-    return this.props.brandId;
-  }
+    getBrandId() {
+        return this.props.brandId;
+    }
 
-  getBrand() {
-    return this.props.brand;
-  }
+    getBrand() {
+        return this.props.brand;
+    }
 
-  getModel() {
-    return this.props.model;
-  }
+    getModel() {
+        return this.props.model;
+    }
 
-  getMalfunction() {
-    return this.props.malfunction;
-  }
+    getMalfunction() {
+        return this.props.malfunction;
+    }
 }

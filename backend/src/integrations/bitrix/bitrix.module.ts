@@ -5,8 +5,8 @@ import { BitrixHttpService } from './bitrix.instance';
 import { BitrixAuthService } from './bitrix-auth.service';
 
 @Module({
-  controllers: [BitrixController],
-  providers: [BitrixService, BitrixHttpService, BitrixAuthService],
-  exports: [BitrixService, BitrixAuthService],
+    controllers: [BitrixController],
+    providers: [BitrixService, BitrixHttpService, BitrixAuthService],
+    exports: [BitrixService, BitrixAuthService],
 })
 export class BitrixModule {}

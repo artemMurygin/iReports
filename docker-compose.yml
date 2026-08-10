@@ -19,8 +19,10 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      # Контекст — корень репозитория: backend зависит от workspace-пакета
+      # ireports-contracts (../contracts), который резолвится через корневой npm workspace
+      context: .
+      dockerfile: backend/docker/Dockerfile
     env_file:
       - .env
     restart: unless-stopped
@@ -41,7 +43,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
       args:
         VITE_API_URL: https://api.murygin.tech
     restart: unless-stopped

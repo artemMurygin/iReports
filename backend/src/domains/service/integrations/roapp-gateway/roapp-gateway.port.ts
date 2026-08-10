@@ -11,8 +11,8 @@ import { Product } from '../roapp/schemas/products.schema';
 import { ServiceBonusForEngeneer } from '../custom-api-roapp/schemas/serviceBonusForEngeneer.schema';
 import { ServiceBonusById } from '../custom-api-roapp/schemas/serviceBonusById.schema';
 import {
-  CreateServiceRequest,
-  CreateServiceResponse,
+    CreateServiceRequest,
+    CreateServiceResponse,
 } from '../custom-api-roapp/schemas/createService.schema';
 import { UpdateServicesResponse } from '../custom-api-roapp/schemas/updateServices.schema';
 
@@ -31,25 +31,27 @@ export type OrderItem = NonNullable<z.infer<typeof OrderItemSchema>>;
  * от этого интерфейса и токена ROAPP_GATEWAY, не от конкретных API.
  */
 export interface RoappGateway {
-  fetchEmployees(): Promise<EmployeeShort[]>;
-  fetchOrderTypes(): Promise<OrderType[]>;
-  fetchOrderStatuses(): Promise<OrderStatus[]>;
-  fetchMarketingSources(): Promise<MarketingSourceShort[]>;
+    fetchEmployees(): Promise<EmployeeShort[]>;
+    fetchOrderTypes(): Promise<OrderType[]>;
+    fetchOrderStatuses(): Promise<OrderStatus[]>;
+    fetchMarketingSources(): Promise<MarketingSourceShort[]>;
 
-  fetchServiceCategories(): AsyncGenerator<Category[]>;
-  fetchProductCategories(): AsyncGenerator<Category[]>;
-  fetchServices(): AsyncGenerator<Service[]>;
-  fetchProducts(): AsyncGenerator<Product[]>;
+    fetchServiceCategories(): AsyncGenerator<Category[]>;
+    fetchProductCategories(): AsyncGenerator<Category[]>;
+    fetchServices(): AsyncGenerator<Service[]>;
+    fetchProducts(): AsyncGenerator<Product[]>;
 
-  fetchCreatedOrders(fromDate?: Date): AsyncGenerator<Order[]>;
-  fetchUpdatedOrders(fromDate?: Date): AsyncGenerator<Order[]>;
-  fetchOrderItems(orderId: number): Promise<OrderItem[]>;
+    fetchCreatedOrders(fromDate?: Date): AsyncGenerator<Order[]>;
+    fetchUpdatedOrders(fromDate?: Date): AsyncGenerator<Order[]>;
+    fetchOrderItems(orderId: number): Promise<OrderItem[]>;
 
-  fetchServiceBonuses(): Promise<ServiceBonusForEngeneer[]>;
-  fetchServiceBonusById(id: number): Promise<ServiceBonusById | null>;
+    fetchServiceBonuses(): Promise<ServiceBonusForEngeneer[]>;
+    fetchServiceBonusById(id: number): Promise<ServiceBonusById | null>;
 
-  createService(payload: CreateServiceRequest): Promise<CreateServiceResponse>;
-  updateServicesFromFile(file: Buffer): Promise<UpdateServicesResponse>;
+    createService(
+        payload: CreateServiceRequest,
+    ): Promise<CreateServiceResponse>;
+    updateServicesFromFile(file: Buffer): Promise<UpdateServicesResponse>;
 }
 
 export const ROAPP_GATEWAY = Symbol('ROAPP_GATEWAY');

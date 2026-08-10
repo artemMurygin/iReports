@@ -23,6 +23,7 @@ describe('CreateSalaryRuleHandler', () => {
                 rule: {
                     type: 'PayPerHour',
                     name: 'Часы',
+                    targetRole: 'ENGINEER',
                     config: { hours: 5, price: 200 },
                 },
             });
@@ -32,7 +33,21 @@ describe('CreateSalaryRuleHandler', () => {
             expect(insert).toHaveBeenCalledTimes(1);
             const [entity, meta] = insert.mock.calls[0];
             expect(entity).toBeInstanceOf(PayPerHoursEntity);
-            expect(entity.calculate()).toBe(1000);
+            expect(
+                entity.calculate({
+                    employee: { id: 1, identities: [] },
+                    period: {
+                        direction: 'service',
+                        period: '2026-08',
+                        from: new Date('2026-08-01T00:00:00.000Z'),
+                        to: new Date('2026-08-31T23:59:59.999Z'),
+                        status: 'OPEN',
+                    },
+                    mode: 'FACT',
+                    erpData: undefined,
+                    salesPerformance: null,
+                }).amount,
+            ).toBe(1000);
             expect(meta).toEqual({ motivationSchemaId: 'schema-1' });
         });
     });
@@ -45,6 +60,7 @@ describe('CreateSalaryRuleHandler', () => {
                 rule: {
                     type: 'ServiceCompleted',
                     name: 'Услуги',
+                    targetRole: 'ENGINEER',
                     config: { award: { type: 'ServiceFixed' } },
                 },
             });
