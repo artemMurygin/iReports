@@ -33,11 +33,9 @@ describe('MotivationSchemaMapper', () => {
             expect(schema).toBeInstanceOf(MotivationSchema);
             expect(schema.id).toBe('schema-1');
             const props = schema.getProps();
-            expect(props).toMatchObject({
-                targetType: 'Employee',
-                targetId: 7,
-                name: 'Оклад',
-            });
+            expect(props.target.getType()).toBe('Employee');
+            expect(props.target.getId()).toBe(7);
+            expect(props.name).toBe('Оклад');
             expect(props.rules).toHaveLength(1);
             expect(
                 props.rules[0].calculate({

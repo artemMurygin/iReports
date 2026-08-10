@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { MotivationSchemaCreatedEventHandler } from './motivation-schema-created.event-handler';
 import { MotivationSchemaCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/motivation-schema-created.domain-event';
+import { MotivationTarget } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
 
 describe('MotivationSchemaCreatedEventHandler', () => {
     it('логирует id, targetType/targetId, name и число правил из события', () => {
@@ -12,8 +13,7 @@ describe('MotivationSchemaCreatedEventHandler', () => {
             const handler = new MotivationSchemaCreatedEventHandler();
             const event = new MotivationSchemaCreatedDomainEvent({
                 aggregateId: 'schema-1',
-                targetType: 'Employee',
-                targetId: 7,
+                target: MotivationTarget.create('Employee', 7),
                 name: 'Оклад',
                 rules: [],
             });

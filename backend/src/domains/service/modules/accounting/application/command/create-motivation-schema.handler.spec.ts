@@ -67,11 +67,10 @@ describe('CreateMotivationSchemaHandler', () => {
             expect(insert).toHaveBeenCalledTimes(1);
             const [insertedEntity] = insert.mock.calls[0];
             expect(insertedEntity).toBeInstanceOf(MotivationSchema);
-            expect(insertedEntity.getProps()).toMatchObject({
-                targetType: 'Employee',
-                targetId: 1,
-                name: 'Оклад',
-            });
+            const insertedProps = insertedEntity.getProps();
+            expect(insertedProps.target.getType()).toBe('Employee');
+            expect(insertedProps.target.getId()).toBe(1);
+            expect(insertedProps.name).toBe('Оклад');
         });
     });
 

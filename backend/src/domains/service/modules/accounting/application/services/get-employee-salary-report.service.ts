@@ -1,12 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
-import { ArgumentInvalidException } from '@/shared/exceptions';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
+import { Period } from '@/domains/service/modules/accounting/domain/value-objects/period.value-object';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
-
-const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 // Тонкий сквозной путь Фазы 1: находит мотивационную схему сотрудника,
 // один раз собирает контекст расчёта (отдельно для FACT и для PROGNOSE —
@@ -34,20 +32,22 @@ export class GetEmployeeSalaryReportService {
         employeeId: number,
         period: string,
     ): Promise<EmployeeSalaryReportResponse> {
-        if (!PERIOD_PATTERN.test(period)) {
-            throw new ArgumentInvalidException(
-                `Период должен быть в формате YYYY-MM, получено: "${period}"`,
-            );
-        }
+        const validatedPeriod = Period.create(period);
 
         const schema =
             await this.motivationSchemaRepo.findByEmployee(employeeId);
         const rules = schema?.getProps().rules ?? [];
 
-        const { from, to } = buildMonthBounds(period);
+        const { from, to } = validatedPeriod.getBounds();
         const baseContext: Omit<CalculationContext, 'mode'> = {
             employee: { id: employeeId, identities: [] },
-            period: { direction: 'service', period, from, to, status: 'OPEN' },
+            period: {
+                direction: 'service',
+                period: validatedPeriod.getValue(),
+                from,
+                to,
+                status: 'OPEN',
+            },
             erpData: undefined,
             salesPerformance: null,
         };
@@ -94,12 +94,4 @@ export class GetEmployeeSalaryReportService {
             grandTotal: { fact: factTotal, prognose: prognoseTotal },
         };
     }
-}
-
-function buildMonthBounds(period: string): { from: Date; to: Date } {
-    const [year, month] = period.split('-').map(Number);
-    const from = new Date(Date.UTC(year, month - 1, 1));
-    // День 0 следующего месяца — последний день текущего.
-    const to = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
-    return { from, to };
 }

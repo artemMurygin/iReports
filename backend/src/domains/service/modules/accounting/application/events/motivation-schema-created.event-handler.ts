@@ -16,7 +16,7 @@ export class MotivationSchemaCreatedEventHandler {
     handle(event: MotivationSchemaCreatedDomainEvent): void {
         this.logger.log(
             `MotivationSchema создана: id=${event.aggregateId}, ` +
-                `targetType=${event.targetType}, targetId=${event.targetId}, ` +
+                `targetType=${event.target.getType()}, targetId=${event.target.getId()}, ` +
                 `name="${event.name}", rules=${event.rules.length}`,
         );
     }

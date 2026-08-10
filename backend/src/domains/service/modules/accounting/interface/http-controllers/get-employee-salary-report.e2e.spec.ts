@@ -28,7 +28,7 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
 
     const fakeMotivationSchemaRepo: MotivationSchemaRepositoryPort = {
         insert: (entity) => {
-            schemas.set(entity.getProps().targetId, entity);
+            schemas.set(entity.getProps().target.getId(), entity);
             return Promise.resolve();
         },
         findByEmployee: (employeeId) =>

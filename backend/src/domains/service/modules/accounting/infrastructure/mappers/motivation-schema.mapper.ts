@@ -5,6 +5,7 @@ import {
 } from '../../../../../../../prisma/generated/prisma/schema/client';
 import { Mapper } from '@/shared/domain/mapper.interface';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationTarget } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
 import { SalaryRuleMapper } from './salary-rule.mapper';
 
 // Правила больше не хранятся в самой строке motivation_schemas (см.
@@ -25,8 +26,10 @@ export class MotivationSchemaMapper implements Mapper<
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
             props: {
-                targetType: record.targetType as 'Department' | 'Employee',
-                targetId: record.targetId,
+                target: MotivationTarget.create(
+                    record.targetType as 'Department' | 'Employee',
+                    record.targetId,
+                ),
                 name: record.name,
                 rules: record.rules.map((rule) =>
                     this.salaryRuleMapper.toDomain(rule),
@@ -41,8 +44,8 @@ export class MotivationSchemaMapper implements Mapper<
         const props = entity.getProps();
         return {
             id: props.id,
-            targetType: props.targetType,
-            targetId: props.targetId,
+            targetType: props.target.getType(),
+            targetId: props.target.getId(),
             name: props.name,
             createdAt: props.createdAt,
             updatedAt: props.updatedAt,

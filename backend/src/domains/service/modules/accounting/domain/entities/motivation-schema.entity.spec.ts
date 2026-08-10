@@ -27,12 +27,11 @@ describe('MotivationSchema', () => {
                 });
 
                 expect(schema.id).toEqual(expect.any(String));
-                expect(schema.getProps()).toMatchObject({
-                    targetType: baseProps.targetType,
-                    targetId: baseProps.targetId,
-                    name: baseProps.name,
-                    rules: [rule],
-                });
+                const props = schema.getProps();
+                expect(props.target.getType()).toBe(baseProps.targetType);
+                expect(props.target.getId()).toBe(baseProps.targetId);
+                expect(props.name).toBe(baseProps.name);
+                expect(props.rules).toEqual([rule]);
             });
         });
 
@@ -49,12 +48,10 @@ describe('MotivationSchema', () => {
                     MotivationSchemaCreatedDomainEvent,
                 );
                 expect(event.aggregateId).toBe(schema.id);
-                expect(event).toMatchObject({
-                    targetType: baseProps.targetType,
-                    targetId: baseProps.targetId,
-                    name: baseProps.name,
-                    rules: [],
-                });
+                expect(event.target.getType()).toBe(baseProps.targetType);
+                expect(event.target.getId()).toBe(baseProps.targetId);
+                expect(event.name).toBe(baseProps.name);
+                expect(event.rules).toEqual([]);
             });
         });
 
