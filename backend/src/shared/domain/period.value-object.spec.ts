@@ -76,4 +76,61 @@ describe('Period', () => {
             jest.useRealTimers();
         });
     });
+
+    describe('getTotalCalendarDays', () => {
+        it('возвращает число дней месяца', () => {
+            expect(Period.create('2026-08').getTotalCalendarDays()).toBe(31);
+        });
+
+        it('корректно считает февраль', () => {
+            expect(Period.create('2026-02').getTotalCalendarDays()).toBe(28);
+        });
+    });
+
+    describe('getElapsedCalendarDays', () => {
+        // Решение зафиксировано (Фаза 5, docs/payroll/plan-payroll-calculation.md):
+        // день считается прошедшим, только когда он уже целиком закончился —
+        // текущие, ещё не завершившиеся сутки не в счёт.
+        it('0 в первую же минуту месяца — ни один день ещё не закончился', () => {
+            const period = Period.create('2026-08');
+            const now = new Date('2026-08-01T00:00:00.000Z');
+
+            expect(period.getElapsedCalendarDays(now)).toBe(0);
+        });
+
+        it('день не засчитывается прошедшим до его окончания', () => {
+            const period = Period.create('2026-08');
+            const now = new Date('2026-08-01T23:59:59.999Z');
+
+            expect(period.getElapsedCalendarDays(now)).toBe(0);
+        });
+
+        it('день засчитывается прошедшим ровно с начала следующих суток', () => {
+            const period = Period.create('2026-08');
+            const now = new Date('2026-08-02T00:00:00.000Z');
+
+            expect(period.getElapsedCalendarDays(now)).toBe(1);
+        });
+
+        it('в середине месяца считает ровно прошедшие сутки', () => {
+            const period = Period.create('2026-08');
+            const now = new Date('2026-08-15T12:00:00.000Z');
+
+            expect(period.getElapsedCalendarDays(now)).toBe(14);
+        });
+
+        it('зажимает результат числом дней месяца, если now позже конца периода (закрытый/прошлый месяц)', () => {
+            const period = Period.create('2026-08');
+            const now = new Date('2026-12-01T00:00:00.000Z');
+
+            expect(period.getElapsedCalendarDays(now)).toBe(31);
+        });
+
+        it('зажимает результат нулём, если now раньше начала периода', () => {
+            const period = Period.create('2026-08');
+            const now = new Date('2026-07-01T00:00:00.000Z');
+
+            expect(period.getElapsedCalendarDays(now)).toBe(0);
+        });
+    });
 });

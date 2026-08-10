@@ -63,4 +63,33 @@ export class Period extends ValueObject<string> {
         const month = String(date.getUTCMonth() + 1).padStart(2, '0');
         return Period.create(`${year}-${month}`);
     }
+
+    // Сколько дней в месяце периода целиком — последнее число месяца
+    // равно длине месяца (см. трюк "день 0 следующего месяца" в
+    // getBounds()).
+    getTotalCalendarDays(): number {
+        return this.getBounds().to.getUTCDate();
+    }
+
+    // Сколько календарных дней месяца уже полностью прошло к моменту `now`
+    // — вход формулы линейной экстраполяции SalesPrognose (Фаза 5, см.
+    // docs/payroll/plan-payroll-calculation.md). Решение, что считать
+    // "прошедшим днём", зафиксировано и должно оставаться единым везде,
+    // где используется этот метод: день засчитывается прошедшим, только
+    // когда он уже целиком закончился — текущие, ещё не завершившиеся
+    // сутки в счёт не идут (00:00 первого числа → 0 прошедших дней, 00:00
+    // второго числа → 1 прошедший день, и так далее). Результат зажат в
+    // границах [0, общее число дней месяца]: `now` раньше начала периода
+    // даёт 0, `now` на или после конца периода (закрытый месяц или период
+    // целиком в прошлом) даёт полное число дней месяца — экстраполировать
+    // в этом случае уже нечего.
+    getElapsedCalendarDays(now: Date = new Date()): number {
+        const { from } = this.getBounds();
+        const totalDays = this.getTotalCalendarDays();
+        const elapsedMs = now.getTime() - from.getTime();
+        const elapsedDays = Math.floor(elapsedMs / MS_PER_DAY);
+        return Math.min(Math.max(elapsedDays, 0), totalDays);
+    }
 }
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;

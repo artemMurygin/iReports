@@ -2,6 +2,7 @@ const motivationSchemaRoot = 'motivation-schema';
 const employeeIdentityRoot = 'employee-identity';
 const salesPlanRoot = 'sales/plan';
 const salesPlanTemplateRoot = 'sales/plan_template';
+const salesPerformanceRoot = 'sales/salesPerformance';
 
 // Api Versions
 const v1 = 'v1';
@@ -31,5 +32,10 @@ export const routesV1 = {
     },
     salesPlanTemplate: {
         root: salesPlanTemplateRoot,
+    },
+    // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
+    // направление в query (см. listSalesPerformanceQuerySchema).
+    salesPerformance: {
+        byPeriod: `/${salesPerformanceRoot}/:period`,
     },
 };

@@ -4,6 +4,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
 import type {
+    SalesPerformanceResponse,
     SalesPlanResponse,
     SalesPlanTemplateResponse,
 } from 'ireports-contracts';
@@ -14,9 +15,12 @@ import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/applicati
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
 import type { SalesPlanTemplateRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
+import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
+import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { SalesPlanTemplate } from '@/domains/service/modules/sales/domain/entities/sales-plan-template.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
+import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Как и get-employee-salary-report.e2e.spec.ts (см. соседний accounting-
 // модуль): поднимает SalesModule целиком через Nest TestingModule (реальные
@@ -24,15 +28,23 @@ import { DomainExceptionFilter } from '@/shared/exceptions';
 // границу с БД — репозитории. LEAD_REPOSITORY подменяется заглушкой: он не
 // участвует в сценариях этого теста, но реальная LeadRepository требует
 // живого DatabaseService из @Global() DatabaseModule, который сюда не
-// импортирован.
-describe('SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
+// импортирован. SERVICE_SALES_FACT_SOURCE подменяется по той же причине —
+// реальный RoappSalesFactSourceRepository тоже требует DatabaseService
+// (Фаза 5).
+describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
     let app: INestApplication;
 
     const plans = new Map<string, SalesPlan>();
     const templates = new Map<string, SalesPlanTemplate>();
+    let erpFacts: Awaited<ReturnType<ServiceSalesFactSourcePort['aggregate']>> =
+        [];
 
     const fakeLeadRepo: LeadRepositoryPort = {
         findModifiedSince: () => Promise.resolve([]),
+    };
+
+    const fakeFactSource: ServiceSalesFactSourcePort = {
+        aggregate: () => Promise.resolve(erpFacts),
     };
 
     const fakePlanRepo: SalesPlanRepositoryPort = {
@@ -107,6 +119,8 @@ describe('SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
             .useValue(fakePlanRepo)
             .overrideProvider(SALES_PLAN_TEMPLATE_REPOSITORY)
             .useValue(fakeTemplateRepo)
+            .overrideProvider(SERVICE_SALES_FACT_SOURCE)
+            .useValue(fakeFactSource)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -129,6 +143,7 @@ describe('SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
     afterEach(() => {
         plans.clear();
         templates.clear();
+        erpFacts = [];
     });
 
     it('заводит, читает, правит, утверждает и удаляет план месяца', async () => {
@@ -318,5 +333,83 @@ describe('SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
             .get('/v1/sales/plan_template')
             .expect(200);
         expect(listResponse.body).toHaveLength(1);
+    });
+
+    it('SalesPerformance: план, факт и прогноз одним запросом; правка/удаление плана видны сразу же (Фаза 5)', async () => {
+        const plan = withRequestContext(() =>
+            SalesPlan.create({
+                direction: 'service',
+                department: 1,
+                period: '2026-08',
+                turnover: 1_000_000,
+                margin: 200_000,
+                source: 'MANUAL',
+            }),
+        );
+        plans.set(plan.id, plan);
+        erpFacts = [
+            {
+                department: 1,
+                category: null,
+                turnover: 400_000,
+                cost: 240_000,
+                quantity: 10,
+            },
+        ];
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/sales/salesPerformance/2026-08')
+            .query({ direction: 'service' })
+            .expect(200);
+        const performances = listResponse.body as SalesPerformanceResponse[];
+        expect(performances).toHaveLength(1);
+        expect(performances[0]).toMatchObject({
+            direction: 'service',
+            period: '2026-08',
+            department: 1,
+            category: null,
+            plan: { status: 'CREATED', turnover: 1_000_000 },
+            fact: {
+                turnover: 400_000,
+                cost: 240_000,
+                margin: 160_000,
+                percentCompletion: 40,
+            },
+        });
+
+        // Правка плана меняет percentCompletion без изменения ERP-факта —
+        // SalesFact/SalesPrognose не персистятся, пересчитываются заново.
+        await request(app.getHttpServer())
+            .patch(`/v1/sales/plan/${plan.id}`)
+            .send({ turnover: 2_000_000 })
+            .expect(200);
+
+        const afterEdit = await request(app.getHttpServer())
+            .get('/v1/sales/salesPerformance/2026-08')
+            .query({ direction: 'service' })
+            .expect(200);
+        expect(
+            (afterEdit.body as SalesPerformanceResponse[])[0].fact
+                .percentCompletion,
+        ).toBe(20);
+
+        // Удаление плана удаляет факт и прогноз — строка пропадает из
+        // ответа целиком.
+        await request(app.getHttpServer())
+            .delete(`/v1/sales/plan/${plan.id}`)
+            .expect(204);
+
+        const afterDelete = await request(app.getHttpServer())
+            .get('/v1/sales/salesPerformance/2026-08')
+            .query({ direction: 'service' })
+            .expect(200);
+        expect(afterDelete.body).toHaveLength(0);
+    });
+
+    it('SalesPerformance отклоняет направление shop в Фазе 5', async () => {
+        await request(app.getHttpServer())
+            .get('/v1/sales/salesPerformance/2026-08')
+            .query({ direction: 'shop' })
+            .expect(400);
     });
 });

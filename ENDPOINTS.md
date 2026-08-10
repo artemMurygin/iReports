@@ -16,7 +16,7 @@ access token текущего пользователя из `BX24.getAuth()`); �
 - `GET /v1/employee-identity/employee/:employeeId` — связи конкретного сотрудника
 - `GET /v1/employee-identity/unmatched` — сотрудники Bitrix без единой связи ни в одной системе
 
-## domains/service/modules/sales (`/v1/sales/plan`, `/v1/sales/plan_template`)
+## domains/service/modules/sales (`/v1/sales/plan`, `/v1/sales/plan_template`, `/v1/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели общие для направлений
 `service`/`shop` (Фаза 11 переиспользует их без изменения формы). Без модели прав в проекте эндпоинты
 не закрыты гардом (в отличие от `employee-identity`, см. «неблокирующие вопросы» PRD).
@@ -27,6 +27,7 @@ access token текущего пользователя из `BX24.getAuth()`); �
 - `POST /v1/sales/plan/approve` — утвердить построчно (`{ ids, approvedBy }`) или весь месяц по направлению (`{ direction, period, approvedBy }`); уже утверждённые строки не трогает
 - `GET /v1/sales/plan_template?direction` — дефолтный шаблон плана (оборот, маржа, процент роста) по отделам/категориям
 - `PUT /v1/sales/plan_template` — upsert строки шаблона по естественному ключу `(direction, department, category)`
+- `GET /v1/sales/salesPerformance/:period?direction` — план, факт и прогноз одним запросом по каждому отделу и категории направления за период (Фаза 5); факт и прогноз не персистятся, считаются заново на каждый запрос по данным ERP и текущему плану. В этой фазе поддержан только `direction=service` (`shop` — `400`, появится в Фазе 11)
 
 ## deals (`/deals`)
 - `GET /deals?from&to` — список сделок за период

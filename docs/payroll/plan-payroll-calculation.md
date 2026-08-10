@@ -92,11 +92,11 @@
 **Что затрагивает?** backend, database, contracts
 
 **Задачи:**
-- [ ] `SalesFact` по данным ERP: `turnover`, `margin`, `marginPercent`, `cost`, `quantity`, `averageCheck`, `percentCompletion`.
-- [ ] `SalesPrognose`: `turnover`, `margin`, `marginPercent`, `quantity`, `percentCompletion` по зафиксированной формуле (одна на оба домена — см. блокирующие вопросы).
-- [ ] Агрегат `SalesPerformance` (`period`, `department`, `category`, `plan`, `fact`, `prognose`) и эндпоинт `GET /sales/salesPerformance/:period`.
-- [ ] Порт чтения `SalesPerformance` для модуля `accounting` — дублирующего расчёта плана внутри зарплатного модуля нет; изменение плана пересчитывает факт и прогноз, удаление плана удаляет их.
-- [ ] Контракты `SalesFact` / `SalesPrognose` / `SalesPerformance`. Тесты: план в статусе `CREATED` полноценно участвует в расчёте процента выполнения; изменение плана меняет `percentCompletion`; удаление плана удаляет факт и прогноз.
+- [x] `SalesFact` по данным ERP: `turnover`, `margin`, `marginPercent`, `cost`, `quantity`, `averageCheck`, `percentCompletion`.
+- [x] `SalesPrognose`: `turnover`, `margin`, `marginPercent`, `quantity`, `percentCompletion` по зафиксированной формуле (одна на оба домена — см. блокирующие вопросы).
+- [x] Агрегат `SalesPerformance` (`period`, `department`, `category`, `plan`, `fact`, `prognose`) и эндпоинт `GET /sales/salesPerformance/:period`.
+- [x] Порт чтения `SalesPerformance` для модуля `accounting` — дублирующего расчёта плана внутри зарплатного модуля нет; изменение плана пересчитывает факт и прогноз, удаление плана удаляет их.
+- [x] Контракты `SalesFact` / `SalesPrognose` / `SalesPerformance`. Тесты: план в статусе `CREATED` полноценно участвует в расчёте процента выполнения; изменение плана меняет `percentCompletion`; удаление плана удаляет факт и прогноз.
 
 **Когда готово** Страница выполнения плана получает план, факт, процент выполнения и прогноз по каждому отделу и категории одним запросом.
 
@@ -320,7 +320,7 @@
 
 | Вопрос PRD | Блокирует |
 |---|---|
-| Формула расчёта `SalesPrognose` — линейная экстраполяция или учёт рабочих дней и сезонности | Фаза 5 (и, следовательно, 9, 11) |
+| ~~Формула расчёта `SalesPrognose` — линейная экстраполяция или учёт рабочих дней и сезонности~~ — решено: линейная экстраполяция по прошедшим календарным дням месяца, одна формула для service и shop (см. `SalesPrognose.forPeriod()` и `Period.getElapsedCalendarDays()` модуля `sales`) | Фаза 5 (и, следовательно, 9, 11) |
 | Что считается «оплаченным заказом» для `OrderPayed` — статус заказа или факт полной оплаты | Фаза 8 |
 | Что считается «задачей» для `TaskCompleted` и откуда берутся данные — в сервисе и в магазине | Фазы 8, 13 |
 | Где физически лежат закупщики (доп. поле `MoySkladProduct` или позиции отгрузки) и какой у значения тип (ссылка на сотрудника или строка) | Фаза 10 |

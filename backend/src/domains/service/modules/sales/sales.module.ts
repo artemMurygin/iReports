@@ -22,6 +22,11 @@ import { ApproveSalesPlanHttpController } from './interface/http-controllers/app
 import { ListSalesPlansHttpController } from './interface/http-controllers/list-sales-plans.http.controller';
 import { PutSalesPlanTemplateHttpController } from './interface/http-controllers/put-sales-plan-template.http.controller';
 import { ListSalesPlanTemplatesHttpController } from './interface/http-controllers/list-sales-plan-templates.http.controller';
+import { SERVICE_SALES_FACT_SOURCE } from './application/ports/service-sales-fact-source.port';
+import { RoappSalesFactSourceRepository } from './infrastructure/repositories/roapp-sales-fact-source.repository';
+import { SALES_PERFORMANCE_READER } from './application/ports/sales-performance.port';
+import { GetSalesPerformanceService } from './application/services/get-sales-performance.service';
+import { ListSalesPerformanceHttpController } from './interface/http-controllers/list-sales-performance.http.controller';
 
 // LEAD_REPOSITORY (сделки/лиды, см. domain/entities/{deal,lead}.entity.ts) —
 // более ранняя, не задействованная пока часть модуля (см.
@@ -40,6 +45,7 @@ import { ListSalesPlanTemplatesHttpController } from './interface/http-controlle
         ListSalesPlansHttpController,
         PutSalesPlanTemplateHttpController,
         ListSalesPlanTemplatesHttpController,
+        ListSalesPerformanceHttpController,
     ],
     providers: [
         { provide: LEAD_REPOSITORY, useClass: LeadRepository },
@@ -47,6 +53,10 @@ import { ListSalesPlanTemplatesHttpController } from './interface/http-controlle
         {
             provide: SALES_PLAN_TEMPLATE_REPOSITORY,
             useClass: SalesPlanTemplateRepository,
+        },
+        {
+            provide: SERVICE_SALES_FACT_SOURCE,
+            useClass: RoappSalesFactSourceRepository,
         },
         CreateSalesPlanHandler,
         UpdateSalesPlanHandler,
@@ -57,14 +67,24 @@ import { ListSalesPlanTemplatesHttpController } from './interface/http-controlle
         ListSalesPlansService,
         ListSalesPlanTemplatesService,
         SalesPlanAutoCreationCron,
+        GetSalesPerformanceService,
+        // Алиас DI-токена на тот же провайдер, что и конкретный класс —
+        // HTTP-контроллер этого модуля инжектит GetSalesPerformanceService
+        // напрямую, а accounting (Фаза 9) будет инжектить абстракцию через
+        // SALES_PERFORMANCE_READER (см. application/ports/sales-performance.port.ts).
+        {
+            provide: SALES_PERFORMANCE_READER,
+            useExisting: GetSalesPerformanceService,
+        },
     ],
     exports: [
         LEAD_REPOSITORY,
-        // Экспортируется заранее для Фазы 5 (accounting читает
-        // SalesPerformance через порт этого модуля, без дублирования
-        // расчёта плана — см. "Когда готово" Фазы 5 плана).
         SALES_PLAN_REPOSITORY,
         SALES_PLAN_TEMPLATE_REPOSITORY,
+        // Порт чтения SalesPerformance для accounting (Фаза 5 — "Когда
+        // готово": "дублирующего расчёта плана внутри зарплатного модуля
+        // нет").
+        SALES_PERFORMANCE_READER,
     ],
 })
 export class SalesModule {}

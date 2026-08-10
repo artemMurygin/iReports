@@ -6,6 +6,9 @@ import { z } from 'zod';
 // направлений service и shop (см. Фазу 11) — направление задаётся полем
 // direction на каждой строке, а не отдельными таблицами.
 
+// Экспортируется — переиспользуется в sales-performance.ts (SalesFact /
+// SalesPrognose / SalesPerformance, Фаза 5), чтобы формат периода не
+// расходился по двум файлам контрактов.
 const periodSchema = z
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM');
@@ -155,6 +158,7 @@ const listSalesPlansQuerySchema = z.object({
 export type ListSalesPlansQuery = z.infer<typeof listSalesPlansQuerySchema>;
 
 export {
+    periodSchema,
     salesDirectionSchema,
     salesPlanTemplateSchema,
     putSalesPlanTemplateRequestSchema,
