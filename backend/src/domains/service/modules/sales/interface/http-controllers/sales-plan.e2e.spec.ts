@@ -232,6 +232,60 @@ describe('SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
         expect(body.every((p) => p.status === 'APPROVED')).toBe(true);
     });
 
+    it('ленивое достраивание: GET на пустой период заводит план из шаблона и из плана предыдущего месяца (Фаза 4)', async () => {
+        // Шаблон на отдел 2 — ни за какой месяц строки плана ещё нет.
+        const template = SalesPlanTemplate.create({
+            direction: 'service',
+            department: 2,
+            turnover: 300_000,
+            margin: 50_000,
+            growthPercent: 10,
+        });
+        templates.set(template.id, template);
+
+        // План предыдущего месяца на отдел 1.
+        const previous = SalesPlan.create({
+            direction: 'service',
+            department: 1,
+            period: '2026-10',
+            turnover: 1_000_000,
+            margin: 200_000,
+            source: 'MANUAL',
+        });
+        plans.set(previous.id, previous);
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/sales/plan')
+            .query({ direction: 'service', period: '2026-11' })
+            .expect(200);
+
+        const body = listResponse.body as SalesPlanResponse[];
+        expect(body).toHaveLength(2);
+        const byDepartment = new Map(
+            body.map((plan) => [plan.department, plan]),
+        );
+        expect(byDepartment.get(1)).toMatchObject({
+            source: 'PREVIOUS_MONTH',
+            status: 'CREATED',
+            turnover: 1_100_000,
+            margin: 220_000,
+        });
+        expect(byDepartment.get(2)).toMatchObject({
+            source: 'TEMPLATE',
+            status: 'CREATED',
+            turnover: 300_000,
+            margin: 50_000,
+        });
+
+        // Повторное обращение к тому же периоду идемпотентно — не плодит
+        // новых строк поверх уже достроенных.
+        const secondResponse = await request(app.getHttpServer())
+            .get('/v1/sales/plan')
+            .query({ direction: 'service', period: '2026-11' })
+            .expect(200);
+        expect(secondResponse.body).toHaveLength(2);
+    });
+
     it('шаблон: PUT создаёт строку при первой правке и правит при повторной', async () => {
         const firstPut = await request(app.getHttpServer())
             .put('/v1/sales/plan_template')

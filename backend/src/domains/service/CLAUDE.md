@@ -87,7 +87,7 @@ domains/service/
   импорт `SalaryModule` в `app.module.ts`) — не путай его с `accounting`, они пока частично
   дублируют предметную область на время переноса.
 
-### `modules/sales` — сделки/лиды (в разработке) + план продаж (Фаза 3)
+### `modules/sales` — сделки/лиды (в разработке) + план продаж (Фазы 3–4)
 
 Модуль объединяет два независимых среза с общим route-неймспейсом `/sales/*` и общей бизнес-областью
 "продажи", но без переиспользования кода между ними — слоистость и провайдеры у каждого свои.
@@ -117,8 +117,18 @@ DDD/CQRS-слоистости, как `accounting`, а не по образцу 
   `(direction, department, category)`.
 - `SalesPlan` (`POST|GET|PATCH|DELETE /v1/sales/plan`, `POST /v1/sales/plan/approve`) — план на
   конкретный месяц; `source` (`PREVIOUS_MONTH`/`TEMPLATE`/`MANUAL`) и `status`
-  (`CREATED`/`APPROVED`) — см. `SalesPlan.edit()`/`.approve()`. Автосоздание планов кроном/ленивым
-  достраиванием — Фаза 4, ещё не реализовано.
+  (`CREATED`/`APPROVED`) — см. `SalesPlan.edit()`/`.approve()`.
+- Автосоздание планов (Фаза 4) — `EnsureSalesPlansForPeriodService.ensure(direction, period)`:
+  для каждой комбинации отдел/категория без строки в текущем периоде берёт план предыдущего
+  месяца + `growthPercent` (`source = PREVIOUS_MONTH`), а если предыдущего плана нет — строку
+  шаблона без надбавки (`source = TEMPLATE`); уже существующие строки (в т.ч. `APPROVED`/`MANUAL`)
+  не трогает. Два входа в одну операцию: `SalesPlanAutoCreationCron`
+  (`infrastructure/cron/`, `@ProdCron` первого числа, только `direction = 'service'`) и ленивое
+  достраивание внутри `ListSalesPlansService` при каждом `GET /sales/plan` — обязательное, так как
+  `@ProdCron` не тикает в dev. Крон выполняется вне HTTP-запроса, поэтому оборачивается в
+  `runInSystemRequestContext` (`shared/application/context/run-in-system-context.ts`) — без него
+  репозитории падают: домен/`DatabaseService.getClient()` читают `RequestContext`, который вне
+  запроса никем не открыт.
 - `category` хранится в БД сентинелом `NO_CATEGORY_ID = -1` вместо `NULL` (Postgres не считает два
   `NULL` равными в составном уникальном индексе) — см. комментарий в
   `infrastructure/mappers/sales-plan.mapper.ts`; наружу модуля сентинел не протекает.

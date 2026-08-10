@@ -11,8 +11,10 @@ import { UpdateSalesPlanHandler } from './application/command/update-sales-plan.
 import { DeleteSalesPlanHandler } from './application/command/delete-sales-plan.handler';
 import { ApproveSalesPlanHandler } from './application/command/approve-sales-plan.handler';
 import { PutSalesPlanTemplateHandler } from './application/command/put-sales-plan-template.handler';
+import { EnsureSalesPlansForPeriodService } from './application/services/ensure-sales-plans-for-period.service';
 import { ListSalesPlansService } from './application/services/list-sales-plans.service';
 import { ListSalesPlanTemplatesService } from './application/services/list-sales-plan-templates.service';
+import { SalesPlanAutoCreationCron } from './infrastructure/cron/sales-plan-auto-creation.cron';
 import { CreateSalesPlanHttpController } from './interface/http-controllers/create-sales-plan.http.controller';
 import { UpdateSalesPlanHttpController } from './interface/http-controllers/update-sales-plan.http.controller';
 import { DeleteSalesPlanHttpController } from './interface/http-controllers/delete-sales-plan.http.controller';
@@ -24,10 +26,10 @@ import { ListSalesPlanTemplatesHttpController } from './interface/http-controlle
 // LEAD_REPOSITORY (сделки/лиды, см. domain/entities/{deal,lead}.entity.ts) —
 // более ранняя, не задействованная пока часть модуля (см.
 // src/domains/service/CLAUDE.md, "modules/sales — сделки и лиды"). План
-// продаж (Фаза 3, docs/payroll/plan-payroll-calculation.md) живёт в том же
-// модуле по смыслу route-неймспейса (/sales/plan*) и бизнес-области
-// "продажи", но слоистость и провайдеры у него отдельные — оба среза
-// самостоятельны и не переиспользуют код друг друга.
+// продаж (Фаза 3 + автосоздание Фазы 4, docs/payroll/plan-payroll-calculation.md)
+// живёт в том же модуле по смыслу route-неймспейса (/sales/plan*) и бизнес-
+// области "продажи", но слоистость и провайдеры у него отдельные — оба
+// среза самостоятельны и не переиспользуют код друг друга.
 @Module({
     imports: [CqrsModule],
     controllers: [
@@ -51,8 +53,10 @@ import { ListSalesPlanTemplatesHttpController } from './interface/http-controlle
         DeleteSalesPlanHandler,
         ApproveSalesPlanHandler,
         PutSalesPlanTemplateHandler,
+        EnsureSalesPlansForPeriodService,
         ListSalesPlansService,
         ListSalesPlanTemplatesService,
+        SalesPlanAutoCreationCron,
     ],
     exports: [
         LEAD_REPOSITORY,

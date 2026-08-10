@@ -50,4 +50,30 @@ describe('Period', () => {
             ).toBe(false);
         });
     });
+
+    describe('previous', () => {
+        it('возвращает предыдущий месяц внутри года', () => {
+            expect(Period.create('2026-08').previous().getValue()).toBe(
+                '2026-07',
+            );
+        });
+
+        it('переносит январь в декабрь предыдущего года', () => {
+            expect(Period.create('2026-01').previous().getValue()).toBe(
+                '2025-12',
+            );
+        });
+    });
+
+    describe('current', () => {
+        it('вычисляет текущий период по UTC-дате', () => {
+            jest.useFakeTimers().setSystemTime(
+                new Date('2026-08-15T12:00:00.000Z'),
+            );
+
+            expect(Period.current().getValue()).toBe('2026-08');
+
+            jest.useRealTimers();
+        });
+    });
 });

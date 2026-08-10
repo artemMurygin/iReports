@@ -38,4 +38,29 @@ export class Period extends ValueObject<string> {
             to: new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)),
         };
     }
+
+    // Предыдущий месяц — источник значений для автосоздания плана (Фаза 4,
+    // см. EnsureSalesPlansForPeriodService: "план предыдущего месяца +
+    // growthPercent"). Тот же UTC-трюк с "нулевым" месяцем, что и в
+    // getBounds() — Date сам переносит январь в декабрь предыдущего года.
+    previous(): Period {
+        const [year, month] = this.props.value.split('-').map(Number);
+        const prevMonthDate = new Date(Date.UTC(year, month - 2, 1));
+        return Period.fromDate(prevMonthDate);
+    }
+
+    // Текущий период "сейчас" в UTC — общая точка отсчёта для крона
+    // (SalesPlanAutoCreationCron) и ленивого достраивания, чтобы границы
+    // месяца в кроне и в самом Period не расходились по временной зоне (см.
+    // docs/prd-payroll-calculation.md: "иначе план и факт разъедутся на
+    // сутки").
+    static current(): Period {
+        return Period.fromDate(new Date());
+    }
+
+    private static fromDate(date: Date): Period {
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        return Period.create(`${year}-${month}`);
+    }
 }
