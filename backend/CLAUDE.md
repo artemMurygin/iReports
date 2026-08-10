@@ -43,6 +43,7 @@ One-off scripts (build first, they run from `dist/`):
 npm run initial                  # nest build -c src/config/nest-cli.json && node dist/src/shared/initialUploadData.js
 npm run price:monitoring         # nest build -c src/config/nest-cli.json && node dist/src/utils/runPriceMonitoring.js
 npm run export:roapp-orders      # nest build -c src/config/nest-cli.json && node dist/src/shared/exportRoappOrders.js
+npm run migrate:employee-identities  # разовый перенос BitrixEmployee.roappId/moySkladId/roappOnlineName в EmployeeIdentity (Фаза 2, идемпотентно)
 ```
 
 To run a single test file directly with ts-jest, `cd backend` and use the `test` script with a path/name
@@ -50,7 +51,7 @@ filter (jest's `rootDir` is `src`, so paths are relative to `src/`) — see abov
 
 ## Architecture
 
-The backend is **mid-refactor** from a flat NestJS app into a DDD/domain-oriented structure. Three
+The backend is **mid-refactor** from a flat NestJS app into a DDD/domain-oriented structure. Two
 generations of code coexist in `src/`:
 
 - `src/domains/{opt,service,shop}` — the target structure, organized by business domain (see root
@@ -61,9 +62,9 @@ generations of code coexist in `src/`:
 - `src/TODO/` — modules (`deals`, `reports`, `priceMonitoring`) carried over as-is from the old
   structure, still wired into `AppModule`, **pending refactor into a domain**. Don't treat their
   layout as a pattern to copy.
-- `backend/deprecated/` — the previous, pre-refactor backend. It is *not* compiled into the app
-  (excluded in `tsconfig.json`) and is kept only as a reference during the migration. Do not import
-  from it.
+
+The previous, pre-refactor backend (`backend/deprecated/`) has been removed now that the migration
+no longer needs it as a reference — don't expect it to exist.
 
 `src/app.module.ts` documents the current migration state in comments (`TODO: временно перенесены...`,
 `TODO: не мигрировано...`) — check it before assuming a module has (or hasn't) been ported.

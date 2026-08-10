@@ -2,8 +2,19 @@
 
 Все пути указаны от корня, глобальный префикс не задан.
 
-## domains/service/modules/accounting (`/accounting`)
+## domains/service/modules/accounting (`/accounting`, `/v1/motivation-schema`)
 - `GET /accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника за период (`period` — `YYYY-MM`): итог и разбивка по правилам мотивационной схемы, пара «факт/прогноз»
+- `POST /v1/motivation-schema` — создать мотивационную схему (цель + набор зарплатных правил)
+
+## modules/employee-identity (`/v1/employee-identity`)
+Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Все эндпоинты закрыты
+`PortalAdminGuard` — доступны только администратору портала Bitrix24 (заголовок `x-bitrix-auth` с
+access token текущего пользователя из `BX24.getAuth()`); без токена или не-администратору — `403`.
+- `POST /v1/employee-identity` — создать связь «сотрудник Bitrix × внешняя система × внешний идентификатор»
+- `PATCH /v1/employee-identity/:id` — изменить тип идентификатора и/или внешний ID связи
+- `DELETE /v1/employee-identity/:id` — удалить связь
+- `GET /v1/employee-identity/employee/:employeeId` — связи конкретного сотрудника
+- `GET /v1/employee-identity/unmatched` — сотрудники Bitrix без единой связи ни в одной системе
 
 ## deals (`/deals`)
 - `GET /deals?from&to` — список сделок за период

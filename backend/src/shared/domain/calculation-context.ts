@@ -12,7 +12,6 @@
 //   искать сотрудника в данных;
 // - результаты других правил схемы — в этой итерации правила независимы, их
 //   результаты просто складываются.
-
 export type AccountingDirection = 'service' | 'shop';
 
 export type AccountingPeriodStatus = 'OPEN' | 'CLOSED';

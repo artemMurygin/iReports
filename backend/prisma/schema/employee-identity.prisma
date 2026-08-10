@@ -1,0 +1,47 @@
+// Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2,
+// см. docs/payroll/plan-payroll-calculation.md и
+// docs/payroll/prd-payroll-calculation.md, раздел 1). Bitrix-сотрудник —
+// единственный источник истины о человеке, EmployeeIdentity — связь
+// «сотрудник Bitrix × внешняя система × внешний идентификатор»,
+// many-to-many: один сотрудник может иметь несколько записей (разные
+// системы и несколько идентификаторов в одной системе). Роль сотрудника
+// здесь намеренно не хранится — роль лежит в SalaryRule.targetRole
+// (salary.prisma), потому что один человек может в течение месяца работать
+// то инженером, то менеджером, а связь "кто есть кто" от этого не меняется.
+
+enum ExternalSystem {
+  ROAPP
+  MOY_SKLAD
+
+  @@map("external_system")
+}
+
+// Где именно в ERP лежит значение, а не роль сотрудника:
+// EMPLOYEE_ID — ссылка на сотрудника в ERP (RoappEmployee.id, MoySkladEmployee.id).
+// ONLINE_MANAGER_FIELD — значение строкового кастомного поля RemOnline
+// (RoappOrder.onlineManager), для которого ссылки на сотрудника не существует.
+enum EmployeeIdentityType {
+  EMPLOYEE_ID
+  ONLINE_MANAGER_FIELD
+
+  @@map("employee_identity_type")
+}
+
+model EmployeeIdentity {
+  id               String               @id
+  bitrixEmployeeId Int                  @map("bitrix_employee_id")
+  system           ExternalSystem
+  identifierType   EmployeeIdentityType @map("identifier_type")
+  externalId       String               @map("external_id")
+
+  bitrixEmployee BitrixEmployee @relation(fields: [bitrixEmployeeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Один и тот же внешний идентификатор в одной системе не может
+  // одновременно обозначать двух разных сотрудников.
+  @@unique([system, identifierType, externalId])
+  @@index([bitrixEmployeeId])
+  @@map("employee_identities")
+}

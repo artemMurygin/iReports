@@ -40,13 +40,19 @@ model BitrixEmployee {
   lastName     String
   departmentId Int    @map("department")
 
-  roappId         Int?    @unique @map("roapp_id")
-  moySkladId      String? @unique @map("moy_sklad_id")
+  /// @deprecated Заменено на EmployeeIdentity(system: ROAPP, identifierType: EMPLOYEE_ID)
+  /// — см. employee-identity.prisma и Фазу 2 docs/payroll/plan-payroll-calculation.md.
+  /// Поле оставлено для истории/переходного периода, новые связи сюда не пишутся.
+  roappId Int? @unique @map("roapp_id")
+  /// @deprecated Заменено на EmployeeIdentity(system: MOY_SKLAD, identifierType: EMPLOYEE_ID).
+  moySkladId String? @unique @map("moy_sklad_id")
+  /// @deprecated Заменено на EmployeeIdentity(system: ROAPP, identifierType: ONLINE_MANAGER_FIELD).
   roappOnlineName String? @unique @map("roapp_online_name")
 
-  department       BitrixDepartment  @relation(fields: [departmentId], references: [id])
-  roappEmployee    RoappEmployee?    @relation(fields: [roappId], references: [id], onDelete: SetNull)
-  moySkladEmployee MoySkladEmployee? @relation(fields: [moySkladId], references: [id], onDelete: SetNull)
+  department       BitrixDepartment   @relation(fields: [departmentId], references: [id])
+  roappEmployee    RoappEmployee?     @relation(fields: [roappId], references: [id], onDelete: SetNull)
+  moySkladEmployee MoySkladEmployee?  @relation(fields: [moySkladId], references: [id], onDelete: SetNull)
+  identities       EmployeeIdentity[]
 
   bitrixDeal BitrixDeal[]
 

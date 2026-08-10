@@ -89,7 +89,11 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
         // AppModule.configure(); здесь бутстрапится только AccountingModule,
         // поэтому подключаем ту же middleware вручную.
         app.use((req: unknown, res: unknown, next: () => void) =>
-            new RequestContextMiddleware().use(req as never, res as never, next),
+            new RequestContextMiddleware().use(
+                req as never,
+                res as never,
+                next,
+            ),
         );
         app.useGlobalPipes(new ZodValidationPipe());
         app.useGlobalFilters(new DomainExceptionFilter());
