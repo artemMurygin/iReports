@@ -18,16 +18,17 @@ product/architecture picture. This file covers backend-specific commands and con
 Run from `backend/`.
 
 All tooling config files (`tsconfig.json`, `tsconfig.build.json`, `nest-cli.json`, `eslint.config.mjs`,
-`.prettierrc`, `prisma.config.ts`) live under `src/config/`, not at the `backend/` root — the npm
-scripts below already point at them via the relevant `-c`/`-p`/`--config` flags. Pass the same flag
-if you invoke `nest`/`eslint`/`prettier`/`tsc-alias`/`prisma` directly instead of through `npm run`.
+`.prettierrc`, `prisma.config.ts`) live at the `backend/` root, except `app.routes.ts` which stays under
+`src/config/` (imported via the `@/config/app.routes` alias). The npm scripts below already point at
+the root config files via the relevant `-c`/`-p`/`--config` flags. Pass the same flag if you invoke
+`nest`/`eslint`/`prettier`/`tsc-alias`/`prisma` directly instead of through `npm run`.
 
 ```bash
 npm run start:dev          # nest start --watch + tsc-alias watcher (path aliases resolved on the fly)
-npm run build               # nest build -c src/config/nest-cli.json && tsc-alias -p src/config/tsconfig.build.json
+npm run build               # nest build -c nest-cli.json && tsc-alias -p tsconfig.build.json
 npm run start:prod          # node dist/main (requires build first)
-npm run lint                 # eslint --config src/config/eslint.config.mjs --fix over src/apps/libs/test
-npm run format                # prettier --config src/config/.prettierrc --write src/**/*.ts test/**/*.ts
+npm run lint                 # eslint --config eslint.config.mjs --fix over src/apps/libs/test
+npm run format                # prettier --config .prettierrc --write src/**/*.ts test/**/*.ts
 
 npm run test                    # jest, all *.spec.ts under src
 npm run test -- deals.service    # jest, filter by filename/testname pattern
@@ -37,20 +38,20 @@ npm run test:cov
 npm run test:e2e                # separate jest config: test/jest-e2e.json
 ```
 
-Prisma (schema lives in `prisma/schema/*.prisma`, config in `src/config/prisma.config.ts`):
+Prisma (schema lives in `prisma/schema/*.prisma`, config in `prisma.config.ts`):
 
 ```bash
-npx prisma generate --config src/config/prisma.config.ts             # regenerate client into prisma/generated/prisma/schema
-npx prisma migrate dev --config src/config/prisma.config.ts --name x  # create+apply a migration (prisma/migrations)
-npx prisma studio --config src/config/prisma.config.ts
+npx prisma generate --config prisma.config.ts             # regenerate client into prisma/generated/prisma/schema
+npx prisma migrate dev --config prisma.config.ts --name x  # create+apply a migration (prisma/migrations)
+npx prisma studio --config prisma.config.ts
 ```
 
 One-off scripts (build first, they run from `dist/`):
 
 ```bash
-npm run initial                  # nest build -c src/config/nest-cli.json && node dist/src/shared/initialUploadData.js
-npm run price:monitoring         # nest build -c src/config/nest-cli.json && node dist/src/utils/runPriceMonitoring.js
-npm run export:roapp-orders      # nest build -c src/config/nest-cli.json && node dist/src/shared/exportRoappOrders.js
+npm run initial                  # nest build -c nest-cli.json && node dist/src/shared/initialUploadData.js
+npm run price:monitoring         # nest build -c nest-cli.json && node dist/src/utils/runPriceMonitoring.js
+npm run export:roapp-orders      # nest build -c nest-cli.json && node dist/src/shared/exportRoappOrders.js
 npm run migrate:employee-identities  # разовый перенос BitrixEmployee.roappId/moySkladId/roappOnlineName в EmployeeIdentity (Фаза 2, идемпотентно)
 ```
 

@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
     {
-        ignores: ['eslint.config.mjs', '../../deprecated/**'],
+        ignores: ['eslint.config.mjs', 'deprecated/**'],
     },
     eslint.configs.recommended,
     ...tseslint.configs.recommendedTypeChecked,
@@ -19,9 +19,8 @@ export default tseslint.config(
             },
             sourceType: 'commonjs',
             parserOptions: {
-                // Файл tsconfig.json лежит рядом (в src/config), но линтуемые файлы — в ../../src,
-                // поэтому автопоиск ближайшего tsconfig.json (projectService) вверх по дереву
-                // директорий его не найдёт. Указываем путь явно.
+                // tsconfig.json лежит рядом, в корне backend/, но явное указание project
+                // (вместо автопоиска projectService вверх по дереву) оставлено для надёжности.
                 project: ['./tsconfig.json'],
                 tsconfigRootDir: import.meta.dirname,
             },
@@ -41,9 +40,8 @@ export default tseslint.config(
                 'error',
                 { argsIgnorePattern: '^_' },
             ],
-            // singleQuote/tabWidth/trailingComma продублированы из .prettierrc: eslint-plugin-prettier
-            // резолвит .prettierrc поиском вверх от линтуемого файла и не найдёт файл, лежащий
-            // в соседней (не родительской) директории src/config.
+            // singleQuote/tabWidth/trailingComma продублированы из .prettierrc явно, чтобы не зависеть
+            // от того, найдёт ли eslint-plugin-prettier файл поиском вверх от линтуемого файла.
             'prettier/prettier': ['error', { endOfLine: 'auto', singleQuote: true, tabWidth: 4, trailingComma: 'all' }],
         },
     },

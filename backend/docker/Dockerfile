@@ -21,7 +21,7 @@ COPY backend backend
 # cwd специально backend/ — часть зависимостей (например prisma) npm workspaces кладёт
 # не в корневой node_modules, а вложенно в backend/node_modules, и npx находит бинарники
 # только вверх по дереву от cwd, а не в дочерних директориях
-RUN cd backend && npx prisma generate --config src/config/prisma.config.ts
+RUN cd backend && npx prisma generate --config prisma.config.ts
 RUN npm run build --workspace=backend
 
 # ---- Production stage ----
@@ -43,7 +43,7 @@ COPY --from=builder /repo/backend/dist ./dist
 # Файлы Prisma, нужные для migrate deploy
 COPY --from=builder /repo/backend/prisma/migrations ./prisma/migrations
 COPY --from=builder /repo/backend/prisma/schema ./prisma/schema
-COPY backend/src/config/prisma.config.ts ./src/config/prisma.config.ts
+COPY backend/prisma.config.ts ./prisma.config.ts
 
 COPY --from=builder /repo/backend/package.json ./package.json
 
