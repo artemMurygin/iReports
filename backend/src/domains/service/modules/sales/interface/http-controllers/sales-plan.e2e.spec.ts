@@ -1,0 +1,268 @@
+import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { ZodValidationPipe } from 'nestjs-zod';
+import { RequestContextMiddleware } from 'nestjs-request-context';
+import request from 'supertest';
+import type {
+    SalesPlanResponse,
+    SalesPlanTemplateResponse,
+} from 'ireports-contracts';
+import { SalesModule } from '@/domains/service/modules/sales/sales.module';
+import { LEAD_REPOSITORY } from '@/domains/service/modules/sales/domain/ports/sales.repositories.port';
+import type { LeadRepositoryPort } from '@/domains/service/modules/sales/domain/ports/sales.repositories.port';
+import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
+import type { SalesPlanTemplateRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
+import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
+import { SalesPlanTemplate } from '@/domains/service/modules/sales/domain/entities/sales-plan-template.entity';
+import { DomainExceptionFilter } from '@/shared/exceptions';
+
+// Как и get-employee-salary-report.e2e.spec.ts (см. соседний accounting-
+// модуль): поднимает SalesModule целиком через Nest TestingModule (реальные
+// Controller → CommandBus/Service → Handler → Entity), подменяя только
+// границу с БД — репозитории. LEAD_REPOSITORY подменяется заглушкой: он не
+// участвует в сценариях этого теста, но реальная LeadRepository требует
+// живого DatabaseService из @Global() DatabaseModule, который сюда не
+// импортирован.
+describe('SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
+    let app: INestApplication;
+
+    const plans = new Map<string, SalesPlan>();
+    const templates = new Map<string, SalesPlanTemplate>();
+
+    const fakeLeadRepo: LeadRepositoryPort = {
+        findModifiedSince: () => Promise.resolve([]),
+    };
+
+    const fakePlanRepo: SalesPlanRepositoryPort = {
+        insert: (entity) => {
+            plans.set(entity.id, entity);
+            return Promise.resolve();
+        },
+        update: (entity) => {
+            plans.set(entity.id, entity);
+            return Promise.resolve();
+        },
+        delete: (id) => {
+            plans.delete(id);
+            return Promise.resolve();
+        },
+        findById: (id) => Promise.resolve(plans.get(id) ?? null),
+        findByIds: (ids) =>
+            Promise.resolve(
+                [...plans.values()].filter((p) => ids.includes(p.id)),
+            ),
+        findByScope: (direction, department, category, period) =>
+            Promise.resolve(
+                [...plans.values()].find(
+                    (p) =>
+                        p.direction === direction &&
+                        p.department === department &&
+                        p.category === category &&
+                        p.period === period,
+                ) ?? null,
+            ),
+        findByDirectionAndPeriod: (direction, period) =>
+            Promise.resolve(
+                [...plans.values()].filter(
+                    (p) => p.direction === direction && p.period === period,
+                ),
+            ),
+    };
+
+    const fakeTemplateRepo: SalesPlanTemplateRepositoryPort = {
+        insert: (entity) => {
+            templates.set(entity.id, entity);
+            return Promise.resolve();
+        },
+        update: (entity) => {
+            templates.set(entity.id, entity);
+            return Promise.resolve();
+        },
+        findByScope: (direction, department, category) =>
+            Promise.resolve(
+                [...templates.values()].find(
+                    (t) =>
+                        t.direction === direction &&
+                        t.department === department &&
+                        t.category === category,
+                ) ?? null,
+            ),
+        findAll: (direction) =>
+            Promise.resolve(
+                [...templates.values()].filter(
+                    (t) => !direction || t.direction === direction,
+                ),
+            ),
+    };
+
+    beforeAll(async () => {
+        const moduleRef = await Test.createTestingModule({
+            imports: [SalesModule],
+        })
+            .overrideProvider(LEAD_REPOSITORY)
+            .useValue(fakeLeadRepo)
+            .overrideProvider(SALES_PLAN_REPOSITORY)
+            .useValue(fakePlanRepo)
+            .overrideProvider(SALES_PLAN_TEMPLATE_REPOSITORY)
+            .useValue(fakeTemplateRepo)
+            .compile();
+
+        app = moduleRef.createNestApplication();
+        app.use((req: unknown, res: unknown, next: () => void) =>
+            new RequestContextMiddleware().use(
+                req as never,
+                res as never,
+                next,
+            ),
+        );
+        app.useGlobalPipes(new ZodValidationPipe());
+        app.useGlobalFilters(new DomainExceptionFilter());
+        await app.init();
+    });
+
+    afterAll(async () => {
+        await app.close();
+    });
+
+    afterEach(() => {
+        plans.clear();
+        templates.clear();
+    });
+
+    it('заводит, читает, правит, утверждает и удаляет план месяца', async () => {
+        const createResponse = await request(app.getHttpServer())
+            .post('/v1/sales/plan')
+            .send({
+                direction: 'service',
+                department: 1,
+                period: '2026-08',
+                turnover: 1_000_000,
+                margin: 200_000,
+            })
+            .expect(201);
+        const created = createResponse.body as SalesPlanResponse;
+        expect(created).toMatchObject({
+            direction: 'service',
+            department: 1,
+            category: null,
+            status: 'CREATED',
+            source: 'MANUAL',
+        });
+
+        // Повторное создание на ту же комбинацию отклоняется.
+        await request(app.getHttpServer())
+            .post('/v1/sales/plan')
+            .send({
+                direction: 'service',
+                department: 1,
+                period: '2026-08',
+                turnover: 1,
+                margin: 1,
+            })
+            .expect(409);
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/sales/plan')
+            .query({ direction: 'service', period: '2026-08' })
+            .expect(200);
+        expect(listResponse.body).toHaveLength(1);
+
+        const approveResponse = await request(app.getHttpServer())
+            .post('/v1/sales/plan/approve')
+            .send({ ids: [created.id], approvedBy: 42 })
+            .expect(201);
+        expect((approveResponse.body as SalesPlanResponse[])[0].status).toBe(
+            'APPROVED',
+        );
+
+        // Правка утверждённой строки возвращает её в CREATED + MANUAL.
+        const updateResponse = await request(app.getHttpServer())
+            .patch(`/v1/sales/plan/${created.id}`)
+            .send({ turnover: 1_500_000 })
+            .expect(200);
+        expect(updateResponse.body).toMatchObject({
+            status: 'CREATED',
+            source: 'MANUAL',
+            turnover: 1_500_000,
+            approvedBy: null,
+        });
+
+        await request(app.getHttpServer())
+            .delete(`/v1/sales/plan/${created.id}`)
+            .expect(204);
+
+        const afterDelete = await request(app.getHttpServer())
+            .get('/v1/sales/plan')
+            .query({ direction: 'service', period: '2026-08' })
+            .expect(200);
+        expect(afterDelete.body).toHaveLength(0);
+    });
+
+    it('утверждает весь месяц по направлению одним запросом', async () => {
+        await request(app.getHttpServer())
+            .post('/v1/sales/plan')
+            .send({
+                direction: 'service',
+                department: 1,
+                period: '2026-09',
+                turnover: 100,
+                margin: 10,
+            })
+            .expect(201);
+        await request(app.getHttpServer())
+            .post('/v1/sales/plan')
+            .send({
+                direction: 'service',
+                department: 2,
+                period: '2026-09',
+                turnover: 200,
+                margin: 20,
+            })
+            .expect(201);
+
+        const approveResponse = await request(app.getHttpServer())
+            .post('/v1/sales/plan/approve')
+            .send({ direction: 'service', period: '2026-09', approvedBy: 1 })
+            .expect(201);
+
+        const body = approveResponse.body as SalesPlanResponse[];
+        expect(body).toHaveLength(2);
+        expect(body.every((p) => p.status === 'APPROVED')).toBe(true);
+    });
+
+    it('шаблон: PUT создаёт строку при первой правке и правит при повторной', async () => {
+        const firstPut = await request(app.getHttpServer())
+            .put('/v1/sales/plan_template')
+            .send({
+                direction: 'service',
+                department: 1,
+                turnover: 1_000_000,
+                margin: 200_000,
+                growthPercent: 10,
+            })
+            .expect(200);
+        const created = firstPut.body as SalesPlanTemplateResponse;
+        expect(created.growthPercent).toBe(10);
+
+        const secondPut = await request(app.getHttpServer())
+            .put('/v1/sales/plan_template')
+            .send({
+                direction: 'service',
+                department: 1,
+                turnover: 1_100_000,
+                margin: 220_000,
+                growthPercent: 12,
+            })
+            .expect(200);
+        const updated = secondPut.body as SalesPlanTemplateResponse;
+        expect(updated.id).toBe(created.id);
+        expect(updated.growthPercent).toBe(12);
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/sales/plan_template')
+            .expect(200);
+        expect(listResponse.body).toHaveLength(1);
+    });
+});

@@ -8,11 +8,12 @@ export interface PeriodBounds {
     to: Date;
 }
 
-// Период расчёта зарплаты в формате 'YYYY-MM'. Инкапсулирует формат
-// (используется как /accounting/salary_report/employee/:id/:period, так и
-// CalculationContext.period) и вычисление границ месяца — раньше обе вещи
-// были раскиданы по GetEmployeeSalaryReportService (regexp + отдельная
-// buildMonthBounds).
+// Период в формате 'YYYY-MM' — общий для accounting (расчёт зарплаты,
+// CalculationContext.period) и sales (SalesPlan.period, Фаза 3):
+// инкапсулирует формат и вычисление границ месяца, чтобы regexp и разбор
+// строки не расходились по модулям. Изначально жил только в accounting
+// (см. историю get-employee-salary-report.service.ts), переехал сюда, как
+// только период понадобился второму модулю.
 export class Period extends ValueObject<string> {
     static create(value: string): Period {
         if (!PERIOD_PATTERN.test(value)) {

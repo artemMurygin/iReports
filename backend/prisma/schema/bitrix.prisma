@@ -30,6 +30,10 @@ model BitrixDepartment {
   name String
 
   employees BitrixEmployee[]
+  // См. sales.prisma (Фаза 3, docs/payroll/plan-payroll-calculation.md) —
+  // план продаж и его дефолтный шаблон всегда привязаны к отделу.
+  salesPlanTemplates SalesPlanTemplate[]
+  salesPlans         SalesPlan[]
 
   @@map("bitrix_departments")
 }

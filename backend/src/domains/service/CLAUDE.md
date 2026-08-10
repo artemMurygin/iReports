@@ -18,7 +18,8 @@ domains/service/
 ├── sync/roapp/            — cron-синхронизация RoApp → локальная БД
 └── modules/
     ├── accounting/        — зарплатные схемы и правила мотивации (полностью выстроенный DDD/CQRS)
-    └── sales/              — сделки/лиды (ранняя стадия, в основном read-side)
+    └── sales/              — сделки/лиды (ранняя стадия, в основном read-side) + план продаж
+                              (шаблон/план/статусы/утверждение, Фаза 3 — выстроен по слоистости accounting)
 ```
 
 ### `integrations/roapp` и `integrations/custom-api-roapp`
@@ -86,9 +87,13 @@ domains/service/
   импорт `SalaryModule` в `app.module.ts`) — не путай его с `accounting`, они пока частично
   дублируют предметную область на время переноса.
 
-### `modules/sales` — сделки и лиды (в разработке)
+### `modules/sales` — сделки/лиды (в разработке) + план продаж (Фаза 3)
 
-Гораздо более ранняя стадия, чем `accounting` — сейчас это фактически только read-side:
+Модуль объединяет два независимых среза с общим route-неймспейсом `/sales/*` и общей бизнес-областью
+"продажи", но без переиспользования кода между ними — слоистость и провайдеры у каждого свои.
+
+**Сделки/лиды** — гораздо более ранняя стадия, чем `accounting`, сейчас это фактически только
+read-side:
 
 - `LeadRepository`/`DealRepository` (`infrastructure/sales.repositories.ts`) читают уже
   засинканные данные напрямую из Prisma и мапят в доменные `LeadEntity`/`DealEntity`:
@@ -100,9 +105,25 @@ domains/service/
   - `DealEntity` — из таблицы `roappOrder` (уже засинканной `sync/roapp` выше).
 - `api/sales.routes.ts`, `api/schemas/sales.shcemas.ts`, `domain/sales.events.ts`,
   `application/event.handlers.ts` — **пустые файлы-заготовки**: контроллеров, схем запросов и
-  обработчиков событий для этого модуля пока не существует, `sales.module.ts` регистрирует только
-  `LEAD_REPOSITORY`. Не удивляйся отсутствию HTTP-эндпоинтов у `sales` — воронка и список сделок
-  сейчас обслуживаются через ещё не мигрированный `src/TODO/deals` (см. ниже).
+  обработчиков событий для этого среза пока не существует. Не удивляйся отсутствию HTTP-эндпоинтов у
+  сделок/лидов — воронка и список сделок сейчас обслуживаются через ещё не мигрированный
+  `src/TODO/deals` (см. ниже).
+
+**План продаж** (`docs/payroll/plan-payroll-calculation.md`, Фаза 3) — выстроен по целевой
+DDD/CQRS-слоистости, как `accounting`, а не по образцу сделок/лидов выше:
+
+- `SalesPlanTemplate` (`GET|PUT /v1/sales/plan_template`) — дефолтные значения плана по отделу и,
+  опционально, категории, с процентом ежемесячного роста; `PUT` — upsert по естественному ключу
+  `(direction, department, category)`.
+- `SalesPlan` (`POST|GET|PATCH|DELETE /v1/sales/plan`, `POST /v1/sales/plan/approve`) — план на
+  конкретный месяц; `source` (`PREVIOUS_MONTH`/`TEMPLATE`/`MANUAL`) и `status`
+  (`CREATED`/`APPROVED`) — см. `SalesPlan.edit()`/`.approve()`. Автосоздание планов кроном/ленивым
+  достраиванием — Фаза 4, ещё не реализовано.
+- `category` хранится в БД сентинелом `NO_CATEGORY_ID = -1` вместо `NULL` (Postgres не считает два
+  `NULL` равными в составном уникальном индексе) — см. комментарий в
+  `infrastructure/mappers/sales-plan.mapper.ts`; наружу модуля сентинел не протекает.
+- Модели общие для `service`/`shop` (поле `direction`) — Фаза 11 переиспользует их для магазина без
+  изменения формы.
 
 ## Целевой набор модулей домена
 
@@ -150,6 +171,6 @@ domains/service/
 
 - Prisma-схема: `prisma/schema/roapp.prisma` (собственные таблицы `roapp*`) и
   `prisma/schema/bitrix.prisma` (общие с CRM-контуром, читаются `sales`).
-- Тесты на сегодня есть только для интеграций: `roapp/roapp.service.spec.ts`,
-  `custom-api-roapp/custom-api-roapp.service.spec.ts`. Ни `sales`, ни `accounting` тестами пока не
-  покрыты.
+- Тесты интеграций: `roapp/roapp.service.spec.ts`, `custom-api-roapp/custom-api-roapp.service.spec.ts`.
+  `accounting` и срез плана продаж модуля `sales` покрыты юнит- и e2e-тестами; срез сделок/лидов —
+  нет.

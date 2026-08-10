@@ -1,0 +1,93 @@
+// План продаж — вход для всех процентных зарплатных правил (Фаза 3, см.
+// docs/payroll/plan-payroll-calculation.md и prd-payroll-calculation.md,
+// раздел "План продаж"). Обе модели общие для направлений service и shop
+// (Фаза 11 переиспользует их без изменения формы) — направление задаётся
+// полем direction на каждой строке, а не отдельными таблицами.
+
+enum SalesDirection {
+  service
+  shop
+
+  @@map("sales_direction")
+}
+
+// PREVIOUS_MONTH/TEMPLATE — источники, которыми крон и ленивое достраивание
+// заполняют месяц без участия руководителя (Фаза 4); MANUAL — ручное
+// создание или правка через этот модуль. Любая правка строки, созданной
+// автоматически, переводит её в MANUAL (см. SalesPlan.edit()).
+enum SalesPlanSource {
+  PREVIOUS_MONTH
+  TEMPLATE
+  MANUAL
+
+  @@map("sales_plan_source")
+}
+
+// CREATED — строка полноценно участвует в расчётах, но ещё не подтверждена
+// руководителем; APPROVED — подтверждена. Автоматически APPROVED никогда не
+// проставляется (см. prd-payroll-calculation.md, раздел "Статусы плана").
+enum SalesPlanStatus {
+  CREATED
+  APPROVED
+
+  @@map("sales_plan_status")
+}
+
+// Дефолтные значения плана по отделу и, опционально, категории — стартовая
+// точка для самого первого месяца направления и запасной вариант, если
+// плана за предыдущий месяц ещё нет (см. Фазу 4).
+model SalesPlanTemplate {
+  id           String         @id
+  direction    SalesDirection
+  departmentId Int            @map("department_id")
+  // "Без категории" (шаблон действует на весь отдел) хранится сентинелом
+  // NO_CATEGORY_ID = -1 (см. sales-plan.mapper.ts), а не NULL: Postgres не
+  // считает два NULL равными в составном уникальном индексе, значит
+  // nullable-столбец не защитил бы от двух строк "без категории" на тот же
+  // отдел. Домен и контракты продолжают работать с category: number | null
+  // — сентинел не протекает дальше пары функций в мапперах этого модуля.
+  categoryId Int @map("category_id")
+
+  turnover      Int
+  margin        Int
+  growthPercent Int      @default(10) @map("growth_percent")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  department BitrixDepartment @relation(fields: [departmentId], references: [id])
+
+  @@unique([direction, departmentId, categoryId])
+  @@map("sales_plan_templates")
+}
+
+// План на конкретный месяц по отделу и, опционально, категории. Уникальность
+// по (direction, departmentId, categoryId, period) — повторное создание
+// плана на ту же комбинацию отклоняется на уровне БД (см. комментарий про
+// categoryId в SalesPlanTemplate выше — та же сентинел-логика).
+model SalesPlan {
+  id           String         @id
+  direction    SalesDirection
+  departmentId Int            @map("department_id")
+  categoryId   Int            @map("category_id")
+  period       String
+
+  turnover Int
+  margin   Int
+  source   SalesPlanSource
+  status   SalesPlanStatus @default(CREATED)
+
+  // Bitrix ID руководителя, утвердившего строку, и когда — оба поля
+  // заполняются/очищаются только вместе (см. SalesPlanApproval value
+  // object), поэтому оба nullable и оба сбрасываются в одном месте.
+  approvedBy Int?      @map("approved_by")
+  approvedAt DateTime? @map("approved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  department BitrixDepartment @relation(fields: [departmentId], references: [id])
+
+  @@unique([direction, departmentId, categoryId, period])
+  @@index([direction, period])
+  @@map("sales_plans")
+}

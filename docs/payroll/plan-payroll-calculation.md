@@ -60,11 +60,11 @@
 **Что затрагивает?** backend, database, contracts
 
 **Задачи:**
-- [ ] Модели `SalesPlanTemplate` (`direction`, `department`, `category?`, `turnover`, `margin`, `growthPercent` по умолчанию 10 %, уникальность по `direction+department+category`) и `SalesPlan` (`+ period`, `source: PREVIOUS_MONTH | TEMPLATE | MANUAL`, `status: CREATED | APPROVED`, `approvedBy`, `approvedAt`, уникальность по `direction+department+category+period`).
-- [ ] Модуль `sales` домена `service` по слоистости `accounting`; CRUD плана: `POST|PATCH|DELETE /sales/plan`, повторное создание на ту же комбинацию отклоняется.
-- [ ] `GET|PUT /sales/plan_template` — чтение и правка шаблона и процента роста.
-- [ ] `POST /sales/plan/approve` — утверждение построчно и массово по направлению за месяц; ручная правка переводит строку в `source = MANUAL` и сбрасывает статус в `CREATED`.
-- [ ] Контракты `SalesPlanTemplate` / `SalesPlan`. Тесты: правка утверждённой строки возвращает её в `CREATED` + `MANUAL`; массовое утверждение переводит все строки месяца; дубль по уникальному ключу отклоняется.
+- [x] Модели `SalesPlanTemplate` (`direction`, `department`, `category?`, `turnover`, `margin`, `growthPercent` по умолчанию 10 %, уникальность по `direction+department+category`) и `SalesPlan` (`+ period`, `source: PREVIOUS_MONTH | TEMPLATE | MANUAL`, `status: CREATED | APPROVED`, `approvedBy`, `approvedAt`, уникальность по `direction+department+category+period`).
+- [x] Модуль `sales` домена `service` по слоистости `accounting`; CRUD плана: `POST|PATCH|DELETE /sales/plan`, повторное создание на ту же комбинацию отклоняется.
+- [x] `GET|PUT /sales/plan_template` — чтение и правка шаблона и процента роста.
+- [x] `POST /sales/plan/approve` — утверждение построчно и массово по направлению за месяц; ручная правка переводит строку в `source = MANUAL` и сбрасывает статус в `CREATED`.
+- [x] Контракты `SalesPlanTemplate` / `SalesPlan`. Тесты: правка утверждённой строки возвращает её в `CREATED` + `MANUAL`; массовое утверждение переводит все строки месяца; дубль по уникальному ключу отклоняется.
 
 **Когда готово** Руководитель заводит, правит, удаляет и утверждает план месяца по отделу и категории; шаблон редактируется.
 
@@ -327,6 +327,6 @@
 | Как отличить БУ технику от новой — по категории или по факту заполненного поля закупщика | Фаза 13 |
 | Берёт ли `ProductSold` с `FloatPercent` процент выполнения плана по своей категории или по отделу целиком | Фаза 12 |
 | Полный перечень `targetRole` первой итерации для сервиса и для магазина | Фазы 7, 12 |
-| `growthPercent` — на строку шаблона или один на направление | Фаза 3 |
+| ~~`growthPercent` — на строку шаблона или один на направление~~ — решено: на строку шаблона (см. `SalesPlanTemplate.growthPercent`, форма зафиксирована в PRD) | Фаза 3 |
 
 Неблокирующие вопросы (решаются по ходу или переносятся): прятать ли прогноз в первых числах месяца, перевод сотрудника между отделами в середине месяца, отдельный штраф за скидку продавца, поведение при падении синхронизации в момент закрытия месяца, распространение ограничения «только администратор портала» на остальные блоки, сезонность шаблона, уведомления руководителю о неутверждённом плане.

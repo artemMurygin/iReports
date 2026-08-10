@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
-import { Period } from '@/domains/service/modules/accounting/domain/value-objects/period.value-object';
+import { Period } from '@/shared/domain/period.value-object';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 
