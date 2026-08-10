@@ -5,6 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Backend of the iReports monorepo. See the [root CLAUDE.md](../CLAUDE.md) for the overall
 product/architecture picture. This file covers backend-specific commands and conventions.
 
+## Приоритет инструкций
+
+Паттерны, подсказки по код-стилю и архитектуре, описанные в этом файле (и в CLAUDE.md доменов,
+`src/domains/service/CLAUDE.md`, `src/domains/shop/CLAUDE.md`), важнее того, что фактически
+встречается в существующем коде. Часть кодовой базы ещё не приведена к целевой архитектуре
+(см. «Architecture» ниже) — не копируй паттерн только потому, что он уже где-то использован;
+ориентируйся на то, что написано здесь, даже если это расходится с наблюдаемым кодом.
+
 ## Commands
 
 Run from `backend/`.
@@ -104,6 +112,22 @@ imports from `application`/`infrastructure`/`interface`.
 Shared DDD building blocks (base classes to extend, not reimplement) live in `src/shared/domain/`:
 `aggregate-root.base.ts`, `entity.base.ts`, `value-object.base.ts`, `domain-event.base.ts`,
 `command.base.ts`, `repository.port.ts`, `mapper.interface.ts`.
+
+#### Value objects
+
+В доменном слое value object (наследник `value-object.base.ts`, см.
+`src/domains/service/modules/sales/domain/value-objects/*` как референс) обязателен везде, где для
+поля/группы полей сущности характерны: собственная валидация или инварианты (например, диапазон,
+формат, допустимый набор значений), сравнение по значению, а не по идентичности, или группа полей,
+которые всегда меняются вместе и имеют самостоятельный смысл (деньги/сумма+валюта, диапазон дат,
+адрес, статус с ограниченным набором переходов, контактные данные и т.п.). Примитивы (`string`,
+`number`) прямо в полях сущности допустимы только для действительно простых, не требующих валидации
+атрибутов (например, суррогатный технический идентификатор без собственной семантики).
+
+Если при работе с сущностью в домене (создание/рефакторинг модуля, ревью, ответ на вопрос) видно, что
+для одного из её полей по этим критериям нужен value object, а сейчас там голый примитив —
+добавь value object, даже если это не было явно запрошено, и обнови сущность, мапперы и (если
+затронуты) zod-схемы персистентности, чтобы они использовали новый тип.
 
 Cross-cutting request context (`AsyncLocalStorage`-based) lives in
 `src/shared/application/context/` (`AppRequestContext`, `ContextInterceptor`) and is populated by
