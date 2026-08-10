@@ -3,6 +3,11 @@
         "module": "nodenext",
         "moduleResolution": "nodenext",
         "resolvePackageJsonExports": true,
+        // Пакет Prisma 7 генерирует клиент (prisma/generated/) с относительными импортами вида
+        // "./internal/class.ts" — при компиляции tsc сам по себе не переписывает расширение на .js
+        // в эмитируемых require(), из-за чего dist/prisma/generated падает на старте с
+        // MODULE_NOT_FOUND. rewriteRelativeImportExtensions (TS 5.7+) делает это переписывание.
+        "rewriteRelativeImportExtensions": true,
         "esModuleInterop": true,
         "isolatedModules": true,
         "declaration": true,
