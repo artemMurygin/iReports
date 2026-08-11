@@ -32,7 +32,16 @@ export class MotivationSchemaRepository
         // открытую транзакцию, если есть), а не через write().
         const record = await this.client.motivationSchema.findFirst({
             where: { targetType: 'Employee', targetId: employeeId },
-            include: { rules: true },
+            // direction: 'service' — MotivationSchema сотрудника может
+            // содержать правила ОБОИХ направлений (сотрудник числится и в
+            // RemOnline, и в МойСклад, см. Фаза 2/EmployeeIdentity), а
+            // `type` правил у двух направлений пересекается буквально
+            // ('PayPerHour' есть и там, и там) — без этого фильтра
+            // SalaryRuleMapper.toDomain мог бы получить чужую (shop)
+            // строку и попытаться резолвнуть её несуществующим для этого
+            // реестра типом. См. комментарий у SalaryRule.direction в
+            // salary.prisma (Фаза 12).
+            include: { rules: { where: { direction: 'service' } } },
         });
 
         return record ? this.mapper.toDomain(record) : null;
@@ -41,7 +50,16 @@ export class MotivationSchemaRepository
     async findAllEmployeeTargets(): Promise<MotivationSchema[]> {
         const records = await this.client.motivationSchema.findMany({
             where: { targetType: 'Employee' },
-            include: { rules: true },
+            // direction: 'service' — MotivationSchema сотрудника может
+            // содержать правила ОБОИХ направлений (сотрудник числится и в
+            // RemOnline, и в МойСклад, см. Фаза 2/EmployeeIdentity), а
+            // `type` правил у двух направлений пересекается буквально
+            // ('PayPerHour' есть и там, и там) — без этого фильтра
+            // SalaryRuleMapper.toDomain мог бы получить чужую (shop)
+            // строку и попытаться резолвнуть её несуществующим для этого
+            // реестра типом. См. комментарий у SalaryRule.direction в
+            // salary.prisma (Фаза 12).
+            include: { rules: { where: { direction: 'service' } } },
         });
 
         return records.map((record) => this.mapper.toDomain(record));
@@ -53,7 +71,16 @@ export class MotivationSchemaRepository
         }
         const records = await this.client.motivationSchema.findMany({
             where: { targetType: 'Employee', targetId: { in: employeeIds } },
-            include: { rules: true },
+            // direction: 'service' — MotivationSchema сотрудника может
+            // содержать правила ОБОИХ направлений (сотрудник числится и в
+            // RemOnline, и в МойСклад, см. Фаза 2/EmployeeIdentity), а
+            // `type` правил у двух направлений пересекается буквально
+            // ('PayPerHour' есть и там, и там) — без этого фильтра
+            // SalaryRuleMapper.toDomain мог бы получить чужую (shop)
+            // строку и попытаться резолвнуть её несуществующим для этого
+            // реестра типом. См. комментарий у SalaryRule.direction в
+            // salary.prisma (Фаза 12).
+            include: { rules: { where: { direction: 'service' } } },
         });
 
         return records.map((record) => this.mapper.toDomain(record));

@@ -18,6 +18,7 @@ import { RoappSyncModule } from './domains/service/sync/roapp/roapp-sync.module'
 import { MoySkladSyncModule } from './domains/shop/sync/moySklad/moysklad-sync.module';
 import { ShopSalesModule } from './domains/shop/modules/sales/shop-sales.module';
 import { AccountingModule } from './domains/service/modules/accounting/accounting.module';
+import { ShopAccountingModule } from './domains/shop/modules/accounting/shop-accounting.module';
 import { EmployeeIdentityModule } from './modules/employee-identity/employee-identity.module';
 
 // TODO: временно перенесены как есть, требуют рефакторинга под DDD:
@@ -42,6 +43,7 @@ import { ReportsModule } from './TODO/reports/reports.module';
         SalesModule,
         ShopSalesModule,
         AccountingModule,
+        ShopAccountingModule,
         EmployeeIdentityModule,
         AiModule,
         GoogleSheetsModule,

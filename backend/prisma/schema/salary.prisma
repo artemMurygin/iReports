@@ -22,6 +22,30 @@ model SalaryRule {
   // ERP искать сотрудника в этой роли (см. docs/payroll/prd-payroll-calculation.md,
   // раздел 2 "Зарплатные правила сервиса").
   targetRole         String   @map("target_role")
+  // Направление, которому принадлежит правило (Фаза 12, issue #57 —
+  // см. backend/src/domains/shop/modules/accounting, decision-комментарий
+  // в SalaryRuleMapper направления service). ПОЧЕМУ на SalaryRule, а не на
+  // MotivationSchema (в отличие от AccountingPeriod.direction, где
+  // (direction, period) — независимый агрегат): одна MotivationSchema
+  // адресует ОДНОГО сотрудника (targetType = 'Employee') или отдел, а
+  // сотрудник вполне может числиться и в RemOnline, и в МойСклад
+  // одновременно (см. EmployeeIdentity, Фаза 2) — то есть у одной схемы
+  // мотивации может быть смешанный набор правил service+shop. `type`
+  // правила ('PayPerHour', 'ProductSold', ...) у двух направлений
+  // пересекается буквально (service и shop оба используют литерал
+  // 'PayPerHour', но с разными реестрами/фабриками — issue #57 требует
+  // независимости), поэтому резолвинг класса правила по одному лишь
+  // (type) неоднозначен, если в выборке смешаны строки обоих направлений.
+  // Решение: каждый direction-репозиторий (SalaryRuleRepository/
+  // MotivationSchemaRepository своего домена) фильтрует `rules` по этому
+  // полю на уровне Prisma-запроса (`where: { direction: ... }`), поэтому
+  // домену того направления, что читает схему, всегда попадают только его
+  // "свои" строки — SalaryRuleMapper.toDomain никогда не видит чужой type
+  // и продолжает безопасно бросать NotFoundException только на реально
+  // незарегистрированный (а не "чужого направления") тип. Дефолт
+  // 'service' — обратная совместимость: все существующие на момент
+  // миграции строки были созданы единственным на тот момент направлением.
+  direction          String   @default("service")
   props              Json
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -29,6 +53,7 @@ model SalaryRule {
   motivationSchema MotivationSchema @relation(fields: [motivationSchemaId], references: [id], onDelete: Cascade)
 
   @@index([motivationSchemaId])
+  @@index([motivationSchemaId, direction])
   @@map("salary_rules")
 }
 

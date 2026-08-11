@@ -13,6 +13,12 @@ const salesPerformanceRoot = 'sales/salesPerformance';
 // параметр на общем пути, чтобы не создавать двух контроллеров на один и
 // тот же путь+метод (Nest/Express однозначно не резолвят такую коллизию).
 const shopSalesPerformanceRoot = 'sales/salesPerformance/shop';
+// Модуль accounting магазина (Фаза 12, issue #57/#61) — собственный
+// namespace 'shop/accounting', отдельный от 'accounting' сервиса
+// (см. domains/service/modules/accounting), чтобы GET списка типов правил
+// каждого направления был самостоятельным HTTP-роутом, а не query-веткой
+// одного эндпоинта (тот же приём, что у shopSalesPerformanceRoot выше).
+const shopAccountingRoot = 'shop/accounting';
 
 // Api Versions
 const v1 = 'v1';
@@ -54,5 +60,9 @@ export const routesV1 = {
     // shopSalesPerformanceRoot выше.
     shopSalesPerformance: {
         byPeriod: `/${shopSalesPerformanceRoot}/:period`,
+    },
+    // Зарплатные правила магазина (Фаза 12, см. domains/shop/modules/accounting).
+    shopAccounting: {
+        salaryRuleTypes: `/${shopAccountingRoot}/salary_role_types`,
     },
 };

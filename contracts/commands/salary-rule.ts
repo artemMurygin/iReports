@@ -4,9 +4,21 @@ import { z } from 'zod';
 
 // Роль, за которую платит правило — общее поле рядом с type/name, а не
 // часть config (см. docs/payroll/prd-payroll-calculation.md, раздел 2).
-// Перечень пока ограничен ролями сервиса, зафиксированными в PRD; роли
-// магазина (ONLINE_PURCHASER / OFFLINE_PURCHASER) добавляются вместе с
-// направлением shop (Фаза 12).
+// Единый перечень для ОБОИХ направлений (service/shop), а не два отдельных
+// enum'а: ONLINE_MANAGER/OFFLINE_MANAGER — одно и то же бизнес-понятие в
+// обеих ERP (просто разные поля-источники, см. domain/services/
+// service-role-source.ts у service и domain/services/shop-role-source.ts
+// у shop), поэтому расширяем этот же shared-enum, а не заводим копию в
+// shop-salary-rule.ts. ONLINE_PURCHASER / OFFLINE_PURCHASER (Фаза 12,
+// см. docs/payroll/prd-payroll-calculation.md, раздел "Роли магазина") —
+// роли, специфичные для shop (закупщики БУ техники на уровне товарной
+// позиции, targetRole правил PayPerHour/ProductSold в этой фазе их не
+// использует — задел под UsedProductSold, Фаза 13). У сервисных типов
+// правил они недостижимы (SalaryRuleFactory/registry сервиса их просто не
+// матчит ни в одном правиле), поэтому смешение в одном enum безопасно —
+// "не смешивай контракты" (issue #60) относится к discriminatedUnion типов
+// правил (PayPerHour/ProductSold/... vs PayPerHour/ServiceCompleted/...),
+// а не к этому вспомогательному enum'у.
 const targetRoleSchema = z.enum([
     'ENGINEER',
     'ONLINE_MANAGER',
@@ -14,6 +26,8 @@ const targetRoleSchema = z.enum([
     'ORDER_MANAGER',
     'CREATED_BY',
     'CLOSED_BY',
+    'ONLINE_PURCHASER',
+    'OFFLINE_PURCHASER',
 ]);
 
 export type TargetRole = z.infer<typeof targetRoleSchema>;
@@ -23,7 +37,9 @@ export type TargetRole = z.infer<typeof targetRoleSchema>;
 // docs/payroll/prd-payroll-calculation.md, раздел 2, и план, Фаза 7).
 // Целое число: денежные поля во всём модуле accounting — целые рубли (см.
 // комментарий у roundRubles() на бэкенде,
-// domains/service/modules/accounting/domain/services/money.ts).
+// domains/service/modules/accounting/domain/services/money.ts). Экспортится
+// (Фаза 12) — переиспользуется shop-salary-rule.ts, у обоих направлений
+// один и тот же смысл поля.
 const individualBonusFieldSchema = z.number().int().optional();
 
 // База начисления процентных правил — общая для OrderPayed и TaskCompleted
@@ -333,8 +349,10 @@ export {
     orderPayedSalaryConfigSchema,
     taskCompletedSalaryConfigSchema,
     percentBorderSchema,
+    percentBordersSchema,
     salaryBasisSchema,
     targetRoleSchema,
+    individualBonusFieldSchema,
     calculationLineSchema,
     factPrognoseAmountSchema,
     salesPerformanceSummarySchema,

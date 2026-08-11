@@ -15,6 +15,14 @@ import {
     salaryRuleTypeSchema,
 } from '../schemas/salary-rule.schema';
 
+// Направление (record.direction) здесь не проверяется намеренно — фильтрация
+// "только правила service" происходит на уровне Prisma-запроса в
+// MotivationSchemaRepository (Фаза 12, `include: { rules: { where: {
+// direction: 'service' } } }`), поэтому сюда в норме не попадают чужие
+// строки. Если попадут (например, прямой вызов в обход репозитория) —
+// salaryRuleRegistry.get(type) всё равно не найдёт класс для
+// незнакомого/чужого типа и бросит осмысленную ошибку ниже, а не молча
+// проглотит чужое правило.
 export class SalaryRuleMapper implements Mapper<
     SalaryRule,
     Omit<Prisma.SalaryRuleUncheckedCreateInput, 'motivationSchemaId'>
@@ -53,6 +61,11 @@ export class SalaryRuleMapper implements Mapper<
             type: entity.type,
             name: entity.name,
             targetRole: entity.targetRole,
+            // Направление правила (Фаза 12) — фиксированное 'service' для
+            // этого мапера: домен service никогда не пишет чужие правила.
+            // См. комментарий у SalaryRule.direction в salary.prisma —
+            // почему это поле не на MotivationSchema.
+            direction: 'service',
             props: entity.config as Prisma.InputJsonValue,
             createdAt,
             updatedAt,

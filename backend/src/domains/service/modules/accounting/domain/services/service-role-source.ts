@@ -1,5 +1,6 @@
 import type { CalculationEmployee } from '@/shared/domain/calculation-context';
 import type { TargetRole } from '../types/salary-rule.types';
+import { ArgumentInvalidException } from '@/shared/exceptions';
 
 // Маппинг «роль правила → поле ERP» для сервиса (RoApp/RemOnline) — Фаза 7
 // (см. docs/payroll/plan-payroll-calculation.md и
@@ -54,6 +55,16 @@ export function resolveServiceRoleSource(role: TargetRole): ServiceRoleSource {
             return { kind: 'ORDER_EMPLOYEE_FIELD', field: 'createdById' };
         case 'CLOSED_BY':
             return { kind: 'ORDER_EMPLOYEE_FIELD', field: 'closedById' };
+        default:
+            // ONLINE_PURCHASER/OFFLINE_PURCHASER — роли магазина, добавленные
+            // в общий targetRoleSchema Фазой 12 (см.
+            // contracts/commands/salary-rule.ts) для переиспользования
+            // одного enum'а обоими направлениями. Правило сервиса их
+            // получить не должно — это ошибка конфигурации правила, а не
+            // данных (то же решение, что у shop-role-source.ts).
+            throw new ArgumentInvalidException(
+                `Роль "${role}" не относится к направлению service`,
+            );
     }
 }
 

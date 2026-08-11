@@ -58,6 +58,23 @@ query у общего пути `/v1/sales/salesPerformance/:period` (см. об�
 ленивое достраивание при первом обращении к периоду (тот же механизм, что и у `service`).
 - `GET /v1/sales/salesPerformance/shop/:period` — план, факт и прогноз одним запросом по каждому отделу направления `shop` за период; ⚠️ `fact.margin` — сумма `MoySkladDemandPosition.profit` по позициям отгрузок периода, а не `turnover - cost` (значение уже посчитано в МойСклад с учётом метода списания себестоимости); `quantity` — сумма `Float` (весовой/дробный товар)
 
+## domains/shop/modules/accounting (`/shop/accounting`)
+Зарплатные правила магазина (Фаза 12, issues #57-#61, см. docs/payroll/plan-payroll-calculation.md) —
+собственный реестр (`shopSalaryRuleRegistry`) и фабрика (`ShopSalaryRuleFactory`), независимые от
+одноимённого модуля `domains/service/modules/accounting` (см. выше): `PayPerHour` (`hours × price`,
+источник часов — общий `EmployeeHoursEntry`) и `ProductSold` (награда `Fixed`/`FixedPercent`/
+`FloatPercent` за проданный товар в категории `MoySkladProductFolder`, с раскрытием вложенных папок;
+база `REVENUE`/`MARGIN`, без `SALARY_MINUS_ENGINEER_SALARY`). Роли — `ONLINE_MANAGER`/
+`OFFLINE_MANAGER` (уровень отгрузки, `MoySkladDemand`) и `ONLINE_PURCHASER`/`OFFLINE_PURCHASER`
+(уровень товарной позиции, задел под `UsedProductSold`, Фаза 13); роли инженера нет. ⚠️
+Персистентность (создание мотивационной схемы/правила магазина) в Фазу 12/13 не входит — расчётный
+слой (`calculate()`) уже готов принять `CalculationContext`, когда появится оркестратор, который его
+соберёт; единственный HTTP-вход этой фазы — список типов правил.
+- `GET /shop/accounting/salary_role_types` — типы зарплатных правил магазина (`PayPerHour`,
+  `ProductSold`) с перечнем допустимых `targetRole` для каждого; набор типов не пересекается с
+  `GET /accounting/salary_role_types` сервиса (кроме совпадающего по имени `PayPerHour` — это два
+  независимых типа с разными реестрами)
+
 ## deals (`/deals`)
 - `GET /deals?from&to` — список сделок за период
 - `GET /deals/stages` — этапы
