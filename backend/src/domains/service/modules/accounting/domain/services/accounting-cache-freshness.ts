@@ -1,4 +1,13 @@
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+// Структурный, а не конкретный тип: домен shop заводит собственную (не
+// импортируемую отсюда, см. backend/CLAUDE.md о независимости деревьев
+// modules/accounting service/shop) мотивационную схему с такой же формой
+// getProps() — Фаза 13.5, docs/payroll/phase-13.5-shop-report-integration.md.
+interface MotivationSchemaLike {
+    getProps(): {
+        updatedAt: Date;
+        rules: { updatedAt: Date }[];
+    };
+}
 
 // Ленивый кэш расчёта зарплаты (Фаза 6, см.
 // docs/payroll/plan-payroll-calculation.md) описан в PRD как ключ
@@ -27,7 +36,7 @@ import { MotivationSchema } from '@/domains/service/modules/accounting/domain/en
 // (см. PRD: "кэш отдаётся, если штамп и версия схемы совпадают ... иначе —
 // пересчёт с перезаписью").
 export function motivationSchemaVersion(
-    schema: MotivationSchema | null,
+    schema: MotivationSchemaLike | null,
 ): string {
     if (!schema) {
         return 'none';

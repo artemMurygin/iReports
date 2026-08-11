@@ -26,34 +26,54 @@ export class CreateMotivationSchemaHandler implements ICommandHandler<
     async execute(
         command: CreateMotivationSchemaCommand,
     ): Promise<MotivationResponse> {
-        const motivationSchema = MotivationSchema.create({
-            targetType: command.targetType,
-            targetId: command.targetId,
-            name: command.name,
-            rules: command.rules.map((rule) => SalaryRuleFactory.create(rule)),
-        });
-
         // Схема и все её правила должны появиться в БД атомарно, поэтому
-        // insert схемы и диспатч команд на создание правил идут внутри одной
-        // транзакции. Каждый репозиторий сам оборачивает свою запись в
-        // db.withTransaction() (см. PrismaRepository.write), но раз она уже
-        // открыта здесь, вложенные вызовы лишь переиспользуют текущий
-        // TransactionClient (reentrancy-guard в withTransaction), а не
-        // открывают свою — и события агрегатов опубликуются одним пакетом
+        // find-or-create схемы и диспатч команд на создание правил идут
+        // внутри одной транзакции. Каждый репозиторий сам оборачивает свою
+        // запись в db.withTransaction() (см. PrismaRepository.write), но раз
+        // она уже открыта здесь, вложенные вызовы лишь переиспользуют
+        // текущий TransactionClient (reentrancy-guard в withTransaction), а
+        // не открывают свою — и события агрегатов опубликуются одним пакетом
         // только после коммита именно этой, внешней транзакции.
-        await this.unitOfWork.run(async () => {
-            await this.motivationSchemaRepo.insert(motivationSchema);
+        const motivationSchemaId = await this.unitOfWork.run(async () => {
+            // У MotivationSchema нет колонки direction — targetType/targetId
+            // это весь естественный ключ. Сотрудник с идентичностями в обеих
+            // ERP мог получить схему уже с другой стороны (см. shop-версию
+            // этого хендлера), поэтому вставлять новую строку можно только
+            // когда её ещё нет.
+            const existingId = await this.motivationSchemaRepo.findIdByTarget(
+                command.targetType,
+                command.targetId,
+            );
+
+            let motivationSchemaId: string;
+
+            if (existingId) {
+                motivationSchemaId = existingId;
+            } else {
+                const motivationSchema = MotivationSchema.create({
+                    targetType: command.targetType,
+                    targetId: command.targetId,
+                    name: command.name,
+                    rules: command.rules.map((rule) =>
+                        SalaryRuleFactory.create(rule),
+                    ),
+                });
+                await this.motivationSchemaRepo.insert(motivationSchema);
+                motivationSchemaId = motivationSchema.id;
+            }
 
             for (const rule of command.rules) {
                 await this.commandBus.execute(
                     new CreateSalaryRuleCommand({
-                        motivationSchemaId: motivationSchema.id,
+                        motivationSchemaId,
                         rule,
                     }),
                 );
             }
+
+            return motivationSchemaId;
         });
 
-        return { id: motivationSchema.id };
+        return { id: motivationSchemaId };
     }
 }

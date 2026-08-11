@@ -28,6 +28,10 @@ import { MotivationSchema } from '@/domains/service/modules/accounting/domain/en
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
+import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
+import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
+import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 
 // Настоящей инфраструктуры для test:e2e (jest-e2e.json + отдельная БД) в
 // проекте пока нет (см. backend/CLAUDE.md — упомянутый конфиг не заведён).
@@ -40,7 +44,13 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // RoappSalesFactSourceRepository и т.п.), которые этот эндпоинт не
 // использует, всё равно конструируются Nest DI и просто хранят
 // DatabaseService в поле, поэтому им достаточно фейкового DatabaseService,
-// а не реального Postgres (тот же приём, что и с UNIT_OF_WORK ниже).
+// а не реального Postgres (тот же приём, что и с UNIT_OF_WORK ниже). Фаза
+// 13.5 добавила зеркальную зависимость на ShopAccountingModule (через
+// AccountingModule) — SHOP_MOTIVATION_SCHEMA_REPOSITORY/SHOP_CALCULATION_DATA
+// подменяются тем же приёмом; сквозной сценарий записи и чтения обоих
+// направлений сразу (включая дедуп MotivationSchema и независимое закрытие
+// периода) — отдельный файл shop-report-integration.e2e.spec.ts в этой же
+// директории, а не этот тест (он остаётся узким тестом одного направления).
 describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
     let app: INestApplication;
     const schemas = new Map<number, MotivationSchema>();
@@ -112,6 +122,30 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
         findHoursWorkedForEmployees: () => Promise.resolve(new Map()),
     };
+    // Фаза 13.5: GetEmployeeSalaryReportService теперь всегда строит ОБА
+    // направления (см. combineDirections) — этот тест проверяет только
+    // service, поэтому shop-сторона намеренно пустая (без личной схемы, без
+    // erpData), а не подмена бизнес-логики: направление shop всё равно
+    // должно попасть в directions[] с total 0 и isClosed: false, иначе
+    // отчёт сотрудника без схемы магазина не отличить от ошибки.
+    const fakeShopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
+        insert: () => Promise.resolve(),
+        findByEmployee: () => Promise.resolve(null),
+        findByEmployees: () => Promise.resolve([]),
+        findAllEmployeeTargets: () => Promise.resolve([]),
+        findIdByTarget: () => Promise.resolve(null),
+    };
+    const fakeShopCalculationData: ShopCalculationDataPort = {
+        findEmployeeIdentities: () => Promise.resolve([]),
+        findHoursWorked: () => Promise.resolve(0),
+        findProductSoldItems: () => Promise.resolve([]),
+        findConfirmedTaskCompletions: () => Promise.resolve([]),
+        findEmployeeDepartmentId: () => Promise.resolve(null),
+        findEmployeesInDepartment: () => Promise.resolve([]),
+        findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
+        findHoursWorkedForEmployees: () => Promise.resolve(new Map()),
+        resolveCategoryDescendantFolderIds: () => Promise.resolve({}),
+    };
     // AccountingModule заодно поднимает CreateMotivationSchemaHandler (не
     // используется этим эндпоинтом), которому нужен UNIT_OF_WORK — реальный
     // PrismaUnitOfWork приходит из @Global() DatabaseModule (требует живой
@@ -171,6 +205,10 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(SERVICE_CALCULATION_DATA)
             .useValue(fakeServiceCalculationData)
+            .overrideProvider(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
+            .useValue(fakeShopMotivationSchemaRepo)
+            .overrideProvider(SHOP_CALCULATION_DATA)
+            .useValue(fakeShopCalculationData)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -203,12 +241,19 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
 
         expect(body).toMatchObject({
             period: '2026-08',
-            isClosed: false,
+            // isClosed переехал с верхнего уровня в directions[] (Фаза
+            // 13.5, Решение №1) — service и shop закрываются независимо.
             grandTotal: { fact: 2000, prognose: 2000 },
         });
-        expect(body.directions).toHaveLength(1);
+        // grandTotal сходится с одним service-направлением, потому что
+        // shop-сторона (см. fakeShopMotivationSchemaRepo/
+        // fakeShopCalculationData выше) пуста — не потому, что shop
+        // отсутствует в ответе: directions[] всегда содержит оба
+        // направления (Фаза 13.5).
+        expect(body.directions).toHaveLength(2);
         expect(body.directions[0]).toMatchObject({
             direction: 'service',
+            isClosed: false,
             total: { fact: 2000, prognose: 2000 },
             isPlanApproved: true,
         });
@@ -220,6 +265,12 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
                 amount: { fact: 2000, prognose: 2000 },
             }),
         ]);
+        expect(body.directions[1]).toMatchObject({
+            direction: 'shop',
+            isClosed: false,
+            total: { fact: 0, prognose: 0 },
+        });
+        expect(body.directions[1].rules).toEqual([]);
     });
 
     it('возвращает пустой отчёт для сотрудника без мотивационной схемы', async () => {
@@ -232,6 +283,7 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
             grandTotal: { fact: 0, prognose: 0 },
         });
         expect(body.directions[0].rules).toEqual([]);
+        expect(body.directions[1].rules).toEqual([]);
     });
 
     it('отклоняет период не в формате YYYY-MM', async () => {

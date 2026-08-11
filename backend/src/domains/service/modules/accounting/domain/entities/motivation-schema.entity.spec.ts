@@ -43,7 +43,9 @@ describe('MotivationSchema', () => {
                 });
 
                 expect(schema.domainEvents).toHaveLength(1);
-                const [event] = schema.domainEvents;
+                const [event] = schema.domainEvents as [
+                    MotivationSchemaCreatedDomainEvent,
+                ];
                 expect(event).toBeInstanceOf(
                     MotivationSchemaCreatedDomainEvent,
                 );

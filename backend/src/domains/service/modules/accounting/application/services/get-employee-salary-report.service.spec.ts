@@ -2,10 +2,16 @@ import { GetEmployeeSalaryReportService } from './get-employee-salary-report.ser
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import type {
+    AccountingCalculationCacheEntry,
+    AccountingCalculationCachePort,
+} from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
+import type { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
@@ -13,17 +19,24 @@ import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/e
 import { OrderPayedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/order-payed.entity';
 import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
+import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
+import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
-// Ленивый кэш и снапшот закрытого периода (Фаза 6, см.
-// docs/payroll/plan-payroll-calculation.md, "Фаза 6: Расчётный период,
-// ленивый кэш и снапшоты"). Все зависимости — чистые in-memory фейки, без
-// NestJS DI и без БД (тот же стиль, что и у остальных юнит-тестов accounting).
+// Direction-aware отчёт сотрудника (Фаза 13.5, см.
+// docs/payroll/phase-13.5-shop-report-integration.md) — сервис всегда
+// строит ОБА направления (service/shop) параллельно и независимо (свой
+// AccountingPeriod, своя мотивационная схема, свой кэш/снапшот на каждое
+// направление), сводя их в единый grandTotal. Все зависимости — чистые
+// in-memory фейки, без NestJS DI и без БД (тот же стиль, что и у остальных
+// юнит-тестов accounting).
 describe('GetEmployeeSalaryReportService', () => {
-    // Часы (Фаза 7) приходят из BuildServiceCalculationContextService, а не
-    // из config — фейк ниже всегда возвращает hoursWorked: 8, чтобы старые
-    // числовые ожидания этого файла (2000 = 8ч × 250) остались верны.
+    // Часы (Фаза 7) приходят из Build*CalculationContextService, а не из
+    // config — фейки ниже всегда возвращают hoursWorked: 8, чтобы старые
+    // числовые ожидания этого файла (2000 = 8ч × 250 у service, 800 = 8ч ×
+    // 100 у shop) остались верны.
     const buildSchema = (employeeId: number) =>
         withRequestContext(() => {
             const rule = PayPerHoursEntity.create({
@@ -40,17 +53,47 @@ describe('GetEmployeeSalaryReportService', () => {
             });
         });
 
+    const buildShopSchema = (employeeId: number) =>
+        withRequestContext(() => {
+            const rule = PayPerHourShopEntity.create({
+                type: 'PayPerHour',
+                name: 'Почасовая ставка (магазин)',
+                targetRole: 'OFFLINE_MANAGER',
+                config: { price: 100 },
+            });
+            return ShopMotivationSchema.create({
+                targetType: 'Employee',
+                targetId: employeeId,
+                name: 'Оклад продавца',
+                rules: [rule],
+            });
+        });
+
     const buildService = (overrides?: {
         schema?: MotivationSchema | null;
+        shopSchema?: ShopMotivationSchema | null;
         accountingPeriod?: AccountingPeriod | null;
+        shopAccountingPeriod?: AccountingPeriod | null;
         snapshot?: Awaited<
             ReturnType<AccountingPeriodSnapshotPort['findByKey']>
         >;
+        shopSnapshot?: Awaited<
+            ReturnType<AccountingPeriodSnapshotPort['findByKey']>
+        >;
         domainSyncAt?: Date | null;
+        shopDomainSyncAt?: Date | null;
         plans?: SalesPlan[];
+        shopPlans?: SalesPlan[];
         erpData?: Partial<ServiceCalculationErpData>;
+        shopErpData?: Partial<ShopCalculationErpData>;
         salesPerformanceDetail?: unknown;
+        shopSalesPerformanceDetail?: unknown;
         identities?: {
+            system: string;
+            identifierType: string;
+            externalId: string;
+        }[];
+        shopIdentities?: {
             system: string;
             identifierType: string;
             externalId: string;
@@ -66,9 +109,26 @@ describe('GetEmployeeSalaryReportService', () => {
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
         };
 
+        const findShopByEmployee = jest
+            .fn<Promise<ShopMotivationSchema | null>, [number]>()
+            .mockResolvedValue(overrides?.shopSchema ?? null);
+        const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
+            insert: jest.fn(),
+            findByEmployee: findShopByEmployee,
+            findByEmployees: jest.fn().mockResolvedValue([]),
+            findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findIdByTarget: jest.fn().mockResolvedValue(null),
+        };
+
         const findByDirectionAndPeriodPeriod = jest
             .fn<Promise<AccountingPeriod | null>, [string, string]>()
-            .mockResolvedValue(overrides?.accountingPeriod ?? null);
+            .mockImplementation((direction) =>
+                Promise.resolve(
+                    direction === 'shop'
+                        ? (overrides?.shopAccountingPeriod ?? null)
+                        : (overrides?.accountingPeriod ?? null),
+                ),
+            );
         const periodRepo: AccountingPeriodRepositoryPort = {
             findByDirectionAndPeriod: findByDirectionAndPeriodPeriod,
             save: jest.fn(),
@@ -76,7 +136,13 @@ describe('GetEmployeeSalaryReportService', () => {
 
         const findSnapshot = jest
             .fn()
-            .mockResolvedValue(overrides?.snapshot ?? null);
+            .mockImplementation((direction: string) =>
+                Promise.resolve(
+                    direction === 'shop'
+                        ? (overrides?.shopSnapshot ?? null)
+                        : (overrides?.snapshot ?? null),
+                ),
+            );
         const snapshotRepo: AccountingPeriodSnapshotPort = {
             saveAll: jest.fn(),
             findByKey: findSnapshot,
@@ -85,7 +151,17 @@ describe('GetEmployeeSalaryReportService', () => {
         };
 
         const findCache = jest.fn().mockResolvedValue(null);
-        const upsertCache = jest.fn().mockResolvedValue(undefined);
+        const upsertCache = jest
+            .fn<
+                Promise<void>,
+                [
+                    AccountingDirection,
+                    string,
+                    number,
+                    AccountingCalculationCacheEntry,
+                ]
+            >()
+            .mockResolvedValue(undefined);
         const cacheRepo: AccountingCalculationCachePort = {
             find: findCache,
             upsert: upsertCache,
@@ -94,7 +170,13 @@ describe('GetEmployeeSalaryReportService', () => {
 
         const getLastSuccessfulSyncAt = jest
             .fn<Promise<Date | null>, [string]>()
-            .mockResolvedValue(overrides?.domainSyncAt ?? null);
+            .mockImplementation((direction) =>
+                Promise.resolve(
+                    direction === 'shop'
+                        ? (overrides?.shopDomainSyncAt ?? null)
+                        : (overrides?.domainSyncAt ?? null),
+                ),
+            );
         const domainSyncStatus: DomainSyncStatusPort = {
             getLastSuccessfulSyncAt,
             markSuccessful: jest.fn(),
@@ -102,7 +184,13 @@ describe('GetEmployeeSalaryReportService', () => {
 
         const findPlansByDirectionAndPeriod = jest
             .fn<Promise<SalesPlan[]>, [string, string]>()
-            .mockResolvedValue(overrides?.plans ?? []);
+            .mockImplementation((direction) =>
+                Promise.resolve(
+                    direction === 'shop'
+                        ? (overrides?.shopPlans ?? [])
+                        : (overrides?.plans ?? []),
+                ),
+            );
         const salesPlanRepo: SalesPlanRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
@@ -137,6 +225,29 @@ describe('GetEmployeeSalaryReportService', () => {
             findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),
         } as unknown as BuildServiceCalculationContextService;
 
+        const shopContextBuilder = {
+            build: jest.fn((period: Period, employeeId: number) =>
+                Promise.resolve({
+                    employee: {
+                        id: employeeId,
+                        identities: overrides?.shopIdentities ?? [],
+                    },
+                    period: {
+                        direction: 'shop' as const,
+                        period: period.getValue(),
+                        ...period.getBounds(),
+                        status: 'OPEN' as const,
+                    },
+                    erpData: overrides?.shopErpData ?? {
+                        hoursWorked: 8,
+                    },
+                    salesPerformanceDetail:
+                        overrides?.shopSalesPerformanceDetail ?? null,
+                }),
+            ),
+            findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),
+        } as unknown as BuildShopCalculationContextService;
+
         const service = new GetEmployeeSalaryReportService(
             motivationSchemaRepo,
             periodRepo,
@@ -145,11 +256,14 @@ describe('GetEmployeeSalaryReportService', () => {
             domainSyncStatus,
             salesPlanRepo,
             contextBuilder,
+            shopMotivationSchemaRepo,
+            shopContextBuilder,
         );
 
         return {
             service,
             findByEmployee,
+            findShopByEmployee,
             findByDirectionAndPeriodPeriod,
             findSnapshot,
             findCache,
@@ -158,40 +272,6 @@ describe('GetEmployeeSalaryReportService', () => {
             findPlansByDirectionAndPeriod,
         };
     };
-
-    const buildSalesPlan = (period: string) =>
-        SalesPlan.create({
-            direction: 'service',
-            department: 1,
-            category: null,
-            period,
-            turnover: 1000,
-            margin: 100,
-            source: 'MANUAL',
-        });
-
-    // SalesPlan.edit() не бьёт собственный updatedAt в памяти (у Entity нет
-    // сеттера для него) — свежий штамп появляется только после реального
-    // прохода через Prisma (@updatedAt на sales_plans, см. фикс
-    // SalesPlanRepository.update() в этой же фазе) и повторного чтения из
-    // БД. В юните это моделируется прямой пересборкой сущности с более
-    // поздним updatedAt — тем же способом, каким SalesPlanMapper.toDomain()
-    // восстанавливает сущность из строки БД.
-    const withUpdatedAt = (plan: SalesPlan, updatedAt: Date): SalesPlan =>
-        new SalesPlan({
-            id: plan.id,
-            createdAt: plan.getProps().createdAt,
-            updatedAt,
-            props: {
-                scope: plan.getProps().scope,
-                period: plan.period,
-                turnover: plan.turnover,
-                margin: plan.margin,
-                source: plan.source,
-                status: plan.status,
-                approval: null,
-            },
-        });
 
     it('отклоняет период не в формате YYYY-MM', async () => {
         await withRequestContext(async () => {
@@ -203,18 +283,27 @@ describe('GetEmployeeSalaryReportService', () => {
         });
     });
 
-    it('возвращает пустой отчёт, если у сотрудника нет мотивационной схемы', async () => {
-        const { service, findByEmployee } = buildService();
+    it('оба направления без мотивационной схемы — пустой отчёт по обоим', async () => {
+        const { service, findByEmployee, findShopByEmployee } = buildService();
 
         const report = await service.execute(1, '2026-08');
 
         expect(findByEmployee).toHaveBeenCalledWith(1);
+        expect(findShopByEmployee).toHaveBeenCalledWith(1);
         expect(report).toEqual({
             period: '2026-08',
-            isClosed: false,
             directions: [
                 {
                     direction: 'service',
+                    isClosed: false,
+                    total: { fact: 0, prognose: 0 },
+                    rules: [],
+                    salesPerformance: null,
+                    isPlanApproved: true,
+                },
+                {
+                    direction: 'shop',
+                    isClosed: false,
                     total: { fact: 0, prognose: 0 },
                     rules: [],
                     salesPerformance: null,
@@ -225,142 +314,109 @@ describe('GetEmployeeSalaryReportService', () => {
         });
     });
 
-    it('возвращает итог и разбивку по правилам схемы для запроса с PayPerHour', async () => {
-        const schema = buildSchema(42);
-        const { service } = buildService({ schema });
+    describe('мотивационная схема только в одном направлении', () => {
+        it('только у service — shop возвращает нулевое направление, grandTotal равен service', async () => {
+            const schema = buildSchema(42);
+            const { service } = buildService({ schema });
 
-        const report = await service.execute(42, '2026-08');
+            const report = await service.execute(42, '2026-08');
 
-        expect(report.grandTotal).toEqual({ fact: 2000, prognose: 2000 });
-        expect(report.directions).toHaveLength(1);
-        const [direction] = report.directions;
-        expect(direction.direction).toBe('service');
-        expect(direction.total).toEqual({ fact: 2000, prognose: 2000 });
-        expect(direction.rules).toHaveLength(1);
-        expect(direction.rules[0]).toMatchObject({
-            type: 'PayPerHour',
-            name: 'Почасовая ставка',
-            targetRole: 'ENGINEER',
-            amount: { fact: 2000, prognose: 2000 },
+            expect(report.directions).toHaveLength(2);
+            const [serviceDirection, shopDirection] = report.directions;
+            expect(serviceDirection.direction).toBe('service');
+            expect(serviceDirection.total).toEqual({
+                fact: 2000,
+                prognose: 2000,
+            });
+            expect(shopDirection.direction).toBe('shop');
+            expect(shopDirection.total).toEqual({ fact: 0, prognose: 0 });
+            expect(shopDirection.rules).toEqual([]);
+            expect(report.grandTotal).toEqual({ fact: 2000, prognose: 2000 });
+        });
+
+        it('только у shop — service возвращает нулевое направление, grandTotal равен shop', async () => {
+            const shopSchema = buildShopSchema(42);
+            const { service } = buildService({ shopSchema });
+
+            const report = await service.execute(42, '2026-08');
+
+            const [serviceDirection, shopDirection] = report.directions;
+            expect(serviceDirection.total).toEqual({ fact: 0, prognose: 0 });
+            expect(serviceDirection.rules).toEqual([]);
+            expect(shopDirection.total).toEqual({ fact: 800, prognose: 800 });
+            expect(report.grandTotal).toEqual({ fact: 800, prognose: 800 });
         });
     });
 
-    describe('ленивый кэш открытого периода', () => {
-        it('первый запрос считает через оркестратор и записывает кэш', async () => {
+    it('мотивационные схемы в обоих направлениях — grandTotal суммирует оба направления', async () => {
+        const schema = buildSchema(42);
+        const shopSchema = buildShopSchema(42);
+        const { service } = buildService({ schema, shopSchema });
+
+        const report = await service.execute(42, '2026-08');
+
+        const [serviceDirection, shopDirection] = report.directions;
+        expect(serviceDirection.total).toEqual({ fact: 2000, prognose: 2000 });
+        expect(shopDirection.total).toEqual({ fact: 800, prognose: 800 });
+        // 2000 + 800 = 2800 по факту и по прогнозу (оба направления открыты).
+        expect(report.grandTotal).toEqual({ fact: 2800, prognose: 2800 });
+    });
+
+    describe('ленивый кэш открытого периода — своя строка на каждое направление', () => {
+        it('первый запрос считает через оба оркестратора и пишет кэш дважды (по направлению)', async () => {
             const schema = buildSchema(42);
+            const shopSchema = buildShopSchema(42);
             const { service, findCache, upsertCache } = buildService({
                 schema,
+                shopSchema,
             });
 
             await service.execute(42, '2026-08');
 
             expect(findCache).toHaveBeenCalledWith('service', '2026-08', 42);
-            expect(upsertCache).toHaveBeenCalledTimes(1);
+            expect(findCache).toHaveBeenCalledWith('shop', '2026-08', 42);
+            expect(upsertCache).toHaveBeenCalledTimes(2);
+            const directionsUpserted = upsertCache.mock.calls.map(
+                (call) => call[0],
+            );
+            expect(directionsUpserted.sort()).toEqual(['service', 'shop']);
         });
 
-        it('повторный запрос без синхронизации отдаётся из кэша и не пересчитывает', async () => {
+        it('повторный запрос без изменений отдаётся из кэша по обоим направлениям и не пересчитывает', async () => {
             const schema = buildSchema(42);
+            const shopSchema = buildShopSchema(42);
             const { service, findCache, upsertCache } = buildService({
                 schema,
+                shopSchema,
             });
 
             const first = await service.execute(42, '2026-08');
-            const cachedEntry = (upsertCache.mock.calls[0] as unknown[])[3];
-            findCache.mockResolvedValue(cachedEntry);
+            const cachedByDirection = new Map(
+                upsertCache.mock.calls.map((call) => [call[0], call[3]]),
+            );
+            findCache.mockImplementation((direction: string) =>
+                Promise.resolve(cachedByDirection.get(direction) ?? null),
+            );
 
             const calculateSpy = jest.spyOn(
                 schema.getProps().rules[0],
                 'calculate',
             );
+            const shopCalculateSpy = jest.spyOn(
+                shopSchema.getProps().rules[0],
+                'calculate',
+            );
             const second = await service.execute(42, '2026-08');
 
             expect(calculateSpy).not.toHaveBeenCalled();
-            expect(upsertCache).toHaveBeenCalledTimes(1); // не перезаписан второй раз
+            expect(shopCalculateSpy).not.toHaveBeenCalled();
+            expect(upsertCache).toHaveBeenCalledTimes(2); // не перезаписаны второй раз
             expect(second).toEqual(first);
-        });
-
-        it('завершение синхронизации домена вызывает пересчёт', async () => {
-            const schema = buildSchema(42);
-            const { service, findCache, upsertCache, getLastSuccessfulSyncAt } =
-                buildService({ schema });
-
-            await service.execute(42, '2026-08');
-            const cachedEntry = (upsertCache.mock.calls[0] as unknown[])[3];
-            findCache.mockResolvedValue(cachedEntry);
-            getLastSuccessfulSyncAt.mockResolvedValue(new Date('2026-08-05'));
-
-            await service.execute(42, '2026-08');
-
-            expect(upsertCache).toHaveBeenCalledTimes(2);
-        });
-
-        it('правка мотивационной схемы (новый updatedAt) вызывает пересчёт', async () => {
-            const schema = buildSchema(42);
-            const { service, findByEmployee, findCache, upsertCache } =
-                buildService({ schema });
-
-            await service.execute(42, '2026-08');
-            const cachedEntry = (upsertCache.mock.calls[0] as unknown[])[3];
-            findCache.mockResolvedValue(cachedEntry);
-
-            // Правка схемы — новый updatedAt у того же сотрудника (см.
-            // motivationSchemaVersion в accounting-cache-freshness.ts).
-            const editedSchema = withRequestContext(() => {
-                const rule = PayPerHoursEntity.create({
-                    type: 'PayPerHour',
-                    name: 'Почасовая ставка (правка)',
-                    targetRole: 'ENGINEER',
-                    config: { price: 300 },
-                });
-                return new MotivationSchema({
-                    id: schema.id,
-                    createdAt: schema.getProps().createdAt,
-                    updatedAt: new Date(
-                        schema.getProps().updatedAt.getTime() + 1000,
-                    ),
-                    props: {
-                        target: schema.getProps().target,
-                        name: schema.getProps().name,
-                        rules: [rule],
-                    },
-                });
-            });
-            findByEmployee.mockResolvedValue(editedSchema);
-
-            await service.execute(42, '2026-08');
-
-            expect(upsertCache).toHaveBeenCalledTimes(2);
-        });
-
-        it('правка плана продаж периода (новый updatedAt после перечитывания из БД) вызывает пересчёт', async () => {
-            const schema = buildSchema(42);
-            const plan = buildSalesPlan('2026-08');
-            const {
-                service,
-                findCache,
-                upsertCache,
-                findPlansByDirectionAndPeriod,
-            } = buildService({ schema, plans: [plan] });
-
-            await service.execute(42, '2026-08');
-            const cachedEntry = (upsertCache.mock.calls[0] as unknown[])[3];
-            findCache.mockResolvedValue(cachedEntry);
-
-            const editedPlan = withUpdatedAt(
-                plan,
-                new Date(plan.getProps().updatedAt.getTime() + 1000),
-            );
-            findPlansByDirectionAndPeriod.mockResolvedValue([editedPlan]);
-
-            await service.execute(42, '2026-08');
-
-            expect(upsertCache).toHaveBeenCalledTimes(2);
         });
     });
 
     describe('закрытый период', () => {
-        it('отдаётся из снапшота, минуя оркестратор, и не пишет в кэш', async () => {
-            const schema = buildSchema(42);
+        it('оба направления закрыты — отчёт строится из обоих снапшотов, кэш и схемы не трогаются', async () => {
             const closedPeriod = withRequestContext(() => {
                 const period = AccountingPeriod.openFor({
                     direction: 'service',
@@ -369,10 +425,115 @@ describe('GetEmployeeSalaryReportService', () => {
                 period.close(1, 1);
                 return period;
             });
+            const closedShopPeriod = withRequestContext(() => {
+                const period = AccountingPeriod.openFor({
+                    direction: 'shop',
+                    period: '2026-07',
+                });
+                period.close(1, 1);
+                return period;
+            });
 
-            const { service, findByEmployee, upsertCache } = buildService({
-                schema,
+            const { service, findByEmployee, findShopByEmployee, upsertCache } =
+                buildService({
+                    accountingPeriod: closedPeriod,
+                    shopAccountingPeriod: closedShopPeriod,
+                    snapshot: {
+                        employeeId: 42,
+                        total: 5000,
+                        lines: [
+                            {
+                                ruleId: 'r1',
+                                type: 'PayPerHour',
+                                name: 'Почасовая ставка',
+                                targetRole: 'ENGINEER',
+                                amount: 5000,
+                                sources: [],
+                            },
+                        ],
+                    },
+                    shopSnapshot: {
+                        employeeId: 42,
+                        total: 1500,
+                        lines: [
+                            {
+                                ruleId: 'r2',
+                                type: 'PayPerHour',
+                                name: 'Почасовая ставка (магазин)',
+                                targetRole: 'OFFLINE_MANAGER',
+                                amount: 1500,
+                                sources: [],
+                            },
+                        ],
+                    },
+                });
+
+            const report = await service.execute(42, '2026-07');
+
+            expect(report).toEqual({
+                period: '2026-07',
+                directions: [
+                    {
+                        direction: 'service',
+                        isClosed: true,
+                        total: { fact: 5000, prognose: null },
+                        rules: [
+                            {
+                                ruleId: 'r1',
+                                type: 'PayPerHour',
+                                name: 'Почасовая ставка',
+                                targetRole: 'ENGINEER',
+                                amount: { fact: 5000, prognose: null },
+                                appliedPercent: undefined,
+                                sources: [],
+                            },
+                        ],
+                        salesPerformance: null,
+                        isPlanApproved: true,
+                    },
+                    {
+                        direction: 'shop',
+                        isClosed: true,
+                        total: { fact: 1500, prognose: null },
+                        rules: [
+                            {
+                                ruleId: 'r2',
+                                type: 'PayPerHour',
+                                name: 'Почасовая ставка (магазин)',
+                                targetRole: 'OFFLINE_MANAGER',
+                                amount: { fact: 1500, prognose: null },
+                                appliedPercent: undefined,
+                                sources: [],
+                            },
+                        ],
+                        salesPerformance: null,
+                        isPlanApproved: true,
+                    },
+                ],
+                // Оба направления закрыты — prognose = fact по каждому
+                // (Решение №2 плана), grandTotal.fact = 5000 + 1500 = 6500.
+                grandTotal: { fact: 6500, prognose: 6500 },
+            });
+            expect(findByEmployee).not.toHaveBeenCalled();
+            expect(findShopByEmployee).not.toHaveBeenCalled();
+            expect(upsertCache).not.toHaveBeenCalled();
+        });
+
+        it('смешанный период: service закрыт, shop открыт — grandTotal.prognose берёт fact закрытого и prognose открытого', async () => {
+            const closedPeriod = withRequestContext(() => {
+                const period = AccountingPeriod.openFor({
+                    direction: 'service',
+                    period: '2026-07',
+                });
+                period.close(1, 1);
+                return period;
+            });
+            const shopSchema = buildShopSchema(42);
+
+            const { service } = buildService({
                 accountingPeriod: closedPeriod,
+                shopAccountingPeriod: null, // shop за этот период не закрыт
+                shopSchema,
                 snapshot: {
                     employeeId: 42,
                     total: 5000,
@@ -391,81 +552,20 @@ describe('GetEmployeeSalaryReportService', () => {
 
             const report = await service.execute(42, '2026-07');
 
-            expect(report).toEqual({
-                period: '2026-07',
-                isClosed: true,
-                directions: [
-                    {
-                        direction: 'service',
-                        total: { fact: 5000, prognose: null },
-                        rules: [
-                            {
-                                ruleId: 'r1',
-                                type: 'PayPerHour',
-                                name: 'Почасовая ставка',
-                                targetRole: 'ENGINEER',
-                                amount: { fact: 5000, prognose: null },
-                                appliedPercent: undefined,
-                                sources: [],
-                            },
-                        ],
-                        salesPerformance: null,
-                        isPlanApproved: true,
-                    },
-                ],
-                grandTotal: { fact: 5000, prognose: null },
+            const [serviceDirection, shopDirection] = report.directions;
+            expect(serviceDirection.isClosed).toBe(true);
+            expect(serviceDirection.total).toEqual({
+                fact: 5000,
+                prognose: null,
             });
-            // Схема сотрудника даже не запрашивается — закрытый период
-            // отдаётся из снапшота целиком (см. buildClosedReport).
-            expect(findByEmployee).not.toHaveBeenCalled();
-            expect(upsertCache).not.toHaveBeenCalled();
+            expect(shopDirection.isClosed).toBe(false);
+            expect(shopDirection.total).toEqual({ fact: 800, prognose: 800 });
+            // Закрытое service считает как fact (5000), открытое shop — как
+            // свой prognose (800): 5000 + 800 = 5800.
+            expect(report.grandTotal).toEqual({ fact: 5800, prognose: 5800 });
         });
 
-        it('правка схемы, правила или плана после закрытия не меняет цифры закрытого месяца', async () => {
-            const closedPeriod = withRequestContext(() => {
-                const period = AccountingPeriod.openFor({
-                    direction: 'service',
-                    period: '2026-07',
-                });
-                period.close(1, 1);
-                return period;
-            });
-            const snapshot = {
-                employeeId: 42,
-                total: 5000,
-                lines: [
-                    {
-                        ruleId: 'r1',
-                        type: 'PayPerHour',
-                        name: 'Почасовая ставка',
-                        targetRole: 'ENGINEER' as const,
-                        amount: 5000,
-                        sources: [],
-                    },
-                ],
-            };
-            // Схема, "поменявшаяся" после закрытия (другое имя/ставка),
-            // плюс изменённый план — ни то ни другое не должно попасть в
-            // отчёт закрытого месяца: buildClosedReport читает только
-            // снапшот и не обращается ни к schema, ни к salesPlanRepo.
-            const editedSchema = buildSchema(42);
-            const { service, findByEmployee, findPlansByDirectionAndPeriod } =
-                buildService({
-                    schema: editedSchema,
-                    accountingPeriod: closedPeriod,
-                    snapshot,
-                    plans: [buildSalesPlan('2026-07')],
-                });
-
-            const report = await service.execute(42, '2026-07');
-
-            expect(report.isClosed).toBe(true);
-            expect(report.grandTotal).toEqual({ fact: 5000, prognose: null });
-            expect(findByEmployee).not.toHaveBeenCalled();
-            expect(findPlansByDirectionAndPeriod).not.toHaveBeenCalled();
-        });
-
-        it('без снапшота (сотрудник без схемы на момент закрытия) отдаёт нулевой закрытый отчёт', async () => {
+        it('без снапшота (сотрудник без схемы на момент закрытия) отдаёт нулевой закрытый отчёт по направлению', async () => {
             const closedPeriod = withRequestContext(() => {
                 const period = AccountingPeriod.openFor({
                     direction: 'service',
@@ -481,16 +581,19 @@ describe('GetEmployeeSalaryReportService', () => {
 
             const report = await service.execute(999, '2026-07');
 
-            expect(report.isClosed).toBe(true);
-            expect(report.grandTotal).toEqual({ fact: 0, prognose: null });
+            const [serviceDirection] = report.directions;
+            expect(serviceDirection.isClosed).toBe(true);
+            expect(serviceDirection.total).toEqual({ fact: 0, prognose: null });
         });
     });
 
     // Режим расчёта FACT | PROGNOSE (Фаза 9, issue #42/#46): один и тот же
     // OrderPayedEntity.calculate() вызывается дважды с разным входным
     // percentCompletion (факт/прогноз отдела), база продаж сотрудника
-    // (orderPayedItems) не меняется между проходами.
-    describe('режим расчёта FACT | PROGNOSE (FloatPercent)', () => {
+    // (orderPayedItems) не меняется между проходами. Регрессия направления
+    // service — направление shop в этих тестах остаётся пустым (нет схемы),
+    // не влияет на прогноз/факт service, только на состав directions[].
+    describe('режим расчёта FACT | PROGNOSE (FloatPercent, направление service)', () => {
         const borders = [
             {
                 name: 'A',
@@ -578,7 +681,7 @@ describe('GetEmployeeSalaryReportService', () => {
             }),
         });
 
-        it('прогнозный процент в другом пороге меняет прогнозную сумму относительно факта при неизменной базе продаж', async () => {
+        it('прогнозный процент в другом пороге меняет прогнозную сумму направления service относительно факта', async () => {
             const schema = buildFloatPercentSchema();
             // Факт — 65% (порог 50%, множитель 0.5) -> 1000*10%*0.5 = 50.
             // Прогноз — 70% (порог 70%, множитель 1) -> 1000*10%*1 = 100.
@@ -595,54 +698,14 @@ describe('GetEmployeeSalaryReportService', () => {
             });
 
             const report = await service.execute(42, '2026-08');
-            const [rule] = report.directions[0].rules;
+            const [serviceDirection, shopDirection] = report.directions;
+            const [rule] = serviceDirection.rules;
 
             expect(rule.amount.fact).toBe(50);
             expect(rule.amount.prognose).toBe(100);
             expect(rule.amount.fact).not.toBe(rule.amount.prognose);
-        });
-
-        it('прогнозный процент ниже текущего — прогнозная сумма меньше фактической', async () => {
-            const schema = buildFloatPercentSchema();
-            // Факт — 70% (множитель 1) -> 100. Прогноз — 50% (множитель 0.5) -> 50.
-            const { service } = buildService({
-                schema,
-                erpData: {
-                    serviceCompletedItems: [],
-                    hoursWorked: 0,
-                    orderPayedItems: [orderPayedItem],
-                    confirmedTaskCompletions: [],
-                },
-                identities,
-                salesPerformanceDetail: fakePerformance(70, 50),
-            });
-
-            const report = await service.execute(42, '2026-08');
-            const [rule] = report.directions[0].rules;
-
-            expect(rule.amount.fact).toBe(100);
-            expect(rule.amount.prognose).toBe(50);
-            expect(rule.amount.prognose).toBeLessThan(rule.amount.fact);
-        });
-
-        it('одинаковый процент факта и прогноза (нет плана до конца месяца) — суммы совпадают', async () => {
-            const schema = buildFloatPercentSchema();
-            const { service } = buildService({
-                schema,
-                erpData: {
-                    serviceCompletedItems: [],
-                    hoursWorked: 0,
-                    orderPayedItems: [orderPayedItem],
-                    confirmedTaskCompletions: [],
-                },
-                identities,
-                salesPerformanceDetail: fakePerformance(70, 70),
-            });
-
-            const report = await service.execute(42, '2026-08');
-            const [rule] = report.directions[0].rules;
-
-            expect(rule.amount.fact).toBe(rule.amount.prognose);
+            expect(shopDirection.total).toEqual({ fact: 0, prognose: 0 });
+            expect(report.grandTotal).toEqual({ fact: 50, prognose: 100 });
         });
     });
 });

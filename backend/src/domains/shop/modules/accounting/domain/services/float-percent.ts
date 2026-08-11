@@ -1,4 +1,5 @@
 import type { PercentBorder } from '../types/shop-salary-rule.types';
+import { roundRubles } from './money';
 
 // Множитель FloatPercent по проценту выполнения плана — Фаза 12 (issue
 // #60: "независимая реализация в домене shop, а не переиспользованный код
@@ -52,4 +53,60 @@ export function resolveFloatPercentMultiplier(
     }
 
     return prev.multiplier;
+}
+
+export interface FloatPercentThresholdInfo {
+    currentThreshold: PercentBorder | null;
+    nextThreshold: PercentBorder | null;
+    diffToNext: number | null;
+}
+
+// Текущий/следующий порог для отчёта (Фаза 13.5, зеркало
+// resolveFloatPercentThresholds сервиса — независимая реализация, issue
+// #57). currentThreshold — null, если percentCompletion ниже самого нижнего
+// порога; nextThreshold — null, если порогов выше нет.
+export function resolveFloatPercentThresholds(
+    percentBorders: readonly [PercentBorder, PercentBorder, PercentBorder],
+    percentCompletion: number,
+): Pick<FloatPercentThresholdInfo, 'currentThreshold' | 'nextThreshold'> {
+    const sorted = [...percentBorders].sort(
+        (a, b) => a.fromPlanPercent - b.fromPlanPercent,
+    );
+
+    let current: PercentBorder | null = null;
+    let next: PercentBorder | null = null;
+    for (const border of sorted) {
+        if (percentCompletion >= border.fromPlanPercent) {
+            current = border;
+        } else if (next === null) {
+            next = border;
+        }
+    }
+    return { currentThreshold: current, nextThreshold: next };
+}
+
+// diffToNext — в обороте, не в процентных пунктах (зеркало
+// buildFloatPercentThresholdInfo сервиса), считается от фактического/
+// прогнозного оборота напрямую, а не обратным пересчётом от округлённого
+// percentCompletion.
+export function buildFloatPercentThresholdInfo(
+    percentBorders: readonly [PercentBorder, PercentBorder, PercentBorder],
+    percentCompletion: number,
+    planTurnover: number,
+    actualTurnover: number,
+): FloatPercentThresholdInfo {
+    const { currentThreshold, nextThreshold } = resolveFloatPercentThresholds(
+        percentBorders,
+        percentCompletion,
+    );
+    const diffToNext = nextThreshold
+        ? Math.max(
+              0,
+              roundRubles(
+                  (planTurnover * nextThreshold.fromPlanPercent) / 100 -
+                      actualTurnover,
+              ),
+          )
+        : null;
+    return { currentThreshold, nextThreshold, diffToNext };
 }

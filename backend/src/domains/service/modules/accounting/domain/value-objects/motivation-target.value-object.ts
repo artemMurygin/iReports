@@ -8,13 +8,24 @@ export interface MotivationTargetProps {
     id: number;
 }
 
+// type принимается как голый string (а не MotivationTargetType) —
+// вызывающие (мапперы Prisma, MotivationSchema.create()) получают
+// targetType из непроверенного источника (БД/DTO), а не из TS-литерала;
+// type guard ниже — единственная точка, где строка реально валидируется
+// перед сужением типа (без неё TS-narrowing через !== для string был бы
+// невозможен, а каст со стороны вызывающего сделал бы проверку мёртвым
+// кодом с точки зрения типов).
+function isMotivationTargetType(value: string): value is MotivationTargetType {
+    return value === 'Department' || value === 'Employee';
+}
+
 // На кого действует мотивационная схема — сотрудник или отдел (см.
 // MotivationRequestSchema в ireports-contracts). Пара всегда меняется
 // вместе и имеет самостоятельный смысл, поэтому не два голых поля entity
 // (targetType/targetId), а один объект.
 export class MotivationTarget extends ValueObject<MotivationTargetProps> {
-    static create(type: MotivationTargetType, id: number): MotivationTarget {
-        if (type !== 'Department' && type !== 'Employee') {
+    static create(type: string, id: number): MotivationTarget {
+        if (!isMotivationTargetType(type)) {
             throw new ArgumentInvalidException(
                 `Недопустимый тип цели мотивационной схемы: "${type}"`,
             );

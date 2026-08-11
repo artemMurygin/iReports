@@ -64,5 +64,16 @@ export const routesV1 = {
     // Зарплатные правила магазина (Фаза 12, см. domains/shop/modules/accounting).
     shopAccounting: {
         salaryRuleTypes: `/${shopAccountingRoot}/salary_role_types`,
+        // Схема мотивации и подтверждение выполненных задач магазина
+        // (Фаза 13.5, см. docs/payroll/phase-13.5-shop-report-integration.md)
+        // — зеркалят одноимённые маршруты accounting сервиса, но в своём
+        // namespace shopAccountingRoot, а не через общие константы сервиса
+        // (см. запрет на импорт между domains/service и domains/shop в
+        // backend/CLAUDE.md и src/domains/service/CLAUDE.md).
+        motivationSchema: `/${shopAccountingRoot}/motivation-schema`,
+        taskCompletions: `/${shopAccountingRoot}/task_completions`,
+        taskCompletionById: `/${shopAccountingRoot}/task_completions/:id`,
+        confirmTaskCompletion: `/${shopAccountingRoot}/task_completions/:id/confirm`,
+        rejectTaskCompletion: `/${shopAccountingRoot}/task_completions/:id/reject`,
     },
 };

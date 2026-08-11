@@ -1,0 +1,177 @@
+import { buildShopSalaryReportRules } from './to-shop-salary-report-rules';
+import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
+import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import type { PercentBorder } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
+import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object';
+
+const borders: [PercentBorder, PercentBorder, PercentBorder] = [
+    { name: 'A', fromPlanPercent: 50, multiplier: 0.5, mode: 'FIX' },
+    { name: 'B', fromPlanPercent: 70, multiplier: 1, mode: 'FIX' },
+    { name: 'C', fromPlanPercent: 100, multiplier: 1.5, mode: 'FIX' },
+];
+
+const buildFakePerformance = (
+    factPercent: number,
+    prognosePercent: number,
+): ShopSalesPerformance =>
+    ({
+        getDepartment: () => 1,
+        getCategory: () => null,
+        getPlan: () => ({ turnover: 100_000 }),
+        getFact: () => ({
+            getPercentCompletion: () => factPercent,
+            getTurnover: () => (factPercent / 100) * 100_000,
+        }),
+        getPrognose: () => ({
+            getPercentCompletion: () => prognosePercent,
+            getTurnover: () => (prognosePercent / 100) * 100_000,
+        }),
+    }) as unknown as ShopSalesPerformance;
+
+describe('buildShopSalaryReportRules', () => {
+    it('для правила, не зависящего от плана (PayPerHour), факт и прогноз равны и appliedPercent не заполнен', () => {
+        const rule = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 250 },
+        });
+        const factLines = [
+            {
+                ruleId: rule.id,
+                quantity: 8,
+                rate: 250,
+                amount: 2000,
+                sources: [],
+            },
+        ];
+
+        const [entry] = buildShopSalaryReportRules(
+            [rule],
+            factLines,
+            factLines,
+            null,
+        );
+
+        expect(entry.amount).toEqual({ fact: 2000, prognose: 2000 });
+        expect(entry.appliedPercent).toBeUndefined();
+        expect(entry.floatPercent).toBeUndefined();
+    });
+
+    it('appliedPercent заполнен для FixedPercent (ProductSold)', () => {
+        const rule = ProductSoldEntity.create({
+            type: 'ProductSold',
+            name: 'Процент от выручки',
+            targetRole: 'ONLINE_MANAGER',
+            config: {
+                category: null,
+                award: {
+                    type: 'FixedPercent',
+                    percent: 10,
+                    salaryBasis: 'REVENUE',
+                },
+            },
+        });
+        const factLines = [
+            {
+                ruleId: rule.id,
+                salaryBasis: 'REVENUE',
+                quantity: 1,
+                rate: 10,
+                amount: 100,
+                sources: [],
+            },
+        ];
+
+        const [entry] = buildShopSalaryReportRules(
+            [rule],
+            factLines,
+            factLines,
+            null,
+        );
+
+        expect(entry.appliedPercent).toBe(10);
+    });
+
+    it('FloatPercent — floatPercent.fact/prognose содержат текущий/следующий порог и diffToNext', () => {
+        const rule = ProductSoldEntity.create({
+            type: 'ProductSold',
+            name: 'Плавающий процент',
+            targetRole: 'ONLINE_MANAGER',
+            config: {
+                category: null,
+                award: {
+                    type: 'FloatPercent',
+                    basePercent: 10,
+                    salaryBasis: 'REVENUE',
+                    percentBorders: borders,
+                },
+            },
+        });
+        const factLines = [
+            {
+                ruleId: rule.id,
+                salaryBasis: 'REVENUE',
+                rate: 5,
+                amount: 50,
+                sources: [],
+            },
+        ];
+        const prognoseLines = [
+            {
+                ruleId: rule.id,
+                salaryBasis: 'REVENUE',
+                rate: 10,
+                amount: 100,
+                sources: [],
+            },
+        ];
+        // Факт — 65% выполнения плана (порог A/B), прогноз — 70% (порог B).
+        const performance = buildFakePerformance(65, 70);
+
+        const [entry] = buildShopSalaryReportRules(
+            [rule],
+            factLines,
+            prognoseLines,
+            performance,
+        );
+
+        expect(entry.floatPercent).toBeDefined();
+        expect(entry.floatPercent?.fact.currentThreshold).toEqual(borders[0]);
+        expect(entry.floatPercent?.fact.nextThreshold).toEqual(borders[1]);
+        expect(entry.floatPercent?.fact.diffToNext).toBe(5000); // 70%-65% из 100 000
+        expect(entry.floatPercent?.prognose.currentThreshold).toEqual(
+            borders[1],
+        );
+    });
+
+    it('нет ShopSalesPerformance — floatPercent отсутствует, даже если правило FloatPercent', () => {
+        const rule = ProductSoldEntity.create({
+            type: 'ProductSold',
+            name: 'Плавающий процент',
+            targetRole: 'ONLINE_MANAGER',
+            config: {
+                category: null,
+                award: {
+                    type: 'FloatPercent',
+                    basePercent: 10,
+                    salaryBasis: 'REVENUE',
+                    percentBorders: borders,
+                },
+            },
+        });
+        const lines = [
+            {
+                ruleId: rule.id,
+                salaryBasis: 'REVENUE',
+                rate: 5,
+                amount: 50,
+                sources: [],
+            },
+        ];
+
+        const [entry] = buildShopSalaryReportRules([rule], lines, lines, null);
+
+        expect(entry.floatPercent).toBeUndefined();
+    });
+});

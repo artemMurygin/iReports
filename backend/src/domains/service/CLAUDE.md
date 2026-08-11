@@ -17,9 +17,10 @@ domains/service/
 │   └── roapp-gateway/     — единая точка входа, скрывающая, что за ней два разных транспорта
 ├── sync/roapp/            — cron-синхронизация RoApp → локальная БД
 └── modules/
-    ├── accounting/        — зарплатные схемы и правила мотивации (полностью выстроенный DDD/CQRS)
-    └── sales/              — сделки/лиды (ранняя стадия, в основном read-side) + план продаж
-                              (шаблон/план/статусы/утверждение, Фаза 3 — выстроен по слоистости accounting)
+    ├── accounting/        — зарплатные схемы, правила мотивации, расчётный период и отчёты
+    │                         (полностью выстроенный DDD/CQRS, Фазы 1–2, 6–9)
+    └── sales/              — план/факт/прогноз продаж (Фазы 3–5) + сделки/лиды (ранняя стадия,
+                              в основном read-side)
 ```
 
 ### `integrations/roapp` и `integrations/custom-api-roapp`
@@ -63,65 +64,85 @@ domains/service/
 услуги, товары, бонусы) через cron не гоняются — это ручные/разовые операции (`npm run initial`,
 см. `src/shared/initialUploadData.ts`), крон покрывает только заказы.
 
-### `modules/accounting` — зарплатные схемы и правила мотивации
+### `modules/accounting` — зарплатные схемы, расчётный период и отчёты
 
 Единственный в проекте модуль, полностью выстроенный по целевой DDD/CQRS-слоистости
 (`domain`/`application`/`infrastructure`/`interface`) — используй его как образец при рефакторинге
-или добавлении нового модуля, не `sales` (см. ниже).
+или добавлении нового модуля (в том числе для `shop`, см. ниже, который его зеркалирует, но
+самостоятельно). Основной источник замысла — `docs/payroll/prd-payroll-calculation.md` и
+`docs/payroll/plan-payroll-calculation.md` в корне репозитория (Фазы 1–9 покрывают всё, что описано
+в этом разделе).
 
 - **Мотивационная схема** (`MotivationSchemaEntity`) — агрегат, объединяющий набор зарплатных правил
   сотрудника/должности.
-- **Зарплатные правила** (`domain/entities/salary-rules/*`) — несколько типов правил как отдельные
+- **Зарплатные правила** (`domain/entities/salary-rules/*`) — четыре типа правил как отдельные
   сущности: `PayPerHoursEntity` (почасовая оплата), `ServiceCompletedEntity` (оплата за выполненную
-  услугу), плюс `OrderPayedEntity`/`TaskCompletedEntity`. Тип правила резолвится через
+  услугу), `OrderPayedEntity` (вознаграждение за оплаченный заказ), `TaskCompletedEntity`
+  (вознаграждение за подтверждённую выполненную задачу). Тип правила резолвится через
   `salary-rule-registry.ts` (`Map<SalaryRuleTypes, SalaryRuleClass>`) и создаётся фабрикой
   `domain/factories/salary-rule.factory.ts` — при добавлении нового типа правила регистрируй его в
-  обоих местах.
-- **Команды** (`application/command/`): `CreateMotivationSchemaCommand`/`Handler`,
-  `CreateSalaryRuleCommand`/`Handler` — стандартный `@nestjs/cqrs` `CommandBus` (`CqrsModule`
-  импортирован в `accounting.module.ts`).
-- **События**: `MotivationSchemaCreatedDomainEvent` → `MotivationSchemaCreatedEventHandler`
-  (application-level side effect после создания схемы).
-- HTTP-вход пока один: `CreateMotivationSchemaHttpController`. Правила зарплаты (`/salary-rules/*` из
-  `ENDPOINTS.md`) обслуживаются другим, ещё не мигрированным модулем `salary` (см. закомментированный
-  импорт `SalaryModule` в `app.module.ts`) — не путай его с `accounting`, они пока частично
-  дублируют предметную область на время переноса.
-- **`PayPerHour`/`ServiceCompleted` — реально считающие правила (Фаза 7)**: `domain/services/service-role-source.ts`
+  обоих местах. `PeriodCalculationOrchestrator` (`domain/services/`) вызывает `calculate()` каждого
+  правила схемы и суммирует строки — правила независимы, не ссылаются на результаты друг друга.
+- **Команды** (`application/command/`): помимо создания схемы/правила — `CloseAccountingPeriodCommand`,
+  `ReopenAccountingPeriodCommand`, `RecalculateAccountingPeriodCommand`, CRUD `EmployeeHoursEntry` и
+  `TaskCompletion` (`Create/Delete...`, `ConfirmTaskCompletion`) — стандартный `@nestjs/cqrs`
+  `CommandBus` (`CqrsModule` импортирован в `accounting.module.ts`).
+- **События**: `MotivationSchemaCreatedDomainEvent` → `MotivationSchemaCreatedEventHandler`;
+  `AccountingPeriodClosedDomainEvent` → `AccountingPeriodClosedEventHandler` (создаёт снапшот).
+- HTTP-вход: `CreateMotivationSchemaHttpController`, эндпоинты периода/часов/отчётов/задач (см.
+  `ENDPOINTS.md`, раздел `domains/service/modules/accounting`). Правила зарплаты (`/salary-rules/*`
+  из `ENDPOINTS.md`) обслуживаются другим, ещё не мигрированным модулем `salary` (см.
+  закомментированный импорт `SalaryModule` в `app.module.ts`) — не путай его с `accounting`, они пока
+  частично дублируют предметную область на время переноса.
+- **Роли и правила расчёта (Фазы 7–8)**: `domain/services/service-role-source.ts`
   — маппинг «роль правила → поле ERP RoApp» и функция `employeeMatchesServiceRole`, общая точка,
-  которую переиспользуют будущие правила Фазы 8 (`OrderPayed`/`TaskCompleted`) для той же ролевой
-  выборки; `domain/services/money.ts` — `roundRubles()`, единая точка округления процентных начислений
-  (целые рубли, `Math.round`) для всего модуля. `application/services/build-service-calculation-context.service.ts`
+  которую переиспользуют все четыре правила для ролевой выборки (кроме `OrderPayedEntity` в роли
+  `ENGINEER`, которая матчится по позициям заказа, а не по одному полю — см. комментарий в
+  `order-payed.entity.ts`). `domain/services/money.ts` — `roundRubles()`, единая точка округления
+  процентных начислений (целые рубли, `Math.round`) для всего модуля. `domain/services/float-percent.ts`
+  — `resolveFloatPercentMultiplier()`, разрешение множителя `FloatPercent` по границам процента
+  выполнения плана. `application/services/build-service-calculation-context.service.ts`
   — единственное место, где `CalculationContext.erpData`/`employee.identities` реально заполняются из
   БД (`ServiceCalculationDataPort`/`ServiceCalculationDataRepository`): собирает вход для оркестратора
-  и для `GetEmployeeSalaryReportService`, и для `CloseAccountingPeriodHandler`. Источник часов
-  `PayPerHour` — `EmployeeHoursEntry` (`domain/entities/employee-hours-entry.entity.ts`), простой CRUD
-  без CQRS-событий (`POST|PATCH|DELETE|GET /accounting/employee_hours*`, см. `ENDPOINTS.md`) — ручной
-  ввод отработанных часов сотрудника за период, полноценный график работы вне скоупа.
+  и для `GetEmployeeSalaryReportService`/`GetDepartmentSalaryReportService`, и для
+  `CloseAccountingPeriodHandler`. Источник часов `PayPerHour` — `EmployeeHoursEntry`
+  (`domain/entities/employee-hours-entry.entity.ts`), простой CRUD без CQRS-событий
+  (`POST|PATCH|DELETE|GET /accounting/employee_hours*`, см. `ENDPOINTS.md`) — ручной ввод отработанных
+  часов сотрудника за период, полноценный график работы вне скоупа. Источник `TaskCompleted` —
+  `TaskCompletion` (`domain/entities/task-completion.entity.ts`) — временный внутренний двухступенчатый
+  воркфлоу подтверждения (сотрудник отмечает выполненной → руководитель подтверждает `CONFIRMED`) без
+  интеграции с Bitrix24 Tasks (реальная синхронизация запланирована отдельной будущей фазой); только
+  подтверждённые записи участвуют в расчёте. Prisma-модель `TaskCompletion` общая для `service`/`shop`
+  (дискриминатор `direction`, дефолт `'service'`, Фаза 13) — с Фазы 13.5 у `shop` есть собственный,
+  независимый CQRS-вход для записи этих задач (`ShopTaskCompletion`, см. `domains/shop/CLAUDE.md`),
+  пишущий в ту же таблицу с `direction: 'shop'`.
+- **Расчётный период (`AccountingPeriod`, Фаза 6)** — `direction` + `period` (`YYYY-MM`) как
+  естественный ключ, сервис и магазин закрываются независимо; период без записи в БД трактуется как
+  `OPEN` (см. `AccountingPeriodRepositoryPort.findByDirectionAndPeriod`). `close()`/`reopen()` —
+  переходы статуса на агрегате; проверка «все строки плана продаж утверждены» перед закрытием —
+  ответственность `CloseAccountingPeriodHandler` (знает про модуль `sales` через
+  `SALES_PLAN_REPOSITORY`), не самой сущности. Закрытие создаёт неизменяемый снапшот по каждому
+  сотруднику с личной мотивационной схемой (`AccountingPeriodSnapshotPort`) — закрытый период отчёты
+  читают из снапшота (`prognose` не хранится, только `fact`), открытый — считает заново через ленивый
+  кэш (`ACCOUNTING_CALCULATION_CACHE`, ключ `(direction, period, employeeId)`), инвалидируемый штампом
+  свежести (`accounting-cache-freshness.ts`: версия мотивационной схемы + штамп последней успешной
+  синхронизации ERP + штамп последнего изменения плана продаж).
+- **Отчёты (Фаза 9)** — `GetEmployeeSalaryReportService` (`GET
+  /accounting/salary_report/employee/:id/:period`) и `GetDepartmentSalaryReportService` (`GET
+  .../department/:id/:period`) используют один и тот же расчёт
+  (`PeriodCalculationOrchestrator` + `rule.calculate()`); отчёт отдела — сумма отчётов сотрудников
+  отдела, но контекст (ERP-данные, `SalesPerformance`, схемы, идентичности, часы) собирается **один
+  раз на весь отдел**, а не на каждого сотрудника — чтобы не было N+1. Оба режима расчёта — `FACT` и
+  `PROGNOSE` — считаются параллельно; `PROGNOSE` берёт `SalesPrognose.percentCompletion` вместо
+  `SalesFact.percentCompletion` для `FloatPercent`, личная база сотрудника не экстраполируется.
 
-### `modules/sales` — сделки/лиды (в разработке) + план продаж (Фазы 3–4)
+### `modules/sales` — план/факт/прогноз продаж (Фазы 3–5) + сделки/лиды (в разработке)
 
-Модуль объединяет два независимых среза с общим route-неймспейсом `/sales/*` и общей бизнес-областью
+Модуль объединяет два независимых среза с общим route-неймспейсом `/v1/sales/*` и общей бизнес-областью
 "продажи", но без переиспользования кода между ними — слоистость и провайдеры у каждого свои.
 
-**Сделки/лиды** — гораздо более ранняя стадия, чем `accounting`, сейчас это фактически только
-read-side:
-
-- `LeadRepository`/`DealRepository` (`infrastructure/sales.repositories.ts`) читают уже
-  засинканные данные напрямую из Prisma и мапят в доменные `LeadEntity`/`DealEntity`:
-  - `LeadEntity` — из таблицы `bitrixDeal`, отфильтрованной по
-    `categoryId = SERVICE_FUNNEL_CATEGORY_ID (0)` — это воронка Bitrix24, принадлежащая направлению
-    "Сервис" (см. также `CATEGORY_ID` в `src/integrations/bitrix/bitrix.service.ts`, откуда
-    синхронизируются все воронки Bitrix). Сама синхронизация Bitrix living не в этом домене, а в
-    `src/sync/bitrix` + `src/integrations/bitrix` (общекорпоративный CRM-контур, общий для доменов).
-  - `DealEntity` — из таблицы `roappOrder` (уже засинканной `sync/roapp` выше).
-- `api/sales.routes.ts`, `api/schemas/sales.shcemas.ts`, `domain/sales.events.ts`,
-  `application/event.handlers.ts` — **пустые файлы-заготовки**: контроллеров, схем запросов и
-  обработчиков событий для этого среза пока не существует. Не удивляйся отсутствию HTTP-эндпоинтов у
-  сделок/лидов — воронка и список сделок сейчас обслуживаются через ещё не мигрированный
-  `src/TODO/deals` (см. ниже).
-
-**План продаж** (`docs/payroll/plan-payroll-calculation.md`, Фаза 3) — выстроен по целевой
-DDD/CQRS-слоистости, как `accounting`, а не по образцу сделок/лидов выше:
+**План продаж, факт и прогноз** (`docs/payroll/plan-payroll-calculation.md`, Фазы 3–5) — выстроен по
+целевой DDD/CQRS-слоистости, как `accounting`:
 
 - `SalesPlanTemplate` (`GET|PUT /v1/sales/plan_template`) — дефолтные значения плана по отделу и,
   опционально, категории, с процентом ежемесячного роста; `PUT` — upsert по естественному ключу
@@ -143,16 +164,45 @@ DDD/CQRS-слоистости, как `accounting`, а не по образцу 
 - `category` хранится в БД сентинелом `NO_CATEGORY_ID = -1` вместо `NULL` (Postgres не считает два
   `NULL` равными в составном уникальном индексе) — см. комментарий в
   `infrastructure/mappers/sales-plan.mapper.ts`; наружу модуля сентинел не протекает.
-- Модели общие для `service`/`shop` (поле `direction`) — Фаза 11 переиспользует их для магазина без
-  изменения формы.
+- `SalesPerformance` (Фаза 5, `GET /v1/sales/salesPerformance/:period?direction`) —
+  `GetSalesPerformanceService` (единственная реализация `SalesPerformanceReaderPort`) на каждый вызов
+  пересчитывает `SalesFact` (агрегат по ERP через `ServiceSalesFactSourcePort`,
+  `RoappSalesFactSourceRepository`) и `SalesPrognose` (`SalesPrognose.forPeriod()`, общая формула в
+  `src/shared/domain/`) поверх плана — ни факт, ни прогноз нигде не персистятся, это и есть механизм,
+  которым «изменение плана пересчитывает факт и прогноз». Жёстко привязан к `direction = 'service'`
+  (`SalesPerformanceDirectionNotSupportedException` для любого другого значения) — читает RoApp/
+  RemOnline напрямую; аналог для `shop` — отдельный эндпоинт `domains/shop/modules/sales`, см.
+  `domains/shop/CLAUDE.md`, а не параметр `direction` этого же роута.
+- Модели (`SalesPlan`/`SalesPlanTemplate`) общие для `service`/`shop` (поле `direction`) — CRUD-роуты
+  этого модуля не привязаны к `direction: 'service'` и одинаково обслуживают оба направления, `shop`
+  не заводит для них дублирующий CRUD (Фаза 11).
+
+**Сделки/лиды** — гораздо более ранняя стадия, чем остальной модуль, сейчас это фактически только
+read-side:
+
+- `LeadRepository`/`DealRepository` (`infrastructure/sales.repositories.ts`) читают уже
+  засинканные данные напрямую из Prisma и мапят в доменные `LeadEntity`/`DealEntity`:
+  - `LeadEntity` — из таблицы `bitrixDeal`, отфильтрованной по
+    `categoryId = SERVICE_FUNNEL_CATEGORY_ID (0)` — это воронка Bitrix24, принадлежащая направлению
+    "Сервис" (см. также `CATEGORY_ID` в `src/integrations/bitrix/bitrix.service.ts`, откуда
+    синхронизируются все воронки Bitrix). Сама синхронизация Bitrix living не в этом домене, а в
+    `src/sync/bitrix` + `src/integrations/bitrix` (общекорпоративный CRM-контур, общий для доменов).
+  - `DealEntity` — из таблицы `roappOrder` (уже засинканной `sync/roapp` выше).
+- `api/sales.routes.ts`, `api/schemas/sales.shcemas.ts`, `domain/sales.events.ts`,
+  `application/event.handlers.ts` — **пустые файлы-заготовки**: контроллеров, схем запросов и
+  обработчиков событий для этого среза пока не существует. Не удивляйся отсутствию HTTP-эндпоинтов у
+  сделок/лидов — воронка и список сделок сейчас обслуживаются через ещё не мигрированный
+  `src/TODO/deals` (см. ниже).
 
 ## Целевой набор модулей домена
 
 `service` и `shop` — параллельные бизнес-направления с похожим набором бизнес-процессов, поэтому
-итоговая структура `modules/` у них будет похожей, но бизнес-логика внутри каждого процесса разная
-(разные ERP, разные правила) — это **не общий переиспользуемый код**, а зеркальный, но независимый
-набор модулей в каждом домене. Помимо уже существующих `accounting` и `sales` (см. выше), для
-`service` планируются:
+итоговая структура `modules/` у них похожая, но бизнес-логика внутри каждого процесса разная (разные
+ERP, разные правила) — это **не общий переиспользуемый код**, а зеркальный, но независимый набор
+модулей в каждом домене (кроме моделей `SalesPlan`/`SalesPlanTemplate`/`TaskCompletion`, которые
+осознанно общие на уровне Prisma-схемы с дискриминатором `direction`, см. выше — но не на уровне
+доменного кода). Помимо уже существующих `accounting` и `sales` (реализованы в обоих доменах, см.
+выше и `domains/shop/CLAUDE.md`), для `service` планируются:
 
 - **`purchasing`** — закупки (запчастей/расходников у поставщиков). Не существует.
 - **`logistics`** — логистика (движение устройств/грузов между приёмкой, сервисными точками,
@@ -184,14 +234,23 @@ DDD/CQRS-слоистости, как `accounting`, а не по образцу 
   использует также AI-интеграцию (`src/integrations/ai`) для сопоставления названий услуг. Второй
   эндпоинт этого же модуля, `update-shop-products-costs`, относится к домену `shop` — модуль
   обслуживает оба направления сразу.
+- Правила зарплаты `/salary-rules/*` и отчёт `/salaryReport*` (модуль `salary`, см.
+  `ENDPOINTS.md`) — предшественник `modules/accounting`, ещё не полностью вытесненный: `accounting`
+  уже закрывает создание схем/правил, расчётный период и оба отчёта по зарплате, но CRUD над
+  отдельными правилами (`salary-rules`) остаётся в старом модуле.
 
 При переносе этой функциональности в `domains/service` — заводить её как `interface`-слой поверх
 `modules/sales` (или нового модуля отчётов), а не копировать текущую плоскую структуру `TODO/*`.
 
 ## Данные и тесты
 
-- Prisma-схема: `prisma/schema/roapp.prisma` (собственные таблицы `roapp*`) и
-  `prisma/schema/bitrix.prisma` (общие с CRM-контуром, читаются `sales`).
+- Prisma-схема: `prisma/schema/roapp.prisma` (собственные таблицы `roapp*`),
+  `prisma/schema/salary.prisma` (`MotivationSchema`/`SalaryRule`/`EmployeeHoursEntry`/
+  `TaskCompletion` — `TaskCompletion` общая с `shop`, дискриминатор `direction`),
+  `prisma/schema/accounting-period.prisma` (`AccountingPeriod`/`AccountingCalculationCache`/
+  `AccountingPeriodSnapshot`), `prisma/schema/sales.prisma` (`SalesPlan`/`SalesPlanTemplate`, тоже
+  общие с `shop` через `direction`) и `prisma/schema/bitrix.prisma` (общие с CRM-контуром, читаются
+  `sales`).
 - Тесты интеграций: `roapp/roapp.service.spec.ts`, `custom-api-roapp/custom-api-roapp.service.spec.ts`.
-  `accounting` и срез плана продаж модуля `sales` покрыты юнит- и e2e-тестами; срез сделок/лидов —
-  нет.
+  `accounting` и срез плана продаж/`SalesPerformance` модуля `sales` покрыты юнит- и e2e-тестами;
+  срез сделок/лидов — нет.

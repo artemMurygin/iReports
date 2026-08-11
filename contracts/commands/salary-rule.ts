@@ -289,8 +289,14 @@ export type EmployeeSalaryReportRule = z.infer<
     typeof employeeSalaryReportRuleSchema
 >;
 
+// isClosed — своё у каждого направления (Фаза 13.5), а не одно общее на
+// весь ответ: service и shop закрываются независимо
+// (AccountingPeriod.direction — часть ключа), поэтому статус закрытия —
+// свойство направления. У закрытого направления total.prognose — null (см.
+// factPrognoseAmountSchema), у открытого — посчитан заново/из кэша.
 const directionSalaryReportSchema = z.object({
     direction: z.enum(['service', 'shop']),
+    isClosed: z.boolean(),
     total: factPrognoseAmountSchema,
     rules: z.array(employeeSalaryReportRuleSchema),
     // Заполняется начиная с Фазы 5 (модуль sales/SalesPerformance) — до этого
@@ -299,11 +305,20 @@ const directionSalaryReportSchema = z.object({
     isPlanApproved: z.boolean(),
 });
 
+// grandTotal — «сколько заплатить сотруднику за месяц» по обоим
+// направлениям сразу (Фаза 13.5). fact — простая сумма fact по направлениям
+// (оба всегда числа). prognose — сумма (direction.total.prognose ??
+// direction.total.fact): для закрытого направления prognose не хранится
+// (null), но экономически сумма уже финальна и равна fact (прогнозировать
+// больше нечего) — так grandTotal.prognose всегда осмысленное число, никогда
+// не null и не занижает при частично закрытом периоде.
 const employeeSalaryReportResponseSchema = z.object({
     period: z.string(),
-    isClosed: z.boolean(),
     directions: z.array(directionSalaryReportSchema),
-    grandTotal: factPrognoseAmountSchema,
+    grandTotal: z.object({
+        fact: z.number(),
+        prognose: z.number(),
+    }),
 });
 
 export type EmployeeSalaryReportResponse = z.infer<

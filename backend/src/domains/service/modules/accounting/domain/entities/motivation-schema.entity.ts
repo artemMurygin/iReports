@@ -6,10 +6,7 @@ import {
     MotivationSchemaCreateProps,
     MotivationSchemaProps,
 } from '../types/motivation-schema.types';
-import {
-    MotivationTarget,
-    MotivationTargetType,
-} from '../value-objects/motivation-target.value-object';
+import { MotivationTarget } from '../value-objects/motivation-target.value-object';
 
 export class MotivationSchema extends AggregateRoot<MotivationSchemaProps> {
     declare protected readonly _id: AggregateID;
@@ -21,7 +18,7 @@ export class MotivationSchema extends AggregateRoot<MotivationSchemaProps> {
     static create(create: MotivationSchemaCreateProps): MotivationSchema {
         const id = randomUUID();
         const target = MotivationTarget.create(
-            create.targetType as MotivationTargetType,
+            create.targetType,
             create.targetId,
         );
         const props: MotivationSchemaProps = {

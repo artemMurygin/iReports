@@ -24,6 +24,18 @@ export interface MotivationSchemaRepositoryPort {
     // сотрудника ("не должно быть N+1 запросов при расчёте отдела").
     // Сотрудники без личной схемы просто отсутствуют в результате.
     findByEmployees(employeeIds: number[]): Promise<MotivationSchema[]>;
+
+    // Find-or-create guard для CreateMotivationSchemaHandler (Фаза 13.5): у
+    // MotivationSchema в БД нет колонки direction, естественный ключ — только
+    // (targetType, targetId). Сотрудник с идентичностями в обеих ERP может
+    // получить create-запрос сначала с сервисной, потом с shop-стороны (или
+    // наоборот) на один и тот же targetId — без этой проверки вставились бы
+    // две строки на одного и того же сотрудника, и findByEmployee (findFirst)
+    // непредсказуемо находил бы только одну из них.
+    findIdByTarget(
+        targetType: string,
+        targetId: number,
+    ): Promise<string | null>;
 }
 
 export const MOTIVATION_SCHEMA_REPOSITORY = Symbol(

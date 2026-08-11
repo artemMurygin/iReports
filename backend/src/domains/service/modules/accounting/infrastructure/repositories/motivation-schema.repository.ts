@@ -85,4 +85,16 @@ export class MotivationSchemaRepository
 
         return records.map((record) => this.mapper.toDomain(record));
     }
+
+    async findIdByTarget(
+        targetType: string,
+        targetId: number,
+    ): Promise<string | null> {
+        const record = await this.client.motivationSchema.findFirst({
+            where: { targetType, targetId },
+            select: { id: true },
+        });
+
+        return record?.id ?? null;
+    }
 }

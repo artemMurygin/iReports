@@ -1,0 +1,108 @@
+import type {
+    EmployeeSalaryReportRule,
+    FloatPercentInfo,
+} from 'ireports-contracts';
+import { CalculationLine } from '@/shared/domain/calculation-line';
+import {
+    PercentBorder,
+    ProductSoldSalaryConfig,
+    ShopSalaryRule,
+    TaskCompletedShopSalaryConfig,
+} from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
+import { buildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
+import { buildFloatPercentThresholdInfo } from '@/domains/shop/modules/accounting/domain/services/float-percent';
+import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object';
+
+// Зеркало domains/service/modules/accounting/application/mappers/to-salary-report-rules.ts
+// (Фаза 13.5, issue #57) — независимая реализация в домене shop. Общая
+// точка для отчёта сотрудника и отчёта отдела, чтобы форма и правила
+// сведения пары «факт/прогноз» не расходились по двум местам.
+// rules/factLines/prognoseLines собраны одним и тем же оркестратором за
+// один проход на каждый режим — сопоставление по индексу безопасно (см.
+// rule-breakdown.builder.ts).
+export function buildShopSalaryReportRules(
+    rules: ShopSalaryRule[],
+    factLines: CalculationLine[],
+    prognoseLines: CalculationLine[],
+    performance: ShopSalesPerformance | null,
+): EmployeeSalaryReportRule[] {
+    const factBreakdown = buildRuleBreakdown(rules, factLines);
+    const prognoseBreakdown = buildRuleBreakdown(rules, prognoseLines);
+
+    return rules.map((rule, index) => {
+        const fact = factBreakdown[index];
+        const prognose = prognoseBreakdown[index];
+        const percentBorders = getFloatPercentBorders(rule);
+
+        return {
+            ruleId: fact.ruleId,
+            type: fact.type,
+            name: fact.name,
+            targetRole: fact.targetRole,
+            amount: { fact: fact.amount, prognose: prognose.amount },
+            appliedPercent: isPercentAward(rule) ? fact.rate : undefined,
+            floatPercent:
+                percentBorders && performance
+                    ? {
+                          fact: buildThresholdInfo(
+                              percentBorders,
+                              performance,
+                              'fact',
+                          ),
+                          prognose: buildThresholdInfo(
+                              percentBorders,
+                              performance,
+                              'prognose',
+                          ),
+                      }
+                    : undefined,
+            sources: fact.sources,
+        };
+    });
+}
+
+function buildThresholdInfo(
+    percentBorders: [PercentBorder, PercentBorder, PercentBorder],
+    performance: ShopSalesPerformance,
+    branch: 'fact' | 'prognose',
+): FloatPercentInfo {
+    const slice =
+        branch === 'fact' ? performance.getFact() : performance.getPrognose();
+    return buildFloatPercentThresholdInfo(
+        percentBorders,
+        slice.getPercentCompletion(),
+        performance.getPlan().turnover,
+        slice.getTurnover(),
+    );
+}
+
+// Award-типы, где line.rate — процент/множитель, а не денежная ставка за
+// единицу (PayPerHour.price, ProductSold/UsedProductSold Fixed.price,
+// TaskCompleted Fixed.price) — appliedPercent для остальных не
+// заполняется, чтобы не путать деньги с процентом на UI.
+const PERCENT_AWARD_TYPES = new Set(['FixedPercent', 'FloatPercent']);
+
+function isPercentAward(rule: ShopSalaryRule): boolean {
+    const award = (rule.config as { award?: { type: string } }).award;
+    return !!award && PERCENT_AWARD_TYPES.has(award.type);
+}
+
+// Пороги FloatPercent есть только у ProductSold/TaskCompleted, и только
+// когда их award выбран как FloatPercent (а не Fixed/FixedPercent) —
+// UsedProductSold FloatPercent вообще не поддерживает (закупщик не
+// привязан к выполнению плана продаж, см. shop-salary-rule.types.ts), для
+// остальных типов правил (PayPerHour) и остальных award того же правила
+// возвращает null, что и означает "поля floatPercent в ответе не будет".
+function getFloatPercentBorders(
+    rule: ShopSalaryRule,
+): [PercentBorder, PercentBorder, PercentBorder] | null {
+    if (rule.type === 'ProductSold') {
+        const award = (rule.config as ProductSoldSalaryConfig).award;
+        return award.type === 'FloatPercent' ? award.percentBorders : null;
+    }
+    if (rule.type === 'TaskCompleted') {
+        const award = (rule.config as TaskCompletedShopSalaryConfig).award;
+        return award.type === 'FloatPercent' ? award.percentBorders : null;
+    }
+    return null;
+}

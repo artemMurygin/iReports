@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SalesModule } from '@/domains/service/modules/sales/sales.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
+import { ShopAccountingModule } from '@/domains/shop/modules/accounting/shop-accounting.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
@@ -63,8 +64,23 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
 // (BuildServiceCalculationContextService, вход FloatPercent).
 // DomainSyncStatusModule — второй штамп свежести, общий с будущим
 // синком shop.
+// ShopAccountingModule (Фаза 13.5) — импортируется исключительно ради
+// экспортируемых DI-токенов (SHOP_MOTIVATION_SCHEMA_REPOSITORY,
+// BuildShopCalculationContextService, SHOP_CALCULATION_DATA,
+// SHOP_SALES_PERFORMANCE_READER), которые резолвят в конструкторы
+// GetEmployeeSalaryReportService/GetDepartmentSalaryReportService/
+// CloseAccountingPeriodHandler для направления shop — ни один класс
+// бизнес-логики shop здесь не переиспользуется. Единственная санкционированная
+// точка связи domains/service и domains/shop на уровне Nest DI (см.
+// backend/CLAUDE.md), зеркало обратной зависимости ShopSalesModule →
+// сервисные SalesPlanRepository/SalesPlanTemplateRepository.
 @Module({
-    imports: [CqrsModule, SalesModule, DomainSyncStatusModule],
+    imports: [
+        CqrsModule,
+        SalesModule,
+        DomainSyncStatusModule,
+        ShopAccountingModule,
+    ],
     controllers: [
         CreateMotivationSchemaHttpController,
         GetEmployeeSalaryReportHttpController,

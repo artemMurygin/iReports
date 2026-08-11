@@ -32,7 +32,7 @@ npm run format                # prettier --config .prettierrc --write src/**/*.t
 
 npm run test                    # jest, all *.spec.ts under src
 npm run test -- deals.service    # jest, filter by filename/testname pattern
-npm run test -- --testPathPattern=domains/service/modules/sales
+npm run test -- --testPathPatterns=domains/service/modules/sales
 npm run test:watch
 npm run test:cov
 npm run test:e2e                # separate jest config: test/jest-e2e.json

@@ -5,8 +5,10 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import type { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -17,7 +19,12 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // accounting-period.prisma), эта проверка защищает контракт "направление —
 // часть ключа, а не просто период" от регрессии (например, случайной
 // правки хендлера/репозитория, забывшей передать direction при
-// чтении/записи).
+// чтении/записи). До direction-aware правки хендлера (Фаза 13.5, issue #57)
+// closeShopDirection не существовал — при direction === 'shop' хендлер
+// молча строил снапшот через сервисный motivationSchemaRepo/contextBuilder
+// (латентный баг, схемы магазина никогда не попадали в снапшот); этот тест
+// на генеричности periodRepo/snapshotRepo/cacheRepo/salesPlanRepo тот
+// баг не ловил и продолжает проходить без изменений в своей логике.
 describe('CloseAccountingPeriodHandler — независимость направлений', () => {
     it('закрытие периода service не переводит в CLOSED тот же период направления shop, и наоборот', async () => {
         // Один и тот же key-value store имитирует реальный уникальный ключ
@@ -53,6 +60,13 @@ describe('CloseAccountingPeriodHandler — независимость напра
             findByEmployees: jest.fn().mockResolvedValue([]),
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
         };
+        const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
+            insert: jest.fn(),
+            findByEmployee: jest.fn(),
+            findByEmployees: jest.fn().mockResolvedValue([]),
+            findIdByTarget: jest.fn(),
+            findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+        };
         const salesPlanRepo: SalesPlanRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
@@ -79,14 +93,32 @@ describe('CloseAccountingPeriodHandler — независимость напра
             ),
         } as unknown as BuildServiceCalculationContextService;
 
+        const shopContextBuilder = {
+            build: jest.fn((period: Period, employeeId: number) =>
+                Promise.resolve({
+                    employee: { id: employeeId, identities: [] },
+                    period: {
+                        direction: 'shop' as const,
+                        period: period.getValue(),
+                        ...period.getBounds(),
+                        status: 'OPEN' as const,
+                    },
+                    erpData: { hoursWorked: 8 },
+                    salesPerformanceDetail: null,
+                }),
+            ),
+        } as unknown as BuildShopCalculationContextService;
+
         const handler = new CloseAccountingPeriodHandler(
             periodRepo,
             snapshotRepo,
             cacheRepo,
             motivationSchemaRepo,
             salesPlanRepo,
+            shopMotivationSchemaRepo,
             unitOfWork,
             contextBuilder,
+            shopContextBuilder,
         );
 
         await withRequestContext(() =>

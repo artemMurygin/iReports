@@ -8,12 +8,16 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 
 describe('CreateMotivationSchemaHandler', () => {
-    const buildHandler = () => {
+    const buildHandler = (existingId: string | null = null) => {
         const insert = jest
             .fn<Promise<void>, [MotivationSchema]>()
             .mockResolvedValue(undefined);
+        const findIdByTarget = jest
+            .fn<Promise<string | null>, [string, number]>()
+            .mockResolvedValue(existingId);
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert,
+            findIdByTarget,
         };
         // run() выполняет переданную работу напрямую, без реальной транзакции —
         // для юнит-теста хендлера этого достаточно, транзакционность самого
@@ -33,7 +37,7 @@ describe('CreateMotivationSchemaHandler', () => {
             commandBus,
         );
 
-        return { handler, insert, run, execute };
+        return { handler, insert, findIdByTarget, run, execute };
     };
 
     it('оборачивает запись схемы и правил в unitOfWork.run', async () => {
@@ -121,6 +125,60 @@ describe('CreateMotivationSchemaHandler', () => {
             const result = await handler.execute(command);
 
             expect(result.id).toEqual(expect.any(String));
+        });
+    });
+
+    it('если findIdByTarget нашёл существующую схему — не вставляет новую, а дописывает правила к найденному id', async () => {
+        await withRequestContext(async () => {
+            const { handler, insert, execute } =
+                buildHandler('existing-schema-id');
+            const command = new CreateMotivationSchemaCommand({
+                targetType: 'Employee',
+                targetId: 1,
+                name: 'Оклад',
+                rules: [
+                    {
+                        type: 'PayPerHour',
+                        name: 'Часы',
+                        targetRole: 'ENGINEER',
+                        config: { price: 100 },
+                    },
+                    {
+                        type: 'ServiceCompleted',
+                        name: 'Услуги',
+                        targetRole: 'ENGINEER',
+                        config: { award: { type: 'ServiceFixed' } },
+                    },
+                ],
+            });
+
+            const result = await handler.execute(command);
+
+            expect(insert).not.toHaveBeenCalled();
+            expect(result.id).toBe('existing-schema-id');
+            expect(execute).toHaveBeenCalledTimes(2);
+            for (const [dispatched] of execute.mock.calls) {
+                expect(dispatched).toBeInstanceOf(CreateSalaryRuleCommand);
+                expect(dispatched.motivationSchemaId).toBe(
+                    'existing-schema-id',
+                );
+            }
+        });
+    });
+
+    it('вызывает findIdByTarget с targetType/targetId команды', async () => {
+        await withRequestContext(async () => {
+            const { handler, findIdByTarget } = buildHandler();
+            const command = new CreateMotivationSchemaCommand({
+                targetType: 'Employee',
+                targetId: 42,
+                name: 'Оклад',
+                rules: [],
+            });
+
+            await handler.execute(command);
+
+            expect(findIdByTarget).toHaveBeenCalledWith('Employee', 42);
         });
     });
 });

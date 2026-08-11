@@ -27,7 +27,7 @@ export class MotivationSchemaMapper implements Mapper<
             updatedAt: record.updatedAt,
             props: {
                 target: MotivationTarget.create(
-                    record.targetType as 'Department' | 'Employee',
+                    record.targetType,
                     record.targetId,
                 ),
                 name: record.name,
