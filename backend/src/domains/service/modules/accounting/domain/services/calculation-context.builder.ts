@@ -9,8 +9,11 @@ import type { AccountingDirection } from '@/shared/domain/calculation-context';
 // точки не расходились в сборке контекста (см. PRD: "Контекст собирается
 // один раз ... одинаковую выборку данных для всех правил").
 //
-// erpData/salesPerformance пока не подкладываются (Фазы 2, 5, 7-13) — как и
-// в Фазе 1, доступные на сегодня правила их не используют.
+// erpData/employee.identities реально заполняются приложением поверх этого
+// скелета — см. BuildServiceCalculationContextService (Фаза 7), которая
+// оборачивает эту функцию и подмешивает EmployeeIdentity/ERP-данные из
+// ServiceCalculationDataPort. salesPerformance по-прежнему не подкладывается
+// (Фаза 9) — доступные на сегодня правила его не используют.
 export function buildBaseCalculationContext(
     direction: AccountingDirection,
     period: Period,

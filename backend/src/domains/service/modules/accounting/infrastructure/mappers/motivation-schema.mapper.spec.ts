@@ -23,7 +23,7 @@ describe('MotivationSchemaMapper', () => {
                         type: 'PayPerHour',
                         name: 'Часы',
                         targetRole: 'ENGINEER',
-                        props: { hours: 2, price: 300 },
+                        props: { price: 300 },
                         createdAt,
                         updatedAt,
                     },
@@ -48,7 +48,7 @@ describe('MotivationSchemaMapper', () => {
                         status: 'OPEN',
                     },
                     mode: 'FACT',
-                    erpData: undefined,
+                    erpData: { serviceCompletedItems: [], hoursWorked: 2 },
                     salesPerformance: null,
                 }).amount,
             ).toBe(600);

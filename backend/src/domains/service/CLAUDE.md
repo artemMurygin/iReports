@@ -86,6 +86,17 @@ domains/service/
   `ENDPOINTS.md`) обслуживаются другим, ещё не мигрированным модулем `salary` (см. закомментированный
   импорт `SalaryModule` в `app.module.ts`) — не путай его с `accounting`, они пока частично
   дублируют предметную область на время переноса.
+- **`PayPerHour`/`ServiceCompleted` — реально считающие правила (Фаза 7)**: `domain/services/service-role-source.ts`
+  — маппинг «роль правила → поле ERP RoApp» и функция `employeeMatchesServiceRole`, общая точка,
+  которую переиспользуют будущие правила Фазы 8 (`OrderPayed`/`TaskCompleted`) для той же ролевой
+  выборки; `domain/services/money.ts` — `roundRubles()`, единая точка округления процентных начислений
+  (целые рубли, `Math.round`) для всего модуля. `application/services/build-service-calculation-context.service.ts`
+  — единственное место, где `CalculationContext.erpData`/`employee.identities` реально заполняются из
+  БД (`ServiceCalculationDataPort`/`ServiceCalculationDataRepository`): собирает вход для оркестратора
+  и для `GetEmployeeSalaryReportService`, и для `CloseAccountingPeriodHandler`. Источник часов
+  `PayPerHour` — `EmployeeHoursEntry` (`domain/entities/employee-hours-entry.entity.ts`), простой CRUD
+  без CQRS-событий (`POST|PATCH|DELETE|GET /accounting/employee_hours*`, см. `ENDPOINTS.md`) — ручной
+  ввод отработанных часов сотрудника за период, полноценный график работы вне скоупа.
 
 ### `modules/sales` — сделки/лиды (в разработке) + план продаж (Фазы 3–4)
 

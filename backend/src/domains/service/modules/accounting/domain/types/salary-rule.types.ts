@@ -5,10 +5,14 @@ import type { SalaryRuleRequest, TargetRole } from 'ireports-contracts';
 
 export type { TargetRole };
 
+// hours больше не часть config (Фаза 7) — источник часов сотрудника за
+// период это EmployeeHoursEntry (ручной ввод), приходящий в
+// CalculationContext.erpData, а не хардкод в правиле. bonus — необязательный
+// индивидуальный бонус, общий для всех типов правил (см. contracts,
+// individualBonusFieldSchema).
 export type PayPerHourSalaryConfig = {
-    hours?: number;
     price: number;
-    total?: number;
+    bonus?: number;
 };
 
 export type PayPerHourSalaryRule = {
@@ -23,6 +27,7 @@ export type ServiceCompletedSalaryConfig = {
         | { type: 'Fixed'; price: number }
         | { type: 'ServiceFixed' }
         | { type: 'ServicePercent'; percent: number };
+    bonus?: number;
 };
 
 export type ServiceCompletedSalaryRule = {

@@ -20,6 +20,8 @@ import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-statu
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
+import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
@@ -83,6 +85,14 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
         findByScope: () => Promise.resolve(null),
         findByDirectionAndPeriod: () => Promise.resolve([]),
     };
+    // Часы (Фаза 7) больше не в config правила — источник данных для
+    // BuildServiceCalculationContextService, hoursWorked: 8 сохраняет
+    // числовые ожидания теста (2000 = 8ч × 250).
+    const fakeServiceCalculationData: ServiceCalculationDataPort = {
+        findEmployeeIdentities: () => Promise.resolve([]),
+        findServiceCompletedItems: () => Promise.resolve([]),
+        findHoursWorked: () => Promise.resolve(8),
+    };
     // AccountingModule заодно поднимает CreateMotivationSchemaHandler (не
     // используется этим эндпоинтом), которому нужен UNIT_OF_WORK — реальный
     // PrismaUnitOfWork приходит из @Global() DatabaseModule (требует живой
@@ -112,7 +122,7 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
                 type: 'PayPerHour',
                 name: 'Почасовая ставка',
                 targetRole: 'ENGINEER',
-                config: { hours: 8, price: 250 },
+                config: { price: 250 },
             });
             return MotivationSchema.create({
                 targetType: 'Employee',
@@ -140,6 +150,8 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
             .useValue(fakeDomainSyncStatus)
             .overrideProvider(SALES_PLAN_REPOSITORY)
             .useValue(fakeSalesPlanRepo)
+            .overrideProvider(SERVICE_CALCULATION_DATA)
+            .useValue(fakeServiceCalculationData)
             .compile();
 
         app = moduleRef.createNestApplication();

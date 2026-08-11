@@ -1,9 +1,12 @@
 import { PayPerHoursEntity } from './pay-per-hour.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 
 // Юнит-тест на подготовленном объекте контекста — без поднятия БД и без
 // моков репозиториев (см. docs/payroll/prd-payroll-calculation.md, Фаза 1).
-const buildContext = (): CalculationContext => ({
+// Источник часов с Фазы 7 — context.erpData.hoursWorked (ручной ввод,
+// EmployeeHoursEntry), а не config.hours.
+const buildContext = (hoursWorked = 0): CalculationContext => ({
     employee: { id: 1, identities: [] },
     period: {
         direction: 'service',
@@ -13,7 +16,10 @@ const buildContext = (): CalculationContext => ({
         status: 'OPEN',
     },
     mode: 'FACT',
-    erpData: undefined,
+    erpData: {
+        serviceCompletedItems: [],
+        hoursWorked,
+    } satisfies ServiceCalculationErpData,
     salesPerformance: null,
 });
 
@@ -24,27 +30,27 @@ describe('PayPerHoursEntity', () => {
                 type: 'PayPerHour',
                 name: 'Почасовая ставка',
                 targetRole: 'ENGINEER',
-                config: { hours: 10, price: 300 },
+                config: { price: 300 },
             });
 
             expect(rule.id).toEqual(expect.any(String));
             expect(rule.type).toBe('PayPerHour');
             expect(rule.name).toBe('Почасовая ставка');
             expect(rule.targetRole).toBe('ENGINEER');
-            expect(rule.config).toEqual({ hours: 10, price: 300 });
+            expect(rule.config).toEqual({ price: 300 });
         });
     });
 
     describe('calculate', () => {
-        it('умножает часы на ставку и возвращает строку расчёта', () => {
+        it('умножает часы из контекста (ручной ввод) на ставку и возвращает строку расчёта', () => {
             const rule = PayPerHoursEntity.create({
                 type: 'PayPerHour',
                 name: 'Почасовая ставка',
                 targetRole: 'ENGINEER',
-                config: { hours: 8, price: 250 },
+                config: { price: 250 },
             });
 
-            const line = rule.calculate(buildContext());
+            const line = rule.calculate(buildContext(8));
 
             expect(line).toEqual({
                 ruleId: rule.id,
@@ -55,7 +61,7 @@ describe('PayPerHoursEntity', () => {
             });
         });
 
-        it('возвращает сумму 0 при отсутствии часов', () => {
+        it('возвращает сумму 0 при отсутствии записи о часах в контексте', () => {
             const rule = PayPerHoursEntity.create({
                 type: 'PayPerHour',
                 name: 'Почасовая ставка',
@@ -64,6 +70,38 @@ describe('PayPerHoursEntity', () => {
             });
 
             expect(rule.calculate(buildContext()).amount).toBe(0);
+        });
+
+        it('индивидуальный бонус попадает в итоговую сумму', () => {
+            const rule = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Почасовая ставка',
+                targetRole: 'ENGINEER',
+                config: { price: 250, bonus: 300 },
+            });
+
+            expect(rule.calculate(buildContext(8)).amount).toBe(2300);
+        });
+
+        it('округляет дробное произведение часов на ставку до целого рубля', () => {
+            const rule = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Почасовая ставка',
+                targetRole: 'ENGINEER',
+                config: { price: 250 },
+            });
+
+            // 2.5 * 250 = 625 — целое, проверим реальное дробление ставки.
+            const ruleWithFraction = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Почасовая ставка',
+                targetRole: 'ENGINEER',
+                config: { price: 233 },
+            });
+            expect(ruleWithFraction.calculate(buildContext(2.5)).amount).toBe(
+                Math.round(2.5 * 233),
+            );
+            expect(rule.calculate(buildContext(2.5)).amount).toBe(625);
         });
     });
 });

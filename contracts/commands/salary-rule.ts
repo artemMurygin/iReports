@@ -18,12 +18,22 @@ const targetRoleSchema = z.enum([
 
 export type TargetRole = z.infer<typeof targetRoleSchema>;
 
+// Необязательный индивидуальный бонус — разовая надбавка поверх расчёта
+// правила по его основной формуле, не влияющая на discriminant `type` (см.
+// docs/payroll/prd-payroll-calculation.md, раздел 2, и план, Фаза 7).
+// Целое число: денежные поля во всём модуле accounting — целые рубли (см.
+// комментарий у roundRubles() на бэкенде,
+// domains/service/modules/accounting/domain/services/money.ts).
+const individualBonusFieldSchema = z.number().int().optional();
+
 // ========================== Почасовая ставка ========================== //
 
+// hours больше не часть config: источник часов — ручной ввод за период
+// (EmployeeHoursEntry, см. Фазу 7 плана), а не захардкоженное значение в
+// правиле. price — ставка за час.
 const payPerHourSalaryConfigSchema = z.object({
-    hours: z.number().optional(),
     price: z.number(),
-    total: z.number().optional(),
+    bonus: individualBonusFieldSchema,
 });
 
 const payPerHourSalaryRuleSchema = z.object({
@@ -41,6 +51,7 @@ const serviceCompletedSalaryConfigSchema = z.object({
         z.object({ type: z.literal('ServiceFixed') }),
         z.object({ type: z.literal('ServicePercent'), percent: z.number() }),
     ]),
+    bonus: individualBonusFieldSchema,
 });
 
 const serviceCompletedSalaryRuleSchema = z.object({

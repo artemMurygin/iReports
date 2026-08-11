@@ -1,12 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
-import { CalculationContext } from '@/shared/domain/calculation-context';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
-import { buildBaseCalculationContext } from '@/domains/service/modules/accounting/domain/services/calculation-context.builder';
+import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
 import {
     buildFreshnessStamp,
@@ -46,8 +45,11 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 // совпадении отдаёт кэш без вызова оркестратора, при расхождении
 // пересчитывает и перезаписывает кэш (см. accounting-cache-freshness.ts).
 //
+// Контекст расчёта (EmployeeIdentity + erpData сервиса) собирает
+// BuildServiceCalculationContextService (Фаза 7) — этот сервис больше не
+// строит его напрямую через buildBaseCalculationContext.
+//
 // Пока не реализовано (следующие фазы плана):
-// - EmployeeIdentity/ERP-данные в контексте (Фаза 2 и далее);
 // - SalesPerformance и isPlanApproved в ответе отчёта (Фаза 9/5) —
 //   salesPerformance = null, isPlanApproved = true;
 // - направление shop (Фазы 10-13) — directions содержит только 'service'.
@@ -68,6 +70,7 @@ export class GetEmployeeSalaryReportService {
         private readonly domainSyncStatus: DomainSyncStatusPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
+        private readonly contextBuilder: BuildServiceCalculationContextService,
     ) {}
 
     async execute(
@@ -155,12 +158,10 @@ export class GetEmployeeSalaryReportService {
             );
         }
 
-        const baseContext: Omit<CalculationContext, 'mode'> =
-            buildBaseCalculationContext(
-                this.direction,
-                validatedPeriod,
-                employeeId,
-            );
+        const baseContext = await this.contextBuilder.build(
+            validatedPeriod,
+            employeeId,
+        );
 
         const [factLines, prognoseLines] = await Promise.all([
             PeriodCalculationOrchestrator.calculate(rules, {

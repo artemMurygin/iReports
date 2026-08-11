@@ -31,3 +31,21 @@ model SalaryRule {
   @@index([motivationSchemaId])
   @@map("salary_rules")
 }
+
+// Ручной ввод отработанных часов сотрудника за период — источник данных для
+// PayPerHour.calculate() (Фаза 7, см. docs/payroll/plan-payroll-calculation.md).
+// Полноценный график работы — вне скоупа этой итерации: одна запись — одно
+// значение часов на пару (сотрудник, период), заводится/правится
+// руководителем/администратором через простой CRUD.
+model EmployeeHoursEntry {
+  id         String @id
+  employeeId Int    @map("employee_id")
+  period     String
+  hours      Float
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([employeeId, period])
+  @@map("employee_hours_entries")
+}

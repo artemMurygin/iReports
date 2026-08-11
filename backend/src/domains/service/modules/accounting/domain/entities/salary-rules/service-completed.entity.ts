@@ -8,6 +8,9 @@ import {
     ServiceCompletedSalaryRule,
     TargetRole,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import { employeeMatchesServiceRole } from '@/domains/service/modules/accounting/domain/services/service-role-source';
+import { roundRubles } from '@/domains/service/modules/accounting/domain/services/money';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { randomUUID } from 'crypto';
 
 export class ServiceCompletedEntity
@@ -48,15 +51,71 @@ export class ServiceCompletedEntity
         });
     }
 
-    // TODO(Фаза 7): расчёт захардкожен и не учитывает config.award (Fixed /
-    // ServiceFixed / ServicePercent) — сигнатура уже новая (context →
-    // строка расчёта), сама логика ещё нет.
-    calculate(_context: CalculationContext): CalculationLine {
-        return {
-            ruleId: this.id,
-            amount: 10,
-            sources: [],
-        };
+    // Правило само определяет выборку по своей роли (Фаза 7): фильтрует
+    // позиции оказанных услуг периода (context.erpData.serviceCompletedItems)
+    // по тому, встречается ли сотрудник в поле ERP, соответствующем
+    // targetRole правила (см. service-role-source.ts) — например, ENGINEER
+    // считает только по позициям со своим инженером, другие услуги того же
+    // периода на сумму не влияют.
+    calculate(context: CalculationContext): CalculationLine {
+        const erpData = context.erpData as
+            | ServiceCalculationErpData
+            | undefined;
+        const items = erpData?.serviceCompletedItems ?? [];
+        const matched = items.filter((item) =>
+            employeeMatchesServiceRole(context.employee, this.targetRole, item),
+        );
+        const quantity = matched.reduce((sum, item) => sum + item.quantity, 0);
+        const sources = matched.map((item) => ({
+            type: 'serviceOrderItem',
+            id: item.serviceOrderId,
+        }));
+        const bonus = this.props.config.bonus ?? 0;
+        const award = this.props.config.award;
+
+        switch (award.type) {
+            case 'Fixed': {
+                const amount = award.price * quantity + bonus;
+                return {
+                    ruleId: this.id,
+                    quantity,
+                    rate: award.price,
+                    amount,
+                    sources,
+                };
+            }
+            case 'ServiceFixed': {
+                // Ставка "за услугу" из справочника (RoappService.engeneerBonus)
+                // — своя на каждую услугу, поэтому единого rate для строки
+                // нет (см. CalculationLine.rate — опционален).
+                const amount =
+                    matched.reduce(
+                        (sum, item) =>
+                            sum + item.catalogEngineerBonus * item.quantity,
+                        0,
+                    ) + bonus;
+                return { ruleId: this.id, quantity, amount, sources };
+            }
+            case 'ServicePercent': {
+                const base = matched.reduce(
+                    (sum, item) => sum + item.linePrice * item.quantity,
+                    0,
+                );
+                const amount =
+                    roundRubles((base * award.percent) / 100) + bonus;
+                return {
+                    ruleId: this.id,
+                    // Базы REVENUE/MARGIN и т.п. у ServiceCompleted нет —
+                    // процент берётся от стоимости оказанной услуги по этой
+                    // позиции заказа (item.linePrice), это и есть база.
+                    salaryBasis: 'SERVICE_PRICE',
+                    quantity,
+                    rate: award.percent,
+                    amount,
+                    sources,
+                };
+            }
+        }
     }
 
     validate(): void {}

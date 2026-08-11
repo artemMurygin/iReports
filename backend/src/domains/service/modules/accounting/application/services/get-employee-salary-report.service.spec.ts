@@ -5,6 +5,8 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
@@ -17,13 +19,16 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // ленивый кэш и снапшоты"). Все зависимости — чистые in-memory фейки, без
 // NestJS DI и без БД (тот же стиль, что и у остальных юнит-тестов accounting).
 describe('GetEmployeeSalaryReportService', () => {
+    // Часы (Фаза 7) приходят из BuildServiceCalculationContextService, а не
+    // из config — фейк ниже всегда возвращает hoursWorked: 8, чтобы старые
+    // числовые ожидания этого файла (2000 = 8ч × 250) остались верны.
     const buildSchema = (employeeId: number) =>
         withRequestContext(() => {
             const rule = PayPerHoursEntity.create({
                 type: 'PayPerHour',
                 name: 'Почасовая ставка',
                 targetRole: 'ENGINEER',
-                config: { hours: 8, price: 250 },
+                config: { price: 250 },
             });
             return MotivationSchema.create({
                 targetType: 'Employee',
@@ -97,6 +102,22 @@ describe('GetEmployeeSalaryReportService', () => {
             findByDirectionAndPeriod: findPlansByDirectionAndPeriod,
         };
 
+        const contextBuilder = {
+            build: jest.fn((period: Period, employeeId: number) =>
+                Promise.resolve({
+                    employee: { id: employeeId, identities: [] },
+                    period: {
+                        direction: 'service' as const,
+                        period: period.getValue(),
+                        ...period.getBounds(),
+                        status: 'OPEN' as const,
+                    },
+                    erpData: { serviceCompletedItems: [], hoursWorked: 8 },
+                    salesPerformance: null,
+                }),
+            ),
+        } as unknown as BuildServiceCalculationContextService;
+
         const service = new GetEmployeeSalaryReportService(
             motivationSchemaRepo,
             periodRepo,
@@ -104,6 +125,7 @@ describe('GetEmployeeSalaryReportService', () => {
             cacheRepo,
             domainSyncStatus,
             salesPlanRepo,
+            contextBuilder,
         );
 
         return {
@@ -269,7 +291,7 @@ describe('GetEmployeeSalaryReportService', () => {
                     type: 'PayPerHour',
                     name: 'Почасовая ставка (правка)',
                     targetRole: 'ENGINEER',
-                    config: { hours: 8, price: 300 },
+                    config: { price: 300 },
                 });
                 return new MotivationSchema({
                     id: schema.id,

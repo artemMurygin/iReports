@@ -124,11 +124,11 @@
 **Что затрагивает?** backend, contracts
 
 **Задачи:**
-- [ ] Перечень ролей сервиса (`ENGINEER`, `ONLINE_MANAGER`, `OFFLINE_MANAGER`, `ORDER_MANAGER`, `CREATED_BY`, `CLOSED_BY`) и маппинг «роль правила → поле ERP» внутри кода правил: `ENGINEER` — `RoappServiceOrder.engineerId` / `RoappProductsOrder.engineerId`, `ONLINE_MANAGER` — строковое поле `RoappOrder.onlineManager` через идентификатор типа `ONLINE_MANAGER_FIELD`, остальные — `managerId`, `createdById`, `closedById`.
-- [ ] `ServiceCompleted.calculate()` для всех трёх вариантов `award`: `Fixed`, `ServiceFixed` (ставка из справочника услуги), `ServicePercent` (процент от стоимости услуги) — вместо возврата константы `10`.
-- [ ] `PayPerHour`: источник часов вместо захардкоженного значения (ручной ввод — график работы вне скоупа).
-- [ ] Необязательный индивидуальный бонус к любому правилу, не меняющий его тип; фиксация единицы измерения денежных полей `Int` (рубли или копейки) и правил округления при расчёте процентов.
-- [ ] Тесты: юнит-тесты на контексте для `PayPerHour` и всех трёх `award` `ServiceCompleted`; правило `ENGINEER` считает только по позициям со своим инженером; бонус попадает в итоговую сумму.
+- [x] Перечень ролей сервиса (`ENGINEER`, `ONLINE_MANAGER`, `OFFLINE_MANAGER`, `ORDER_MANAGER`, `CREATED_BY`, `CLOSED_BY`) и маппинг «роль правила → поле ERP» внутри кода правил: `ENGINEER` — `RoappServiceOrder.engineerId` / `RoappProductsOrder.engineerId`, `ONLINE_MANAGER` — строковое поле `RoappOrder.onlineManager` через идентификатор типа `ONLINE_MANAGER_FIELD`, остальные — `managerId`, `createdById`, `closedById`.
+- [x] `ServiceCompleted.calculate()` для всех трёх вариантов `award`: `Fixed`, `ServiceFixed` (ставка из справочника услуги), `ServicePercent` (процент от стоимости услуги) — вместо возврата константы `10`.
+- [x] `PayPerHour`: источник часов вместо захардкоженного значения (ручной ввод — график работы вне скоупа).
+- [x] Необязательный индивидуальный бонус к любому правилу, не меняющий его тип; фиксация единицы измерения денежных полей `Int` (рубли или копейки) и правил округления при расчёте процентов.
+- [x] Тесты: юнит-тесты на контексте для `PayPerHour` и всех трёх `award` `ServiceCompleted`; правило `ENGINEER` считает только по позициям со своим инженером; бонус попадает в итоговую сумму.
 
 **Когда готово** Ни один `calculate()` этих правил не возвращает константу; правило само определяет выборку по своей роли.
 

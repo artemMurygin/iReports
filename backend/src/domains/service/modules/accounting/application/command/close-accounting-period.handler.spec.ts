@@ -6,6 +6,8 @@ import type { AccountingCalculationCachePort } from '@/domains/service/modules/a
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
+import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
@@ -60,6 +62,22 @@ describe('CloseAccountingPeriodHandler', () => {
 
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
 
+        const contextBuilder = {
+            build: jest.fn((period: Period, employeeId: number) =>
+                Promise.resolve({
+                    employee: { id: employeeId, identities: [] },
+                    period: {
+                        direction: 'service' as const,
+                        period: period.getValue(),
+                        ...period.getBounds(),
+                        status: 'OPEN' as const,
+                    },
+                    erpData: { serviceCompletedItems: [], hoursWorked: 8 },
+                    salesPerformance: null,
+                }),
+            ),
+        } as unknown as BuildServiceCalculationContextService;
+
         const handler = new CloseAccountingPeriodHandler(
             periodRepo,
             snapshotRepo,
@@ -67,6 +85,7 @@ describe('CloseAccountingPeriodHandler', () => {
             motivationSchemaRepo,
             salesPlanRepo,
             unitOfWork,
+            contextBuilder,
         );
 
         return { handler, save, saveAll, deleteCacheByPeriod, periodRepo };
@@ -121,7 +140,7 @@ describe('CloseAccountingPeriodHandler', () => {
                 type: 'PayPerHour',
                 name: 'Почасовая ставка',
                 targetRole: 'ENGINEER',
-                config: { hours: 8, price: 250 },
+                config: { price: 250 },
             });
             return MotivationSchema.create({
                 targetType: 'Employee',

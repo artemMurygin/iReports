@@ -5,7 +5,7 @@ import { Period } from '@/shared/domain/period.value-object';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
-import { buildBaseCalculationContext } from '@/domains/service/modules/accounting/domain/services/calculation-context.builder';
+import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
@@ -52,6 +52,7 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
+        private readonly contextBuilder: BuildServiceCalculationContextService,
     ) {}
 
     async execute(
@@ -98,11 +99,7 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
             const employeeId = props.target.getId();
             const rules = props.rules;
             const context = {
-                ...buildBaseCalculationContext(
-                    command.direction,
-                    period,
-                    employeeId,
-                ),
+                ...(await this.contextBuilder.build(period, employeeId)),
                 mode: 'FACT' as const,
             };
             const lines = await PeriodCalculationOrchestrator.calculate(

@@ -1,8 +1,12 @@
 import { PeriodCalculationOrchestrator } from './period-calculation.orchestrator';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 
-const buildContext = (): CalculationContext => ({
+// Часы сотрудника за период — одно значение из ручного ввода (Фаза 7),
+// общее для всех правил его схемы вне зависимости от роли; независимость
+// правил демонстрируется разными ставками (price), а не разными часами.
+const buildContext = (hoursWorked = 5): CalculationContext => ({
     employee: { id: 1, identities: [] },
     period: {
         direction: 'service',
@@ -12,7 +16,10 @@ const buildContext = (): CalculationContext => ({
         status: 'OPEN',
     },
     mode: 'FACT',
-    erpData: undefined,
+    erpData: {
+        serviceCompletedItems: [],
+        hoursWorked,
+    } satisfies ServiceCalculationErpData,
     salesPerformance: null,
 });
 
@@ -22,13 +29,13 @@ describe('PeriodCalculationOrchestrator', () => {
             type: 'PayPerHour',
             name: 'Часы (инженер)',
             targetRole: 'ENGINEER',
-            config: { hours: 4, price: 300 },
+            config: { price: 300 },
         });
         const ruleB = PayPerHoursEntity.create({
             type: 'PayPerHour',
             name: 'Часы (онлайн-менеджер)',
             targetRole: 'ONLINE_MANAGER',
-            config: { hours: 6, price: 250 },
+            config: { price: 250 },
         });
         const context = buildContext();
         const calculateA = jest.spyOn(ruleA, 'calculate');
@@ -50,13 +57,13 @@ describe('PeriodCalculationOrchestrator', () => {
                 type: 'PayPerHour',
                 name: 'Часы (инженер)',
                 targetRole: 'ENGINEER',
-                config: { hours: 4, price: 300 }, // 1200
+                config: { price: 300 }, // 5 * 300 = 1500
             }),
             PayPerHoursEntity.create({
                 type: 'PayPerHour',
                 name: 'Часы (онлайн-менеджер)',
                 targetRole: 'ONLINE_MANAGER',
-                config: { hours: 6, price: 250 }, // 1500
+                config: { price: 250 }, // 5 * 250 = 1250
             }),
         ];
 
@@ -65,7 +72,7 @@ describe('PeriodCalculationOrchestrator', () => {
             buildContext(),
         );
 
-        expect(PeriodCalculationOrchestrator.total(lines)).toBe(2700);
+        expect(PeriodCalculationOrchestrator.total(lines)).toBe(2750);
     });
 
     it('для пустого набора правил возвращает пустой список строк и нулевой итог', async () => {

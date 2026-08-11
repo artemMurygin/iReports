@@ -24,7 +24,7 @@ describe('CreateSalaryRuleHandler', () => {
                     type: 'PayPerHour',
                     name: 'Часы',
                     targetRole: 'ENGINEER',
-                    config: { hours: 5, price: 200 },
+                    config: { price: 200 },
                 },
             });
 
@@ -44,7 +44,7 @@ describe('CreateSalaryRuleHandler', () => {
                         status: 'OPEN',
                     },
                     mode: 'FACT',
-                    erpData: undefined,
+                    erpData: { serviceCompletedItems: [], hoursWorked: 5 },
                     salesPerformance: null,
                 }).amount,
             ).toBe(1000);

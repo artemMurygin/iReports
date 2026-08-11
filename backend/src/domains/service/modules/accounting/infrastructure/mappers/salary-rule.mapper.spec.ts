@@ -30,7 +30,7 @@ describe('SalaryRuleMapper', () => {
                 type: 'PayPerHour',
                 name: 'Часы',
                 targetRole: 'ENGINEER',
-                props: { hours: 4, price: 300 },
+                props: { price: 300 },
                 createdAt,
                 updatedAt,
             });
@@ -39,8 +39,14 @@ describe('SalaryRuleMapper', () => {
             expect(entity.id).toBe('rule-1');
             expect(entity.name).toBe('Часы');
             expect(entity.targetRole).toBe('ENGINEER');
-            expect(entity.config).toEqual({ hours: 4, price: 300 });
-            expect(entity.calculate(buildContext()).amount).toBe(1200);
+            expect(entity.config).toEqual({ price: 300 });
+            // Часы — из контекста (ручной ввод, Фаза 7), а не из config.
+            expect(
+                entity.calculate({
+                    ...buildContext(),
+                    erpData: { serviceCompletedItems: [], hoursWorked: 4 },
+                }).amount,
+            ).toBe(1200);
         });
 
         it('восстанавливает ServiceCompletedEntity из записи БД', () => {
@@ -83,7 +89,7 @@ describe('SalaryRuleMapper', () => {
                     name: 'Часы',
                     targetRole: 'ENGINEER',
                     // price обязателен схемой payPerHourSalaryConfigSchema
-                    props: { hours: 4 },
+                    props: {},
                     createdAt,
                     updatedAt,
                 }),
@@ -98,7 +104,7 @@ describe('SalaryRuleMapper', () => {
                     type: 'PayPerHour',
                     name: 'Часы',
                     targetRole: 'UNKNOWN_ROLE',
-                    props: { hours: 4, price: 300 },
+                    props: { price: 300 },
                     createdAt,
                     updatedAt,
                 }),
@@ -112,7 +118,7 @@ describe('SalaryRuleMapper', () => {
                 type: 'PayPerHour',
                 name: 'Часы',
                 targetRole: 'ENGINEER',
-                config: { hours: 2, price: 500 },
+                config: { price: 500 },
             });
 
             const record = mapper.toPersistence(entity);
@@ -122,7 +128,7 @@ describe('SalaryRuleMapper', () => {
                 type: 'PayPerHour',
                 name: 'Часы',
                 targetRole: 'ENGINEER',
-                props: { hours: 2, price: 500 },
+                props: { price: 500 },
             });
             expect(record.createdAt).toBeInstanceOf(Date);
             expect(record.updatedAt).toBeInstanceOf(Date);

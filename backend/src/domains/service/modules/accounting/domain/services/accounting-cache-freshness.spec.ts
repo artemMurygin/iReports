@@ -101,7 +101,7 @@ function buildSchema(
                 name: 'Почасовая ставка',
                 type: 'PayPerHour',
                 targetRole: 'ENGINEER',
-                config: { hours: 8, price: 250 },
+                config: { price: 250 },
             },
         });
         return new MotivationSchema({

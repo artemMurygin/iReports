@@ -2,6 +2,8 @@ import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
+import { roundRubles } from '../../services/money';
+import type { ServiceCalculationErpData } from '../../types/service-calculation-data.types';
 import {
     CreateSalaryRuleProps,
     PayPerHourSalaryConfig,
@@ -48,18 +50,24 @@ export class PayPerHoursEntity
         });
     }
 
-    // Часы пока вводятся вручную в config (график работы — вне скоупа Фазы
-    // 1, см. PRD раздел 2), поэтому context в этой итерации не используется
-    // самим расчётом, но принимается — сигнатура едина для всех правил.
-    calculate(_context: CalculationContext): CalculationLine {
-        const hours = this.props.config.hours ?? 0;
+    // Источник часов — ручной ввод отработанных часов сотрудника за период
+    // (EmployeeHoursEntry, график работы вне скоупа — см. PRD раздел 2,
+    // "Не в скоупе"), приходящий в контексте расчёта, а не захардкоженное
+    // значение в config (Фаза 7). Часов нет — 0, а не ошибка: правило не
+    // обязано быть настроено для каждого сотрудника с этой ролью.
+    calculate(context: CalculationContext): CalculationLine {
+        const erpData = context.erpData as
+            | ServiceCalculationErpData
+            | undefined;
+        const hours = erpData?.hoursWorked ?? 0;
         const rate = this.props.config.price;
+        const bonus = this.props.config.bonus ?? 0;
 
         return {
             ruleId: this.id,
             quantity: hours,
             rate,
-            amount: hours * rate,
+            amount: roundRubles(hours * rate) + bonus,
             sources: [],
         };
     }

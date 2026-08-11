@@ -4,3 +4,4 @@ export * from './employee-identity';
 export * from './sales-plan';
 export * from './sales-performance';
 export * from './accounting-period';
+export * from './employee-hours-entry';

@@ -7,7 +7,7 @@ describe('buildRuleBreakdown', () => {
             type: 'PayPerHour',
             name: 'Почасовая ставка',
             targetRole: 'ENGINEER',
-            config: { hours: 8, price: 250 },
+            config: { price: 250 },
         });
         const line = {
             ruleId: rule.id,
