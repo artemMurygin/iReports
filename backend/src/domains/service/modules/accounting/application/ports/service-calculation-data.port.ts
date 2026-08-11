@@ -1,5 +1,9 @@
 import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
-import type { ServiceCompletedErpItem } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type {
+    ConfirmedTaskCompletionErpItem,
+    OrderPayedErpItem,
+    ServiceCompletedErpItem,
+} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 
 // Источник данных для сборки CalculationContext направления service (Фаза
 // 7, см. docs/payroll/plan-payroll-calculation.md). Единый порт, а не по
@@ -32,6 +36,25 @@ export interface ServiceCalculationDataPort {
     // Отработанные часы сотрудника за период — ручной ввод (Фаза 7,
     // EmployeeHoursEntry). 0, если записи нет.
     findHoursWorked(bitrixEmployeeId: number, period: string): Promise<number>;
+
+    // Заказы, оплаченные в периоде (Фаза 8, "оплаченный" — по группе
+    // статуса, см. domain/services/paid-order-status.ts) — источник для
+    // OrderPayedEntity. Период-широкий набор, без фильтра по сотруднику —
+    // тот же принцип, что и у findServiceCompletedItems.
+    findOrderPayedItems(from: Date, to: Date): Promise<OrderPayedErpItem[]>;
+
+    // Подтверждённые записи о выполнении задач за период (Фаза 8) —
+    // источник для TaskCompletedEntity. Период-широкий набор.
+    findConfirmedTaskCompletions(
+        period: string,
+    ): Promise<ConfirmedTaskCompletionErpItem[]>;
+
+    // Отдел Bitrix-сотрудника — вход для поиска SalesPerformance
+    // подразделения (Фаза 8, вход FloatPercent). null, если сотрудник не
+    // сопоставлен ни с каким Bitrix-отделом (не должно происходить для
+    // реального BitrixEmployee.departmentId, но поле не nullable в схеме,
+    // а сотрудник может не существовать вовсе).
+    findEmployeeDepartmentId(bitrixEmployeeId: number): Promise<number | null>;
 }
 
 export const SERVICE_CALCULATION_DATA = Symbol('SERVICE_CALCULATION_DATA');

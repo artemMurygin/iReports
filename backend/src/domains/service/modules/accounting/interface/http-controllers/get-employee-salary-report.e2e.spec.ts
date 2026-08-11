@@ -88,10 +88,19 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
     // Часы (Фаза 7) больше не в config правила — источник данных для
     // BuildServiceCalculationContextService, hoursWorked: 8 сохраняет
     // числовые ожидания теста (2000 = 8ч × 250).
+    // Фаза 8 расширила порт тремя источниками (OrderPayed/TaskCompleted/
+    // отдел сотрудника) — пустые/null здесь достаточны: тест проверяет
+    // только PayPerHour, а findEmployeeDepartmentId: null отключает поход
+    // в SalesPerformanceReaderPort (см. buildSalesPerformance) — реального
+    // Postgres в этом e2e-тесте нет, а SALES_PERFORMANCE_READER здесь не
+    // подменяется.
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
         findServiceCompletedItems: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve(8),
+        findOrderPayedItems: () => Promise.resolve([]),
+        findConfirmedTaskCompletions: () => Promise.resolve([]),
+        findEmployeeDepartmentId: () => Promise.resolve(null),
     };
     // AccountingModule заодно поднимает CreateMotivationSchemaHandler (не
     // используется этим эндпоинтом), которому нужен UNIT_OF_WORK — реальный

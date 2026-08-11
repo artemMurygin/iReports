@@ -15,6 +15,13 @@
   - `PATCH /accounting/employee_hours/:id` — изменить количество часов
   - `DELETE /accounting/employee_hours/:id` — удалить запись
   - `GET /accounting/employee_hours?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
+- `GET /accounting/salary_role_types` — типы зарплатных правил сервиса (`PayPerHour`, `ServiceCompleted`, `OrderPayed`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого (Фаза 8)
+- Выполнение задачи сотрудником (`TaskCompletion`, Фаза 8, см. docs/payroll/plan-payroll-calculation.md) — временный внутренний двухступенчатый воркфлоу подтверждения без интеграции с Bitrix24 Tasks (синхронизация с реальными задачами запланирована отдельной фазой); эндпоинты без гарда, как и остальной `accounting`:
+  - `POST /accounting/task_completions` — сотрудник отмечает задачу выполненной (`{ employeeId, period, description, createdBy }`), сразу в статусе `PENDING_CONFIRMATION`
+  - `POST /accounting/task_completions/:id/confirm` — руководитель подтверждает (`{ confirmedBy }`) → только такие записи участвуют в расчёте `TaskCompleted.calculate()`
+  - `POST /accounting/task_completions/:id/reject` — руководитель отклоняет (`{ confirmedBy }`)
+  - `DELETE /accounting/task_completions/:id` — удалить запись
+  - `GET /accounting/task_completions?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
 
 ## modules/employee-identity (`/v1/employee-identity`)
 Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Все эндпоинты закрыты

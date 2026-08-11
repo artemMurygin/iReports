@@ -26,6 +26,41 @@ export type TargetRole = z.infer<typeof targetRoleSchema>;
 // domains/service/modules/accounting/domain/services/money.ts).
 const individualBonusFieldSchema = z.number().int().optional();
 
+// База начисления процентных правил — общая для OrderPayed и TaskCompleted
+// (Фаза 8): REVENUE (выручка заказа), MARGIN (маржа), SALARY_MINUS_ENGINEER_SALARY
+// (сумма за вычетом зарплаты инженера). См.
+// docs/payroll/prd-payroll-calculation.md, раздел 2.
+const salaryBasisSchema = z.enum([
+    'REVENUE',
+    'MARGIN',
+    'SALARY_MINUS_ENGINEER_SALARY',
+]);
+
+export type SalaryBasis = z.infer<typeof salaryBasisSchema>;
+
+// Один из трёх порогов FloatPercent — { fromPlanPercent, multiplier, mode }.
+// FIX — множитель ступенькой при достижении порога, LINEAR — линейная
+// интерполяция между соседними порогами (см. PRD, раздел 2, и план, Фаза 8).
+// mode лежит на каждом пороге отдельно (а не одним полем на весь award) —
+// так задан контракт в PRD ("каждый — { fromPlanPercent, multiplier, mode }");
+// смысл: mode описывает, как считается участок МЕЖДУ предыдущим порогом
+// (или нулевой точкой, если это первый порог) и этим — см.
+// domain/services/float-percent.ts на бэкенде.
+const percentBorderSchema = z.object({
+    name: z.string(),
+    fromPlanPercent: z.number(),
+    multiplier: z.number(),
+    mode: z.enum(['FIX', 'LINEAR']),
+});
+
+export type PercentBorder = z.infer<typeof percentBorderSchema>;
+
+const percentBordersSchema = z.tuple([
+    percentBorderSchema,
+    percentBorderSchema,
+    percentBorderSchema,
+]);
+
 // ========================== Почасовая ставка ========================== //
 
 // hours больше не часть config: источник часов — ручной ввод за период
@@ -63,65 +98,93 @@ const serviceCompletedSalaryRuleSchema = z.object({
 
 // ========================== За оплаченный заказ ========================== //
 
-const percentBorderSchema = z.object({
-    name: z.string(),
-    fromPlanPercent: z.number(),
-    multiplier: z.number(),
-    mode: z.enum(['FIX', 'LINEAR']),
-});
-
+// Расчёт опирается на исходные суммы заказа (RoappOrder.payed/cost/
+// engineerSalary), а не на предрассчитанный legacy-KPI RoappOrder.managerSalary
+// (жёстко зашитые 10% в sync/roapp) — см. PRD, "Технические ограничения",
+// и план, Фаза 8.
 const orderPayedSalaryConfigSchema = z.object({
     award: z.union([
         z.object({ type: z.literal('Fixed'), price: z.number() }),
         z.object({
             type: z.literal('FixedPercent'),
             percent: z.number(),
-            salaryBasis: z.enum(['REVENUE', 'MARGIN', 'SALARY_MINUS_ENGINEER_SALARY'],)
+            salaryBasis: salaryBasisSchema,
         }),
         z.object({
             type: z.literal('FloatPercent'),
             basePercent: z.number(),
-            salaryBasis: z.enum(['REVENUE', 'MARGIN', 'SALARY_MINUS_ENGINEER_SALARY']),
-            percentBorders: z.tuple([
-                percentBorderSchema,
-                percentBorderSchema,
-                percentBorderSchema,
-            ]),
+            salaryBasis: salaryBasisSchema,
+            percentBorders: percentBordersSchema,
         }),
     ]),
-})
+    bonus: individualBonusFieldSchema,
+});
 
 const orderPayedSalaryRuleSchema = z.object({
     type: z.literal('OrderPayed'),
     name: z.string(),
     targetRole: targetRoleSchema,
-    config: orderPayedSalaryConfigSchema
-})
+    config: orderPayedSalaryConfigSchema,
+});
 
 // ========================== За выполненную задачу ========================== //
 
+// "Задача" в этой итерации — внутренний ручной ввод (EmployeeTaskCompletion
+// на бэкенде), а не интеграция с Bitrix24 Tasks (см. план, Фаза 8, раздел
+// "Принятые решения по открытым вопросам" — интеграция с реальными задачами
+// Bitrix24 запланирована отдельной фазой). FloatPercent для TaskCompleted —
+// не описан в PRD подробно (в отличие от OrderPayed); решение по этому
+// открытому вопросу: тот же трёхпороговый механизм percentBorders, что и у
+// OrderPayed, но база — не сумма заказа, а фиксированная ставка за
+// подтверждённую задачу (basePrice), умножаемая на множитель выполнения
+// плана — см. domain/entities/salary-rules/task-completed.entity.ts на
+// бэкенде.
 const taskCompletedSalaryConfigSchema = z.object({
     award: z.union([
         z.object({ type: z.literal('Fixed'), price: z.number() }),
-        z.object({ type: z.literal('FloatPercent') })
+        z.object({
+            type: z.literal('FloatPercent'),
+            basePrice: z.number(),
+            percentBorders: percentBordersSchema,
+        }),
     ]),
+    bonus: individualBonusFieldSchema,
 });
 
 const taskCompletedSalaryRuleSchema = z.object({
     type: z.literal('TaskCompleted'),
     name: z.string(),
     targetRole: targetRoleSchema,
-    config: taskCompletedSalaryConfigSchema
-})
-
+    config: taskCompletedSalaryConfigSchema,
+});
 
 const salaryRuleRequestSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleSchema,
     serviceCompletedSalaryRuleSchema,
     orderPayedSalaryRuleSchema,
+    taskCompletedSalaryRuleSchema,
 ]);
 
 export type SalaryRuleRequest = z.infer<typeof salaryRuleRequestSchema>;
+
+// ========================== Список типов правил для UI ========================== //
+
+// Ответ GET /accounting/salary_role_types (Фаза 8, "Когда готово" плана) —
+// каждый тип правила плюс перечень допустимых для него ролей, чтобы форма
+// на фронтенде подставляла варианты targetRole только из этого набора (см.
+// PRD, раздел 2: "в список типов правил, отдаваемый фронтенду, входит
+// перечень допустимых ролей").
+const salaryRuleTypeInfoSchema = z.object({
+    type: z.string(),
+    allowedRoles: z.array(targetRoleSchema),
+});
+
+const salaryRuleTypesResponseSchema = z.array(salaryRuleTypeInfoSchema);
+
+export type SalaryRuleTypeInfo = z.infer<typeof salaryRuleTypeInfoSchema>;
+export type SalaryRuleTypesResponse = z.infer<
+    typeof salaryRuleTypesResponseSchema
+>;
 
 // ========================== Строка расчёта ========================== //
 
@@ -204,7 +267,13 @@ export {
     salaryRuleRequestSchema,
     payPerHourSalaryConfigSchema,
     serviceCompletedSalaryConfigSchema,
+    orderPayedSalaryConfigSchema,
+    taskCompletedSalaryConfigSchema,
+    percentBorderSchema,
+    salaryBasisSchema,
     targetRoleSchema,
     calculationLineSchema,
     employeeSalaryReportResponseSchema,
+    salaryRuleTypeInfoSchema,
+    salaryRuleTypesResponseSchema,
 };

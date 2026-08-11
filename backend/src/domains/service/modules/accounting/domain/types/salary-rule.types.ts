@@ -1,9 +1,14 @@
 import { CreateEntityProps } from '@/shared/domain/entity.base';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import type { SalaryRuleRequest, TargetRole } from 'ireports-contracts';
+import type {
+    PercentBorder,
+    SalaryBasis,
+    SalaryRuleRequest,
+    TargetRole,
+} from 'ireports-contracts';
 
-export type { TargetRole };
+export type { TargetRole, SalaryBasis, PercentBorder };
 
 // hours больше не часть config (Фаза 7) — источник часов сотрудника за
 // период это EmployeeHoursEntry (ручной ввод), приходящий в
@@ -37,9 +42,64 @@ export type ServiceCompletedSalaryRule = {
     config: ServiceCompletedSalaryConfig;
 };
 
+// За оплаченный заказ (Фаза 8) — расчёт опирается на исходные суммы заказа
+// (RoappOrder.payed/cost/engineerSalary), а не на legacy-KPI
+// RoappOrder.managerSalary (см. domain/services/service-calculation-data.repository.ts
+// и docs/payroll/prd-payroll-calculation.md, "Технические ограничения").
+export type OrderPayedSalaryConfig = {
+    award:
+        | { type: 'Fixed'; price: number }
+        | {
+              type: 'FixedPercent';
+              percent: number;
+              salaryBasis: SalaryBasis;
+          }
+        | {
+              type: 'FloatPercent';
+              basePercent: number;
+              salaryBasis: SalaryBasis;
+              percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+          };
+    bonus?: number;
+};
+
+export type OrderPayedSalaryRule = {
+    type: 'OrderPayed';
+    name: string;
+    targetRole: TargetRole;
+    config: OrderPayedSalaryConfig;
+};
+
+// За выполненную задачу (Фаза 8) — "задача" в этой итерации это внутренний
+// ручной ввод (TaskCompletionEntity), не интеграция с Bitrix24 Tasks (см.
+// domain/entities/task-completion.entity.ts). FloatPercent для задач не
+// описан в PRD подробно — решение по этому открытому вопросу: тот же
+// трёхпороговый механизм percentBorders, что и у OrderPayed, но база —
+// фиксированная ставка за подтверждённую задачу (basePrice), а не сумма
+// заказа (см. contracts/commands/salary-rule.ts).
+export type TaskCompletedSalaryConfig = {
+    award:
+        | { type: 'Fixed'; price: number }
+        | {
+              type: 'FloatPercent';
+              basePrice: number;
+              percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+          };
+    bonus?: number;
+};
+
+export type TaskCompletedSalaryRule = {
+    type: 'TaskCompleted';
+    name: string;
+    targetRole: TargetRole;
+    config: TaskCompletedSalaryConfig;
+};
+
 export type SalaryRuleConfig =
     | PayPerHourSalaryConfig
-    | ServiceCompletedSalaryConfig;
+    | ServiceCompletedSalaryConfig
+    | OrderPayedSalaryConfig
+    | TaskCompletedSalaryConfig;
 
 // Форма запроса на создание правила — контракт (SalaryRuleRequest), а не
 // подмножество из двух реализованных типов: контракт уже включает

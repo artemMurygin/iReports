@@ -81,7 +81,12 @@ export function employeeMatchesServiceRole(
     return value !== null && hasRoappEmployeeIdentity(employee, value);
 }
 
-function hasRoappEmployeeIdentity(
+// Экспортируется отдельно от employeeMatchesServiceRole (Фаза 8) — нужна
+// OrderPayedEntity для роли ENGINEER, которая на уровне заказа определена не
+// одним полем (в отличие от остальных пяти ролей), а множеством инженеров
+// его позиций (см. order-payed.entity.ts) — employeeMatchesServiceRole
+// рассчитан на ровно одно значение engineerId и не годится напрямую.
+export function hasRoappEmployeeIdentity(
     employee: CalculationEmployee,
     roappEmployeeId: number,
 ): boolean {
