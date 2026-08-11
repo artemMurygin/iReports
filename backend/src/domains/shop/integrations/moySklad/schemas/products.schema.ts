@@ -1,6 +1,31 @@
 import { z } from 'zod';
 import { MoneySchema } from './common.schema';
 
+const AttributeMetaSchema = z.object({
+    href: z.string().url(),
+    type: z.string(),
+    mediaType: z.string(),
+});
+
+// Доп. поля (кастомные атрибуты) карточки товара МойСклад (issue #47) — до
+// сих пор `products.schema.ts` вообще не читал `attributes`, в отличие от
+// `demands.schema.ts`. Конкретных атрибутов уровня товара, требующих
+// строгой валидации по литералам id/name (как ONLINE_MANAGER_ATTR_ID у
+// отгрузки), сейчас нет: закупщики БУ техники лежат на уровне товарной
+// позиции отгрузки, а не карточки товара (см.
+// docs/payroll/prd-payroll-calculation.md, раздел "Роли магазина"), поэтому
+// схема читает attributes как есть — инфраструктурная возможность синка
+// товаров, а не разбор конкретного известного поля.
+const ProductAttributeSchema = z.object({
+    meta: AttributeMetaSchema,
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    value: z.unknown(),
+});
+
+export type ProductAttribute = z.infer<typeof ProductAttributeSchema>;
+
 export const ProductSchema = z
     .object({
         id: z.string(),
@@ -11,6 +36,7 @@ export const ProductSchema = z
         description: z.string().optional().default(''),
         updated: z.string(),
         archived: z.boolean(),
+        attributes: z.array(ProductAttributeSchema).optional(),
 
         salePrices: z
             .array(
@@ -47,4 +73,5 @@ export const ProductSchema = z
         salePrice: d.salePrices[0]?.value ?? null,
         buyPrice: d.buyPrice?.value ?? null,
         productFolderHref: d.productFolder?.meta.href ?? null,
+        attributes: d.attributes ?? [],
     }));

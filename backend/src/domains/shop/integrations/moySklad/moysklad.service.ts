@@ -119,6 +119,13 @@ export class MoyskladService {
         fromDate: Date | undefined,
         fromField: 'created' | 'updated',
     ) {
+        // `expand` разворачивает ССЫЛКИ (positions.assortment — иначе пришёл
+        // бы голый meta.href без name/type). Кастомные атрибуты (шапки
+        // отгрузки и, с Фазы 10, каждой позиции — закупщики БУ техники) —
+        // это embedded-значения, а не ссылки, МойСклад отдаёт их без
+        // expand: `demand.attributes` (ONLINE_MANAGER_ATTR_ID) уже работает
+        // без `expand=attributes` в этом же запросе — по аналогии
+        // ожидаем, что `positions[].attributes` придёт так же.
         const extraParams: Record<string, string> = {
             expand: 'positions,positions.assortment',
             fields: 'stock',

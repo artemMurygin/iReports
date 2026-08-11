@@ -13,9 +13,17 @@ export type ExternalSystem = z.infer<typeof externalSystemSchema>;
 // EMPLOYEE_ID — ссылка на сотрудника в ERP (RoappEmployee.id, MoySkladEmployee.id).
 // ONLINE_MANAGER_FIELD — значение строкового кастомного поля RemOnline
 // («онлайн-менеджер»), для которого связи по ID не существует.
+// MOY_SKLAD_ONLINE_PURCHASER_FIELD / MOY_SKLAD_OFFLINE_PURCHASER_FIELD —
+// значение доп. поля закупщика БУ техники на позиции отгрузки МойСклада
+// (Фаза 10, см. docs/payroll/prd-payroll-calculation.md, раздел "Роли
+// магазина"): тип атрибута МойСклад заранее не известен (employee-ссылка
+// или произвольная строка), поэтому сопоставление — тем же механизмом, что
+// ONLINE_MANAGER_FIELD, по значению, а не по ID.
 const employeeIdentityTypeSchema = z.enum([
     'EMPLOYEE_ID',
     'ONLINE_MANAGER_FIELD',
+    'MOY_SKLAD_ONLINE_PURCHASER_FIELD',
+    'MOY_SKLAD_OFFLINE_PURCHASER_FIELD',
 ]);
 export type EmployeeIdentityType = z.infer<typeof employeeIdentityTypeSchema>;
 

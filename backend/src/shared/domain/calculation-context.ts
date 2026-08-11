@@ -26,7 +26,15 @@ export type SalaryCalculationMode = 'FACT' | 'PROGNOSE';
 // портала) — здесь фиксируется только форма, которую обязан уметь нести
 // контекст уже сейчас.
 export type ExternalSystem = 'ROAPP' | 'MOY_SKLAD';
-export type ExternalIdentifierType = 'EMPLOYEE_ID' | 'ONLINE_MANAGER_FIELD';
+// MOY_SKLAD_ONLINE_PURCHASER_FIELD / MOY_SKLAD_OFFLINE_PURCHASER_FIELD —
+// закупщики БУ техники магазина (Фаза 10) — тот же строковый механизм, что
+// ONLINE_MANAGER_FIELD у RemOnline (см. EmployeeIdentityType в
+// employee-identity.prisma).
+export type ExternalIdentifierType =
+    | 'EMPLOYEE_ID'
+    | 'ONLINE_MANAGER_FIELD'
+    | 'MOY_SKLAD_ONLINE_PURCHASER_FIELD'
+    | 'MOY_SKLAD_OFFLINE_PURCHASER_FIELD';
 
 export interface EmployeeIdentityRef {
     system: ExternalSystem;

@@ -12,6 +12,22 @@ const MetaSchema = z.object({
 
 const MetaWrapperSchema = z.object({ meta: MetaSchema });
 
+// Доп. поля закупщика БУ техники на уровне товарной позиции (Фаза 10, см.
+// docs/payroll/prd-payroll-calculation.md, раздел "Роли магазина": "закупщики
+// лежат на уровне товарной позиции, а не карточки товара"). В отличие от
+// DemandAttributeSchema ниже, id и тип атрибута заранее не известны — схема
+// намеренно не валидирует их литералами, резолв идёт по имени в
+// sync/moySklad/moysklad-sync.mappers.ts (extractPurchaserExternalId).
+const PositionAttributeSchema = z.object({
+    meta: MetaSchema,
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    value: z.unknown(),
+});
+
+export type PositionAttribute = z.infer<typeof PositionAttributeSchema>;
+
 const DemandPositionSchema = z.object({
     meta: MetaSchema,
     id: z.string(),
@@ -22,6 +38,7 @@ const DemandPositionSchema = z.object({
     vat: z.number().int(),
     vatEnabled: z.boolean(),
     overhead: MoneySchema.optional(),
+    attributes: z.array(PositionAttributeSchema).optional(),
     assortment: z
         .object({
             meta: MetaSchema,

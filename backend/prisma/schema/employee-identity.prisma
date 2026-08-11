@@ -20,9 +20,18 @@ enum ExternalSystem {
 // EMPLOYEE_ID — ссылка на сотрудника в ERP (RoappEmployee.id, MoySkladEmployee.id).
 // ONLINE_MANAGER_FIELD — значение строкового кастомного поля RemOnline
 // (RoappOrder.onlineManager), для которого ссылки на сотрудника не существует.
+// MOY_SKLAD_ONLINE_PURCHASER_FIELD / MOY_SKLAD_OFFLINE_PURCHASER_FIELD —
+// значение доп. поля закупщика БУ техники на позиции отгрузки МойСклада
+// (MoySkladDemandPosition.onlinePurchaserId/offlinePurchaserId, Фаза 10, см.
+// docs/payroll/prd-payroll-calculation.md, раздел "Роли магазина"). Тот же
+// механизм, что ONLINE_MANAGER_FIELD: значение — не гарантированно ссылка на
+// сотрудника (тип атрибута МойСклад заранее не известен и может оказаться
+// произвольной строкой), поэтому сопоставление идёт по значению, а не по ID.
 enum EmployeeIdentityType {
   EMPLOYEE_ID
   ONLINE_MANAGER_FIELD
+  MOY_SKLAD_ONLINE_PURCHASER_FIELD
+  MOY_SKLAD_OFFLINE_PURCHASER_FIELD
 
   @@map("employee_identity_type")
 }

@@ -28,6 +28,20 @@ model MoySkladProductFolder {
   products MoySkladProduct[]
   services MoySkladService[]
 
+  // Фаза 10 (issue #50): категория магазина — дерево, дочерние pathName
+  // всегда начинаются с pathName родителя + "/" (формат МойСклада, см.
+  // product-folder-tree.ts). Правило `ProductSold`/`UsedProductSold`
+  // раскрывает фильтр по категории до всех потомков запросом
+  // `pathName LIKE 'parent.pathName%'` вместо рекурсивного обхода
+  // parentId — один индексированный запрос вместо O(глубина дерева)
+  // последовательных походов в БД. Обычный B-tree индекс на pathName НЕ
+  // ускоряет `LIKE 'prefix%'` при локали БД, отличной от "C" (сравнение по
+  // умолчанию учитывает локаль и не может использовать диапазонный скан) —
+  // образ pgvector/pgvector, которым поднят Postgres в docker-compose, не
+  // фиксирует локаль как "C", поэтому используем operator class
+  // text_pattern_ops, который сравнивает байты, а не по локали, и делает
+  // индекс пригодным для префиксного LIKE.
+  @@index([pathName(ops: raw("text_pattern_ops"))], type: BTree)
   @@map("moy_sklad_product_folders")
 }
 
@@ -107,6 +121,23 @@ model MoySkladDemandPosition {
   cost           Int
   profit         Int
 
+  // Закупщики БУ техники (Фаза 10, роли ONLINE_PURCHASER / OFFLINE_PURCHASER
+  // из docs/payroll/prd-payroll-calculation.md, раздел "Роли магазина") —
+  // сознательно НЕ внешний ключ на MoySkladEmployee, в отличие от
+  // MoySkladDemand.onlineManagerId/offlineManagerId. Открытый вопрос PRD "где
+  // физически лежат закупщики и какой тип значения" решён здесь: закупщики
+  // лежат на уровне позиции отгрузки (а не карточки товара — см.
+  // MoySkladProduct), а тип значения кастомного атрибута МойСклад заранее не
+  // известен (employee-ссылка или произвольная строка) — оба случая
+  // приводятся синком к строковому идентификатору (см.
+  // sync/moySklad/moysklad-sync.mappers.ts, extractPurchaserExternalId) и
+  // сопоставляются с EmployeeIdentity тем же механизмом, что и строковое
+  // поле "онлайн-менеджер" RemOnline (identifierType
+  // MOY_SKLAD_ONLINE_PURCHASER_FIELD / MOY_SKLAD_OFFLINE_PURCHASER_FIELD в
+  // employee-identity.prisma), а не прямым JOIN.
+  onlinePurchaserId  String? @map("online_purchaser_id")
+  offlinePurchaserId String? @map("offline_purchaser_id")
+
   demand  MoySkladDemand   @relation(fields: [demandId], references: [id], onDelete: Cascade)
   product MoySkladProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
   service MoySkladService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
@@ -114,5 +145,7 @@ model MoySkladDemandPosition {
   @@index([demandId])
   @@index([productId])
   @@index([serviceId])
+  @@index([onlinePurchaserId])
+  @@index([offlinePurchaserId])
   @@map("moy_sklad_demand_positions")
 }

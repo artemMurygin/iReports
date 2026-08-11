@@ -61,4 +61,34 @@ describe('ResolveEmployeeByExternalIdService', () => {
             expect(resolvedEmployeeId).toBeNull();
         });
     });
+
+    // Закупщики БУ техники МойСклад (Фаза 10, MOY_SKLAD_ONLINE_PURCHASER_FIELD
+    // / MOY_SKLAD_OFFLINE_PURCHASER_FIELD) сопоставляются тем же общим
+    // механизмом — см. отдельный тест на стыке с извлечением значения из
+    // доп. поля позиции в
+    // domains/shop/sync/moySklad/resolve-purchaser-identity.spec.ts.
+    it('резолвит внешний идентификатор закупщика МойСклада в Bitrix-сотрудника', async () => {
+        await withRequestContext(async () => {
+            const identity = EmployeeIdentity.create({
+                bitrixEmployeeId: 7,
+                system: 'MOY_SKLAD',
+                identifierType: 'MOY_SKLAD_ONLINE_PURCHASER_FIELD',
+                externalId: 'purchaser-employee-1',
+            });
+            const { service, findByExternalId } = buildService(identity);
+
+            const resolvedEmployeeId = await service.execute(
+                'MOY_SKLAD',
+                'MOY_SKLAD_ONLINE_PURCHASER_FIELD',
+                'purchaser-employee-1',
+            );
+
+            expect(resolvedEmployeeId).toBe(7);
+            expect(findByExternalId).toHaveBeenCalledWith(
+                'MOY_SKLAD',
+                'MOY_SKLAD_ONLINE_PURCHASER_FIELD',
+                'purchaser-employee-1',
+            );
+        });
+    });
 });

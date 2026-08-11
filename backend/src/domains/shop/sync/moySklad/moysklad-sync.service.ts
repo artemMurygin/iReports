@@ -6,8 +6,10 @@ import type { ProductFolder } from '../../integrations/moySklad/schemas/productF
 import type { Demand } from '../../integrations/moySklad/schemas/demands.schema';
 import {
     extractIdFromHref,
+    extractPurchaserExternalId,
     topoSortFolders,
     ONLINE_MANAGER_ATTR_ID,
+    PURCHASER_ATTRIBUTE_NAME,
 } from './moysklad-sync.mappers';
 
 @Injectable()
@@ -424,6 +426,19 @@ export class MoySkladSyncService {
                     const profit = sum - cost;
                     const assortmentType = p.assortment!.meta.type;
 
+                    // Закупщики БУ техники (Фаза 10) — доп. поля позиции,
+                    // не отгрузки: каждая позиция может ссылаться на своего
+                    // закупщика (см. PURCHASER_ATTRIBUTE_NAME и комментарий
+                    // extractPurchaserExternalId в moysklad-sync.mappers.ts).
+                    const onlinePurchaserId = extractPurchaserExternalId(
+                        p.attributes,
+                        PURCHASER_ATTRIBUTE_NAME.ONLINE,
+                    );
+                    const offlinePurchaserId = extractPurchaserExternalId(
+                        p.attributes,
+                        PURCHASER_ATTRIBUTE_NAME.OFFLINE,
+                    );
+
                     return {
                         id: p.id,
                         demandId: demand.id,
@@ -443,6 +458,8 @@ export class MoySkladSyncService {
                         sum,
                         cost,
                         profit,
+                        onlinePurchaserId,
+                        offlinePurchaserId,
                     };
                 });
 
