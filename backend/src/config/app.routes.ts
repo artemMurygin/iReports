@@ -3,6 +3,16 @@ const employeeIdentityRoot = 'employee-identity';
 const salesPlanRoot = 'sales/plan';
 const salesPlanTemplateRoot = 'sales/plan_template';
 const salesPerformanceRoot = 'sales/salesPerformance';
+// Направление shop (Фаза 11) обслуживается отдельным эндпоинтом, а не тем
+// же /sales/salesPerformance/:period с direction=shop в query: читатель
+// SalesPerformance направления service (GetSalesPerformanceService) и его
+// ERP-источник (RoappSalesFactSourceRepository) жёстко привязаны к
+// RoappOrder, поэтому единственный контроллер не может обслужить оба
+// направления без домена service, знающего о домене shop (или наоборот) —
+// см. отчёт Фазы 11. shopSalesPerformanceRoot — отдельный путь, не query-
+// параметр на общем пути, чтобы не создавать двух контроллеров на один и
+// тот же путь+метод (Nest/Express однозначно не резолвят такую коллизию).
+const shopSalesPerformanceRoot = 'sales/salesPerformance/shop';
 
 // Api Versions
 const v1 = 'v1';
@@ -37,5 +47,12 @@ export const routesV1 = {
     // направление в query (см. listSalesPerformanceQuerySchema).
     salesPerformance: {
         byPeriod: `/${salesPerformanceRoot}/:period`,
+    },
+    // SalesFact/SalesPrognose/SalesPerformance магазина (Фаза 11, см.
+    // domains/shop/modules/sales) — свой путь, направление не query-
+    // параметр (оно и так подразумевается путём), см. комментарий у
+    // shopSalesPerformanceRoot выше.
+    shopSalesPerformance: {
+        byPeriod: `/${shopSalesPerformanceRoot}/:period`,
     },
 };

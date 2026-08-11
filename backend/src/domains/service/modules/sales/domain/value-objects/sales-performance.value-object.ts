@@ -1,7 +1,7 @@
 import { ValueObject } from '@/shared/domain/value-object.base';
 import { SalesPlan } from '../entities/sales-plan.entity';
 import { SalesFact } from './sales-fact.value-object';
-import { SalesPrognose } from './sales-prognose.value-object';
+import { SalesPrognose } from '@/shared/domain/sales-prognose.value-object';
 import type { SalesDirection } from '../types/sales-plan.types';
 
 export interface SalesPerformanceProps {

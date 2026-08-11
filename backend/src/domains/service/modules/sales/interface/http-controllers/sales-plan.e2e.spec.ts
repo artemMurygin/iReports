@@ -412,4 +412,67 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             .query({ direction: 'shop' })
             .expect(400);
     });
+
+    // Фаза 11 (issue #52): SalesPlan/SalesPlanTemplate CRUD этого модуля не
+    // привязан к direction: 'service' — те же эндпоинты уже обслуживают и
+    // направление shop без единой правки (домен shop получил в Фазе 11
+    // отдельный модуль только для ERP-специфичного SalesPerformance/
+    // SalesFact, см. domains/shop/modules/sales/shop-sales.module.ts).
+    it('план и шаблон плана работают для направления shop через тот же CRUD, что и service (Фаза 11)', async () => {
+        const createResponse = await request(app.getHttpServer())
+            .post('/v1/sales/plan')
+            .send({
+                direction: 'shop',
+                department: 1,
+                period: '2026-08',
+                turnover: 500_000,
+                margin: 100_000,
+            })
+            .expect(201);
+        const created = createResponse.body as SalesPlanResponse;
+        expect(created).toMatchObject({
+            direction: 'shop',
+            department: 1,
+            category: null,
+            status: 'CREATED',
+            source: 'MANUAL',
+        });
+
+        // Строка на ту же комбинацию, но направления service, не
+        // конфликтует со строкой шага выше — direction часть естественного
+        // ключа.
+        await request(app.getHttpServer())
+            .post('/v1/sales/plan')
+            .send({
+                direction: 'service',
+                department: 1,
+                period: '2026-08',
+                turnover: 999,
+                margin: 111,
+            })
+            .expect(201);
+
+        const shopList = await request(app.getHttpServer())
+            .get('/v1/sales/plan')
+            .query({ direction: 'shop', period: '2026-08' })
+            .expect(200);
+        expect(shopList.body).toHaveLength(1);
+        expect((shopList.body as SalesPlanResponse[])[0].id).toBe(created.id);
+
+        const templatePut = await request(app.getHttpServer())
+            .put('/v1/sales/plan_template')
+            .send({
+                direction: 'shop',
+                department: 2,
+                turnover: 300_000,
+                margin: 60_000,
+                growthPercent: 15,
+            })
+            .expect(200);
+        expect(templatePut.body).toMatchObject({
+            direction: 'shop',
+            department: 2,
+            growthPercent: 15,
+        });
+    });
 });

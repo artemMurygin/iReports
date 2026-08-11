@@ -1,17 +1,15 @@
 import { Period } from '@/shared/domain/period.value-object';
-import { SalesFact } from './sales-fact.value-object';
 import { SalesPrognose } from './sales-prognose.value-object';
 
+// Вход формулы — плоские числа (см. SalesPrognoseFactInput), а не
+// конкретный SalesFact/ShopSalesFact: тест конструирует их напрямую, не
+// завися ни от одного из двух модулей направлений (см. комментарий в
+// sales-prognose.value-object.ts про переезд в shared в Фазе 11).
 describe('SalesPrognose', () => {
     const period = Period.create('2026-08'); // 31 календарный день
 
     it('линейно экстраполирует turnover/margin/quantity по прошедшим дням месяца', () => {
-        const fact = SalesFact.calculate({
-            turnover: 500_000,
-            cost: 300_000,
-            quantity: 10,
-            planTurnover: 2_000_000,
-        });
+        const fact = { turnover: 500_000, margin: 200_000, quantity: 10 };
         // Половина месяца (2026-08-16T00:00Z) — ровно 15 прошедших дней.
         const now = new Date('2026-08-16T00:00:00.000Z');
 
@@ -24,12 +22,7 @@ describe('SalesPrognose', () => {
     });
 
     it('marginPercent и percentCompletion пересчитываются из экстраполированных сумм, а не экстраполируются напрямую', () => {
-        const fact = SalesFact.calculate({
-            turnover: 500_000,
-            cost: 300_000, // marginPercent факта = 40%
-            quantity: 10,
-            planTurnover: 2_000_000,
-        });
+        const fact = { turnover: 500_000, margin: 200_000, quantity: 10 }; // marginPercent факта = 40%
         const now = new Date('2026-08-16T00:00:00.000Z');
 
         const prognose = SalesPrognose.forPeriod(fact, period, 2_000_000, now);
@@ -45,29 +38,19 @@ describe('SalesPrognose', () => {
     });
 
     it('прогноз выше факта, когда план по обороту растёт быстрее прошедшей доли месяца', () => {
-        const fact = SalesFact.calculate({
-            turnover: 100_000,
-            cost: 50_000,
-            quantity: 5,
-            planTurnover: 1_000_000,
-        });
+        const fact = { turnover: 100_000, margin: 50_000, quantity: 5 };
         const now = new Date('2026-08-06T00:00:00.000Z'); // 5 прошедших дней
 
         const prognose = SalesPrognose.forPeriod(fact, period, 1_000_000, now);
 
-        expect(prognose.getTurnover()).toBeGreaterThan(fact.getTurnover());
+        expect(prognose.getTurnover()).toBeGreaterThan(fact.turnover);
     });
 
     // Решение зафиксировано: день не считается прошедшим до его окончания,
     // поэтому в первую минуту месяца прошедших дней ещё 0 — экстраполировать
     // нечего, прогноз равен факту (нулевому).
     it('в первую минуту месяца (elapsedDays = 0) прогноз равен факту', () => {
-        const fact = SalesFact.calculate({
-            turnover: 0,
-            cost: 0,
-            quantity: 0,
-            planTurnover: 1_000_000,
-        });
+        const fact = { turnover: 0, margin: 0, quantity: 0 };
         const now = new Date('2026-08-01T00:00:00.000Z');
 
         const prognose = SalesPrognose.forPeriod(fact, period, 1_000_000, now);
@@ -81,32 +64,18 @@ describe('SalesPrognose', () => {
     // конца периода) — все календарные дни уже прошли, экстраполировать
     // нечего: прогноз = факту месяца (см. Фаза 5, "Когда готово").
     it('для периода, полностью лежащего в прошлом, прогноз равен факту месяца', () => {
-        const fact = SalesFact.calculate({
-            turnover: 1_234_000,
-            cost: 700_000,
-            quantity: 42,
-            planTurnover: 2_000_000,
-        });
+        const fact = { turnover: 1_234_000, margin: 534_000, quantity: 42 };
         const now = new Date('2026-12-01T00:00:00.000Z');
 
         const prognose = SalesPrognose.forPeriod(fact, period, 2_000_000, now);
 
-        expect(prognose.getTurnover()).toBe(fact.getTurnover());
-        expect(prognose.getMargin()).toBe(fact.getMargin());
-        expect(prognose.getQuantity()).toBe(fact.getQuantity());
-        expect(prognose.getMarginPercent()).toBe(fact.getMarginPercent());
-        expect(prognose.getPercentCompletion()).toBe(
-            fact.getPercentCompletion(),
-        );
+        expect(prognose.getTurnover()).toBe(fact.turnover);
+        expect(prognose.getMargin()).toBe(fact.margin);
+        expect(prognose.getQuantity()).toBe(fact.quantity);
     });
 
     it('последний день месяца ещё не завершился (23:59:59.999) — он ещё не считается прошедшим, прогноз чуть выше факта', () => {
-        const fact = SalesFact.calculate({
-            turnover: 2_100_000,
-            cost: 1_000_000,
-            quantity: 60,
-            planTurnover: 2_000_000,
-        });
+        const fact = { turnover: 2_100_000, margin: 1_100_000, quantity: 60 };
         const now = new Date('2026-08-31T23:59:59.999Z');
 
         const prognose = SalesPrognose.forPeriod(fact, period, 2_000_000, now);
@@ -116,16 +85,11 @@ describe('SalesPrognose', () => {
     });
 
     it('ровно в начале следующего месяца период полностью прошёл — прогноз равен факту месяца', () => {
-        const fact = SalesFact.calculate({
-            turnover: 2_100_000,
-            cost: 1_000_000,
-            quantity: 60,
-            planTurnover: 2_000_000,
-        });
+        const fact = { turnover: 2_100_000, margin: 1_100_000, quantity: 60 };
         const now = new Date('2026-09-01T00:00:00.000Z');
 
         const prognose = SalesPrognose.forPeriod(fact, period, 2_000_000, now);
 
-        expect(prognose.getTurnover()).toBe(fact.getTurnover());
+        expect(prognose.getTurnover()).toBe(fact.turnover);
     });
 });

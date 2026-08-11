@@ -1,5 +1,6 @@
 import { ValueObject } from '@/shared/domain/value-object.base';
 import { ArgumentInvalidException } from '@/shared/exceptions';
+import { percentOf } from '@/shared/domain/percent';
 
 export interface SalesFactProps {
     turnover: number;
@@ -92,12 +93,7 @@ export class SalesFact extends ValueObject<SalesFactProps> {
     }
 }
 
-// Процент `part` от `whole`, округлённый до сотых, без деления на 0 —
-// общий помощник для SalesFact и SalesPrognose (marginPercent,
-// percentCompletion), чтобы правило округления не разъезжалось по модулю.
-export function percentOf(part: number, whole: number): number {
-    if (!whole) {
-        return 0;
-    }
-    return Math.round((part / whole) * 10000) / 100;
-}
+// percentOf() переехал в @/shared/domain/percent — с Фазы 11 им пользуется
+// и ShopSalesFact (domains/shop/modules/sales), а не только этот класс (см.
+// комментарий в shared/domain/percent.ts).
+export { percentOf } from '@/shared/domain/percent';

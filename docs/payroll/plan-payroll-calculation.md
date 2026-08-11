@@ -188,11 +188,11 @@
 **Что затрагивает?** backend, database, contracts
 
 **Задачи:**
-- [ ] Модуль `sales` в домене `shop`: `SalesPlanTemplate` / `SalesPlan` для направления `shop` с тем же CRUD, статусами и утверждением.
-- [ ] Автосоздание планов магазина: крон первого числа и ленивое достраивание по логике фазы 4.
-- [ ] `SalesFact` и `SalesPrognose` магазина по `MoySkladDemand` / `MoySkladDemandPosition`; маржа берётся из `MoySkladDemandPosition.profit`, а не пересчитывается как `sum - cost`.
-- [ ] `SalesPerformance` магазина и порт его чтения для будущего модуля `accounting` домена `shop`; период магазина заводится и закрывается независимо от сервиса.
-- [ ] Тесты: маржа равна `profit` из МойСклада; закрытие периода сервиса не меняет статус периода магазина; изменение плана магазина пересчитывает факт и прогноз.
+- [x] Модуль `sales` в домене `shop`: `SalesPlanTemplate` / `SalesPlan` для направления `shop` с тем же CRUD, статусами и утверждением (CRUD уже общий с `service` — модели/эндпоинты `domains/service/modules/sales` не привязаны к `direction: 'service'`, отдельного дублирующего CRUD в `domains/shop` не заводили).
+- [x] Автосоздание планов магазина: крон первого числа и ленивое достраивание по логике фазы 4.
+- [x] `SalesFact` и `SalesPrognose` магазина по `MoySkladDemand` / `MoySkladDemandPosition`; маржа берётся из `MoySkladDemandPosition.profit`, а не пересчитывается как `sum - cost`.
+- [x] `SalesPerformance` магазина и порт его чтения для будущего модуля `accounting` домена `shop`; период магазина заводится и закрывается независимо от сервиса.
+- [x] Тесты: маржа равна `profit` из МойСклада; закрытие периода сервиса не меняет статус периода магазина; изменение плана магазина пересчитывает факт и прогноз.
 
 **Когда готово** `GET /sales/salesPerformance/:period` работает для направления `shop`.
 
@@ -320,7 +320,7 @@
 
 | Вопрос PRD | Блокирует |
 |---|---|
-| ~~Формула расчёта `SalesPrognose` — линейная экстраполяция или учёт рабочих дней и сезонности~~ — решено: линейная экстраполяция по прошедшим календарным дням месяца, одна формула для service и shop (см. `SalesPrognose.forPeriod()` и `Period.getElapsedCalendarDays()` модуля `sales`) | Фаза 5 (и, следовательно, 9, 11) |
+| ~~Формула расчёта `SalesPrognose` — линейная экстраполяция или учёт рабочих дней и сезонности~~ — решено: линейная экстраполяция по прошедшим календарным дням месяца, одна формула для service и shop (см. `SalesPrognose.forPeriod()` в `src/shared/domain/` — переехала туда из модуля `sales` в Фазе 11, когда формула понадобилась второму направлению, и `Period.getElapsedCalendarDays()`, там же) | Фаза 5 (и, следовательно, 9, 11) |
 | ~~Что считается «оплаченным заказом» для `OrderPayed` — статус заказа или факт полной оплаты~~ — решено: по группе статуса заказа (`RoappOrderStatus.grupName`), список «оплаченных» групп — конфигурируемая константа (см. `domain/services/paid-order-status.ts` модуля `accounting`) | Фаза 8 |
 | ~~Что считается «задачей» для `TaskCompleted` и откуда берутся данные — в сервисе~~ — решено для сервиса: временный внутренний двухступенчатый воркфлоу подтверждения (сотрудник отмечает → руководитель подтверждает), без интеграции с Bitrix24 Tasks в этой итерации (см. `TaskCompletion`, `domain/entities/task-completion.entity.ts`); для магазина вопрос остаётся открытым | Фаза 13 |
 | ~~Где физически лежат закупщики (доп. поле `MoySkladProduct` или позиции отгрузки) и какой у значения тип (ссылка на сотрудника или строка)~~ — решено: позиция отгрузки (`MoySkladDemandPosition.onlinePurchaserId`/`offlinePurchaserId`), тип значения атрибута в проде не зафиксирован — синк поддерживает оба варианта (`employee` и произвольная строка) и сопоставляет с `EmployeeIdentity` по значению (см. `MOY_SKLAD_ONLINE_PURCHASER_FIELD`/`MOY_SKLAD_OFFLINE_PURCHASER_FIELD` в `employee-identity.prisma` и `extractPurchaserExternalId` в `sync/moySklad/moysklad-sync.mappers.ts`) | Фаза 10 |

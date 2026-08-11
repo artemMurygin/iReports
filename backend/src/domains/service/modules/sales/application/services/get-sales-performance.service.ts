@@ -8,7 +8,7 @@ import type {
 } from '../ports/service-sales-fact-source.port';
 import type { SalesPerformanceReaderPort } from '../ports/sales-performance.port';
 import { SalesFact } from '../../domain/value-objects/sales-fact.value-object';
-import { SalesPrognose } from '../../domain/value-objects/sales-prognose.value-object';
+import { SalesPrognose } from '@/shared/domain/sales-prognose.value-object';
 import { SalesPerformance } from '../../domain/value-objects/sales-performance.value-object';
 import { SalesPerformanceDirectionNotSupportedException } from '../../domain/exceptions/sales-performance.exception';
 import type { SalesDirection } from '../../domain/types/sales-plan.types';
@@ -70,7 +70,11 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
                 planTurnover: plan.turnover,
             });
             const prognose = SalesPrognose.forPeriod(
-                fact,
+                {
+                    turnover: fact.getTurnover(),
+                    margin: fact.getMargin(),
+                    quantity: fact.getQuantity(),
+                },
                 periodVo,
                 plan.turnover,
                 now,

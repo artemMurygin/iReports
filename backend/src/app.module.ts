@@ -16,6 +16,7 @@ import { BitrixSyncModule } from './sync/bitrix/bitrix-sync.module';
 import { SalesModule } from './domains/service/modules/sales/sales.module';
 import { RoappSyncModule } from './domains/service/sync/roapp/roapp-sync.module';
 import { MoySkladSyncModule } from './domains/shop/sync/moySklad/moysklad-sync.module';
+import { ShopSalesModule } from './domains/shop/modules/sales/shop-sales.module';
 import { AccountingModule } from './domains/service/modules/accounting/accounting.module';
 import { EmployeeIdentityModule } from './modules/employee-identity/employee-identity.module';
 
@@ -39,6 +40,7 @@ import { ReportsModule } from './TODO/reports/reports.module';
         BitrixSyncModule,
         RoappSyncModule,
         SalesModule,
+        ShopSalesModule,
         AccountingModule,
         EmployeeIdentityModule,
         AiModule,

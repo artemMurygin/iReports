@@ -1,6 +1,6 @@
 import { ValueObject } from '@/shared/domain/value-object.base';
 import { Period } from '@/shared/domain/period.value-object';
-import { SalesFact, percentOf } from './sales-fact.value-object';
+import { percentOf } from '@/shared/domain/percent';
 
 export interface SalesPrognoseProps {
     turnover: number;
@@ -8,6 +8,20 @@ export interface SalesPrognoseProps {
     marginPercent: number;
     quantity: number;
     percentCompletion: number;
+}
+
+// Вход формулы — только числа факта, а не конкретный класс SalesFact:
+// SalesPrognose общая для обоих направлений (Фаза 5 для service, Фаза 11
+// для shop), а SalesFact/ShopSalesFact — разные классы с разной логикой
+// расчёта margin (service считает margin = turnover - cost, shop берёт
+// margin из MoySkladDemandPosition.profit как есть, см.
+// domains/shop/modules/sales/domain/value-objects/shop-sales-fact.value-object.ts).
+// Общий VO не должен зависеть ни от одного из них — только от чисел,
+// которые оба факта одинаково умеют отдавать через геттеры.
+export interface SalesPrognoseFactInput {
+    turnover: number;
+    margin: number;
+    quantity: number;
 }
 
 // Прогноз до конца месяца (Фаза 5, решение по открытому вопросу PRD
@@ -32,9 +46,14 @@ export interface SalesPrognoseProps {
 // - elapsedDays === totalDays (период уже закрыт или полностью в прошлом —
 //   `now` на или после конца периода) — множитель 1, прогноз равен факту
 //   месяца, что и требуется ("экстраполировать нечего").
+//
+// Живёт в shared, а не в domains/service/modules/sales (где появилась в
+// Фазе 5), с Фазы 11 — как только формула понадобилась второму направлению
+// (shop), см. docs/payroll/plan-payroll-calculation.md, раздел "Формула
+// расчёта SalesPrognose... одна формула для service и shop".
 export class SalesPrognose extends ValueObject<SalesPrognoseProps> {
     static forPeriod(
-        fact: SalesFact,
+        fact: SalesPrognoseFactInput,
         period: Period,
         planTurnover: number,
         now: Date = new Date(),
@@ -43,9 +62,9 @@ export class SalesPrognose extends ValueObject<SalesPrognoseProps> {
         const elapsedDays = period.getElapsedCalendarDays(now);
         const factor = elapsedDays === 0 ? 1 : totalDays / elapsedDays;
 
-        const turnover = Math.round(fact.getTurnover() * factor);
-        const margin = Math.round(fact.getMargin() * factor);
-        const quantity = Math.round(fact.getQuantity() * factor);
+        const turnover = Math.round(fact.turnover * factor);
+        const margin = Math.round(fact.margin * factor);
+        const quantity = Math.round(fact.quantity * factor);
 
         return new SalesPrognose({
             turnover,

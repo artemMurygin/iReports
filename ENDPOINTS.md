@@ -36,8 +36,9 @@ access token текущего пользователя из `BX24.getAuth()`); �
 
 ## domains/service/modules/sales (`/v1/sales/plan`, `/v1/sales/plan_template`, `/v1/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели общие для направлений
-`service`/`shop` (Фаза 11 переиспользует их без изменения формы). Без модели прав в проекте эндпоинты
-не закрыты гардом (в отличие от `employee-identity`, см. «неблокирующие вопросы» PRD).
+`service`/`shop` (Фаза 11 переиспользует их без изменения формы, включая сам CRUD ниже — он не
+привязан к `direction: 'service'` и одинаково обслуживает оба направления). Без модели прав в проекте
+эндпоинты не закрыты гардом (в отличие от `employee-identity`, см. «неблокирующие вопросы» PRD).
 - `POST /v1/sales/plan` — создать план месяца по отделу и, опционально, категории (`source = MANUAL`); повтор на ту же комбинацию `(direction, department, category, period)` отклоняется (`409`)
 - `GET /v1/sales/plan?direction&period` — план месяца по направлению
 - `PATCH /v1/sales/plan/:id` — изменить оборот/маржу; переводит строку в `source = MANUAL`, утверждённую строку возвращает в `status = CREATED`
@@ -45,7 +46,17 @@ access token текущего пользователя из `BX24.getAuth()`); �
 - `POST /v1/sales/plan/approve` — утвердить построчно (`{ ids, approvedBy }`) или весь месяц по направлению (`{ direction, period, approvedBy }`); уже утверждённые строки не трогает
 - `GET /v1/sales/plan_template?direction` — дефолтный шаблон плана (оборот, маржа, процент роста) по отделам/категориям
 - `PUT /v1/sales/plan_template` — upsert строки шаблона по естественному ключу `(direction, department, category)`
-- `GET /v1/sales/salesPerformance/:period?direction` — план, факт и прогноз одним запросом по каждому отделу и категории направления за период (Фаза 5); факт и прогноз не персистятся, считаются заново на каждый запрос по данным ERP и текущему плану. В этой фазе поддержан только `direction=service` (`shop` — `400`, появится в Фазе 11)
+- `GET /v1/sales/salesPerformance/:period?direction` — план, факт и прогноз одним запросом по каждому отделу и категории направления за период (Фаза 5); факт и прогноз не персистятся, считаются заново на каждый запрос по данным ERP и текущему плану. Поддержан только `direction=service` (`400` для любого другого значения) — читатель этого эндпоинта жёстко привязан к RoApp/RemOnline; для `shop` см. отдельный эндпоинт `domains/shop/modules/sales` ниже
+
+## domains/shop/modules/sales (`/v1/sales/salesPerformance/shop`)
+SalesFact/SalesPrognose/SalesPerformance направления `shop` по данным МойСклад (Фаза 11, issue #54/#55)
+— зеркало `GetSalesPerformanceService` направления `service`, отдельный эндпоинт вместо `direction` в
+query у общего пути `/v1/sales/salesPerformance/:period` (см. обоснование в `config/app.routes.ts`).
+План/шаблон плана для `shop` обслуживаются CRUD-эндпоинтами `domains/service/modules/sales` выше —
+отдельного дублирующего CRUD у этого модуля нет. Автосоздание плана — свой крон первого числа
+(`ShopSalesPlanAutoCreationCron`, `@ProdCron`) поверх общего `EnsureSalesPlansForPeriodService`, плюс
+ленивое достраивание при первом обращении к периоду (тот же механизм, что и у `service`).
+- `GET /v1/sales/salesPerformance/shop/:period` — план, факт и прогноз одним запросом по каждому отделу направления `shop` за период; ⚠️ `fact.margin` — сумма `MoySkladDemandPosition.profit` по позициям отгрузок периода, а не `turnover - cost` (значение уже посчитано в МойСклад с учётом метода списания себестоимости); `quantity` — сумма `Float` (весовой/дробный товар)
 
 ## deals (`/deals`)
 - `GET /deals?from&to` — список сделок за период
