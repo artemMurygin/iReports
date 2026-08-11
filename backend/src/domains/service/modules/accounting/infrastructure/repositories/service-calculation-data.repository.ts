@@ -163,4 +163,57 @@ export class ServiceCalculationDataRepository
         });
         return record?.departmentId ?? null;
     }
+
+    async findEmployeesInDepartment(
+        departmentId: number,
+    ): Promise<{ id: number; name: string }[]> {
+        const records = await this.client.bitrixEmployee.findMany({
+            where: { departmentId },
+            select: { id: true, firstName: true, lastName: true },
+        });
+        return records.map((record) => ({
+            id: record.id,
+            name: `${record.firstName} ${record.lastName}`,
+        }));
+    }
+
+    async findEmployeeIdentitiesForEmployees(
+        bitrixEmployeeIds: number[],
+    ): Promise<Map<number, EmployeeIdentityRef[]>> {
+        const map = new Map<number, EmployeeIdentityRef[]>(
+            bitrixEmployeeIds.map((id) => [id, []]),
+        );
+        if (bitrixEmployeeIds.length === 0) {
+            return map;
+        }
+        const records = await this.client.employeeIdentity.findMany({
+            where: { bitrixEmployeeId: { in: bitrixEmployeeIds } },
+        });
+        for (const record of records) {
+            map.get(record.bitrixEmployeeId)?.push({
+                system: record.system as ExternalSystem,
+                identifierType: record.identifierType as ExternalIdentifierType,
+                externalId: record.externalId,
+            });
+        }
+        return map;
+    }
+
+    async findHoursWorkedForEmployees(
+        bitrixEmployeeIds: number[],
+        period: string,
+    ): Promise<Map<number, number>> {
+        const map = new Map<number, number>();
+        if (bitrixEmployeeIds.length === 0) {
+            return map;
+        }
+        const records = await this.client.employeeHoursEntry.findMany({
+            where: { employeeId: { in: bitrixEmployeeIds }, period },
+            select: { employeeId: true, hours: true },
+        });
+        for (const record of records) {
+            map.set(record.employeeId, record.hours);
+        }
+        return map;
+    }
 }

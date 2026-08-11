@@ -4,9 +4,15 @@ import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
-import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
+import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-context';
+import {
+    isSalesPerformancePlanApproved,
+    toSalesPerformanceSummary,
+} from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-summary';
+import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/to-salary-report-rules';
 import {
     buildFreshnessStamp,
     motivationSchemaVersion,
@@ -27,31 +33,34 @@ import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/applicati
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 
 // Тонкий сквозной путь Фазы 1, дополненный Фазой 6 ленивым кэшем и
-// снапшотом закрытого периода (см.
-// docs/payroll/plan-payroll-calculation.md, "Фаза 6: Расчётный период,
-// ленивый кэш и снапшоты") — по прямому указанию плана логика встроена
-// сюда же, а не в параллельный сервис.
+// снапшотом закрытого периода, и Фазой 9 парой факт/прогноз + компактным
+// блоком плана продаж (см. docs/payroll/plan-payroll-calculation.md,
+// "Фаза 6" и "Фаза 9") — по прямому указанию плана логика встроена сюда же,
+// а не в параллельный сервис.
 //
 // Закрытый период (AccountingPeriod.status === 'CLOSED') отдаётся из
-// снапшота целиком, без обращения к оркестратору — снапшот прогноз не
+// снапшота целиком, без обращения к оркестратору — снапшот прогноза не
 // хранит (закрытый месяц не прогнозируется, см. PRD раздел 6), поэтому
-// fact/prognose в ответе совпадают (см. buildClosedReport ниже —
-// полноценная раздельная пара «факт/прогноз» с nullable-прогнозом для
-// закрытого периода — предмет контракта Фазы 9, которая владеет всей формой
-// EmployeeSalaryReportResponse; Фаза 6 сознательно не трогает контракт).
+// amount.prognose в ответе закрытого периода — null, а не равен факту (см.
+// buildClosedReport ниже).
 //
 // Открытый период считает как и раньше (оркестратор по схеме сотрудника),
 // но сперва сверяет freshnessStamp с последним сохранённым в кэше — при
 // совпадении отдаёт кэш без вызова оркестратора, при расхождении
 // пересчитывает и перезаписывает кэш (см. accounting-cache-freshness.ts).
+// Кэш хранит только строки/итоги расчёта (CalculationLine[]) — компактный
+// блок SalesPerformance для ответа при попадании в кэш подтягивается
+// отдельным лёгким запросом (findSalesPerformanceForEmployee), не
+// пересчитывая тяжёлые erpData-выборки.
 //
 // Контекст расчёта (EmployeeIdentity + erpData сервиса) собирает
-// BuildServiceCalculationContextService (Фаза 7) — этот сервис больше не
-// строит его напрямую через buildBaseCalculationContext.
+// BuildServiceCalculationContextService (Фаза 7/9) — этот сервис больше не
+// строит его напрямую через buildBaseCalculationContext. Режим FACT/PROGNOSE
+// (Фаза 9) — единственное отличие между двумя проходами calculate(): в
+// каждый передаётся один и тот же erpData/identities, но разный
+// percentCompletion (см. to-sales-performance-context.ts).
 //
 // Пока не реализовано (следующие фазы плана):
-// - SalesPerformance и isPlanApproved в ответе отчёта (Фаза 9/5) —
-//   salesPerformance = null, isPlanApproved = true;
 // - направление shop (Фазы 10-13) — directions содержит только 'service'.
 @Injectable()
 export class GetEmployeeSalaryReportService {
@@ -104,16 +113,23 @@ export class GetEmployeeSalaryReportService {
             employeeId,
         );
         const total = snapshot?.total ?? 0;
-        // Закрытый месяц прогноза не хранит (см. шапку файла) — прогноз в
-        // ответе намеренно равен факту, а не занижен до нуля: ноль читался
-        // бы как "правило перестало действовать", а не "прогноз не
-        // считается для закрытого периода".
+        // Закрытый месяц прогноза не хранит (см. шапку файла) — amount.prognose
+        // и итоговый prognose в ответе намеренно null, а не равны факту и не
+        // занижены до нуля: ноль читался бы как "правило перестало
+        // действовать", а не "прогноз не считается для закрытого периода"
+        // (Фаза 9, см. PRD раздел 6: "У закрытого периода поля prognose не
+        // заполняются").
+        // appliedPercent восстанавливается по наличию salaryBasis в строке
+        // снапшота — тот же признак "это процентное правило", что и у
+        // isPercentAward() в to-salary-report-rules.ts (снапшот не хранит
+        // award.type самого правила, только уже посчитанную строку).
         const rules = (snapshot?.lines ?? []).map((line) => ({
             ruleId: line.ruleId,
             type: line.type,
             name: line.name,
             targetRole: line.targetRole,
-            amount: { fact: line.amount, prognose: line.amount },
+            amount: { fact: line.amount, prognose: null },
+            appliedPercent: line.salaryBasis ? line.rate : undefined,
             sources: line.sources,
         }));
 
@@ -123,13 +139,13 @@ export class GetEmployeeSalaryReportService {
             directions: [
                 {
                     direction: this.direction,
-                    total: { fact: total, prognose: total },
+                    total: { fact: total, prognose: null },
                     rules,
                     salesPerformance: null,
                     isPlanApproved: true,
                 },
             ],
-            grandTotal: { fact: total, prognose: total },
+            grandTotal: { fact: total, prognose: null },
         };
     }
 
@@ -150,11 +166,17 @@ export class GetEmployeeSalaryReportService {
             employeeId,
         );
         if (cached && cached.freshnessStamp === freshnessStamp) {
+            const salesPerformanceDetail =
+                await this.contextBuilder.findSalesPerformanceForEmployee(
+                    validatedPeriod,
+                    employeeId,
+                );
             return this.buildResponse(
                 period,
                 rules,
                 cached.factLines,
                 cached.prognoseLines,
+                salesPerformanceDetail,
             );
         }
 
@@ -165,12 +187,24 @@ export class GetEmployeeSalaryReportService {
 
         const [factLines, prognoseLines] = await Promise.all([
             PeriodCalculationOrchestrator.calculate(rules, {
-                ...baseContext,
+                employee: baseContext.employee,
+                period: baseContext.period,
+                erpData: baseContext.erpData,
                 mode: 'FACT',
+                salesPerformance: toSalesPerformanceContext(
+                    baseContext.salesPerformanceDetail,
+                    'FACT',
+                ),
             }),
             PeriodCalculationOrchestrator.calculate(rules, {
-                ...baseContext,
+                employee: baseContext.employee,
+                period: baseContext.period,
+                erpData: baseContext.erpData,
                 mode: 'PROGNOSE',
+                salesPerformance: toSalesPerformanceContext(
+                    baseContext.salesPerformanceDetail,
+                    'PROGNOSE',
+                ),
             }),
         ]);
 
@@ -186,7 +220,13 @@ export class GetEmployeeSalaryReportService {
             prognoseTotal,
         });
 
-        return this.buildResponse(period, rules, factLines, prognoseLines);
+        return this.buildResponse(
+            period,
+            rules,
+            factLines,
+            prognoseLines,
+            baseContext.salesPerformanceDetail,
+        );
     }
 
     private buildResponse(
@@ -194,21 +234,14 @@ export class GetEmployeeSalaryReportService {
         rules: SalaryRule[],
         factLines: CalculationLine[],
         prognoseLines: CalculationLine[],
+        salesPerformanceDetail: SalesPerformance | null,
     ): EmployeeSalaryReportResponse {
-        const factBreakdown = buildRuleBreakdown(rules, factLines);
-        const prognoseBreakdown = buildRuleBreakdown(rules, prognoseLines);
-
-        const ruleBreakdown = factBreakdown.map((fact, index) => ({
-            ruleId: fact.ruleId,
-            type: fact.type,
-            name: fact.name,
-            targetRole: fact.targetRole,
-            amount: {
-                fact: fact.amount,
-                prognose: prognoseBreakdown[index].amount,
-            },
-            sources: fact.sources,
-        }));
+        const ruleBreakdown = buildSalaryReportRules(
+            rules,
+            factLines,
+            prognoseLines,
+            salesPerformanceDetail,
+        );
 
         const factTotal = PeriodCalculationOrchestrator.total(factLines);
         const prognoseTotal =
@@ -222,8 +255,12 @@ export class GetEmployeeSalaryReportService {
                     direction: this.direction,
                     total: { fact: factTotal, prognose: prognoseTotal },
                     rules: ruleBreakdown,
-                    salesPerformance: null,
-                    isPlanApproved: true,
+                    salesPerformance: toSalesPerformanceSummary(
+                        salesPerformanceDetail,
+                    ),
+                    isPlanApproved: isSalesPerformancePlanApproved(
+                        salesPerformanceDetail,
+                    ),
                 },
             ],
             grandTotal: { fact: factTotal, prognose: prognoseTotal },

@@ -1,4 +1,8 @@
-import { resolveFloatPercentMultiplier } from './float-percent';
+import {
+    buildFloatPercentThresholdInfo,
+    resolveFloatPercentMultiplier,
+    resolveFloatPercentThresholds,
+} from './float-percent';
 import type { PercentBorder } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 
 const borders: [PercentBorder, PercentBorder, PercentBorder] = [
@@ -61,5 +65,65 @@ describe('resolveFloatPercentMultiplier', () => {
             borders[1],
         ];
         expect(resolveFloatPercentMultiplier(shuffled, 70)).toBe(1);
+    });
+});
+
+// Текущий/следующий порог + разница до него в обороте (Фаза 9, см. PRD
+// раздел 6 — "чтобы UI мог показать «до следующего порога осталось N по
+// обороту»").
+describe('resolveFloatPercentThresholds', () => {
+    it('ниже первого порога — currentThreshold отсутствует, nextThreshold — первый', () => {
+        const { currentThreshold, nextThreshold } =
+            resolveFloatPercentThresholds(borders, 10);
+        expect(currentThreshold).toBeNull();
+        expect(nextThreshold).toEqual(borders[0]);
+    });
+
+    it('между порогами — currentThreshold/nextThreshold соседние', () => {
+        const { currentThreshold, nextThreshold } =
+            resolveFloatPercentThresholds(borders, 65);
+        expect(currentThreshold).toEqual(borders[0]);
+        expect(nextThreshold).toEqual(borders[1]);
+    });
+
+    it('на пороге — currentThreshold совпадает с ним', () => {
+        const { currentThreshold } = resolveFloatPercentThresholds(borders, 70);
+        expect(currentThreshold).toEqual(borders[1]);
+    });
+
+    it('на и выше старшего порога — nextThreshold отсутствует', () => {
+        expect(
+            resolveFloatPercentThresholds(borders, 100).nextThreshold,
+        ).toBeNull();
+        expect(
+            resolveFloatPercentThresholds(borders, 200).nextThreshold,
+        ).toBeNull();
+    });
+});
+
+describe('buildFloatPercentThresholdInfo', () => {
+    it('считает diffToNext в обороте, а не в процентных пунктах', () => {
+        // План 100 000, факт 65% выполнения -> оборот 65 000; следующий
+        // порог 70% -> оборот на пороге 70 000; не хватает 5 000.
+        const info = buildFloatPercentThresholdInfo(
+            borders,
+            65,
+            100_000,
+            65_000,
+        );
+        expect(info.currentThreshold).toEqual(borders[0]);
+        expect(info.nextThreshold).toEqual(borders[1]);
+        expect(info.diffToNext).toBe(5_000);
+    });
+
+    it('нет следующего порога (выполнение выше старшего) — diffToNext null', () => {
+        const info = buildFloatPercentThresholdInfo(
+            borders,
+            120,
+            100_000,
+            120_000,
+        );
+        expect(info.nextThreshold).toBeNull();
+        expect(info.diffToNext).toBeNull();
     });
 });

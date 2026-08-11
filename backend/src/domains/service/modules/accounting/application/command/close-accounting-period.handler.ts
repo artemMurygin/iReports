@@ -6,6 +6,7 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-context';
 import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
@@ -98,14 +99,17 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
             const props = schema.getProps();
             const employeeId = props.target.getId();
             const rules = props.rules;
-            const context = {
-                ...(await this.contextBuilder.build(period, employeeId)),
-                mode: 'FACT' as const,
-            };
-            const lines = await PeriodCalculationOrchestrator.calculate(
-                rules,
-                context,
-            );
+            const base = await this.contextBuilder.build(period, employeeId);
+            const lines = await PeriodCalculationOrchestrator.calculate(rules, {
+                employee: base.employee,
+                period: base.period,
+                erpData: base.erpData,
+                mode: 'FACT',
+                salesPerformance: toSalesPerformanceContext(
+                    base.salesPerformanceDetail,
+                    'FACT',
+                ),
+            });
             rows.push({
                 employeeId,
                 total: PeriodCalculationOrchestrator.total(lines),

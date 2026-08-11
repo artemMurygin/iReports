@@ -10,6 +10,8 @@ import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { OrderPayedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/order-payed.entity';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -46,6 +48,13 @@ describe('GetEmployeeSalaryReportService', () => {
         >;
         domainSyncAt?: Date | null;
         plans?: SalesPlan[];
+        erpData?: Partial<ServiceCalculationErpData>;
+        salesPerformanceDetail?: unknown;
+        identities?: {
+            system: string;
+            identifierType: string;
+            externalId: string;
+        }[];
     }) => {
         const findByEmployee = jest
             .fn<Promise<MotivationSchema | null>, [number]>()
@@ -53,6 +62,7 @@ describe('GetEmployeeSalaryReportService', () => {
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee,
+            findByEmployees: jest.fn().mockResolvedValue([]),
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
         };
 
@@ -70,6 +80,7 @@ describe('GetEmployeeSalaryReportService', () => {
         const snapshotRepo: AccountingPeriodSnapshotPort = {
             saveAll: jest.fn(),
             findByKey: findSnapshot,
+            findManyByKey: jest.fn().mockResolvedValue(new Map()),
             deleteByDirectionAndPeriod: jest.fn(),
         };
 
@@ -105,17 +116,25 @@ describe('GetEmployeeSalaryReportService', () => {
         const contextBuilder = {
             build: jest.fn((period: Period, employeeId: number) =>
                 Promise.resolve({
-                    employee: { id: employeeId, identities: [] },
+                    employee: {
+                        id: employeeId,
+                        identities: overrides?.identities ?? [],
+                    },
                     period: {
                         direction: 'service' as const,
                         period: period.getValue(),
                         ...period.getBounds(),
                         status: 'OPEN' as const,
                     },
-                    erpData: { serviceCompletedItems: [], hoursWorked: 8 },
-                    salesPerformance: null,
+                    erpData: overrides?.erpData ?? {
+                        serviceCompletedItems: [],
+                        hoursWorked: 8,
+                    },
+                    salesPerformanceDetail:
+                        overrides?.salesPerformanceDetail ?? null,
                 }),
             ),
+            findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),
         } as unknown as BuildServiceCalculationContextService;
 
         const service = new GetEmployeeSalaryReportService(
@@ -378,14 +397,15 @@ describe('GetEmployeeSalaryReportService', () => {
                 directions: [
                     {
                         direction: 'service',
-                        total: { fact: 5000, prognose: 5000 },
+                        total: { fact: 5000, prognose: null },
                         rules: [
                             {
                                 ruleId: 'r1',
                                 type: 'PayPerHour',
                                 name: 'Почасовая ставка',
                                 targetRole: 'ENGINEER',
-                                amount: { fact: 5000, prognose: 5000 },
+                                amount: { fact: 5000, prognose: null },
+                                appliedPercent: undefined,
                                 sources: [],
                             },
                         ],
@@ -393,7 +413,7 @@ describe('GetEmployeeSalaryReportService', () => {
                         isPlanApproved: true,
                     },
                 ],
-                grandTotal: { fact: 5000, prognose: 5000 },
+                grandTotal: { fact: 5000, prognose: null },
             });
             // Схема сотрудника даже не запрашивается — закрытый период
             // отдаётся из снапшота целиком (см. buildClosedReport).
@@ -440,7 +460,7 @@ describe('GetEmployeeSalaryReportService', () => {
             const report = await service.execute(42, '2026-07');
 
             expect(report.isClosed).toBe(true);
-            expect(report.grandTotal).toEqual({ fact: 5000, prognose: 5000 });
+            expect(report.grandTotal).toEqual({ fact: 5000, prognose: null });
             expect(findByEmployee).not.toHaveBeenCalled();
             expect(findPlansByDirectionAndPeriod).not.toHaveBeenCalled();
         });
@@ -462,7 +482,167 @@ describe('GetEmployeeSalaryReportService', () => {
             const report = await service.execute(999, '2026-07');
 
             expect(report.isClosed).toBe(true);
-            expect(report.grandTotal).toEqual({ fact: 0, prognose: 0 });
+            expect(report.grandTotal).toEqual({ fact: 0, prognose: null });
+        });
+    });
+
+    // Режим расчёта FACT | PROGNOSE (Фаза 9, issue #42/#46): один и тот же
+    // OrderPayedEntity.calculate() вызывается дважды с разным входным
+    // percentCompletion (факт/прогноз отдела), база продаж сотрудника
+    // (orderPayedItems) не меняется между проходами.
+    describe('режим расчёта FACT | PROGNOSE (FloatPercent)', () => {
+        const borders = [
+            {
+                name: 'A',
+                fromPlanPercent: 50,
+                multiplier: 0.5,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'B',
+                fromPlanPercent: 70,
+                multiplier: 1,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'C',
+                fromPlanPercent: 100,
+                multiplier: 1.5,
+                mode: 'FIX' as const,
+            },
+        ];
+
+        const buildFloatPercentSchema = () =>
+            withRequestContext(() => {
+                const rule = OrderPayedEntity.create({
+                    type: 'OrderPayed',
+                    name: 'Процент от выручки по плану',
+                    targetRole: 'ENGINEER',
+                    config: {
+                        award: {
+                            type: 'FloatPercent',
+                            basePercent: 10,
+                            salaryBasis: 'REVENUE',
+                            percentBorders: borders,
+                        },
+                    },
+                });
+                return MotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: 42,
+                    name: 'Инженер на проценте',
+                    rules: [rule],
+                });
+            });
+
+        const orderPayedItem = {
+            orderId: 1,
+            managerId: null,
+            createdById: 7,
+            closedById: null,
+            onlineManager: null,
+            engineerIds: [999],
+            revenue: 1000,
+            cost: 0,
+            engineerSalary: 0,
+        };
+
+        const identities = [
+            {
+                system: 'ROAPP' as const,
+                identifierType: 'EMPLOYEE_ID' as const,
+                externalId: '999',
+            },
+        ];
+
+        const fakePerformance = (
+            factPercent: number,
+            prognosePercent: number,
+        ) => ({
+            getDepartment: () => 1,
+            getCategory: () => null,
+            getFact: () => ({
+                getPercentCompletion: () => factPercent,
+                getTurnover: () => 0,
+                getMargin: () => 0,
+            }),
+            getPrognose: () => ({
+                getPercentCompletion: () => prognosePercent,
+                getTurnover: () => 0,
+                getMargin: () => 0,
+            }),
+            getPlan: () => ({
+                turnover: 0,
+                margin: 0,
+                status: 'APPROVED' as const,
+            }),
+        });
+
+        it('прогнозный процент в другом пороге меняет прогнозную сумму относительно факта при неизменной базе продаж', async () => {
+            const schema = buildFloatPercentSchema();
+            // Факт — 65% (порог 50%, множитель 0.5) -> 1000*10%*0.5 = 50.
+            // Прогноз — 70% (порог 70%, множитель 1) -> 1000*10%*1 = 100.
+            const { service } = buildService({
+                schema,
+                erpData: {
+                    serviceCompletedItems: [],
+                    hoursWorked: 0,
+                    orderPayedItems: [orderPayedItem],
+                    confirmedTaskCompletions: [],
+                },
+                identities,
+                salesPerformanceDetail: fakePerformance(65, 70),
+            });
+
+            const report = await service.execute(42, '2026-08');
+            const [rule] = report.directions[0].rules;
+
+            expect(rule.amount.fact).toBe(50);
+            expect(rule.amount.prognose).toBe(100);
+            expect(rule.amount.fact).not.toBe(rule.amount.prognose);
+        });
+
+        it('прогнозный процент ниже текущего — прогнозная сумма меньше фактической', async () => {
+            const schema = buildFloatPercentSchema();
+            // Факт — 70% (множитель 1) -> 100. Прогноз — 50% (множитель 0.5) -> 50.
+            const { service } = buildService({
+                schema,
+                erpData: {
+                    serviceCompletedItems: [],
+                    hoursWorked: 0,
+                    orderPayedItems: [orderPayedItem],
+                    confirmedTaskCompletions: [],
+                },
+                identities,
+                salesPerformanceDetail: fakePerformance(70, 50),
+            });
+
+            const report = await service.execute(42, '2026-08');
+            const [rule] = report.directions[0].rules;
+
+            expect(rule.amount.fact).toBe(100);
+            expect(rule.amount.prognose).toBe(50);
+            expect(rule.amount.prognose).toBeLessThan(rule.amount.fact);
+        });
+
+        it('одинаковый процент факта и прогноза (нет плана до конца месяца) — суммы совпадают', async () => {
+            const schema = buildFloatPercentSchema();
+            const { service } = buildService({
+                schema,
+                erpData: {
+                    serviceCompletedItems: [],
+                    hoursWorked: 0,
+                    orderPayedItems: [orderPayedItem],
+                    confirmedTaskCompletions: [],
+                },
+                identities,
+                salesPerformanceDetail: fakePerformance(70, 70),
+            });
+
+            const report = await service.execute(42, '2026-08');
+            const [rule] = report.directions[0].rules;
+
+            expect(rule.amount.fact).toBe(rule.amount.prognose);
         });
     });
 });

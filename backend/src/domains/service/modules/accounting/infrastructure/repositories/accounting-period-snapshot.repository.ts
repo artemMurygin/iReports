@@ -70,6 +70,28 @@ export class AccountingPeriodSnapshotRepository
         };
     }
 
+    async findManyByKey(
+        direction: AccountingDirection,
+        period: string,
+        employeeIds: number[],
+    ): Promise<Map<number, AccountingPeriodSnapshotRow>> {
+        const map = new Map<number, AccountingPeriodSnapshotRow>();
+        if (employeeIds.length === 0) {
+            return map;
+        }
+        const records = await this.client.accountingPeriodSnapshot.findMany({
+            where: { direction, period, employeeId: { in: employeeIds } },
+        });
+        for (const record of records) {
+            map.set(record.employeeId, {
+                employeeId: record.employeeId,
+                total: record.total,
+                lines: record.lines as unknown as RuleBreakdownLine[],
+            });
+        }
+        return map;
+    }
+
     async deleteByDirectionAndPeriod(
         direction: AccountingDirection,
         period: string,

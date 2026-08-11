@@ -52,6 +52,12 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
         },
         findByEmployee: (employeeId) =>
             Promise.resolve(schemas.get(employeeId) ?? null),
+        findByEmployees: (employeeIds) =>
+            Promise.resolve(
+                employeeIds
+                    .map((id) => schemas.get(id))
+                    .filter((schema): schema is MotivationSchema => !!schema),
+            ),
         findAllEmployeeTargets: () =>
             Promise.resolve(Array.from(schemas.values())),
     };
@@ -65,6 +71,7 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
     const fakeAccountingPeriodSnapshot: AccountingPeriodSnapshotPort = {
         saveAll: () => Promise.resolve(),
         findByKey: () => Promise.resolve(null),
+        findManyByKey: () => Promise.resolve(new Map()),
         deleteByDirectionAndPeriod: () => Promise.resolve(),
     };
     const fakeAccountingCalculationCache: AccountingCalculationCachePort = {
@@ -101,6 +108,9 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
         findOrderPayedItems: () => Promise.resolve([]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
+        findEmployeesInDepartment: () => Promise.resolve([]),
+        findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
+        findHoursWorkedForEmployees: () => Promise.resolve(new Map()),
     };
     // AccountingModule заодно поднимает CreateMotivationSchemaHandler (не
     // используется этим эндпоинтом), которому нужен UNIT_OF_WORK — реальный

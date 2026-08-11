@@ -18,6 +18,12 @@ export interface MotivationSchemaRepositoryPort {
     // Bitrix-сотрудникам компании (у схем на отдел своя, ещё не
     // реализованная логика раскрытия, см. PRD раздел "Мотивационные схемы").
     findAllEmployeeTargets(): Promise<MotivationSchema[]>;
+
+    // Батч-версия findByEmployee для отчёта по отделу (Фаза 9,
+    // GetDepartmentSalaryReportService) — один запрос вместо одного на
+    // сотрудника ("не должно быть N+1 запросов при расчёте отдела").
+    // Сотрудники без личной схемы просто отсутствуют в результате.
+    findByEmployees(employeeIds: number[]): Promise<MotivationSchema[]>;
 }
 
 export const MOTIVATION_SCHEMA_REPOSITORY = Symbol(

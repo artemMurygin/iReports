@@ -55,6 +55,30 @@ export interface ServiceCalculationDataPort {
     // реального BitrixEmployee.departmentId, но поле не nullable в схеме,
     // а сотрудник может не существовать вовсе).
     findEmployeeDepartmentId(bitrixEmployeeId: number): Promise<number | null>;
+
+    // Все сотрудники отдела (Фаза 9, вход отчёта GET
+    // /accounting/salary_report/department/:id/:period) — один запрос на
+    // весь отдел, а не по одному на сотрудника (см.
+    // GetDepartmentSalaryReportService). name — "Имя Фамилия" (см.
+    // src/shared/exportRoappOrders.ts, тот же формат для BitrixEmployee).
+    findEmployeesInDepartment(
+        departmentId: number,
+    ): Promise<{ id: number; name: string }[]>;
+
+    // Батч-версия findEmployeeIdentities для отдела целиком — один запрос
+    // вместо одного на сотрудника (Фаза 9, "не должно быть N+1 запросов при
+    // расчёте отдела"). Сотрудники без единой связи получают пустой массив.
+    findEmployeeIdentitiesForEmployees(
+        bitrixEmployeeIds: number[],
+    ): Promise<Map<number, EmployeeIdentityRef[]>>;
+
+    // Батч-версия findHoursWorked для отдела целиком (Фаза 9) — один запрос
+    // вместо одного на сотрудника. Сотрудники без записи получают 0 (как и
+    // в findHoursWorked).
+    findHoursWorkedForEmployees(
+        bitrixEmployeeIds: number[],
+        period: string,
+    ): Promise<Map<number, number>>;
 }
 
 export const SERVICE_CALCULATION_DATA = Symbol('SERVICE_CALCULATION_DATA');

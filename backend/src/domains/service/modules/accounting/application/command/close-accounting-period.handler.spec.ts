@@ -30,6 +30,7 @@ describe('CloseAccountingPeriodHandler', () => {
         const snapshotRepo: AccountingPeriodSnapshotPort = {
             saveAll,
             findByKey: jest.fn(),
+            findManyByKey: jest.fn().mockResolvedValue(new Map()),
             deleteByDirectionAndPeriod: jest.fn(),
         };
 
@@ -43,6 +44,7 @@ describe('CloseAccountingPeriodHandler', () => {
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
+            findByEmployees: jest.fn().mockResolvedValue([]),
             findAllEmployeeTargets: jest
                 .fn()
                 .mockResolvedValue(overrides?.schemas ?? []),
@@ -73,7 +75,7 @@ describe('CloseAccountingPeriodHandler', () => {
                         status: 'OPEN' as const,
                     },
                     erpData: { serviceCompletedItems: [], hoursWorked: 8 },
-                    salesPerformance: null,
+                    salesPerformanceDetail: null,
                 }),
             ),
         } as unknown as BuildServiceCalculationContextService;

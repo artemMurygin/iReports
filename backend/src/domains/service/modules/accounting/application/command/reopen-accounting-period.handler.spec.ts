@@ -18,6 +18,7 @@ describe('ReopenAccountingPeriodHandler', () => {
         const snapshotRepo: AccountingPeriodSnapshotPort = {
             saveAll: jest.fn(),
             findByKey: jest.fn(),
+            findManyByKey: jest.fn().mockResolvedValue(new Map()),
             deleteByDirectionAndPeriod: deleteSnapshot,
         };
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };

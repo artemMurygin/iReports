@@ -14,6 +14,7 @@ import { CreateTaskCompletionHandler } from '@/domains/service/modules/accountin
 import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
 import { DeleteTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/delete-task-completion.handler';
 import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-employee-salary-report.service';
+import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-department-salary-report.service';
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { ListEmployeeHoursEntriesService } from '@/domains/service/modules/accounting/application/services/list-employee-hours-entries.service';
@@ -21,6 +22,7 @@ import { ListTaskCompletionsService } from '@/domains/service/modules/accounting
 import { ListSalaryRuleTypesService } from '@/domains/service/modules/accounting/application/services/list-salary-rule-types.service';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-motivation-schema.http.controller';
 import { GetEmployeeSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-employee-salary-report.http.controller';
+import { GetDepartmentSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-salary-report.http.controller';
 import { CloseAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/close-accounting-period.http.controller';
 import { ReopenAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/reopen-accounting-period.http.controller';
 import { RecalculateAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/recalculate-accounting-period.http.controller';
@@ -66,6 +68,7 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
     controllers: [
         CreateMotivationSchemaHttpController,
         GetEmployeeSalaryReportHttpController,
+        GetDepartmentSalaryReportHttpController,
         CloseAccountingPeriodHttpController,
         ReopenAccountingPeriodHttpController,
         RecalculateAccountingPeriodHttpController,
@@ -93,6 +96,7 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
         ConfirmTaskCompletionHandler,
         DeleteTaskCompletionHandler,
         GetEmployeeSalaryReportService,
+        GetDepartmentSalaryReportService,
         GetAccountingPeriodService,
         BuildServiceCalculationContextService,
         ListEmployeeHoursEntriesService,

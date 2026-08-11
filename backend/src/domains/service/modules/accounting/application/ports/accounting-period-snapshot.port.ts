@@ -28,6 +28,16 @@ export interface AccountingPeriodSnapshotPort {
         employeeId: number,
     ): Promise<AccountingPeriodSnapshotRow | null>;
 
+    // Батч-версия findByKey для отчёта по отделу за закрытый период (Фаза 9,
+    // GetDepartmentSalaryReportService) — один запрос на весь отдел вместо
+    // одного на сотрудника. Сотрудники без строки снапшота просто
+    // отсутствуют в результирующей Map.
+    findManyByKey(
+        direction: AccountingDirection,
+        period: string,
+        employeeIds: number[],
+    ): Promise<Map<number, AccountingPeriodSnapshotRow>>;
+
     deleteByDirectionAndPeriod(
         direction: AccountingDirection,
         period: string,

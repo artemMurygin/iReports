@@ -214,11 +214,15 @@ export type CalculationLineResponse = z.infer<typeof calculationLineSchema>;
 
 // Пара «факт / прогноз» — отчёт всегда считает calculate() дважды (режимы
 // FACT и PROGNOSE) и сводит строки по ruleId; отдельной ветки под прогноз
-// нет (см. PRD, раздел 6).
+// нет (см. PRD, раздел 6). prognose nullable — у закрытого периода снапшот
+// прогноза не хранит, поле остаётся пустым, а не равным факту (Фаза 9, см.
+// PRD раздел 6: "У закрытого периода поля prognose не заполняются").
 const factPrognoseAmountSchema = z.object({
     fact: z.number(),
-    prognose: z.number(),
+    prognose: z.number().nullable(),
 });
+
+export type FactPrognoseAmount = z.infer<typeof factPrognoseAmountSchema>;
 
 const salesPerformanceSummarySchema = z.object({
     department: z.number(),
@@ -229,9 +233,29 @@ const salesPerformanceSummarySchema = z.object({
     percentCompletion: z.number(),
 });
 
+export type SalesPerformanceSummary = z.infer<
+    typeof salesPerformanceSummarySchema
+>;
+
+// Текущий/следующий порог FloatPercent и разница до следующего (в обороте,
+// см. PRD раздел 6: "чтобы UI мог показать «до следующего порога осталось N
+// по обороту»"). currentThreshold/nextThreshold — null, когда процент
+// выполнения плана ниже самого нижнего порога (currentThreshold) либо уже
+// достиг/превысил старший порог (nextThreshold, "порогов выше нет").
+const floatPercentInfoSchema = z.object({
+    currentThreshold: percentBorderSchema.nullable(),
+    nextThreshold: percentBorderSchema.nullable(),
+    diffToNext: z.number().nullable(),
+});
+
+export type FloatPercentInfo = z.infer<typeof floatPercentInfoSchema>;
+
 // Разбивка по правилу в отчёте — это calculationLineSchema, сведённый по
 // парам FACT/PROGNOSE, плюс атрибуты правила (type/name/targetRole), нужные
-// UI для отображения без дополнительных запросов.
+// UI для отображения без дополнительных запросов. floatPercent — только для
+// правил с award.type === 'FloatPercent' и только пока для периода известен
+// SalesPerformance (иначе отсутствует, как и amount.prognose у закрытого
+// периода).
 const employeeSalaryReportRuleSchema = z.object({
     ruleId: z.string(),
     type: z.string(),
@@ -239,8 +263,15 @@ const employeeSalaryReportRuleSchema = z.object({
     targetRole: targetRoleSchema,
     amount: factPrognoseAmountSchema,
     appliedPercent: z.number().optional(),
+    floatPercent: z
+        .object({ fact: floatPercentInfoSchema, prognose: floatPercentInfoSchema })
+        .optional(),
     sources: z.array(calculationSourceRefSchema),
 });
+
+export type EmployeeSalaryReportRule = z.infer<
+    typeof employeeSalaryReportRuleSchema
+>;
 
 const directionSalaryReportSchema = z.object({
     direction: z.enum(['service', 'shop']),
@@ -263,6 +294,38 @@ export type EmployeeSalaryReportResponse = z.infer<
     typeof employeeSalaryReportResponseSchema
 >;
 
+// ========================== Отчёт по зарплатам отдела ========================== //
+
+// GET /accounting/salary_report/department/:id/:period (Фаза 9) — тот же
+// расчёт, что и у отчёта сотрудника (см. PeriodCalculationOrchestrator +
+// buildSalaryReportRules на бэкенде), агрегированный по всем сотрудникам
+// отдела: по каждому — общая сумма и разбивка по его зарплатным правилам,
+// сверху — итог по отделу. Отдельной "свёрнутой" логики расчёта для отдела
+// нет — total равен сумме employees[].total (см. PRD раздел 6 и план,
+// Фаза 9).
+const departmentSalaryReportEmployeeSchema = z.object({
+    employeeId: z.number(),
+    name: z.string(),
+    total: factPrognoseAmountSchema,
+    rules: z.array(employeeSalaryReportRuleSchema),
+});
+
+export type DepartmentSalaryReportEmployee = z.infer<
+    typeof departmentSalaryReportEmployeeSchema
+>;
+
+const departmentSalaryReportResponseSchema = z.object({
+    period: z.string(),
+    isClosed: z.boolean(),
+    department: z.number(),
+    employees: z.array(departmentSalaryReportEmployeeSchema),
+    total: factPrognoseAmountSchema,
+});
+
+export type DepartmentSalaryReportResponse = z.infer<
+    typeof departmentSalaryReportResponseSchema
+>;
+
 export {
     salaryRuleRequestSchema,
     payPerHourSalaryConfigSchema,
@@ -273,7 +336,13 @@ export {
     salaryBasisSchema,
     targetRoleSchema,
     calculationLineSchema,
+    factPrognoseAmountSchema,
+    salesPerformanceSummarySchema,
+    floatPercentInfoSchema,
+    employeeSalaryReportRuleSchema,
     employeeSalaryReportResponseSchema,
+    departmentSalaryReportEmployeeSchema,
+    departmentSalaryReportResponseSchema,
     salaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema,
 };
