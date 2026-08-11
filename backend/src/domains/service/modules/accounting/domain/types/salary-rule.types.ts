@@ -65,6 +65,12 @@ export type SalaryRule = {
     readonly type: string;
     readonly targetRole: TargetRole;
     readonly config: SalaryRuleConfig;
+    // Отсутствовало до Фазы 6 — нужно ленивому кэшу расчёта (см.
+    // domain/services/accounting-cache-freshness.ts), чтобы отличать версию
+    // мотивационной схемы по факту правки правила, а не только самой схемы:
+    // Entity (базовый класс всех конкретных правил) уже несёт updatedAt
+    // рантайм-полем, здесь лишь делаем его частью структурного типа.
+    readonly updatedAt: Date;
     calculate(
         context: CalculationContext,
     ): CalculationLine | Promise<CalculationLine>;

@@ -37,4 +37,13 @@ export class MotivationSchemaRepository
 
         return record ? this.mapper.toDomain(record) : null;
     }
+
+    async findAllEmployeeTargets(): Promise<MotivationSchema[]> {
+        const records = await this.client.motivationSchema.findMany({
+            where: { targetType: 'Employee' },
+            include: { rules: true },
+        });
+
+        return records.map((record) => this.mapper.toDomain(record));
+    }
 }

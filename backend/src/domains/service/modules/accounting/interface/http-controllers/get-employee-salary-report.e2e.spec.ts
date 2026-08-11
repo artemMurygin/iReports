@@ -4,11 +4,22 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
+import { DatabaseService } from '@/infrustructure/database/database.service';
 import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
 import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
+import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
+import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
+import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
@@ -21,7 +32,13 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // Этот тест — ближайший к нему эквивалент, который реально выполняется в
 // npm run test: поднимает AccountingModule целиком через Nest TestingModule
 // (реальные Controller → Service → Orchestrator → Entity), подменяя только
-// границу с БД — репозиторий мотивационной схемы — на in-memory реализацию.
+// границу с БД на in-memory реализации портов. С Фазы 6 AccountingModule
+// импортирует SalesModule (SALES_PLAN_REPOSITORY нужен и закрытию периода, и
+// ленивому кэшу отчёта) — часть провайдеров SalesModule (SalesPlanTemplateRepository,
+// RoappSalesFactSourceRepository и т.п.), которые этот эндпоинт не
+// использует, всё равно конструируются Nest DI и просто хранят
+// DatabaseService в поле, поэтому им достаточно фейкового DatabaseService,
+// а не реального Postgres (тот же приём, что и с UNIT_OF_WORK ниже).
 describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
     let app: INestApplication;
     const schemas = new Map<number, MotivationSchema>();
@@ -33,9 +50,38 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
         },
         findByEmployee: (employeeId) =>
             Promise.resolve(schemas.get(employeeId) ?? null),
+        findAllEmployeeTargets: () =>
+            Promise.resolve(Array.from(schemas.values())),
     };
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
+    };
+    const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
+        findByDirectionAndPeriod: () => Promise.resolve(null),
+        save: () => Promise.resolve(),
+    };
+    const fakeAccountingPeriodSnapshot: AccountingPeriodSnapshotPort = {
+        saveAll: () => Promise.resolve(),
+        findByKey: () => Promise.resolve(null),
+        deleteByDirectionAndPeriod: () => Promise.resolve(),
+    };
+    const fakeAccountingCalculationCache: AccountingCalculationCachePort = {
+        find: () => Promise.resolve(null),
+        upsert: () => Promise.resolve(),
+        deleteByDirectionAndPeriod: () => Promise.resolve(),
+    };
+    const fakeDomainSyncStatus: DomainSyncStatusPort = {
+        getLastSuccessfulSyncAt: () => Promise.resolve(null),
+        markSuccessful: () => Promise.resolve(),
+    };
+    const fakeSalesPlanRepo: SalesPlanRepositoryPort = {
+        insert: () => Promise.resolve(),
+        update: () => Promise.resolve(),
+        delete: () => Promise.resolve(),
+        findById: () => Promise.resolve(null),
+        findByIds: () => Promise.resolve([]),
+        findByScope: () => Promise.resolve(null),
+        findByDirectionAndPeriod: () => Promise.resolve([]),
     };
     // AccountingModule заодно поднимает CreateMotivationSchemaHandler (не
     // используется этим эндпоинтом), которому нужен UNIT_OF_WORK — реальный
@@ -48,13 +94,17 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
     const fakeUnitOfWork: UnitOfWorkPort = {
         run: (work) => work(),
     };
+    const fakeDatabaseService = {} as unknown as DatabaseService;
 
     @Global()
     @Module({
-        providers: [{ provide: UNIT_OF_WORK, useValue: fakeUnitOfWork }],
-        exports: [UNIT_OF_WORK],
+        providers: [
+            { provide: UNIT_OF_WORK, useValue: fakeUnitOfWork },
+            { provide: DatabaseService, useValue: fakeDatabaseService },
+        ],
+        exports: [UNIT_OF_WORK, DatabaseService],
     })
-    class FakeUnitOfWorkModule {}
+    class FakeInfrastructureModule {}
 
     beforeAll(async () => {
         const schema = withRequestContext(() => {
@@ -74,12 +124,22 @@ describe('GET /accounting/salary_report/employee/:id/:period (e2e)', () => {
         schemas.set(42, schema);
 
         const moduleRef = await Test.createTestingModule({
-            imports: [FakeUnitOfWorkModule, AccountingModule],
+            imports: [FakeInfrastructureModule, AccountingModule],
         })
             .overrideProvider(MOTIVATION_SCHEMA_REPOSITORY)
             .useValue(fakeMotivationSchemaRepo)
             .overrideProvider(SALARY_RULE_REPOSITORY)
             .useValue(fakeSalaryRuleRepo)
+            .overrideProvider(ACCOUNTING_PERIOD_REPOSITORY)
+            .useValue(fakeAccountingPeriodRepo)
+            .overrideProvider(ACCOUNTING_PERIOD_SNAPSHOT)
+            .useValue(fakeAccountingPeriodSnapshot)
+            .overrideProvider(ACCOUNTING_CALCULATION_CACHE)
+            .useValue(fakeAccountingCalculationCache)
+            .overrideProvider(DOMAIN_SYNC_STATUS)
+            .useValue(fakeDomainSyncStatus)
+            .overrideProvider(SALES_PLAN_REPOSITORY)
+            .useValue(fakeSalesPlanRepo)
             .compile();
 
         app = moduleRef.createNestApplication();

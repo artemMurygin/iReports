@@ -33,6 +33,18 @@ export class SalesPlanRepository
         await this.write(entity, (client) =>
             client.salesPlan.update({
                 where: { id: props.id },
+                // updatedAt намеренно не передаётся: SalesPlan.edit()/.approve()
+                // не бьют собственный updatedAt (у Entity нет сеттера для
+                // него, см. shared/domain/entity.base.ts), поэтому
+                // столбец с @updatedAt в sales.prisma обязан выставлять его
+                // сам Prisma при записи — явная передача старого
+                // props.updatedAt (как раньше) отключает это автообновление
+                // и "замораживает" штамп на моменте создания строки. С Фазы
+                // 6 это критично: max(updatedAt) строк плана периода — один
+                // из трёх штампов свежести ленивого кэша расчёта зарплаты
+                // (см. domain/services/accounting-cache-freshness.ts в
+                // модуле accounting), правка/утверждение плана обязаны его
+                // менять.
                 data: {
                     turnover: entity.turnover,
                     margin: entity.margin,
@@ -40,7 +52,6 @@ export class SalesPlanRepository
                     status: entity.status,
                     approvedBy: entity.approvedBy,
                     approvedAt: entity.approvedAt,
-                    updatedAt: props.updatedAt,
                 },
             }),
         );

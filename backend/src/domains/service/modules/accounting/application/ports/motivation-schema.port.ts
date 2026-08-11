@@ -11,6 +11,13 @@ export interface MotivationSchemaRepositoryPort {
     // правилами. Схем на отдел (targetType = 'Department') здесь
     // сознательно не ищем — их учёт в отчёте сотрудника не входит в Фазу 1.
     findByEmployee(employeeId: number): Promise<MotivationSchema | null>;
+
+    // Все схемы, нацеленные на сотрудника (targetType = 'Employee') — вход
+    // закрытия периода (Фаза 6, CloseAccountingPeriodHandler): снапшот
+    // строится по каждому сотруднику с личной схемой, а не по всем
+    // Bitrix-сотрудникам компании (у схем на отдел своя, ещё не
+    // реализованная логика раскрытия, см. PRD раздел "Мотивационные схемы").
+    findAllEmployeeTargets(): Promise<MotivationSchema[]>;
 }
 
 export const MOTIVATION_SCHEMA_REPOSITORY = Symbol(

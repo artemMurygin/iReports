@@ -3,8 +3,13 @@
 Все пути указаны от корня, глобальный префикс не задан.
 
 ## domains/service/modules/accounting (`/accounting`, `/v1/motivation-schema`)
-- `GET /accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника за период (`period` — `YYYY-MM`): итог и разбивка по правилам мотивационной схемы, пара «факт/прогноз»
+- `GET /accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника за период (`period` — `YYYY-MM`): итог и разбивка по правилам мотивационной схемы, пара «факт/прогноз». Открытый период — ленивый кэш по штампу синхронизации/версии схемы/плана продаж (Фаза 6); закрытый — отдаётся из неизменяемого снапшота, прогноз в ответе зеркалит факт
 - `POST /v1/motivation-schema` — создать мотивационную схему (цель + набор зарплатных правил)
+- Расчётный период (`AccountingPeriod`, Фаза 6, см. docs/payroll/plan-payroll-calculation.md) — сервис и магазин закрываются независимо (`direction` в пути); эндпоинты без гарда (см. «неблокирующие вопросы» PRD, то же решение, что и у `sales`):
+  - `GET /accounting/period/:direction/:period` — статус периода; для периода без записи в БД возвращает `status = OPEN`
+  - `POST /accounting/period/:direction/:period/close` — закрыть период (`{ closedBy }`): отклоняется (`409`) со списком строк в `metadata.rows`, если в плане продаж периода есть неутверждённые строки; при успехе создаёт неизменяемый снапшот по каждому сотруднику с личной мотивационной схемой
+  - `POST /accounting/period/:direction/:period/reopen` — повторно открыть закрытый период (`{ confirm: true }`), удаляет снапшот целиком
+  - `POST /accounting/period/:direction/:period/recalculate` — сбросить кэш открытого периода (действие «пересчитать» для руководителя); `204`, закрытый период — `409`
 
 ## modules/employee-identity (`/v1/employee-identity`)
 Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Все эндпоинты закрыты

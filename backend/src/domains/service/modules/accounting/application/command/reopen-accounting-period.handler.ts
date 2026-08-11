@@ -1,0 +1,65 @@
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import type { AccountingPeriodResponse } from 'ireports-contracts';
+import { Period } from '@/shared/domain/period.value-object';
+import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
+import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
+import { PeriodNotClosedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
+import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
+import { ReopenAccountingPeriodCommand } from './reopen-accounting-period.command';
+
+// Повторное открытие закрытого периода — только с явным подтверждением
+// (проверено на границе HTTP, см. ReopenAccountingPeriodCommand) и с
+// удалением снапшота целиком (см. PRD: "повторное открытие — только
+// руководителем, с явным подтверждением и удалением снапшота").
+@CommandHandler(ReopenAccountingPeriodCommand)
+export class ReopenAccountingPeriodHandler implements ICommandHandler<
+    ReopenAccountingPeriodCommand,
+    AccountingPeriodResponse
+> {
+    constructor(
+        @Inject(ACCOUNTING_PERIOD_REPOSITORY)
+        private readonly periodRepo: AccountingPeriodRepositoryPort,
+        @Inject(ACCOUNTING_PERIOD_SNAPSHOT)
+        private readonly snapshotRepo: AccountingPeriodSnapshotPort,
+        @Inject(UNIT_OF_WORK)
+        private readonly unitOfWork: UnitOfWorkPort,
+    ) {}
+
+    async execute(
+        command: ReopenAccountingPeriodCommand,
+    ): Promise<AccountingPeriodResponse> {
+        const period = Period.create(command.period);
+
+        const periodEntity = await this.periodRepo.findByDirectionAndPeriod(
+            command.direction,
+            period.getValue(),
+        );
+        if (!periodEntity || periodEntity.isOpen()) {
+            throw new PeriodNotClosedException(
+                command.direction,
+                period.getValue(),
+            );
+        }
+
+        periodEntity.reopen();
+
+        await this.unitOfWork.run(async () => {
+            await this.periodRepo.save(periodEntity);
+            await this.snapshotRepo.deleteByDirectionAndPeriod(
+                command.direction,
+                period.getValue(),
+            );
+        });
+
+        return toAccountingPeriodResponse(
+            periodEntity,
+            command.direction,
+            period.getValue(),
+        );
+    }
+}

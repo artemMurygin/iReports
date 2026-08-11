@@ -1,0 +1,88 @@
+// Расчётный период направления — Фаза 6 (см.
+// docs/payroll/plan-payroll-calculation.md, "Фаза 6: Расчётный период,
+// ленивый кэш и снапшоты"). Направления закрываются независимо: уникальный
+// ключ — (direction, period), а не просто period. Строки нет, пока период не
+// был хотя бы раз закрыт или явно затронут — отсутствие записи трактуется
+// приложением как OPEN (см. AccountingPeriodRepositoryPort).
+model AccountingPeriod {
+  id        String         @id
+  direction SalesDirection
+  period    String
+
+  status AccountingPeriodStatus @default(OPEN)
+
+  // Кто и когда закрыл — оба поля заполняются/очищаются только вместе (см.
+  // PeriodClosure value object), поэтому оба nullable и оба сбрасываются в
+  // одном месте (AccountingPeriod.reopen()).
+  closedBy Int?      @map("closed_by")
+  closedAt DateTime? @map("closed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  snapshots AccountingPeriodSnapshot[]
+
+  @@unique([direction, period])
+  @@map("accounting_periods")
+}
+
+enum AccountingPeriodStatus {
+  OPEN
+  CLOSED
+
+  @@map("accounting_period_status")
+}
+
+// Ленивый кэш результата расчёта зарплаты сотрудника за период — Фаза 6.
+// Один ряд на (direction, period, employeeId); freshnessStamp — не сама
+// версия мотивационной схемы, а её свёртка вместе со штампом последней
+// успешной синхронизации домена (DomainSyncStatus) и штампом плана продаж
+// периода в одну opaque-строку (см.
+// domain/services/accounting-cache-freshness.ts) — сравнение этой строки на
+// чтении и есть механизм инвалидации на все три события из PRD: сравнение
+// не совпало → пересчёт с перезаписью той же строки (upsert), совпало →
+// строка отдаётся как есть без обращения к оркестратору расчёта.
+model AccountingCalculationCache {
+  id         String         @id
+  direction  SalesDirection
+  period     String
+  employeeId Int            @map("employee_id")
+
+  freshnessStamp String @map("freshness_stamp")
+
+  factTotal     Int  @map("fact_total")
+  prognoseTotal Int  @map("prognose_total")
+  factLines     Json @map("fact_lines")
+  prognoseLines Json @map("prognose_lines")
+
+  computedAt DateTime @default(now()) @map("computed_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([direction, period, employeeId])
+  @@map("accounting_calculation_cache")
+}
+
+// Неизменяемый снапшот суммы сотрудника за закрытый период с разбивкой по
+// правилам — создаётся один раз при закрытии периода (см.
+// CloseAccountingPeriodHandler), отдаётся вместо расчёта, пока период
+// CLOSED, и удаляется целиком при повторном открытии периода
+// (ReopenAccountingPeriodHandler). `lines` — сериализованный
+// RuleBreakdownLine[] (правило, база, количество, ставка, сумма, источники)
+// — снапшот прогноз не хранит (закрытый месяц прогноза не имеет, см. PRD).
+model AccountingPeriodSnapshot {
+  id         String         @id
+  periodId   String         @map("period_id")
+  direction  SalesDirection
+  period     String
+  employeeId Int            @map("employee_id")
+
+  total Int  @map("total")
+  lines Json @map("lines")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  accountingPeriod AccountingPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([direction, period, employeeId])
+  @@map("accounting_period_snapshots")
+}
