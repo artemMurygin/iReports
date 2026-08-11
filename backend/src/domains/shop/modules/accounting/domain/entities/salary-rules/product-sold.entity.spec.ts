@@ -22,6 +22,8 @@ const buildItem = (
     profit: 400,
     onlineManagerId: null,
     offlineManagerId: null,
+    onlinePurchaserId: null,
+    offlinePurchaserId: null,
     ...overrides,
 });
 

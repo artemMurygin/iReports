@@ -3,6 +3,8 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import { ShopSalaryRuleFactory } from './salary-rule.factory';
 import { PayPerHourShopEntity } from '../entities/salary-rules/pay-per-hour.entity';
 import { ProductSoldEntity } from '../entities/salary-rules/product-sold.entity';
+import { UsedProductSoldEntity } from '../entities/salary-rules/used-product-sold.entity';
+import { TaskCompletedShopEntity } from '../entities/salary-rules/task-completed.entity';
 
 describe('ShopSalaryRuleFactory', () => {
     it('создаёт PayPerHourShopEntity для типа PayPerHour', () => {
@@ -30,14 +32,39 @@ describe('ShopSalaryRuleFactory', () => {
         expect(rule).toBeInstanceOf(ProductSoldEntity);
     });
 
+    it('создаёт UsedProductSoldEntity для типа UsedProductSold', () => {
+        const rule = ShopSalaryRuleFactory.create({
+            type: 'UsedProductSold',
+            name: 'Закупщик БУ техники',
+            targetRole: 'ONLINE_PURCHASER',
+            config: {
+                category: null,
+                award: { type: 'Fixed', price: 500 },
+            },
+        });
+
+        expect(rule).toBeInstanceOf(UsedProductSoldEntity);
+    });
+
+    it('создаёт TaskCompletedShopEntity для типа TaskCompleted', () => {
+        const rule = ShopSalaryRuleFactory.create({
+            type: 'TaskCompleted',
+            name: 'За выполненную задачу',
+            targetRole: 'ONLINE_MANAGER',
+            config: { award: { type: 'Fixed', price: 200 } },
+        });
+
+        expect(rule).toBeInstanceOf(TaskCompletedShopEntity);
+    });
+
     it('выбрасывает NotFoundException для незарегистрированного типа', () => {
         withRequestContext(() => {
             expect(() =>
                 ShopSalaryRuleFactory.create({
                     // Тип не зарегистрирован в shopSalaryRuleRegistry этого
-                    // домена (Фаза 12 реализует только PayPerHour/
-                    // ProductSold — UsedProductSold/TaskCompleted появятся
-                    // в Фазе 13).
+                    // домена (Фаза 12/13 реализует PayPerHour/ProductSold/
+                    // UsedProductSold/TaskCompleted — полный набор первой
+                    // итерации магазина).
                     type: 'UnknownRuleType' as never,
                     name: 'Неизвестное правило',
                     targetRole: 'ONLINE_MANAGER' as never,

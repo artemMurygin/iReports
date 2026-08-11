@@ -69,9 +69,59 @@ export type ProductSoldSalaryRule = {
     config: ProductSoldSalaryConfig;
 };
 
+// ========================== Вознаграждение закупщику БУ техники ========================== //
+
+// Фаза 13 (issue #62/#63) — зеркало ProductSoldSalaryConfig по структуре
+// (category/award/bonus), но award — только Fixed/FixedPercent (без
+// FloatPercent: закупщик не привязан к выполнению плана продаж, см.
+// contracts/commands/shop-salary-rule.ts).
+export type UsedProductSoldSalaryConfig = {
+    category: string | null;
+    award:
+        | { type: 'Fixed'; price: number }
+        | {
+              type: 'FixedPercent';
+              percent: number;
+              salaryBasis: ShopSalaryBasis;
+          };
+    bonus?: number;
+};
+
+export type UsedProductSoldSalaryRule = {
+    type: 'UsedProductSold';
+    name: string;
+    targetRole: TargetRole;
+    config: UsedProductSoldSalaryConfig;
+};
+
+// ========================== За выполненную задачу ========================== //
+
+// TaskCompleted магазина (Фаза 13, issue #64) — зеркало
+// TaskCompletedSalaryConfig сервиса по структуре, независимый тип (issue
+// #57). Источник данных — domain/entities/salary-rules/task-completed.entity.ts.
+export type TaskCompletedShopSalaryConfig = {
+    award:
+        | { type: 'Fixed'; price: number }
+        | {
+              type: 'FloatPercent';
+              basePrice: number;
+              percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+          };
+    bonus?: number;
+};
+
+export type TaskCompletedShopSalaryRule = {
+    type: 'TaskCompleted';
+    name: string;
+    targetRole: TargetRole;
+    config: TaskCompletedShopSalaryConfig;
+};
+
 export type ShopSalaryRuleConfig =
     | PayPerHourShopSalaryConfig
-    | ProductSoldSalaryConfig;
+    | ProductSoldSalaryConfig
+    | UsedProductSoldSalaryConfig
+    | TaskCompletedShopSalaryConfig;
 
 // Форма запроса на создание правила — контракт (ShopSalaryRuleRequest), а
 // не подмножество реализованных типов (то же решение, что у сервиса — см.

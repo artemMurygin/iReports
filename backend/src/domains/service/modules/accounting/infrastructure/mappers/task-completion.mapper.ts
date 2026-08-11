@@ -8,6 +8,13 @@ import {
     TaskCompletionStatus,
 } from '@/domains/service/modules/accounting/domain/entities/task-completion.entity';
 
+// Направление (record.direction) не читается в toDomain намеренно — то же
+// решение, что и у SalaryRuleMapper сервиса (Фаза 12): фильтрация "только
+// записи service" происходит на уровне Prisma-запроса в
+// TaskCompletionRepository (`where: { direction: 'service' }`, Фаза 13,
+// issue #64), поэтому сюда в норме не попадают чужие (shop) строки, а
+// доменная сущность TaskCompletion направления не хранит вовсе (это
+// исключительно инфраструктурный, а не доменный факт).
 export class TaskCompletionMapper implements Mapper<
     TaskCompletion,
     Prisma.TaskCompletionCreateInput
@@ -39,6 +46,10 @@ export class TaskCompletionMapper implements Mapper<
             createdBy: entity.createdBy,
             confirmedBy: entity.confirmedBy,
             confirmedAt: entity.confirmedAt,
+            // Направление записи (Фаза 13) — фиксированное 'service' для
+            // этого мапера: домен service никогда не пишет чужие записи.
+            // См. комментарий у TaskCompletion.direction в salary.prisma.
+            direction: 'service',
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt,
         };

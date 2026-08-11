@@ -7,21 +7,20 @@ import {
     targetRoleSchema,
 } from './salary-rule';
 
-// Контракты зарплатных правил направления `shop` (Фаза 12, issue #57/#60,
-// см. docs/payroll/plan-payroll-calculation.md). Отдельный
+// Контракты зарплатных правил направления `shop` (Фаза 12/13, issue
+// #57/#60/#62/#64, см. docs/payroll/plan-payroll-calculation.md). Отдельный
 // discriminatedUnion, НЕ смешанный с сервисным `salaryRuleRequestSchema`
 // (contracts/commands/salary-rule.ts) — состав типов правил разный
-// (`PayPerHour`/`ProductSold` здесь, `PayPerHour`/`ServiceCompleted`/
-// `OrderPayed`/`TaskCompleted` у сервиса), а `type: 'PayPerHour'` у обоих
-// направлений совпадает буквально — смешение узла discriminatedUnion дало
-// бы неоднозначный тип. `targetRoleSchema`/`percentBordersSchema`/
+// (`PayPerHour`/`ProductSold`/`UsedProductSold`/`TaskCompleted` здесь,
+// `PayPerHour`/`ServiceCompleted`/`OrderPayed`/`TaskCompleted` у сервиса), а
+// `type: 'PayPerHour'`/`type: 'TaskCompleted'` у обоих направлений совпадают
+// буквально — смешение узла discriminatedUnion дало бы неоднозначный тип
+// (то же решение и по той же причине для `TaskCompleted`, Фаза 13, что и
+// для `PayPerHour` в Фазе 12). `targetRoleSchema`/`percentBordersSchema`/
 // `individualBonusFieldSchema` — переиспользованы напрямую из
 // `salary-rule.ts`: это НЕ бизнес-логика (issue #57 запрещает
 // переиспользовать именно её), а разделяемый примитивный словарь форм
-// (см. комментарий у targetRoleSchema в salary-rule.ts). Модуль спроектирован
-// так, чтобы Фаза 13 (`UsedProductSold`, `TaskCompleted` магазина, issue
-// #62/#64) добавила ещё два члена в `shopSalaryRuleRequestSchema` без
-// изменения уже существующих.
+// (см. комментарий у targetRoleSchema в salary-rule.ts).
 
 // ========================== База начисления магазина ========================== //
 
@@ -88,11 +87,75 @@ const productSoldSalaryRuleSchema = z.object({
     config: productSoldSalaryConfigSchema,
 });
 
+// ========================== Вознаграждение закупщику БУ техники ========================== //
+
+// Фаза 13 (issue #62/#63) — закупщик выкупленной у клиента БУ техники
+// получает вознаграждение, когда устройство ПРОДАНО (попало в отгрузку
+// периода), а не когда выкуплено: источник данных — тот же
+// MoySkladDemandPosition, что и у ProductSold (см. issue #63: "не изобретай
+// отдельный источник данных под выкуп"), только матчинг идёт по полю
+// закупщика (ONLINE_PURCHASER/OFFLINE_PURCHASER), а не менеджера. category —
+// та же необязательная часть правила, что у ProductSold (ставка за БУ айфон
+// и за БУ ноутбук может отличаться, issue #62). FloatPercent НЕ
+// предусмотрен — вознаграждение закупщика не привязано к выполнению плана
+// продаж (PRD, раздел "Закупщики БУ техники").
+const usedProductSoldSalaryConfigSchema = z.object({
+    category: z.string().nullable(),
+    award: z.union([
+        z.object({ type: z.literal('Fixed'), price: z.number() }),
+        z.object({
+            type: z.literal('FixedPercent'),
+            percent: z.number(),
+            salaryBasis: shopSalaryBasisSchema,
+        }),
+    ]),
+    bonus: individualBonusFieldSchema,
+});
+
+const usedProductSoldSalaryRuleSchema = z.object({
+    type: z.literal('UsedProductSold'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: usedProductSoldSalaryConfigSchema,
+});
+
+// ========================== За выполненную задачу ========================== //
+
+// TaskCompleted магазина (Фаза 13, issue #64) — зеркало формы
+// taskCompletedSalaryConfigSchema сервиса (contracts/commands/salary-rule.ts),
+// но отдельный литерал схемы (issue #57 — направления технически не
+// связаны одним объектом, как и остальные типы правил этого файла).
+// Источник данных на бэкенде — тот же временный источник, что и у сервиса
+// (см. domain/entities/salary-rules/task-completed.entity.ts магазина):
+// открытый вопрос PRD "что считается задачей для TaskCompleted в магазине"
+// не решён, поэтому используется то же временное решение, что и у сервиса
+// в Фазе 8.
+const taskCompletedShopSalaryConfigSchema = z.object({
+    award: z.union([
+        z.object({ type: z.literal('Fixed'), price: z.number() }),
+        z.object({
+            type: z.literal('FloatPercent'),
+            basePrice: z.number(),
+            percentBorders: percentBordersSchema,
+        }),
+    ]),
+    bonus: individualBonusFieldSchema,
+});
+
+const taskCompletedShopSalaryRuleSchema = z.object({
+    type: z.literal('TaskCompleted'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: taskCompletedShopSalaryConfigSchema,
+});
+
 // ========================== Итоговый дискриминированный союз ========================== //
 
 const shopSalaryRuleRequestSchema = z.discriminatedUnion('type', [
     payPerHourShopSalaryRuleSchema,
     productSoldSalaryRuleSchema,
+    usedProductSoldSalaryRuleSchema,
+    taskCompletedShopSalaryRuleSchema,
 ]);
 
 export type ShopSalaryRuleRequest = z.infer<typeof shopSalaryRuleRequestSchema>;
@@ -110,6 +173,8 @@ export {
     shopSalaryBasisSchema,
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,
+    usedProductSoldSalaryConfigSchema,
+    taskCompletedShopSalaryConfigSchema,
     salaryRuleTypeInfoSchema as shopSalaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema as shopSalaryRuleTypesResponseSchema,
 };

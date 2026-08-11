@@ -55,7 +55,16 @@ export class TaskCompletionRepository
         employeeId?: number,
     ): Promise<TaskCompletion[]> {
         const records = await this.client.taskCompletion.findMany({
-            where: { period, ...(employeeId !== undefined && { employeeId }) },
+            // direction: 'service' (Фаза 13, issue #64) — та же коллизия и
+            // то же решение, что и у MotivationSchemaRepository/
+            // SalaryRuleMapper сервиса (Фаза 12): без фильтра сюда попали
+            // бы и записи, заведённые будущим CQRS-модулем shop (см.
+            // комментарий у TaskCompletion.direction в salary.prisma).
+            where: {
+                period,
+                direction: 'service',
+                ...(employeeId !== undefined && { employeeId }),
+            },
             orderBy: { createdAt: 'asc' },
         });
         return records.map((record) => this.mapper.toDomain(record));
@@ -63,7 +72,7 @@ export class TaskCompletionRepository
 
     async findConfirmedByPeriod(period: string): Promise<TaskCompletion[]> {
         const records = await this.client.taskCompletion.findMany({
-            where: { period, status: 'CONFIRMED' },
+            where: { period, status: 'CONFIRMED', direction: 'service' },
         });
         return records.map((record) => this.mapper.toDomain(record));
     }

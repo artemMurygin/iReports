@@ -147,8 +147,12 @@ export class ServiceCalculationDataRepository
     async findConfirmedTaskCompletions(
         period: string,
     ): Promise<ConfirmedTaskCompletionErpItem[]> {
+        // direction: 'service' (Фаза 13, issue #64) — тот же фильтр, что и
+        // в TaskCompletionRepository: без него сюда попали бы и записи
+        // будущего CQRS-модуля shop (см. комментарий у
+        // TaskCompletion.direction в prisma/schema/salary.prisma).
         const records = await this.client.taskCompletion.findMany({
-            where: { period, status: 'CONFIRMED' },
+            where: { period, status: 'CONFIRMED', direction: 'service' },
             select: { id: true, employeeId: true },
         });
         return records;

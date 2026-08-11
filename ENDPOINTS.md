@@ -17,7 +17,7 @@
   - `DELETE /accounting/employee_hours/:id` — удалить запись
   - `GET /accounting/employee_hours?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
 - `GET /accounting/salary_role_types` — типы зарплатных правил сервиса (`PayPerHour`, `ServiceCompleted`, `OrderPayed`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого (Фаза 8)
-- Выполнение задачи сотрудником (`TaskCompletion`, Фаза 8, см. docs/payroll/plan-payroll-calculation.md) — временный внутренний двухступенчатый воркфлоу подтверждения без интеграции с Bitrix24 Tasks (синхронизация с реальными задачами запланирована отдельной фазой); эндпоинты без гарда, как и остальной `accounting`:
+- Выполнение задачи сотрудником (`TaskCompletion`, Фаза 8, см. docs/payroll/plan-payroll-calculation.md) — временный внутренний двухступенчатый воркфлоу подтверждения без интеграции с Bitrix24 Tasks (синхронизация с реальными задачами запланирована отдельной фазой); эндпоинты без гарда, как и остальной `accounting`. ⚠️ `TaskCompletion.direction` (Фаза 13, дефолт `'service'`) — эти эндпоинты всегда пишут/читают `direction: 'service'`; направление `shop` использует ту же таблицу через будущий CQRS-модуль (не реализован в этой фазе, см. `domains/shop/modules/accounting`):
   - `POST /accounting/task_completions` — сотрудник отмечает задачу выполненной (`{ employeeId, period, description, createdBy }`), сразу в статусе `PENDING_CONFIRMATION`
   - `POST /accounting/task_completions/:id/confirm` — руководитель подтверждает (`{ confirmedBy }`) → только такие записи участвуют в расчёте `TaskCompleted.calculate()`
   - `POST /accounting/task_completions/:id/reject` — руководитель отклоняет (`{ confirmedBy }`)
@@ -59,21 +59,32 @@ query у общего пути `/v1/sales/salesPerformance/:period` (см. об�
 - `GET /v1/sales/salesPerformance/shop/:period` — план, факт и прогноз одним запросом по каждому отделу направления `shop` за период; ⚠️ `fact.margin` — сумма `MoySkladDemandPosition.profit` по позициям отгрузок периода, а не `turnover - cost` (значение уже посчитано в МойСклад с учётом метода списания себестоимости); `quantity` — сумма `Float` (весовой/дробный товар)
 
 ## domains/shop/modules/accounting (`/shop/accounting`)
-Зарплатные правила магазина (Фаза 12, issues #57-#61, см. docs/payroll/plan-payroll-calculation.md) —
-собственный реестр (`shopSalaryRuleRegistry`) и фабрика (`ShopSalaryRuleFactory`), независимые от
-одноимённого модуля `domains/service/modules/accounting` (см. выше): `PayPerHour` (`hours × price`,
-источник часов — общий `EmployeeHoursEntry`) и `ProductSold` (награда `Fixed`/`FixedPercent`/
-`FloatPercent` за проданный товар в категории `MoySkladProductFolder`, с раскрытием вложенных папок;
-база `REVENUE`/`MARGIN`, без `SALARY_MINUS_ENGINEER_SALARY`). Роли — `ONLINE_MANAGER`/
-`OFFLINE_MANAGER` (уровень отгрузки, `MoySkladDemand`) и `ONLINE_PURCHASER`/`OFFLINE_PURCHASER`
-(уровень товарной позиции, задел под `UsedProductSold`, Фаза 13); роли инженера нет. ⚠️
-Персистентность (создание мотивационной схемы/правила магазина) в Фазу 12/13 не входит — расчётный
-слой (`calculate()`) уже готов принять `CalculationContext`, когда появится оркестратор, который его
-соберёт; единственный HTTP-вход этой фазы — список типов правил.
+Зарплатные правила магазина (Фаза 12/13, issues #57-#66, см.
+docs/payroll/plan-payroll-calculation.md) — собственный реестр (`shopSalaryRuleRegistry`) и фабрика
+(`ShopSalaryRuleFactory`), независимые от одноимённого модуля `domains/service/modules/accounting`
+(см. выше): `PayPerHour` (`hours × price`, источник часов — общий `EmployeeHoursEntry`), `ProductSold`
+(награда `Fixed`/`FixedPercent`/`FloatPercent` за проданный товар в категории `MoySkladProductFolder`,
+с раскрытием вложенных папок; база `REVENUE`/`MARGIN`, без `SALARY_MINUS_ENGINEER_SALARY`),
+`UsedProductSold` (Фаза 13 — вознаграждение закупщику БУ техники за **продажу** выкупленного им
+устройства, не за выкуп: тот же источник данных, что и `ProductSold`, позиции периода отгрузки;
+`Fixed`/`FixedPercent`, без `FloatPercent`; необязательная категория) и `TaskCompleted` (Фаза 13 —
+`Fixed`/`FloatPercent`, тот же временный источник данных, что у одноимённого правила сервиса —
+`TaskCompletion`, различаемая по новому полю `TaskCompletion.direction`). Роли — `ONLINE_MANAGER`/
+`OFFLINE_MANAGER` (уровень отгрузки, `MoySkladDemand`, используются `ProductSold`/`TaskCompleted`) и
+`ONLINE_PURCHASER`/`OFFLINE_PURCHASER` (уровень товарной позиции, используются `UsedProductSold`);
+роли инженера нет. Дедупликация «правило × позиция» — внутри каждого правила независимо; вырожденный
+случай «продавец и закупщик — один сотрудник» не считается двойным начислением (`ProductSold` и
+`UsedProductSold` — разные правила). ⚠️ Персистентность (создание мотивационной схемы/правила
+магазина) и оркестратор, реально собирающий `CalculationContext` из БД для направления `shop`
+(`BuildShopCalculationContextService`), в Фазу 12/13 не входят — расчётный слой (`calculate()`) уже
+полностью готов принять `CalculationContext`, когда они появятся; единственный HTTP-вход этих фаз —
+список типов правил. Это сознательный, задокументированный пробел (см. комментарий в
+`shop-accounting.module.ts`): следующая backend-фаза обязана закрыть его до начала Фазы 16/18 плана
+(UI мотивационных схем и отчётов по зарплате).
 - `GET /shop/accounting/salary_role_types` — типы зарплатных правил магазина (`PayPerHour`,
-  `ProductSold`) с перечнем допустимых `targetRole` для каждого; набор типов не пересекается с
-  `GET /accounting/salary_role_types` сервиса (кроме совпадающего по имени `PayPerHour` — это два
-  независимых типа с разными реестрами)
+  `ProductSold`, `UsedProductSold`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого;
+  набор типов не пересекается с `GET /accounting/salary_role_types` сервиса (кроме совпадающих по
+  имени `PayPerHour`/`TaskCompleted` — это независимые типы с разными реестрами)
 
 ## deals (`/deals`)
 - `GET /deals?from&to` — список сделок за период

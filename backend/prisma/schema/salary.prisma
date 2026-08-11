@@ -93,6 +93,21 @@ model TaskCompletion {
   createdBy   Int     @map("created_by")
   confirmedBy Int?    @map("confirmed_by")
   confirmedAt DateTime? @map("confirmed_at")
+  // Направление, которому принадлежит запись (Фаза 13, issue #64 —
+  // см. decision-комментарий у ShopTaskCompletionErpItem в
+  // domains/shop/modules/accounting/domain/types/shop-calculation-data.types.ts).
+  // ТА ЖЕ коллизия, что и у SalaryRule.direction (см. комментарий выше в
+  // этом файле) и ТО ЖЕ решение: "выполненная задача" — не запись ERP (у
+  // неё нет ролевых/доменных полей, различающих направление, это ручная
+  // отметка), поэтому заводить отдельную Prisma-модель на домен shop ради
+  // одного этого поля избыточно — используется общая таблица с
+  // дискриминатором, а не дублирование сущности. Дефолт 'service' —
+  // обратная совместимость: все существующие на момент миграции записи
+  // созданы единственным на тот момент направлением (сервисный CQRS-модуль
+  // accounting, Фаза 8). Домен shop свой CQRS-модуль записи задач в этой
+  // фазе не заводит (см. shop-accounting.module.ts) — поле подготовлено
+  // впрок, по прецеденту SalaryRule.direction в Фазе 12.
+  direction   String  @default("service")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
