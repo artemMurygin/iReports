@@ -27,6 +27,15 @@ const serviceSalesPlanTemplateRoot = `${serviceRoot}/sales/plan_template`;
 // не удаляется и продолжает работать — это параллельный, а не заменяющий
 // маршрут на время миграции.
 const serviceDealsRoot = `${serviceRoot}/sales/deals`;
+// Обновление цен услуг RoApp (Фаза 7,
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом сервисной половины `POST /price-monitoring/update-service-price`
+// из backend/src/TODO/priceMonitoring (см. PRD, раздел 3б). Саб-группа
+// `marketing` внутри service — см. domains/service/CLAUDE.md, раздел
+// "Целевой набор модулей домена". Легаси-эндпоинт при этом не удаляется —
+// он всё ещё обслуживает shop-половину (update-shop-products-costs) до
+// завершения обеих половин миграции.
+const serviceMarketingPricingRoot = `${serviceRoot}/marketing/pricing`;
 
 // Направление shop — все маршруты домена domains/shop под общим префиксом
 // /v1/shop.
@@ -128,6 +137,13 @@ export const routesV1 = {
         // выше группировка в подобъект читается яснее одного плоского пути.
         deals: {
             root: serviceDealsRoot,
+        },
+        // Маркетинг (Фаза 7, см. комментарий у serviceMarketingPricingRoot
+        // выше) — единственный поднабор саб-группы marketing на сегодня.
+        marketing: {
+            pricing: {
+                updateServicePrices: `${serviceMarketingPricingRoot}/update-service-prices`,
+            },
         },
     },
     // Маршруты направления shop (domains/shop) — под префиксом /v1/shop.

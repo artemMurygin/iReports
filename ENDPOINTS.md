@@ -177,3 +177,13 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
 - `GET /reports/service-funnel`
 - `GET /reports/service-categories`
 - `GET /reports/services-analytics`
+
+## domains/service/modules/marketing/pricing (`/v1/service/marketing/pricing`)
+Цены услуг RemOnline (Фаза 7, docs/todo-modules-ddd-refactoring) — новый дом сервисной половины
+`POST /price-monitoring/update-service-price` (см. `priceMonitoring` выше); доступ к RoApp только
+через `ROAPP_GATEWAY`, без прямых инжектов `RoappService`/`CustomApiRoappService`. Легаси-эндпоинт не
+удалён — он всё ещё обслуживает shop-половину (`update-shop-products-costs`) до завершения миграции
+обеих половин.
+- `POST /v1/service/marketing/pricing/update-service-prices` — обновить цены и себестоимость услуг
+  (`[{ id, price, serviceCost }]`): выгружает услуги и категории RoApp, строит пути категорий,
+  собирает XLSX и отправляет через `CustomApiRoapp /updateServices`
