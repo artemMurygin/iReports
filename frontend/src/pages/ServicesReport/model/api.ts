@@ -10,7 +10,7 @@ export const api = {
             staleTime: 30 * 60 * 1000,
             queryFn: async ({ signal }): Promise<ServiceCategory[]> =>
                 apiInstance
-                    .get<ServiceCategory[]>('/reports/service-categories', {
+                    .get<ServiceCategory[]>('/v1/service/reports/service-categories', {
                         signal,
                     })
                     .then((r) => r.data)
@@ -30,11 +30,11 @@ export const api = {
             queryKey: ['services', 'services-analytics', filters, resolvedCategoryIds],
             queryFn: ({ signal }) =>
                 apiInstance
-                    .get<ServicesAnalyticsResponse>('/reports/services-analytics', {
+                    .get<ServicesAnalyticsResponse>('/v1/service/reports/services', {
                         signal,
                         params: {
-                            momentFrom: from,
-                            momentTo: to,
+                            from,
+                            to,
                             groupBy,
                             categoryIds: resolvedCategoryIds,
                             serviceIds: serviceIds.map(Number),

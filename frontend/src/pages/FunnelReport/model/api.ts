@@ -54,11 +54,11 @@ export const api = {
             queryKey: ['funnel', 'deals', 'KPIs', filters],
             queryFn: ({ signal }) =>
                 apiInstance
-                    .get<ServiceFunnelResponse>('/reports/service-funnel', {
+                    .get<ServiceFunnelResponse>('/v1/service/sales/funnel-report', {
                         signal,
                         params: {
-                            momentFrom: from,
-                            momentTo: to,
+                            from,
+                            to,
                             stageIds: stages,
                             managerIds: managers,
                             sourceIds: sources,

@@ -58,10 +58,22 @@ export interface DealsResponse {
     deals: Deal[]
 }
 
-export interface ServiceBreakdownPoint {
+// Одна точка разбивки по периодам, как её реально отдаёт
+// `GET /v1/service/reports/services` (periodBreakdownEntrySchema,
+// contracts/commands/report.ts) — только period/count/avgPrice, без
+// revenue: он на бэкенде не считается и не хранится, а восстанавливается
+// на фронтенде (см. `enrichBreakdown`/`mergePeriodBreakdowns` в
+// pages/ServicesReport/model/categoryTree.ts) как count * avgPrice.
+export interface PeriodBreakdownEntry {
     period: string
     count: number
     avgPrice: number
+}
+
+// Точка разбивки после клиентского обогащения (см. categoryTree.ts) —
+// используется только для ChartSeriesEntry.breakdown ниже, а не для
+// "сырого" ответа API (см. PeriodBreakdownEntry выше).
+export interface ServiceBreakdownPoint extends PeriodBreakdownEntry {
     revenue: number
 }
 
@@ -75,7 +87,7 @@ export interface ServiceAnalyticsEntry {
     totalEngineerBonus: number
     avgServicePrice: number
     avgOrderCheck: number
-    breakdown: ServiceBreakdownPoint[]
+    breakdown: PeriodBreakdownEntry[]
 }
 
 export interface ChartSeriesEntry {
