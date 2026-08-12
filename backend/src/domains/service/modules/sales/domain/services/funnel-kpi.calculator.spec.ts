@@ -1,17 +1,16 @@
-import { serviceFunnelKPICalculation } from '@/TODO/reports/reports.helpers';
 import { FunnelStageMap } from '../value-objects/funnel-stage-map.value-object';
 import {
     calculateServiceFunnelKpi,
     FunnelDealFacts,
 } from './funnel-kpi.calculator';
 
-function toLegacyShape(deal: FunnelDealFacts) {
-    return {
-        stage: deal.stageId ? { id: deal.stageId } : null,
-        opportunity: deal.opportunity,
-    };
-}
-
+// Легаси serviceFunnelKPICalculation (src/TODO/reports/reports.helpers.ts)
+// удалена вместе с остальным TODO/reports этой же фазой (Фаза 5, см.
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// эти тесты раньше сравнивали расчёт напрямую с легаси-функцией на тех же
+// фикстурах; теперь, когда сравнивать не с чем, ожидаемые числа посчитаны
+// вручную по той же формуле (зафиксированы в комментариях к каждому кейсу),
+// сама формула не менялась (см. Фаза 4 "Когда готово").
 describe('calculateServiceFunnelKpi', () => {
     const stageMap = FunnelStageMap.default();
 
@@ -34,12 +33,13 @@ describe('calculateServiceFunnelKpi', () => {
         { stageId: null, opportunity: null },
     ];
 
-    // Прямое сравнение с легаси-функцией (не только с ожидаемыми числами
-    // руками) — гарантия того, что перенос в VO/calculator не изменил
-    // бизнес-правило (см. "Когда готово" Фазы 4: "KPI на одинаковой
-    // выборке сделок совпадает с legacy-расчётом").
-    it('совпадает с легаси serviceFunnelKPICalculation на представительной выборке', () => {
-        const legacy = serviceFunnelKPICalculation(fixtures.map(toLegacyShape));
+    // Числа посчитаны вручную по формуле serviceFunnelKPICalculation (см.
+    // комментарий выше): allLeads=13; nonTargetDeals=2 (два stageId === '3');
+    // targetedLeads=11; won=2 (revenue 15000+25000=40000); lose=2 (LOSE + '4');
+    // inWork=2 (NEW + UC_U52J7C); waitingInService=1 (EXECUTING); inService=2
+    // (UC_UPDA02 + UC_EWM3W9); conversionRate=round(2/11*1000)/10=18.2;
+    // avgDeal=round(40000/2)=20000.
+    it('считает KPI на представительной выборке (по одному-два этапа из каждой группы)', () => {
         const actual = calculateServiceFunnelKpi(fixtures, stageMap);
 
         expect({
@@ -54,19 +54,28 @@ describe('calculateServiceFunnelKpi', () => {
             conversionRate: actual.getConversionRate(),
             avgDeal: actual.getAvgDeal(),
             revenue: actual.getRevenue(),
-        }).toEqual(legacy);
+        }).toEqual({
+            allLeads: 13,
+            nonTargetDeals: 2,
+            targetedLeads: 11,
+            won: 2,
+            lose: 2,
+            inWork: 2,
+            waitingInService: 1,
+            inService: 2,
+            conversionRate: 18.2,
+            avgDeal: 20000,
+            revenue: 40000,
+        });
     });
 
     it('пустой список сделок даёт нулевой KPI без деления на 0', () => {
-        const legacy = serviceFunnelKPICalculation([]);
         const kpi = calculateServiceFunnelKpi([], stageMap);
 
         expect(kpi.getAllLeads()).toBe(0);
         expect(kpi.getConversionRate()).toBe(0);
         expect(kpi.getAvgDeal()).toBe(0);
         expect(kpi.getRevenue()).toBe(0);
-        expect(kpi.getConversionRate()).toBe(legacy.conversionRate);
-        expect(kpi.getAvgDeal()).toBe(legacy.avgDeal);
     });
 
     it('округляет conversionRate до одного знака (won/targetedLeads*100)', () => {
@@ -76,10 +85,9 @@ describe('calculateServiceFunnelKpi', () => {
             { stageId: 'NEW', opportunity: 0 },
         ];
 
-        const legacy = serviceFunnelKPICalculation(deals.map(toLegacyShape));
         const kpi = calculateServiceFunnelKpi(deals, stageMap);
 
-        expect(kpi.getConversionRate()).toBe(legacy.conversionRate);
+        // conversionRate = round(1/3*1000)/10 = 33.3
         expect(kpi.getConversionRate()).toBe(33.3);
     });
 
@@ -100,11 +108,8 @@ describe('calculateServiceFunnelKpi', () => {
             { stageId: 'WON', opportunity: null },
         ];
 
-        const legacy = serviceFunnelKPICalculation(deals.map(toLegacyShape));
         const kpi = calculateServiceFunnelKpi(deals, stageMap);
 
-        expect(kpi.getRevenue()).toBe(legacy.revenue);
-        expect(kpi.getAvgDeal()).toBe(legacy.avgDeal);
         expect(kpi.getRevenue()).toBe(0);
         expect(kpi.getAvgDeal()).toBe(0);
     });

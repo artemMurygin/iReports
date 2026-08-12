@@ -26,7 +26,6 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { DealListItemEntity } from '@/domains/service/modules/sales/domain/entities/deal-list-item.entity';
 import { DealListStage } from '@/domains/service/modules/sales/domain/value-objects/deal-list-stage.value-object';
 import { DomainExceptionFilter } from '@/shared/exceptions';
-import { serviceFunnelKPICalculation } from '@/TODO/reports/reports.helpers';
 
 // Тот же приём, что list-deals.e2e.spec.ts (см. комментарий там): поднимает
 // SalesModule целиком через Nest TestingModule (реальные Controller →
@@ -165,13 +164,17 @@ describe('GET /v1/service/sales/funnel-report (e2e)', () => {
         });
     }
 
-    // Паритет с легаси ReportsService.getServiceFunnelReport
-    // (src/TODO/reports/reports.service.ts, см. "Когда готово" Фазы 4:
-    // "KPI на одинаковой выборке сделок совпадает с legacy-расчётом") —
-    // проверяется напрямую вызовом легаси serviceFunnelKPICalculation на
-    // той же выборке сделок, что отдаёт фейковый порт, а не только
-    // сравнением с посчитанными вручную числами.
-    it('KPI нового эндпоинта совпадает с легаси serviceFunnelKPICalculation на той же выборке', async () => {
+    // Легаси ReportsService.getServiceFunnelReport (src/TODO/reports/
+    // reports.service.ts) удалён вместе с остальным TODO/reports этой же
+    // фазой (Фаза 5) — раньше этот тест сравнивал KPI напрямую с легаси
+    // serviceFunnelKPICalculation на той же выборке; ожидаемые числа теперь
+    // посчитаны вручную по той же формуле (сама формула не менялась, см.
+    // funnel-kpi.calculator.spec.ts, где формула зафиксирована подробнее):
+    // allLeads=7; nonTargetDeals=1 ('3'); targetedLeads=6; won=2 (revenue
+    // 15000+25000=40000); lose=1; inWork=1 (NEW); waitingInService=1
+    // (EXECUTING); inService=1 (UC_UPDA02); conversionRate=
+    // round(2/6*1000)/10=33.3; avgDeal=round(40000/2)=20000.
+    it('KPI нового эндпоинта совпадает с формулой воронки на представительной выборке', async () => {
         seededDeals = [
             buildDeal({ id: '1', stageId: 'WON', opportunity: 15_000 }),
             buildDeal({ id: '2', stageId: 'WON', opportunity: 25_000 }),
@@ -189,17 +192,19 @@ describe('GET /v1/service/sales/funnel-report (e2e)', () => {
 
         const body = response.body as GetServiceFunnelReportResponse;
 
-        const legacyKpi = serviceFunnelKPICalculation(
-            seededDeals.map((deal) => {
-                const props = deal.getProps();
-                return {
-                    stage: props.stage ? { id: props.stage.getId() } : null,
-                    opportunity: props.opportunity,
-                };
-            }),
-        );
-
-        expect(body.KPI).toEqual(legacyKpi);
+        expect(body.KPI).toEqual({
+            allLeads: 7,
+            nonTargetDeals: 1,
+            targetedLeads: 6,
+            won: 2,
+            lose: 1,
+            inWork: 1,
+            waitingInService: 1,
+            inService: 1,
+            conversionRate: 33.3,
+            avgDeal: 20000,
+            revenue: 40000,
+        });
         expect(body.deals).toHaveLength(7);
     });
 
