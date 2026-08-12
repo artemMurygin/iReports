@@ -31,6 +31,13 @@ import { DEAL_LIST_REPOSITORY } from './application/ports/deal-list.port';
 import { DealListRepository } from './infrastructure/repositories/deal-list.repository';
 import { ListDealsService } from './application/services/list-deals.service';
 import { ListDealsHttpController } from './interface/http-controllers/list-deals.http.controller';
+// Отчёт по воронке сервисных сделок (Фаза 4, см.
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом для GET /reports/service-funnel из src/TODO/reports.
+import { FUNNEL_DEAL_REPOSITORY } from './application/ports/funnel-deal.port';
+import { FunnelDealRepository } from './infrastructure/repositories/funnel-deal.repository';
+import { GetServiceFunnelReportService } from './application/services/get-service-funnel-report.service';
+import { GetServiceFunnelReportHttpController } from './interface/http-controllers/get-service-funnel-report.http.controller';
 
 // LEAD_REPOSITORY (сделки/лиды, см. domain/entities/{deal,lead}.entity.ts) —
 // более ранняя, не задействованная пока часть модуля (см.
@@ -51,6 +58,7 @@ import { ListDealsHttpController } from './interface/http-controllers/list-deals
         ListSalesPlanTemplatesHttpController,
         ListSalesPerformanceHttpController,
         ListDealsHttpController,
+        GetServiceFunnelReportHttpController,
     ],
     providers: [
         { provide: LEAD_REPOSITORY, useClass: LeadRepository },
@@ -86,6 +94,12 @@ import { ListDealsHttpController } from './interface/http-controllers/list-deals
         // см. ListDealsHttpController выше, в controllers.
         { provide: DEAL_LIST_REPOSITORY, useClass: DealListRepository },
         ListDealsService,
+        // Read-side отчёта по воронке (GET /v1/service/sales/funnel-report,
+        // см. задание миграции TODO/reports → modules/sales, Фаза 4) —
+        // HTTP-контроллер см. GetServiceFunnelReportHttpController выше, в
+        // controllers.
+        { provide: FUNNEL_DEAL_REPOSITORY, useClass: FunnelDealRepository },
+        GetServiceFunnelReportService,
     ],
     exports: [
         LEAD_REPOSITORY,

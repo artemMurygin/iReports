@@ -27,6 +27,14 @@ const serviceSalesPlanTemplateRoot = `${serviceRoot}/sales/plan_template`;
 // не удаляется и продолжает работать — это параллельный, а не заменяющий
 // маршрут на время миграции.
 const serviceDealsRoot = `${serviceRoot}/sales/deals`;
+// Отчёт по воронке сервисных сделок (Фаза 4,
+// см. docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// — новый дом для GET /reports/service-funnel из backend/src/TODO/reports,
+// тем же приёмом, что и serviceDealsRoot выше: путь под /v1/service/sales,
+// читает те же bitrix_deals. Легаси-эндпоинт /reports/service-funnel при
+// этом не удаляется — параллельный маршрут на время миграции (TODO/reports
+// целиком выводится из эксплуатации отдельной фазой этого же трека).
+const serviceFunnelReportRoot = `${serviceRoot}/sales/funnel-report`;
 
 // Направление shop — все маршруты домена domains/shop под общим префиксом
 // /v1/shop.
@@ -128,6 +136,12 @@ export const routesV1 = {
         // выше группировка в подобъект читается яснее одного плоского пути.
         deals: {
             root: serviceDealsRoot,
+        },
+        // Отчёт по воронке сервисных сделок (Фаза 4, см. комментарий у
+        // serviceFunnelReportRoot выше) — отдельный подобъект по тому же
+        // принципу, что и deals выше.
+        funnelReport: {
+            root: serviceFunnelReportRoot,
         },
     },
     // Маршруты направления shop (domains/shop) — под префиксом /v1/shop.

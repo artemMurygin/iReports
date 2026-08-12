@@ -20,6 +20,8 @@ import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/appli
 import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
+import { FUNNEL_DEAL_REPOSITORY } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
+import type { FunnelDealRepositoryPort } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
@@ -60,6 +62,13 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
     // остальные репозитории этого файла.
     const fakeDealListRepo: DealListRepositoryPort = {
         findByDateRange: () => Promise.resolve([]),
+    };
+
+    // Отчёт по воронке (GET /v1/service/sales/funnel-report, Фаза 4) — тем
+    // же приёмом, что и fakeDealListRepo выше: не участвует в сценариях
+    // этого файла, но FUNNEL_DEAL_REPOSITORY тоже провайдер SalesModule.
+    const fakeFunnelDealRepo: FunnelDealRepositoryPort = {
+        findByFilter: () => Promise.resolve([]),
     };
 
     const fakePlanRepo: SalesPlanRepositoryPort = {
@@ -155,6 +164,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             .useValue(fakeFactSource)
             .overrideProvider(DEAL_LIST_REPOSITORY)
             .useValue(fakeDealListRepo)
+            .overrideProvider(FUNNEL_DEAL_REPOSITORY)
+            .useValue(fakeFunnelDealRepo)
             .compile();
 
         app = moduleRef.createNestApplication();
