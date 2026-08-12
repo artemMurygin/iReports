@@ -16,6 +16,8 @@ import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/appli
 import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
+import { DEAL_CATALOG_READER } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
+import type { DealCatalogReaderPort } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
 import { FUNNEL_DEAL_REPOSITORY } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
 import type {
     FunnelDealRepositoryPort,
@@ -32,8 +34,8 @@ import { DomainExceptionFilter } from '@/shared/exceptions';
 // GetServiceFunnelReportService → FunnelDealRepositoryPort), подменяя
 // только границу с БД. LEAD_REPOSITORY/SALES_PLAN_REPOSITORY/
 // SALES_PLAN_TEMPLATE_REPOSITORY/SERVICE_SALES_FACT_SOURCE/
-// DEAL_LIST_REPOSITORY подменяются заглушками по той же причине, что и там
-// — они не участвуют в сценариях этого файла.
+// DEAL_LIST_REPOSITORY/DEAL_CATALOG_READER подменяются заглушками по той же
+// причине, что и там — они не участвуют в сценариях этого файла.
 describe('GET /v1/service/sales/funnel-report (e2e)', () => {
     let app: INestApplication<Server>;
 
@@ -69,6 +71,14 @@ describe('GET /v1/service/sales/funnel-report (e2e)', () => {
         findByDateRange: () => Promise.resolve([]),
     };
 
+    const fakeDealCatalogReader: DealCatalogReaderPort = {
+        findStages: () => Promise.resolve([]),
+        findDeviceTypes: () => Promise.resolve([]),
+        findManagers: () => Promise.resolve([]),
+        findSources: () => Promise.resolve([]),
+        findStageGroups: () => Promise.resolve([]),
+    };
+
     const fakeFunnelDealRepo: FunnelDealRepositoryPort = {
         findByFilter: (filter) => {
             capturedFilter = filter;
@@ -101,6 +111,8 @@ describe('GET /v1/service/sales/funnel-report (e2e)', () => {
             .useValue(fakeFactSource)
             .overrideProvider(DEAL_LIST_REPOSITORY)
             .useValue(fakeDealListRepo)
+            .overrideProvider(DEAL_CATALOG_READER)
+            .useValue(fakeDealCatalogReader)
             .overrideProvider(FUNNEL_DEAL_REPOSITORY)
             .useValue(fakeFunnelDealRepo)
             .compile();

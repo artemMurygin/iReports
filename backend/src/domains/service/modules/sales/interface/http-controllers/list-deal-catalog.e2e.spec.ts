@@ -24,6 +24,8 @@ import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/applicatio
 import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import { DEAL_CATALOG_READER } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
 import type { DealCatalogReaderPort } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
+import { FUNNEL_DEAL_REPOSITORY } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
+import type { FunnelDealRepositoryPort } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { DealListStage } from '@/domains/service/modules/sales/domain/value-objects/deal-list-stage.value-object';
@@ -36,9 +38,10 @@ import { DomainExceptionFilter } from '@/shared/exceptions';
 // Тот же приём, что list-deals.e2e.spec.ts (см. комментарий там): поднимает
 // SalesModule целиком через Nest TestingModule (реальные Controller →
 // ListDealCatalogService → DealCatalogReaderPort), подменяя только границу
-// с БД через DEAL_CATALOG_READER. Проверяет паритет формы ответа с легаси
-// DealsController (src/TODO/deals/deals.controller.ts, удалён этой фазой) —
-// каждый эндпоинт отдаёт голый массив, без обёртки.
+// с БД через DEAL_CATALOG_READER (и FUNNEL_DEAL_REPOSITORY — тоже провайдер
+// SalesModule, но не участвует в сценариях этого файла). Проверяет паритет
+// формы ответа с легаси DealsController (src/TODO/deals/deals.controller.ts,
+// удалён этой фазой) — каждый эндпоинт отдаёт голый массив, без обёртки.
 describe('GET /v1/service/sales/deals/{stages,managers,sources,stage-groups,models} (e2e)', () => {
     let app: INestApplication<Server>;
 
@@ -85,6 +88,10 @@ describe('GET /v1/service/sales/deals/{stages,managers,sources,stage-groups,mode
         findStageGroups: () => Promise.resolve(stageGroups),
     };
 
+    const fakeFunnelDealRepo: FunnelDealRepositoryPort = {
+        findByFilter: () => Promise.resolve([]),
+    };
+
     const fakeUnitOfWork: UnitOfWorkPort = {
         run: (work) => work(),
     };
@@ -112,6 +119,8 @@ describe('GET /v1/service/sales/deals/{stages,managers,sources,stage-groups,mode
             .useValue(fakeDealListRepo)
             .overrideProvider(DEAL_CATALOG_READER)
             .useValue(fakeDealCatalogReader)
+            .overrideProvider(FUNNEL_DEAL_REPOSITORY)
+            .useValue(fakeFunnelDealRepo)
             .compile();
 
         app = moduleRef.createNestApplication();

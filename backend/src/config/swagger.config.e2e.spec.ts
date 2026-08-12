@@ -14,6 +14,8 @@ import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/appli
 import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
+import { DEAL_CATALOG_READER } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
+import type { DealCatalogReaderPort } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
 import { FUNNEL_DEAL_REPOSITORY } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
 import type { FunnelDealRepositoryPort } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
@@ -38,17 +40,17 @@ import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 
 // Смоук-тест генерации OpenAPI (Фаза 5, "Когда готово": "OpenAPI-документы
-// генерируются — блокер z.coerce.date() устранён") — до этой фазы
-// TODO/reports (getServiceFunnelReportDTO, z.coerce.date()) считался
-// причиной падения генерации схемы (см. старый комментарий над
-// setupSwagger в swagger.config.ts); TODO/reports удалён этой же фазой
-// целиком, поэтому здесь собирается РОВНО тот же набор модулей, что и
-// serviceDocument в swagger.config.ts (SalesModule, AccountingModule,
-// ReportsModule), реальными Controller → Service → доменными VO, с
-// подменой только границы с БД (тот же приём, что list-deals.e2e.spec.ts и
-// get-employee-salary-report.e2e.spec.ts: фейковый DatabaseService вместо
-// живого Postgres — SwaggerModule.createDocument никогда не выполняет ни
-// одного запроса, ей достаточно того, что граф DI собирается).
+// генерируются — блокер z.coerce.date() устранён") — TODO/reports
+// (getServiceFunnelReportDTO, z.coerce.date()) когда-то считался причиной
+// падения генерации схемы; TODO/reports удалён целиком, блокер устранён.
+// Собирает подмножество serviceDocument (SalesModule, AccountingModule,
+// ReportsModule — не обязательно 1:1 с полным include в swagger.config.ts,
+// см. его актуальный список отдельно), реальными Controller → Service →
+// доменными VO, с подменой только границы с БД (тот же приём, что
+// list-deals.e2e.spec.ts и get-employee-salary-report.e2e.spec.ts: фейковый
+// DatabaseService вместо живого Postgres — SwaggerModule.createDocument
+// никогда не выполняет ни одного запроса, ей достаточно того, что граф DI
+// собирается).
 describe('setupSwagger — serviceDocument (смоук-тест генерации OpenAPI)', () => {
     const fakeLeadRepo: LeadRepositoryPort = {
         findModifiedSince: () => Promise.resolve([]),
@@ -64,6 +66,13 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
     };
     const fakeDealListRepo: DealListRepositoryPort = {
         findByDateRange: () => Promise.resolve([]),
+    };
+    const fakeDealCatalogReader: DealCatalogReaderPort = {
+        findStages: () => Promise.resolve([]),
+        findDeviceTypes: () => Promise.resolve([]),
+        findManagers: () => Promise.resolve([]),
+        findSources: () => Promise.resolve([]),
+        findStageGroups: () => Promise.resolve([]),
     };
     const fakeFunnelDealRepo: FunnelDealRepositoryPort = {
         findByFilter: () => Promise.resolve([]),
@@ -156,6 +165,8 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
             .useValue(fakeFactSource)
             .overrideProvider(DEAL_LIST_REPOSITORY)
             .useValue(fakeDealListRepo)
+            .overrideProvider(DEAL_CATALOG_READER)
+            .useValue(fakeDealCatalogReader)
             .overrideProvider(FUNNEL_DEAL_REPOSITORY)
             .useValue(fakeFunnelDealRepo)
             .overrideProvider(MOTIVATION_SCHEMA_REPOSITORY)
