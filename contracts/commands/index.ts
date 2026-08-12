@@ -11,3 +11,4 @@ export * from './task-completion';
 export * from './catalog';
 export * from './deal';
 export * from './service-pricing';
+export * from './shop-pricing';
