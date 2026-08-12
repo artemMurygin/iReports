@@ -81,6 +81,11 @@ describe('CloseShopAccountingPeriodHandler', () => {
                     },
                     erpData: { hoursWorked: 8 },
                     salesPerformanceDetail: null,
+                    // Карта по категориям (Фаза 2 плана
+                    // shop-sales-performance-by-category) — здесь всегда
+                    // пустая, ни один тест этого файла не использует
+                    // FloatPercent-правила.
+                    salesPerformanceByCategory: new Map(),
                 }),
             ),
         } as unknown as BuildShopCalculationContextService;

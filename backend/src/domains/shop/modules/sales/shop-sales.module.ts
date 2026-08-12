@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
+import { MoySkladSyncModule } from '@/domains/shop/sync/moySklad/moysklad-sync.module';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
 import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastructure/repositories/sales-plan.repository';
@@ -49,6 +50,12 @@ import { PutShopSalesPlanTemplateHttpController } from './interface/http-control
 // interface/http-controllers/list-shop-sales-performance.http.controller.ts
 // и обоснование отдельного пути в config/app.routes.ts).
 //
+// MoySkladSyncModule — источник ProductFolderTreeService (Фаза 1,
+// docs/shop-sales-performance-by-category), которым
+// MoySkladSalesFactSourceRepository раскрывает переданные aggregate()
+// корневые categoryIds до дочерних папок — тот же приём, что уже применён
+// в ShopAccountingModule для ShopCalculationDataRepository.
+//
 // SALES_PLAN_REPOSITORY/SALES_PLAN_TEMPLATE_REPOSITORY/
 // EnsureSalesPlansForPeriodService/ListSalesPlansService/
 // ListSalesPlanTemplatesService переиспользуются как классы направления
@@ -57,7 +64,7 @@ import { PutShopSalesPlanTemplateHttpController } from './interface/http-control
 // модуля), но это тот же генерик-код поверх общей Prisma-модели, не
 // дублирование ERP-логики.
 @Module({
-    imports: [CqrsModule],
+    imports: [CqrsModule, MoySkladSyncModule],
     controllers: [
         ListShopSalesPerformanceHttpController,
         CreateShopSalesPlanHttpController,

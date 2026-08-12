@@ -15,7 +15,7 @@ describe('GetShopSalesPerformanceService', () => {
         plans: SalesPlan[],
         facts: {
             department: number;
-            category: number | null;
+            category: string | null;
             turnover: number;
             margin: number;
             cost: number;
@@ -54,9 +54,8 @@ describe('GetShopSalesPerformanceService', () => {
             findByScope: jest.fn(),
             findAll: jest.fn().mockResolvedValue([]),
         };
-        const factSource: ShopSalesFactSourcePort = {
-            aggregate: jest.fn().mockResolvedValue(facts),
-        };
+        const aggregate = jest.fn().mockResolvedValue(facts);
+        const factSource: ShopSalesFactSourcePort = { aggregate };
         const ensureSalesPlans = new EnsureSalesPlansForPeriodService(
             planRepo,
             templateRepo,
@@ -65,7 +64,7 @@ describe('GetShopSalesPerformanceService', () => {
             ensureSalesPlans,
             factSource,
         );
-        return { service, planRepo, store };
+        return { service, planRepo, store, aggregate };
     };
 
     // ⚠️ Ключевой тест Фазы 11 (issue #54/#56): margin ERP-факта не равен
@@ -177,6 +176,75 @@ describe('GetShopSalesPerformanceService', () => {
             expect(performances[0].getFact().getTurnover()).toBe(0);
             expect(performances[0].getFact().getMargin()).toBe(0);
             expect(performances[0].getFact().getPercentCompletion()).toBe(0);
+        });
+    });
+
+    // Фаза 1 (docs/shop-sales-performance-by-category): listForPeriod
+    // собирает уникальные непустые plan.category и передаёт их вторым
+    // аргументом в factSource.aggregate(period, categoryIds) — сам
+    // репозиторий раскрывает категорию до потомков (см.
+    // moysklad-sales-fact-source.repository.spec.ts), здесь важно только,
+    // что план с category теперь получает непустой факт по совпадающей
+    // категории ERP-агрегата и не смешивается с планом без категории.
+    it('план с category получает факт из ERP-агрегата с этой же category, передаёт categoryIds в aggregate', async () => {
+        await withRequestContext(async () => {
+            const planWithCategory = SalesPlan.create({
+                direction: 'shop',
+                department: 1,
+                category: 'folder-phones',
+                period: '2026-08',
+                turnover: 500_000,
+                margin: 100_000,
+                source: 'MANUAL',
+            });
+            const planWithoutCategory = SalesPlan.create({
+                direction: 'shop',
+                department: 1,
+                period: '2026-08',
+                turnover: 1_000_000,
+                margin: 200_000,
+                source: 'MANUAL',
+            });
+            const facts = [
+                {
+                    department: 1,
+                    category: 'folder-phones',
+                    turnover: 300_000,
+                    cost: 180_000,
+                    margin: 90_000,
+                    quantity: 5,
+                },
+                {
+                    department: 1,
+                    category: null,
+                    turnover: 400_000,
+                    cost: 240_000,
+                    margin: 130_000,
+                    quantity: 10,
+                },
+            ];
+            const { service, aggregate } = buildService(
+                [planWithCategory, planWithoutCategory],
+                facts,
+            );
+
+            const performances = await service.listForPeriod('2026-08');
+
+            expect(aggregate).toHaveBeenCalledWith('2026-08', [
+                'folder-phones',
+            ]);
+
+            const withCategory = performances.find(
+                (p) => p.getCategory() === 'folder-phones',
+            );
+            const withoutCategory = performances.find(
+                (p) => p.getCategory() === null,
+            );
+
+            expect(withCategory?.getFact().getTurnover()).toBe(300_000);
+            expect(withCategory?.getFact().getMargin()).toBe(90_000);
+            expect(withoutCategory?.getFact().getTurnover()).toBe(400_000);
+            expect(withoutCategory?.getFact().getMargin()).toBe(130_000);
         });
     });
 

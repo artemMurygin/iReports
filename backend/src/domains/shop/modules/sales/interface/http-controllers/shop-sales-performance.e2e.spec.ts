@@ -1,9 +1,10 @@
 import type { Server } from 'http';
-import { INestApplication } from '@nestjs/common';
+import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
 import type { SalesPerformanceResponse } from 'ireports-contracts';
+import { DatabaseService } from '@/infrustructure/database/database.service';
 import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
@@ -93,9 +94,28 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
             ),
     };
 
+    // ShopSalesModule теперь импортирует MoySkladSyncModule (Фаза 1,
+    // docs/shop-sales-performance-by-category — источник
+    // ProductFolderTreeService для раскрытия категории в
+    // MoySkladSalesFactSourceRepository), чьи провайдеры
+    // (ProductFolderTreeService, MoySkladSyncService и т.п.) конструируют
+    // DatabaseService в конструкторе, даже когда SHOP_SALES_FACT_SOURCE сам
+    // подменён фейком ниже — тот же приём фейкового DatabaseService, что и в
+    // get-shop-employee-salary-report.e2e.spec.ts.
+    const fakeDatabaseService = {} as unknown as DatabaseService;
+
+    @Global()
+    @Module({
+        providers: [
+            { provide: DatabaseService, useValue: fakeDatabaseService },
+        ],
+        exports: [DatabaseService],
+    })
+    class FakeInfrastructureModule {}
+
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({
-            imports: [ShopSalesModule],
+            imports: [FakeInfrastructureModule, ShopSalesModule],
         })
             .overrideProvider(SALES_PLAN_REPOSITORY)
             .useValue(fakePlanRepo)
@@ -169,6 +189,56 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
                 percentCompletion: 40,
             },
         });
+    });
+
+    // Фаза 1 (docs/shop-sales-performance-by-category): план с category
+    // должен получить непустой факт, когда в ERP-агрегате есть бакет с той
+    // же category (сама фейковая factSource раскрытие дерева не
+    // выполняет — это ответственность MoySkladSalesFactSourceRepository,
+    // покрытая отдельным unit-тестом; здесь важно, что
+    // GetShopSalesPerformanceService и HTTP-слой корректно доносят
+    // categoryIds/факт по категории до ответа).
+    it('план с category: fact.turnover/percentCompletion не равны нулю при наличии продаж по этой категории', async () => {
+        const plan = withRequestContext(() =>
+            SalesPlan.create({
+                direction: 'shop',
+                department: 1,
+                category: 'folder-phones',
+                period: '2026-09',
+                turnover: 200_000,
+                margin: 40_000,
+                source: 'MANUAL',
+            }),
+        );
+        plans.set(plan.id, plan);
+        erpFacts = [
+            {
+                department: 1,
+                category: 'folder-phones',
+                turnover: 100_000,
+                cost: 60_000,
+                margin: 30_000,
+                quantity: 4,
+            },
+        ];
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/shop/sales/salesPerformance/2026-09')
+            .expect(200);
+        const performances = listResponse.body as SalesPerformanceResponse[];
+
+        expect(performances).toHaveLength(1);
+        expect(performances[0]).toMatchObject({
+            department: 1,
+            category: 'folder-phones',
+            fact: {
+                turnover: 100_000,
+                margin: 30_000,
+                percentCompletion: 50,
+            },
+        });
+        expect(performances[0].fact.turnover).not.toBe(0);
+        expect(performances[0].fact.percentCompletion).not.toBe(0);
     });
 
     it('ленивое достраивание: GET на пустой период магазина заводит план из шаблона', async () => {

@@ -1,6 +1,6 @@
-import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
+import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
 
 // Зеркало domains/service/modules/accounting/domain/services/period-calculation.orchestrator.ts
 // (Фаза 13.5, issue #57) — независимая реализация в домене shop. Контекст
@@ -16,7 +16,7 @@ import { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/s
 export class PeriodCalculationOrchestrator {
     static async calculate(
         rules: ShopSalaryRule[],
-        context: CalculationContext,
+        context: ShopCalculationContext,
     ): Promise<CalculationLine[]> {
         const lines: CalculationLine[] = [];
         for (const rule of rules) {

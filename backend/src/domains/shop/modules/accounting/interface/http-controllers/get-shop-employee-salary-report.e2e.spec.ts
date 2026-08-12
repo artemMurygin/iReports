@@ -25,10 +25,14 @@ import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-statu
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SHOP_SALES_PERFORMANCE_READER } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
+import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
+import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
@@ -118,16 +122,109 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
     // намеренно отличное от 2000 (8ч × 250) сервисного e2e-зеркала: числа
     // не должны совпадать, иначе равенство total между направлениями ничего
     // бы не доказывало о том, что каждое направление считает СВОЁ правило.
+    //
+    // employeeId 43 — отдельный сотрудник (см. describe ниже,
+    // "ProductSold/FloatPercent по категории"), с отделом (departmentId 100)
+    // и позицией отгрузки в категории 'root-folder' — остальные employeeId
+    // (42, 999) продолжают получать null/[]/5 как раньше, эти два теста не
+    // должны видеть данные друг друга.
     const fakeShopCalculationData: ShopCalculationDataPort = {
-        findEmployeeIdentities: () => Promise.resolve([]),
+        findEmployeeIdentities: (employeeId) =>
+            Promise.resolve(
+                employeeId === 43
+                    ? [
+                          {
+                              system: 'MOY_SKLAD',
+                              identifierType: 'EMPLOYEE_ID',
+                              externalId: 'employee-43',
+                          },
+                      ]
+                    : [],
+            ),
         findHoursWorked: () => Promise.resolve(5),
-        findProductSoldItems: () => Promise.resolve([]),
+        findProductSoldItems: () =>
+            Promise.resolve([
+                {
+                    positionId: 'shop-pos-1',
+                    demandId: 'shop-demand-1',
+                    folderId: 'root-folder',
+                    quantity: 1,
+                    sum: 1000,
+                    profit: 400,
+                    onlineManagerId: 'employee-43',
+                    offlineManagerId: null,
+                    onlinePurchaserId: null,
+                    offlinePurchaserId: null,
+                },
+            ]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
-        findEmployeeDepartmentId: () => Promise.resolve(null),
+        findEmployeeDepartmentId: (employeeId) =>
+            Promise.resolve(employeeId === 43 ? 100 : null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
         findHoursWorkedForEmployees: () => Promise.resolve(new Map()),
-        resolveCategoryDescendantFolderIds: () => Promise.resolve({}),
+        resolveCategoryDescendantFolderIds: (categoryIds) =>
+            Promise.resolve(
+                categoryIds.reduce<Record<string, string[]>>((acc, id) => {
+                    acc[id] = [id];
+                    return acc;
+                }, {}),
+            ),
+    };
+
+    // Фейковый ShopSalesPerformance, отдающий заданный percentCompletion и
+    // на getFact(), и на getPrognose() — этому e2e важен только процент
+    // выполнения плана (вход FloatPercent), не сами обороты/маржу.
+    const buildFakeShopSalesPerformance = (
+        percentCompletion: number,
+        department: number,
+        category: string | null,
+    ): ShopSalesPerformance =>
+        ({
+            getPeriod: () => '2026-08',
+            getDepartment: () => department,
+            getCategory: () => category,
+            getPlan: () => ({
+                turnover: 1000,
+                margin: 400,
+                status: 'APPROVED',
+            }),
+            getFact: () => ({
+                getTurnover: () => 1000,
+                getMargin: () => 400,
+                getPercentCompletion: () => percentCompletion,
+            }),
+            getPrognose: () => ({
+                getTurnover: () => 1000,
+                getMargin: () => 400,
+                getPercentCompletion: () => percentCompletion,
+            }),
+        }) as unknown as ShopSalesPerformance;
+
+    // Отдел 100 выполнен всего на 40% целиком, но категория 'root-folder'
+    // (та самая, на которую заведено правило employeeId 43 ниже) — на 90%:
+    // заведомо разные значения по разным ключам карты
+    // salesPerformanceByCategory, чтобы e2e-тест мог отличить "правило
+    // считает по своей категории" от "правило по-прежнему считает по отделу
+    // целиком".
+    const fakeShopSalesPerformanceReader: ShopSalesPerformanceReaderPort = {
+        listForPeriod: () => Promise.resolve([]),
+        findForScope: (_period, department, category) => {
+            if (department !== 100) {
+                return Promise.resolve(null);
+            }
+            if (category === 'root-folder') {
+                return Promise.resolve(
+                    buildFakeShopSalesPerformance(90, department, category),
+                );
+            }
+            if (category === null) {
+                return Promise.resolve(
+                    buildFakeShopSalesPerformance(40, department, category),
+                );
+            }
+            return Promise.resolve(null);
+        },
     };
     // ShopAccountingModule заодно поднимает командные хендлеры
     // (CreateShopMotivationSchemaHandler и т.п., не используются этим
@@ -170,6 +267,51 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         });
         shopSchemas.set(42, shopSchema);
 
+        // employeeId 43 — ProductSold/FloatPercent на категорию 'root-folder'
+        // (см. describe ниже, "ProductSold/FloatPercent по категории").
+        const shopSchemaProductSold = withRequestContext(() => {
+            const rule = ProductSoldEntity.create({
+                type: 'ProductSold',
+                name: 'За технику (категория)',
+                targetRole: 'ONLINE_MANAGER',
+                config: {
+                    category: 'root-folder',
+                    award: {
+                        type: 'FloatPercent',
+                        basePercent: 10,
+                        salaryBasis: 'REVENUE',
+                        percentBorders: [
+                            {
+                                name: 'A',
+                                fromPlanPercent: 50,
+                                multiplier: 0.5,
+                                mode: 'FIX',
+                            },
+                            {
+                                name: 'B',
+                                fromPlanPercent: 80,
+                                multiplier: 1,
+                                mode: 'FIX',
+                            },
+                            {
+                                name: 'C',
+                                fromPlanPercent: 100,
+                                multiplier: 1.5,
+                                mode: 'FIX',
+                            },
+                        ],
+                    },
+                },
+            });
+            return ShopMotivationSchema.create({
+                targetType: 'Employee',
+                targetId: 43,
+                name: 'Продавец категории «Техника»',
+                rules: [rule],
+            });
+        });
+        shopSchemas.set(43, shopSchemaProductSold);
+
         const moduleRef = await Test.createTestingModule({
             imports: [FakeInfrastructureModule, ShopAccountingModule],
         })
@@ -191,6 +333,8 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             .useValue(fakeDomainSyncStatus)
             .overrideProvider(SALES_PLAN_REPOSITORY)
             .useValue(fakeSalesPlanRepo)
+            .overrideProvider(SHOP_SALES_PERFORMANCE_READER)
+            .useValue(fakeShopSalesPerformanceReader)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -254,5 +398,45 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         await request(app.getHttpServer())
             .get('/v1/shop/accounting/salary_report/employee/42/2026')
             .expect(400);
+    });
+
+    // Фаза 2 плана shop-sales-performance-by-category (issue #60):
+    // ProductSold/FloatPercent должен читать percentCompletion СВОЕЙ
+    // категории, а не отдела целиком.
+    describe('ProductSold/FloatPercent по категории', () => {
+        it('считает вознаграждение по проценту выполнения плана категории правила, а не по проценту отдела целиком', async () => {
+            const response = await request(app.getHttpServer())
+                .get('/v1/shop/accounting/salary_report/employee/43/2026-08')
+                .expect(200);
+            const body = response.body as EmployeeSalaryReportResponse;
+
+            // Отдел (category: null) выполнен всего на 40% — при этом
+            // проценте FloatPercent ниже нижнего порога (50) дал бы
+            // множитель 0 и amount 0 (resolveFloatPercentMultiplier).
+            // Категория правила 'root-folder' выполнена на 90% — между
+            // порогами B (80, ×1) и C (100, ×1.5), режим FIX держит
+            // множитель предыдущего порога (×1): 1000 * 10% * 1 = 100.
+            // Итог 100 (а не 0) доказывает, что расчёт берёт процент СВОЕЙ
+            // категории правила, а не отдела целиком.
+            expect(body.total).toEqual({ fact: 100, prognose: 100 });
+            expect(body.rules).toEqual([
+                expect.objectContaining({
+                    type: 'ProductSold',
+                    name: 'За технику (категория)',
+                    amount: { fact: 100, prognose: 100 },
+                }),
+            ]);
+            // Блок SalesPerformance в ответе — компактная сводка по отделу
+            // целиком (category: null, см. to-shop-sales-performance-summary.ts),
+            // поэтому здесь ожидаемо 40%, а не 90% процента категории —
+            // сводка отчёта и расчёт FloatPercent намеренно читают разные
+            // записи карты salesPerformanceByCategory.
+            expect(body.salesPerformance).toEqual(
+                expect.objectContaining({
+                    department: 100,
+                    percentCompletion: 40,
+                }),
+            );
+        });
     });
 });

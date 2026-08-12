@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
-import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import {
     CreateShopSalaryRuleProps,
@@ -10,6 +9,7 @@ import {
     UsedProductSoldSalaryConfig,
     UsedProductSoldSalaryRule,
 } from '../../types/shop-salary-rule.types';
+import type { ShopCalculationContext } from '../../types/shop-calculation-context.types';
 import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
@@ -79,7 +79,7 @@ export class UsedProductSoldEntity
         });
     }
 
-    calculate(context: CalculationContext): CalculationLine {
+    calculate(context: ShopCalculationContext): CalculationLine {
         const erpData = context.erpData as ShopCalculationErpData | undefined;
         const items = erpData?.productSoldItems ?? [];
         const matched = this.dedupeByPosition(
@@ -133,7 +133,7 @@ export class UsedProductSoldEntity
     validate(): void {}
 
     private matchesRole(
-        context: CalculationContext,
+        context: ShopCalculationContext,
         item: ShopProductSoldErpItem,
     ): boolean {
         return employeeMatchesShopPurchaserRole(

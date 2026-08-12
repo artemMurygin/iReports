@@ -184,7 +184,7 @@ export class GetShopEmployeeSalaryReportService {
                 erpData: baseContext.erpData,
                 mode: 'FACT',
                 salesPerformance: toShopSalesPerformanceContext(
-                    baseContext.salesPerformanceDetail,
+                    baseContext.salesPerformanceByCategory,
                     'FACT',
                 ),
             }),
@@ -194,7 +194,7 @@ export class GetShopEmployeeSalaryReportService {
                 erpData: baseContext.erpData,
                 mode: 'PROGNOSE',
                 salesPerformance: toShopSalesPerformanceContext(
-                    baseContext.salesPerformanceDetail,
+                    baseContext.salesPerformanceByCategory,
                     'PROGNOSE',
                 ),
             }),

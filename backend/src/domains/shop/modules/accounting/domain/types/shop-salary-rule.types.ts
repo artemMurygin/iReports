@@ -1,6 +1,6 @@
 import { CreateEntityProps } from '@/shared/domain/entity.base';
-import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
+import type { ShopCalculationContext } from './shop-calculation-context.types';
 import type {
     PercentBorder,
     ShopSalaryBasis,
@@ -145,6 +145,6 @@ export type ShopSalaryRule = {
     readonly config: ShopSalaryRuleConfig;
     readonly updatedAt: Date;
     calculate(
-        context: CalculationContext,
+        context: ShopCalculationContext,
     ): CalculationLine | Promise<CalculationLine>;
 };

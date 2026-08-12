@@ -156,9 +156,21 @@ ERP-специфичной логики, поэтому контроллеры `
   (`erpData.categoryDescendantFolderIds`), правило только сверяет `folderId` позиции — при
   отсутствующем раскрытии контекста **fail closed** (лучше не начислить, чем начислить по чужой
   категории). `Fixed` считается по сумме `quantity` (а не числу позиций) — товар может быть
-  дробным/весовым. `FloatPercent` берёт `context.salesPerformance` **по отделу целиком**, не по
-  категории правила — план/факт по категории в `shop` пока не реализован, категория `ProductSold`
-  (папка МойСклад) и категория `SalesPlan` (числовой id) сейчас никак не связаны между собой.
+  дробным/весовым. `FloatPercent` берёт `context.salesPerformance` **по СВОЕЙ категории**
+  (`docs/shop-sales-performance-by-category`, Фаза 2) — с тех пор как в `shop` появился факт продаж
+  по категории (Фаза 1 того же плана, `ShopSalesFactErpAggregate.category`/
+  `MoySkladSalesFactSourceRepository.aggregate`), `CalculationContext.salesPerformance` больше не
+  единственное значение на отдел, а карта `category → percentCompletion`
+  (`ShopSalesPerformanceByCategory`, ключ `null` = «весь отдел») — `BuildShopCalculationContextService`
+  резолвит её через `ShopSalesPerformanceReaderPort.findForScope(period, department, category)` по
+  каждой уникальной `category` правил `ProductSold`/`UsedProductSold` схемы сотрудника. Правило читает
+  запись по `this.props.config.category`; **fail closed**, если для этой категории в карте нет
+  расчёта (нет плана/факта по scope) — вознаграждение не начисляется, тот же принцип, что и у
+  раскрытия дерева категорий выше. `TaskCompletedShopEntity.FloatPercent` категории не имеет вовсе —
+  всегда читает запись «весь отдел» (`category: null`) и по-прежнему бросает
+  `ShopSalesPerformanceRequiredException`, если её нет. `category` у `ProductSold` и у `SalesPlan`
+  теперь одного типа (`string | null`, для `shop` — UUID папки МойСклад, `MoySkladProductFolder.id`),
+  но это по-прежнему две независимые системы без фактической ссылочной связи/валидации между ними.
 - **`UsedProductSoldEntity`** (Фаза 13) — вознаграждение закупщику БУ техники за **продажу**
   выкупленного им устройства (не за сам выкуп): роль `ONLINE_PURCHASER`/`OFFLINE_PURCHASER` (уровень
   **товарной позиции**, `MoySkladDemandPosition.onlinePurchaserId`/`offlinePurchaserId`), тот же

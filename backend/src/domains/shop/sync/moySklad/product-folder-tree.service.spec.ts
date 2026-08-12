@@ -4,16 +4,30 @@ import type { DatabaseService } from '@/infrustructure/database/database.service
 // issue #50 (Фаза 10): выборка по родительской категории должна захватывать
 // товары из вложенных папок любого уровня вложенности, а не только прямых
 // потомков.
+//
+// pathName у МойСклад — путь ПРЕДКОВ, не включая саму папку: у корневой
+// "Техника" pathName = '', у её прямого потомка "Смартфоны" pathName =
+// 'Техника' (полный путь родителя, не "Техника/Смартфоны"), у листа
+// "iPhone" pathName = 'Техника/Смартфоны'.
 describe('ProductFolderTreeService.resolveDescendantFolderIds', () => {
     // Дерево: Техника (root) -> Смартфоны -> iPhone (лист, третий уровень).
     const folders = {
-        'folder-root': { id: 'folder-root', pathName: 'Техника' },
-        'folder-mid': { id: 'folder-mid', pathName: 'Техника/Смартфоны' },
+        'folder-root': { id: 'folder-root', name: 'Техника', pathName: '' },
+        'folder-mid': {
+            id: 'folder-mid',
+            name: 'Смартфоны',
+            pathName: 'Техника',
+        },
         'folder-leaf': {
             id: 'folder-leaf',
-            pathName: 'Техника/Смартфоны/iPhone',
+            name: 'iPhone',
+            pathName: 'Техника/Смартфоны',
         },
-        'folder-unrelated': { id: 'folder-unrelated', pathName: 'Аксессуары' },
+        'folder-unrelated': {
+            id: 'folder-unrelated',
+            name: 'Аксессуары',
+            pathName: '',
+        },
     };
 
     const buildService = () => {
@@ -23,17 +37,31 @@ describe('ProductFolderTreeService.resolveDescendantFolderIds', () => {
         );
         const findMany = jest.fn(
             ({
-                where: {
-                    pathName: { startsWith },
-                },
+                where: { OR },
             }: {
-                where: { pathName: { startsWith: string } };
-            }) =>
-                Promise.resolve(
+                where: {
+                    OR: [
+                        { pathName: string },
+                        { pathName: { startsWith: string } },
+                    ];
+                };
+            }) => {
+                const [
+                    { pathName: exact },
+                    {
+                        pathName: { startsWith },
+                    },
+                ] = OR;
+                return Promise.resolve(
                     Object.values(folders)
-                        .filter((f) => f.pathName.startsWith(startsWith))
+                        .filter(
+                            (f) =>
+                                f.pathName === exact ||
+                                f.pathName.startsWith(startsWith),
+                        )
                         .map((f) => ({ id: f.id })),
-                ),
+                );
+            },
         );
         const db = {
             moySkladProductFolder: { findUnique, findMany },
@@ -78,7 +106,7 @@ describe('ProductFolderTreeService.resolveDescendantFolderIds', () => {
         expect(ids).toEqual([]);
     });
 
-    it('запрашивает потомков одним запросом по префиксу pathName родителя', async () => {
+    it('запрашивает потомков одним запросом: прямые потомки — точное совпадение с полным путём категории, более глубокие — по префиксу', async () => {
         const { service, findMany } = buildService();
 
         await service.resolveDescendantFolderIds('folder-root');
@@ -86,7 +114,12 @@ describe('ProductFolderTreeService.resolveDescendantFolderIds', () => {
         expect(findMany).toHaveBeenCalledTimes(1);
         expect(findMany).toHaveBeenCalledWith(
             expect.objectContaining({
-                where: { pathName: { startsWith: 'Техника/' } },
+                where: {
+                    OR: [
+                        { pathName: 'Техника' },
+                        { pathName: { startsWith: 'Техника/' } },
+                    ],
+                },
             }),
         );
     });

@@ -3,8 +3,8 @@ import type {
     DepartmentSalaryReportResponse,
     EmployeeSalaryReportRule,
 } from 'ireports-contracts';
-import type { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
+import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
 import { Period } from '@/shared/domain/period.value-object';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
@@ -246,8 +246,23 @@ export class GetShopDepartmentSalaryReportService {
         const schemaByEmployee = new Map(
             schemas.map((schema) => [schema.getProps().target.getId(), schema]),
         );
+        const categoryIds = this.collectProductCategoryIds(schemas);
         const categoryDescendantFolderIds =
-            await this.resolveShopCategoryDescendantFolderIds(schemas);
+            await this.resolveShopCategoryDescendantFolderIds(categoryIds);
+        // Одна и та же карта category → ShopSalesPerformance для всех
+        // сотрудников отдела (findForScope зависит только от department +
+        // category, не от employeeId) — резолвится один раз батчем, а не в
+        // цикле по сотрудникам (то же требование "без N+1", что и у
+        // categoryDescendantFolderIds/erpData выше; Фаза 2 плана
+        // shop-sales-performance-by-category, зеркало
+        // BuildShopCalculationContextService.resolveSalesPerformanceByCategory).
+        const salesPerformanceByCategory =
+            await this.resolveSalesPerformanceByCategory(
+                period,
+                departmentId,
+                categoryIds,
+                salesPerformanceDetail,
+            );
         const salesPlanAt = plans.reduce<Date | null>((latest, plan) => {
             const updatedAt = plan.getProps().updatedAt;
             return !latest || updatedAt > latest ? updatedAt : latest;
@@ -293,7 +308,7 @@ export class GetShopDepartmentSalaryReportService {
                     freshnessStamp,
                     rules,
                     employeeContext,
-                    salesPerformanceDetail,
+                    salesPerformanceByCategory,
                 );
 
             contributions.set(employee.id, {
@@ -313,13 +328,16 @@ export class GetShopDepartmentSalaryReportService {
     }
 
     // Уникальные category правил ProductSold/UsedProductSold ВСЕХ схем
-    // отдела разом (union, issue #60/#57) — один батч-вызов
-    // resolveCategoryDescendantFolderIds на отдел, а не по одному на
-    // сотрудника/схему, зеркало collectCategoryIds
-    // BuildShopCalculationContextService, но на весь список схем.
-    private async resolveShopCategoryDescendantFolderIds(
+    // отдела разом (union, issue #60/#57) — переиспользуется и для
+    // раскрытия дерева категорий (resolveShopCategoryDescendantFolderIds),
+    // и для резолва salesPerformance по категории
+    // (resolveSalesPerformanceByCategory, Фаза 2 плана
+    // shop-sales-performance-by-category), зеркало collectProductCategoryIds
+    // BuildShopCalculationContextService, но на весь список схем отдела, а
+    // не одной схемы сотрудника.
+    private collectProductCategoryIds(
         schemas: ShopMotivationSchema[],
-    ): Promise<Record<string, string[]>> {
+    ): Set<string> {
         const categoryIds = new Set<string>();
         for (const schema of schemas) {
             for (const rule of schema.getProps().rules) {
@@ -334,6 +352,14 @@ export class GetShopDepartmentSalaryReportService {
                 }
             }
         }
+        return categoryIds;
+    }
+
+    // Один батч-вызов resolveCategoryDescendantFolderIds на отдел, а не по
+    // одному на сотрудника/схему.
+    private async resolveShopCategoryDescendantFolderIds(
+        categoryIds: Set<string>,
+    ): Promise<Record<string, string[]>> {
         if (categoryIds.size === 0) {
             return {};
         }
@@ -342,13 +368,57 @@ export class GetShopDepartmentSalaryReportService {
         ]);
     }
 
+    // Карта category → ShopSalesPerformance для всего отдела (Фаза 2 плана
+    // shop-sales-performance-by-category, закрывает issue #60) — зеркало
+    // BuildShopCalculationContextService.resolveSalesPerformanceByCategory,
+    // но по union категорий ВСЕХ схем отдела (см. collectProductCategoryIds
+    // выше), а не одной схемы сотрудника; findForScope не зависит от
+    // employeeId, поэтому одна и та же карта переиспользуется для каждого
+    // сотрудника отдела в buildOpenShopContributions. Ключ null — то же
+    // departmentPerformance, что уже получен для salesPerformanceDetail
+    // отчёта (второго похода не делаем); категория без строки плана/факта в
+    // карту не попадает — fail closed на стороне ProductSoldEntity.
+    private async resolveSalesPerformanceByCategory(
+        period: string,
+        departmentId: number,
+        categoryIds: Set<string>,
+        departmentPerformance: ShopSalesPerformance | null,
+    ): Promise<Map<string | null, ShopSalesPerformance>> {
+        const result = new Map<string | null, ShopSalesPerformance>();
+        if (departmentPerformance) {
+            result.set(null, departmentPerformance);
+        }
+        if (categoryIds.size === 0) {
+            return result;
+        }
+        const entries = await Promise.all(
+            [...categoryIds].map(
+                async (category) =>
+                    [
+                        category,
+                        await this.shopSalesPerformanceReader.findForScope(
+                            period,
+                            departmentId,
+                            category,
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [category, performance] of entries) {
+            if (performance) {
+                result.set(category, performance);
+            }
+        }
+        return result;
+    }
+
     private async calculateShopEmployee(
         employeeId: number,
         period: string,
         freshnessStamp: string,
         rules: ShopSalaryRule[],
-        baseContext: Omit<CalculationContext, 'mode' | 'salesPerformance'>,
-        salesPerformanceDetail: ShopSalesPerformance | null,
+        baseContext: Omit<ShopCalculationContext, 'mode' | 'salesPerformance'>,
+        salesPerformanceByCategory: Map<string | null, ShopSalesPerformance>,
     ): Promise<EmployeeCalculationResult> {
         const cached = await this.cacheRepo.find('shop', period, employeeId);
         if (cached && cached.freshnessStamp === freshnessStamp) {
@@ -363,7 +433,7 @@ export class GetShopDepartmentSalaryReportService {
                 ...baseContext,
                 mode: 'FACT',
                 salesPerformance: toShopSalesPerformanceContext(
-                    salesPerformanceDetail,
+                    salesPerformanceByCategory,
                     'FACT',
                 ),
             }),
@@ -371,7 +441,7 @@ export class GetShopDepartmentSalaryReportService {
                 ...baseContext,
                 mode: 'PROGNOSE',
                 salesPerformance: toShopSalesPerformanceContext(
-                    salesPerformanceDetail,
+                    salesPerformanceByCategory,
                     'PROGNOSE',
                 ),
             }),

@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
-import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
+import type { ShopCalculationContext } from '../../types/shop-calculation-context.types';
 import {
     CreateShopSalaryRuleProps,
     ShopSalaryRule,
@@ -69,7 +69,7 @@ export class TaskCompletedShopEntity
         });
     }
 
-    calculate(context: CalculationContext): CalculationLine {
+    calculate(context: ShopCalculationContext): CalculationLine {
         const erpData = context.erpData as ShopCalculationErpData | undefined;
         const completions = erpData?.taskCompletions ?? [];
         const matched = completions.filter(
@@ -99,14 +99,23 @@ export class TaskCompletedShopEntity
                 };
             }
             case 'FloatPercent': {
-                if (!context.salesPerformance) {
+                // TaskCompleted не привязан к категории (у конфига нет
+                // поля category, см. TaskCompletedShopSalaryConfig) —
+                // всегда читает запись "весь отдел" карты
+                // context.salesPerformance (ключ null, см.
+                // shop-calculation-context.types.ts). Поведение не
+                // изменилось Фазой 2 плана
+                // shop-sales-performance-by-category — та переключала
+                // только ProductSold (см. product-sold.entity.ts).
+                const percentCompletion = context.salesPerformance?.get(null);
+                if (percentCompletion === undefined) {
                     throw new ShopSalesPerformanceRequiredException(
                         context.period.period,
                     );
                 }
                 const multiplier = resolveFloatPercentMultiplier(
                     award.percentBorders,
-                    context.salesPerformance.percentCompletion,
+                    percentCompletion,
                 );
                 const amount =
                     roundRubles(award.basePrice * quantity * multiplier) +

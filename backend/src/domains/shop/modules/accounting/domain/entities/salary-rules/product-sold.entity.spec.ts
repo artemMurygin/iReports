@@ -1,15 +1,21 @@
 import { ProductSoldEntity } from './product-sold.entity';
-import { CalculationContext } from '@/shared/domain/calculation-context';
+import type { CalculationContext } from '@/shared/domain/calculation-context';
 import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
 } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
-import { ShopSalesPerformanceRequiredException } from '@/domains/shop/modules/accounting/domain/exceptions/float-percent.exception';
-import { withRequestContext } from '@/shared/testing/with-request-context';
+import type {
+    ShopCalculationContext,
+    ShopSalesPerformanceByCategory,
+} from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
 
 // Юнит-тесты на подготовленном объекте контекста — без БД и без моков
 // репозиториев (issue #61, "Тесты правил ProductSold и PayPerHour
-// магазина").
+// магазина"). С Фазы 2 плана shop-sales-performance-by-category
+// context.salesPerformance — карта category → percentCompletion
+// (ShopSalesPerformanceByCategory, ключ null = «весь отдел»), а не
+// единственное значение общего CalculationContext — см.
+// shop-calculation-context.types.ts.
 
 const buildItem = (
     overrides: Partial<ShopProductSoldErpItem> = {},
@@ -31,10 +37,10 @@ const buildContext = (
     items: ShopProductSoldErpItem[],
     overrides: {
         identities?: CalculationContext['employee']['identities'];
-        salesPerformance?: CalculationContext['salesPerformance'];
+        salesPerformance?: ShopSalesPerformanceByCategory | null;
         categoryDescendantFolderIds?: Record<string, string[]>;
     } = {},
-): CalculationContext => ({
+): ShopCalculationContext => ({
     employee: {
         id: 1,
         identities: overrides.identities ?? [
@@ -259,33 +265,78 @@ describe('ProductSoldEntity', () => {
             },
         ];
 
-        it('бросает ShopSalesPerformanceRequiredException без SalesPerformance в контексте', () => {
-            withRequestContext(() => {
-                const rule = ProductSoldEntity.create({
-                    type: 'ProductSold',
-                    name: 'За проданный товар',
-                    targetRole: 'ONLINE_MANAGER',
-                    config: {
-                        category: null,
-                        award: {
-                            type: 'FloatPercent',
-                            basePercent: 10,
-                            salaryBasis: 'REVENUE',
-                            percentBorders,
-                        },
+        it('нет записи по своей категории в карте salesPerformance — fail closed (ничего не начисляется, не бросает исключение)', () => {
+            const rule = ProductSoldEntity.create({
+                type: 'ProductSold',
+                name: 'За проданный товар',
+                targetRole: 'ONLINE_MANAGER',
+                config: {
+                    category: null,
+                    award: {
+                        type: 'FloatPercent',
+                        basePercent: 10,
+                        salaryBasis: 'REVENUE',
+                        percentBorders,
                     },
-                });
-                const items = [
-                    buildItem({ sum: 1000, onlineManagerId: 'employee-42' }),
-                ];
+                },
+            });
+            const items = [
+                buildItem({ sum: 1000, onlineManagerId: 'employee-42' }),
+            ];
 
-                expect(() => rule.calculate(buildContext(items))).toThrow(
-                    ShopSalesPerformanceRequiredException,
-                );
+            const line = rule.calculate(buildContext(items));
+
+            expect(line).toEqual({
+                ruleId: rule.id,
+                salaryBasis: 'REVENUE',
+                quantity: 0,
+                rate: 0,
+                amount: 0,
+                sources: [],
             });
         });
 
-        it('режим FIX — меняет результат при разном проценте выполнения плана', () => {
+        it('карта salesPerformance есть, но без записи по своей категории (только по чужой) — тоже fail closed', () => {
+            const rule = ProductSoldEntity.create({
+                type: 'ProductSold',
+                name: 'За технику',
+                targetRole: 'ONLINE_MANAGER',
+                config: {
+                    category: 'root-folder',
+                    award: {
+                        type: 'FloatPercent',
+                        basePercent: 10,
+                        salaryBasis: 'REVENUE',
+                        percentBorders,
+                    },
+                },
+            });
+            const items = [
+                buildItem({
+                    sum: 1000,
+                    folderId: 'root-folder',
+                    onlineManagerId: 'employee-42',
+                }),
+            ];
+
+            const amount = rule.calculate(
+                buildContext(items, {
+                    categoryDescendantFolderIds: {
+                        'root-folder': ['root-folder'],
+                    },
+                    // В карте есть только "весь отдел" (null) и другая
+                    // категория — но не 'root-folder' самого правила.
+                    salesPerformance: new Map([
+                        [null, 100],
+                        ['other-folder', 100],
+                    ]),
+                }),
+            ).amount;
+
+            expect(amount).toBe(0);
+        });
+
+        it('режим FIX — меняет результат при разном проценте выполнения плана СВОЕЙ (null) категории', () => {
             const rule = ProductSoldEntity.create({
                 type: 'ProductSold',
                 name: 'За проданный товар',
@@ -306,20 +357,12 @@ describe('ProductSoldEntity', () => {
 
             const low = rule.calculate(
                 buildContext(items, {
-                    salesPerformance: {
-                        department: 1,
-                        category: null,
-                        percentCompletion: 60,
-                    },
+                    salesPerformance: new Map([[null, 60]]),
                 }),
             ).amount;
             const high = rule.calculate(
                 buildContext(items, {
-                    salesPerformance: {
-                        department: 1,
-                        category: null,
-                        percentCompletion: 100,
-                    },
+                    salesPerformance: new Map([[null, 100]]),
                 }),
             ).amount;
 
@@ -330,7 +373,7 @@ describe('ProductSoldEntity', () => {
             expect(low).not.toBe(high);
         });
 
-        it('режим LINEAR — интерполирует множитель между порогами', () => {
+        it('режим LINEAR — интерполирует множитель между порогами по СВОЕЙ (null) категории', () => {
             const rule = ProductSoldEntity.create({
                 type: 'ProductSold',
                 name: 'За проданный товар',
@@ -352,15 +395,57 @@ describe('ProductSoldEntity', () => {
             // Ровно между 50 (×0.5) и 80 (×1) — 65%, интерполяция даёт ×0.75.
             const amount = rule.calculate(
                 buildContext(items, {
-                    salesPerformance: {
-                        department: 1,
-                        category: null,
-                        percentCompletion: 65,
-                    },
+                    salesPerformance: new Map([[null, 65]]),
                 }),
             ).amount;
 
             expect(amount).toBe(75); // 1000 * 10% * 0.75
+        });
+
+        it('правило на конкретную категорию считает по проценту выполнения плана СВОЕЙ категории, а не отдела целиком (Фаза 2, issue #60)', () => {
+            const rule = ProductSoldEntity.create({
+                type: 'ProductSold',
+                name: 'За технику',
+                targetRole: 'ONLINE_MANAGER',
+                config: {
+                    category: 'root-folder',
+                    award: {
+                        type: 'FloatPercent',
+                        basePercent: 10,
+                        salaryBasis: 'REVENUE',
+                        percentBorders,
+                    },
+                },
+            });
+            const items = [
+                buildItem({
+                    sum: 1000,
+                    folderId: 'root-folder',
+                    onlineManagerId: 'employee-42',
+                }),
+            ];
+            const context = buildContext(items, {
+                categoryDescendantFolderIds: {
+                    'root-folder': ['root-folder'],
+                },
+                // Отдел целиком выполнен всего на 40% (ниже нижнего порога —
+                // множитель 0, начисление было бы 0), а СВОЯ категория
+                // правила ('root-folder') — на 90% (между порогами B и C,
+                // FIX даёт множитель B = 1). Разные значения по разным
+                // ключам карты — заведомо разный результат в зависимости от
+                // того, какой ключ читает правило.
+                salesPerformance: new Map([
+                    [null, 40],
+                    ['root-folder', 90],
+                ]),
+            });
+
+            const line = rule.calculate(context);
+
+            // 1000 * 10% * 1 (множитель 90% между 80 и 100 в режиме FIX) = 100,
+            // а не 0 (что дал бы процент отдела 40%).
+            expect(line.amount).toBe(100);
+            expect(line.rate).toBe(10); // basePercent * multiplier = 10 * 1
         });
     });
 

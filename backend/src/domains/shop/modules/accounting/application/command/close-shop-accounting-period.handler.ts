@@ -153,7 +153,7 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
                 erpData: base.erpData,
                 mode: 'FACT',
                 salesPerformance: toShopSalesPerformanceContext(
-                    base.salesPerformanceDetail,
+                    base.salesPerformanceByCategory,
                     'FACT',
                 ),
             });

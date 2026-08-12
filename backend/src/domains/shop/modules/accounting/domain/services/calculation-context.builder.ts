@@ -1,6 +1,6 @@
-import { CalculationContext } from '@/shared/domain/calculation-context';
 import { Period } from '@/shared/domain/period.value-object';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
+import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
 
 // Зеркало domains/service/modules/accounting/domain/services/calculation-context.builder.ts
 // (Фаза 13.5, issue #57) — независимая реализация в домене shop. Общий
@@ -19,7 +19,7 @@ export function buildBaseCalculationContext(
     direction: AccountingDirection,
     period: Period,
     employeeId: number,
-): Omit<CalculationContext, 'mode'> {
+): Omit<ShopCalculationContext, 'mode'> {
     const { from, to } = period.getBounds();
     return {
         employee: { id: employeeId, identities: [] },

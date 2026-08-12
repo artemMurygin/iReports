@@ -1,5 +1,5 @@
 import { TaskCompletedShopEntity } from './task-completed.entity';
-import { CalculationContext } from '@/shared/domain/calculation-context';
+import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
 import { ShopSalesPerformanceRequiredException } from '@/domains/shop/modules/accounting/domain/exceptions/float-percent.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -10,8 +10,8 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 const buildContext = (
     employeeId: number,
     completions: ShopCalculationErpData['taskCompletions'],
-    salesPerformance: CalculationContext['salesPerformance'] = null,
-): CalculationContext => ({
+    salesPerformance: ShopCalculationContext['salesPerformance'] = null,
+): ShopCalculationContext => ({
     employee: { id: employeeId, identities: [] },
     period: {
         direction: 'shop',
@@ -155,18 +155,10 @@ describe('TaskCompletedShopEntity', () => {
             const completions = [{ id: 't1', employeeId: 1 }];
 
             const low = rule.calculate(
-                buildContext(1, completions, {
-                    department: 1,
-                    category: null,
-                    percentCompletion: 60,
-                }),
+                buildContext(1, completions, new Map([[null, 60]])),
             ).amount;
             const high = rule.calculate(
-                buildContext(1, completions, {
-                    department: 1,
-                    category: null,
-                    percentCompletion: 100,
-                }),
+                buildContext(1, completions, new Map([[null, 100]])),
             ).amount;
 
             // 60% -> множитель предыдущего порога (0.5): 100 * 1 * 0.5 = 50

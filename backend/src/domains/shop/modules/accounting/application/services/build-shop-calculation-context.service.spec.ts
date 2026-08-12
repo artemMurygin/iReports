@@ -30,6 +30,12 @@ describe('BuildShopCalculationContextService', () => {
     const buildService = (overrides?: {
         departmentId?: number | null;
         performance?: ShopSalesPerformance | null;
+        // Позволяет резолвить разные ShopSalesPerformance по разным
+        // category (findForScope третьим аргументом) — иначе один и тот же
+        // mockResolvedValue(performance) вернулся бы для ЛЮБОЙ category, и
+        // тест не отличил бы "резолвим один раз на сотрудника" от "резолвим
+        // по каждой уникальной category".
+        performanceByCategory?: Record<string, ShopSalesPerformance | null>;
     }) => {
         const findEmployeeIdentities = jest.fn().mockResolvedValue([]);
         const findHoursWorked = jest.fn().mockResolvedValue(8);
@@ -58,7 +64,20 @@ describe('BuildShopCalculationContextService', () => {
 
         const findForScope = jest
             .fn()
-            .mockResolvedValue(overrides?.performance ?? null);
+            .mockImplementation(
+                (
+                    _period: string,
+                    _department: number,
+                    category: string | null,
+                ) => {
+                    if (overrides?.performanceByCategory && category !== null) {
+                        return Promise.resolve(
+                            overrides.performanceByCategory[category] ?? null,
+                        );
+                    }
+                    return Promise.resolve(overrides?.performance ?? null);
+                },
+            );
         const salesPerformanceReader: ShopSalesPerformanceReaderPort = {
             listForPeriod: jest.fn().mockResolvedValue([]),
             findForScope,
@@ -136,6 +155,117 @@ describe('BuildShopCalculationContextService', () => {
 
         expect(findForScope).toHaveBeenCalledWith('2026-01', 42, null);
         expect(context.salesPerformanceDetail).toBe(performance);
+    });
+
+    describe('salesPerformanceByCategory (Фаза 2 плана shop-sales-performance-by-category)', () => {
+        it('резолвит salesPerformance отдельным вызовом findForScope на каждую уникальную category правил схемы, а не один раз на сотрудника', async () => {
+            const departmentPerformance = {
+                department: true,
+            } as unknown as ShopSalesPerformance;
+            const categoryAPerformance = {
+                category: 'a',
+            } as unknown as ShopSalesPerformance;
+            const categoryBPerformance = {
+                category: 'b',
+            } as unknown as ShopSalesPerformance;
+            const { service, findForScope } = buildService({
+                departmentId: 7,
+                performance: departmentPerformance,
+                performanceByCategory: {
+                    'cat-a': categoryAPerformance,
+                    'cat-b': categoryBPerformance,
+                },
+            });
+            const rules = [
+                buildRule('ProductSold', 'cat-a'),
+                buildRule('UsedProductSold', 'cat-b'),
+                // Дубликат категории 'cat-a' у другого правила — не должен
+                // породить второй вызов findForScope на эту же category.
+                buildRule('ProductSold', 'cat-a'),
+                buildRule('TaskCompleted'),
+            ];
+
+            const context = await service.build(
+                Period.create('2026-01'),
+                1,
+                rules,
+            );
+
+            // Один вызов на "весь отдел" (category: null, переиспользован из
+            // salesPerformanceDetail) + один на каждую уникальную category
+            // ('cat-a', 'cat-b') — не 2 * количество ProductSold/UsedProductSold
+            // правил и не единственный вызов на сотрудника целиком.
+            expect(findForScope).toHaveBeenCalledTimes(3);
+            expect(findForScope).toHaveBeenCalledWith('2026-01', 7, null);
+            expect(findForScope).toHaveBeenCalledWith('2026-01', 7, 'cat-a');
+            expect(findForScope).toHaveBeenCalledWith('2026-01', 7, 'cat-b');
+
+            expect(context.salesPerformanceByCategory).toEqual(
+                new Map([
+                    [null, departmentPerformance],
+                    ['cat-a', categoryAPerformance],
+                    ['cat-b', categoryBPerformance],
+                ]),
+            );
+        });
+
+        it('category правила без найденной строки плана/факта — отсутствует в карте (fail closed резолвится дальше, в самом правиле)', async () => {
+            const departmentPerformance = {
+                department: true,
+            } as unknown as ShopSalesPerformance;
+            const { service } = buildService({
+                departmentId: 7,
+                performance: departmentPerformance,
+                performanceByCategory: {
+                    'cat-with-plan': {
+                        found: true,
+                    } as unknown as ShopSalesPerformance,
+                    // 'cat-without-plan' намеренно отсутствует в объекте —
+                    // findForScope резолвится в null для неё.
+                },
+            });
+            const rules = [
+                buildRule('ProductSold', 'cat-with-plan'),
+                buildRule('ProductSold', 'cat-without-plan'),
+            ];
+
+            const context = await service.build(
+                Period.create('2026-01'),
+                1,
+                rules,
+            );
+
+            expect(
+                context.salesPerformanceByCategory.has('cat-without-plan'),
+            ).toBe(false);
+            expect(
+                context.salesPerformanceByCategory.get('cat-with-plan'),
+            ).toEqual({
+                found: true,
+            });
+        });
+
+        it('нет правил с category — карта несёт только запись "весь отдел" (null), findForScope вызывается один раз', async () => {
+            const departmentPerformance = {
+                department: true,
+            } as unknown as ShopSalesPerformance;
+            const { service, findForScope } = buildService({
+                departmentId: 7,
+                performance: departmentPerformance,
+            });
+            const rules = [buildRule('PayPerHour'), buildRule('TaskCompleted')];
+
+            const context = await service.build(
+                Period.create('2026-01'),
+                1,
+                rules,
+            );
+
+            expect(findForScope).toHaveBeenCalledTimes(1);
+            expect(context.salesPerformanceByCategory).toEqual(
+                new Map([[null, departmentPerformance]]),
+            );
+        });
     });
 
     it('собирает identities/hoursWorked/productSoldItems/taskCompletions из БД', async () => {

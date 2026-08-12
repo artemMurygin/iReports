@@ -25,6 +25,16 @@ export interface ShopCalculationBaseContext {
     period: CalculationContext['period'];
     erpData: ShopCalculationErpData;
     salesPerformanceDetail: ShopSalesPerformance | null;
+    // Карта ShopSalesPerformance по категории (Фаза 2 плана
+    // shop-sales-performance-by-category) — вход
+    // toShopSalesPerformanceContext(), строящей карту
+    // CalculationContext.salesPerformance для рассчёта FloatPercent по
+    // категории СВОЕГО правила, а не по отделу целиком (см. findSalesPerformance
+    // ниже). Ключ null — тот же ShopSalesPerformance, что и
+    // salesPerformanceDetail (отдел целиком), под тем же ключом, что читает
+    // TaskCompletedShopEntity.FloatPercent (у него категории нет вовсе) и
+    // ProductSold/UsedProductSold с config.category === null.
+    salesPerformanceByCategory: Map<string | null, ShopSalesPerformance>;
 }
 
 // Application-слой сборки контекста расчёта направления shop (Фаза 13.5,
@@ -74,13 +84,21 @@ export class BuildShopCalculationContextService {
             this.dataSource.findEmployeeDepartmentId(employeeId),
         ]);
 
-        const categoryDescendantFolderIds =
-            await this.resolveCategoryDescendantFolderIds(rules);
+        const categoryIds = this.collectProductCategoryIds(rules);
 
-        const salesPerformanceDetail = await this.findSalesPerformance(
-            period,
-            departmentId,
-        );
+        const [categoryDescendantFolderIds, salesPerformanceDetail] =
+            await Promise.all([
+                this.resolveCategoryDescendantFolderIds(categoryIds),
+                this.findSalesPerformance(period, departmentId, null),
+            ]);
+
+        const salesPerformanceByCategory =
+            await this.resolveSalesPerformanceByCategory(
+                period,
+                departmentId,
+                categoryIds,
+                salesPerformanceDetail,
+            );
 
         return {
             employee: { ...base.employee, identities },
@@ -92,18 +110,19 @@ export class BuildShopCalculationContextService {
                 taskCompletions: confirmedTaskCompletions,
             } satisfies ShopCalculationErpData,
             salesPerformanceDetail,
+            salesPerformanceByCategory,
         };
     }
 
     // Уникальные category правил ProductSold/UsedProductSold схемы (issue
     // #60) — только у этих двух типов правил config несёт поле category,
-    // остальные (PayPerHour/TaskCompleted) его не читают вовсе. Один
-    // батч-вызов resolveCategoryDescendantFolderIds на все уникальные
-    // корневые папки схемы разом (см. ShopCalculationDataPort), а не по
-    // одному на правило.
-    private async resolveCategoryDescendantFolderIds(
-        rules: ShopSalaryRule[],
-    ): Promise<Record<string, string[]>> {
+    // остальные (PayPerHour/TaskCompleted) его не читают вовсе. Общий
+    // список переиспользуется и для раскрытия дерева категорий
+    // (resolveCategoryDescendantFolderIds), и для резолва salesPerformance
+    // по категории (resolveSalesPerformanceByCategory, Фаза 2 плана
+    // shop-sales-performance-by-category) — один проход по правилам вместо
+    // двух.
+    private collectProductCategoryIds(rules: ShopSalaryRule[]): Set<string> {
         const categoryIds = new Set<string>();
         for (const rule of rules) {
             if (
@@ -116,6 +135,15 @@ export class BuildShopCalculationContextService {
                 categoryIds.add(rule.config.category);
             }
         }
+        return categoryIds;
+    }
+
+    // Один батч-вызов resolveCategoryDescendantFolderIds на все уникальные
+    // корневые папки схемы разом (см. ShopCalculationDataPort), а не по
+    // одному на правило.
+    private async resolveCategoryDescendantFolderIds(
+        categoryIds: Set<string>,
+    ): Promise<Record<string, string[]>> {
         if (categoryIds.size === 0) {
             return {};
         }
@@ -124,18 +152,17 @@ export class BuildShopCalculationContextService {
         ]);
     }
 
-    // Полный ShopSalesPerformance подразделения сотрудника — вход и для
-    // расчёта FloatPercent (после выбора percentCompletion по режиму, см.
-    // to-shop-sales-performance-context.ts), и для компактного блока в
-    // ответе отчёта. null, если у сотрудника нет отдела или для этого
-    // отдела ещё нет ни плана, ни факта за период — тогда FloatPercent-
-    // правила сами бросают доменную ошибку, а остальные правила контекст не
-    // используют и продолжают считать как обычно. category не передаём (null)
-    // — ShopSalesPerformanceReaderPort.findForScope ищет по отделу целиком,
-    // без привязки к конкретной категории правила (зеркало service-порта).
+    // Полный ShopSalesPerformance подразделения сотрудника (category: null)
+    // — вход для компактного блока SalesPerformance в ответе отчёта
+    // (to-shop-sales-performance-summary.ts) и для записи «весь отдел» в
+    // карте salesPerformanceByCategory (правила без категории —
+    // TaskCompletedShopEntity.FloatPercent, ProductSold/UsedProductSold с
+    // config.category === null). null, если у сотрудника нет отдела или для
+    // этого отдела ещё нет ни плана, ни факта за период.
     async findSalesPerformance(
         period: Period,
         departmentId: number | null,
+        category: string | null,
     ): Promise<ShopSalesPerformance | null> {
         if (departmentId == null) {
             return null;
@@ -143,8 +170,52 @@ export class BuildShopCalculationContextService {
         return this.salesPerformanceReader.findForScope(
             period.getValue(),
             departmentId,
-            null,
+            category,
         );
+    }
+
+    // Карта category → ShopSalesPerformance (Фаза 2 плана
+    // shop-sales-performance-by-category, закрывает issue #60) — по одному
+    // findForScope на каждую уникальную category правил ProductSold/
+    // UsedProductSold схемы (переиспользует categoryIds, собранный для
+    // resolveCategoryDescendantFolderIds), плюс запись "весь отдел" под
+    // ключом null из уже полученного departmentPerformance (второго похода
+    // за category: null не делаем — тот же вызов уже нужен для
+    // salesPerformanceDetail отчёта). Категория, для которой findForScope
+    // не нашёл строки, в карту не попадает — fail closed на стороне
+    // ProductSoldEntity (см. product-sold.entity.ts), а не здесь.
+    private async resolveSalesPerformanceByCategory(
+        period: Period,
+        departmentId: number | null,
+        categoryIds: Set<string>,
+        departmentPerformance: ShopSalesPerformance | null,
+    ): Promise<Map<string | null, ShopSalesPerformance>> {
+        const result = new Map<string | null, ShopSalesPerformance>();
+        if (departmentPerformance) {
+            result.set(null, departmentPerformance);
+        }
+        if (categoryIds.size === 0) {
+            return result;
+        }
+        const entries = await Promise.all(
+            [...categoryIds].map(
+                async (category) =>
+                    [
+                        category,
+                        await this.findSalesPerformance(
+                            period,
+                            departmentId,
+                            category,
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [category, performance] of entries) {
+            if (performance) {
+                result.set(category, performance);
+            }
+        }
+        return result;
     }
 
     // Лёгкий путь для попадания в ленивый кэш расчёта (зеркало
@@ -152,13 +223,15 @@ export class BuildShopCalculationContextService {
     // расчёта (CalculationLine[]), не сам ShopSalesPerformance, поэтому
     // компактный блок для ответа при кэш-хите достаётся отдельно, без
     // похода за тяжёлыми erpData-выборками (findProductSoldItems/...),
-    // которые build() тянет за собой.
+    // которые build() тянет за собой. Только "весь отдел" (category: null)
+    // — при кэш-хите rule.calculate() заново не вызывается, поэтому карта
+    // по категориям здесь не нужна, только компактный блок отчёта.
     async findSalesPerformanceForEmployee(
         period: Period,
         employeeId: number,
     ): Promise<ShopSalesPerformance | null> {
         const departmentId =
             await this.dataSource.findEmployeeDepartmentId(employeeId);
-        return this.findSalesPerformance(period, departmentId);
+        return this.findSalesPerformance(period, departmentId, null);
     }
 }

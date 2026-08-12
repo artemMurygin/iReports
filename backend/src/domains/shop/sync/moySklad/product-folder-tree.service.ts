@@ -22,10 +22,18 @@ import { DatabaseService } from '../../../../infrustructure/database/database.se
 // синком без ограничения глубины, поэтому один индексированный запрос
 // надёжнее и не деградирует с ростом справочника.
 //
-// Формат pathName у МойСклад — путь по именам предков через "/"
-// (например "Техника/Смартфоны/iPhone"), поэтому у любого потомка pathName
-// начинается с pathName родителя + "/" — сравнение строгое по префиксу, не
-// требует нормализации регистра или обрезки пробелов.
+// Формат pathName у МойСклад — путь по именам ПРЕДКОВ через "/", НЕ
+// включая саму папку (например у папки "iPhone" с родителями
+// "Техника/Смартфоны" pathName = "Техника/Смартфоны", а не
+// "Техника/Смартфоны/iPhone"); у папок верхнего уровня pathName — пустая
+// строка. Поэтому "полный путь включая себя" нужно досчитывать на лету
+// как pathName + "/" + name (или просто name для верхнего уровня), а
+// прямые потомки категории имеют pathName РАВНЫЙ этому полному пути
+// (не начинающийся с "полный_путь/") — глубже вложенные потомки уже
+// начинаются с "полный_путь/". Раньше здесь ошибочно считалось, что
+// pathName самой категории уже включает её саму, из-за чего для любой
+// категории верхнего уровня (pathName = '') запрос на потомков не находил
+// вообще ничего (searched for pathName LIKE '/%').
 @Injectable()
 export class ProductFolderTreeService {
     constructor(private readonly db: DatabaseService) {}
@@ -36,12 +44,21 @@ export class ProductFolderTreeService {
     async resolveDescendantFolderIds(rootFolderId: string): Promise<string[]> {
         const root = await this.db.moySkladProductFolder.findUnique({
             where: { id: rootFolderId },
-            select: { id: true, pathName: true },
+            select: { id: true, name: true, pathName: true },
         });
         if (!root) return [];
 
+        const rootFullPath = root.pathName
+            ? `${root.pathName}/${root.name}`
+            : root.name;
+
         const descendants = await this.db.moySkladProductFolder.findMany({
-            where: { pathName: { startsWith: `${root.pathName}/` } },
+            where: {
+                OR: [
+                    { pathName: rootFullPath },
+                    { pathName: { startsWith: `${rootFullPath}/` } },
+                ],
+            },
             select: { id: true },
         });
 

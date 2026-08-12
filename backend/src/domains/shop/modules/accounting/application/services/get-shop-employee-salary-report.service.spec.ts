@@ -149,6 +149,14 @@ describe('GetShopEmployeeSalaryReportService', () => {
                     },
                     salesPerformanceDetail:
                         overrides?.shopSalesPerformanceDetail ?? null,
+                    // Карта по категориям (Фаза 2 плана
+                    // shop-sales-performance-by-category) — ключ null
+                    // зеркалит salesPerformanceDetail (отдел целиком), тот
+                    // же приём, что и в BuildShopCalculationContextService.
+                    // resolveSalesPerformanceByCategory.
+                    salesPerformanceByCategory: overrides?.shopSalesPerformanceDetail
+                        ? new Map([[null, overrides.shopSalesPerformanceDetail]])
+                        : new Map(),
                 }),
             ),
             findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),

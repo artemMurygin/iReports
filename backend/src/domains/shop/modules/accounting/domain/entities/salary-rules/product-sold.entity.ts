@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
-import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import {
     CreateShopSalaryRuleProps,
@@ -10,6 +9,7 @@ import {
     ShopSalaryRule,
     TargetRole,
 } from '../../types/shop-salary-rule.types';
+import type { ShopCalculationContext } from '../../types/shop-calculation-context.types';
 import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
@@ -17,7 +17,6 @@ import type {
 import { employeeMatchesShopDemandRole } from '../../services/shop-role-source';
 import { roundRubles } from '../../services/money';
 import { resolveFloatPercentMultiplier } from '../../services/float-percent';
-import { ShopSalesPerformanceRequiredException } from '../../exceptions/float-percent.exception';
 
 // Правило "вознаграждение за проданный товар в категории" (Фаза 12, issue
 // #59/#60, см. docs/payroll/plan-payroll-calculation.md и
@@ -70,7 +69,7 @@ export class ProductSoldEntity
         });
     }
 
-    calculate(context: CalculationContext): CalculationLine {
+    calculate(context: ShopCalculationContext): CalculationLine {
         const erpData = context.erpData as ShopCalculationErpData | undefined;
         const items = erpData?.productSoldItems ?? [];
         const matched = this.dedupeByPosition(
@@ -122,30 +121,38 @@ export class ProductSoldEntity
                 };
             }
             case 'FloatPercent': {
-                // Открытый вопрос issue #60 ("берёт ли ProductSold с
-                // FloatPercent процент выполнения плана по своей категории
-                // или по отделу целиком") — решение: по ОТДЕЛУ целиком.
-                // context.salesPerformance приходит готовым от
-                // application-слоя (ShopSalesPerformanceReaderPort,
-                // domains/shop/modules/sales, Фаза 11); фактический
-                // источник факта продаж (MoySkladSalesFactSourceRepository)
-                // всегда отдаёт category: null — план/факт по категории в
-                // домене shop пока не реализован (см. комментарий в этом
-                // репозитории), поэтому категория ProductSold (папка
-                // MoySkladProductFolder, ERP-справочник товаров) и
-                // категория SalesPlan (числовой id, справочник плана
-                // продаж) — на сегодня два никак не связанных между собой
-                // понятия. Правило само эту связь не устанавливает —
-                // просто использует переданный context.salesPerformance
-                // как есть.
-                if (!context.salesPerformance) {
-                    throw new ShopSalesPerformanceRequiredException(
-                        context.period.period,
-                    );
+                // Issue #60 закрыт (Фаза 2 плана
+                // shop-sales-performance-by-category): FloatPercent берёт
+                // процент выполнения плана СВОЕЙ категории, а не отдела
+                // целиком — application-слой (BuildShopCalculationContextService)
+                // резолвит salesPerformance по каждой уникальной category
+                // правил ProductSold/UsedProductSold схемы через
+                // ShopSalesPerformanceReaderPort.findForScope(period,
+                // department, category) и складывает результат в карту
+                // context.salesPerformance (category → percentCompletion,
+                // ключ null — «весь отдел», см. shop-calculation-context.types.ts).
+                // Fail closed — тот же принцип, что и у matchesCategory
+                // ниже для categoryDescendantFolderIds: если для
+                // this.props.config.category в карте нет расчёта (нет
+                // плана/факта по этому scope), вознаграждение не
+                // начисляется, а не считается по проценту чужой
+                // категории/отдела.
+                const percentCompletion = context.salesPerformance?.get(
+                    this.props.config.category,
+                );
+                if (percentCompletion === undefined) {
+                    return {
+                        ruleId: this.id,
+                        salaryBasis: award.salaryBasis,
+                        quantity: 0,
+                        rate: 0,
+                        amount: 0,
+                        sources: [],
+                    };
                 }
                 const multiplier = resolveFloatPercentMultiplier(
                     award.percentBorders,
-                    context.salesPerformance.percentCompletion,
+                    percentCompletion,
                 );
                 const base = this.sumBasis(matched, award.salaryBasis);
                 const amount =
@@ -166,7 +173,7 @@ export class ProductSoldEntity
     validate(): void {}
 
     private matchesRole(
-        context: CalculationContext,
+        context: ShopCalculationContext,
         item: ShopProductSoldErpItem,
     ): boolean {
         return employeeMatchesShopDemandRole(

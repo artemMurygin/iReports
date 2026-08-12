@@ -11,7 +11,7 @@ import type { ShopSalesPerformanceReaderPort } from '../ports/shop-sales-perform
 import { ShopSalesFact } from '../../domain/value-objects/shop-sales-fact.value-object';
 import { ShopSalesPerformance } from '../../domain/value-objects/shop-sales-performance.value-object';
 
-function scopeKey(department: number, category: number | null): string {
+function scopeKey(department: number, category: string | null): string {
     return `${department}:${category ?? 'null'}`;
 }
 
@@ -38,10 +38,19 @@ export class GetShopSalesPerformanceService implements ShopSalesPerformanceReade
         const periodVo = Period.create(period);
         const now = new Date();
 
-        const [plans, facts] = await Promise.all([
-            this.ensureSalesPlans.ensure('shop', period),
-            this.factSource.aggregate(period),
-        ]);
+        const plans = await this.ensureSalesPlans.ensure('shop', period);
+
+        const categories = [
+            ...new Set(
+                plans
+                    .map((plan) => plan.category)
+                    .filter(
+                        (category): category is string => category !== null,
+                    ),
+            ),
+        ];
+
+        const facts = await this.factSource.aggregate(period, categories);
 
         const factsByScope = new Map<string, ShopSalesFactErpAggregate>(
             facts.map((fact) => [
@@ -78,7 +87,7 @@ export class GetShopSalesPerformanceService implements ShopSalesPerformanceReade
     async findForScope(
         period: string,
         department: number,
-        category: number | null,
+        category: string | null,
     ): Promise<ShopSalesPerformance | null> {
         const performances = await this.listForPeriod(period);
         return (
