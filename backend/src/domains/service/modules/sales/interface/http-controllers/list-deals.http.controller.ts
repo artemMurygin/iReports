@@ -7,9 +7,9 @@ import { ListDealsQueryDto } from '../dto/list-deals-query.dto';
 import { ListDealsService } from '../../application/services/list-deals.service';
 
 // Новый дом для GET /deals из src/TODO/deals (см. комментарий у
-// serviceDealsRoot в app.routes.ts) — легаси-эндпоинт при этом не трогается
-// и продолжает работать, это параллельный маршрут на время миграции (Фаза
-// 3, docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md).
+// serviceDealsRoot в app.routes.ts). Фаза 2 (см.
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// удаляет src/TODO/deals целиком — этот путь остаётся единственным.
 @ApiTags('Продажи')
 @Controller()
 export class ListDealsHttpController {

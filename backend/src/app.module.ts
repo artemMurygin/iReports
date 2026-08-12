@@ -24,7 +24,6 @@ import { EmployeeIdentityModule } from './modules/employee-identity/employee-ide
 
 // TODO: временно перенесены как есть, требуют рефакторинга под DDD:
 import { PriceMonitoringModule } from './TODO/priceMonitoring/priceMonitoring.module';
-import { DealsModule } from './TODO/deals/deals.module';
 import { ReportsModule } from './TODO/reports/reports.module';
 
 @Module({
@@ -50,7 +49,6 @@ import { ReportsModule } from './TODO/reports/reports.module';
 
         // TODO: временно перенесены как есть, требуют рефакторинга под DDD:
         PriceMonitoringModule,
-        DealsModule,
         ReportsModule,
 
         // TODO: не мигрировано в src1 (эквивалента ещё нет):
