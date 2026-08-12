@@ -43,7 +43,8 @@ domains/shop/
 `roapp` в домене `service`, итерировать через `for await`.
 
 В отличие от `service`, здесь **нет** абстракции вроде `roapp-gateway` — `MoySkladSyncService` и
-`TODO/priceMonitoring` инжектят конкретный класс `MoyskladService` напрямую, не через порт/DI-токен.
+`modules/marketing/pricing` (см. ниже) инжектят конкретный класс `MoyskladService` напрямую, не
+через порт/DI-токен.
 Модуль не регистрирует ни одного `@Controller` (`controllers: []` в `moysklad.module.ts`) — данные
 наружу отдаются только через `sync`, а не через собственный HTTP API. Если понадобится подменять
 источник данных в тестах или добавить второй транспорт (аналогично `custom-api-roapp`), заведи порт
@@ -233,8 +234,12 @@ generic-по-`direction` `GetAccountingPeriodService`/`ReopenAccountingPeriodCom
 
 - **`purchasing`** — закупки товара у поставщиков. Не существует.
 - **`logistics`** — логистика (доставка товара, перемещения между складами/точками). Не существует.
-- **`marketing`** — маркетинг (источники обращений, кампании и их эффективность). Не существует.
 - **`warehouse`** — склад/остатки товаров. Не существует.
+
+`marketing` уже существует (`modules/marketing/pricing`, Фаза 8–10
+`docs/todo-modules-ddd-refactoring`) — импорт закупочных цен из XLSX-прайса поставщика
+(`POST /v1/shop/marketing/pricing/import-costs` + статус/SSE), см. `ENDPOINTS.md`. Остальная часть
+маркетинга (источники обращений, кампании и их эффективность) в этом модуле пока не покрыта.
 
 Именование модулей — короткое существительное на английском, без домена в названии (не
 `shop-warehouse`): домен и так задаёт контекст через путь `domains/shop/modules/*`. Для "склада"
@@ -244,15 +249,13 @@ generic-по-`direction` `GetAccountingPeriodService`/`ReopenAccountingPeriodCom
 
 ## Функциональность домена, ещё не перенесённая в `domains/shop`
 
-- **`TODO/priceMonitoring`**, эндпоинт `/price-monitoring/update-shop-products-costs` — обновляет
-  себестоимость товаров в МойСклад (`moysklad.batchUpdateProducts`), сверяясь с прайсами поставщиков
-  через Excel/AI-парсинг (`src/integrations/ai`). Этот же модуль обслуживает и домен `service`
-  (`update-service-price`) — единая точка входа для обеих ERP, физически не принадлежит ни одному
-  домену.
-- Розничная аналитика (свой аналог `TODO/reports` из домена `service`) для `shop` пока не
+Легаси `TODO/priceMonitoring` (обновление себестоимости товаров в МойСклад из прайсов поставщиков)
+полностью перенесён в `modules/marketing/pricing` (Фазы 8–10 `docs/todo-modules-ddd-refactoring`) и
+удалён — см. выше.
+
+- Розничная аналитика (свой аналог `modules/reports` из домена `service`) для `shop` пока не
   существует ни в каком виде. При появлении такого функционала заводить его по DDD-слоям
-  (`domain`/`application`/`infrastructure`/`interface`), описанным в `backend/CLAUDE.md`, а не как
-  плоский `TODO`-модуль.
+  (`domain`/`application`/`infrastructure`/`interface`), описанным в `backend/CLAUDE.md`.
 
 ## Данные и тесты
 

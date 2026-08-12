@@ -44,7 +44,7 @@ A separate npm package (`ireports-contracts`) reused by both the backend and the
 - **Zod** / `nestjs-zod` — request validation based on contracts from `contracts`.
 - Code is organized by domain (`src/domains/{opt,service,shop}`); each domain has its own integrations, modules, and syncs with the corresponding external ERP system. Cross-domain infrastructure and shared abstractions live in `src/shared` and `src/infrustructure`.
 - External integrations: **Bitrix24**, **RoApp/RemOnline**, **МойСклад (MoySklad)**, Google Sheets, and an AI integration (OpenAI-compatible API) for analytics and auxiliary scenarios.
-- `backend/deprecated` contains code from the previous version of the backend, before it was split into domains — kept around while functionality is being migrated over.
+- The previous, pre-refactor version of the backend (formerly `backend/deprecated`) has been removed now that the migration to `src/domains` no longer needs it as a reference.
 
 ### `frontend` — web UI
 

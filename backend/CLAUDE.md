@@ -60,23 +60,23 @@ filter (jest's `rootDir` is `src`, so paths are relative to `src/`) — see abov
 
 ## Architecture
 
-The backend is **mid-refactor** from a flat NestJS app into a DDD/domain-oriented structure. Two
-generations of code coexist in `src/`:
+The backend is organized as a DDD/domain-oriented structure under `src/domains/{opt,service,shop}`
+(see root CLAUDE.md for what each domain means) — this is where all features live. `service` and
+`shop` each have their own CLAUDE.md with domain-specific detail:
+[`domains/service/CLAUDE.md`](./src/domains/service/CLAUDE.md),
+[`domains/shop/CLAUDE.md`](./src/domains/shop/CLAUDE.md). `opt` is an empty placeholder directory.
 
-- `src/domains/{opt,service,shop}` — the target structure, organized by business domain (see root
-  CLAUDE.md for what each domain means). This is where new features go. `service` and `shop` each
-  have their own CLAUDE.md with domain-specific detail:
-  [`domains/service/CLAUDE.md`](./src/domains/service/CLAUDE.md),
-  [`domains/shop/CLAUDE.md`](./src/domains/shop/CLAUDE.md). `opt` is an empty placeholder directory.
-- `src/TODO/` — modules (`deals`, `reports`, `priceMonitoring`) carried over as-is from the old
-  structure, still wired into `AppModule`, **pending refactor into a domain**. Don't treat their
-  layout as a pattern to copy.
+`src/TODO/` (a staging area for modules — `deals`, `reports`, `priceMonitoring` — carried over as-is
+from the pre-DDD backend, pending refactor into a domain) has been fully migrated into
+`src/domains/service/modules/{sales,reports,marketing/pricing}` and
+`src/domains/shop/modules/marketing/pricing` and no longer exists — don't expect to find it, and
+don't treat any lingering reference to it elsewhere as current.
 
 The previous, pre-refactor backend (`backend/deprecated/`) has been removed now that the migration
 no longer needs it as a reference — don't expect it to exist.
 
-`src/app.module.ts` documents the current migration state in comments (`TODO: временно перенесены...`,
-`TODO: не мигрировано...`) — check it before assuming a module has (or hasn't) been ported.
+`src/app.module.ts` documents any remaining not-yet-migrated functionality in comments
+(`TODO: не мигрировано...`) — check it before assuming a module has (or hasn't) been ported.
 
 ### Layering inside a domain module (the target pattern)
 
