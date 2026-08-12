@@ -10,7 +10,7 @@ function showUploadForm() {
 }
 
 function processFile(base64Data) {
-    const response = UrlFetchApp.fetch(BASE_URL + '/price-monitoring/update-shop-products-costs', {
+    const response = UrlFetchApp.fetch(BASE_URL + '/v1/shop/marketing/pricing/import-costs', {
         method: 'POST',
         contentType: 'application/json',
         payload: JSON.stringify({ file: base64Data }),
@@ -103,7 +103,7 @@ function uploadPricesToRO() {
         return emptyResult
     }
 
-    const response = UrlFetchApp.fetch(BASE_URL + '/price-monitoring/update-service-price', {
+    const response = UrlFetchApp.fetch(BASE_URL + '/v1/service/marketing/pricing/update-service-prices', {
         method: 'POST',
         contentType: 'application/json',
         payload: JSON.stringify(items),

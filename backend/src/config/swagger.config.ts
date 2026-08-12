@@ -8,19 +8,17 @@ import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module'
 import { ShopAccountingModule } from '@/domains/shop/modules/accounting/shop-accounting.module';
 import { ShopWarehouseModule } from '@/domains/shop/modules/warehouse/shop-warehouse.module';
 import { EmployeeIdentityModule } from '@/modules/employee-identity/employee-identity.module';
+import { PricingModule } from '@/domains/service/modules/marketing/pricing/pricing.module';
+import { ShopPricingModule } from '@/domains/shop/modules/marketing/pricing/pricing.module';
 
 // include в каждом документе ниже: документируем только отрефакторенные
-// DDD-модули (см. backend/CLAUDE.md); модули из src/TODO/* сюда намеренно
-// не входят — это старый, ещё не переложенный на nestjs-zod/DDD код,
-// который мы не трогаем (см. src/TODO/CLAUDE.md). До Фазы 5
-// (docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
-// один из них (getServiceFunnelReportDTO в TODO/reports, использовавший
-// z.coerce.date(), которую zod v4 toJSONSchema() не умеет сериализовать)
-// ронял генерацию OpenAPI-схемы на старте — TODO/reports удалён этой же
-// фазой целиком (перенесён в ReportsModule ниже и в воронку
-// modules/sales), блокер устранён: все контракты новых модулей используют
-// ISO-строки дат вместо z.coerce.date() (см. contracts/commands/report.ts,
-// contracts/commands/deal.ts).
+// DDD-модули (см. backend/CLAUDE.md). src/TODO/* как источник модулей
+// прекратил существовать (docs/todo-modules-ddd-refactoring/
+// plan-todo-modules-ddd-refactoring.md) — deals/reports/priceMonitoring
+// перенесены в domains/{service,shop}/modules/*, весь каталог удалён; все
+// контракты используют ISO-строки дат вместо z.coerce.date() (которую zod v4
+// toJSONSchema() не умеет сериализовать), поэтому OpenAPI-генерация больше
+// ничем не блокируется.
 export function setupSwagger(app: INestApplication): void {
     const serviceSwaggerConfig = new DocumentBuilder()
         .setTitle('iReports API — Service')
@@ -31,7 +29,12 @@ export function setupSwagger(app: INestApplication): void {
         app,
         serviceSwaggerConfig,
         {
-            include: [SalesModule, AccountingModule, ReportsModule],
+            include: [
+                SalesModule,
+                AccountingModule,
+                ReportsModule,
+                PricingModule,
+            ],
         },
     );
     SwaggerModule.setup(
@@ -46,7 +49,12 @@ export function setupSwagger(app: INestApplication): void {
         .setVersion('1.0')
         .build();
     const shopDocument = SwaggerModule.createDocument(app, shopSwaggerConfig, {
-        include: [ShopSalesModule, ShopAccountingModule, ShopWarehouseModule],
+        include: [
+            ShopSalesModule,
+            ShopAccountingModule,
+            ShopWarehouseModule,
+            ShopPricingModule,
+        ],
     });
     SwaggerModule.setup('docs/shop', app, cleanupOpenApiDoc(shopDocument));
 

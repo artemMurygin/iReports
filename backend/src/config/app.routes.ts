@@ -45,6 +45,15 @@ const serviceFunnelReportRoot = `${serviceRoot}/sales/funnel-report`;
 // serviceDealsRoot) — это отдельный модуль и отдельный корень пути, читает
 // roapp_service_orders/roapp_service_categories, а не bitrix_deals.
 const serviceReportsRoot = `${serviceRoot}/reports`;
+// Обновление цен услуг RoApp (Фаза 7,
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом сервисной половины `POST /price-monitoring/update-service-price`
+// из backend/src/TODO/priceMonitoring (см. PRD, раздел 3б). Саб-группа
+// `marketing` внутри service — см. domains/service/CLAUDE.md, раздел
+// "Целевой набор модулей домена". Легаси-`priceMonitoring` (обе половины —
+// service и shop, см. shopMarketingPricingRoot ниже) удалён целиком в
+// Фазе 10 того же трека.
+const serviceMarketingPricingRoot = `${serviceRoot}/marketing/pricing`;
 
 // Направление shop — все маршруты домена domains/shop под общим префиксом
 // /v1/shop.
@@ -70,6 +79,16 @@ const shopSalesPerformanceRoot = `${shopRoot}/sales/salesPerformance`;
 // применён для shopSalesPerformanceRoot выше.
 const shopSalesPlanRoot = `${shopRoot}/sales/plan`;
 const shopSalesPlanTemplateRoot = `${shopRoot}/sales/plan_template`;
+// Импорт закупочных цен магазина из XLSX-прайса поставщика (Фаза 10,
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом `POST /price-monitoring/update-shop-products-costs` +
+// `GET /price-monitoring/:uuid[/status]` из backend/src/TODO/priceMonitoring
+// (см. PRD, раздел 3а). Саб-группа `marketing` внутри shop — зеркалит
+// serviceMarketingPricingRoot выше, своя (см. domains/shop/CLAUDE.md о
+// независимости modules/accounting/sales — тот же принцип для marketing).
+// Легаси-эндпоинт удалён целиком в этой же фазе (обе половины уже
+// перенесены — сервисная в Фазе 7, эта, магазинная, — здесь).
+const shopMarketingPricingRoot = `${shopRoot}/marketing/pricing`;
 
 export const routesV1 = {
     version: v1,
@@ -174,6 +193,13 @@ export const routesV1 = {
             services: `${serviceReportsRoot}/services`,
             serviceCategories: `${serviceReportsRoot}/service-categories`,
         },
+        // Маркетинг (Фаза 7, см. комментарий у serviceMarketingPricingRoot
+        // выше) — единственный поднабор саб-группы marketing на сегодня.
+        marketing: {
+            pricing: {
+                updateServicePrices: `${serviceMarketingPricingRoot}/update-service-prices`,
+            },
+        },
     },
     // Маршруты направления shop (domains/shop) — под префиксом /v1/shop.
     shop: {
@@ -243,6 +269,18 @@ export const routesV1 = {
         },
         salesPlanTemplate: {
             root: shopSalesPlanTemplateRoot,
+        },
+        // Маркетинг (Фаза 10, см. комментарий у shopMarketingPricingRoot
+        // выше) — импорт закупочных цен магазина, единственный поднабор
+        // саб-группы marketing направления shop на сегодня.
+        // importCostsProgress (SSE) и importCostsStatus (поллинг) делят
+        // общий путь-параметр `:id`, различаясь только суффиксом `/status`.
+        marketing: {
+            pricing: {
+                importCosts: `${shopMarketingPricingRoot}/import-costs`,
+                importCostsStatus: `${shopMarketingPricingRoot}/import-costs/:id/status`,
+                importCostsProgress: `${shopMarketingPricingRoot}/import-costs/:id`,
+            },
         },
     },
 };

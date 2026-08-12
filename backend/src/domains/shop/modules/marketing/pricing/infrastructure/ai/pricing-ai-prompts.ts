@@ -1,20 +1,26 @@
-import {
-    AiMatchItem,
+import type {
     CategoryKey,
-    MatchedProduct,
-    MoySkladRow,
-    ProductRow,
-} from './priceMonitoring.types';
+    PriceListRow,
+} from '../../domain/services/row-categorization.service';
+import type { CatalogItem } from '../../application/ports/product-matcher.port';
 
-// ─── Builders для строк ───────────────────────────────────────────────────────
+// Промпты AI-сопоставления/форматирования названий (Фаза 9, см. PRD раздел 3а: "AI-адаптер
+// (промпты из priceMonitoring.prompts.ts — деталь реализации адаптера)") — verbatim-порт текста и
+// правил сопоставления из src/TODO/priceMonitoring/priceMonitoring.prompts.ts, только типы
+// заменены на доменные (`CategoryKey`/`PriceListRow` из RowCategorizationService, `CatalogItem` из
+// PRODUCT_MATCHER). Формат ответа AI (JSON-массив), правила по каждой категории — не менялись,
+// это тонкая деталь ai-product-matcher.adapter.ts, не переиспользуется вне него. Дублирующий
+// инлайн-промпт из легаси `PriceMonitoringService.formatNamesViaAi`
+// (priceMonitoring.service.ts:307-349) сюда намеренно не перенесён — используется только этот,
+// канонический вариант (см. PRD, раздел 4, "мёртвый код при переносе").
 
-function buildPriceList(rows: ProductRow[]): string {
+function buildPriceList(rows: PriceListRow[]): string {
     return rows
         .map((item, idx) => `${idx + 1}. ${item.name} — ${item.price} руб.`)
         .join('\n');
 }
 
-function buildNomenclatureWithPrice(rows: MoySkladRow[]): string {
+function buildNomenclatureWithPrice(rows: CatalogItem[]): string {
     return rows
         .map(
             (item, idx) =>
@@ -23,13 +29,11 @@ function buildNomenclatureWithPrice(rows: MoySkladRow[]): string {
         .join('\n');
 }
 
-function buildNomenclatureBasic(rows: MoySkladRow[]): string {
+function buildNomenclatureBasic(rows: CatalogItem[]): string {
     return rows
         .map((item, idx) => `${idx + 1}. [${item.id}] ${item.name}`)
         .join('\n');
 }
-
-// ─── Общий JSON-формат (от прайса к номенклатуре) ────────────────────────────
 
 const FORMAT_PRICE_TO_SYSTEM = `[
   {
@@ -39,8 +43,6 @@ const FORMAT_PRICE_TO_SYSTEM = `[
     "price": 00000
   }
 ]`;
-
-// ─── Общий JSON-формат (от номенклатуры к прайсу) ────────────────────────────
 
 const FORMAT_SYSTEM_TO_PRICE = `[
   {
@@ -52,8 +54,6 @@ const FORMAT_SYSTEM_TO_PRICE = `[
 ]`;
 
 const JSON_FOOTER = `Формат ответа: отправляй только JSON файл в формате ниже, не используй ничего дополнительно. Только чистый JSON`;
-
-// ─── iPhone ──────────────────────────────────────────────────────────────────
 
 function buildIphonePrompt(priceList: string, nomenclature: string): string {
     return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
@@ -78,8 +78,6 @@ ${JSON_FOOTER}
 ${FORMAT_PRICE_TO_SYSTEM}`;
 }
 
-// ─── MacBook ─────────────────────────────────────────────────────────────────
-
 function buildMacbookPrompt(priceList: string, nomenclature: string): string {
     return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
 
@@ -103,8 +101,6 @@ ${priceList}
 ${JSON_FOOTER}
 ${FORMAT_SYSTEM_TO_PRICE}`;
 }
-
-// ─── iPad ─────────────────────────────────────────────────────────────────────
 
 function buildIpadPrompt(priceList: string, nomenclature: string): string {
     return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
@@ -135,8 +131,6 @@ ${priceList}
 ${JSON_FOOTER}
 ${FORMAT_SYSTEM_TO_PRICE}`;
 }
-
-// ─── Watch ────────────────────────────────────────────────────────────────────
 
 function buildWatchPrompt(priceList: string, nomenclature: string): string {
     return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
@@ -172,8 +166,6 @@ ${JSON_FOOTER}
 ${FORMAT_SYSTEM_TO_PRICE}`;
 }
 
-// ─── AirPods ──────────────────────────────────────────────────────────────────
-
 function buildAirpodsPrompt(priceList: string, nomenclature: string): string {
     return `Ты помогаешь сопоставить товары из прайс-листа с номенклатурой системы учёта.
 
@@ -204,88 +196,61 @@ ${JSON_FOOTER}
 ${FORMAT_SYSTEM_TO_PRICE}`;
 }
 
-// ─── Парсинг ответа AI ────────────────────────────────────────────────────────
-
-/**
- * Парсит raw JSON-ответ AI в список MatchedProduct.
- * Фильтрует позиции без system_id (товар из прайса не нашёл пару в номенклатуре).
- */
-export function parseMatchingResponse(
-    raw: string,
-    category: CategoryKey,
-): MatchedProduct[] {
-    let items: AiMatchItem[];
-
-    try {
-        items = JSON.parse(raw.trim()) as AiMatchItem[];
-    } catch {
-        console.error(
-            `[${category}] Не удалось распарсить ответ AI:`,
-            raw.slice(0, 200),
-        );
-        return [];
-    }
-
-    if (!Array.isArray(items)) {
-        console.error(`[${category}] Ответ AI — не массив`);
-        return [];
-    }
-
-    return items
-        .filter((item) => item.system_id != null)
-        .map((item) => ({
-            externalId: item.system_id as string,
-            moyskladName: item.system_name ?? '',
-            priceListName: item.price_name ?? '',
-            price: item.price,
-            matchedVia: 'llm' as const,
-        }));
-}
-
-// ─── Публичная точка входа ────────────────────────────────────────────────────
-
-/**
- * Строит промпт для LLM-сопоставления товаров по категории.
- *
- * - iPhone: направление прайс → номенклатура (итерируем по прайсу)
- * - MacBook / iPad / Watch / AirPods: направление номенклатура → прайс (итерируем по номенклатуре)
- */
+/** Строит промпт для LLM-сопоставления товаров по категории. */
 export function buildMatchingPrompt(
     category: CategoryKey,
-    priceRows: ProductRow[],
-    moySkladRows: MoySkladRow[],
+    priceRows: PriceListRow[],
+    catalogItems: CatalogItem[],
 ): string {
     const priceList = buildPriceList(priceRows);
 
     switch (category) {
         case 'iPhone': {
-            const nomenclature = buildNomenclatureBasic(moySkladRows);
+            const nomenclature = buildNomenclatureBasic(catalogItems);
             return buildIphonePrompt(priceList, nomenclature);
         }
         case 'MacBook': {
-            const nomenclature = buildNomenclatureWithPrice(moySkladRows);
+            const nomenclature = buildNomenclatureWithPrice(catalogItems);
             return buildMacbookPrompt(priceList, nomenclature);
         }
         case 'iPad': {
-            const nomenclature = buildNomenclatureWithPrice(moySkladRows);
+            const nomenclature = buildNomenclatureWithPrice(catalogItems);
             return buildIpadPrompt(priceList, nomenclature);
         }
         case 'Watch': {
-            const nomenclature = buildNomenclatureWithPrice(moySkladRows);
+            const nomenclature = buildNomenclatureWithPrice(catalogItems);
             return buildWatchPrompt(priceList, nomenclature);
         }
         case 'AirPods': {
-            const nomenclature = buildNomenclatureWithPrice(moySkladRows);
+            const nomenclature = buildNomenclatureWithPrice(catalogItems);
             return buildAirpodsPrompt(priceList, nomenclature);
         }
     }
 }
 
-// ─── Приведение названий товаров Apple к единому формату ─────────────────────
+/** Одна позиция в raw JSON-ответе AI-сопоставления (оба направления). */
+export interface AiMatchItem {
+    system_id: string | null;
+    system_name: string | null;
+    price_name: string | null;
+    price: string | number | null;
+}
 
 /**
- * Строит промпт для приведения названий товаров Apple к единому стандартному формату.
+ * Парсит raw JSON-ответ AI-сопоставления. Возвращает `null`, если ответ не распарсился как JSON-
+ * массив (вызывающая сторона решает, что делать — в текущем адаптере это заканчивается `job.fail`).
  */
+export function parseMatchingResponse(raw: string): AiMatchItem[] | null {
+    let items: unknown;
+    try {
+        items = JSON.parse(raw.trim());
+    } catch {
+        return null;
+    }
+    return Array.isArray(items) ? (items as AiMatchItem[]) : null;
+}
+
+/** Строит промпт для приведения названий товаров Apple к единому стандартному формату. */
 export function buildFormatNamesPrompt(names: string[]): string {
     return `Ты приводишь названия товаров Apple к единому стандартному формату.
 
@@ -323,10 +288,7 @@ export function buildFormatNamesPrompt(names: string[]): string {
   ${JSON.stringify(names)}`;
 }
 
-/**
- * Парсит JSON-ответ AI со списком отформатированных названий.
- * При ошибке парсинга возвращает исходные названия без изменений.
- */
+/** Парсит JSON-ответ AI со списком отформатированных названий; при ошибке — исходные названия. */
 export function parseFormatNamesResponse(
     response: string,
     fallbackNames: string[],

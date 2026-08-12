@@ -639,18 +639,24 @@
             // ── SSE ПОТОК ───────────────────────────────────────────────
 
             function startProgressStream(uuid) {
-                const es = new EventSource(BASE_URL + '/price-monitoring/' + uuid)
+                const es = new EventSource(BASE_URL + '/v1/shop/marketing/pricing/import-costs/' + uuid)
                 let finished = false
 
                 es.onmessage = (e) => {
-                    const { message, status, type } = JSON.parse(e.data)
+                    const data = JSON.parse(e.data)
 
-                    if (type) return
+                    // Heartbeat-события (каждые 20с, см. SubscribePriceImportJobProgressHttpController)
+                    // отдаются как { type: 'heartbeat' } без полей status/progress — пропускаем.
+                    if (data.type) return
 
-                    updateLoader(message)
-                    addLogLine(message)
+                    const { status, progress, errorMessage } = data
+                    const message = progress ? progress.message : null
+                    if (message) {
+                        updateLoader(message)
+                        addLogLine(message)
+                    }
 
-                    if (status === 'done') {
+                    if (status === 'COMPLETED') {
                         finished = true
                         es.close()
                         hideLoader()
@@ -658,11 +664,11 @@
                         resetBtn('uploadBtn', 'Загрузить прайс')
                     }
 
-                    if (status === 'error') {
+                    if (status === 'FAILED') {
                         finished = true
                         es.close()
                         hideLoader()
-                        setStatus('❌ ' + message, '#c62828')
+                        setStatus('❌ ' + (errorMessage || message || 'Ошибка импорта'), '#c62828')
                         resetBtn('uploadBtn', 'Загрузить прайс')
                     }
                 }
