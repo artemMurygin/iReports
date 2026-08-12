@@ -23,12 +23,6 @@ import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounti
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
-import { PeriodCalculationOrchestrator as ShopPeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
-import { buildRuleBreakdown as shopBuildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
-import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-context';
 import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';
 
@@ -57,12 +51,9 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
         private readonly motivationSchemaRepo: MotivationSchemaRepositoryPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
-        @Inject(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
-        private readonly shopContextBuilder: BuildShopCalculationContextService,
     ) {}
 
     async execute(
@@ -71,13 +62,13 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
         const period = Period.create(command.period);
 
         const plans = await this.salesPlanRepo.findByDirectionAndPeriod(
-            command.direction,
+            'service',
             period.getValue(),
         );
         const unapproved = plans.filter((plan) => plan.status !== 'APPROVED');
         if (unapproved.length > 0) {
             throw new UnapprovedSalesPlanRowsException(
-                command.direction,
+                'service',
                 period.getValue(),
                 unapproved.map((plan) => ({
                     id: plan.id,
@@ -88,29 +79,20 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
         }
 
         const existing = await this.periodRepo.findByDirectionAndPeriod(
-            command.direction,
+            'service',
             period.getValue(),
         );
         const periodEntity =
             existing ??
             AccountingPeriod.openFor({
-                direction: command.direction,
+                direction: 'service',
                 period: period.getValue(),
             });
 
         // Снапшот — только сотрудники с личной мотивационной схемой (см.
         // MotivationSchemaRepositoryPort.findAllEmployeeTargets); схемы на
-        // отдел здесь, как и в Фазе 1, не разворачиваются. Выбор
-        // motivationSchemaRepo/context-builder по направлению (Фаза 13.5,
-        // issue #57) — до этой правки хендлер был жёстко захардкожен на
-        // сервисные зависимости и при command.direction === 'shop' молча
-        // считал снапшот по сервисным мотивационным схемам сотрудника,
-        // что было латентным багом; closeServiceDirection/closeShopDirection
-        // делают выбор явным.
-        const rows =
-            command.direction === 'service'
-                ? await this.closeServiceDirection(period)
-                : await this.closeShopDirection(period);
+        // отдел здесь, как и в Фазе 1, не разворачиваются.
+        const rows = await this.closeServiceDirection(period);
 
         periodEntity.close(command.closedBy, rows.length);
 
@@ -118,19 +100,19 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
             await this.periodRepo.save(periodEntity);
             await this.snapshotRepo.saveAll(
                 periodEntity.id,
-                command.direction,
+                'service',
                 period.getValue(),
                 rows,
             );
             await this.cacheRepo.deleteByDirectionAndPeriod(
-                command.direction,
+                'service',
                 period.getValue(),
             );
         });
 
         return toAccountingPeriodResponse(
             periodEntity,
-            command.direction,
+            'service',
             period.getValue(),
         );
     }
@@ -160,43 +142,6 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
                 employeeId,
                 total: PeriodCalculationOrchestrator.total(lines),
                 lines: buildRuleBreakdown(rules, lines),
-            });
-        }
-        return rows;
-    }
-
-    private async closeShopDirection(
-        period: Period,
-    ): Promise<AccountingPeriodSnapshotRow[]> {
-        const schemas =
-            await this.shopMotivationSchemaRepo.findAllEmployeeTargets();
-        const rows: AccountingPeriodSnapshotRow[] = [];
-        for (const schema of schemas) {
-            const props = schema.getProps();
-            const employeeId = props.target.getId();
-            const rules = props.rules;
-            const base = await this.shopContextBuilder.build(
-                period,
-                employeeId,
-                rules,
-            );
-            const lines = await ShopPeriodCalculationOrchestrator.calculate(
-                rules,
-                {
-                    employee: base.employee,
-                    period: base.period,
-                    erpData: base.erpData,
-                    mode: 'FACT',
-                    salesPerformance: toShopSalesPerformanceContext(
-                        base.salesPerformanceDetail,
-                        'FACT',
-                    ),
-                },
-            );
-            rows.push({
-                employeeId,
-                total: ShopPeriodCalculationOrchestrator.total(lines),
-                lines: shopBuildRuleBreakdown(rules, lines),
             });
         }
         return rows;

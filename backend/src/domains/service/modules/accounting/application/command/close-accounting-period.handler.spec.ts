@@ -5,15 +5,11 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
-import type { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
-import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -22,7 +18,6 @@ describe('CloseAccountingPeriodHandler', () => {
     const buildHandler = (overrides?: {
         plans?: SalesPlan[];
         schemas?: MotivationSchema[];
-        shopSchemas?: ShopMotivationSchema[];
     }) => {
         const save = jest.fn().mockResolvedValue(undefined);
         const findByDirectionAndPeriod = jest.fn().mockResolvedValue(null);
@@ -50,6 +45,7 @@ describe('CloseAccountingPeriodHandler', () => {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
             findByEmployees: jest.fn().mockResolvedValue([]),
+            findIdByTarget: jest.fn(),
             findAllEmployeeTargets: jest
                 .fn()
                 .mockResolvedValue(overrides?.schemas ?? []),
@@ -65,16 +61,6 @@ describe('CloseAccountingPeriodHandler', () => {
             findByDirectionAndPeriod: jest
                 .fn()
                 .mockResolvedValue(overrides?.plans ?? []),
-        };
-
-        const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
-            insert: jest.fn(),
-            findByEmployee: jest.fn(),
-            findByEmployees: jest.fn().mockResolvedValue([]),
-            findIdByTarget: jest.fn(),
-            findAllEmployeeTargets: jest
-                .fn()
-                .mockResolvedValue(overrides?.shopSchemas ?? []),
         };
 
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
@@ -95,32 +81,14 @@ describe('CloseAccountingPeriodHandler', () => {
             ),
         } as unknown as BuildServiceCalculationContextService;
 
-        const shopContextBuilder = {
-            build: jest.fn((period: Period, employeeId: number) =>
-                Promise.resolve({
-                    employee: { id: employeeId, identities: [] },
-                    period: {
-                        direction: 'shop' as const,
-                        period: period.getValue(),
-                        ...period.getBounds(),
-                        status: 'OPEN' as const,
-                    },
-                    erpData: { hoursWorked: 8 },
-                    salesPerformanceDetail: null,
-                }),
-            ),
-        } as unknown as BuildShopCalculationContextService;
-
         const handler = new CloseAccountingPeriodHandler(
             periodRepo,
             snapshotRepo,
             cacheRepo,
             motivationSchemaRepo,
             salesPlanRepo,
-            shopMotivationSchemaRepo,
             unitOfWork,
             contextBuilder,
-            shopContextBuilder,
         );
 
         return {
@@ -129,7 +97,6 @@ describe('CloseAccountingPeriodHandler', () => {
             saveAll,
             deleteCacheByPeriod,
             periodRepo,
-            shopContextBuilder,
         };
     };
 
@@ -166,7 +133,6 @@ describe('CloseAccountingPeriodHandler', () => {
             withRequestContext(() =>
                 handler.execute(
                     new CloseAccountingPeriodCommand({
-                        direction: 'service',
                         period: '2026-08',
                         closedBy: 1,
                     }),
@@ -199,7 +165,6 @@ describe('CloseAccountingPeriodHandler', () => {
         const response = await withRequestContext(() =>
             handler.execute(
                 new CloseAccountingPeriodCommand({
-                    direction: 'service',
                     period: '2026-08',
                     closedBy: 7,
                 }),
@@ -228,7 +193,6 @@ describe('CloseAccountingPeriodHandler', () => {
         const response = await withRequestContext(() =>
             handler.execute(
                 new CloseAccountingPeriodCommand({
-                    direction: 'service',
                     period: '2026-08',
                     closedBy: 1,
                 }),
@@ -237,56 +201,5 @@ describe('CloseAccountingPeriodHandler', () => {
 
         expect(response.status).toBe('CLOSED');
         expect(save).toHaveBeenCalledTimes(1);
-    });
-
-    // Фаза 13.5 (issue #57): до direction-aware правки closeShopDirection не
-    // существовал и хендлер при direction === 'shop' молча считал снапшот по
-    // сервисному motivationSchemaRepo/contextBuilder (латентный баг — схемы
-    // магазина никогда не попадали в снапшот) — этот тест защищает именно
-    // выбор shop-веток.
-    it('при direction shop строит снапшот через shopMotivationSchemaRepo/shopContextBuilder', async () => {
-        const schema = withRequestContext(() => {
-            const rule = PayPerHourShopEntity.create({
-                type: 'PayPerHour',
-                name: 'Почасовая ставка',
-                targetRole: 'ONLINE_MANAGER',
-                config: { price: 250 },
-            });
-            return ShopMotivationSchema.create({
-                targetType: 'Employee',
-                targetId: 42,
-                name: 'Оклад продавца',
-                rules: [rule],
-            });
-        });
-        const { handler, save, saveAll, deleteCacheByPeriod } = buildHandler({
-            plans: [buildApprovedPlan()],
-            shopSchemas: [schema],
-        });
-
-        const response = await withRequestContext(() =>
-            handler.execute(
-                new CloseAccountingPeriodCommand({
-                    direction: 'shop',
-                    period: '2026-08',
-                    closedBy: 7,
-                }),
-            ),
-        );
-
-        expect(response.status).toBe('CLOSED');
-        expect(response.closedBy).toBe(7);
-        expect(save).toHaveBeenCalledTimes(1);
-        expect(saveAll).toHaveBeenCalledTimes(1);
-        const [, , , rows] = saveAll.mock.calls[0] as [
-            string,
-            string,
-            string,
-            { employeeId: number; total: number }[],
-        ];
-        expect(rows).toEqual([
-            expect.objectContaining({ employeeId: 42, total: 2000 }),
-        ]);
-        expect(deleteCacheByPeriod).toHaveBeenCalledWith('shop', '2026-08');
     });
 });

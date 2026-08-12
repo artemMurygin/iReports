@@ -1,11 +1,13 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
+import { routesV1 } from '@/config/app.routes';
 import { ReopenAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.command';
-import { parseAccountingDirection } from '../utils/parse-accounting-direction';
 import { ReopenAccountingPeriodDto } from '../dto/reopen-accounting-period.dto';
 
-@Controller('accounting')
+@ApiTags('Бухгалтерия: расчётный период')
+@Controller()
 export class ReopenAccountingPeriodHttpController {
     constructor(private readonly commandBus: CommandBus) {}
 
@@ -13,14 +15,14 @@ export class ReopenAccountingPeriodHttpController {
     // reopenAccountingPeriodRequestSchema) — явное подтверждение повторного
     // открытия проверяется на этой границе, раньше, чем запрос доходит до
     // домена (см. PRD: "требует явного подтверждения").
-    @Post('period/:direction/:period/reopen')
+    @Post(routesV1.service.accounting.period.reopen)
+    @ApiOperation({ summary: 'Повторно открыть закрытый расчётный период' })
     async reopen(
-        @Param('direction') direction: string,
         @Param('period') period: string,
         @Body() _body: ReopenAccountingPeriodDto,
     ): Promise<AccountingPeriodResponse> {
         const command = new ReopenAccountingPeriodCommand({
-            direction: parseAccountingDirection(direction),
+            direction: 'service',
             period,
         });
         return this.commandBus.execute(command);

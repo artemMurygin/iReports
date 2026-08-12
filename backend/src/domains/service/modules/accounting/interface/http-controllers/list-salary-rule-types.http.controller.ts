@@ -1,14 +1,20 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryRuleTypesResponse } from 'ireports-contracts';
+import { routesV1 } from '@/config/app.routes';
 import { ListSalaryRuleTypesService } from '../../application/services/list-salary-rule-types.service';
 
-@Controller('accounting')
+@ApiTags('Бухгалтерия: типы правил')
+@Controller()
 export class ListSalaryRuleTypesHttpController {
     constructor(
         private readonly listSalaryRuleTypes: ListSalaryRuleTypesService,
     ) {}
 
-    @Get('salary_role_types')
+    @Get(routesV1.service.accounting.salaryRuleTypes)
+    @ApiOperation({
+        summary: 'Типы зарплатных правил сервиса и допустимые роли',
+    })
     list(): SalaryRuleTypesResponse {
         return this.listSalaryRuleTypes.execute();
     }

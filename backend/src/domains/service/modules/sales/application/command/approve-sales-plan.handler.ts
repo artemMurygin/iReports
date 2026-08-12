@@ -46,8 +46,18 @@ export class ApproveSalesPlanHandler implements ICommandHandler<
     ): Promise<SalesPlan[]> {
         if (command.ids) {
             const plans = await this.repo.findByIds(command.ids);
-            const foundIds = new Set(plans.map((plan) => plan.id));
-            const missing = command.ids.filter((id) => !foundIds.has(id));
+            const byId = new Map(plans.map((plan) => [plan.id, plan]));
+
+            // "Не найдено" здесь — и id вообще не существует, и id
+            // существует, но принадлежит чужому направлению: план
+            // чужого направления для этого запроса не должен быть
+            // виден вообще, поэтому он остаётся в missing наравне с
+            // отсутствующим, а не утверждается молча. Хотя бы один такой
+            // id — весь approve отклоняется, ни одна строка не трогается.
+            const missing = command.ids.filter((id) => {
+                const plan = byId.get(id);
+                return !plan || plan.direction !== command.direction;
+            });
             if (missing.length > 0) {
                 throw new SalesPlanNotFoundException(
                     `Не найдены строки плана: ${missing.join(', ')}`,
@@ -56,7 +66,7 @@ export class ApproveSalesPlanHandler implements ICommandHandler<
             return plans;
         }
 
-        if (command.direction && command.period) {
+        if (command.period) {
             return this.repo.findByDirectionAndPeriod(
                 command.direction,
                 command.period,

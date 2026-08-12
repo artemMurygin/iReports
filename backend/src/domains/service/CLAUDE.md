@@ -107,8 +107,8 @@ domains/service/
   и для `GetEmployeeSalaryReportService`/`GetDepartmentSalaryReportService`, и для
   `CloseAccountingPeriodHandler`. Источник часов `PayPerHour` — `EmployeeHoursEntry`
   (`domain/entities/employee-hours-entry.entity.ts`), простой CRUD без CQRS-событий
-  (`POST|PATCH|DELETE|GET /accounting/employee_hours*`, см. `ENDPOINTS.md`) — ручной ввод отработанных
-  часов сотрудника за период, полноценный график работы вне скоупа. Источник `TaskCompleted` —
+  (`POST|PATCH|DELETE|GET /v1/service/accounting/employee_hours*`, см. `ENDPOINTS.md`) — ручной ввод
+  отработанных часов сотрудника за период, полноценный график работы вне скоупа. Источник `TaskCompleted` —
   `TaskCompletion` (`domain/entities/task-completion.entity.ts`) — временный внутренний двухступенчатый
   воркфлоу подтверждения (сотрудник отмечает выполненной → руководитель подтверждает `CONFIRMED`) без
   интеграции с Bitrix24 Tasks (реальная синхронизация запланирована отдельной будущей фазой); только
@@ -128,8 +128,8 @@ domains/service/
   свежести (`accounting-cache-freshness.ts`: версия мотивационной схемы + штамп последней успешной
   синхронизации ERP + штамп последнего изменения плана продаж).
 - **Отчёты (Фаза 9)** — `GetEmployeeSalaryReportService` (`GET
-  /accounting/salary_report/employee/:id/:period`) и `GetDepartmentSalaryReportService` (`GET
-  .../department/:id/:period`) используют один и тот же расчёт
+  /v1/service/accounting/salary_report/employee/:id/:period`) и `GetDepartmentSalaryReportService`
+  (`GET .../department/:id/:period`) используют один и тот же расчёт
   (`PeriodCalculationOrchestrator` + `rule.calculate()`); отчёт отдела — сумма отчётов сотрудников
   отдела, но контекст (ERP-данные, `SalesPerformance`, схемы, идентичности, часы) собирается **один
   раз на весь отдел**, а не на каждого сотрудника — чтобы не было N+1. Оба режима расчёта — `FACT` и
@@ -138,33 +138,35 @@ domains/service/
 
 ### `modules/sales` — план/факт/прогноз продаж (Фазы 3–5) + сделки/лиды (в разработке)
 
-Модуль объединяет два независимых среза с общим route-неймспейсом `/v1/sales/*` и общей бизнес-областью
-"продажи", но без переиспользования кода между ними — слоистость и провайдеры у каждого свои.
+Модуль объединяет два независимых среза с общим route-неймспейсом `/v1/service/sales/*` и общей
+бизнес-областью "продажи", но без переиспользования кода между ними — слоистость и провайдеры у
+каждого свои.
 
 **План продаж, факт и прогноз** (`docs/payroll/plan-payroll-calculation.md`, Фазы 3–5) — выстроен по
 целевой DDD/CQRS-слоистости, как `accounting`:
 
-- `SalesPlanTemplate` (`GET|PUT /v1/sales/plan_template`) — дефолтные значения плана по отделу и,
-  опционально, категории, с процентом ежемесячного роста; `PUT` — upsert по естественному ключу
-  `(direction, department, category)`.
-- `SalesPlan` (`POST|GET|PATCH|DELETE /v1/sales/plan`, `POST /v1/sales/plan/approve`) — план на
-  конкретный месяц; `source` (`PREVIOUS_MONTH`/`TEMPLATE`/`MANUAL`) и `status`
-  (`CREATED`/`APPROVED`) — см. `SalesPlan.edit()`/`.approve()`.
+- `SalesPlanTemplate` (`GET|PUT /v1/service/sales/plan_template`) — дефолтные значения плана по
+  отделу и, опционально, категории, с процентом ежемесячного роста; `PUT` — upsert по естественному
+  ключу `(direction, department, category)`.
+- `SalesPlan` (`POST|GET|PATCH|DELETE /v1/service/sales/plan`,
+  `POST /v1/service/sales/plan/approve`) — план на конкретный месяц; `source`
+  (`PREVIOUS_MONTH`/`TEMPLATE`/`MANUAL`) и `status` (`CREATED`/`APPROVED`) — см.
+  `SalesPlan.edit()`/`.approve()`.
 - Автосоздание планов (Фаза 4) — `EnsureSalesPlansForPeriodService.ensure(direction, period)`:
   для каждой комбинации отдел/категория без строки в текущем периоде берёт план предыдущего
   месяца + `growthPercent` (`source = PREVIOUS_MONTH`), а если предыдущего плана нет — строку
   шаблона без надбавки (`source = TEMPLATE`); уже существующие строки (в т.ч. `APPROVED`/`MANUAL`)
   не трогает. Два входа в одну операцию: `SalesPlanAutoCreationCron`
   (`infrastructure/cron/`, `@ProdCron` первого числа, только `direction = 'service'`) и ленивое
-  достраивание внутри `ListSalesPlansService` при каждом `GET /sales/plan` — обязательное, так как
-  `@ProdCron` не тикает в dev. Крон выполняется вне HTTP-запроса, поэтому оборачивается в
-  `runInSystemRequestContext` (`shared/application/context/run-in-system-context.ts`) — без него
-  репозитории падают: домен/`DatabaseService.getClient()` читают `RequestContext`, который вне
-  запроса никем не открыт.
+  достраивание внутри `ListSalesPlansService` при каждом `GET /v1/service/sales/plan` —
+  обязательное, так как `@ProdCron` не тикает в dev. Крон выполняется вне HTTP-запроса, поэтому
+  оборачивается в `runInSystemRequestContext`
+  (`shared/application/context/run-in-system-context.ts`) — без него репозитории падают:
+  домен/`DatabaseService.getClient()` читают `RequestContext`, который вне запроса никем не открыт.
 - `category` хранится в БД сентинелом `NO_CATEGORY_ID = -1` вместо `NULL` (Postgres не считает два
   `NULL` равными в составном уникальном индексе) — см. комментарий в
   `infrastructure/mappers/sales-plan.mapper.ts`; наружу модуля сентинел не протекает.
-- `SalesPerformance` (Фаза 5, `GET /v1/sales/salesPerformance/:period?direction`) —
+- `SalesPerformance` (Фаза 5, `GET /v1/service/sales/salesPerformance/:period?direction`) —
   `GetSalesPerformanceService` (единственная реализация `SalesPerformanceReaderPort`) на каждый вызов
   пересчитывает `SalesFact` (агрегат по ERP через `ServiceSalesFactSourcePort`,
   `RoappSalesFactSourceRepository`) и `SalesPrognose` (`SalesPrognose.forPeriod()`, общая формула в
@@ -173,9 +175,20 @@ domains/service/
   (`SalesPerformanceDirectionNotSupportedException` для любого другого значения) — читает RoApp/
   RemOnline напрямую; аналог для `shop` — отдельный эндпоинт `domains/shop/modules/sales`, см.
   `domains/shop/CLAUDE.md`, а не параметр `direction` этого же роута.
-- Модели (`SalesPlan`/`SalesPlanTemplate`) общие для `service`/`shop` (поле `direction`) — CRUD-роуты
-  этого модуля не привязаны к `direction: 'service'` и одинаково обслуживают оба направления, `shop`
-  не заводит для них дублирующий CRUD (Фаза 11).
+- Prisma-модели (`SalesPlan`/`SalesPlanTemplate`) общие для `service`/`shop` (поле `direction`), но
+  CRUD-роуты — нет: у `/v1/service/sales/plan*` (контроллеры этого модуля) и `/v1/shop/sales/plan*`
+  (`domains/shop/modules/sales`, см. `domains/shop/CLAUDE.md`) — два независимых набора HTTP-
+  контроллеров, каждый в своём домене. `direction` больше не параметр запроса: его выбирает сервер по
+  тому, по какому из двух путей пришёл запрос, — контроллеры `shop` сами подставляют
+  `direction: 'shop'` в команды (`CreateSalesPlanCommand` и т.п.) вместо чтения его из тела/query, как
+  раньше. При этом дублирования бизнес-логики нет — контроллеры `shop` лишь тонкий HTTP-слой поверх
+  тех же классов команд и обработчиков этого модуля (`application/command/*`), зарегистрированных на
+  общем `CommandBus` (`CqrsModule` — тот же класс, импортированный в обоих модулях);
+  `SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY`/`ListSalesPlansService`/
+  `ListSalesPlanTemplatesService` — обычные DI-провайдеры (не CQRS-хендлеры), поэтому
+  `shop-sales.module.ts` заводит для них собственные экземпляры тех же классов (Nest DI не делит
+  провайдеров между модулями без явного экспорта) — подробности и обоснование в комментарии в начале
+  `shop-sales.module.ts`.
 
 **Сделки/лиды** — гораздо более ранняя стадия, чем остальной модуль, сейчас это фактически только
 read-side:
@@ -199,10 +212,15 @@ read-side:
 `service` и `shop` — параллельные бизнес-направления с похожим набором бизнес-процессов, поэтому
 итоговая структура `modules/` у них похожая, но бизнес-логика внутри каждого процесса разная (разные
 ERP, разные правила) — это **не общий переиспользуемый код**, а зеркальный, но независимый набор
-модулей в каждом домене (кроме моделей `SalesPlan`/`SalesPlanTemplate`/`TaskCompletion`, которые
-осознанно общие на уровне Prisma-схемы с дискриминатором `direction`, см. выше — но не на уровне
-доменного кода). Помимо уже существующих `accounting` и `sales` (реализованы в обоих доменах, см.
-выше и `domains/shop/CLAUDE.md`), для `service` планируются:
+модулей в каждом домене, за двумя осознанными исключениями: модели `SalesPlan`/`SalesPlanTemplate`/
+`TaskCompletion`, общие на уровне Prisma-схемы с дискриминатором `direction` (см. выше), и CRUD плана/
+шаблона плана продаж внутри `modules/sales` — там HTTP-контроллеры `shop` напрямую диспатчат те же
+классы команд `service` через общий `CommandBus` (см. выше, раздел про `modules/sales`, и
+`domains/shop/CLAUDE.md`); эндпоинты (`/v1/service/sales/plan*` и `/v1/shop/sales/plan*`) при этом
+независимые, общая только бизнес-логика. Всё остальное, включая `modules/accounting` целиком, —
+независимые реализации без переиспользования доменного кода между доменами. Помимо уже существующих
+`accounting` и `sales` (реализованы в обоих доменах, см. выше и `domains/shop/CLAUDE.md`), для
+`service` планируются:
 
 - **`purchasing`** — закупки (запчастей/расходников у поставщиков). Не существует.
 - **`logistics`** — логистика (движение устройств/грузов между приёмкой, сервисными точками,

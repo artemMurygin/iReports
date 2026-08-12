@@ -2,27 +2,27 @@
 
 Все пути указаны от корня, глобальный префикс не задан.
 
-## domains/service/modules/accounting (`/accounting`, `/v1/motivation-schema`)
-- `GET /accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника за период (`period` — `YYYY-MM`), с Фазы 13.5 (см. `docs/payroll/phase-13.5-shop-report-integration.md`) — ВСЕГДА оба направления сразу: `directions` — массив из ровно двух элементов (`service` и `shop`), каждый со своим `isClosed`, `total.{fact,prognose}`, разбивкой по правилам, компактным `salesPerformance` и `isPlanApproved` — направления закрываются независимо, поэтому статус закрытия и `prognose` (`null` только для закрытого направления, снапшот прогноз не хранит) — свойство направления, а не всего ответа. `grandTotal.fact` — сумма `direction.total.fact` по обоим направлениям (всегда число); `grandTotal.prognose` — сумма `direction.total.prognose ?? direction.total.fact` (тоже всегда число, никогда `null`: для закрытого направления берётся его финальный факт). Пара «факт/прогноз» внутри направления — режим расчёта `FACT`/`PROGNOSE` (Фаза 9: прогноз берёт `SalesPrognose.percentCompletion` вместо `SalesFact.percentCompletion`, личная база сотрудника не экстраполируется), для `FloatPercent` — `floatPercent.{fact,prognose}.{currentThreshold,nextThreshold,diffToNext}`. Открытое направление — ленивый кэш по штампу синхронизации/версии схемы/плана продаж (Фаза 6, ключ `(direction, period, employeeId)`); закрытое — отдаётся из неизменяемого снапшота этого направления
-- `GET /accounting/salary_report/department/:id/:period` — отчёт по зарплатам отдела за период (Фаза 9, дополнено Фазой 13.5): тот же расчёт, что и у отчёта сотрудника, агрегированный по каждому сотруднику отдела — но, в отличие от отчёта сотрудника, БЕЗ `directions[]`-разбивки (сознательное упрощение): `employees[].rules` объединяет строки ОБОИХ направлений одним плоским списком, а верхнеуровневый `isClosed` — `true`, только если периоды закрыты у обоих направлений сразу (`employees[].total.prognose`/`total.prognose` отдела — `null` только в этом случае). Контекст ERP-данных/`SalesPerformance`/схем/идентичностей/часов собирается один раз на весь отдел по каждому направлению, без N+1 запросов на сотрудника
-- `POST /v1/motivation-schema` — создать мотивационную схему (цель + набор зарплатных правил, `direction: 'service'` — правила пишутся с этим дискриминатором в `salary_rules`). Find-or-create по естественному ключу `(targetType, targetId)` строки `motivation_schemas` (Фаза 13.5, issue #57) — если у сотрудника уже есть строка схемы, созданная с shop-стороны (`POST /shop/accounting/motivation-schema` ниже, тот же `targetId`), вторая строка не создаётся, новые правила добавляются к существующей схеме; так сотрудник с идентичностями в обеих ERP получает ровно одну строку `motivation_schemas` независимо от порядка обращений с обеих сторон
-- Расчётный период (`AccountingPeriod`, Фаза 6, дополнено Фазой 13.5, см. docs/payroll/plan-payroll-calculation.md и docs/payroll/phase-13.5-shop-report-integration.md) — сервис и магазин закрываются НЕЗАВИСИМО (`direction` в пути, свой `AccountingPeriod`/снапшот на каждое направление): закрытие `service` не трогает открытый период/снапшот `shop`, и наоборот (`CloseAccountingPeriodHandler` выбирает мотивационную схему/контекст-билдер/оркестратор по `direction`, включая shop-версии из `domains/shop/modules/accounting`). Эндпоинты без гарда (см. «неблокирующие вопросы» PRD, то же решение, что и у `sales`):
-  - `GET /accounting/period/:direction/:period` — статус периода; для периода без записи в БД возвращает `status = OPEN`
-  - `POST /accounting/period/:direction/:period/close` — закрыть период (`{ closedBy }`): отклоняется (`409`) со списком строк в `metadata.rows`, если в плане продаж периода (этого направления) есть неутверждённые строки; при успехе создаёт неизменяемый снапшот по каждому сотруднику с личной мотивационной схемой ЭТОГО направления (`service` — `MotivationSchemaRepositoryPort.findAllEmployeeTargets`, `shop` — `ShopMotivationSchemaRepositoryPort.findAllEmployeeTargets`)
-  - `POST /accounting/period/:direction/:period/reopen` — повторно открыть закрытый период (`{ confirm: true }`), удаляет снапшот целиком
-  - `POST /accounting/period/:direction/:period/recalculate` — сбросить кэш открытого периода (действие «пересчитать» для руководителя); `204`, закрытый период — `409`
+## domains/service/modules/accounting (`/v1/service/accounting`, `/v1/service/motivation-schema`)
+- `GET /v1/service/accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника направления `service` за период (`period` — `YYYY-MM`). С Фазы 4 (см. `docs/service-shop-route-split`) ответ строго однонаправленный — один отчёт направления `service`: `{ period, direction: 'service', isClosed, total: { fact, prognose }, rules, salesPerformance, isPlanApproved }`, без `directions[]`/`grandTotal` (аналог для `shop` — независимый `GET /v1/shop/accounting/salary_report/employee/:id/:period`, см. ниже, не параметр этого же эндпоинта). Пара «факт/прогноз» — режим расчёта `FACT`/`PROGNOSE` (Фаза 9: прогноз берёт `SalesPrognose.percentCompletion` вместо `SalesFact.percentCompletion`, личная база сотрудника не экстраполируется), для `FloatPercent` — `floatPercent.{fact,prognose}.{currentThreshold,nextThreshold,diffToNext}`. Открытый период — ленивый кэш по штампу синхронизации/версии схемы/плана продаж (Фаза 6, ключ `(direction, period, employeeId)`); закрытый — отдаётся из неизменяемого снапшота
+- `GET /v1/service/accounting/salary_report/department/:id/:period` — отчёт по зарплатам отдела направления `service` за период (Фаза 9): тот же расчёт, что и у отчёта сотрудника, агрегированный по каждому сотруднику отдела, строго однонаправленный (`employees[].rules` — только строки `service`, `isClosed`/`total.prognose` — статус периода только этого направления). Контекст ERP-данных/`SalesPerformance`/схем/идентичностей/часов собирается один раз на весь отдел, без N+1 запросов на сотрудника
+- `POST /v1/service/motivation-schema` — создать мотивационную схему (цель + набор зарплатных правил, `direction: 'service'` — правила пишутся с этим дискриминатором в `salary_rules`). Find-or-create по естественному ключу `(targetType, targetId)` строки `motivation_schemas` (Фаза 13.5, issue #57) — если у сотрудника уже есть строка схемы, созданная с shop-стороны (`POST /v1/shop/accounting/motivation-schema` ниже, тот же `targetId`), вторая строка не создаётся, новые правила добавляются к существующей схеме; так сотрудник с идентичностями в обеих ERP получает ровно одну строку `motivation_schemas` независимо от порядка обращений с обеих сторон
+- Расчётный период (`AccountingPeriod`, Фаза 6, дополнено Фазой 13.5 и разделено по направлениям Фазой 3 — см. docs/payroll/plan-payroll-calculation.md и docs/service-shop-route-split) — сервис и магазин закрываются НЕЗАВИСИМЫМИ эндпоинтами без `:direction` в пути (свой `AccountingPeriod`/снапшот на каждое направление): закрытие `service` не трогает открытый период/снапшот `shop`, и наоборот. `close` обслуживают два независимых класса-хендлера (`CloseAccountingPeriodHandler` здесь и `CloseShopAccountingPeriodHandler` в `domains/shop/modules/accounting`, без общего кода/кросс-доменных импортов); `get`/`reopen`/`recalculate` — общие, generic-по-`direction` классы, переиспользуемые обоими доменами через один `CommandBus`. Эндпоинты без гарда (см. «неблокирующие вопросы» PRD, то же решение, что и у `sales`):
+  - `GET /v1/service/accounting/period/:period` — статус периода направления `service`; для периода без записи в БД возвращает `status = OPEN`
+  - `POST /v1/service/accounting/period/:period/close` — закрыть период (`{ closedBy }`): отклоняется (`409`) со списком строк в `metadata.rows`, если в плане продаж периода есть неутверждённые строки; при успехе создаёт неизменяемый снапшот по каждому сотруднику с личной мотивационной схемой
+  - `POST /v1/service/accounting/period/:period/reopen` — повторно открыть закрытый период (`{ confirm: true }`), удаляет снапшот целиком
+  - `POST /v1/service/accounting/period/:period/recalculate` — сбросить кэш открытого периода (действие «пересчитать» для руководителя); `204`, закрытый период — `409`
 - Ручной ввод часов сотрудника за период (`EmployeeHoursEntry`, Фаза 7, см. docs/payroll/plan-payroll-calculation.md) — минимальный источник данных для `PayPerHour.calculate()` (полноценный график работы вне скоупа); эндпоинты без гарда, как и остальной `accounting`:
-  - `POST /accounting/employee_hours` — создать запись (`{ employeeId, period, hours }`); повтор на ту же пару `(employeeId, period)` отклоняется (`409`)
-  - `PATCH /accounting/employee_hours/:id` — изменить количество часов
-  - `DELETE /accounting/employee_hours/:id` — удалить запись
-  - `GET /accounting/employee_hours?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
-- `GET /accounting/salary_role_types` — типы зарплатных правил сервиса (`PayPerHour`, `ServiceCompleted`, `OrderPayed`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого (Фаза 8)
-- Выполнение задачи сотрудником (`TaskCompletion`, Фаза 8, см. docs/payroll/plan-payroll-calculation.md) — временный внутренний двухступенчатый воркфлоу подтверждения без интеграции с Bitrix24 Tasks (синхронизация с реальными задачами запланирована отдельной фазой); эндпоинты без гарда, как и остальной `accounting`. `TaskCompletion.direction` (Фаза 13, дефолт `'service'`) — эти эндпоинты всегда пишут/читают `direction: 'service'`; направление `shop` пишет/читает ту же таблицу (`direction: 'shop'`) через собственный, независимый CQRS-вход `POST/GET /shop/accounting/task_completions*` (Фаза 13.5, см. ниже) — ту же пару Zod-контрактов (`createTaskCompletionRequestSchema`/`confirmTaskCompletionRequestSchema`/…) переиспользует HTTP-DTO, а не бизнес-логика:
-  - `POST /accounting/task_completions` — сотрудник отмечает задачу выполненной (`{ employeeId, period, description, createdBy }`), сразу в статусе `PENDING_CONFIRMATION`
-  - `POST /accounting/task_completions/:id/confirm` — руководитель подтверждает (`{ confirmedBy }`) → только такие записи участвуют в расчёте `TaskCompleted.calculate()`
-  - `POST /accounting/task_completions/:id/reject` — руководитель отклоняет (`{ confirmedBy }`)
-  - `DELETE /accounting/task_completions/:id` — удалить запись
-  - `GET /accounting/task_completions?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
+  - `POST /v1/service/accounting/employee_hours` — создать запись (`{ employeeId, period, hours }`); повтор на ту же пару `(employeeId, period)` отклоняется (`409`)
+  - `PATCH /v1/service/accounting/employee_hours/:id` — изменить количество часов
+  - `DELETE /v1/service/accounting/employee_hours/:id` — удалить запись
+  - `GET /v1/service/accounting/employee_hours?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
+- `GET /v1/service/accounting/salary_role_types` — типы зарплатных правил сервиса (`PayPerHour`, `ServiceCompleted`, `OrderPayed`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого (Фаза 8)
+- Выполнение задачи сотрудником (`TaskCompletion`, Фаза 8, см. docs/payroll/plan-payroll-calculation.md) — временный внутренний двухступенчатый воркфлоу подтверждения без интеграции с Bitrix24 Tasks (синхронизация с реальными задачами запланирована отдельной фазой); эндпоинты без гарда, как и остальной `accounting`. `TaskCompletion.direction` (Фаза 13, дефолт `'service'`) — эти эндпоинты всегда пишут/читают `direction: 'service'`; направление `shop` пишет/читает ту же таблицу (`direction: 'shop'`) через собственный, независимый CQRS-вход `POST/GET /v1/shop/accounting/task_completions*` (Фаза 13.5, см. ниже) — ту же пару Zod-контрактов (`createTaskCompletionRequestSchema`/`confirmTaskCompletionRequestSchema`/…) переиспользует HTTP-DTO, а не бизнес-логика:
+  - `POST /v1/service/accounting/task_completions` — сотрудник отмечает задачу выполненной (`{ employeeId, period, description, createdBy }`), сразу в статусе `PENDING_CONFIRMATION`
+  - `POST /v1/service/accounting/task_completions/:id/confirm` — руководитель подтверждает (`{ confirmedBy }`) → только такие записи участвуют в расчёте `TaskCompleted.calculate()`
+  - `POST /v1/service/accounting/task_completions/:id/reject` — руководитель отклоняет (`{ confirmedBy }`)
+  - `DELETE /v1/service/accounting/task_completions/:id` — удалить запись
+  - `GET /v1/service/accounting/task_completions?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
 
 ## modules/employee-identity (`/v1/employee-identity`)
 Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Все эндпоинты закрыты
@@ -34,31 +34,46 @@ access token текущего пользователя из `BX24.getAuth()`); �
 - `GET /v1/employee-identity/employee/:employeeId` — связи конкретного сотрудника
 - `GET /v1/employee-identity/unmatched` — сотрудники Bitrix без единой связи ни в одной системе
 
-## domains/service/modules/sales (`/v1/sales/plan`, `/v1/sales/plan_template`, `/v1/sales/salesPerformance`)
-План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели общие для направлений
-`service`/`shop` (Фаза 11 переиспользует их без изменения формы, включая сам CRUD ниже — он не
-привязан к `direction: 'service'` и одинаково обслуживает оба направления). Без модели прав в проекте
+## domains/service/modules/sales (`/v1/service/sales/plan`, `/v1/service/sales/plan_template`, `/v1/service/sales/salesPerformance`)
+План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели (`SalesPlan`/
+`SalesPlanTemplate`) общие для направлений `service`/`shop` (общая Prisma-схема с дискриминатором
+`direction`), но с Фазы 2 (`docs/service-shop-route-split`) CRUD-эндпоинты — независимые наборы по
+направлениям: `/v1/service/sales/plan*` здесь и `/v1/shop/sales/plan*` в `domains/shop/modules/sales`
+(см. ниже) — оба тонкий HTTP-слой поверх одних и тех же классов команд этого модуля через общий
+`CommandBus`, но `direction` подставляет сервер по тому, под каким путём пришёл запрос — клиент
+больше не передаёт его в теле/query, и попытка изменить/удалить/утвердить строку чужого направления по
+`id` отклоняется как «не найдено» (`404`), а не как ошибка доступа. Без модели прав в проекте
 эндпоинты не закрыты гардом (в отличие от `employee-identity`, см. «неблокирующие вопросы» PRD).
-- `POST /v1/sales/plan` — создать план месяца по отделу и, опционально, категории (`source = MANUAL`); повтор на ту же комбинацию `(direction, department, category, period)` отклоняется (`409`)
-- `GET /v1/sales/plan?direction&period` — план месяца по направлению
-- `PATCH /v1/sales/plan/:id` — изменить оборот/маржу; переводит строку в `source = MANUAL`, утверждённую строку возвращает в `status = CREATED`
-- `DELETE /v1/sales/plan/:id` — удалить строку плана
-- `POST /v1/sales/plan/approve` — утвердить построчно (`{ ids, approvedBy }`) или весь месяц по направлению (`{ direction, period, approvedBy }`); уже утверждённые строки не трогает
-- `GET /v1/sales/plan_template?direction` — дефолтный шаблон плана (оборот, маржа, процент роста) по отделам/категориям
-- `PUT /v1/sales/plan_template` — upsert строки шаблона по естественному ключу `(direction, department, category)`
-- `GET /v1/sales/salesPerformance/:period?direction` — план, факт и прогноз одним запросом по каждому отделу и категории направления за период (Фаза 5); факт и прогноз не персистятся, считаются заново на каждый запрос по данным ERP и текущему плану. Поддержан только `direction=service` (`400` для любого другого значения) — читатель этого эндпоинта жёстко привязан к RoApp/RemOnline; для `shop` см. отдельный эндпоинт `domains/shop/modules/sales` ниже
+- `POST /v1/service/sales/plan` — создать план месяца по отделу и, опционально, категории (`source = MANUAL`); тело — один объект плана или `{ items: [...] }` (batch на несколько отделов/категорий за один запрос, ответ зеркалит форму тела) — `direction` в теле не передаётся; повтор на ту же комбинацию `(department, category, period)` — как с уже существующей строкой направления `service`, так и внутри самого батча — отклоняется целиком, атомарно (`409`)
+- `GET /v1/service/sales/plan?period` — план месяца направления `service`
+- `PATCH /v1/service/sales/plan/:id` — изменить оборот/маржу; переводит строку в `source = MANUAL`, утверждённую строку возвращает в `status = CREATED`; `id` строки другого направления — `404`
+- `DELETE /v1/service/sales/plan/:id` — удалить строку плана; `id` строки другого направления — `404`
+- `POST /v1/service/sales/plan/approve` — утвердить построчно (`{ ids, approvedBy }`, весь запрос отклоняется `404`, если хотя бы один `id` принадлежит направлению `shop`, ни одна строка не утверждается) или весь месяц направления `service` (`{ period, approvedBy }`); уже утверждённые строки не трогает
+- `GET /v1/service/sales/plan_template` — дефолтный шаблон плана направления `service` (оборот, маржа, процент роста) по отделам/категориям
+- `PUT /v1/service/sales/plan_template` — upsert строки шаблона направления `service` по естественному ключу `(department, category)`
+- `GET /v1/service/sales/salesPerformance/:period?direction` — план, факт и прогноз одним запросом по каждому отделу и категории направления за период (Фаза 5); факт и прогноз не персистятся, считаются заново на каждый запрос по данным ERP и текущему плану. Поддержан только `direction=service` (`400` для любого другого значения) — читатель этого эндпоинта жёстко привязан к RoApp/RemOnline; для `shop` см. отдельный эндпоинт `domains/shop/modules/sales` ниже
 
-## domains/shop/modules/sales (`/v1/sales/salesPerformance/shop`)
+## domains/shop/modules/sales (`/v1/shop/sales/plan`, `/v1/shop/sales/plan_template`, `/v1/shop/sales/salesPerformance`)
 SalesFact/SalesPrognose/SalesPerformance направления `shop` по данным МойСклад (Фаза 11, issue #54/#55)
 — зеркало `GetSalesPerformanceService` направления `service`, отдельный эндпоинт вместо `direction` в
-query у общего пути `/v1/sales/salesPerformance/:period` (см. обоснование в `config/app.routes.ts`).
-План/шаблон плана для `shop` обслуживаются CRUD-эндпоинтами `domains/service/modules/sales` выше —
-отдельного дублирующего CRUD у этого модуля нет. Автосоздание плана — свой крон первого числа
-(`ShopSalesPlanAutoCreationCron`, `@ProdCron`) поверх общего `EnsureSalesPlansForPeriodService`, плюс
-ленивое достраивание при первом обращении к периоду (тот же механизм, что и у `service`).
-- `GET /v1/sales/salesPerformance/shop/:period` — план, факт и прогноз одним запросом по каждому отделу направления `shop` за период; ⚠️ `fact.margin` — сумма `MoySkladDemandPosition.profit` по позициям отгрузок периода, а не `turnover - cost` (значение уже посчитано в МойСклад с учётом метода списания себестоимости); `quantity` — сумма `Float` (весовой/дробный товар)
+query у сервисного пути `/v1/service/sales/salesPerformance/:period` (см. обоснование в `config/app.routes.ts`).
+С Фазы 2 (`docs/service-shop-route-split`) у `shop` есть и собственный независимый CRUD плана/шаблона
+плана продаж — тонкий HTTP-слой поверх тех же классов команд, что и у `domains/service/modules/sales`
+(общий `CommandBus`, `direction: 'shop'` подставляет контроллер, не тело/query запроса; см. пояснение
+в секции `domains/service/modules/sales` выше и комментарий в `shop-sales.module.ts`). Автосоздание
+плана — свой крон первого числа (`ShopSalesPlanAutoCreationCron`, `@ProdCron`) поверх общего
+`EnsureSalesPlansForPeriodService`, плюс ленивое достраивание при первом обращении к периоду (тот же
+механизм, что и у `service`).
+- `POST /v1/shop/sales/plan` — создать план месяца по отделу и, опционально, категории направления `shop`; тело — один объект плана или `{ items: [...] }`, `direction` не передаётся; повтор на ту же комбинацию `(department, category, period)` направления `shop` — `409`
+- `GET /v1/shop/sales/plan?period` — план месяца направления `shop`
+- `PATCH /v1/shop/sales/plan/:id` — изменить оборот/маржу строки направления `shop`; `id` строки направления `service` — `404`
+- `DELETE /v1/shop/sales/plan/:id` — удалить строку плана направления `shop`; `id` строки направления `service` — `404`
+- `POST /v1/shop/sales/plan/approve` — утвердить построчно (`{ ids, approvedBy }`, весь запрос отклоняется `404`, если хотя бы один `id` принадлежит направлению `service`) или весь месяц направления `shop` (`{ period, approvedBy }`)
+- `GET /v1/shop/sales/plan_template` — дефолтный шаблон плана направления `shop`
+- `PUT /v1/shop/sales/plan_template` — upsert строки шаблона направления `shop` по естественному ключу `(department, category)`
+- `GET /v1/shop/sales/salesPerformance/:period` — план, факт и прогноз одним запросом по каждому отделу направления `shop` за период; ⚠️ `fact.margin` — сумма `MoySkladDemandPosition.profit` по позициям отгрузок периода, а не `turnover - cost` (значение уже посчитано в МойСклад с учётом метода списания себестоимости); `quantity` — сумма `Float` (весовой/дробный товар)
 
-## domains/shop/modules/accounting (`/shop/accounting`)
+## domains/shop/modules/accounting (`/v1/shop/accounting`)
 Зарплатные правила, мотивационная схема, выполнение задач и расчёт магазина (Фазы 12/13/13.5,
 issues #57-#66, см. docs/payroll/plan-payroll-calculation.md и
 docs/payroll/phase-13.5-shop-report-integration.md) — собственный набор `domain`/`application`/
@@ -82,24 +97,34 @@ docs/payroll/phase-13.5-shop-report-integration.md) — собственный �
 
 Персистентность мотивационной схемы/правила/задачи магазина и оркестратор, реально собирающий
 `CalculationContext` из БД для направления `shop` (`BuildShopCalculationContextService`), реализованы
-Фазой 13.5 — направление `shop` подключено к тому же контуру, что и `service`: сквозной отчёт (см.
-`GET /accounting/salary_report/employee|department/:id/:period` выше, теперь `direction`-aware),
-закрытие периода (`POST /accounting/period/:direction/:period/close`, `direction=shop`) и HTTP-запись
-мотивационной схемы/задач ниже. `MotivationSchema`/`SalaryRule` — та же Prisma-таблица, что и у
+Фазой 13.5. Расчётный период и отчёт по зарплате разделены на независимые от `service` эндпоинты
+Фазами 3–4 (`docs/service-shop-route-split`) — `close` обслуживает собственный
+`CloseShopAccountingPeriodHandler`, `get`/`reopen`/`recalculate` переиспользуют generic-по-`direction`
+классы сервисного `accounting` напрямую (без своих Command/Handler), а отчёт по зарплате —
+собственные, строго однонаправленные `GetShopEmployeeSalaryReportService`/
+`GetShopDepartmentSalaryReportService` (ответ не объединяется с `service` в одном вызове):
+- `GET /v1/shop/accounting/period/:period` — статус периода направления `shop`; без записи в БД — `status = OPEN`
+- `POST /v1/shop/accounting/period/:period/close` — закрыть период направления `shop` (`{ closedBy }`); `409` при неутверждённых строках плана продаж этого направления, иначе — неизменяемый снапшот по каждому сотруднику с личной мотивационной схемой `shop`
+- `POST /v1/shop/accounting/period/:period/reopen` — повторно открыть закрытый период (`{ confirm: true }`)
+- `POST /v1/shop/accounting/period/:period/recalculate` — сбросить кэш открытого периода; `204`, закрытый период — `409`
+- `GET /v1/shop/accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника направления `shop`, та же форма ответа, что у сервисного эквивалента (`{ period, direction: 'shop', isClosed, total, rules, salesPerformance, isPlanApproved }`)
+- `GET /v1/shop/accounting/salary_report/department/:id/:period` — отчёт по зарплатам отдела направления `shop`, `employees[].rules` — только строки `shop`
+
+HTTP-запись мотивационной схемы/задач ниже. `MotivationSchema`/`SalaryRule` — та же Prisma-таблица, что и у
 `service` (`motivation_schemas` без колонки `direction`, `salary_rules.direction = 'shop'`); find-or-
 create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — зеркало сервисного
 `CreateMotivationSchemaHandler` (см. выше), гарантирует одну строку `motivation_schemas` на сотрудника
-с идентичностями в обеих ERP независимо от того, с какой стороны (`/v1/motivation-schema` или
-`/shop/accounting/motivation-schema`) пришёл первый запрос.
-- `GET /shop/accounting/salary_role_types` — типы зарплатных правил магазина (`PayPerHour`,
+с идентичностями в обеих ERP независимо от того, с какой стороны (`/v1/service/motivation-schema` или
+`/v1/shop/accounting/motivation-schema`) пришёл первый запрос.
+- `GET /v1/shop/accounting/salary_role_types` — типы зарплатных правил магазина (`PayPerHour`,
   `ProductSold`, `UsedProductSold`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого;
-  набор типов не пересекается с `GET /accounting/salary_role_types` сервиса (кроме совпадающих по
+  набор типов не пересекается с `GET /v1/service/accounting/salary_role_types` сервиса (кроме совпадающих по
   имени `PayPerHour`/`TaskCompleted` — это независимые типы с разными реестрами)
-- `POST /shop/accounting/motivation-schema` — создать мотивационную схему магазина (цель + набор
+- `POST /v1/shop/accounting/motivation-schema` — создать мотивационную схему магазина (цель + набор
   зарплатных правил магазина, `ShopMotivationRequestSchema` — отдельный от сервисного
   `MotivationRequestSchema` контракт, `rules` — `ShopSalaryRuleRequest[]`); правила пишутся в
   `salary_rules` с `direction: 'shop'`. Find-or-create по `(targetType, targetId)`, см. выше — тот же
-  `targetId`, отправленный сюда и в `POST /v1/motivation-schema` сервиса, даёт одну строку
+  `targetId`, отправленный сюда и в `POST /v1/service/motivation-schema` сервиса, даёт одну строку
   `motivation_schemas` с правилами обоих направлений, а не две
 - Выполнение задачи сотрудником магазина (`ShopTaskCompletion`, Фаза 13.5) — независимая сущность
   (не переиспользует `TaskCompletion` сервиса), тот же двухступенчатый воркфлоу подтверждения
@@ -107,14 +132,22 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
   Prisma-таблица `TaskCompletion`, но пишет `direction: 'shop'`. HTTP DTO переиспользуют сервисные
   Zod-контракты (`createTaskCompletionRequestSchema` и т.д., direction-агностичные по форме) — не
   бизнес-код, только форма запроса/ответа:
-  - `POST /shop/accounting/task_completions` — сотрудник магазина отмечает задачу выполненной
+  - `POST /v1/shop/accounting/task_completions` — сотрудник магазина отмечает задачу выполненной
     (`{ employeeId, period, description, createdBy }`), сразу в статусе `PENDING_CONFIRMATION`
-  - `POST /shop/accounting/task_completions/:id/confirm` — руководитель подтверждает
+  - `POST /v1/shop/accounting/task_completions/:id/confirm` — руководитель подтверждает
     (`{ confirmedBy }`) → только такие записи участвуют в расчёте `TaskCompleted.calculate()` магазина
-  - `POST /shop/accounting/task_completions/:id/reject` — руководитель отклоняет (`{ confirmedBy }`)
-  - `DELETE /shop/accounting/task_completions/:id` — удалить запись
-  - `GET /shop/accounting/task_completions?period&employeeId` — записи за период (все сотрудники
+  - `POST /v1/shop/accounting/task_completions/:id/reject` — руководитель отклоняет (`{ confirmedBy }`)
+  - `DELETE /v1/shop/accounting/task_completions/:id` — удалить запись
+  - `GET /v1/shop/accounting/task_completions?period&employeeId` — записи за период (все сотрудники
     магазина) или одна запись, если указан `employeeId`
+
+## domains/shop/modules/warehouse (`/v1/shop/warehouse`)
+Каталог (дерево категорий) магазина — сущность `catalog` модуля `warehouse` (docs/shop-warehouse-catalog).
+Читает уже синхронизированную `MoySkladProductFolder` (Фаза 10), без нового синка и без товаров/
+остатков — модуль пока состоит из одной сущности `catalog`, сама сущность "Склад" (МойСклад Store) в
+системе не заведена (см. PRD).
+- `GET /v1/shop/warehouse/catalog` — дерево категорий каталога магазина (`id`/`name`/`pathName`/
+  `children`, родитель/потомки, не плоский список); архивные категории не отфильтровываются
 
 ## deals (`/deals`)
 - `GET /deals?from&to` — список сделок за период

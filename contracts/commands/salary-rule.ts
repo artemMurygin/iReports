@@ -305,21 +305,15 @@ const directionSalaryReportSchema = z.object({
     isPlanApproved: z.boolean(),
 });
 
-// grandTotal — «сколько заплатить сотруднику за месяц» по обоим
-// направлениям сразу (Фаза 13.5). fact — простая сумма fact по направлениям
-// (оба всегда числа). prognose — сумма (direction.total.prognose ??
-// direction.total.fact): для закрытого направления prognose не хранится
-// (null), но экономически сумма уже финальна и равна fact (прогнозировать
-// больше нечего) — так grandTotal.prognose всегда осмысленное число, никогда
-// не null и не занижает при частично закрытом периоде.
-const employeeSalaryReportResponseSchema = z.object({
-    period: z.string(),
-    directions: z.array(directionSalaryReportSchema),
-    grandTotal: z.object({
-        fact: z.number(),
-        prognose: z.number(),
-    }),
-});
+// Ответ односторонний: один отчёт одного направления сотрудника за период,
+// а не сводка по обоим направлениям сразу (было directions[] + grandTotal,
+// см. историю Фазы 13.5) — за выбор direction и объединение с другим
+// направлением (если понадобится) отвечает вызывающий бэкенд-код, а не этот
+// контракт. Поэтому форма — просто period поверх directionSalaryReportSchema,
+// без обёртки массивом и без сводного grandTotal.
+const employeeSalaryReportResponseSchema = z
+    .object({ period: z.string() })
+    .merge(directionSalaryReportSchema);
 
 export type EmployeeSalaryReportResponse = z.infer<
     typeof employeeSalaryReportResponseSchema

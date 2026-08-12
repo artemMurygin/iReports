@@ -9,9 +9,10 @@ describe('ApproveSalesPlanHandler', () => {
     const buildPlan = (
         department: number,
         status: 'CREATED' | 'APPROVED' = 'CREATED',
+        direction: 'service' | 'shop' = 'service',
     ) => {
         const plan = SalesPlan.create({
-            direction: 'service',
+            direction,
             department,
             period: '2026-08',
             turnover: 1_000_000,
@@ -79,6 +80,7 @@ describe('ApproveSalesPlanHandler', () => {
 
             const result = await handler.execute(
                 new ApproveSalesPlanCommand({
+                    direction: 'service',
                     ids: [plans[0].id],
                     approvedBy: 7,
                 }),
@@ -99,11 +101,34 @@ describe('ApproveSalesPlanHandler', () => {
             await expect(
                 handler.execute(
                     new ApproveSalesPlanCommand({
+                        direction: 'service',
                         ids: [plans[0].id, 'missing'],
                         approvedBy: 7,
                     }),
                 ),
             ).rejects.toBeInstanceOf(SalesPlanNotFoundException);
+        });
+    });
+
+    // Хотя бы один id из чужого направления — весь approve отклоняется, как
+    // будто этот id не найден вовсе, и ни одна строка (в т.ч. "своя") не
+    // утверждается.
+    it('падает NotFound и не утверждает ничего, если один из ids принадлежит другому направлению', async () => {
+        await withRequestContext(async () => {
+            const ownPlan = buildPlan(1, 'CREATED', 'service');
+            const foreignPlan = buildPlan(2, 'CREATED', 'shop');
+            const { handler, update } = buildHandler([ownPlan, foreignPlan]);
+
+            await expect(
+                handler.execute(
+                    new ApproveSalesPlanCommand({
+                        direction: 'service',
+                        ids: [ownPlan.id, foreignPlan.id],
+                        approvedBy: 7,
+                    }),
+                ),
+            ).rejects.toBeInstanceOf(SalesPlanNotFoundException);
+            expect(update).not.toHaveBeenCalled();
         });
     });
 });

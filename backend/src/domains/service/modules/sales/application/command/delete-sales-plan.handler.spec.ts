@@ -26,8 +26,37 @@ describe('DeleteSalesPlanHandler', () => {
         await withRequestContext(async () => {
             const { handler } = buildHandler(null);
             await expect(
-                handler.execute(new DeleteSalesPlanCommand({ planId: 'x' })),
+                handler.execute(
+                    new DeleteSalesPlanCommand({
+                        planId: 'x',
+                        direction: 'service',
+                    }),
+                ),
             ).rejects.toBeInstanceOf(SalesPlanNotFoundException);
+        });
+    });
+
+    it('падает NotFound, если план найден, но принадлежит другому направлению', async () => {
+        await withRequestContext(async () => {
+            const plan = SalesPlan.create({
+                direction: 'shop',
+                department: 1,
+                period: '2026-08',
+                turnover: 1,
+                margin: 1,
+                source: 'MANUAL',
+            });
+            const { handler, del } = buildHandler(plan);
+
+            await expect(
+                handler.execute(
+                    new DeleteSalesPlanCommand({
+                        planId: plan.id,
+                        direction: 'service',
+                    }),
+                ),
+            ).rejects.toBeInstanceOf(SalesPlanNotFoundException);
+            expect(del).not.toHaveBeenCalled();
         });
     });
 
@@ -44,7 +73,10 @@ describe('DeleteSalesPlanHandler', () => {
             const { handler, del } = buildHandler(plan);
 
             await handler.execute(
-                new DeleteSalesPlanCommand({ planId: plan.id }),
+                new DeleteSalesPlanCommand({
+                    planId: plan.id,
+                    direction: 'service',
+                }),
             );
 
             expect(del).toHaveBeenCalledWith(plan.id);

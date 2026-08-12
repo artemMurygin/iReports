@@ -8,8 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `shop` и `service` — параллельные бизнес-направления с похожим набором бизнес-процессов; `shop`
 зеркалирует структуру `service` (см. `domains/service/CLAUDE.md`), но с самостоятельной, независимой
-реализацией — общий только код на уровне `src/shared/*` и несколько Prisma-моделей с дискриминатором
-`direction` (`SalesPlan`/`SalesPlanTemplate`/`TaskCompletion`), не доменный код. Домен уже вырос из
+реализацией — общий код в основном ограничен `src/shared/*` и несколькими Prisma-моделями с
+дискриминатором `direction` (`SalesPlan`/`SalesPlanTemplate`/`TaskCompletion`). Единственное осознанное
+исключение из «независимого доменного кода» — CRUD плана и шаблона плана продаж в `modules/sales`
+(см. ниже): HTTP-контроллеры `shop` напрямую диспатчат те же классы команд из
+`domains/service/modules/sales/application/command/*` через общий `CommandBus`, подставляя
+`direction: 'shop'` сами — независимы только эндпоинты (`/v1/shop/sales/plan*`), а не бизнес-логика.
+`modules/accounting` от этого исключения свободен и полностью независим от одноимённого модуля
+`service`. Домен уже вырос из
 состояния «только интеграция и синк» — `modules/accounting` и `modules/sales` частично реализованы
 (Фазы 10–13, см. `docs/payroll/plan-payroll-calculation.md` в корне репозитория), но не «планировались
 на будущее» полностью — часть слоёв всё ещё сознательно отсутствует, см. ниже.
@@ -23,8 +29,9 @@ domains/shop/
 └── modules/
     ├── accounting/          — зарплатные правила магазина (Фазы 12–13) + персистентность,
     │                          оркестратор расчёта и HTTP-запись мотивации/задач (Фаза 13.5, см. ниже)
-    └── sales/                — SalesPerformance (факт/прогноз по МойСклад, Фаза 11); план/шаблон
-                                 плана переиспользуют CRUD-модуль sales домена service как есть
+    └── sales/                — SalesPerformance (факт/прогноз по МойСклад, Фаза 11) + собственный
+                                 CRUD плана/шаблона плана продаж, тонкий HTTP-слой поверх команд
+                                 sales домена service
 ```
 
 ### `integrations/moySklad`
@@ -92,12 +99,23 @@ domains/shop/
 
 ### `modules/sales` — SalesPerformance магазина (Фаза 11)
 
-Зеркало `SalesPerformance`-среза `domains/service/modules/sales`, но **план и шаблон плана продаж
-для `shop` собственного CRUD не имеют** — их обслуживают общие CRUD-эндпоинты
-`domains/service/modules/sales` (`POST|GET|PATCH|DELETE /v1/sales/plan`,
-`GET|PUT /v1/sales/plan_template`, `POST /v1/sales/plan/approve`): `SalesPlan`/`SalesPlanTemplate` —
-общие Prisma-модели с полем `direction` на каждой строке, без ERP-специфичной логики, поэтому
-дублировать их в `shop` не имеет смысла (см. `ShopSalesModule`, комментарий в `shop-sales.module.ts`).
+Зеркало `SalesPerformance`-среза `domains/service/modules/sales`, и, с Фазы 13.5, **план и шаблон
+плана продаж для `shop` тоже обслуживаются собственными эндпоинтами** этого модуля
+(`POST|GET|PATCH|DELETE /v1/shop/sales/plan`, `GET|PUT /v1/shop/sales/plan_template`,
+`POST /v1/shop/sales/plan/approve`, см. `interface/http-controllers/*-shop-sales-plan*.http.controller.ts`
+и `shopSalesPlanRoot`/`shopSalesPlanTemplateRoot` в `config/app.routes.ts`) — независимые от
+`domains/service/modules/sales` по HTTP (свой путь, свой контроллер), но не по бизнес-логике:
+`SalesPlan`/`SalesPlanTemplate` — общие Prisma-модели с полем `direction` на каждой строке, без
+ERP-специфичной логики, поэтому контроллеры `shop` не дублируют CRUD, а диспатчат те же классы команд
+(`CreateSalesPlanCommand` и т.д.) из `domains/service/modules/sales/application/command/*` через
+общий на всё приложение `CommandBus` (обработчики регистрирует `SalesModule` направления service —
+они генерик по `direction`, повторная регистрация здесь не нужна), сами подставляя
+`direction: 'shop'` на сервере (не читая его из тела/query запроса) — клиент не может запросить чужое
+направление через этот путь. `ListSalesPlansService`/`ListSalesPlanTemplatesService`/
+`SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY`/`EnsureSalesPlansForPeriodService` — те же
+классы направления `service`, но предоставлены `ShopSalesModule` отдельными экземплярами (Nest DI не
+разделяет провайдеров между модулями без явного экспорта/импорта) — см. `ShopSalesModule`, комментарий
+в `shop-sales.module.ts`.
 
 Что у `shop` действительно самостоятельное:
 
@@ -108,10 +126,10 @@ domains/shop/
   `GetShopSalesPerformanceService` (единственная реализация `ShopSalesPerformanceReaderPort`) на
   каждый вызов пересчитывает факт и прогноз (`SalesPrognose.forPeriod()`, та же формула из
   `src/shared/domain/`, что у `service`) — ни факт, ни прогноз не персистятся.
-- **Отдельный HTTP-эндпоинт** `GET /v1/sales/salesPerformance/shop/:period` вместо параметра
-  `direction` у общего `/v1/sales/salesPerformance/:period` (см. обоснование раздельного пути в
-  `config/app.routes.ts`) — общий роут жёстко читает RoApp и отклоняет любой `direction`, кроме
-  `service`.
+- **Отдельный HTTP-эндпоинт** `GET /v1/shop/sales/salesPerformance/:period` вместо параметра
+  `direction` у сервисного `/v1/service/sales/salesPerformance/:period` (см. обоснование раздельного
+  пути в `config/app.routes.ts`) — сервисный роут жёстко читает RoApp и отклоняет любой `direction`,
+  кроме `service`.
 - **`ShopSalesPlanAutoCreationCron`** — собственный крон автосоздания плана первого числа поверх
   общего `EnsureSalesPlansForPeriodService` (переиспользуется как класс направления `service`, но
   предоставлен здесь отдельным экземпляром — Nest DI не разделяет провайдеров между модулями без
@@ -162,7 +180,7 @@ domains/shop/
 
 **Персистентность и оркестратор (Фаза 13.5, см. `docs/payroll/phase-13.5-shop-report-integration.md`)**:
 пробел, ранее задокументированный здесь (только domain-слой правил + `GET
-/shop/accounting/salary_role_types`, без персистентности и без оркестратора расчёта из БД), закрыт.
+/v1/shop/accounting/salary_role_types`, без персистентности и без оркестратора расчёта из БД), закрыт.
 Независимая (не переиспользующая классы `service`) реализация: `ShopSalaryRuleMapper`/`schema`/
 `Repository`, `ShopMotivationSchema` (сущность + `ShopMotivationSchemaMapper`/`Repository`, включая
 `findIdByTarget` — защита от дублирования строки `MotivationSchema` для сотрудника с идентичностями в
@@ -173,17 +191,29 @@ domains/shop/
 параметром правила схемы, так как `categoryDescendantFolderIds` зависит от `category` конкретных
 правил `ProductSold`/`UsedProductSold`), собственный `PeriodCalculationOrchestrator`/
 `rule-breakdown.builder`/`to-shop-salary-report-rules.ts`. HTTP-запись: `POST
-/shop/accounting/motivation-schema` (find-or-create по `findIdByTarget`), `POST|GET
-/shop/accounting/task_completions`, `POST /shop/accounting/task_completions/:id/{confirm,reject}`,
-`DELETE /shop/accounting/task_completions/:id` (DTO переиспользуют направление-агностичные Zod-схемы
-`TaskCompletion` из `ireports-contracts`, не бизнес-код). `ShopAccountingModule` экспортирует
-`SHOP_MOTIVATION_SCHEMA_REPOSITORY`/`BuildShopCalculationContextService`/`SHOP_CALCULATION_DATA` —
-единственная точка связи с `domains/service` на уровне Nest DI: сервисный `AccountingModule`
-импортирует `ShopAccountingModule` ради этих токенов (не ради переиспользования классов), чтобы
-`GetEmployeeSalaryReportService`/`GetDepartmentSalaryReportService`/`CloseAccountingPeriodHandler`
-стали direction-aware и обслуживали оба направления. Расчётный период, отчёт по зарплате и CRUD
-правил для `shop` теперь используют этот же контур, что и `service` — см.
-`domains/service/CLAUDE.md`, разделы «Расчётный период» и «Отчёты».
+/v1/shop/accounting/motivation-schema` (find-or-create по `findIdByTarget`), `POST|GET
+/v1/shop/accounting/task_completions`,
+`POST /v1/shop/accounting/task_completions/:id/{confirm,reject}`,
+`DELETE /v1/shop/accounting/task_completions/:id` (DTO переиспользуют направление-агностичные Zod-схемы
+`TaskCompletion` из `ireports-contracts`, не бизнес-код).
+
+Расчётный период (`GET|POST /v1/shop/accounting/period/*`) и отчёт по зарплате
+(`GET /v1/shop/accounting/salary_report/{employee,department}/:id/:period`) — независимые от
+`service` эндпоинты (Фазы 3–4, см. `domains/service/CLAUDE.md`, разделы «Расчётный период» и
+«Отчёты»): `close` обслуживает собственный `CloseShopAccountingPeriodHandler`
+(`domains/shop/modules/accounting/application/command/`), `get`/`reopen`/`recalculate` переиспользуют
+generic-по-`direction` `GetAccountingPeriodService`/`ReopenAccountingPeriodCommand`/
+`RecalculateAccountingPeriodCommand` сервисного `accounting` напрямую (без своих классов — команда/
+хендлер уже не завязаны на конкретное направление), а отчёт по зарплате — собственные, строго
+однонаправленные `GetShopEmployeeSalaryReportService`/`GetShopDepartmentSalaryReportService` (ответ
+контракта односторонний, не объединяет `service`/`shop` в одном вызове, в отличие от того, как было
+устроено до Фазы 4). `ShopAccountingModule` заводит собственные экземпляры инфраструктурных токенов
+сервисного `accounting` (`ACCOUNTING_PERIOD_REPOSITORY`/`ACCOUNTING_PERIOD_SNAPSHOT`/
+`ACCOUNTING_CALCULATION_CACHE`/`SALES_PLAN_REPOSITORY`) под теми же именами — тот же приём, что уже
+применён в `ShopSalesModule` для `SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY`; сервисный
+`AccountingModule` `ShopAccountingModule` больше не импортирует (кросс-доменная связь на уровне Nest DI
+между `domains/service` и `domains/shop` в `accounting` полностью устранена, см.
+`domains/service/CLAUDE.md`).
 
 ## Целевой набор модулей домена
 
@@ -225,7 +255,12 @@ domains/shop/
   (`GetShopSalesPerformanceService`) и весь `modules/accounting` (domain-слой правил,
   `shop-role-source`, `money`, `float-percent`, `salary-rule-registry`, фабрика; и с Фазы 13.5 —
   persistence/application/interface слой: мапперы, репозитории, CQRS-хендлеры,
-  `BuildShopCalculationContextService`) покрыты юнит-тестами; сквозной e2e-сценарий «сотрудник в
-  обеих ERP» — в `domains/service/modules/accounting/interface/http-controllers/
-  shop-report-integration.e2e.spec.ts` (доменный e2e для этого расчёта живёт на стороне `service`,
-  так как это единственная точка HTTP-входа для объединённого отчёта по обоим направлениям).
+  `BuildShopCalculationContextService`) покрыты юнит-тестами. Отчёт по зарплате сотрудника
+  (`GetShopEmployeeSalaryReportService`) — строго однонаправленный, ответ не объединяет `service` и
+  `shop` (см. "Отчёты по зарплате" выше); e2e-покрытие —
+  `interface/http-controllers/get-shop-employee-salary-report.e2e.spec.ts` в этом же модуле,
+  зеркало одноимённого файла в `domains/service/modules/accounting/interface/http-controllers/`.
+  Оба файла используют один и тот же `employeeId`, но независимые in-memory фейки — тем самым
+  проверяют инвариант "сотрудник существует в обеих ERP одновременно, каждый эндпоинт видит только
+  свой срез" двумя раздельными e2e вместо одного объединённого (существовавшего до Фазы 4 разбора
+  `shop-report-integration.e2e.spec.ts`, см. `docs/payroll/phase-13.5-shop-report-integration.md`).

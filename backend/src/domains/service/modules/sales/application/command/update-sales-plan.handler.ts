@@ -21,7 +21,11 @@ export class UpdateSalesPlanHandler implements ICommandHandler<
 
     async execute(command: UpdateSalesPlanCommand): Promise<SalesPlanResponse> {
         const plan = await this.repo.findById(command.planId);
-        if (!plan) {
+        // План с чужим direction трактуется как не найденный — тот же
+        // SalesPlanNotFoundException, что и при полном отсутствии строки, а
+        // не отдельное исключение: с точки зрения вызывающего направления
+        // это одна и та же ситуация "нет доступа к этому плану".
+        if (!plan || plan.direction !== command.direction) {
             throw new SalesPlanNotFoundException();
         }
 

@@ -47,7 +47,6 @@ export type SalesPlanTemplateResponse = z.infer<typeof salesPlanTemplateSchema>;
 // шаблона нет — первая правка комбинации создаёт её (см.
 // PutSalesPlanTemplateHandler).
 const putSalesPlanTemplateRequestSchema = z.object({
-    direction: salesDirectionSchema,
     department: z.number(),
     category: z.number().nullable().optional(),
     turnover: z.number().nonnegative(),
@@ -58,9 +57,7 @@ export type PutSalesPlanTemplateRequest = z.infer<
     typeof putSalesPlanTemplateRequestSchema
 >;
 
-const listSalesPlanTemplatesQuerySchema = z.object({
-    direction: salesDirectionSchema.optional(),
-});
+const listSalesPlanTemplatesQuerySchema = z.object({});
 export type ListSalesPlanTemplatesQuery = z.infer<
     typeof listSalesPlanTemplatesQuerySchema
 >;
@@ -105,15 +102,32 @@ export type SalesPlanResponse = z.infer<typeof salesPlanSchema>;
 // запрашивается): автоматические источники (PREVIOUS_MONTH/TEMPLATE)
 // проставляет только крон/ленивое достраивание Фазы 4, у этого эндпоинта их
 // не бывает. Повторное создание на ту же комбинацию
-// (direction, department, category, period) отклоняется.
-const createSalesPlanRequestSchema = z.object({
-    direction: salesDirectionSchema,
+// (direction, department, category, period) отклоняется — как для каждой
+// строки батча по отдельности, так и для дублей внутри одного запроса.
+const createSalesPlanItemSchema = z.object({
     department: z.number(),
     category: z.number().nullable().optional(),
     period: periodSchema,
     turnover: z.number().nonnegative(),
     margin: z.number(),
 });
+export type CreateSalesPlanItemRequest = z.infer<
+    typeof createSalesPlanItemSchema
+>;
+
+// Тело — один план или батч планов. direction в теле не передаётся вообще —
+// его выбирает сервер по тому, под каким доменным префиксом
+// (/v1/service/sales/plan или /v1/shop/sales/plan) пришёл запрос (см.
+// CreateSalesPlanHttpController/CreateShopSalesPlanHttpController). Union, а
+// не единая форма на оба случая (несовместим с createZodDto — TS2509, как и
+// approveSalesPlanRequestSchema ниже), валидируется на контроллере через
+// ZodValidationPipe напрямую.
+const createSalesPlanRequestSchema = z.union([
+    createSalesPlanItemSchema,
+    z.object({
+        items: z.array(createSalesPlanItemSchema).min(1),
+    }),
+]);
 export type CreateSalesPlanRequest = z.infer<
     typeof createSalesPlanRequestSchema
 >;
@@ -133,16 +147,15 @@ export type UpdateSalesPlanRequest = z.infer<
     typeof updateSalesPlanRequestSchema
 >;
 
-// Утверждение построчно (ids) или массово по направлению и месяцу
-// (direction + period, все строки CREATED переходят в APPROVED, уже
-// утверждённые строки не трогаются). approvedBy — Bitrix ID руководителя,
+// Утверждение построчно (ids) или массово по месяцу (period, в рамках
+// направления эндпоинта из пути — все строки CREATED переходят в APPROVED,
+// уже утверждённые строки не трогаются). approvedBy — Bitrix ID руководителя,
 // который утверждает: в проекте нет модели прав и резолва "текущего
 // пользователя" вне PortalAdminGuard (см. backend/CLAUDE.md), поэтому его
 // передаёт фронтенд явно, а не берёт из токена/сессии.
 const approveSalesPlanRequestSchema = z.union([
     z.object({ ids: z.array(z.string()).min(1), approvedBy: z.number() }),
     z.object({
-        direction: salesDirectionSchema,
         period: periodSchema,
         approvedBy: z.number(),
     }),
@@ -152,7 +165,6 @@ export type ApproveSalesPlanRequest = z.infer<
 >;
 
 const listSalesPlansQuerySchema = z.object({
-    direction: salesDirectionSchema,
     period: periodSchema,
 });
 export type ListSalesPlansQuery = z.infer<typeof listSalesPlansQuerySchema>;
@@ -166,6 +178,7 @@ export {
     salesPlanSourceSchema,
     salesPlanStatusSchema,
     salesPlanSchema,
+    createSalesPlanItemSchema,
     createSalesPlanRequestSchema,
     updateSalesPlanRequestSchema,
     approveSalesPlanRequestSchema,

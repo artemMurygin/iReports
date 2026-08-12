@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SalesModule } from '@/domains/service/modules/sales/sales.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
-import { ShopAccountingModule } from '@/domains/shop/modules/accounting/shop-accounting.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
@@ -64,23 +63,35 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
 // (BuildServiceCalculationContextService, вход FloatPercent).
 // DomainSyncStatusModule — второй штамп свежести, общий с будущим
 // синком shop.
-// ShopAccountingModule (Фаза 13.5) — импортируется исключительно ради
-// экспортируемых DI-токенов (SHOP_MOTIVATION_SCHEMA_REPOSITORY,
-// BuildShopCalculationContextService, SHOP_CALCULATION_DATA,
-// SHOP_SALES_PERFORMANCE_READER), которые резолвят в конструкторы
-// GetEmployeeSalaryReportService/GetDepartmentSalaryReportService/
-// CloseAccountingPeriodHandler для направления shop — ни один класс
-// бизнес-логики shop здесь не переиспользуется. Единственная санкционированная
-// точка связи domains/service и domains/shop на уровне Nest DI (см.
-// backend/CLAUDE.md), зеркало обратной зависимости ShopSalesModule →
-// сервисные SalesPlanRepository/SalesPlanTemplateRepository.
+//
+// ShopAccountingModule (Фаза 13.5) здесь больше НЕ импортируется: это был
+// единственный (санкционированный, см. backend/CLAUDE.md) уровень связи
+// domains/service ↔ domains/shop на уровне Nest DI, нужный только ради
+// экспортируемых токенов SHOP_MOTIVATION_SCHEMA_REPOSITORY/
+// BuildShopCalculationContextService/SHOP_CALCULATION_DATA/
+// SHOP_SALES_PERFORMANCE_READER для GetEmployeeSalaryReportService/
+// GetDepartmentSalaryReportService, которые раньше сводили оба направления
+// в один ответ. После разбора объединённого отчёта (Фаза 4,
+// shop-report-integration.e2e.spec.ts) оба сервиса стали строго
+// однонаправленными (только service) и ни один SHOP_*-токен больше не
+// инжектируют — импорт стал мёртвым весом и удалён. Аналогичный отчёт
+// направления shop — независимый GetShopEmployeeSalaryReportService/
+// GetShopDepartmentSalaryReportService в самом ShopAccountingModule (см.
+// domains/shop/CLAUDE.md).
+//
+// Итог: кросс-доменная связь domains/service ↔ domains/shop на уровне Nest DI
+// в этом модуле полностью устранена — ни один провайдер/контроллер ниже не
+// импортирует и не инжектирует ничего из domains/shop, проверено
+// `grep -rn "domains/shop\|SHOP_" accounting --include=*.ts | grep -v spec`
+// (единственные совпадения — этот комментарий и аналогичный комментарий в
+// get-employee-salary-report.service.ts, оба чисто документационные, не
+// импорты). Не путай с close-accounting-period.direction-independence.spec.ts
+// — это регрессионный тест, который намеренно и легитимно импортирует классы
+// shop напрямую (без прохода через DI ShopAccountingModule), чтобы проверить
+// независимость закрытия периода по direction; на providers/controllers/
+// imports этого модуля он не влияет.
 @Module({
-    imports: [
-        CqrsModule,
-        SalesModule,
-        DomainSyncStatusModule,
-        ShopAccountingModule,
-    ],
+    imports: [CqrsModule, SalesModule, DomainSyncStatusModule],
     controllers: [
         CreateMotivationSchemaHttpController,
         GetEmployeeSalaryReportHttpController,

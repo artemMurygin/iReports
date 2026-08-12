@@ -11,7 +11,7 @@ import { ShopSalesPerformance } from '../../domain/value-objects/shop-sales-perf
 // — параметр интерфейса, а не свойство модуля).
 export interface ShopSalesPerformanceReaderPort {
     // Все строки ShopSalesPerformance периода — вход эндпоинта
-    // GET /sales/salesPerformance/shop/:period.
+    // GET /shop/sales/salesPerformance/:period.
     listForPeriod(period: string): Promise<ShopSalesPerformance[]>;
 
     // Одна строка по отделу и, опционально, категории — вход

@@ -1,22 +1,23 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
+import { routesV1 } from '@/config/app.routes';
 import { CloseAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/close-accounting-period.command';
-import { parseAccountingDirection } from '../utils/parse-accounting-direction';
 import { CloseAccountingPeriodDto } from '../dto/close-accounting-period.dto';
 
-@Controller('accounting')
+@ApiTags('Бухгалтерия: расчётный период')
+@Controller()
 export class CloseAccountingPeriodHttpController {
     constructor(private readonly commandBus: CommandBus) {}
 
-    @Post('period/:direction/:period/close')
+    @Post(routesV1.service.accounting.period.close)
+    @ApiOperation({ summary: 'Закрыть расчётный период направления' })
     async close(
-        @Param('direction') direction: string,
         @Param('period') period: string,
         @Body() body: CloseAccountingPeriodDto,
     ): Promise<AccountingPeriodResponse> {
         const command = new CloseAccountingPeriodCommand({
-            direction: parseAccountingDirection(direction),
             period,
             closedBy: body.closedBy,
         });

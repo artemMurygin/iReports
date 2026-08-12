@@ -10,7 +10,7 @@ import type { SalesDirection } from '../../domain/types/sales-plan.types';
 // экспортированным из SalesModule заранее.
 export interface SalesPerformanceReaderPort {
     // Все строки SalesPerformance периода — вход эндпоинта
-    // GET /sales/salesPerformance/:period.
+    // GET /service/sales/salesPerformance/:period.
     listForPeriod(
         direction: SalesDirection,
         period: string,

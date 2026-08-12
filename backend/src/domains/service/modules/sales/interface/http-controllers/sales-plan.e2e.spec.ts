@@ -1,4 +1,5 @@
-import { INestApplication } from '@nestjs/common';
+import type { Server } from 'http';
+import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { RequestContextMiddleware } from 'nestjs-request-context';
@@ -17,6 +18,8 @@ import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/
 import type { SalesPlanTemplateRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
 import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
+import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
+import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { SalesPlanTemplate } from '@/domains/service/modules/sales/domain/entities/sales-plan-template.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
@@ -32,7 +35,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // реальный RoappSalesFactSourceRepository тоже требует DatabaseService
 // (Фаза 5).
 describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
-    let app: INestApplication;
+    let app: INestApplication<Server>;
 
     const plans = new Map<string, SalesPlan>();
     const templates = new Map<string, SalesPlanTemplate>();
@@ -109,9 +112,26 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             ),
     };
 
+    // CreateSalesPlanHandler (Фаза с batch-созданием) заворачивает вставку
+    // строк в UNIT_OF_WORK — реальный PrismaUnitOfWork приходит из
+    // @Global() DatabaseModule (требует живой Postgres), который сюда не
+    // импортирован. Регистрируем фейк тем же способом (@Global()-модуль),
+    // каким это в реальном приложении делает DatabaseModule — см. тот же
+    // приём в get-employee-salary-report.e2e.spec.ts.
+    const fakeUnitOfWork: UnitOfWorkPort = {
+        run: (work) => work(),
+    };
+
+    @Global()
+    @Module({
+        providers: [{ provide: UNIT_OF_WORK, useValue: fakeUnitOfWork }],
+        exports: [UNIT_OF_WORK],
+    })
+    class FakeInfrastructureModule {}
+
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({
-            imports: [SalesModule],
+            imports: [FakeInfrastructureModule, SalesModule],
         })
             .overrideProvider(LEAD_REPOSITORY)
             .useValue(fakeLeadRepo)
@@ -148,9 +168,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
 
     it('заводит, читает, правит, утверждает и удаляет план месяца', async () => {
         const createResponse = await request(app.getHttpServer())
-            .post('/v1/sales/plan')
+            .post('/v1/service/sales/plan')
             .send({
-                direction: 'service',
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,
@@ -168,9 +187,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
 
         // Повторное создание на ту же комбинацию отклоняется.
         await request(app.getHttpServer())
-            .post('/v1/sales/plan')
+            .post('/v1/service/sales/plan')
             .send({
-                direction: 'service',
                 department: 1,
                 period: '2026-08',
                 turnover: 1,
@@ -179,13 +197,13 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             .expect(409);
 
         const listResponse = await request(app.getHttpServer())
-            .get('/v1/sales/plan')
-            .query({ direction: 'service', period: '2026-08' })
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-08' })
             .expect(200);
         expect(listResponse.body).toHaveLength(1);
 
         const approveResponse = await request(app.getHttpServer())
-            .post('/v1/sales/plan/approve')
+            .post('/v1/service/sales/plan/approve')
             .send({ ids: [created.id], approvedBy: 42 })
             .expect(201);
         expect((approveResponse.body as SalesPlanResponse[])[0].status).toBe(
@@ -194,7 +212,7 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
 
         // Правка утверждённой строки возвращает её в CREATED + MANUAL.
         const updateResponse = await request(app.getHttpServer())
-            .patch(`/v1/sales/plan/${created.id}`)
+            .patch(`/v1/service/sales/plan/${created.id}`)
             .send({ turnover: 1_500_000 })
             .expect(200);
         expect(updateResponse.body).toMatchObject({
@@ -205,21 +223,129 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         });
 
         await request(app.getHttpServer())
-            .delete(`/v1/sales/plan/${created.id}`)
+            .delete(`/v1/service/sales/plan/${created.id}`)
             .expect(204);
 
         const afterDelete = await request(app.getHttpServer())
-            .get('/v1/sales/plan')
-            .query({ direction: 'service', period: '2026-08' })
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-08' })
             .expect(200);
         expect(afterDelete.body).toHaveLength(0);
     });
 
-    it('утверждает весь месяц по направлению одним запросом', async () => {
-        await request(app.getHttpServer())
-            .post('/v1/sales/plan')
+    it('заводит несколько планов (отделов/категорий) одним batch-запросом', async () => {
+        const createResponse = await request(app.getHttpServer())
+            .post('/v1/service/sales/plan')
             .send({
-                direction: 'service',
+                items: [
+                    {
+                        department: 1,
+                        category: 10,
+                        period: '2026-12',
+                        turnover: 1_000_000,
+                        margin: 200_000,
+                    },
+                    {
+                        department: 2,
+                        period: '2026-12',
+                        turnover: 500_000,
+                        margin: 100_000,
+                    },
+                ],
+            })
+            .expect(201);
+
+        const created = createResponse.body as SalesPlanResponse[];
+        expect(created).toHaveLength(2);
+        expect(created).toMatchObject([
+            { direction: 'service', department: 1, category: 10 },
+            { direction: 'service', department: 2, category: null },
+        ]);
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-12' })
+            .expect(200);
+        expect(listResponse.body).toHaveLength(2);
+    });
+
+    it('batch-запрос отклоняет строку, конфликтующую с уже существующим планом, — весь запрос падает без частичного создания', async () => {
+        await request(app.getHttpServer())
+            .post('/v1/service/sales/plan')
+            .send({
+                department: 3,
+                period: '2027-01',
+                turnover: 1,
+                margin: 1,
+            })
+            .expect(201);
+
+        // Конфликтующая строка стоит первой — до неё цикл в хендлере не
+        // успевает дойти до отдела 4, так что фейковый (нетранзакционный)
+        // репозиторий теста корректно отражает поведение реального
+        // UNIT_OF_WORK: ничего лишнего не создаётся.
+        await request(app.getHttpServer())
+            .post('/v1/service/sales/plan')
+            .send({
+                items: [
+                    {
+                        department: 3,
+                        period: '2027-01',
+                        turnover: 3,
+                        margin: 3,
+                    },
+                    {
+                        department: 4,
+                        period: '2027-01',
+                        turnover: 2,
+                        margin: 2,
+                    },
+                ],
+            })
+            .expect(409);
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/service/sales/plan')
+            .query({ period: '2027-01' })
+            .expect(200);
+        expect(listResponse.body).toHaveLength(1);
+        expect((listResponse.body as SalesPlanResponse[])[0].department).toBe(
+            3,
+        );
+    });
+
+    it('batch-запрос отклоняет дубли внутри самого запроса, не создавая ни одной строки', async () => {
+        await request(app.getHttpServer())
+            .post('/v1/service/sales/plan')
+            .send({
+                items: [
+                    {
+                        department: 5,
+                        period: '2027-02',
+                        turnover: 1,
+                        margin: 1,
+                    },
+                    {
+                        department: 5,
+                        period: '2027-02',
+                        turnover: 2,
+                        margin: 2,
+                    },
+                ],
+            })
+            .expect(409);
+
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/service/sales/plan')
+            .query({ period: '2027-02' })
+            .expect(200);
+        expect(listResponse.body).toHaveLength(0);
+    });
+
+    it('утверждает весь месяц одним запросом', async () => {
+        await request(app.getHttpServer())
+            .post('/v1/service/sales/plan')
+            .send({
                 department: 1,
                 period: '2026-09',
                 turnover: 100,
@@ -227,9 +353,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             })
             .expect(201);
         await request(app.getHttpServer())
-            .post('/v1/sales/plan')
+            .post('/v1/service/sales/plan')
             .send({
-                direction: 'service',
                 department: 2,
                 period: '2026-09',
                 turnover: 200,
@@ -238,8 +363,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             .expect(201);
 
         const approveResponse = await request(app.getHttpServer())
-            .post('/v1/sales/plan/approve')
-            .send({ direction: 'service', period: '2026-09', approvedBy: 1 })
+            .post('/v1/service/sales/plan/approve')
+            .send({ period: '2026-09', approvedBy: 1 })
             .expect(201);
 
         const body = approveResponse.body as SalesPlanResponse[];
@@ -270,8 +395,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         plans.set(previous.id, previous);
 
         const listResponse = await request(app.getHttpServer())
-            .get('/v1/sales/plan')
-            .query({ direction: 'service', period: '2026-11' })
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-11' })
             .expect(200);
 
         const body = listResponse.body as SalesPlanResponse[];
@@ -295,17 +420,16 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         // Повторное обращение к тому же периоду идемпотентно — не плодит
         // новых строк поверх уже достроенных.
         const secondResponse = await request(app.getHttpServer())
-            .get('/v1/sales/plan')
-            .query({ direction: 'service', period: '2026-11' })
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-11' })
             .expect(200);
         expect(secondResponse.body).toHaveLength(2);
     });
 
     it('шаблон: PUT создаёт строку при первой правке и правит при повторной', async () => {
         const firstPut = await request(app.getHttpServer())
-            .put('/v1/sales/plan_template')
+            .put('/v1/service/sales/plan_template')
             .send({
-                direction: 'service',
                 department: 1,
                 turnover: 1_000_000,
                 margin: 200_000,
@@ -316,9 +440,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         expect(created.growthPercent).toBe(10);
 
         const secondPut = await request(app.getHttpServer())
-            .put('/v1/sales/plan_template')
+            .put('/v1/service/sales/plan_template')
             .send({
-                direction: 'service',
                 department: 1,
                 turnover: 1_100_000,
                 margin: 220_000,
@@ -330,7 +453,7 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         expect(updated.growthPercent).toBe(12);
 
         const listResponse = await request(app.getHttpServer())
-            .get('/v1/sales/plan_template')
+            .get('/v1/service/sales/plan_template')
             .expect(200);
         expect(listResponse.body).toHaveLength(1);
     });
@@ -358,7 +481,7 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         ];
 
         const listResponse = await request(app.getHttpServer())
-            .get('/v1/sales/salesPerformance/2026-08')
+            .get('/v1/service/sales/salesPerformance/2026-08')
             .query({ direction: 'service' })
             .expect(200);
         const performances = listResponse.body as SalesPerformanceResponse[];
@@ -380,12 +503,12 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         // Правка плана меняет percentCompletion без изменения ERP-факта —
         // SalesFact/SalesPrognose не персистятся, пересчитываются заново.
         await request(app.getHttpServer())
-            .patch(`/v1/sales/plan/${plan.id}`)
+            .patch(`/v1/service/sales/plan/${plan.id}`)
             .send({ turnover: 2_000_000 })
             .expect(200);
 
         const afterEdit = await request(app.getHttpServer())
-            .get('/v1/sales/salesPerformance/2026-08')
+            .get('/v1/service/sales/salesPerformance/2026-08')
             .query({ direction: 'service' })
             .expect(200);
         expect(
@@ -396,11 +519,11 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         // Удаление плана удаляет факт и прогноз — строка пропадает из
         // ответа целиком.
         await request(app.getHttpServer())
-            .delete(`/v1/sales/plan/${plan.id}`)
+            .delete(`/v1/service/sales/plan/${plan.id}`)
             .expect(204);
 
         const afterDelete = await request(app.getHttpServer())
-            .get('/v1/sales/salesPerformance/2026-08')
+            .get('/v1/service/sales/salesPerformance/2026-08')
             .query({ direction: 'service' })
             .expect(200);
         expect(afterDelete.body).toHaveLength(0);
@@ -408,59 +531,44 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
 
     it('SalesPerformance отклоняет направление shop в Фазе 5', async () => {
         await request(app.getHttpServer())
-            .get('/v1/sales/salesPerformance/2026-08')
+            .get('/v1/service/sales/salesPerformance/2026-08')
             .query({ direction: 'shop' })
             .expect(400);
     });
 
-    // Фаза 11 (issue #52): SalesPlan/SalesPlanTemplate CRUD этого модуля не
-    // привязан к direction: 'service' — те же эндпоинты уже обслуживают и
-    // направление shop без единой правки (домен shop получил в Фазе 11
-    // отдельный модуль только для ERP-специфичного SalesPerformance/
-    // SalesFact, см. domains/shop/modules/sales/shop-sales.module.ts).
-    it('план и шаблон плана работают для направления shop через тот же CRUD, что и service (Фаза 11)', async () => {
+    // Фаза 2 (переход direction команд application/command из query/body в
+    // обязательное поле, подставляемое контроллером): эндпоинты этого
+    // модуля больше не обслуживают направление shop через один общий CRUD
+    // (в отличие от Фазы 11, см. git-историю) — они висят под /v1/service и
+    // всегда пишут direction: 'service'. Схема createSalesPlanRequestSchema
+    // больше не содержит поле direction вообще — если клиент всё равно
+    // пришлёт его в теле, zod молча отбрасывает незнакомое поле при
+    // валидации, на результат не влияет.
+    it('эндпоинт плана игнорирует direction, переданный в теле, и всегда пишет service', async () => {
         const createResponse = await request(app.getHttpServer())
-            .post('/v1/sales/plan')
+            .post('/v1/service/sales/plan')
             .send({
                 direction: 'shop',
-                department: 1,
+                department: 9,
                 period: '2026-08',
                 turnover: 500_000,
                 margin: 100_000,
             })
             .expect(201);
-        const created = createResponse.body as SalesPlanResponse;
-        expect(created).toMatchObject({
-            direction: 'shop',
-            department: 1,
-            category: null,
-            status: 'CREATED',
-            source: 'MANUAL',
-        });
+        expect((createResponse.body as SalesPlanResponse).direction).toBe(
+            'service',
+        );
 
-        // Строка на ту же комбинацию, но направления service, не
-        // конфликтует со строкой шага выше — direction часть естественного
-        // ключа.
-        await request(app.getHttpServer())
-            .post('/v1/sales/plan')
-            .send({
-                direction: 'service',
-                department: 1,
-                period: '2026-08',
-                turnover: 999,
-                margin: 111,
-            })
-            .expect(201);
-
-        const shopList = await request(app.getHttpServer())
-            .get('/v1/sales/plan')
-            .query({ direction: 'shop', period: '2026-08' })
+        const listResponse = await request(app.getHttpServer())
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-08' })
             .expect(200);
-        expect(shopList.body).toHaveLength(1);
-        expect((shopList.body as SalesPlanResponse[])[0].id).toBe(created.id);
+        expect(listResponse.body).toMatchObject([{ direction: 'service' }]);
+    });
 
+    it('эндпоинт шаблона плана игнорирует direction, переданный в теле, и всегда пишет service', async () => {
         const templatePut = await request(app.getHttpServer())
-            .put('/v1/sales/plan_template')
+            .put('/v1/service/sales/plan_template')
             .send({
                 direction: 'shop',
                 department: 2,
@@ -470,7 +578,7 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             })
             .expect(200);
         expect(templatePut.body).toMatchObject({
-            direction: 'shop',
+            direction: 'service',
             department: 2,
             growthPercent: 15,
         });

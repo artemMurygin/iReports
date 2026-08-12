@@ -1,19 +1,26 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalesPlanTemplateResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { SalesPlanTemplateListQueryDto } from '../dto/sales-plan-template-list-query.dto';
 import { ListSalesPlanTemplatesService } from '../../application/services/list-sales-plan-templates.service';
 
-@Controller(routesV1.version)
+@ApiTags('Продажи')
+@Controller()
 export class ListSalesPlanTemplatesHttpController {
     constructor(
         private readonly listSalesPlanTemplates: ListSalesPlanTemplatesService,
     ) {}
 
-    @Get(routesV1.salesPlanTemplate.root)
-    async list(
-        @Query() query: SalesPlanTemplateListQueryDto,
-    ): Promise<SalesPlanTemplateResponse[]> {
-        return this.listSalesPlanTemplates.execute(query.direction);
+    // Эндпоинт обслуживает только direction: 'service' (путь под
+    // /v1/service) — listSalesPlanTemplatesQuerySchema больше не несёт
+    // direction (query у эндпоинта не осталось полей), поэтому
+    // SalesPlanTemplateListQueryDto/@Query() здесь больше не нужны.
+    @Get(routesV1.service.salesPlanTemplate.root)
+    @ApiOperation({
+        summary:
+            'Получить дефолтный шаблон плана направления service по отделам и категориям',
+    })
+    async list(): Promise<SalesPlanTemplateResponse[]> {
+        return this.listSalesPlanTemplates.execute('service');
     }
 }

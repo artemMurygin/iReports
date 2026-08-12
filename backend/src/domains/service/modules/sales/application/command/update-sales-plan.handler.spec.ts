@@ -27,12 +27,38 @@ describe('UpdateSalesPlanHandler', () => {
             const { handler } = buildHandler(null);
             const command = new UpdateSalesPlanCommand({
                 planId: 'missing',
+                direction: 'service',
                 turnover: 100,
             });
 
             await expect(handler.execute(command)).rejects.toBeInstanceOf(
                 SalesPlanNotFoundException,
             );
+        });
+    });
+
+    it('падает NotFound, если план найден, но принадлежит другому направлению', async () => {
+        await withRequestContext(async () => {
+            const plan = SalesPlan.create({
+                direction: 'shop',
+                department: 1,
+                period: '2026-08',
+                turnover: 1_000_000,
+                margin: 200_000,
+                source: 'MANUAL',
+            });
+
+            const { handler, update } = buildHandler(plan);
+            const command = new UpdateSalesPlanCommand({
+                planId: plan.id,
+                direction: 'service',
+                turnover: 1_200_000,
+            });
+
+            await expect(handler.execute(command)).rejects.toBeInstanceOf(
+                SalesPlanNotFoundException,
+            );
+            expect(update).not.toHaveBeenCalled();
         });
     });
 
@@ -54,6 +80,7 @@ describe('UpdateSalesPlanHandler', () => {
             const { handler, update } = buildHandler(plan);
             const command = new UpdateSalesPlanCommand({
                 planId: plan.id,
+                direction: 'service',
                 turnover: 1_200_000,
             });
 

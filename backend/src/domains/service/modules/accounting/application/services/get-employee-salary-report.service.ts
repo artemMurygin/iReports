@@ -31,18 +31,6 @@ import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-statu
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
-import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
-import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
-import { PeriodCalculationOrchestrator as ShopPeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
-import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-context';
-import {
-    isShopSalesPerformancePlanApproved,
-    toShopSalesPerformanceSummary,
-} from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-summary';
-import { buildShopSalaryReportRules } from '@/domains/shop/modules/accounting/application/mappers/to-shop-salary-report-rules';
 
 // Тонкий сквозной путь Фазы 1, дополненный Фазой 6 ленивым кэшем и
 // снапшотом закрытого периода, и Фазой 9 парой факт/прогноз + компактным
@@ -54,7 +42,7 @@ import { buildShopSalaryReportRules } from '@/domains/shop/modules/accounting/ap
 // снапшота целиком, без обращения к оркестратору — снапшот прогноза не
 // хранит (закрытый месяц не прогнозируется, см. PRD раздел 6), поэтому
 // amount.prognose в ответе закрытого периода — null, а не равен факту (см.
-// buildClosedServiceDirection/buildClosedShopDirection ниже).
+// buildClosedServiceDirection ниже).
 //
 // Открытый период считает как и раньше (оркестратор по схеме сотрудника),
 // но сперва сверяет freshnessStamp с последним сохранённым в кэше — при
@@ -65,21 +53,20 @@ import { buildShopSalaryReportRules } from '@/domains/shop/modules/accounting/ap
 // отдельным лёгким запросом (findSalesPerformanceForEmployee), не
 // пересчитывая тяжёлые erpData-выборки.
 //
-// Контекст расчёта (EmployeeIdentity + erpData) собирают
-// BuildServiceCalculationContextService/BuildShopCalculationContextService
-// (Фаза 7/9, Фаза 13.5) — этот сервис больше не строит его напрямую. Режим
-// FACT/PROGNOSE (Фаза 9) — единственное отличие между двумя проходами
-// calculate(): в каждый передаётся один и тот же erpData/identities, но
-// разный percentCompletion (см. to-sales-performance-context.ts).
+// Контекст расчёта (EmployeeIdentity + erpData) собирает
+// BuildServiceCalculationContextService (Фаза 7) — этот сервис больше не
+// строит его напрямую. Режим FACT/PROGNOSE (Фаза 9) — единственное отличие
+// между двумя проходами calculate(): в каждый передаётся один и тот же
+// erpData/identities, но разный percentCompletion (см.
+// to-sales-performance-context.ts).
 //
-// Фаза 13.5 (см. docs/payroll/phase-13.5-shop-report-integration.md):
-// направление shop подключено параллельно service — каждое направление
-// закрывается и считается независимо (свой AccountingPeriod, свой
-// motivationSchemaRepo, свой контекст-билдер, свой оркестратор — "зеркальные,
-// но независимые" деревья service/shop, см. backend/CLAUDE.md), grandTotal
-// сводит оба направления по формулам из "Решений по открытым вопросам"
-// плана: fact — простая сумма, prognose — сумма (prognose ?? fact), где
-// null возможен только у закрытого направления.
+// Сервис отвечает только за направление service — ответ односторонний
+// (period + разбор одного направления, без directions[]/grandTotal, см.
+// employeeSalaryReportResponseSchema в contracts). Аналогичный отчёт для
+// направления shop — отдельный, независимый сервис в domains/shop (см.
+// backend/CLAUDE.md, "зеркальные, но независимые" модули доменов); сведение
+// двух направлений в один ответ, если понадобится, — забота вызывающего
+// кода, а не этого сервиса.
 @Injectable()
 export class GetEmployeeSalaryReportService {
     constructor(
@@ -96,9 +83,6 @@ export class GetEmployeeSalaryReportService {
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
-        @Inject(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort,
-        private readonly shopContextBuilder: BuildShopCalculationContextService,
     ) {}
 
     async execute(
@@ -108,57 +92,17 @@ export class GetEmployeeSalaryReportService {
         const validatedPeriod = Period.create(period);
         const periodValue = validatedPeriod.getValue();
 
-        const [serviceAccountingPeriod, shopAccountingPeriod] =
-            await Promise.all([
-                this.periodRepo.findByDirectionAndPeriod(
-                    'service',
-                    periodValue,
-                ),
-                this.periodRepo.findByDirectionAndPeriod('shop', periodValue),
-            ]);
+        const serviceAccountingPeriod =
+            await this.periodRepo.findByDirectionAndPeriod(
+                'service',
+                periodValue,
+            );
 
-        const [serviceDirection, shopDirection] = await Promise.all([
-            serviceAccountingPeriod?.isClosed()
-                ? this.buildClosedServiceDirection(periodValue, employeeId)
-                : this.buildOpenServiceDirection(validatedPeriod, employeeId),
-            shopAccountingPeriod?.isClosed()
-                ? this.buildClosedShopDirection(periodValue, employeeId)
-                : this.buildOpenShopDirection(validatedPeriod, employeeId),
-        ]);
+        const direction = serviceAccountingPeriod?.isClosed()
+            ? await this.buildClosedServiceDirection(periodValue, employeeId)
+            : await this.buildOpenServiceDirection(validatedPeriod, employeeId);
 
-        return this.combineDirections(
-            periodValue,
-            serviceDirection,
-            shopDirection,
-        );
-    }
-
-    // grandTotal.fact — простая сумма fact по направлениям (оба всегда
-    // числа). grandTotal.prognose — (isClosed ? fact : prognose) по каждому
-    // направлению: закрытое направление не хранит прогноз, но экономически
-    // сумма уже финальна и равна факту (Решение №2, см. шапку файла) —
-    // изложено через isClosed, а не через ?? total.fact, чтобы намерение
-    // было явным, а не полагалось на то, что total.prognose у открытого
-    // направления никогда не бывает null.
-    private combineDirections(
-        period: string,
-        serviceDirection: DirectionReport,
-        shopDirection: DirectionReport,
-    ): EmployeeSalaryReportResponse {
-        const fact = serviceDirection.total.fact + shopDirection.total.fact;
-        const prognose =
-            (serviceDirection.isClosed
-                ? serviceDirection.total.fact
-                : serviceDirection.total.prognose) +
-            (shopDirection.isClosed
-                ? shopDirection.total.fact
-                : shopDirection.total.prognose);
-
-        return {
-            period,
-            directions: [serviceDirection, shopDirection],
-            grandTotal: { fact, prognose },
-        };
+        return { period: periodValue, ...direction };
     }
 
     private async buildClosedServiceDirection(
@@ -308,168 +252,12 @@ export class GetEmployeeSalaryReportService {
         };
     }
 
-    // Зеркало buildClosedServiceDirection — читает снапшот направления shop
-    // (AccountingPeriodSnapshotPort уже generic по direction, свой снапшот
-    // на каждое направление, см. Решение №1 плана).
-    private async buildClosedShopDirection(
-        period: string,
-        employeeId: number,
-    ): Promise<ClosedDirectionReport> {
-        const snapshot = await this.snapshotRepo.findByKey(
-            'shop',
-            period,
-            employeeId,
-        );
-        const total = snapshot?.total ?? 0;
-        const rules = (snapshot?.lines ?? []).map((line) => ({
-            ruleId: line.ruleId,
-            type: line.type,
-            name: line.name,
-            targetRole: line.targetRole,
-            amount: { fact: line.amount, prognose: null },
-            appliedPercent: line.salaryBasis ? line.rate : undefined,
-            sources: line.sources,
-        }));
-
-        return {
-            direction: 'shop',
-            isClosed: true,
-            total: { fact: total, prognose: null },
-            rules,
-            salesPerformance: null,
-            isPlanApproved: true,
-        };
-    }
-
-    // Зеркало buildOpenServiceDirection — та же схема (кэш →
-    // freshnessStamp → оркестратор), но собственные shop-порты/контекст-
-    // билдер/оркестратор (см. backend/CLAUDE.md, "зеркальные, но независимые"
-    // модули доменов). shopContextBuilder.build() принимает третий параметр
-    // rules — в отличие от сервисной сигнатуры, categoryDescendantFolderIds
-    // раскрывается только для категорий, реально встречающихся в правилах
-    // схемы (см. build-shop-calculation-context.service.ts).
-    private async buildOpenShopDirection(
-        validatedPeriod: Period,
-        employeeId: number,
-    ): Promise<OpenDirectionReport> {
-        const period = validatedPeriod.getValue();
-        const schema =
-            await this.shopMotivationSchemaRepo.findByEmployee(employeeId);
-        const rules = schema?.getProps().rules ?? [];
-
-        const freshnessStamp = await this.computeFreshnessStamp(
-            'shop',
-            schema,
-            period,
-        );
-
-        const cached = await this.cacheRepo.find('shop', period, employeeId);
-        if (cached && cached.freshnessStamp === freshnessStamp) {
-            const salesPerformanceDetail =
-                await this.shopContextBuilder.findSalesPerformanceForEmployee(
-                    validatedPeriod,
-                    employeeId,
-                );
-            return this.buildShopDirectionResponse(
-                rules,
-                cached.factLines,
-                cached.prognoseLines,
-                salesPerformanceDetail,
-            );
-        }
-
-        const baseContext = await this.shopContextBuilder.build(
-            validatedPeriod,
-            employeeId,
-            rules,
-        );
-
-        const [factLines, prognoseLines] = await Promise.all([
-            ShopPeriodCalculationOrchestrator.calculate(rules, {
-                employee: baseContext.employee,
-                period: baseContext.period,
-                erpData: baseContext.erpData,
-                mode: 'FACT',
-                salesPerformance: toShopSalesPerformanceContext(
-                    baseContext.salesPerformanceDetail,
-                    'FACT',
-                ),
-            }),
-            ShopPeriodCalculationOrchestrator.calculate(rules, {
-                employee: baseContext.employee,
-                period: baseContext.period,
-                erpData: baseContext.erpData,
-                mode: 'PROGNOSE',
-                salesPerformance: toShopSalesPerformanceContext(
-                    baseContext.salesPerformanceDetail,
-                    'PROGNOSE',
-                ),
-            }),
-        ]);
-
-        const factTotal = ShopPeriodCalculationOrchestrator.total(factLines);
-        const prognoseTotal =
-            ShopPeriodCalculationOrchestrator.total(prognoseLines);
-
-        await this.cacheRepo.upsert('shop', period, employeeId, {
-            freshnessStamp,
-            factLines,
-            prognoseLines,
-            factTotal,
-            prognoseTotal,
-        });
-
-        return this.buildShopDirectionResponse(
-            rules,
-            factLines,
-            prognoseLines,
-            baseContext.salesPerformanceDetail,
-        );
-    }
-
-    private buildShopDirectionResponse(
-        rules: ShopSalaryRule[],
-        factLines: CalculationLine[],
-        prognoseLines: CalculationLine[],
-        salesPerformanceDetail: Parameters<
-            typeof buildShopSalaryReportRules
-        >[3],
-    ): OpenDirectionReport {
-        const ruleBreakdown = buildShopSalaryReportRules(
-            rules,
-            factLines,
-            prognoseLines,
-            salesPerformanceDetail,
-        );
-
-        const factTotal = ShopPeriodCalculationOrchestrator.total(factLines);
-        const prognoseTotal =
-            ShopPeriodCalculationOrchestrator.total(prognoseLines);
-
-        return {
-            direction: 'shop',
-            isClosed: false,
-            total: { fact: factTotal, prognose: prognoseTotal },
-            rules: ruleBreakdown,
-            salesPerformance: toShopSalesPerformanceSummary(
-                salesPerformanceDetail,
-            ),
-            isPlanApproved: isShopSalesPerformancePlanApproved(
-                salesPerformanceDetail,
-            ),
-        };
-    }
-
     // Три источника инвалидации кэша (PRD: синхронизация домена / правка
     // схемы или правила / правка или утверждение плана) свёрнуты в одну
     // строку сравнения — см. domain/services/accounting-cache-freshness.ts.
-    // Один метод на оба направления: domainSyncStatus/salesPlanRepo уже
-    // generic по direction, а motivationSchemaVersion() принимает
-    // структурный тип (MotivationSchemaLike), которому удовлетворяют и
-    // MotivationSchema, и ShopMotivationSchema (Фаза 13.5).
     private async computeFreshnessStamp(
         direction: AccountingDirection,
-        schema: MotivationSchema | ShopMotivationSchema | null,
+        schema: MotivationSchema | null,
         period: string,
     ): Promise<string> {
         const [domainSyncAt, plans] = await Promise.all([
@@ -490,13 +278,15 @@ export class GetEmployeeSalaryReportService {
     }
 }
 
-// Один элемент directions[] ответа — своя ветка на закрытое/открытое
-// направление (дискриминант isClosed), а не единый тип с total.prognose:
-// number | null везде: так combineDirections() умеет сузить
-// total.prognose до number в открытой ветке без явного приведения типов
-// (см. комментарий у combineDirections).
-type EmployeeSalaryReportDirection =
-    EmployeeSalaryReportResponse['directions'][number];
+// Разбор одного направления ответа (без обёртки period) — своя ветка на
+// закрытое/открытое направление (дискриминант isClosed), а не единый тип с
+// total.prognose: number | null везде: так buildOpen/ClosedServiceDirection
+// умеют сузить total.prognose до number в открытой ветке без явного
+// приведения типов.
+type EmployeeSalaryReportDirection = Omit<
+    EmployeeSalaryReportResponse,
+    'period'
+>;
 
 type ClosedDirectionReport = Omit<
     EmployeeSalaryReportDirection,
@@ -513,5 +303,3 @@ type OpenDirectionReport = Omit<
     isClosed: false;
     total: { fact: number; prognose: number };
 };
-
-type DirectionReport = ClosedDirectionReport | OpenDirectionReport;

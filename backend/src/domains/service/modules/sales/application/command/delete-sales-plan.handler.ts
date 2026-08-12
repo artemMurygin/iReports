@@ -17,7 +17,9 @@ export class DeleteSalesPlanHandler implements ICommandHandler<
 
     async execute(command: DeleteSalesPlanCommand): Promise<void> {
         const plan = await this.repo.findById(command.planId);
-        if (!plan) {
+        // План с чужим direction трактуется как не найденный — та же
+        // семантика, что и в UpdateSalesPlanHandler (см. комментарий там).
+        if (!plan || plan.direction !== command.direction) {
             throw new SalesPlanNotFoundException();
         }
 

@@ -1,3 +1,4 @@
+import type { Server } from 'http';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { RequestContextMiddleware } from 'nestjs-request-context';
@@ -19,7 +20,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // SalesPerformance), но для отдельного эндпоинта магазина — см.
 // обоснование отдельного пути в config/app.routes.ts.
 describe('Shop SalesPerformance HTTP (e2e)', () => {
-    let app: INestApplication;
+    let app: INestApplication<Server>;
 
     const plans = new Map<string, SalesPlan>();
     const templates = new Map<string, SalesPlanTemplate>();
@@ -150,7 +151,7 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
         ];
 
         const listResponse = await request(app.getHttpServer())
-            .get('/v1/sales/salesPerformance/shop/2026-08')
+            .get('/v1/shop/sales/salesPerformance/2026-08')
             .expect(200);
         const performances = listResponse.body as SalesPerformanceResponse[];
 
@@ -181,7 +182,7 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
         templates.set(template.id, template);
 
         const listResponse = await request(app.getHttpServer())
-            .get('/v1/sales/salesPerformance/shop/2026-11')
+            .get('/v1/shop/sales/salesPerformance/2026-11')
             .expect(200);
         const performances = listResponse.body as SalesPerformanceResponse[];
 

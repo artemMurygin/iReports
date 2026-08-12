@@ -1,15 +1,19 @@
 import { Controller, Get, Param } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
+import { routesV1 } from '@/config/app.routes';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-employee-salary-report.service';
 
-@Controller('accounting')
+@ApiTags('Бухгалтерия: отчёты')
+@Controller()
 export class GetEmployeeSalaryReportHttpController {
     constructor(
         private readonly getEmployeeSalaryReport: GetEmployeeSalaryReportService,
     ) {}
 
-    @Get('salary_report/employee/:id/:period')
+    @Get(routesV1.service.accounting.salaryReport.employee)
+    @ApiOperation({ summary: 'Отчёт по зарплате сотрудника за период' })
     async get(
         @Param('id') id: string,
         @Param('period') period: string,
