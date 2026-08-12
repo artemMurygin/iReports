@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { BitrixSyncService } from '../sync/bitrix/bitrix-sync.service';
-import { UploadLogger } from './logger';
 import { RoappSyncService } from '../domains/service/sync/roapp/roapp-sync.service';
 import { MoySkladSyncService } from '../domains/shop/sync/moySklad/moysklad-sync.service';
 
@@ -26,7 +25,6 @@ async function bootstrap() {
     const roapp = app.get(RoappSyncService);
     const moySklad = app.get(MoySkladSyncService);
 
-    const log = new UploadLogger('Инициализация данных');
     try {
         if (erp.includes('B')) {
             await bitrix.uploadEmployees();
@@ -54,8 +52,8 @@ async function bootstrap() {
             // await roapp.uploadProductCategories();
             // await roapp.uploadServiceCategories();
             // await roapp.uploadServices();
-            // await roapp.uploadProducts();
-            // await roapp.uploadServiceBonuses();
+            await roapp.uploadProducts();
+            await roapp.uploadServiceBonuses();
             const ordersIds = await roapp.uploadCreatedOrders(fromDate);
             await roapp.uploadOrderItems(ordersIds);
         }
@@ -67,4 +65,4 @@ async function bootstrap() {
     }
 }
 
-bootstrap();
+void bootstrap();

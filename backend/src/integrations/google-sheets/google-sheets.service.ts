@@ -1,6 +1,7 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import { GoogleSheetsHttpService } from './google-sheets.instance';
 import { GetRowsOptions, RangeData, SheetRow } from './google-sheets.types';
+import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 
 @Injectable()
 export class GoogleSheetsService {
@@ -22,7 +23,7 @@ export class GoogleSheetsService {
             return (data.values as SheetRow[]) ?? [];
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to get rows from Google Sheets: ${error.message}`,
+                `Failed to get rows from Google Sheets: ${getErrorMessage(error)}`,
             );
         }
     }
@@ -38,7 +39,7 @@ export class GoogleSheetsService {
             });
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to batch update rows in Google Sheets: ${error.message}`,
+                `Failed to batch update rows in Google Sheets: ${getErrorMessage(error)}`,
             );
         }
     }
@@ -66,7 +67,7 @@ export class GoogleSheetsService {
         } catch (error) {
             if (error instanceof BadGatewayException) throw error;
             throw new BadGatewayException(
-                `Failed to get sheet name by gid: ${error.message}`,
+                `Failed to get sheet name by gid: ${getErrorMessage(error)}`,
             );
         }
     }
@@ -88,7 +89,7 @@ export class GoogleSheetsService {
         } catch (error) {
             if (error instanceof BadGatewayException) throw error;
             throw new BadGatewayException(
-                `Failed to clear and write rows in Google Sheets: ${error.message}`,
+                `Failed to clear and write rows in Google Sheets: ${getErrorMessage(error)}`,
             );
         }
     }
@@ -107,7 +108,7 @@ export class GoogleSheetsService {
             });
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to update cell ${cell} in Google Sheets: ${error.message}`,
+                `Failed to update cell ${cell} in Google Sheets: ${getErrorMessage(error)}`,
             );
         }
     }

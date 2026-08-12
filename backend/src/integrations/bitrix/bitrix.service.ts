@@ -3,7 +3,14 @@ import { BitrixHttpService } from './bitrix.instance';
 import { Filter } from './types';
 import { BitrixDealSchema } from './schema';
 import { delay } from '../../shared/delay';
-import type { AxiosRequestConfig } from 'axios';
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
+import type {
+    BitrixFilteredUserField,
+    BitrixListResponse,
+    BitrixStatus,
+    BitrixUser,
+    BitrixUserField,
+} from './bitrix-api.types';
 
 @Injectable()
 export class BitrixService {
@@ -54,7 +61,9 @@ export class BitrixService {
         let start = 0;
 
         while (true) {
-            const { data } = await this._getWithRetry('/crm.deal.list', {
+            const { data } = await this._getWithRetry<
+                BitrixListResponse<unknown[]>
+            >('/crm.deal.list', {
                 params: { select: this.DEAL_FIELDS, filter, start },
             });
 
@@ -71,67 +80,84 @@ export class BitrixService {
         }
     }
 
-    private async _getWithRetry(
+    private async _getWithRetry<T>(
         url: string,
         config?: AxiosRequestConfig,
         retries = 4,
-    ): Promise<any> {
+    ): Promise<AxiosResponse<T>> {
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
-                return await this.bitrix.instance.get(url, config);
+                return await this.bitrix.instance.get<T>(url, config);
             } catch (err) {
                 if (attempt === retries - 1) {
                     throw new BadGatewayException(
-                        `Failed to fetch from Bitrix24: ${err.message}`,
+                        `Failed to fetch from Bitrix24: ${err instanceof Error ? err.message : String(err)}`,
                     );
                 }
                 await delay(2_000 * (attempt + 1));
             }
         }
+        throw new BadGatewayException(
+            'Failed to fetch from Bitrix24: retries exhausted',
+        );
     }
 
-    async fetchEmployees() {
-        return await this._fetchData('/user.get');
+    async fetchEmployees(): Promise<BitrixUser[]> {
+        return await this._fetchData<BitrixUser>('/user.get');
     }
 
-    async fetchEnums() {
-        return await this._fetchData('/crm.deal.userfield.list');
+    async fetchEnums(): Promise<BitrixUserField[]> {
+        return await this._fetchData<BitrixUserField>(
+            '/crm.deal.userfield.list',
+        );
     }
 
-    async fetchLeadSources() {
-        return await this._fetchData('/crm.deal.userfield.list', {
-            params: {
-                filter: { FIELD_NAME: 'UF_CRM_1742462651851' },
+    async fetchLeadSources(): Promise<BitrixFilteredUserField[]> {
+        return await this._fetchData<BitrixFilteredUserField>(
+            '/crm.deal.userfield.list',
+            {
+                params: {
+                    filter: { FIELD_NAME: 'UF_CRM_1742462651851' },
+                },
             },
-        });
+        );
     }
 
-    async fetchDeviceTypes() {
-        return await this._fetchData('/crm.deal.userfield.list', {
-            params: {
-                filter: { FIELD_NAME: 'UF_CRM_1703248170106' },
+    async fetchDeviceTypes(): Promise<BitrixFilteredUserField[]> {
+        return await this._fetchData<BitrixFilteredUserField>(
+            '/crm.deal.userfield.list',
+            {
+                params: {
+                    filter: { FIELD_NAME: 'UF_CRM_1703248170106' },
+                },
             },
-        });
+        );
     }
 
-    async fetchStages() {
-        return await this._fetchData('/crm.status.list', {
+    async fetchStages(): Promise<BitrixStatus[]> {
+        return await this._fetchData<BitrixStatus>('/crm.status.list', {
             params: {
                 filter: {},
             },
         });
     }
 
-    async fetchSources() {
-        return await this._fetchData('/crm.status.list', {
+    async fetchSources(): Promise<BitrixStatus[]> {
+        return await this._fetchData<BitrixStatus>('/crm.status.list', {
             params: {
                 filter: { ENTITY_ID: 'SOURCE' },
             },
         });
     }
 
-    private async _fetchData(url: string, params?: AxiosRequestConfig) {
-        const { data } = await this._getWithRetry(url, params);
+    private async _fetchData<T>(
+        url: string,
+        params?: AxiosRequestConfig,
+    ): Promise<T[]> {
+        const { data } = await this._getWithRetry<BitrixListResponse<T[]>>(
+            url,
+            params,
+        );
         return data.result;
     }
 }

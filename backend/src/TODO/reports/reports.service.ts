@@ -3,7 +3,6 @@ import { getServiceFunnelReportDTO } from './dto/getServiceFunnelReport.dto';
 import { getServicesSoldReportDTO } from './dto/getServicesSoldReport.dto';
 import { DatabaseService } from '../../infrustructure/database/database.service';
 import {
-    groupSoldServicesByPeriod,
     getPeriodBucketKey,
     generatePeriodKeys,
     inFilter,

@@ -81,4 +81,4 @@ async function bootstrap() {
     await app.close();
 }
 
-bootstrap();
+void bootstrap();

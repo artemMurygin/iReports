@@ -11,7 +11,7 @@ import {
 } from '../../domain/entities/sales-plan-template.entity';
 import type { SalesDirection } from '../../domain/types/sales-plan.types';
 
-function scopeKey(department: number, category: number | null): string {
+function scopeKey(department: number, category: string | null): string {
     return `${department}:${category ?? 'null'}`;
 }
 

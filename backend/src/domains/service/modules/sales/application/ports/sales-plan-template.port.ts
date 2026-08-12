@@ -10,7 +10,7 @@ export interface SalesPlanTemplateRepositoryPort {
     findByScope(
         direction: SalesDirection,
         department: number,
-        category: number | null,
+        category: string | null,
     ): Promise<SalesPlanTemplate | null>;
 
     findAll(direction?: SalesDirection): Promise<SalesPlanTemplate[]>;

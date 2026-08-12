@@ -31,8 +31,9 @@
         "@nestjs/cqrs": "^11.0.3",
         "@nestjs/event-emitter": "^3.1.0",
         "@nestjs/mapped-types": "*",
-        "@nestjs/platform-express": "^11.0.1",
+        "@nestjs/platform-express": "^11.1.29",
         "@nestjs/schedule": "^6.1.1",
+        "@nestjs/swagger": "^11.4.6",
         "@prisma/adapter-pg": "^7.5.0",
         "@prisma/client": "^7.5.0",
         "@types/cron": "^2.0.1",
@@ -90,7 +91,12 @@
         "rootDir": "src",
         "testRegex": ".*\\.spec\\.ts$",
         "transform": {
-            "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": "<rootDir>/../tsconfig.json" }]
+            "^.+\\.(t|j)s$": [
+                "ts-jest",
+                {
+                    "tsconfig": "<rootDir>/../tsconfig.json"
+                }
+            ]
         },
         "moduleNameMapper": {
             "^(\\.{1,2}/.*)\\.js$": "$1",

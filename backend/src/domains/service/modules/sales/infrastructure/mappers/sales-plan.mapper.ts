@@ -12,21 +12,23 @@ import type {
     SalesPlanStatus,
 } from '@/domains/service/modules/sales/domain/types/sales-plan.types';
 
-// "Без категории" хранится в БД сентинелом NO_CATEGORY_ID (-1), а не NULL:
+// "Без категории" хранится в БД сентинелом NO_CATEGORY_ID (''), а не NULL:
 // Postgres не считает два NULL равными в составном уникальном индексе
 // (direction, department_id, category_id[, period], см. sales.prisma),
 // поэтому обычный nullable-столбец не защитил бы от дубля "план без
-// категории на тот же месяц". RemOnline/МойСклад не выдают отрицательных
-// ID категорий, поэтому -1 безопасен как сентинел. Наружу этого модуля
-// сентинел никогда не протекает — домен и контракты работают только с
-// category: number | null.
-export const NO_CATEGORY_ID = -1;
+// категории на тот же месяц". Пустая строка безопасна как сентинел, потому
+// что домен и так запрещает её как настоящее значение категории (см.
+// SalesPlanScope.create) — реальная категория никогда не придёт как ''.
+// Наружу этого модуля сентинел никогда не протекает — домен и контракты
+// работают только с category: string | null (для shop это UUID папки
+// МойСклад, см. domains/shop/CLAUDE.md).
+export const NO_CATEGORY_ID = '';
 
-export function categoryToDomain(categoryId: number): number | null {
+export function categoryToDomain(categoryId: string): string | null {
     return categoryId === NO_CATEGORY_ID ? null : categoryId;
 }
 
-export function categoryToPersistence(category: number | null): number {
+export function categoryToPersistence(category: string | null): string {
     return category ?? NO_CATEGORY_ID;
 }
 

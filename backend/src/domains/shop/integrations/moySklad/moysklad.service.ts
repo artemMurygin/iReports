@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { MoyskladHttpService } from './moysklad.instance';
-import { MoyskladListParams } from './moysklad.types';
+import { MoyskladListParams, MoyskladListResponse } from './moysklad.types';
 import { CustomerOrderSchema } from './schemas/customerOrders.schema';
 import { ProductSchema } from './schemas/products.schema';
 import { ServiceSchema } from './schemas/services.schema';
@@ -29,14 +29,14 @@ export class MoyskladService {
                   response: error.response && {
                       status: error.response.status,
                       statusText: error.response.statusText,
-                      data: error.response.data,
+                      data: error.response.data as unknown,
                   },
               }
             : error;
-        const seen = new WeakSet();
+        const seen = new WeakSet<object>();
         const serialized = JSON.stringify(
             dumpTarget,
-            (_key, value) => {
+            (_key, value: unknown) => {
                 if (value instanceof Error) {
                     const plain: Record<string, unknown> = {
                         name: value.name,
@@ -85,16 +85,19 @@ export class MoyskladService {
         try {
             const {
                 data: { rows },
-            } = await this.moysklad.instance.get('/entity/employee', {
-                params: {
-                    limit: PAGE_LIMIT,
-                } satisfies Partial<MoyskladListParams>,
-            });
-            return rows.map((e: unknown) => EmployeeSchema.parse(e));
+            } = await this.moysklad.instance.get<MoyskladListResponse>(
+                '/entity/employee',
+                {
+                    params: {
+                        limit: PAGE_LIMIT,
+                    } satisfies Partial<MoyskladListParams>,
+                },
+            );
+            return rows.map((e) => EmployeeSchema.parse(e));
         } catch (error) {
             await this.dumpError(error);
             throw new BadGatewayException(
-                `Failed to fetch employees from MoySklad: ${error.message}`,
+                `Failed to fetch employees from MoySklad: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
     }
@@ -158,9 +161,10 @@ export class MoyskladService {
 
                 const {
                     data: { rows, meta },
-                } = await this.moysklad.instance.get('/entity/assortment', {
-                    params,
-                });
+                } = await this.moysklad.instance.get<MoyskladListResponse>(
+                    '/entity/assortment',
+                    { params },
+                );
 
                 yield (rows as { id: string; name: string }[]).map(
                     ({ id, name }) => ({
@@ -169,7 +173,7 @@ export class MoyskladService {
                     }),
                 );
 
-                const fetched = offset + (rows as unknown[]).length;
+                const fetched = offset + rows.length;
                 if (fetched >= meta.size) break;
 
                 offset = fetched;
@@ -177,7 +181,7 @@ export class MoyskladService {
             } catch (error) {
                 await this.dumpError(error);
                 throw new BadGatewayException(
-                    `Failed to fetch assortment from MoySklad: ${error.message}`,
+                    `Failed to fetch assortment from MoySklad: ${error instanceof Error ? error.message : String(error)}`,
                 );
             }
         }
@@ -196,7 +200,7 @@ export class MoyskladService {
         } catch (error) {
             await this.dumpError(error);
             throw new BadGatewayException(
-                `Failed to batch update products in MoySklad: ${error.message}`,
+                `Failed to batch update products in MoySklad: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
     }
@@ -232,11 +236,12 @@ export class MoyskladService {
             try {
                 const {
                     data: { rows, meta },
-                } = await this.moysklad.instance.get(url, {
-                    params: { ...baseParams, offset },
-                });
+                } = await this.moysklad.instance.get<MoyskladListResponse>(
+                    url,
+                    { params: { ...baseParams, offset } },
+                );
 
-                yield rows.map((row: unknown) => schema.parse(row));
+                yield rows.map((row) => schema.parse(row));
 
                 const fetched = offset + rows.length;
                 if (fetched >= meta.size) break;
@@ -246,7 +251,7 @@ export class MoyskladService {
             } catch (error) {
                 await this.dumpError(error);
                 throw new BadGatewayException(
-                    `Failed to fetch ${url} from MoySklad: ${error.message}`,
+                    `Failed to fetch ${url} from MoySklad: ${error instanceof Error ? error.message : String(error)}`,
                 );
             }
         }

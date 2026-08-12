@@ -45,7 +45,7 @@ export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
         return this.props.scope.getDepartment();
     }
 
-    get category(): number | null {
+    get category(): string | null {
         return this.props.scope.getCategory();
     }
 

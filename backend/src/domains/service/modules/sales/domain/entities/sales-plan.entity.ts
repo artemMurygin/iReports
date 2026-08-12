@@ -49,7 +49,7 @@ export class SalesPlan extends Entity<SalesPlanProps> {
         return this.props.scope.getDepartment();
     }
 
-    get category(): number | null {
+    get category(): string | null {
         return this.props.scope.getCategory();
     }
 

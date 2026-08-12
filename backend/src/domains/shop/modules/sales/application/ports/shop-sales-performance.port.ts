@@ -20,7 +20,7 @@ export interface ShopSalesPerformanceReaderPort {
     findForScope(
         period: string,
         department: number,
-        category: number | null,
+        category: string | null,
     ): Promise<ShopSalesPerformance | null>;
 }
 

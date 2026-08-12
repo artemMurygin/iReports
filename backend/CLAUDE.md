@@ -169,3 +169,35 @@ maps them to HTTP responses.
 ### Endpoints
 
 See [`../ENDPOINTS.md`](../ENDPOINTS.md) for the current list of routes (no global prefix is set).
+
+### Swagger/OpenAPI — обязательно для каждого нового эндпоинта
+
+Документация Swagger — не опциональный шаг, а обязательная часть создания HTTP-эндпоинта. Любой
+новый `*.http-controller.ts` в `src/domains/{service,shop}` или `src/modules/*` должен при создании
+получить:
+
+- `@ApiTags('<Домен>: <модуль/область>')` на классе контроллера (см. существующие контроллеры в
+  `src/domains/service/modules/accounting/interface/http-controllers/` как образец формулировки —
+  по-русски, `Область: подобласть`).
+- `@ApiOperation({ summary: '...' })` на каждом HTTP-методе — короткое описание того, что делает
+  эндпоинт, по-русски.
+- Тело запроса — через `nestjs-zod`-DTO (`createZodDto`), Swagger выводит схему автоматически из
+  него без дополнительных декораторов. Если DTO с `createZodDto` невозможен (union-схема тела —
+  см. пример в `src/shared/utils/zod-schema-to-open-api-body.ts`), явно передай схему через
+  `@ApiBody({ schema: zodSchemaToOpenApiBody(...) })`, а не оставляй тело недокументированным.
+- Тип ответа — типизированный возврат метода контроллера (тип из `ireports-contracts`), этого
+  достаточно для схемы ответа в Swagger; не нужен отдельный `@ApiResponse`, если в проекте не
+  появится такой паттерн.
+
+Контроллер, у которого нет `@ApiTags`/`@ApiOperation`, считается незавершённым — не сдавай задачу с
+эндпоинтом без них, даже если это не было явно оговорено в задаче.
+
+**Подключение нового модуля в Swagger UI.** Контроллер попадает в `/docs/*` только если его модуль
+явно перечислен в `include: [...]` соответствующего `DocumentBuilder`-документа в
+`src/config/swagger.config.ts`. При создании нового DDD-модуля в `domains/service/modules/*` или
+`domains/shop/modules/*` (или нового сквозного модуля вроде `employee-identity`) — добавь его класс
+модуля в `include` нужного документа (`serviceDocument` для `domains/service`, `shopDocument` для
+`domains/shop`, `commonDocument` для сквозных модулей вне `service`/`shop`) в том же PR, где модуль
+заводится. Модули из `src/TODO/*` в Swagger сознательно не документируются (см. комментарий над
+`setupSwagger` в `swagger.config.ts`) — это осознанное исключение для устаревшего кода, ждущего
+переноса в домен, а не образец для новых модулей.

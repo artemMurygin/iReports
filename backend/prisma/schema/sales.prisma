@@ -41,12 +41,14 @@ model SalesPlanTemplate {
   direction    SalesDirection
   departmentId Int            @map("department_id")
   // "Без категории" (шаблон действует на весь отдел) хранится сентинелом
-  // NO_CATEGORY_ID = -1 (см. sales-plan.mapper.ts), а не NULL: Postgres не
+  // NO_CATEGORY_ID = '' (см. sales-plan.mapper.ts), а не NULL: Postgres не
   // считает два NULL равными в составном уникальном индексе, значит
   // nullable-столбец не защитил бы от двух строк "без категории" на тот же
-  // отдел. Домен и контракты продолжают работать с category: number | null
-  // — сентинел не протекает дальше пары функций в мапперах этого модуля.
-  categoryId Int @map("category_id")
+  // отдел. Категория — строка (для shop это UUID папки МойСклад, см.
+  // domains/shop/CLAUDE.md), домен и контракты работают с
+  // category: string | null — сентинел не протекает дальше пары функций в
+  // мапперах этого модуля.
+  categoryId String @map("category_id")
 
   turnover      Int
   margin        Int
@@ -68,7 +70,7 @@ model SalesPlan {
   id           String         @id
   direction    SalesDirection
   departmentId Int            @map("department_id")
-  categoryId   Int            @map("category_id")
+  categoryId   String         @map("category_id")
   period       String
 
   turnover Int

@@ -13,7 +13,7 @@ import { SalesPerformance } from '../../domain/value-objects/sales-performance.v
 import { SalesPerformanceDirectionNotSupportedException } from '../../domain/exceptions/sales-performance.exception';
 import type { SalesDirection } from '../../domain/types/sales-plan.types';
 
-function scopeKey(department: number, category: number | null): string {
+function scopeKey(department: number, category: string | null): string {
     return `${department}:${category ?? 'null'}`;
 }
 
@@ -87,7 +87,7 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
         direction: SalesDirection,
         period: string,
         department: number,
-        category: number | null,
+        category: string | null,
     ): Promise<SalesPerformance | null> {
         const performances = await this.listForPeriod(direction, period);
         return (

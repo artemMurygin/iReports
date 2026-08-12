@@ -48,12 +48,18 @@ export class DealsService {
         });
 
         return Promise.all(
-            managers.map(({ assignedById }) => {
-                if (!assignedById) return;
-                return this.DB.bitrixEmployee.findFirst({
-                    where: { id: assignedById },
-                });
-            }),
+            managers
+                .filter(
+                    (
+                        manager,
+                    ): manager is typeof manager & { assignedById: number } =>
+                        manager.assignedById !== null,
+                )
+                .map(({ assignedById }) =>
+                    this.DB.bitrixEmployee.findFirst({
+                        where: { id: assignedById },
+                    }),
+                ),
         );
     }
 

@@ -1,3 +1,4 @@
+import type { Server } from 'http';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -23,7 +24,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // Controller → CommandBus/Service → Handler → Entity → Guard), подменяя
 // только границы с внешним миром — репозиторий и проверку admin в Bitrix24.
 describe('EmployeeIdentity HTTP (e2e)', () => {
-    let app: INestApplication;
+    let app: INestApplication<Server>;
 
     const store = new Map<string, EmployeeIdentity>();
     const seedEmployees: BitrixEmployeeSummary[] = [

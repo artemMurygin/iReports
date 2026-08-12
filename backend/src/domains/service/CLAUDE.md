@@ -163,8 +163,9 @@ domains/service/
   оборачивается в `runInSystemRequestContext`
   (`shared/application/context/run-in-system-context.ts`) — без него репозитории падают:
   домен/`DatabaseService.getClient()` читают `RequestContext`, который вне запроса никем не открыт.
-- `category` хранится в БД сентинелом `NO_CATEGORY_ID = -1` вместо `NULL` (Postgres не считает два
-  `NULL` равными в составном уникальном индексе) — см. комментарий в
+- `category` — строка (`string | null`; для `shop` — UUID папки МойСклад, см. `domains/shop/CLAUDE.md`),
+  хранится в БД сентинелом `NO_CATEGORY_ID = ''` вместо `NULL` (Postgres не считает два `NULL`
+  равными в составном уникальном индексе) — см. комментарий в
   `infrastructure/mappers/sales-plan.mapper.ts`; наружу модуля сентинел не протекает.
 - `SalesPerformance` (Фаза 5, `GET /v1/service/sales/salesPerformance/:period?direction`) —
   `GetSalesPerformanceService` (единственная реализация `SalesPerformanceReaderPort`) на каждый вызов

@@ -43,7 +43,7 @@ export type CloseAccountingPeriodRequest = z.infer<
 const unapprovedSalesPlanRowSchema = z.object({
     id: z.string(),
     department: z.number(),
-    category: z.number().nullable(),
+    category: z.string().nullable(),
 });
 export type UnapprovedSalesPlanRow = z.infer<
     typeof unapprovedSalesPlanRowSchema

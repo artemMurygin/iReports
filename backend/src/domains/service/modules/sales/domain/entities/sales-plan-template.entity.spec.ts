@@ -22,12 +22,12 @@ describe('SalesPlanTemplate', () => {
         const template = withRequestContext(() =>
             SalesPlanTemplate.create({
                 ...baseProps,
-                category: 7,
+                category: '7',
                 growthPercent: 15,
             }),
         );
 
-        expect(template.category).toBe(7);
+        expect(template.category).toBe('7');
         expect(template.growthPercent).toBe(15);
     });
 

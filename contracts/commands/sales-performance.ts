@@ -52,7 +52,7 @@ const salesPerformanceSchema = z.object({
     direction: salesDirectionSchema,
     period: periodSchema,
     department: z.number(),
-    category: z.number().nullable(),
+    category: z.string().nullable(),
     plan: salesPlanSchema,
     fact: salesFactSchema,
     prognose: salesPrognoseSchema,

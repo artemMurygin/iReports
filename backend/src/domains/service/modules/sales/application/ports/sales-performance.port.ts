@@ -23,7 +23,7 @@ export interface SalesPerformanceReaderPort {
         direction: SalesDirection,
         period: string,
         department: number,
-        category: number | null,
+        category: string | null,
     ): Promise<SalesPerformance | null>;
 }
 

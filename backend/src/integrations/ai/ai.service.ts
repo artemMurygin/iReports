@@ -1,7 +1,7 @@
-require('dotenv');
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { AiHttpService } from './ai.instance';
 import { ChatMessage, ChatOptions, EmbeddingOptions } from './ai.types';
+import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_INITIAL_DELAY_MS = 3000;
@@ -60,7 +60,7 @@ export class AiService {
             return response.data[0].embedding;
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to create embedding: ${error.message}`,
+                `Failed to create embedding: ${getErrorMessage(error)}`,
             );
         }
     }
@@ -85,7 +85,7 @@ export class AiService {
                 .map((item) => item.embedding);
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to create embeddings: ${error.message}`,
+                `Failed to create embeddings: ${getErrorMessage(error)}`,
             );
         }
     }
@@ -154,7 +154,7 @@ export class AiService {
             return response.choices[0].message.content ?? '';
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to get chat completion: ${error.message}`,
+                `Failed to get chat completion: ${getErrorMessage(error)}`,
             );
         }
     }

@@ -4,7 +4,7 @@ import type { SalesDirection } from '../../domain/types/sales-plan.types';
 export class PutSalesPlanTemplateCommand extends Command {
     readonly direction: SalesDirection;
     readonly department: number;
-    readonly category?: number | null;
+    readonly category?: string | null;
     readonly turnover: number;
     readonly margin: number;
     readonly growthPercent: number;

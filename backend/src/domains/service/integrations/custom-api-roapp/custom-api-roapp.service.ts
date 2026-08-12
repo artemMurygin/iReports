@@ -23,37 +23,42 @@ import {
     CreateServiceResponseSchema,
 } from './schemas/createService.schema';
 
+/** TODO: заменить на Zod-схему конверта ошибки CustomApiRoapp */
+interface CustomApiRoappErrorEnvelope {
+    message?: string;
+}
+
 @Injectable()
 export class CustomApiRoappService {
     constructor(private customApiRoapp: CustomApiRoappHttpService) {}
 
     async getServiceBonusesForEngeneers(): Promise<ServiceBonusForEngeneer[]> {
         try {
-            const { data } = await this.customApiRoapp.instance.get(
+            const { data } = await this.customApiRoapp.instance.get<unknown[]>(
                 '/getServicesBonuses',
             );
-            return data.map((service: unknown) =>
+            return data.map((service) =>
                 ServiceBonusForEngeneerSchema.parse(service),
             );
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to fetch sources from CustomApiRoapp: ${error.message}`,
+                `Failed to fetch sources from CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
     }
 
     async getServiceBonusById(id: number): Promise<ServiceBonusById | null> {
         try {
-            const { data } = await this.customApiRoapp.instance.get(
+            const { data } = await this.customApiRoapp.instance.get<unknown>(
                 `/getServicesBonuses/${id}`,
             );
-            if (data?.message) {
+            if ((data as CustomApiRoappErrorEnvelope)?.message) {
                 return null;
             }
             return ServiceBonusByIdSchema.parse(data);
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to fetch service bonus by id from CustomApiRoapp: ${error.message}`,
+                `Failed to fetch service bonus by id from CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
     }
@@ -69,14 +74,14 @@ export class CustomApiRoappService {
                 'services.xlsx',
             );
 
-            const { data } = await this.customApiRoapp.instance.post(
+            const { data } = await this.customApiRoapp.instance.post<unknown>(
                 '/updateServices',
                 formData,
             );
             return UpdateServicesResponseSchema.parse(data);
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to update services in CustomApiRoapp: ${error.message}`,
+                `Failed to update services in CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
     }
@@ -86,18 +91,20 @@ export class CustomApiRoappService {
         try {
             payload = CreateServiceRequestSchema.parse(body);
         } catch (error) {
-            throw new BadRequestException(error.message);
+            throw new BadRequestException(
+                error instanceof Error ? error.message : String(error),
+            );
         }
 
         try {
-            const { data } = await this.customApiRoapp.instance.post(
+            const { data } = await this.customApiRoapp.instance.post<unknown>(
                 '/createService',
                 payload,
             );
             return CreateServiceResponseSchema.parse(data);
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to create service in CustomApiRoapp: ${error.message}`,
+                `Failed to create service in CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
     }

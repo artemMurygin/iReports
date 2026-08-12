@@ -83,7 +83,7 @@ export class SalesPlanRepository
     async findByScope(
         direction: SalesDirection,
         department: number,
-        category: number | null,
+        category: string | null,
         period: string,
     ): Promise<SalesPlan | null> {
         const record = await this.client.salesPlan.findUnique({

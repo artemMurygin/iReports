@@ -5,7 +5,7 @@ import type { SalesDirection } from 'ireports-contracts';
 export interface SalesPlanScopeProps {
     direction: SalesDirection;
     department: number;
-    category: number | null;
+    category: string | null;
 }
 
 // На что именно указывает план/строка шаблона — направление, отдел и,
@@ -17,7 +17,7 @@ export class SalesPlanScope extends ValueObject<SalesPlanScopeProps> {
     static create(
         direction: SalesDirection,
         department: number,
-        category: number | null,
+        category: string | null,
     ): SalesPlanScope {
         if (direction !== 'service' && direction !== 'shop') {
             throw new ArgumentInvalidException(
@@ -31,7 +31,7 @@ export class SalesPlanScope extends ValueObject<SalesPlanScopeProps> {
         }
         if (category !== null && !category) {
             throw new ArgumentInvalidException(
-                'Категория плана продаж должна быть либо положительным числом, либо отсутствовать',
+                'Категория плана продаж должна быть либо непустой строкой, либо отсутствовать',
             );
         }
         return new SalesPlanScope({ direction, department, category });
@@ -45,7 +45,7 @@ export class SalesPlanScope extends ValueObject<SalesPlanScopeProps> {
         return this.props.department;
     }
 
-    getCategory(): number | null {
+    getCategory(): string | null {
         return this.props.category;
     }
 }

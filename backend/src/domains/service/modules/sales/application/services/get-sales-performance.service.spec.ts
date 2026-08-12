@@ -15,7 +15,7 @@ describe('GetSalesPerformanceService', () => {
         plans: SalesPlan[],
         facts: {
             department: number;
-            category: number | null;
+            category: string | null;
             turnover: number;
             cost: number;
             quantity: number;

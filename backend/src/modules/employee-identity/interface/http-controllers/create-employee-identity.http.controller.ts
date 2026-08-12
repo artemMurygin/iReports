@@ -7,6 +7,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { EmployeeIdentityResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
 import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
@@ -14,12 +15,17 @@ import { EmployeeIdentityCreateDto } from '../dto/employee-identity-create.dto';
 import { CreateEmployeeIdentityCommand } from '../../application/command/create-employee-identity.command';
 
 @UseGuards(PortalAdminGuard)
+@ApiTags('Идентификация сотрудников')
 @Controller(routesV1.version)
 export class CreateEmployeeIdentityHttpController {
     constructor(private readonly commandBus: CommandBus) {}
 
     @Post(routesV1.employeeIdentity.root)
     @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({
+        summary:
+            'Создать связь сотрудника Bitrix с внешней системой (RemOnline/МойСклад)',
+    })
     async create(
         @Body() body: EmployeeIdentityCreateDto,
     ): Promise<EmployeeIdentityResponse> {

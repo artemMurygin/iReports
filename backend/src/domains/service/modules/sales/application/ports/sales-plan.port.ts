@@ -14,7 +14,7 @@ export interface SalesPlanRepositoryPort {
     findByScope(
         direction: SalesDirection,
         department: number,
-        category: number | null,
+        category: string | null,
         period: string,
     ): Promise<SalesPlan | null>;
 

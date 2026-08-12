@@ -39,7 +39,7 @@ export class SalesPerformance extends ValueObject<SalesPerformanceProps> {
         return this.props.plan.department;
     }
 
-    getCategory(): number | null {
+    getCategory(): string | null {
         return this.props.plan.category;
     }
 

@@ -1,3 +1,4 @@
+import type { Request } from 'express';
 import {
     CallHandler,
     ExecutionContext,
@@ -11,13 +12,14 @@ import { RequestContextService } from './AppRequestContext';
 @Injectable()
 export class ContextInterceptor implements NestInterceptor {
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-        const request = context.switchToHttp().getRequest();
+        const request = context.switchToHttp().getRequest<Request>();
 
         /**
          * Setting an ID in the global context for each request.
          * This ID can be used as correlation id shown in logs
          */
-        const requestId = request?.body?.requestId ?? nanoid(6);
+        const requestId =
+            (request?.body as { requestId?: string })?.requestId ?? nanoid(6);
 
         RequestContextService.setRequestId(requestId);
 

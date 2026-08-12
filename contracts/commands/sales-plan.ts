@@ -33,7 +33,7 @@ const salesPlanTemplateSchema = z.object({
     id: z.string(),
     direction: salesDirectionSchema,
     department: z.number(),
-    category: z.number().nullable(),
+    category: z.string().nullable(),
     turnover: z.number(),
     margin: z.number(),
     growthPercent: z.number(),
@@ -48,7 +48,7 @@ export type SalesPlanTemplateResponse = z.infer<typeof salesPlanTemplateSchema>;
 // PutSalesPlanTemplateHandler).
 const putSalesPlanTemplateRequestSchema = z.object({
     department: z.number(),
-    category: z.number().nullable().optional(),
+    category: z.string().nullable().optional(),
     turnover: z.number().nonnegative(),
     margin: z.number(),
     growthPercent: z.number().nonnegative(),
@@ -85,7 +85,7 @@ const salesPlanSchema = z.object({
     id: z.string(),
     direction: salesDirectionSchema,
     department: z.number(),
-    category: z.number().nullable(),
+    category: z.string().nullable(),
     period: periodSchema,
     turnover: z.number(),
     margin: z.number(),
@@ -106,7 +106,7 @@ export type SalesPlanResponse = z.infer<typeof salesPlanSchema>;
 // строки батча по отдельности, так и для дублей внутри одного запроса.
 const createSalesPlanItemSchema = z.object({
     department: z.number(),
-    category: z.number().nullable().optional(),
+    category: z.string().nullable().optional(),
     period: periodSchema,
     turnover: z.number().nonnegative(),
     margin: z.number(),

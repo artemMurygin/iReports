@@ -11,15 +11,12 @@ import { Category } from '../../domains/service/integrations/roapp/schemas/servi
 import { UpdateServicePricesInRoappItem } from './dto/updateServicePricesInRoapp.dto';
 import { PriceMonitoringProgressService } from './priceMonitoring.progress.service';
 import {
-    AiMatchItem,
     CategoryGroup,
     CategoryKey,
     JobProgressEvent,
     MatchedProduct,
     ProductRow,
-    VectorCandidate,
 } from './priceMonitoring.types';
-import { Subject } from 'rxjs';
 import {
     CATEGORY_MS_FILTER,
     IPAD_MACBOOK_PATTERNS,
@@ -33,6 +30,7 @@ import {
     parseMatchingResponse,
 } from './priceMonitoring.prompts';
 import { delay } from '../../shared/delay';
+import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 
 const SERVICE_PRICE_HEADERS = [
     'Штрих-код',
@@ -102,7 +100,7 @@ export class PriceMonitoringService {
             emit('done', 'Готово', 'done');
         } catch (e) {
             console.error(`[${uuid}] Ошибка:`, e);
-            emit('error', e?.message ?? String(e), 'error');
+            emit('error', getErrorMessage(e), 'error');
         } finally {
             this.progress.getSubject(uuid)?.complete();
             // job оставляем в Map — клиент ещё может запросить latest через polling
@@ -239,7 +237,7 @@ export class PriceMonitoringService {
         } catch (e) {
             if (e instanceof BadRequestException) throw e;
             throw new BadRequestException(
-                `Failed to parse XLSX file: ${e.message}`,
+                `Failed to parse XLSX file: ${getErrorMessage(e)}`,
             );
         }
     }

@@ -17,7 +17,7 @@ export class PeriodNotClosedException extends ConflictException {
 export interface UnapprovedSalesPlanRowMeta {
     id: string;
     department: number;
-    category: number | null;
+    category: string | null;
 }
 
 // Закрытие периода отклоняется целиком, а не частично, пока есть хоть одна

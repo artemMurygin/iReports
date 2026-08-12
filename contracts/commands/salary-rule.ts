@@ -242,7 +242,7 @@ export type FactPrognoseAmount = z.infer<typeof factPrognoseAmountSchema>;
 
 const salesPerformanceSummarySchema = z.object({
     department: z.number(),
-    category: z.number().nullable(),
+    category: z.string().nullable(),
     plan: z.object({ turnover: z.number(), margin: z.number() }),
     fact: z.object({ turnover: z.number(), margin: z.number() }),
     prognose: z.object({ turnover: z.number(), margin: z.number() }),

@@ -23,7 +23,7 @@ export interface SalesPlanProps {
 export interface SalesPlanCreateProps {
     direction: SalesDirection;
     department: number;
-    category?: number | null;
+    category?: string | null;
     period: string;
     turnover: number;
     margin: number;

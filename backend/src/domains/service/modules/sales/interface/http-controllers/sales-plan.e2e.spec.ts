@@ -240,7 +240,7 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
                 items: [
                     {
                         department: 1,
-                        category: 10,
+                        category: '10',
                         period: '2026-12',
                         turnover: 1_000_000,
                         margin: 200_000,
@@ -258,7 +258,7 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         const created = createResponse.body as SalesPlanResponse[];
         expect(created).toHaveLength(2);
         expect(created).toMatchObject([
-            { direction: 'service', department: 1, category: 10 },
+            { direction: 'service', department: 1, category: '10' },
             { direction: 'service', department: 2, category: null },
         ]);
 

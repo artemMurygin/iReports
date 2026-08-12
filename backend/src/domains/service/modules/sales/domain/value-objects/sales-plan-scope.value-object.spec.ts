@@ -3,10 +3,10 @@ import { SalesPlanScope } from './sales-plan-scope.value-object';
 
 describe('SalesPlanScope', () => {
     it('создаёт область видимости с категорией и без', () => {
-        const withCategory = SalesPlanScope.create('service', 1, 5);
+        const withCategory = SalesPlanScope.create('service', 1, '5');
         const withoutCategory = SalesPlanScope.create('service', 1, null);
 
-        expect(withCategory.getCategory()).toBe(5);
+        expect(withCategory.getCategory()).toBe('5');
         expect(withoutCategory.getCategory()).toBeNull();
         expect(withCategory.getDirection()).toBe('service');
         expect(withCategory.getDepartment()).toBe(1);

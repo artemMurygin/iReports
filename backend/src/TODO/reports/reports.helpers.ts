@@ -1,17 +1,9 @@
-import { BitrixDealGetPayload } from '../../../prisma/generated/prisma/schema/models/BitrixDeal';
+interface DealForKPI {
+    stage?: { id: string } | null;
+    opportunity?: number | null;
+}
 
-type DealWithRelations = BitrixDealGetPayload<{
-    include: {
-        stage: true;
-        assignedBy: true;
-        source: true;
-        leadSource: true;
-        brand: true;
-        deviceType: true;
-    };
-}>;
-
-export function serviceFunnelKPICalculation(deals: any) {
+export function serviceFunnelKPICalculation(deals: DealForKPI[]) {
     const inWorkStages = [
         'UC_U52J7C',
         'UC_HML04K',
@@ -41,7 +33,7 @@ export function serviceFunnelKPICalculation(deals: any) {
 
     const counts = deals.reduce(
         (acc, d) => {
-            const stageId = d.stage?.id;
+            const stageId = d.stage?.id ?? '';
             if (stageId === '3') acc.nonTargetDeals++;
             else acc.targetedLeads++;
             if (stageId === 'WON') {

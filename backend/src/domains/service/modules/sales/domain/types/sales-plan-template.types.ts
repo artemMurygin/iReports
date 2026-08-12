@@ -11,7 +11,7 @@ export interface SalesPlanTemplateProps {
 export interface SalesPlanTemplateCreateProps {
     direction: SalesDirection;
     department: number;
-    category?: number | null;
+    category?: string | null;
     turnover: number;
     margin: number;
     growthPercent?: number;

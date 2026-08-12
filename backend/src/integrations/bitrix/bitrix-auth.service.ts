@@ -7,6 +7,13 @@ import axios from 'axios';
 import { DatabaseService } from '../../infrustructure/database/database.service';
 import { BitrixInstallDto } from './dto/bitrix-install.dto';
 
+/** TODO: заменить на Zod-схему, см. bitrix-api.types.ts */
+interface BitrixTokenResponse {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+}
+
 @Injectable()
 export class BitrixAuthService {
     constructor(private readonly db: DatabaseService) {}
@@ -71,7 +78,7 @@ export class BitrixAuthService {
         }
 
         try {
-            const { data } = await axios.get(
+            const { data } = await axios.get<BitrixTokenResponse>(
                 'https://oauth.bitrix.info/oauth/token/',
                 {
                     params: {
@@ -96,7 +103,7 @@ export class BitrixAuthService {
                 },
             });
 
-            return data.access_token as string;
+            return data.access_token;
         } catch (err) {
             throw new InternalServerErrorException(
                 `Ошибка обновления токенов Bitrix24: ${err instanceof Error ? err.message : String(err)}`,

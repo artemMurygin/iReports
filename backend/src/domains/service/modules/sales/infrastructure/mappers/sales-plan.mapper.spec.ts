@@ -13,14 +13,14 @@ describe('SalesPlanMapper', () => {
     const updatedAt = new Date('2026-01-02T00:00:00.000Z');
 
     describe('категория ↔ сентинел', () => {
-        it('NO_CATEGORY_ID (-1) в БД соответствует category = null в домене', () => {
+        it("NO_CATEGORY_ID ('') в БД соответствует category = null в домене", () => {
             expect(categoryToDomain(NO_CATEGORY_ID)).toBeNull();
             expect(categoryToPersistence(null)).toBe(NO_CATEGORY_ID);
         });
 
         it('реальный ID категории проходит без изменений в обе стороны', () => {
-            expect(categoryToDomain(42)).toBe(42);
-            expect(categoryToPersistence(42)).toBe(42);
+            expect(categoryToDomain('42')).toBe('42');
+            expect(categoryToPersistence('42')).toBe('42');
         });
     });
 
@@ -54,7 +54,7 @@ describe('SalesPlanMapper', () => {
                 id: 'plan-2',
                 direction: 'service',
                 departmentId: 1,
-                categoryId: 7,
+                categoryId: '7',
                 period: '2026-08',
                 turnover: 1_000_000,
                 margin: 200_000,
@@ -66,7 +66,7 @@ describe('SalesPlanMapper', () => {
                 updatedAt,
             });
 
-            expect(plan.category).toBe(7);
+            expect(plan.category).toBe('7');
             expect(plan.status).toBe('APPROVED');
             expect(plan.approvedBy).toBe(42);
             expect(plan.approvedAt).toEqual(approvedAt);

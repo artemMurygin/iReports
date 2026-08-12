@@ -28,9 +28,9 @@ export class DatabaseService extends PrismaClient {
         await this.$disconnect();
     }
 
-    async enableShutdownHooks(app: INestApplication) {
-        process.on('beforeExit', async () => {
-            await app.close();
+    enableShutdownHooks(app: INestApplication) {
+        process.on('beforeExit', () => {
+            void app.close();
         });
     }
 

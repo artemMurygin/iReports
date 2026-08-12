@@ -11,7 +11,7 @@
 // с подробным обоснованием.
 export interface ServiceSalesFactErpAggregate {
     department: number;
-    category: number | null;
+    category: string | null;
     turnover: number;
     cost: number;
     quantity: number;

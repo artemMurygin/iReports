@@ -103,7 +103,7 @@ describe('CreateSalesPlanHandler', () => {
             const command = new CreateSalesPlanCommand({
                 direction: 'service',
                 plans: [
-                    { ...baseItem, category: 10 },
+                    { ...baseItem, category: '10' },
                     { ...baseItem, department: 2 },
                 ],
             });
@@ -113,7 +113,7 @@ describe('CreateSalesPlanHandler', () => {
             expect(insert).toHaveBeenCalledTimes(2);
             expect(result).toHaveLength(2);
             expect(result).toMatchObject([
-                { direction: 'service', department: 1, category: 10 },
+                { direction: 'service', department: 1, category: '10' },
                 { direction: 'service', department: 2, category: null },
             ]);
         });

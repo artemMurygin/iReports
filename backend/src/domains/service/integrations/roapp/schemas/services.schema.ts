@@ -26,9 +26,13 @@ export const ServiceSchema = z
         uom_id: z.number().int(),
         category_id: z.number().int(),
         cost: z.string(), // "0.00"
-        prices: z.record(
-            z.string(),
-            z.string().transform((v) => Math.round(parseFloat(v))),
+        // RoApp отдаёт пустой набор цен как `[]` (PHP-массив без ключей), а не `{}` — приводим к record
+        prices: z.preprocess(
+            (v) => (Array.isArray(v) ? {} : v),
+            z.record(
+                z.string(),
+                z.string().transform((v) => Math.round(parseFloat(v))),
+            ),
         ),
         duration: z.number().int(),
         barcodes: z.array(z.string()),

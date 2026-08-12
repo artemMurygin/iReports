@@ -14,16 +14,14 @@ export class BitrixSyncService {
     ) {}
 
     async uploadCreatedDeals(fromDate: undefined | Date = undefined) {
-        return this._uploadDeals(
-            fromDate,
-            this.bitrix.fetchCreatedDeals.bind(this.bitrix),
+        return this._uploadDeals(fromDate, (d) =>
+            this.bitrix.fetchCreatedDeals(d),
         );
     }
 
     async uploadModifiedDeals(fromDate: Date) {
-        return this._uploadDeals(
-            fromDate,
-            this.bitrix.fetchModifiedDeals.bind(this.bitrix),
+        return this._uploadDeals(fromDate, (d) =>
+            this.bitrix.fetchModifiedDeals(d),
         );
     }
 
@@ -74,14 +72,14 @@ export class BitrixSyncService {
         try {
             const employees = await this.bitrix.fetchEmployees();
             await Promise.all(
-                employees.map((e: any) =>
+                employees.map((e) =>
                     this.db.bitrixEmployee.upsert({
                         where: { id: Number(e.ID) },
                         create: {
                             id: Number(e.ID),
                             firstName: e.NAME ?? '',
                             lastName: e.LAST_NAME ?? '',
-                            department: e.UF_DEPARTMENT[0],
+                            departmentId: Number(e.UF_DEPARTMENT[0]),
                         },
                         update: {
                             firstName: e.NAME ?? '',
@@ -104,7 +102,7 @@ export class BitrixSyncService {
                 await this.bitrix.fetchDeviceTypes();
             deviceTypes.push({ ID: 0, VALUE: 'Не заполнено' });
             await Promise.all(
-                deviceTypes.map((source: any) =>
+                deviceTypes.map((source) =>
                     this.db.bitrixDeviceTypes.upsert({
                         where: { id: Number(source.ID) },
                         create: { id: Number(source.ID), name: source.VALUE },
@@ -126,7 +124,7 @@ export class BitrixSyncService {
                 await this.bitrix.fetchLeadSources();
             leadSources.push({ ID: 0, VALUE: 'Не заполнено' });
             await Promise.all(
-                leadSources.map((source: any) =>
+                leadSources.map((source) =>
                     this.db.bitrixLeadSources.upsert({
                         where: { id: Number(source.ID) },
                         create: { id: Number(source.ID), name: source.VALUE },
@@ -145,11 +143,11 @@ export class BitrixSyncService {
     async uploadEnums() {
         try {
             const fields = await this.bitrix.fetchEnums();
-            const enumValues = fields.flatMap((f: any) =>
-                (f.LIST ?? []).map((item: any) => ({
+            const enumValues = fields.flatMap((f) =>
+                (f.LIST ?? []).map((item) => ({
                     id: Number(item.ID),
-                    fieldName: f.FIELD_NAME as string,
-                    value: item.VALUE as string,
+                    fieldName: f.FIELD_NAME,
+                    value: item.VALUE,
                     sort: Number(item.SORT),
                 })),
             );
@@ -184,7 +182,7 @@ export class BitrixSyncService {
         try {
             const stages = await this.bitrix.fetchStages();
             await Promise.all(
-                stages.map((s: any) => {
+                stages.map((s) => {
                     const { stageGroupId, stageGroupName } =
                         this.resolveStageGroup(s.ENTITY_ID, s.COLOR ?? '');
                     return this.db.bitrixStage.upsert({
@@ -245,7 +243,7 @@ export class BitrixSyncService {
         try {
             const sources = await this.bitrix.fetchSources();
             await Promise.all(
-                sources.map((s: any) =>
+                sources.map((s) =>
                     this.db.bitrixPointOfContact.upsert({
                         where: { id: s.STATUS_ID },
                         create: {

@@ -26,7 +26,7 @@ export class PriceMonitoringController {
     @Post('update-shop-products-costs')
     updateShopProductsCosts(@Body() body: UpdateShopProductsCostsDTO) {
         const id = crypto.randomUUID();
-        this.priceMonitoringService.updateShopProductsCosts(body.file, id);
+        void this.priceMonitoringService.updateShopProductsCosts(body.file, id);
         return { id };
     }
 

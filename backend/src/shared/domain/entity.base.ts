@@ -142,7 +142,7 @@ export abstract class Entity<EntityProps> {
                 'Entity props should be an object',
             );
         }
-        if (Object.keys(props as any).length > MAX_PROPS) {
+        if (Object.keys(props as Record<string, unknown>).length > MAX_PROPS) {
             throw new ArgumentOutOfRangeException(
                 `Entity props should not have more than ${MAX_PROPS} properties`,
             );

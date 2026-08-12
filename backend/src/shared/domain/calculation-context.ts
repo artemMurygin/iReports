@@ -64,7 +64,7 @@ export interface CalculationPeriod {
 // уже сейчас зависит сигнатура calculate().
 export interface SalesPerformanceContext {
     department: number;
-    category: number | null;
+    category: string | null;
     percentCompletion: number;
 }
 

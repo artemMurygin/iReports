@@ -189,16 +189,14 @@ export class MoySkladSyncService {
     }
 
     async uploadCreatedDemands(fromDate?: Date) {
-        return this._uploadDemands(
-            fromDate,
-            this.moySklad.fetchCreatedDemands.bind(this.moySklad),
+        return this._uploadDemands(fromDate, (d) =>
+            this.moySklad.fetchCreatedDemands(d),
         );
     }
 
     async uploadUpdatedDemands(fromDate?: Date) {
-        return this._uploadDemands(
-            fromDate,
-            this.moySklad.fetchUpdatedDemands.bind(this.moySklad),
+        return this._uploadDemands(fromDate, (d) =>
+            this.moySklad.fetchUpdatedDemands(d),
         );
     }
 

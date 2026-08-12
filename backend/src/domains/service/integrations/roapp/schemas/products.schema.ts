@@ -1,11 +1,5 @@
 import { z } from 'zod';
 
-function getPeriod(unit: 'days' | 'months' | 'years') {
-    if (unit === 'days') return ' дней';
-    if (unit === 'months') return ' месяцев';
-    else return ' год';
-}
-
 const barcodeSchema = z.object({
     code: z.string(),
     type: z.string(), // "code128" встречается, могут быть и другие (ean13, qr и т.д.)
@@ -27,7 +21,11 @@ export const ProductSchema = z
         category_id: z.number().int(),
 
         cost: z.string(), // "0.00"
-        prices: z.record(z.string(), z.string()), // { "31038": "0.00", ... }
+        // RoApp отдаёт пустой набор цен как `[]` (PHP-массив без ключей), а не `{}` — приводим к record
+        prices: z.preprocess(
+            (v) => (Array.isArray(v) ? {} : v),
+            z.record(z.string(), z.string()),
+        ), // { "31038": "0.00", ... }
 
         barcodes: z.array(barcodeSchema),
 
@@ -39,10 +37,11 @@ export const ProductSchema = z
             }),
         ), // в данных пусто, реальная структура неизвестна
 
-        is_dimensions_weight_enabled: z.boolean(),
-        is_expiration_tracking_enabled: z.boolean(),
-        is_expiring_soon_alert_enabled: z.boolean(),
-        is_critical_alert_enabled: z.boolean(),
+        // RoApp не всегда присылает эти флаги (отсутствуют в ответе для части товаров) — не влияют на transform() ниже
+        is_dimensions_weight_enabled: z.boolean().default(false),
+        is_expiration_tracking_enabled: z.boolean().default(false),
+        is_expiring_soon_alert_enabled: z.boolean().default(false),
+        is_critical_alert_enabled: z.boolean().default(false),
 
         default_supplier_id: z.number().int().nullable(),
     })

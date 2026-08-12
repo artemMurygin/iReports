@@ -61,11 +61,11 @@ export class RoappGatewayAdapter implements RoappGateway {
     }
 
     fetchCreatedOrders(fromDate?: Date): AsyncGenerator<Order[]> {
-        return this.roapp.fetchCreatedOrders(fromDate, 'created');
+        return this.roapp.fetchCreatedOrders(fromDate);
     }
 
     fetchUpdatedOrders(fromDate?: Date): AsyncGenerator<Order[]> {
-        return this.roapp.fetchUpdatedOrders(fromDate, 'updated');
+        return this.roapp.fetchUpdatedOrders(fromDate);
     }
 
     async fetchOrderItems(orderId: number): Promise<OrderItem[]> {
