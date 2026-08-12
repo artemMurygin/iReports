@@ -128,6 +128,54 @@ const listDealsResponseSchema = z.object({
 });
 export type ListDealsResponse = z.infer<typeof listDealsResponseSchema>;
 
+// ===================== Справочники сделок (Фаза 2) ===================== //
+//
+// Пять эндпоинтов, заменяющих getStages/getDeviceTypes/getDealsManagers/
+// getDealsSources/getStageGroups из src/TODO/deals/deals.service.ts (см.
+// docs/todo-modules-ddd-refactoring). Формы вложенных объектов те же, что
+// уже описаны выше для элемента списка сделок (dealListStageSchema,
+// dealAssigneeSchema, dealLeadSourceSchema, dealDeviceTypeSchema) — легаси
+// getStages/getDealsManagers/getDealsSources/getDeviceTypes отдают ровно те
+// же Prisma-модели (BitrixStage/BitrixEmployee/BitrixLeadSources/
+// BitrixDeviceTypes) в тех же полях, поэтому схемы переиспользуются, а не
+// дублируются. Каждый эндпоинт возвращает голый массив (как и легаси —
+// `return this.dealsService.getX()` без обёртки), без total/pagination.
+
+const listDealStagesResponseSchema = z.array(dealListStageSchema);
+export type ListDealStagesResponse = z.infer<
+    typeof listDealStagesResponseSchema
+>;
+
+const listDealDeviceTypesResponseSchema = z.array(dealDeviceTypeSchema);
+export type ListDealDeviceTypesResponse = z.infer<
+    typeof listDealDeviceTypesResponseSchema
+>;
+
+const listDealManagersResponseSchema = z.array(dealAssigneeSchema);
+export type ListDealManagersResponse = z.infer<
+    typeof listDealManagersResponseSchema
+>;
+
+const listDealSourcesResponseSchema = z.array(dealLeadSourceSchema);
+export type ListDealSourcesResponse = z.infer<
+    typeof listDealSourcesResponseSchema
+>;
+
+// Группа этапов сделки (Bitrix "категория этапов") — производный список,
+// не отдельная Prisma-модель (distinct (stageGroupId, stageGroupName) по
+// BitrixStage, см. deals.service.ts getStageGroups()), поэтому получает
+// свою схему, а не переиспользует dealListStageSchema.
+const dealStageGroupSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+});
+export type DealStageGroup = z.infer<typeof dealStageGroupSchema>;
+
+const listDealStageGroupsResponseSchema = z.array(dealStageGroupSchema);
+export type ListDealStageGroupsResponse = z.infer<
+    typeof listDealStageGroupsResponseSchema
+>;
+
 export {
     dealListStageSchema,
     dealAssigneeSchema,
@@ -138,4 +186,10 @@ export {
     dealListItemSchema,
     listDealsQuerySchema,
     listDealsResponseSchema,
+    dealStageGroupSchema,
+    listDealStagesResponseSchema,
+    listDealDeviceTypesResponseSchema,
+    listDealManagersResponseSchema,
+    listDealSourcesResponseSchema,
+    listDealStageGroupsResponseSchema,
 };

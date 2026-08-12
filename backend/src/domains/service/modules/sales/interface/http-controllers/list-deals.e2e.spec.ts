@@ -16,6 +16,8 @@ import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/appli
 import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
+import { DEAL_CATALOG_READER } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
+import type { DealCatalogReaderPort } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { DateRange } from '@/shared/domain/date-range.value-object';
@@ -77,6 +79,20 @@ describe('GET /v1/service/sales/deals (e2e)', () => {
         },
     };
 
+    // Справочники сделок (Фаза 2) не участвуют в сценариях этого файла, но
+    // DEAL_CATALOG_READER теперь тоже провайдер SalesModule (см.
+    // sales.module.ts) — реальная DealCatalogRepository требует живой
+    // DatabaseService из @Global() DatabaseModule, который сюда не
+    // импортирован, поэтому подменяется заглушкой, как и остальные порты
+    // этого файла.
+    const fakeDealCatalogReader: DealCatalogReaderPort = {
+        findStages: () => Promise.resolve([]),
+        findDeviceTypes: () => Promise.resolve([]),
+        findManagers: () => Promise.resolve([]),
+        findSources: () => Promise.resolve([]),
+        findStageGroups: () => Promise.resolve([]),
+    };
+
     const fakeUnitOfWork: UnitOfWorkPort = {
         run: (work) => work(),
     };
@@ -102,6 +118,8 @@ describe('GET /v1/service/sales/deals (e2e)', () => {
             .useValue(fakeFactSource)
             .overrideProvider(DEAL_LIST_REPOSITORY)
             .useValue(fakeDealListRepo)
+            .overrideProvider(DEAL_CATALOG_READER)
+            .useValue(fakeDealCatalogReader)
             .compile();
 
         app = moduleRef.createNestApplication();

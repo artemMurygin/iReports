@@ -53,6 +53,21 @@ access token текущего пользователя из `BX24.getAuth()`); �
 - `PUT /v1/service/sales/plan_template` — upsert строки шаблона направления `service` по естественному ключу `(department, category)`
 - `GET /v1/service/sales/salesPerformance/:period?direction` — план, факт и прогноз одним запросом по каждому отделу и категории направления за период (Фаза 5); факт и прогноз не персистятся, считаются заново на каждый запрос по данным ERP и текущему плану. Поддержан только `direction=service` (`400` для любого другого значения) — читатель этого эндпоинта жёстко привязан к RoApp/RemOnline; для `shop` см. отдельный эндпоинт `domains/shop/modules/sales` ниже
 
+Сделки Bitrix24 (`/v1/service/sales/deals*`, Фазы 1-2, docs/todo-modules-ddd-refactoring) — новый дом
+для легаси `/deals*` (`backend/src/TODO/deals`, удалён): список сделок за диапазон дат создания и пять
+read-only справочников. Диапазон дат валидируется доменным VO `DateRange`
+(`src/shared/domain/date-range.value-object.ts`, инварианты «обе даты валидны», `from ≤ to`) —
+невалидный ввод отклоняется `400`, как и раньше, но через `DomainExceptionFilter`, а не ручной
+`BadRequestException`. Выборка менеджеров — один батч-запрос (`bitrixEmployee.findMany` с `id: { in }`),
+а не `findFirst` на каждого менеджера, как было в легаси.
+- `GET /v1/service/sales/deals?from&to` — список сделок за диапазон дат создания (`{ total, deals }`)
+- `GET /v1/service/sales/deals/stages` — этапы сделок (`BitrixStage`, отсортированы по `sort`)
+- `GET /v1/service/sales/deals/managers` — менеджеры, назначенные хотя бы на одну сделку
+- `GET /v1/service/sales/deals/sources` — источники сделок (`BitrixLeadSources`)
+- `GET /v1/service/sales/deals/stage-groups` — группы этапов (`{ id, name }`, distinct по сделочным `BitrixStage`)
+- `GET /v1/service/sales/deals/models` — модели устройств сделок (`BitrixDeviceTypes`); путь `/models`
+  сохранён как в легаси, хотя внутри — `getDeviceTypes()`
+
 ## domains/shop/modules/sales (`/v1/shop/sales/plan`, `/v1/shop/sales/plan_template`, `/v1/shop/sales/salesPerformance`)
 SalesFact/SalesPrognose/SalesPerformance направления `shop` по данным МойСклад (Фаза 11, issue #54/#55)
 — зеркало `GetSalesPerformanceService` направления `service`, отдельный эндпоинт вместо `direction` в
@@ -148,14 +163,6 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
 системе не заведена (см. PRD).
 - `GET /v1/shop/warehouse/catalog` — дерево категорий каталога магазина (`id`/`name`/`pathName`/
   `children`, родитель/потомки, не плоский список); архивные категории не отфильтровываются
-
-## deals (`/deals`)
-- `GET /deals?from&to` — список сделок за период
-- `GET /deals/stages` — этапы
-- `GET /deals/models` — модели устройств
-- `GET /deals/managers` — менеджеры
-- `GET /deals/sources` — источники
-- `GET /deals/stage-groups` — группы этапов
 
 ## integrations/bitrix (`/bitrix`)
 - `POST /bitrix/install` — вебхук установки приложения Bitrix24 (возвращает HTML)

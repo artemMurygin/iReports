@@ -20,6 +20,8 @@ import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/appli
 import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
+import { DEAL_CATALOG_READER } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
+import type { DealCatalogReaderPort } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
@@ -60,6 +62,18 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
     // остальные репозитории этого файла.
     const fakeDealListRepo: DealListRepositoryPort = {
         findByDateRange: () => Promise.resolve([]),
+    };
+
+    // Справочники сделок (GET /v1/service/sales/deals/{stages,managers,
+    // sources,stage-groups,models}, Фаза 2) — та же причина подмены, что и
+    // fakeDealListRepo выше: реальная DealCatalogRepository тоже требует
+    // живой DatabaseService.
+    const fakeDealCatalogReader: DealCatalogReaderPort = {
+        findStages: () => Promise.resolve([]),
+        findDeviceTypes: () => Promise.resolve([]),
+        findManagers: () => Promise.resolve([]),
+        findSources: () => Promise.resolve([]),
+        findStageGroups: () => Promise.resolve([]),
     };
 
     const fakePlanRepo: SalesPlanRepositoryPort = {
@@ -155,6 +169,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             .useValue(fakeFactSource)
             .overrideProvider(DEAL_LIST_REPOSITORY)
             .useValue(fakeDealListRepo)
+            .overrideProvider(DEAL_CATALOG_READER)
+            .useValue(fakeDealCatalogReader)
             .compile();
 
         app = moduleRef.createNestApplication();

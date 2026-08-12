@@ -31,6 +31,14 @@ import { DEAL_LIST_REPOSITORY } from './application/ports/deal-list.port';
 import { DealListRepository } from './infrastructure/repositories/deal-list.repository';
 import { ListDealsService } from './application/services/list-deals.service';
 import { ListDealsHttpController } from './interface/http-controllers/list-deals.http.controller';
+import { DEAL_CATALOG_READER } from './application/ports/deal-catalog.port';
+import { DealCatalogRepository } from './infrastructure/repositories/deal-catalog.repository';
+import { ListDealCatalogService } from './application/services/list-deal-catalog.service';
+import { ListDealStagesHttpController } from './interface/http-controllers/list-deal-stages.http.controller';
+import { ListDealManagersHttpController } from './interface/http-controllers/list-deal-managers.http.controller';
+import { ListDealSourcesHttpController } from './interface/http-controllers/list-deal-sources.http.controller';
+import { ListDealStageGroupsHttpController } from './interface/http-controllers/list-deal-stage-groups.http.controller';
+import { ListDealDeviceTypesHttpController } from './interface/http-controllers/list-deal-device-types.http.controller';
 
 // LEAD_REPOSITORY (сделки/лиды, см. domain/entities/{deal,lead}.entity.ts) —
 // более ранняя, не задействованная пока часть модуля (см.
@@ -51,6 +59,15 @@ import { ListDealsHttpController } from './interface/http-controllers/list-deals
         ListSalesPlanTemplatesHttpController,
         ListSalesPerformanceHttpController,
         ListDealsHttpController,
+        // Пять справочников сделок (Фаза 2, см.
+        // application/ports/deal-catalog.port.ts) — новый дом для GET
+        // /deals/{stages,managers,sources,stage-groups,models} из
+        // src/TODO/deals.
+        ListDealStagesHttpController,
+        ListDealManagersHttpController,
+        ListDealSourcesHttpController,
+        ListDealStageGroupsHttpController,
+        ListDealDeviceTypesHttpController,
     ],
     providers: [
         { provide: LEAD_REPOSITORY, useClass: LeadRepository },
@@ -86,6 +103,11 @@ import { ListDealsHttpController } from './interface/http-controllers/list-deals
         // см. ListDealsHttpController выше, в controllers.
         { provide: DEAL_LIST_REPOSITORY, useClass: DealListRepository },
         ListDealsService,
+        // Read-side справочников сделок (GET /v1/service/sales/deals/
+        // {stages,managers,sources,stage-groups,models}, Фаза 2) — HTTP-
+        // контроллеры см. выше, в controllers.
+        { provide: DEAL_CATALOG_READER, useClass: DealCatalogRepository },
+        ListDealCatalogService,
     ],
     exports: [
         LEAD_REPOSITORY,
