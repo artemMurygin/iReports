@@ -32,4 +32,36 @@ export type StartPriceImportResponse = z.infer<
     typeof startPriceImportResponseSchema
 >;
 
-export { startPriceImportRequestSchema, startPriceImportResponseSchema };
+// Статус/прогресс джобы импорта (Фаза 10) — общая форма для `GET
+// .../import-costs/:id/status` (снапшот по запросу) и данных, которыми
+// наполняется каждое SSE-сообщение `GET .../import-costs/:id` (см.
+// PriceImportJob/JobProgress в domains/shop/modules/marketing/pricing/domain,
+// Фаза 8). `progress` — `null`, пока джоба ещё не перешла в `RUNNING`
+// (снапшот сразу после `POST .../import-costs`); `percent` внутри —
+// `null`, пока `total` для текущего этапа ещё неизвестен (см.
+// JobProgress.getPercent()).
+const jobProgressSchema = z.object({
+    stage: z.string(),
+    processed: z.number(),
+    total: z.number(),
+    message: z.string(),
+    percent: z.number().nullable(),
+});
+export type JobProgress = z.infer<typeof jobProgressSchema>;
+
+const priceImportJobStatusResponseSchema = z.object({
+    id: z.string(),
+    status: z.enum(['CREATED', 'RUNNING', 'COMPLETED', 'FAILED']),
+    progress: jobProgressSchema.nullable(),
+    errorMessage: z.string().nullable(),
+});
+export type PriceImportJobStatusResponse = z.infer<
+    typeof priceImportJobStatusResponseSchema
+>;
+
+export {
+    startPriceImportRequestSchema,
+    startPriceImportResponseSchema,
+    jobProgressSchema,
+    priceImportJobStatusResponseSchema,
+};

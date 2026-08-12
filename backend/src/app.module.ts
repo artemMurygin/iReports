@@ -22,9 +22,9 @@ import { ShopAccountingModule } from './domains/shop/modules/accounting/shop-acc
 import { ShopWarehouseModule } from './domains/shop/modules/warehouse/shop-warehouse.module';
 import { EmployeeIdentityModule } from './modules/employee-identity/employee-identity.module';
 import { PricingModule } from './domains/service/modules/marketing/pricing/pricing.module';
+import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pricing.module';
 
 // TODO: временно перенесены как есть, требуют рефакторинга под DDD:
-import { PriceMonitoringModule } from './TODO/priceMonitoring/priceMonitoring.module';
 import { DealsModule } from './TODO/deals/deals.module';
 import { ReportsModule } from './TODO/reports/reports.module';
 
@@ -45,13 +45,13 @@ import { ReportsModule } from './TODO/reports/reports.module';
         ShopWarehouseModule,
         EmployeeIdentityModule,
         PricingModule,
+        ShopPricingModule,
         AiModule,
         GoogleSheetsModule,
         MoyskladModule,
         MoySkladSyncModule,
 
         // TODO: временно перенесены как есть, требуют рефакторинга под DDD:
-        PriceMonitoringModule,
         DealsModule,
         ReportsModule,
 

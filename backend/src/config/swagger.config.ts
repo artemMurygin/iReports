@@ -8,6 +8,7 @@ import { ShopAccountingModule } from '@/domains/shop/modules/accounting/shop-acc
 import { ShopWarehouseModule } from '@/domains/shop/modules/warehouse/shop-warehouse.module';
 import { EmployeeIdentityModule } from '@/modules/employee-identity/employee-identity.module';
 import { PricingModule } from '@/domains/service/modules/marketing/pricing/pricing.module';
+import { ShopPricingModule } from '@/domains/shop/modules/marketing/pricing/pricing.module';
 
 // include в каждом документе ниже: документируем только отрефакторенные
 // DDD-модули (см. backend/CLAUDE.md); модули из src/TODO/* сюда намеренно
@@ -41,7 +42,12 @@ export function setupSwagger(app: INestApplication): void {
         .setVersion('1.0')
         .build();
     const shopDocument = SwaggerModule.createDocument(app, shopSwaggerConfig, {
-        include: [ShopSalesModule, ShopAccountingModule, ShopWarehouseModule],
+        include: [
+            ShopSalesModule,
+            ShopAccountingModule,
+            ShopWarehouseModule,
+            ShopPricingModule,
+        ],
     });
     SwaggerModule.setup('docs/shop', app, cleanupOpenApiDoc(shopDocument));
 

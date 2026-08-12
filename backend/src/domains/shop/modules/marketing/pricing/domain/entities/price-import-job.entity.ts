@@ -43,9 +43,17 @@ export interface PriceImportJobProps {
 export class PriceImportJob extends AggregateRoot<PriceImportJobProps> {
     declare protected readonly _id: AggregateID;
 
-    static create(): PriceImportJob {
+    // `id` — опциональный, по умолчанию генерируется здесь же (`randomUUID()`), как и раньше.
+    // Явная передача нужна интерфейс-слою (Фаза 10): HTTP-контроллер `POST .../import-costs`
+    // обязан ответить `{ id }` до завершения пайплайна (fire-and-forget, `void
+    // this.commandBus.execute(command)`), а сам id известен раньше, чем отработает
+    // `StartPriceImportHandler` — это `command.id` (базовый `Command.id`, см.
+    // `@/shared/domain/command.base.ts`, поле специально документировано как "для целей
+    // корреляции"), который хендлер передаёт сюда, чтобы id команды и id джобы совпадали и
+    // ответ контроллера сразу был валиден для последующих поллинга/SSE.
+    static create(id: string = randomUUID()): PriceImportJob {
         return new PriceImportJob({
-            id: randomUUID(),
+            id,
             props: {
                 status: 'CREATED',
                 progress: null,

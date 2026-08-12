@@ -64,7 +64,12 @@ export class StartPriceImportHandler implements ICommandHandler<
     async execute(
         command: StartPriceImportCommand,
     ): Promise<StartPriceImportResponse> {
-        const job = PriceImportJob.create();
+        // `command.id` (базовый `Command.id`, генерируется в конструкторе, если явно не
+        // передан) переиспользуется как id самой джобы — HTTP-контроллер (Фаза 10) конструирует
+        // команду сам и отвечает клиенту `{ id: command.id }` не дожидаясь этого `execute()`
+        // (fire-and-forget), поэтому id должен быть известен ДО создания агрегата, а не
+        // сгенерирован заново внутри него.
+        const job = PriceImportJob.create(command.id);
         this.jobStore.save(job);
 
         try {

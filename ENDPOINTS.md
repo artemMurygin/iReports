@@ -167,23 +167,33 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
 - `POST /custom-api-roapp/create-service`
 - `GET /custom-api-roapp/service-bonus/:id`
 
-## priceMonitoring (`/price-monitoring`)
-- `POST /price-monitoring/update-shop-products-costs`
-- `POST /price-monitoring/update-service-price`
-- `GET /price-monitoring/:uuid/status`
-- `GET /price-monitoring/:uuid` — SSE (прогресс задачи + heartbeat)
-
 ## reports (`/reports`)
 - `GET /reports/service-funnel`
 - `GET /reports/service-categories`
 - `GET /reports/services-analytics`
 
 ## domains/service/modules/marketing/pricing (`/v1/service/marketing/pricing`)
-Цены услуг RemOnline (Фаза 7, docs/todo-modules-ddd-refactoring) — новый дом сервисной половины
-`POST /price-monitoring/update-service-price` (см. `priceMonitoring` выше); доступ к RoApp только
-через `ROAPP_GATEWAY`, без прямых инжектов `RoappService`/`CustomApiRoappService`. Легаси-эндпоинт не
-удалён — он всё ещё обслуживает shop-половину (`update-shop-products-costs`) до завершения миграции
-обеих половин.
+Цены услуг RemOnline (Фаза 7, docs/todo-modules-ddd-refactoring) — доступ к RoApp только через
+`ROAPP_GATEWAY`, без прямых инжектов `RoappService`/`CustomApiRoappService`.
 - `POST /v1/service/marketing/pricing/update-service-prices` — обновить цены и себестоимость услуг
   (`[{ id, price, serviceCost }]`): выгружает услуги и категории RoApp, строит пути категорий,
   собирает XLSX и отправляет через `CustomApiRoapp /updateServices`
+
+## domains/shop/modules/marketing/pricing (`/v1/shop/marketing/pricing`)
+Импорт закупочных цен магазина из XLSX-прайса поставщика (Фазы 8–10, docs/todo-modules-ddd-refactoring)
+— новый дом легаси `/price-monitoring/*` (легаси-модуль `TODO/priceMonitoring` удалён вместе с этой
+фазой). Доменное ядро — агрегат `PriceImportJob` со статусами `CREATED → RUNNING → COMPLETED/FAILED`
+(инварианты переходов, доменные события); пайплайн: парсинг XLSX → AI-форматирование названий iPad/
+MacBook → категоризация строк → загрузка каталога МойСклад по категории → AI-сопоставление строка ×
+товар → обновление закупочных цен в МойСклад → запись результата в Google Sheets. Состояние джобы между
+HTTP-запросами (поллинг/SSE) доступно только через порт `PRICE_IMPORT_JOB_STORE` (in-memory, на
+процесс, без персистентности — та же гарантия, что была у легаси `PriceMonitoringProgressService`).
+- `POST /v1/shop/marketing/pricing/import-costs` — запустить импорт закупочных цен из XLSX-прайса
+  (`{ file: <base64> }`); fire-and-forget, как и легаси `update-shop-products-costs` — джоба стартует в
+  фоне, ответ `{ id }` не дожидается завершения пайплайна
+- `GET /v1/shop/marketing/pricing/import-costs/:id/status` — разовый снапшот статуса и текущего
+  прогресса джобы (`{ id, status, progress: { stage, processed, total, message, percent } | null,
+  errorMessage }`); `404`, если `id` не найден
+- `GET /v1/shop/marketing/pricing/import-costs/:id` — SSE-поток тех же снапшотов джобы; heartbeat
+  каждые 20с против таймаута Nginx (сохранён из легаси-SSE-эндпоинта без изменений); `404`, если `id`
+  не найден
