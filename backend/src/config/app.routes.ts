@@ -19,6 +19,14 @@ const serviceSalesPerformanceRoot = `${serviceRoot}/sales/salesPerformance`;
 // Для shop аналогичный CRUD пока не заведён (см. domains/shop/CLAUDE.md).
 const serviceSalesPlanRoot = `${serviceRoot}/sales/plan`;
 const serviceSalesPlanTemplateRoot = `${serviceRoot}/sales/plan_template`;
+// Список сделок Bitrix24 за диапазон дат создания (Фаза 3,
+// см. docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// — новый дом для GET /deals из backend/src/TODO/deals, тем же приёмом, что
+// и salesPlan/salesPlanTemplate выше: путь под /v1/service/sales, диапазон
+// дат в query (см. listDealsQuerySchema). Легаси-эндпоинт /deals при этом
+// не удаляется и продолжает работать — это параллельный, а не заменяющий
+// маршрут на время миграции.
+const serviceDealsRoot = `${serviceRoot}/sales/deals`;
 
 // Направление shop — все маршруты домена domains/shop под общим префиксом
 // /v1/shop.
@@ -111,6 +119,15 @@ export const routesV1 = {
         },
         salesPlanTemplate: {
             root: serviceSalesPlanTemplateRoot,
+        },
+        // Список сделок (Фаза 3, см. комментарий у serviceDealsRoot выше) —
+        // отдельный подобъект deals, а не плоский ключ на уровне service
+        // (как salesPerformance/salesPlan/salesPlanTemplate), потому что имя
+        // "deals" уже занято сущностью предметной области (DealEntity,
+        // DealListItem) и по аналогии с accounting.period/accounting.salaryReport
+        // выше группировка в подобъект читается яснее одного плоского пути.
+        deals: {
+            root: serviceDealsRoot,
         },
     },
     // Маршруты направления shop (domains/shop) — под префиксом /v1/shop.

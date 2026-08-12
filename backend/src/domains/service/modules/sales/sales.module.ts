@@ -27,6 +27,10 @@ import { RoappSalesFactSourceRepository } from './infrastructure/repositories/ro
 import { SALES_PERFORMANCE_READER } from './application/ports/sales-performance.port';
 import { GetSalesPerformanceService } from './application/services/get-sales-performance.service';
 import { ListSalesPerformanceHttpController } from './interface/http-controllers/list-sales-performance.http.controller';
+import { DEAL_LIST_REPOSITORY } from './application/ports/deal-list.port';
+import { DealListRepository } from './infrastructure/repositories/deal-list.repository';
+import { ListDealsService } from './application/services/list-deals.service';
+import { ListDealsHttpController } from './interface/http-controllers/list-deals.http.controller';
 
 // LEAD_REPOSITORY (сделки/лиды, см. domain/entities/{deal,lead}.entity.ts) —
 // более ранняя, не задействованная пока часть модуля (см.
@@ -46,6 +50,7 @@ import { ListSalesPerformanceHttpController } from './interface/http-controllers
         PutSalesPlanTemplateHttpController,
         ListSalesPlanTemplatesHttpController,
         ListSalesPerformanceHttpController,
+        ListDealsHttpController,
     ],
     providers: [
         { provide: LEAD_REPOSITORY, useClass: LeadRepository },
@@ -76,6 +81,11 @@ import { ListSalesPerformanceHttpController } from './interface/http-controllers
             provide: SALES_PERFORMANCE_READER,
             useExisting: GetSalesPerformanceService,
         },
+        // Read-side списка сделок (GET /v1/service/sales/deals, см.
+        // задание миграции TODO/deals → modules/sales) — HTTP-контроллер
+        // см. ListDealsHttpController выше, в controllers.
+        { provide: DEAL_LIST_REPOSITORY, useClass: DealListRepository },
+        ListDealsService,
     ],
     exports: [
         LEAD_REPOSITORY,

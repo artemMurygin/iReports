@@ -18,6 +18,8 @@ import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/
 import type { SalesPlanTemplateRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
 import { SERVICE_SALES_FACT_SOURCE } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
 import type { ServiceSalesFactSourcePort } from '@/domains/service/modules/sales/application/ports/service-sales-fact-source.port';
+import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/application/ports/deal-list.port';
+import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
@@ -48,6 +50,16 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
 
     const fakeFactSource: ServiceSalesFactSourcePort = {
         aggregate: () => Promise.resolve(erpFacts),
+    };
+
+    // Сделки/лиды (GET /v1/service/sales/deals) не участвуют в сценариях
+    // этого файла, но DEAL_LIST_REPOSITORY теперь тоже провайдер
+    // SalesModule (см. sales.module.ts) — реальная DealListRepository
+    // требует живой DatabaseService из @Global() DatabaseModule, который
+    // сюда не импортирован, поэтому подменяется той же заглушкой, что и
+    // остальные репозитории этого файла.
+    const fakeDealListRepo: DealListRepositoryPort = {
+        findByDateRange: () => Promise.resolve([]),
     };
 
     const fakePlanRepo: SalesPlanRepositoryPort = {
@@ -141,6 +153,8 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             .useValue(fakeTemplateRepo)
             .overrideProvider(SERVICE_SALES_FACT_SOURCE)
             .useValue(fakeFactSource)
+            .overrideProvider(DEAL_LIST_REPOSITORY)
+            .useValue(fakeDealListRepo)
             .compile();
 
         app = moduleRef.createNestApplication();
