@@ -3,6 +3,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { SalesModule } from '@/domains/service/modules/sales/sales.module';
 import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
+import { ReportsModule } from '@/domains/service/modules/reports/reports.module';
 import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module';
 import { ShopAccountingModule } from '@/domains/shop/modules/accounting/shop-accounting.module';
 import { ShopWarehouseModule } from '@/domains/shop/modules/warehouse/shop-warehouse.module';
@@ -11,10 +12,15 @@ import { EmployeeIdentityModule } from '@/modules/employee-identity/employee-ide
 // include в каждом документе ниже: документируем только отрефакторенные
 // DDD-модули (см. backend/CLAUDE.md); модули из src/TODO/* сюда намеренно
 // не входят — это старый, ещё не переложенный на nestjs-zod/DDD код,
-// который мы не трогаем (см. src/TODO/CLAUDE.md), и как минимум один из
-// них (getServiceFunnelReportDTO в TODO/reports) роняет генерацию
-// OpenAPI-схемы на старте, потому что использует z.coerce.date(), а
-// zod v4 toJSONSchema() не умеет сериализовать Date.
+// который мы не трогаем (см. src/TODO/CLAUDE.md). До Фазы 5
+// (docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// один из них (getServiceFunnelReportDTO в TODO/reports, использовавший
+// z.coerce.date(), которую zod v4 toJSONSchema() не умеет сериализовать)
+// ронял генерацию OpenAPI-схемы на старте — TODO/reports удалён этой же
+// фазой целиком (перенесён в ReportsModule ниже и в воронку
+// modules/sales), блокер устранён: все контракты новых модулей используют
+// ISO-строки дат вместо z.coerce.date() (см. contracts/commands/report.ts,
+// contracts/commands/deal.ts).
 export function setupSwagger(app: INestApplication): void {
     const serviceSwaggerConfig = new DocumentBuilder()
         .setTitle('iReports API — Service')
@@ -25,7 +31,7 @@ export function setupSwagger(app: INestApplication): void {
         app,
         serviceSwaggerConfig,
         {
-            include: [SalesModule, AccountingModule],
+            include: [SalesModule, AccountingModule, ReportsModule],
         },
     );
     SwaggerModule.setup(

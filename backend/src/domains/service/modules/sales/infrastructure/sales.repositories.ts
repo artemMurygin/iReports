@@ -10,7 +10,9 @@ import { DealMapper, LeadMapper } from '../sales.mappers';
 
 // Bitrix CATEGORY_ID воронки "Сервис" (см. также CATEGORY_ID: [0, 16, 10, 2]
 // в src/integrations/bitrix/bitrix.service.ts, откуда синхронизируются все воронки).
-const SERVICE_FUNNEL_CATEGORY_ID = 0;
+// Экспортируется — переиспользуется FunnelDealRepository (Фаза 4,
+// infrastructure/repositories/funnel-deal.repository.ts), а не дублируется.
+export const SERVICE_FUNNEL_CATEGORY_ID = 0;
 
 @Injectable()
 export class LeadRepository implements LeadRepositoryPort {

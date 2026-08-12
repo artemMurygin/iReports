@@ -52,6 +52,21 @@ access token текущего пользователя из `BX24.getAuth()`); �
 - `GET /v1/service/sales/plan_template` — дефолтный шаблон плана направления `service` (оборот, маржа, процент роста) по отделам/категориям
 - `PUT /v1/service/sales/plan_template` — upsert строки шаблона направления `service` по естественному ключу `(department, category)`
 - `GET /v1/service/sales/salesPerformance/:period?direction` — план, факт и прогноз одним запросом по каждому отделу и категории направления за период (Фаза 5); факт и прогноз не персистятся, считаются заново на каждый запрос по данным ERP и текущему плану. Поддержан только `direction=service` (`400` для любого другого значения) — читатель этого эндпоинта жёстко привязан к RoApp/RemOnline; для `shop` см. отдельный эндпоинт `domains/shop/modules/sales` ниже
+- `GET /v1/service/sales/funnel-report?from&to&sourceIds&managerIds&modelIds&stageIds&stageGroupIds` — отчёт по воронке сервисных сделок (Фаза 4 `docs/todo-modules-ddd-refactoring`, новый дом для legacy `GET /reports/service-funnel`): `{ KPI, deals }`, `deals` — та же форма, что у списка сделок выше; группировка этапов воронки — VO `FunnelStageMap`
+
+## domains/service/modules/reports (`/v1/service/reports`)
+Аналитика проданных услуг и справочник категорий услуг (Фаза 5 `docs/todo-modules-ddd-refactoring`) —
+новый дом для legacy `GET /reports/services-analytics` и `GET /reports/service-categories`
+(`src/TODO/reports`, удалён этой же фазой целиком). Источник данных — `roapp_service_orders`/
+`roapp_service_categories`, к воронке сервисных сделок (`funnel-report` выше, `bitrix_deals`)
+отношения не имеет — отдельный модуль, а не часть `modules/sales`.
+- `GET /v1/service/reports/services?from&to&groupBy&categoryIds&serviceIds` — метрики по каждой
+  проданной услуге за период (`totalCount`, `totalRevenue`, `totalProfit`, `totalEngineerBonus`,
+  `avgServicePrice`, `avgOrderCheck` — `avgOrderCheck`/`totalRevenue`/`totalProfit` считаются по
+  уникальным заказам, не по строкам услуг) + разбивка `breakdown` по периодам (`groupBy`: `day` (по
+  умолчанию) / `week` / `month`)
+- `GET /v1/service/reports/service-categories` — плоский список категорий услуг (`id`/`name`/
+  `parentId`/`depth`), без параметров
 
 Сделки Bitrix24 (`/v1/service/sales/deals*`, Фазы 1-2, docs/todo-modules-ddd-refactoring) — новый дом
 для легаси `/deals*` (`backend/src/TODO/deals`, удалён): список сделок за диапазон дат создания и пять
@@ -179,8 +194,3 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
 - `POST /price-monitoring/update-service-price`
 - `GET /price-monitoring/:uuid/status`
 - `GET /price-monitoring/:uuid` — SSE (прогресс задачи + heartbeat)
-
-## reports (`/reports`)
-- `GET /reports/service-funnel`
-- `GET /reports/service-categories`
-- `GET /reports/services-analytics`

@@ -220,8 +220,11 @@ ERP, разные правила) — это **не общий переиспо�
 `domains/shop/CLAUDE.md`); эндпоинты (`/v1/service/sales/plan*` и `/v1/shop/sales/plan*`) при этом
 независимые, общая только бизнес-логика. Всё остальное, включая `modules/accounting` целиком, —
 независимые реализации без переиспользования доменного кода между доменами. Помимо уже существующих
-`accounting` и `sales` (реализованы в обоих доменах, см. выше и `domains/shop/CLAUDE.md`), для
-`service` планируются:
+`accounting` и `sales` (реализованы в обоих доменах, см. выше и `domains/shop/CLAUDE.md`) и `reports`
+(только в `service` — аналитика проданных услуг и справочник категорий услуг, `roapp_service_orders`/
+`roapp_service_categories`, Фаза 5 `docs/todo-modules-ddd-refactoring`; не путать с отчётом по воронке
+сервисных сделок — тот остался внутри `modules/sales`, читает `bitrix_deals`), для `service`
+планируются:
 
 - **`purchasing`** — закупки (запчастей/расходников у поставщиков). Не существует.
 - **`logistics`** — логистика (движение устройств/грузов между приёмкой, сервисными точками,
@@ -244,10 +247,11 @@ ERP, разные правила) — это **не общий переиспо�
 `src/TODO/` (см. `backend/CLAUDE.md`) и ждёт переноса в `modules/sales` или новый модуль отчётов:
 
 - **`TODO/deals`** (`/deals*`) — список сделок, этапы, менеджеры, источники — читает `bitrixDeal`
-  напрямую (без DDD-слоёв), то, что со временем должно стать HTTP-слоем `modules/sales`.
-- **`TODO/reports`** (`/reports/service-funnel`, `/reports/service-categories`,
-  `/reports/services-analytics`) — читает `bitrixDeal` (воронка) и `roappServiceCategory`/
-  `roappServiceOrder` (аналитика услуг).
+  напрямую (без DDD-слоёв), то, что со временем должно стать HTTP-слоем `modules/sales`. (Отчёт по
+  воронке сервисных сделок, `/reports/service-funnel`, и аналитика проданных услуг с категориями,
+  `/reports/services-analytics` + `/reports/service-categories`, — бывший `TODO/reports` — уже
+  перенесены: воронка живёт в `modules/sales` (Фаза 4), аналитика услуг — в новом `modules/reports`
+  (Фаза 5), см. `docs/todo-modules-ddd-refactoring`.)
 - **`TODO/priceMonitoring`**, эндпоинт `/price-monitoring/update-service-price` — обновляет цены
   услуг обратно в RoApp (через `RoappService`/`CustomApiRoappService`, минуя `roapp-gateway`-порт);
   использует также AI-интеграцию (`src/integrations/ai`) для сопоставления названий услуг. Второй

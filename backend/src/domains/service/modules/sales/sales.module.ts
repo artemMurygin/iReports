@@ -39,6 +39,13 @@ import { ListDealManagersHttpController } from './interface/http-controllers/lis
 import { ListDealSourcesHttpController } from './interface/http-controllers/list-deal-sources.http.controller';
 import { ListDealStageGroupsHttpController } from './interface/http-controllers/list-deal-stage-groups.http.controller';
 import { ListDealDeviceTypesHttpController } from './interface/http-controllers/list-deal-device-types.http.controller';
+// Отчёт по воронке сервисных сделок (Фаза 4, см.
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом для GET /reports/service-funnel из src/TODO/reports.
+import { FUNNEL_DEAL_REPOSITORY } from './application/ports/funnel-deal.port';
+import { FunnelDealRepository } from './infrastructure/repositories/funnel-deal.repository';
+import { GetServiceFunnelReportService } from './application/services/get-service-funnel-report.service';
+import { GetServiceFunnelReportHttpController } from './interface/http-controllers/get-service-funnel-report.http.controller';
 
 // LEAD_REPOSITORY (сделки/лиды, см. domain/entities/{deal,lead}.entity.ts) —
 // более ранняя, не задействованная пока часть модуля (см.
@@ -68,6 +75,7 @@ import { ListDealDeviceTypesHttpController } from './interface/http-controllers/
         ListDealSourcesHttpController,
         ListDealStageGroupsHttpController,
         ListDealDeviceTypesHttpController,
+        GetServiceFunnelReportHttpController,
     ],
     providers: [
         { provide: LEAD_REPOSITORY, useClass: LeadRepository },
@@ -108,6 +116,12 @@ import { ListDealDeviceTypesHttpController } from './interface/http-controllers/
         // контроллеры см. выше, в controllers.
         { provide: DEAL_CATALOG_READER, useClass: DealCatalogRepository },
         ListDealCatalogService,
+        // Read-side отчёта по воронке (GET /v1/service/sales/funnel-report,
+        // см. задание миграции TODO/reports → modules/sales, Фаза 4) —
+        // HTTP-контроллер см. GetServiceFunnelReportHttpController выше, в
+        // controllers.
+        { provide: FUNNEL_DEAL_REPOSITORY, useClass: FunnelDealRepository },
+        GetServiceFunnelReportService,
     ],
     exports: [
         LEAD_REPOSITORY,

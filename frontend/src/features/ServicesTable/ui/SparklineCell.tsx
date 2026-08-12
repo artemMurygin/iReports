@@ -1,10 +1,10 @@
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 import type { TooltipContentProps } from 'recharts'
-import type { ServiceBreakdownPoint } from '@/kernel/types'
+import type { PeriodBreakdownEntry } from '@/kernel/types'
 import { C_POSITIVE } from '@/kernel/chartColors'
 
 interface Props {
-    breakdown: ServiceBreakdownPoint[]
+    breakdown: PeriodBreakdownEntry[]
 }
 
 type SparkTooltipProps = Pick<TooltipContentProps<number, string>, 'active' | 'payload'>

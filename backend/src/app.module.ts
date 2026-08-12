@@ -21,10 +21,13 @@ import { AccountingModule } from './domains/service/modules/accounting/accountin
 import { ShopAccountingModule } from './domains/shop/modules/accounting/shop-accounting.module';
 import { ShopWarehouseModule } from './domains/shop/modules/warehouse/shop-warehouse.module';
 import { EmployeeIdentityModule } from './modules/employee-identity/employee-identity.module';
+// Аналитика услуг и категории услуг (Фаза 5,
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом для src/TODO/reports, удалённого этой же фазой целиком.
+import { ReportsModule } from './domains/service/modules/reports/reports.module';
 
 // TODO: временно перенесены как есть, требуют рефакторинга под DDD:
 import { PriceMonitoringModule } from './TODO/priceMonitoring/priceMonitoring.module';
-import { ReportsModule } from './TODO/reports/reports.module';
 
 @Module({
     imports: [
@@ -42,6 +45,7 @@ import { ReportsModule } from './TODO/reports/reports.module';
         ShopAccountingModule,
         ShopWarehouseModule,
         EmployeeIdentityModule,
+        ReportsModule,
         AiModule,
         GoogleSheetsModule,
         MoyskladModule,
@@ -49,7 +53,6 @@ import { ReportsModule } from './TODO/reports/reports.module';
 
         // TODO: временно перенесены как есть, требуют рефакторинга под DDD:
         PriceMonitoringModule,
-        ReportsModule,
 
         // TODO: не мигрировано в src1 (эквивалента ещё нет):
         // CronModule,

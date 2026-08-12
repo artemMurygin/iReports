@@ -176,6 +176,81 @@ export type ListDealStageGroupsResponse = z.infer<
     typeof listDealStageGroupsResponseSchema
 >;
 
+// ==================== Отчёт по воронке сервисных сделок ==================== //
+//
+// Контракт для `GET /v1/service/sales/funnel-report` (Фаза 4,
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом для `GET /reports/service-funnel` из src/TODO/reports
+// (getServiceFunnelReportDTO). Форма ответа (`{ KPI, deals }`) и набор
+// фильтров скопированы с РЕАЛЬНОГО легаси-эндпоинта (ReportsService.
+// getServiceFunnelReport + serviceFunnelKPICalculation), `deals` — та же
+// dealListItemSchema, что и у списка сделок выше (Prisma include там
+// идентичен: stage/assignedBy/pointOfContact/leadSource/brand/deviceType).
+//
+// Легаси-DTO валидировал даты через `z.coerce.date()` — это ломает
+// генерацию OpenAPI-схемы (zod v4 toJSONSchema() не умеет сериализовать
+// Date, см. swagger.config.ts), поэтому здесь, как и у listDealsQuerySchema,
+// даты — обычные ISO-строки, реальная валидация — доменный DateRange VO.
+
+// Query-параметры множественного выбора (managerIds/sourceIds/modelIds/
+// stageIds/stageGroupIds) приходят через Express как строка (один элемент)
+// либо массив строк (несколько) — тот же приём, что и в легаси
+// queryNumbersArray/queryStringsArray (src/TODO/reports/dto/
+// getServiceFunnelReport.dto.ts), перенесённый как есть: input-схема
+// (string | string[]) — валидный JSON Schema, поэтому OpenAPI не ломается
+// (в отличие от z.coerce.date() выше).
+const queryNumberArray = z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .transform((val) => val.map(Number))
+    .default([]);
+
+const queryStringArray = z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .default([]);
+
+const getServiceFunnelReportQuerySchema = z.object({
+    from: z.string().min(1),
+    to: z.string().min(1),
+    managerIds: queryNumberArray,
+    sourceIds: queryNumberArray,
+    modelIds: queryNumberArray,
+    stageIds: queryStringArray,
+    stageGroupIds: queryStringArray,
+});
+export type GetServiceFunnelReportQuery = z.infer<
+    typeof getServiceFunnelReportQuerySchema
+>;
+
+// Счётчики групп воронки + конверсии — форма 1:1 с возвратом легаси
+// serviceFunnelKPICalculation (src/TODO/reports/reports.helpers.ts).
+const serviceFunnelKpiSchema = z.object({
+    allLeads: z.number(),
+    nonTargetDeals: z.number(),
+    targetedLeads: z.number(),
+    won: z.number(),
+    lose: z.number(),
+    inWork: z.number(),
+    waitingInService: z.number(),
+    inService: z.number(),
+    conversionRate: z.number(),
+    avgDeal: z.number(),
+    revenue: z.number(),
+});
+export type ServiceFunnelKpiResponse = z.infer<typeof serviceFunnelKpiSchema>;
+
+// Ключ ответа `KPI` (не `kpi`) — сохранён как в легаси ради паритета формы
+// ответа для фронтенда на время миграции (см. "В скоупе" PRD: "функциональность
+// для пользователя не меняется").
+const getServiceFunnelReportResponseSchema = z.object({
+    KPI: serviceFunnelKpiSchema,
+    deals: z.array(dealListItemSchema),
+});
+export type GetServiceFunnelReportResponse = z.infer<
+    typeof getServiceFunnelReportResponseSchema
+>;
+
 export {
     dealListStageSchema,
     dealAssigneeSchema,
@@ -192,4 +267,7 @@ export {
     listDealManagersResponseSchema,
     listDealSourcesResponseSchema,
     listDealStageGroupsResponseSchema,
+    serviceFunnelKpiSchema,
+    getServiceFunnelReportQuerySchema,
+    getServiceFunnelReportResponseSchema,
 };

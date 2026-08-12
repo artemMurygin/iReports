@@ -18,6 +18,8 @@ import { DEAL_LIST_REPOSITORY } from '@/domains/service/modules/sales/applicatio
 import type { DealListRepositoryPort } from '@/domains/service/modules/sales/application/ports/deal-list.port';
 import { DEAL_CATALOG_READER } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
 import type { DealCatalogReaderPort } from '@/domains/service/modules/sales/application/ports/deal-catalog.port';
+import { FUNNEL_DEAL_REPOSITORY } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
+import type { FunnelDealRepositoryPort } from '@/domains/service/modules/sales/application/ports/funnel-deal.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { DateRange } from '@/shared/domain/date-range.value-object';
@@ -93,6 +95,13 @@ describe('GET /v1/service/sales/deals (e2e)', () => {
         findStageGroups: () => Promise.resolve([]),
     };
 
+    // Отчёт по воронке (GET /v1/service/sales/funnel-report, Фаза 4) — не
+    // участвует в сценариях этого файла, но FUNNEL_DEAL_REPOSITORY тоже
+    // провайдер SalesModule (см. тот же приём у fakeDealListRepo выше).
+    const fakeFunnelDealRepo: FunnelDealRepositoryPort = {
+        findByFilter: () => Promise.resolve([]),
+    };
+
     const fakeUnitOfWork: UnitOfWorkPort = {
         run: (work) => work(),
     };
@@ -120,6 +129,8 @@ describe('GET /v1/service/sales/deals (e2e)', () => {
             .useValue(fakeDealListRepo)
             .overrideProvider(DEAL_CATALOG_READER)
             .useValue(fakeDealCatalogReader)
+            .overrideProvider(FUNNEL_DEAL_REPOSITORY)
+            .useValue(fakeFunnelDealRepo)
             .compile();
 
         app = moduleRef.createNestApplication();

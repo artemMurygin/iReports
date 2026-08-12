@@ -28,6 +28,23 @@ const serviceSalesPlanTemplateRoot = `${serviceRoot}/sales/plan_template`;
 // backend/src/TODO/deals целиком — это уже не параллельный, а
 // единственный (заменяющий) маршрут.
 const serviceDealsRoot = `${serviceRoot}/sales/deals`;
+// Отчёт по воронке сервисных сделок (Фаза 4,
+// см. docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// — новый дом для GET /reports/service-funnel из backend/src/TODO/reports,
+// тем же приёмом, что и serviceDealsRoot выше: путь под /v1/service/sales,
+// читает те же bitrix_deals. Легаси-эндпоинт /reports/service-funnel при
+// этом не удаляется — параллельный маршрут на время миграции (TODO/reports
+// целиком выводится из эксплуатации отдельной фазой этого же трека).
+const serviceFunnelReportRoot = `${serviceRoot}/sales/funnel-report`;
+// Аналитика услуг и категории услуг (Фаза 5,
+// см. docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// — новый дом для GET /reports/services-analytics и /reports/service-categories
+// из backend/src/TODO/reports (модуль domains/service/modules/reports,
+// каталог TODO/reports целиком удалён этой же фазой). В отличие от
+// serviceFunnelReportRoot выше (тот же источник bitrix_deals, что и
+// serviceDealsRoot) — это отдельный модуль и отдельный корень пути, читает
+// roapp_service_orders/roapp_service_categories, а не bitrix_deals.
+const serviceReportsRoot = `${serviceRoot}/reports`;
 
 // Направление shop — все маршруты домена domains/shop под общим префиксом
 // /v1/shop.
@@ -142,6 +159,20 @@ export const routesV1 = {
             sources: `${serviceDealsRoot}/sources`,
             stageGroups: `${serviceDealsRoot}/stage-groups`,
             models: `${serviceDealsRoot}/models`,
+        },
+        // Отчёт по воронке сервисных сделок (Фаза 4, см. комментарий у
+        // serviceFunnelReportRoot выше) — отдельный подобъект по тому же
+        // принципу, что и deals выше.
+        funnelReport: {
+            root: serviceFunnelReportRoot,
+        },
+        // Аналитика услуг и категории услуг (Фаза 5, см. комментарий у
+        // serviceReportsRoot выше) — новый модуль domains/service/modules/reports,
+        // не modules/sales (иной источник данных: roapp_service_orders, а не
+        // bitrix_deals).
+        reports: {
+            services: `${serviceReportsRoot}/services`,
+            serviceCategories: `${serviceReportsRoot}/service-categories`,
         },
     },
     // Маршруты направления shop (domains/shop) — под префиксом /v1/shop.

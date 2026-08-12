@@ -1,4 +1,4 @@
-import type { ServiceAnalyticsEntry, ServiceBreakdownPoint, ChartSeriesEntry } from '@/kernel/types'
+import type { ServiceAnalyticsEntry, ServiceBreakdownPoint, PeriodBreakdownEntry, ChartSeriesEntry } from '@/kernel/types'
 import { getDirectChildren as getDirectChildrenById, getSubtreeIds } from '@/shared/lib/tree.ts'
 import type { ServiceCategory } from './types'
 
@@ -24,7 +24,7 @@ function mergePeriodBreakdowns(entries: ServiceAnalyticsEntry[]): ServiceBreakdo
     })
 }
 
-function enrichBreakdown(breakdown: ServiceBreakdownPoint[]): ServiceBreakdownPoint[] {
+function enrichBreakdown(breakdown: PeriodBreakdownEntry[]): ServiceBreakdownPoint[] {
     return breakdown.map((b) => ({
         ...b,
         revenue: Math.round(b.count * b.avgPrice),
