@@ -11,7 +11,7 @@ COPY . .
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN npx vite build --config src/config/vite.config.ts
+RUN npx vite build
 
 # ---- Production stage ----
 FROM nginx:1.27-alpine AS production

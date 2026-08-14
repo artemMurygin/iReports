@@ -4,12 +4,12 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "start": "vite --config src/config/vite.config.ts",
-        "build": "tsc -b src/config/tsconfig.json && vite build --config src/config/vite.config.ts",
-        "lint": "eslint --config src/config/eslint.config.js .",
-        "format": "prettier --config src/config/.prettierrc.json --ignore-path src/config/.prettierignore --write .",
-        "format:check": "prettier --config src/config/.prettierrc.json --ignore-path src/config/.prettierignore --check .",
-        "preview": "vite preview --config src/config/vite.config.ts"
+        "start": "vite",
+        "build": "tsc -b && vite build",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "preview": "vite preview"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",

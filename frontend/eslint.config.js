@@ -8,12 +8,7 @@ import boundaries from 'eslint-plugin-boundaries'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
-// Файл лежит в src/config, но глобы files/ignores у флэт-конфига резолвятся
-// относительно cwd процесса eslint (frontend/), а не относительно самого конфига —
-// поэтому здесь достаточно обычных 'dist'/'**/*.{ts,tsx}' без '../'.
-// А вот настройки плагинов (root-path, project) плагины резолвят сами, по-разному —
-// чтобы не гадать, даём им абсолютные пути.
-const srcDir = path.resolve(import.meta.dirname, '../')
+const srcDir = path.resolve(import.meta.dirname, 'src')
 
 export default defineConfig([
     globalIgnores(['dist']),

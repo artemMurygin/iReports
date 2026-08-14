@@ -7,8 +7,7 @@ import path from 'path'
 export default defineConfig({
     resolve: {
         alias: {
-            // Файл лежит в src/config, поэтому '@' (== frontend/src) — это на уровень выше
-            '@': path.resolve(__dirname, '../'),
+            '@': path.resolve(__dirname, 'src'),
         },
     },
     server: {
