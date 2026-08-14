@@ -15,7 +15,11 @@ export function TableBody({ paginated, renderRow }: TableBodyProps) {
     return (
         <>
             {paginated.map((deal, idx) =>
-                renderRow ? renderRow(deal, idx) : <TableRow key={deal.id} deal={deal} isEven={idx % 2 === 1} />,
+                renderRow ? (
+                    renderRow(deal, idx)
+                ) : (
+                    <TableRow key={deal.id} deal={deal} isEven={idx % 2 === 1} onClick={() => {}} />
+                ),
             )}
         </>
     )

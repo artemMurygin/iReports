@@ -1,4 +1,4 @@
-import type { FunnelRowData } from '@/features/DealsFunnelChart/model/useFunnelStats.ts'
+import type { FunnelRowData } from '@/features/DealsFunnelChart/model/type.ts'
 
 type Props = {
     item: FunnelRowData
