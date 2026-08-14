@@ -12,10 +12,27 @@ import { DealsByStage } from '@/features/DealsByStage'
 import { KpiCard } from '@/shared/ui/KpiCard.tsx'
 
 export function FunnelReport() {
-    const { filters, employees, sources, deviceTypes, stages, stageGroups, setError, error, resetHandler, setFilters } =
-        useFilters()
+    const { 
+        filters, 
+        employees, 
+        sources, 
+        deviceTypes, 
+        stages, 
+        stageGroups, 
+        setError, 
+        error, 
+        resetHandler, 
+        setFilters 
+    } = useFilters()
 
-    const { loading, isInitialLoad, isRefreshing, dataVersion, KPI, deals } = useDeals(filters, setError)
+    const { 
+        loading, 
+        isInitialLoad, 
+        isRefreshing, 
+        dataVersion, 
+        KPI, 
+        deals 
+    } = useDeals(filters, setError)
 
     return (
         <Layout
