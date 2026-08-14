@@ -7,6 +7,12 @@
       "skillPath": "feature-sliced-design/SKILL.md",
       "computedHash": "775a8ee42f32b12d33478eaf2416c0c1c394fac61b98805c6cf0f228cc2c9b34"
     },
+    "pencil-design": {
+      "source": "chiroro-jr/pencil-design-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "e898f789a2fdf7eceace95294be4601aa7a2699aeefbb16a741c1ee78d208856"
+    },
     "prisma-client-api": {
       "source": "prisma/skills",
       "sourceType": "github",
