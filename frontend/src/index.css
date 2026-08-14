@@ -3,6 +3,8 @@
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/roboto';
+@import '@fontsource-variable/montserrat';
+@import './shared/ui-kit/tokens/theme.css';
 
 @custom-variant dark (&:is(.dark *));
 

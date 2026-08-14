@@ -93,7 +93,7 @@ export default defineConfig([
         },
     },
     {
-        files: ['**/ui/**/*.{ts,tsx}'],
+        files: ['**/ui/**/*.{ts,tsx}', '**/ui-kit/**/*.{ts,tsx}'],
         rules: {
             'react-refresh/only-export-components': 'off',
         },

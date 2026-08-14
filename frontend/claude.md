@@ -70,9 +70,17 @@ npm run preview
 
 ### UI
 
-- Используются **Tailwind CSS v4** + **shadcn/radix-ui**. Примитивы находятся в `shared/ui/`
-  (`button.tsx`, `select.tsx`, `table.tsx`, `calendar.tsx` и т. д.) — используйте их повторно,
-  вместо создания новых UI-примитивов вручную.
+- Идёт переход на новый дизайн (UI Kit из Pencil, `design/sallary-first-iteration.pen`, фрейм
+  «ERP · UI Kit (Atomic)»). Новый UI Kit живёт в `shared/ui-kit/` (`tokens/`, `atoms/`,
+  `organisms/`) на отдельном наборе токенов (`brand`, `ink`, `canvas`, `surface`, `hairline`,
+  `warn`, `danger`, `scrim`, `font-display`, `font-ui`, см. `shared/ui-kit/tokens/theme.css`) —
+  **все новые страницы и компоненты добавляйте туда**, а не в `shared/ui/`. `shared/ui/`
+  (shadcn-примитивы на старых токенах `--primary`/`--background`) не расширяется новыми
+  компонентами и остаётся только для уже существующих, ещё не мигрированных страниц. См.
+  `docs/ui-kit-new-header/plan-ui-kit-new-header.md`.
+- Используются **Tailwind CSS v4** + **shadcn/radix-ui**. Примитивы старого дизайна находятся в
+  `shared/ui/` (`button.tsx`, `select.tsx`, `table.tsx`, `calendar.tsx` и т. д.) — переиспользуйте
+  их только на страницах, которые ещё не переведены на новый UI Kit.
 - Специализированные для графиков layout-обёртки (`ChartLayout`, `ChartHeader`, `KpiCard`) также
   находятся в `shared/ui/` и используются в аналитических модулях `features/*Chart*`; в качестве
   библиотеки для графиков используется **Recharts**.

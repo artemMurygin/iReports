@@ -1,0 +1,58 @@
+/**
+ * UI Kit design tokens (Pencil: design/sallary-first-iteration.pen, frame "01 Foundations").
+ *
+ * These are a brand-new token namespace living alongside (not replacing) the existing
+ * shadcn tokens defined in `src/index.css` (`--background`, `--primary`, ...). Names match
+ * the .pen file's variable names exactly so the mapping from design to code stays 1:1.
+ *
+ * Only the default light theme / default Base+Accent combination is implemented here — the
+ * .pen file's `Mode: Dark` and alternate `Base`/`Accent` axes are out of scope for this phase.
+ */
+
+@theme inline {
+    --color-brand: var(--uikit-brand);
+    --color-brand-strong: var(--uikit-brand-strong);
+    --color-brand-foreground: var(--uikit-brand-foreground);
+    --color-brand-soft: var(--uikit-brand-soft);
+    --color-brand-border: var(--uikit-brand-border);
+    --color-ink: var(--uikit-ink);
+    --color-ink-muted: var(--uikit-ink-muted);
+    --color-ink-faint: var(--uikit-ink-faint);
+    --color-canvas: var(--uikit-canvas);
+    --color-surface: var(--uikit-surface);
+    --color-hairline: var(--uikit-hairline);
+    --color-warn: var(--uikit-warn);
+    --color-warn-soft: var(--uikit-warn-soft);
+    --color-warn-ink: var(--uikit-warn-ink);
+    --color-danger: var(--uikit-danger);
+    --color-danger-soft: var(--uikit-danger-soft);
+    --color-ok-ink: var(--uikit-ok-ink);
+    --color-row-selected: var(--uikit-row-selected);
+    --color-scrim: var(--uikit-scrim);
+    --font-display: var(--uikit-font-display);
+    --font-ui: var(--uikit-font-ui);
+}
+
+:root {
+    --uikit-brand: #37d97b;
+    --uikit-brand-strong: #22c46a;
+    --uikit-brand-foreground: #04140a;
+    --uikit-brand-soft: #e9faf0;
+    --uikit-brand-border: #b7efce;
+    --uikit-ink: #010306;
+    --uikit-ink-muted: #939393;
+    --uikit-ink-faint: #c4c4c4;
+    --uikit-canvas: #f8f8f8;
+    --uikit-surface: #ffffff;
+    --uikit-hairline: #e6e7e9;
+    --uikit-warn: #f5a524;
+    --uikit-warn-soft: #fef4e3;
+    --uikit-warn-ink: #8a5a05;
+    --uikit-danger: #e7000b;
+    --uikit-danger-soft: #fdecec;
+    --uikit-ok-ink: #0b7a3e;
+    --uikit-row-selected: #f6fdf9;
+    --uikit-scrim: #01030659;
+    --uikit-font-display: 'Montserrat Variable', sans-serif;
+    --uikit-font-ui: 'Roboto Variable', sans-serif;
+}
