@@ -34,9 +34,11 @@ export const IPAD_MACBOOK_PATTERNS: RegExp[] = [
 
 /** ID гугл-таблицы с ценами магазина */
 export const SPREADSHEET_ID = '1kuHPwbQ1LGlNPqBHNuKrVNhUpaOi62kB8uqw8KJu1EY';
+// export const SPREADSHEET_ID = '1gFyiCcOPpU1Mbo6Hr7lmLln72OKYg8vePWgRUaiXyxo'; // тестовая
 
 /** GID листа с товарами (для получения имени листа) */
 export const SHEET_GID = 2068051743;
+// export const SHEET_GID = 1665308629; // тестовая
 
 // ─── МойСклад: базовый URL сущностей и фильтры по папкам номенклатуры ─────
 

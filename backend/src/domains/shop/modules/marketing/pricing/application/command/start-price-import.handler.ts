@@ -88,7 +88,7 @@ export class StartPriceImportHandler implements ICommandHandler<
             );
             const costChanges = this.buildCostChanges(matches);
 
-            await this.updateMoySklad(job, costChanges);
+            // await this.updateMoySklad(job, costChanges);
             await this.writeResults(job, costChanges);
 
             job.complete({ matches, costChanges });
