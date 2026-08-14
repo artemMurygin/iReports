@@ -1,0 +1,14 @@
+{
+    "name": "sheets-app-apps-script",
+    "private": true,
+    "version": "0.0.0",
+    "description": "Typed TypeScript source for the iReports Google Sheets sidebar's Apps Script backend (see README.md). Compiles to plain global-scope JS in ./dist for clasp — no bundler, no ES modules.",
+    "scripts": {
+        "build": "tsc"
+    },
+    "devDependencies": {
+        "@google/clasp": "^2.4.2",
+        "@types/google-apps-script": "^1.0.83",
+        "typescript": "~5.9.3"
+    }
+}
