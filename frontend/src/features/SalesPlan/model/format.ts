@@ -28,8 +28,13 @@ export function formatPeriodLabel(period: string): string {
     return monthName ? `${monthName} ${year}` : period
 }
 
+/** Rounded, thousands-grouped number, no currency suffix — for values whose "₽" already lives in a column/field label (e.g. mobile `PlanCard`'s "План, ₽" label). */
+export function formatNumber(amount: number): string {
+    return Math.round(amount).toLocaleString('ru-RU')
+}
+
 export function formatCurrency(amount: number): string {
-    return `${Math.round(amount).toLocaleString('ru-RU')} ₽`
+    return `${formatNumber(amount)} ₽`
 }
 
 /** Same as `formatCurrency`, but prefixes a `+`/`−` sign — for deltas like "прогноз к плану". */

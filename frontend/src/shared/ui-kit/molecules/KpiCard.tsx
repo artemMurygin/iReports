@@ -18,6 +18,13 @@ import { cn } from '@/shared/lib/tw'
  * `IconButton`) and defaults to `ink-muted` via inherited `currentColor` — pass an icon
  * with its own explicit color class (e.g. `<TrendingUp className="text-brand-strong" />`)
  * to override it per-instance, matching the "Выручка · факт" card's green `trending-up`.
+ *
+ * Also doubles as the mobile `TeVSB` (`ERP/Mobile/KPI Card`) instance used by `KpiGridMobile`
+ * — same structure, slightly smaller below `md:` (14px padding, 18px value vs. desktop's 18px/
+ * 24px, per `KpiGridMobile`'s comment). This isn't just cosmetic: at the 2-up mobile grid's
+ * ~172px card width, real (non-mock) currency values reliably overflowed the 24px value at
+ * 18px padding and got ellipsis-truncated — sizing down under `md:` (rather than introducing a
+ * second component) fixes that and matches the design's own smaller mobile value size.
  */
 export type KpiCardTone = 'default' | 'positive' | 'warning'
 
@@ -48,16 +55,18 @@ function KpiCard({ label, value, note, icon, tone = 'default', className }: KpiC
             data-slot="kpi-card"
             data-tone={tone}
             className={cn(
-                'flex min-w-0 flex-1 flex-col gap-2.5 rounded-xl border bg-surface p-[18px]',
+                'flex min-w-0 flex-1 flex-col gap-2 rounded-xl border bg-surface p-3.5 md:gap-2.5 md:p-[18px]',
                 TONE_BORDER[tone],
                 className,
             )}
         >
             <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-ui text-[13px] text-ink-muted">{label}</span>
+                <span className="truncate font-ui text-xs text-ink-muted md:text-[13px]">{label}</span>
                 <span className="shrink-0 text-ink-muted [&_svg]:size-4 [&_svg]:shrink-0">{icon}</span>
             </div>
-            <span className="truncate font-display text-2xl font-bold tracking-[-0.5px] text-ink">{value}</span>
+            <span className="truncate font-display text-lg font-bold tracking-[-0.3px] text-ink md:text-2xl md:tracking-[-0.5px]">
+                {value}
+            </span>
             <span className={cn('truncate font-ui text-xs', TONE_NOTE[tone])}>{note}</span>
         </div>
     )

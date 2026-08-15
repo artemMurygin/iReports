@@ -18,6 +18,13 @@ import type { SubnavTab } from './Subnav'
  * is open. The `HeaderMobile` hamburger toggles it; `NavDrawer` (Pencil node `UiFMw`) slides in
  * with the list of app sections, and `Scrim` renders the dimming backdrop (Pencil node `C19pWf`)
  * above the page behind it. Both close on backdrop click.
+ *
+ * `open`/`onOpenChange` make that state optionally **controlled** from outside (standard
+ * React controlled/uncontrolled hybrid, falling back to an internal `useState` when omitted —
+ * every existing caller that doesn't pass them keeps working unchanged). This exists so the
+ * global `BottomNav`'s "Ещё" item (Pencil node `XXiyY`, see `shared/ui-kit/organisms/BottomNav.tsx`)
+ * can open the very same drawer the hamburger opens, instead of a second, desynced instance —
+ * `app/Layout.tsx` lifts the state and feeds it to both.
  */
 export type HeaderProps = {
     /** Desktop Nav Bar's main navigation links. Not hardcoded — always supplied by the caller. */
@@ -42,6 +49,10 @@ export type HeaderProps = {
     onBellClick?: () => void
     onUserClick?: () => void
     onLogout?: () => void
+    /** Controls the mobile menu/drawer's open state from outside. Omit to let `Header` manage it internally (uncontrolled, the default for every existing caller). */
+    open?: boolean
+    /** Required alongside `open` to actually change it — `Header` calls this instead of an internal setter when controlled. */
+    onOpenChange?: (open: boolean) => void
     className?: string
 }
 
@@ -55,9 +66,17 @@ function Header({
     onBellClick,
     onUserClick,
     onLogout,
+    open,
+    onOpenChange,
     className,
 }: HeaderProps) {
-    const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+    const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
+    const isControlled = open !== undefined
+    const mobileMenuOpen = isControlled ? open : uncontrolledOpen
+    const setMobileMenuOpen = (next: boolean) => {
+        if (!isControlled) setUncontrolledOpen(next)
+        onOpenChange?.(next)
+    }
     const closeMobileMenu = () => setMobileMenuOpen(false)
 
     // Close the drawer on navigation, in addition to whatever onClick the caller supplied per item.
@@ -89,7 +108,7 @@ function Header({
                 page={mobile.page}
                 actions={mobile.actions}
                 menuOpen={mobileMenuOpen}
-                onMenuToggle={() => setMobileMenuOpen((open) => !open)}
+                onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
                 hasUnreadNotifications={hasUnreadNotifications}
                 onBellClick={onBellClick}
                 user={user}

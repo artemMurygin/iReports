@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import type { SalesDirection, SalesPerformanceResponse } from 'ireports-contracts'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import type { CatalogResponse, SalesDirection, SalesPerformanceResponse } from 'ireports-contracts'
 import { api } from '@/features/SalesPlan/model/api.ts'
 
 // Пикера периода в скоупе этой фазы нет (см. Фазу 1 в
@@ -47,30 +47,73 @@ const EMPTY_TOTALS: SalesPlanTotals = {
     factMargin: 0,
 }
 
+// Дерево warehouse/catalog (CatalogResponse) разворачивается в плоскую map id -> полный путь
+// категории — в отличие от service-categories это не плоский список, а дерево папок МойСклад.
+// `pathName` сам по себе — это путь ПРЕДКОВ, не включая саму категорию (пустая строка у
+// категорий верхнего уровня, см. комментарий у ProductFolderTreeService в
+// backend/src/domains/shop/sync/moySklad/product-folder-tree.service.ts) — поэтому полный
+// путь для показа считается на лету как `pathName + '/' + name` (или просто `name` для
+// категорий верхнего уровня, где pathName == ''), а не берётся из pathName напрямую: иначе
+// категории верхнего уровня резолвились бы в пустую строку, а вложенные — теряли бы
+// собственное имя (см. Фазу 4 в docs/sales-plan-view-page/plan-sales-plan-view-page.md).
+function flattenCatalog(categories: CatalogResponse, map: Map<string, string> = new Map()): Map<string, string> {
+    for (const category of categories) {
+        // pathName сегменты сами разделены "/" без пробелов ("Аксессуары/Чехлы") — пересобираем
+        // через " / " целиком (включая имя самой категории), чтобы разделитель был единообразным.
+        const segments = category.pathName ? [...category.pathName.split('/'), category.name] : [category.name]
+        map.set(category.id, segments.join(' / '))
+        flattenCatalog(category.children, map)
+    }
+    return map
+}
+
 export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION) {
-    // Фаза 4 плана подключит собственный источник данных для shop (свой
-    // salesPerformance-эндпоинт + резолв категорий каталога МойСклад, см. Фазу 4 в
-    // docs/sales-plan-view-page/plan-sales-plan-view-page.md). До тех пор вкладка
-    // «Магазин» лишь переключает состояние на странице и передаёт direction сюда —
-    // запрос к бэкенду за service-данными на ней намеренно не выполняется.
-    const enabled = direction === 'service'
+    const isShop = direction === 'shop'
+
+    // placeholderData: keepPreviousData (см. frontend/CLAUDE.md, "isInitialLoad / isRefreshing
+    // вместо единого isLoading") — при переключении направления/фоновом рефетче старые строки
+    // остаются на экране вместо схлопывания в пустое состояние; loading-флаги считаются от
+    // isFetching (а не isLoading/isPending), как в useServicesAnalytics/useDeals.
+    const {
+        data: servicePerformance,
+        dataUpdatedAt: servicePerformanceUpdatedAt,
+        isFetching: isServicePerformanceFetching,
+        error: servicePerformanceError,
+    } = useQuery({ ...api.getSalesPerformance(DEFAULT_PERIOD), enabled: !isShop, placeholderData: keepPreviousData })
 
     const {
-        data: performance,
-        isLoading: isPerformanceLoading,
-        error: performanceError,
-    } = useQuery({ ...api.getSalesPerformance(DEFAULT_PERIOD), enabled })
+        data: serviceCategories,
+        isFetching: isServiceCategoriesFetching,
+        error: serviceCategoriesError,
+    } = useQuery({ ...api.getServiceCategories(), enabled: !isShop, placeholderData: keepPreviousData })
 
     const {
-        data: categories,
-        isLoading: isCategoriesLoading,
-        error: categoriesError,
-    } = useQuery({ ...api.getServiceCategories(), enabled })
+        data: shopPerformance,
+        dataUpdatedAt: shopPerformanceUpdatedAt,
+        isFetching: isShopPerformanceFetching,
+        error: shopPerformanceError,
+    } = useQuery({ ...api.getShopSalesPerformance(DEFAULT_PERIOD), enabled: isShop, placeholderData: keepPreviousData })
+
+    const {
+        data: shopCatalog,
+        isFetching: isShopCatalogFetching,
+        error: shopCatalogError,
+    } = useQuery({ ...api.getShopCatalog(), enabled: isShop, placeholderData: keepPreviousData })
+
+    const performance = isShop ? shopPerformance : servicePerformance
+    const isPerformanceFetching = isShop ? isShopPerformanceFetching : isServicePerformanceFetching
+    const isCategoriesFetching = isShop ? isShopCatalogFetching : isServiceCategoriesFetching
+    const performanceError = isShop ? shopPerformanceError : servicePerformanceError
+    const categoriesError = isShop ? shopCatalogError : serviceCategoriesError
+    const dataVersion = isShop ? shopPerformanceUpdatedAt : servicePerformanceUpdatedAt
+
+    const categoryNameById = useMemo(() => {
+        if (isShop) return flattenCatalog(shopCatalog ?? [])
+        return new Map((serviceCategories ?? []).map((category) => [String(category.id), category.name]))
+    }, [isShop, shopCatalog, serviceCategories])
 
     const rows = useMemo<SalesPlanRow[]>(() => {
         if (!performance) return []
-
-        const categoryNameById = new Map((categories ?? []).map((category) => [String(category.id), category.name]))
 
         return performance
             .filter((row) => row.department === HARDCODED_DEPARTMENT_ID)
@@ -81,7 +124,7 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION) {
                 remainingMargin: row.plan.margin - row.fact.margin,
                 marginPercent: row.plan.margin !== 0 ? (row.fact.margin / row.plan.margin) * 100 : 0,
             }))
-    }, [performance, categories])
+    }, [performance, categoryNameById])
 
     const totals = useMemo<SalesPlanTotals>(() => {
         if (rows.length === 0) return EMPTY_TOTALS
@@ -99,13 +142,22 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION) {
         )
     }, [rows])
 
-    const isLoading = enabled && (isPerformanceLoading || isCategoriesLoading)
-    const error = enabled ? (performanceError ?? categoriesError ?? null) : null
+    const loading = isPerformanceFetching || isCategoriesFetching
+    // Данные уже есть (строки отрисованы) -> фоновый рефетч (isRefreshing), а не блокирующая
+    // загрузка (isInitialLoad) — иначе переключение вкладки Сервис/Магазин или ревалидация по
+    // фокусу окна "схлопывали" бы уже отрисованную таблицу/карточки в спиннер на весь блок.
+    const isInitialLoad = loading && rows.length === 0
+    const isRefreshing = loading && !isInitialLoad
+    // Ошибки уже нормализованы в ApiError прямо в queryFn (см. model/api.ts) — здесь наружу
+    // отдаётся только человекочитаемое `.message`, компоненты не работают с сырым axios-error.
+    const error = performanceError ?? categoriesError ?? null
 
     return {
         rows,
         totals,
-        isLoading,
+        isInitialLoad,
+        isRefreshing,
+        dataVersion,
         error: error?.message ?? null,
         period: DEFAULT_PERIOD,
         direction,

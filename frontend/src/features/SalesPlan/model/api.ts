@@ -1,13 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { SalesPerformanceResponse, ServiceCategoryResponse } from 'ireports-contracts'
+import type { CatalogResponse, SalesPerformanceResponse, ServiceCategoryResponse } from 'ireports-contracts'
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
 
-// Фаза 1 реализует только направление service (см.
-// docs/sales-plan-view-page/plan-sales-plan-view-page.md) — GET
-// /v1/service/sales/salesPerformance/:period?direction=service. Направление shop
-// (GET /v1/shop/sales/salesPerformance/:period, без query) добавится в Фазе 4.
 export const api = {
+    // GET /v1/service/sales/salesPerformance/:period?direction=service — direction идёт
+    // query-параметром (симметрично GET /sales/plan, см. contracts/commands/sales-performance.ts).
     getSalesPerformance: (period: string) =>
         queryOptions({
             queryKey: ['sales-plan', 'sales-performance', 'service', period],
@@ -33,6 +31,35 @@ export const api = {
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить категории услуг ' + error)
+                    }),
+        }),
+
+    // GET /v1/shop/sales/salesPerformance/:period — направление shop зашито в путь, без
+    // query-параметра direction (см. Фазу 4 в docs/sales-plan-view-page/plan-sales-plan-view-page.md).
+    getShopSalesPerformance: (period: string) =>
+        queryOptions({
+            queryKey: ['sales-plan', 'sales-performance', 'shop', period],
+            queryFn: ({ signal }) =>
+                apiInstance
+                    .get<SalesPerformanceResponse[]>(`/v1/shop/sales/salesPerformance/${period}`, { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError('Не удалось загрузить план продаж ' + error)
+                    }),
+        }),
+
+    // GET /v1/shop/warehouse/catalog — дерево категорий каталога МойСклад (не плоский список,
+    // в отличие от service-categories), разворачивается в плоскую map id -> pathName в useSalesPlan.
+    getShopCatalog: () =>
+        queryOptions({
+            queryKey: ['sales-plan', 'shop-catalog'],
+            staleTime: 30 * 60 * 1000,
+            queryFn: ({ signal }) =>
+                apiInstance
+                    .get<CatalogResponse>('/v1/shop/warehouse/catalog', { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError('Не удалось загрузить каталог магазина ' + error)
                     }),
         }),
 }
