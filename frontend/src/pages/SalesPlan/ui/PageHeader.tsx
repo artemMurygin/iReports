@@ -1,7 +1,9 @@
-import { Calendar } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import type { SalesDirection } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
+import { Button } from '@/shared/ui-kit/atoms/Button'
+import { PeriodPicker } from '@/features/SalesPlan'
 
 const DIRECTIONS: { value: SalesDirection; label: string }[] = [
     { value: 'service', label: 'Сервис' },
@@ -11,7 +13,10 @@ const DIRECTIONS: { value: SalesDirection; label: string }[] = [
 export type PageHeaderProps = {
     direction: SalesDirection
     onDirectionChange: (direction: SalesDirection) => void
-    periodLabel: string
+    period: string
+    onPeriodChange: (period: string) => void
+    onEditPlan: () => void
+    editDisabled?: boolean
     className?: string
 }
 
@@ -26,12 +31,18 @@ export type PageHeaderProps = {
  * fixed to "открыт" for now.
  *
  * `jvP4H`: a segmented Direction Tabs control (`MjG42`, `hairline`-filled track, active tab
- * a white pill — Сервис/Магазин) and, right-aligned, a static Period Chip (`Kj0bs/jKZCJ`,
- * ref `ERP/Atom/Chip`) showing the fixed period — not clickable, this page has no period
- * picker. The design's third `Period Controls` child, "Btn Изменить план" (`JjkSX`), is a
- * plan-mutation action and out of scope for this view-only page.
+ * a white pill — Сервис/Магазин) and, right-aligned, `Kj0bs`/"Period Controls" — the Period
+ * Chip (`jKZCJ`, ref `ERP/Atom/Chip`), now `PeriodPicker` (see that component's own comment
+ * for why its dropdown has no Pencil counterpart) rather than a static label, plus, gap 10 next
+ * to it, "Btn Изменить план" (`JjkSX` desktop / `e1D3nB` mobile, both `ERP/Atom/Button`
+ * instances) — opens `EditPlanModal` via `onEditPlan`.
+ * Kept in this one shared row (rather than mirroring the .pen file's separate mobile-only
+ * full-width button row under `T0FMcE`'s Direction Tabs) so mobile/desktop keep sharing this
+ * single `PageHeader`, consistent with how this component already diverges from a literal
+ * per-breakpoint split (see the file's `SalesPlanPage` render, which mounts one `PageHeader`
+ * for both breakpoints) — `flex-wrap` lets the pair drop to its own line on narrow viewports.
  */
-function PageHeader({ direction, onDirectionChange, periodLabel, className }: PageHeaderProps) {
+function PageHeader({ direction, onDirectionChange, period, onPeriodChange, onEditPlan, editDisabled, className }: PageHeaderProps) {
     return (
         <div data-slot="sales-plan-page-header" className={cn('flex flex-col gap-4', className)}>
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -67,9 +78,12 @@ function PageHeader({ direction, onDirectionChange, periodLabel, className }: Pa
                     ))}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2 rounded-[7px] border border-hairline bg-surface px-2.5 py-[5px]">
-                    <Calendar className="size-[13px] text-ink-muted" />
-                    <span className="font-ui text-xs font-medium text-ink">Период: {periodLabel}</span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                    <PeriodPicker period={period} onPeriodChange={onPeriodChange} />
+                    <Button type="button" onClick={onEditPlan} disabled={editDisabled}>
+                        <Pencil />
+                        Изменить план
+                    </Button>
                 </div>
             </div>
         </div>

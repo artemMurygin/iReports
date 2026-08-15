@@ -3,10 +3,10 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { CatalogResponse, SalesDirection, SalesPerformanceResponse } from 'ireports-contracts'
 import { api } from '@/features/SalesPlan/model/api.ts'
 
-// Пикера периода в скоупе этой фазы нет (см. Фазу 1 в
-// docs/sales-plan-view-page/plan-sales-plan-view-page.md) — период захардкожен,
-// т.к. тестовые данные SalesPerformance гарантированно есть только за этот месяц
-// (для любого другого периода бэкенд отдаёт пустой список).
+// Начальное значение периода на странице (pages/SalesPlan/ui/SalesPlanPage.tsx владеет
+// самим состоянием — см. PeriodPicker) — тестовые данные SalesPerformance гарантированно
+// есть только за этот месяц (для любого другого периода бэкенд отдаёт пустой список,
+// который уже корректно рендерится как SalesPlanEmptyState, а не падает).
 export const DEFAULT_PERIOD = '2026-06'
 
 // Дизайн (design/sallary-first-iteration.pen) не показывает отдел вовсе, а
@@ -67,19 +67,20 @@ function flattenCatalog(categories: CatalogResponse, map: Map<string, string> = 
     return map
 }
 
-export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION) {
+export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, period: string = DEFAULT_PERIOD) {
     const isShop = direction === 'shop'
 
     // placeholderData: keepPreviousData (см. frontend/CLAUDE.md, "isInitialLoad / isRefreshing
-    // вместо единого isLoading") — при переключении направления/фоновом рефетче старые строки
-    // остаются на экране вместо схлопывания в пустое состояние; loading-флаги считаются от
-    // isFetching (а не isLoading/isPending), как в useServicesAnalytics/useDeals.
+    // вместо единого isLoading") — при переключении направления/периода/фоновом рефетче старые
+    // строки остаются на экране вместо схлопывания в пустое состояние; loading-флаги считаются
+    // от isFetching (а не isLoading/isPending), как в useServicesAnalytics/useDeals. `period`
+    // входит в queryKey (см. model/api.ts) — смена периода в PeriodPicker сама триггерит рефетч.
     const {
         data: servicePerformance,
         dataUpdatedAt: servicePerformanceUpdatedAt,
         isFetching: isServicePerformanceFetching,
         error: servicePerformanceError,
-    } = useQuery({ ...api.getSalesPerformance(DEFAULT_PERIOD), enabled: !isShop, placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getSalesPerformance(period), enabled: !isShop, placeholderData: keepPreviousData })
 
     const {
         data: serviceCategories,
@@ -92,7 +93,7 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION) {
         dataUpdatedAt: shopPerformanceUpdatedAt,
         isFetching: isShopPerformanceFetching,
         error: shopPerformanceError,
-    } = useQuery({ ...api.getShopSalesPerformance(DEFAULT_PERIOD), enabled: isShop, placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getShopSalesPerformance(period), enabled: isShop, placeholderData: keepPreviousData })
 
     const {
         data: shopCatalog,
@@ -159,7 +160,7 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION) {
         isRefreshing,
         dataVersion,
         error: error?.message ?? null,
-        period: DEFAULT_PERIOD,
+        period,
         direction,
     }
 }

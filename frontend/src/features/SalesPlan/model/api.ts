@@ -1,5 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { CatalogResponse, SalesPerformanceResponse, ServiceCategoryResponse } from 'ireports-contracts'
+import type {
+    CatalogResponse,
+    SalesPerformanceResponse,
+    SalesPlanResponse,
+    ServiceCategoryResponse,
+    UpdateSalesPlanRequest,
+} from 'ireports-contracts'
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
 
@@ -62,4 +68,26 @@ export const api = {
                         throw new ApiError('Не удалось загрузить каталог магазина ' + error)
                     }),
         }),
+
+    // PATCH /v1/service/sales/plan/:id и PATCH /v1/shop/sales/plan/:id — правка одной строки
+    // плана (turnover и/или margin); direction/department/category/period заданы уже самим
+    // :id и не передаются в теле (см. updateSalesPlanRequestSchema в
+    // contracts/commands/sales-plan.ts). Не queryOptions — как и createMotivationSchema в
+    // pages/SalaryRules/model/api.ts (первая мутация в проекте, см. её комментарий), это
+    // обычная async-функция, разворачиваемая в useMutation в model/useUpdateSalesPlanRows.ts.
+    updateSalesPlan: (id: string, payload: UpdateSalesPlanRequest): Promise<SalesPlanResponse> =>
+        apiInstance
+            .patch<SalesPlanResponse>(`/v1/service/sales/plan/${id}`, payload)
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError('Не удалось обновить план продаж ' + error)
+            }),
+
+    updateShopSalesPlan: (id: string, payload: UpdateSalesPlanRequest): Promise<SalesPlanResponse> =>
+        apiInstance
+            .patch<SalesPlanResponse>(`/v1/shop/sales/plan/${id}`, payload)
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError('Не удалось обновить план продаж ' + error)
+            }),
 }

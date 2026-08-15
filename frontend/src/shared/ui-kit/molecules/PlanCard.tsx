@@ -2,21 +2,20 @@ import { CornerDownRight } from 'lucide-react'
 import type { SalesPlanStatus } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
+import { Checkbox } from '@/shared/ui-kit/atoms/Checkbox'
 import { CellStatus } from '@/shared/ui-kit/molecules/CellStatus'
 
 /**
  * Pencil: design/sallary-first-iteration.pen, node `i4Qz8y` (`ERP/Mobile/Plan Card`) — a
  * 358px-wide card (`surface` fill, 12px radius, 1px hairline border, 14px padding, 12px gap):
- * `Top` (Category name + Status badge) -> `Values` (План/Факт/Выполнение, three columns) ->
- * a full-width revenue `Progress` bar -> `Margin Row` (branch icon + "Маржа" label, right-
- * aligned values + a small flat-grey progress bar + percent).
+ * `Top` (selection checkbox + Category name + Status badge) -> `Values` (План/Факт/Выполнение,
+ * three columns) -> a full-width revenue `Progress` bar -> `Margin Row` (branch icon + "Маржа"
+ * label, right-aligned values + a small flat-grey progress bar + percent).
  *
  * This is the mobile-list counterpart of `SalesPlanTable`'s row (`UWuak`'s "Entity" rows) —
- * same two metric lines (revenue + margin), stacked instead of columned. Selection checkbox
- * (`IRX80`) and the "More" icon-button (`U5ikIX`) are mutation/interaction affordances (row
- * selection, edit/delete) and are dropped here for the same reason `SalesPlanTable` drops its
- * checkboxes/Действия column — this page is view-only (see Фаза 2 of
- * docs/sales-plan-view-page/plan-sales-plan-view-page.md).
+ * same two metric lines (revenue + margin), stacked instead of columned. `Top`'s selection
+ * checkbox (`IRX80`) is implemented; the "More" icon-button (`U5ikIX`, edit/delete) is not —
+ * row mutation beyond selection was not requested.
  *
  * Values are passed in pre-formatted (`planLabel`/`factLabel`/`marginRangeLabel`), matching
  * the same convention as `KpiCard`'s `value` prop — this is `shared/ui-kit`, which per
@@ -43,6 +42,9 @@ export type PlanCardProps = {
     marginRangeLabel: string
     /** Margin completion percent (0-100+) — drives the small margin progress bar and its trailing label. */
     marginPercent: number
+    /** Selection checkbox state — omitted `onSelectedChange` hides the checkbox entirely. */
+    selected?: boolean
+    onSelectedChange?: (selected: boolean) => void
     className?: string
 }
 
@@ -54,6 +56,8 @@ function PlanCard({
     percentCompletion,
     marginRangeLabel,
     marginPercent,
+    selected = false,
+    onSelectedChange,
     className,
 }: PlanCardProps) {
     const filledWidth = Math.max(0, Math.min(100, percentCompletion))
@@ -65,6 +69,9 @@ function PlanCard({
             className={cn('flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-3.5 font-ui', className)}
         >
             <div className="flex items-center gap-2.5">
+                {onSelectedChange && (
+                    <Checkbox checked={selected} onCheckedChange={onSelectedChange} aria-label={`Выбрать категорию ${categoryName}`} />
+                )}
                 <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">{categoryName}</span>
                 <CellStatus status={status} />
             </div>

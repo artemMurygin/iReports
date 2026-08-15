@@ -14,6 +14,9 @@ export type SalesPlanCardListProps = {
     rows: SalesPlanRow[]
     direction: SalesDirection
     className?: string
+    /** `row.plan.id` -> selected. From `useSalesPlanSelection`. */
+    selectedIds: Set<string>
+    onToggleRow: (id: string) => void
 }
 
 /**
@@ -21,11 +24,11 @@ export type SalesPlanCardListProps = {
  * `WQjYG` (`Plan List`, one `i4Qz8y` `PlanCard` instance per category) — the mobile
  * counterpart of `SalesPlanTable`. `LY6sB` only contributes its counter text here ("N
  * категорий · Направление") — the "Select All" checkbox and the "По выполнению" sort control
- * next to it are the same out-of-scope mutation/interaction affordances `SalesPlanTable`
- * already drops (see Фаза 2 of docs/sales-plan-view-page/plan-sales-plan-view-page.md); this
- * page is view-only.
+ * next to it are not built: the task scoped "выбрать всё" to the desktop table header only
+ * (`SalesPlanTable`'s `WWw3l`), not this list header. Each `PlanCard`'s own checkbox (`IRX80`,
+ * inside its `Top` row) is implemented, though — see `PlanCard`.
  */
-function SalesPlanCardList({ rows, direction, className }: SalesPlanCardListProps) {
+function SalesPlanCardList({ rows, direction, className, selectedIds, onToggleRow }: SalesPlanCardListProps) {
     return (
         <div data-slot="sales-plan-card-list" className={cn('flex flex-col gap-2.5', className)}>
             <span className="px-0.5 font-ui text-xs font-semibold text-ink">
@@ -35,7 +38,7 @@ function SalesPlanCardList({ rows, direction, className }: SalesPlanCardListProp
             <div className="flex flex-col gap-2.5">
                 {rows.map((row) => (
                     <PlanCard
-                        key={`${row.direction}-${row.department}-${row.category ?? 'null'}`}
+                        key={row.plan.id}
                         categoryName={row.categoryName}
                         status={row.plan.status}
                         planLabel={formatNumber(row.plan.turnover)}
@@ -43,6 +46,8 @@ function SalesPlanCardList({ rows, direction, className }: SalesPlanCardListProp
                         percentCompletion={row.fact.percentCompletion}
                         marginRangeLabel={`${formatNumber(row.fact.margin)} из ${formatNumber(row.plan.margin)}`}
                         marginPercent={row.marginPercent}
+                        selected={selectedIds.has(row.plan.id)}
+                        onSelectedChange={() => onToggleRow(row.plan.id)}
                     />
                 ))}
             </div>
