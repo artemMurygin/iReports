@@ -24,6 +24,18 @@
   - `DELETE /v1/service/accounting/task_completions/:id` — удалить запись
   - `GET /v1/service/accounting/task_completions?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
 
+## modules/directory (`/v1/directory`)
+Справочник отделов и сотрудников Bitrix24 (`BitrixDepartment`/`BitrixEmployee`, синхронизированные через
+`sync/bitrix`) — Фаза 1 `docs/salary-schema-creation-ui/plan-salary-schema-creation-ui.md`. Питает селекты
+«Отдел»/«Сотрудник» на Шаге 1 формы создания зарплатной схемы; до этого модуля справочник существовал
+только в БД, наружу не отдавался. Модуль общий, не привязан к домену `service`/`shop` (тот же принцип,
+что и `modules/employee-identity`), эндпоинты без гарда — тот же принцип, что и у остальных внутренних
+read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
+- `GET /v1/directory/departments` — список отделов (`id`/`name`)
+- `GET /v1/directory/employees?departmentId=` — список сотрудников (`id`/`name`/`departmentId`),
+  `name` — `firstName + lastName`, собранные на бэкенде; `departmentId` — опциональный фильтр, без него
+  отдаются сотрудники всех отделов
+
 ## modules/employee-identity (`/v1/employee-identity`)
 Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Все эндпоинты закрыты
 `PortalAdminGuard` — доступны только администратору портала Bitrix24 (заголовок `x-bitrix-auth` с

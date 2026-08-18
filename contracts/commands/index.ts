@@ -10,6 +10,7 @@ export * from './employee-hours-entry';
 export * from './task-completion';
 export * from './catalog';
 export * from './deal';
+export * from './directory';
 export * from './report';
 export * from './service-pricing';
 export * from './shop-pricing';

@@ -3,6 +3,13 @@ const employeeIdentityRoot = 'employee-identity';
 // Api Versions
 const v1 = 'v1';
 
+// Справочник отделов/сотрудников Bitrix (Фаза 1,
+// docs/salary-schema-creation-ui) — общий, не привязанный к домену
+// service/shop модуль (см. modules/directory), питает селекты «Отдел»/
+// «Сотрудник» на Шаге 1 формы создания зарплатной схемы. Путь под /v1, как
+// и все не-legacy маршруты, но не под employeeIdentityRoot — разные модули.
+const directoryRoot = `/${v1}/directory`;
+
 // Направление service — все маршруты домена domains/service под общим
 // префиксом /v1/service, чтобы направление было видно уже в пути, а не
 // только в query/имени модуля (см. shopAccounting/shopWarehouse ниже,
@@ -92,6 +99,15 @@ const shopMarketingPricingRoot = `${shopRoot}/marketing/pricing`;
 
 export const routesV1 = {
     version: v1,
+    // Справочник отделов/сотрудников Bitrix (Фаза 1,
+    // docs/salary-schema-creation-ui) — без гарда, тот же принцип, что и
+    // остальные внутренние read-only справочники (deals.managers,
+    // shop.warehouse.catalog): данные не чувствительнее списка сделок,
+    // уже доступного без гарда.
+    directory: {
+        departments: `${directoryRoot}/departments`,
+        employees: `${directoryRoot}/employees`,
+    },
     // Все маршруты этого блока закрыты PortalAdminGuard — доступны только
     // администратору портала Bitrix24 (см. Фаза 2,
     // docs/payroll/prd-payroll-calculation.md, раздел 1).

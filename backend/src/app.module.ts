@@ -21,6 +21,7 @@ import { AccountingModule } from './domains/service/modules/accounting/accountin
 import { ShopAccountingModule } from './domains/shop/modules/accounting/shop-accounting.module';
 import { ShopWarehouseModule } from './domains/shop/modules/warehouse/shop-warehouse.module';
 import { EmployeeIdentityModule } from './modules/employee-identity/employee-identity.module';
+import { DirectoryModule } from './modules/directory/directory.module';
 // Аналитика услуг и категории услуг (Фаза 5,
 // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
 // новый дом для src/TODO/reports, удалённого этой же фазой целиком.
@@ -44,6 +45,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         ShopAccountingModule,
         ShopWarehouseModule,
         EmployeeIdentityModule,
+        DirectoryModule,
         ReportsModule,
         PricingModule,
         ShopPricingModule,
