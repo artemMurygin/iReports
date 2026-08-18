@@ -39,9 +39,11 @@ export type NavSection = {
  *
  * `disabled: true` renders a muted, non-interactive placeholder for pages not shipped yet
  * (matches the previous plain header's treatment of "Отчёт по зарплатам") — most of this IA is
- * still placeholder until those pages exist; only "Воронка продаж", "Услуги" (formerly flat
- * "Аналитика услуг", now nested under "Аналитика" per the updated design), and "План продаж"
- * (view-only, see docs/sales-plan-view-page/plan-sales-plan-view-page.md) are real today.
+ * still placeholder until those pages exist; "Воронка продаж", "Услуги" (formerly flat
+ * "Аналитика услуг", now nested under "Аналитика" per the updated design), "План продаж"
+ * (view-only, see docs/sales-plan-view-page/plan-sales-plan-view-page.md), and "Правила
+ * начисления" (create-only, service direction — see
+ * docs/salary-schema-creation-ui/plan-salary-schema-creation-ui.md, Фаза 2) are real today.
  *
  * Lives in its own module (not inlined in `app/Header.tsx`) so both `app/Header.tsx` (desktop
  * Nav Bar + mobile drawer) and `app/BottomNav.tsx` (Pencil node `XXiyY`) can share one source
@@ -68,7 +70,7 @@ export const SECTIONS: NavSection[] = [
         icon: <Wallet />,
         items: [
             { label: 'Отчёт по зарплате', to: '/salaries', icon: <Receipt />, disabled: true },
-            { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent />, disabled: true },
+            { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
             { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
         ],
     },

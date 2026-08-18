@@ -1,0 +1,92 @@
+import type { CatalogCategoryResponse } from 'ireports-contracts'
+
+import { findCategoryNode } from './catalogTree.ts'
+import { SALARY_BASIS_LABELS } from './ruleTypes.ts'
+import type { BorderDraft, RuleDraft } from './ruleDraft.ts'
+
+function formatNumber(raw: string): string {
+    const value = Number(raw.trim().replace(',', '.'))
+    return Number.isFinite(value) ? String(value).replace('.', ',') : '—'
+}
+
+function formatMultiplier(raw: string): string {
+    const value = Number(raw.trim().replace(',', '.'))
+    return Number.isFinite(value) ? value.toFixed(1).replace('.', ',') : '—'
+}
+
+function summarizeBonus(bonus: string): string | null {
+    const value = Number(bonus.trim().replace(',', '.'))
+    if (bonus.trim() === '' || !Number.isFinite(value) || value === 0) return null
+    return `бонус ${Math.round(value)} ₽`
+}
+
+function summarizeAward(draft: RuleDraft): string {
+    switch (draft.awardKind) {
+        case 'Fixed':
+            return `Фиксированная сумма ${formatNumber(draft.price)} ₽`
+        case 'ServiceFixed':
+            return 'Ставка из справочника услуги'
+        case 'ServicePercent':
+            return `${formatNumber(draft.percent)}% от стоимости услуги`
+        case 'FixedPercent':
+            return `${formatNumber(draft.percent)}% от базы «${draft.salaryBasis ? SALARY_BASIS_LABELS[draft.salaryBasis] : '—'}»`
+        case 'FloatPercent':
+            return draft.type === 'TaskCompleted'
+                ? `Плавающий процент от ставки ${formatNumber(draft.basePrice)} ₽`
+                : `Плавающий процент, база ${formatNumber(draft.basePercent)}%`
+        default:
+            return 'Вариант награды не выбран'
+    }
+}
+
+/** Collapsed rule row's "Meta" line (Pencil `tSYIw`, e.g. `VpJbo/PaGOR`: `"450 ₽ за час · без
+ * варианта награды"`, `tfeLV/PaGOR`: `"Фиксированная сумма 300 ₽ · бонус 1 000 ₽"`; shop mockup
+ * `ZMEof` → `bLrBy/PaGOR`: `"Фиксированный процент 6% от маржи · все категории"`) — award/config
+ * summary, plus a `· <категория>` segment for `ProductSold`/`UsedProductSold` (Фаза 4, shop only)
+ * and a `· бонус N ₽` suffix only when a bonus is actually set. `PayPerHour` has no award choice at
+ * all, so its second segment is always the mockup's literal "без варианта награды" rather than an
+ * award summary.
+ *
+ * `categories` — the catalog tree (`GET /v1/shop/warehouse/catalog`), used to resolve `draft.category`
+ * to a human name; omitted/empty for service rows, which never read it (`draft.type` is never
+ * `ProductSold`/`UsedProductSold` there). */
+export function summarizeRuleDraft(draft: RuleDraft, categories: CatalogCategoryResponse[] = []): string {
+    const bonusPart = summarizeBonus(draft.bonus)
+
+    if (draft.type === 'PayPerHour') {
+        const base = `${formatNumber(draft.price)} ₽ за час · без варианта награды`
+        return bonusPart ? `${base} · ${bonusPart}` : base
+    }
+
+    const parts = [summarizeAward(draft)]
+
+    if (draft.type === 'ProductSold' || draft.type === 'UsedProductSold') {
+        parts.push(draft.category === null ? 'все категории' : (findCategoryNode(categories, draft.category)?.name ?? draft.category))
+    }
+
+    if (bonusPart) parts.push(bonusPart)
+
+    return parts.join(' · ')
+}
+
+/** `ThresholdsEditor`'s collapsed-state summary (Pencil `tSYIw` → `Пороги · Свёрнуто` → `Summary`:
+ * `"До 80% плана — 0,6 · 80–110% — 1,0 · от 110% — 1,4"`) — built from the fixed 3-row shape:
+ * "before the 2nd row's threshold" uses the 1st row's multiplier, "between rows 2 and 3" uses the
+ * 2nd, "from the 3rd row's threshold up" uses the 3rd. */
+export function summarizeBorders(borders: BorderDraft[]): string {
+    if (borders.length !== 3) return 'Настройте 3 порога плана'
+    const [below, plan, over] = borders as [BorderDraft, BorderDraft, BorderDraft]
+    return `До ${formatNumber(plan.fromPlanPercent)}% плана — ${formatMultiplier(below.multiplier)} · ${formatNumber(plan.fromPlanPercent)}–${formatNumber(over.fromPlanPercent)}% — ${formatMultiplier(plan.multiplier)} · от ${formatNumber(over.fromPlanPercent)}% — ${formatMultiplier(over.multiplier)}`
+}
+
+/** "N правил" counter badge (Pencil `tSYIw` → `Counter`: `"3 правила"`) with correct Russian
+ * pluralization (1 правило / 2–4 правила / 5+ и 11–14 правил). */
+export function pluralizeRules(count: number): string {
+    const mod10 = count % 10
+    const mod100 = count % 100
+    let word: string
+    if (mod10 === 1 && mod100 !== 11) word = 'правило'
+    else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'правила'
+    else word = 'правил'
+    return `${count} ${word}`
+}

@@ -3,6 +3,7 @@ import { Layout } from './Layout'
 import { FunnelReport } from '@/pages/FunnelReport'
 import { ServicesAnalytics } from '@/pages/ServicesReport'
 import { SalesPlanPage } from '@/pages/SalesPlan'
+import { SalaryRulesPage } from '@/pages/SalaryRules'
 import { UiKitPreview } from '@/pages/UiKitPreview'
 import { queryClient } from '@/shared/api/query-client.ts'
 import { api as funnelReportApi } from '@/pages/FunnelReport/model/api.ts'
@@ -29,6 +30,10 @@ export const router = createBrowserRouter([
             {
                 path: 'sales-plan',
                 element: <SalesPlanPage />,
+            },
+            {
+                path: 'salaries/rules',
+                element: <SalaryRulesPage />,
             },
         ],
     },
