@@ -6,11 +6,6 @@ import { Mapper } from '@/shared/domain/mapper.interface';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { SalesPlanScope } from '@/domains/service/modules/sales/domain/value-objects/sales-plan-scope.value-object';
 import { SalesPlanApproval } from '@/domains/service/modules/sales/domain/value-objects/sales-plan-approval.value-object';
-import type {
-    SalesDirection,
-    SalesPlanSource,
-    SalesPlanStatus,
-} from '@/domains/service/modules/sales/domain/types/sales-plan.types';
 
 // "Без категории" хранится в БД сентинелом NO_CATEGORY_ID (''), а не NULL:
 // Postgres не считает два NULL равными в составном уникальном индексе
@@ -43,15 +38,15 @@ export class SalesPlanMapper implements Mapper<
             updatedAt: record.updatedAt,
             props: {
                 scope: SalesPlanScope.create(
-                    record.direction as SalesDirection,
+                    record.direction,
                     record.departmentId,
                     categoryToDomain(record.categoryId),
                 ),
                 period: record.period,
                 turnover: record.turnover,
                 margin: record.margin,
-                source: record.source as SalesPlanSource,
-                status: record.status as SalesPlanStatus,
+                source: record.source,
+                status: record.status,
                 approval:
                     record.approvedBy !== null && record.approvedAt !== null
                         ? SalesPlanApproval.create(

@@ -68,6 +68,16 @@ export class EmployeeIdentityRepository
         return records.map((record) => this.mapper.toDomain(record));
     }
 
+    async findAll(): Promise<EmployeeIdentity[]> {
+        const records = await this.client.employeeIdentity.findMany({
+            // Порядок задан явно, чтобы связи приходили уже сгруппированными по
+            // сотруднику и группировка на клиенте была стабильной между
+            // запросами.
+            orderBy: [{ bitrixEmployeeId: 'asc' }, { createdAt: 'asc' }],
+        });
+        return records.map((record) => this.mapper.toDomain(record));
+    }
+
     async findByExternalId(
         system: ExternalSystem,
         identifierType: EmployeeIdentityType,

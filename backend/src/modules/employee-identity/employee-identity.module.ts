@@ -4,6 +4,7 @@ import { BitrixAuthModule } from '@/integrations/bitrix/auth/bitrix-auth.module'
 import { CreateEmployeeIdentityHandler } from './application/command/create-employee-identity.handler';
 import { UpdateEmployeeIdentityHandler } from './application/command/update-employee-identity.handler';
 import { DeleteEmployeeIdentityHandler } from './application/command/delete-employee-identity.handler';
+import { ListAllEmployeeIdentitiesService } from './application/services/list-all-employee-identities.service';
 import { ListEmployeeIdentitiesService } from './application/services/list-employee-identities.service';
 import { ListUnmatchedEmployeesService } from './application/services/list-unmatched-employees.service';
 import { ResolveEmployeeByExternalIdService } from './application/services/resolve-employee-by-external-id.service';
@@ -14,6 +15,7 @@ import { UpdateEmployeeIdentityHttpController } from './interface/http-controlle
 import { DeleteEmployeeIdentityHttpController } from './interface/http-controllers/delete-employee-identity.http.controller';
 import { ListEmployeeIdentitiesHttpController } from './interface/http-controllers/list-employee-identities.http.controller';
 import { ListUnmatchedEmployeesHttpController } from './interface/http-controllers/list-unmatched-employees.http.controller';
+import { ListAllEmployeeIdentitiesHttpController } from './interface/http-controllers/list-all-employee-identities.http.controller';
 
 // Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2).
 // Модуль намеренно не вложен ни в domains/service, ни в domains/shop —
@@ -30,11 +32,17 @@ import { ListUnmatchedEmployeesHttpController } from './interface/http-controlle
         DeleteEmployeeIdentityHttpController,
         ListEmployeeIdentitiesHttpController,
         ListUnmatchedEmployeesHttpController,
+        // Регистрируется последним: GET /v1/employee-identity — отдельный
+        // односегментный путь и с /unmatched, /employee/:employeeId не
+        // пересекается, но порядок «специфичное выше общего» держим на случай,
+        // если у блока появится GET /employee-identity/:id.
+        ListAllEmployeeIdentitiesHttpController,
     ],
     providers: [
         CreateEmployeeIdentityHandler,
         UpdateEmployeeIdentityHandler,
         DeleteEmployeeIdentityHandler,
+        ListAllEmployeeIdentitiesService,
         ListEmployeeIdentitiesService,
         ListUnmatchedEmployeesService,
         ResolveEmployeeByExternalIdService,

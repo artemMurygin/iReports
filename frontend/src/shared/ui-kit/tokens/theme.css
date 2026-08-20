@@ -27,6 +27,8 @@
     --color-danger: var(--uikit-danger);
     --color-danger-soft: var(--uikit-danger-soft);
     --color-ok-ink: var(--uikit-ok-ink);
+    --color-info-soft: var(--uikit-info-soft);
+    --color-info-ink: var(--uikit-info-ink);
     --color-row-selected: var(--uikit-row-selected);
     --color-scrim: var(--uikit-scrim);
     --font-display: var(--uikit-font-display);
@@ -51,6 +53,8 @@
     --uikit-danger: #e7000b;
     --uikit-danger-soft: #fdecec;
     --uikit-ok-ink: #0b7a3e;
+    --uikit-info-soft: #eaf2fe;
+    --uikit-info-ink: #1d4ed8;
     --uikit-row-selected: #f6fdf9;
     --uikit-scrim: #01030659;
     --uikit-font-display: 'Montserrat Variable', sans-serif;

@@ -1,8 +1,9 @@
 import { Ellipsis } from 'lucide-react'
+import { forwardRef } from 'react'
 
 import { BottomNav as UiKitBottomNav, type BottomNavItem } from '@/shared/ui-kit/organisms/BottomNav'
 
-import { TOP_LEVEL_NAV_ITEMS } from './navigation.tsx'
+import { BOTTOM_NAV_ITEMS } from './navigation.tsx'
 
 export type BottomNavProps = {
     /** Whether the (shared, see `app/Header.tsx`) mobile drawer is open — drives "Ещё"'s highlighted state. */
@@ -18,15 +19,21 @@ export type BottomNavProps = {
  * FSD boundaries) and wraps the generic `shared/ui-kit/organisms/BottomNav` the same way
  * `app/Header.tsx` wraps `shared/ui-kit/organisms/Header`.
  *
- * Reuses `TOP_LEVEL_NAV_ITEMS` — the exact same 4 section-level links the desktop Nav Bar
- * uses — for the first 4 slots (Продажи/Аналитика/Зарплата/График), keeping both navs' IA in
- * sync from a single source. The 5th slot, "Ещё" (`XXiyY`'s icon `ellipsis`), has no route:
- * it opens the same `NavDrawer` the header's hamburger opens, via the `open`/`onOpenChange`
- * pair lifted to `app/Layout.tsx` (see that file's comment for why).
+ * Reuses `BOTTOM_NAV_ITEMS` — the same section-level links the desktop Nav Bar uses, minus the
+ * ones that don't fit the design's 5 slots (see that constant's comment in `./navigation.tsx`:
+ * «Настройки» живут только в шторке) — for the first 4 slots
+ * (Продажи/Аналитика/Зарплата/График), keeping both navs' IA in sync from a single source. The
+ * 5th slot, "Ещё" (`XXiyY`'s icon `ellipsis`), has no route: it opens the same `NavDrawer` the
+ * header's hamburger opens, via the `open`/`onOpenChange` pair lifted to `app/Layout.tsx` (see
+ * that file's comment for why).
+ *
+ * Forwards its ref down to the underlying `<nav>` so `app/Layout.tsx` can measure its rendered
+ * height (which varies with `env(safe-area-inset-bottom)`) and publish it as the `--bottom-nav-h`
+ * CSS variable — see that file's comment for why page-level sticky bars need it.
  */
-export function BottomNav({ open, onOpenChange }: BottomNavProps) {
+const BottomNav = forwardRef<HTMLElement, BottomNavProps>(function BottomNav({ open, onOpenChange }, ref) {
     const items: BottomNavItem[] = [
-        ...TOP_LEVEL_NAV_ITEMS.map(({ label, icon, to, end, disabled }) => ({ label, icon, to, end, disabled })),
+        ...BOTTOM_NAV_ITEMS.map(({ label, icon, to, end, disabled }) => ({ label, icon, to, end, disabled })),
         {
             label: 'Ещё',
             icon: <Ellipsis />,
@@ -35,5 +42,7 @@ export function BottomNav({ open, onOpenChange }: BottomNavProps) {
         },
     ]
 
-    return <UiKitBottomNav items={items} className="flex md:hidden" />
-}
+    return <UiKitBottomNav ref={ref} items={items} className="flex md:hidden" />
+})
+
+export { BottomNav }

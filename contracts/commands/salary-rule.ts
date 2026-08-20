@@ -24,23 +24,11 @@ const targetRoleSchema = z.enum([
     'ONLINE_MANAGER',
     'OFFLINE_MANAGER',
     'ORDER_MANAGER',
-    'CREATED_BY',
-    'CLOSED_BY',
     'ONLINE_PURCHASER',
     'OFFLINE_PURCHASER',
 ]);
 
 export type TargetRole = z.infer<typeof targetRoleSchema>;
-
-// Необязательный индивидуальный бонус — разовая надбавка поверх расчёта
-// правила по его основной формуле, не влияющая на discriminant `type` (см.
-// docs/payroll/prd-payroll-calculation.md, раздел 2, и план, Фаза 7).
-// Целое число: денежные поля во всём модуле accounting — целые рубли (см.
-// комментарий у roundRubles() на бэкенде,
-// domains/service/modules/accounting/domain/services/money.ts). Экспортится
-// (Фаза 12) — переиспользуется shop-salary-rule.ts, у обоих направлений
-// один и тот же смысл поля.
-const individualBonusFieldSchema = z.number().int().optional();
 
 // База начисления процентных правил — общая для OrderPayed и TaskCompleted
 // (Фаза 8): REVENUE (выручка заказа), MARGIN (маржа), SALARY_MINUS_ENGINEER_SALARY
@@ -84,7 +72,6 @@ const percentBordersSchema = z.tuple([
 // правиле. price — ставка за час.
 const payPerHourSalaryConfigSchema = z.object({
     price: z.number(),
-    bonus: individualBonusFieldSchema,
 });
 
 const payPerHourSalaryRuleSchema = z.object({
@@ -102,7 +89,6 @@ const serviceCompletedSalaryConfigSchema = z.object({
         z.object({ type: z.literal('ServiceFixed') }),
         z.object({ type: z.literal('ServicePercent'), percent: z.number() }),
     ]),
-    bonus: individualBonusFieldSchema,
 });
 
 const serviceCompletedSalaryRuleSchema = z.object({
@@ -133,7 +119,6 @@ const orderPayedSalaryConfigSchema = z.object({
             percentBorders: percentBordersSchema,
         }),
     ]),
-    bonus: individualBonusFieldSchema,
 });
 
 const orderPayedSalaryRuleSchema = z.object({
@@ -164,7 +149,6 @@ const taskCompletedSalaryConfigSchema = z.object({
             percentBorders: percentBordersSchema,
         }),
     ]),
-    bonus: individualBonusFieldSchema,
 });
 
 const taskCompletedSalaryRuleSchema = z.object({
@@ -182,6 +166,33 @@ const salaryRuleRequestSchema = z.discriminatedUnion('type', [
 ]);
 
 export type SalaryRuleRequest = z.infer<typeof salaryRuleRequestSchema>;
+
+// ========================== Ответ с id правила ========================== //
+
+// Форма GET .../motivation-schema/:id (детальная схема с уже существующими
+// правилами, для предзаполнения формы редактирования) — та же форма, что и
+// salaryRuleRequestSchema, плюс id (правило уже персистентно). Каждый
+// вариант расширяется отдельно (.extend на самой union-схеме zod не
+// поддерживает), чтобы `type` остался дискриминантом.
+const payPerHourSalaryRuleResponseSchema = payPerHourSalaryRuleSchema.extend({
+    id: z.string(),
+});
+const serviceCompletedSalaryRuleResponseSchema =
+    serviceCompletedSalaryRuleSchema.extend({ id: z.string() });
+const orderPayedSalaryRuleResponseSchema = orderPayedSalaryRuleSchema.extend({
+    id: z.string(),
+});
+const taskCompletedSalaryRuleResponseSchema =
+    taskCompletedSalaryRuleSchema.extend({ id: z.string() });
+
+const salaryRuleResponseSchema = z.discriminatedUnion('type', [
+    payPerHourSalaryRuleResponseSchema,
+    serviceCompletedSalaryRuleResponseSchema,
+    orderPayedSalaryRuleResponseSchema,
+    taskCompletedSalaryRuleResponseSchema,
+]);
+
+export type SalaryRuleResponse = z.infer<typeof salaryRuleResponseSchema>;
 
 // ========================== Список типов правил для UI ========================== //
 
@@ -361,7 +372,6 @@ export {
     percentBordersSchema,
     salaryBasisSchema,
     targetRoleSchema,
-    individualBonusFieldSchema,
     calculationLineSchema,
     factPrognoseAmountSchema,
     salesPerformanceSummarySchema,
@@ -372,4 +382,5 @@ export {
     departmentSalaryReportResponseSchema,
     salaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema,
+    salaryRuleResponseSchema,
 };

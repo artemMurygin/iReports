@@ -15,6 +15,7 @@ describe('CreateEmployeeIdentityHandler', () => {
             delete: jest.fn(),
             findById: jest.fn(),
             findByEmployee: jest.fn(),
+            findAll: jest.fn(),
             findByExternalId,
             findUnmatchedEmployees: jest.fn(),
         };

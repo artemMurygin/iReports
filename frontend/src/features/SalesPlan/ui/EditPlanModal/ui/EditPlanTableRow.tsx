@@ -1,0 +1,96 @@
+import { cn } from '@/shared/lib/tw'
+import { CellStatus } from '@/shared/ui-kit/molecules/CellStatus'
+import type { EditRowView, FieldValues } from '@/features/SalesPlan/ui/EditPlanModal/model/useEditPlanForm.ts'
+import { formatCurrency, formatPercent } from '@/features/SalesPlan/model/format.ts'
+
+const CATEGORY_WIDTH = 'min-w-[160px] flex-1'
+const INPUT_WIDTH = 'w-[150px]'
+const FACT_WIDTH = 'w-[160px]'
+const STATUS_WIDTH = 'w-[116px]'
+
+type Props = {
+    view: EditRowView
+    onFieldChange: (field: keyof FieldValues, value: string) => void
+}
+
+/** One editable category row inside `EditPlanTable` (Pencil: `wumav` → `F7qa7`/`fdVVV`/...) —
+ * name + "было X ₽"/margin-ratio note, the two editable turnover/margin cells (highlighted while
+ * the row is dirty), the read-only fact/выполнение cell, and a status chip: "Изменён" while
+ * dirty, otherwise the row's real `plan.status` via `CellStatus`. */
+export function EditPlanTableRow({ view, onFieldChange }: Props) {
+    const { row, values, draftTurnover, isDirty } = view
+    const factPercent = draftTurnover !== 0 ? formatPercent(row.fact.turnover, draftTurnover) : '0%'
+    const marginPercent = row.plan.turnover !== 0 ? formatPercent(row.plan.margin, row.plan.turnover) : '0%'
+
+    return (
+        <div data-slot="edit-plan-table-row" className="flex h-[52px] items-center border-b border-hairline last:border-b-0">
+            <div className={cn('flex h-full flex-col justify-center gap-0.5 px-3', CATEGORY_WIDTH)}>
+                <span className="truncate font-ui text-[13px] font-semibold text-ink">{row.categoryName}</span>
+                <span className={cn('truncate font-ui text-[11px]', isDirty ? 'text-warn' : 'text-ink-muted')}>
+                    {isDirty ? `было ${formatCurrency(row.plan.turnover)}` : `маржа ${marginPercent} от выручки`}
+                </span>
+            </div>
+
+            <div className={cn('flex h-full shrink-0 items-center px-2', INPUT_WIDTH)}>
+                <EditPlanCellInput
+                    aria-label={`План выручки: ${row.categoryName}`}
+                    value={values.turnover}
+                    isDirty={isDirty}
+                    onChange={(value) => onFieldChange('turnover', value)}
+                />
+            </div>
+
+            <div className={cn('flex h-full shrink-0 items-center px-2', INPUT_WIDTH)}>
+                <EditPlanCellInput
+                    aria-label={`План маржи: ${row.categoryName}`}
+                    value={values.margin}
+                    isDirty={isDirty}
+                    onChange={(value) => onFieldChange('margin', value)}
+                />
+            </div>
+
+            <div className={cn('flex h-full shrink-0 flex-col items-end justify-center gap-0.5 px-3', FACT_WIDTH)}>
+                <span className="font-ui text-[13px] font-medium text-ink">{formatCurrency(row.fact.turnover)}</span>
+                <span className="font-ui text-[11px] text-ink-muted">
+                    {factPercent} {isDirty ? 'от нового плана' : 'от плана'}
+                </span>
+            </div>
+
+            <div className={cn('flex h-full shrink-0 items-center px-3', STATUS_WIDTH)}>
+                {isDirty ? (
+                    <span className="inline-flex w-fit shrink-0 items-center rounded-md bg-warn-soft px-2 py-[3px] font-ui text-[11px] font-semibold whitespace-nowrap text-warn-ink">
+                        Изменён
+                    </span>
+                ) : (
+                    <CellStatus status={row.plan.status} />
+                )}
+            </div>
+        </div>
+    )
+}
+
+function EditPlanCellInput({
+    value,
+    isDirty,
+    onChange,
+    'aria-label': ariaLabel,
+}: {
+    value: string
+    isDirty: boolean
+    onChange: (value: string) => void
+    'aria-label': string
+}) {
+    return (
+        <input
+            type="number"
+            inputMode="decimal"
+            aria-label={ariaLabel}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className={cn(
+                'h-8 w-full min-w-0 rounded-[6px] border px-2.5 text-right font-ui text-[13px] font-medium text-ink outline-none tabular-nums focus-visible:ring-2 focus-visible:ring-brand/40',
+                isDirty ? 'border-brand-border bg-brand-soft' : 'border-hairline bg-surface',
+            )}
+        />
+    )
+}

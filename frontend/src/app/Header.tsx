@@ -13,9 +13,16 @@ export type HeaderProps = {
 export function Header({ open, onOpenChange }: HeaderProps = {}) {
     const location = useLocation()
 
+    // Pick the most specific match, not the first one in array order: with `end: false` (the
+    // default), a shorter leaf like "Отчёт по зарплате" (`/salaries`) matches any nested path,
+    // including "Правила начисления" (`/salaries/rules`) — comparing raw `find` order made the
+    // mobile app-bar/drawer show the wrong title depending on which leaf happened to come first
+    // in `SECTIONS`. Comparing `to.length` picks the longest (most specific) matching path
+    // regardless of declaration order.
     const activeLeaf =
-        ALL_LEAVES.find((item) => matchPath({ path: item.to, end: item.end ?? false }, location.pathname)) ??
-        ALL_LEAVES[0]
+        ALL_LEAVES.filter((item) => matchPath({ path: item.to, end: item.end ?? false }, location.pathname)).reduce<
+            (typeof ALL_LEAVES)[number] | null
+        >((best, item) => (best === null || item.to.length > best.to.length ? item : best), null) ?? ALL_LEAVES[0]
 
     // Subnav: the current section's own pages as tabs (node `SHMkH`) — only when there's more
     // than one to switch between.

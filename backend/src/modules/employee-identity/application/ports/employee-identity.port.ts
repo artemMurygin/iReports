@@ -22,6 +22,11 @@ export interface EmployeeIdentityRepositoryPort {
     findById(id: string): Promise<EmployeeIdentity | null>;
     findByEmployee(bitrixEmployeeId: number): Promise<EmployeeIdentity[]>;
 
+    // Все связи разом — вход для экрана «сотрудники × их связи»: он строит
+    // таблицу по всему справочнику сразу, и вызов findByEmployee на каждого
+    // сотрудника дал бы N+1.
+    findAll(): Promise<EmployeeIdentity[]>;
+
     // Резолв сотрудника по значению, найденному в данных ERP (RemOnline
     // строковый онлайн-менеджер, ID сотрудника RemOnline/МойСклад) — вход
     // для контекста расчёта (см. PRD, раздел "Контекст расчёта").

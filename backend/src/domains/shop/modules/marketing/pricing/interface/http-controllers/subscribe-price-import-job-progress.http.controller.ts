@@ -53,11 +53,11 @@ export class SubscribePriceImportJobProgressHttpController {
         const done$ = new Subject<void>();
         const events$ = job$.pipe(
             finalize(() => done$.next()),
-            map((status) => ({ data: status }) as MessageEvent),
+            map((status) => ({ data: status })),
         );
         const heartbeat$ = interval(HEARTBEAT_INTERVAL_MS).pipe(
             takeUntil(done$),
-            map(() => ({ data: { type: 'heartbeat' } }) as MessageEvent),
+            map(() => ({ data: { type: 'heartbeat' } })),
         );
 
         return merge(events$, heartbeat$);

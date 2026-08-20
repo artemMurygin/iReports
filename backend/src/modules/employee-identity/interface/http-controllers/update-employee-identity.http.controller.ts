@@ -1,13 +1,16 @@
-import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Patch } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { EmployeeIdentityResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
 import { EmployeeIdentityUpdateDto } from '../dto/employee-identity-update.dto';
 import { UpdateEmployeeIdentityCommand } from '../../application/command/update-employee-identity.command';
 
-@UseGuards(PortalAdminGuard)
+// Гард снят по решению пользователя — см. пояснение в
+// create-employee-identity.http.controller.ts.
+// import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
+
+// @UseGuards(PortalAdminGuard)
 @ApiTags('Идентификация сотрудников')
 @Controller(routesV1.version)
 export class UpdateEmployeeIdentityHttpController {

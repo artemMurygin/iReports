@@ -25,5 +25,5 @@ type OpenApiBodySchema = Extract<
 export function zodSchemaToOpenApiBody(schema: z.ZodType): OpenApiBodySchema {
     const jsonSchema = z.toJSONSchema(schema) as Record<string, unknown>;
     delete jsonSchema.$schema;
-    return jsonSchema as OpenApiBodySchema;
+    return jsonSchema;
 }

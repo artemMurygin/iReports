@@ -13,6 +13,7 @@ describe('ListUnmatchedEmployeesService', () => {
             delete: jest.fn(),
             findById: jest.fn(),
             findByEmployee: jest.fn(),
+            findAll: jest.fn(),
             findByExternalId: jest.fn(),
             findUnmatchedEmployees,
         };

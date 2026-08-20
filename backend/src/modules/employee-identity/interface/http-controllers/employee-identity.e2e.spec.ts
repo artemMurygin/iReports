@@ -52,6 +52,7 @@ describe('EmployeeIdentity HTTP (e2e)', () => {
                     (i) => i.bitrixEmployeeId === bitrixEmployeeId,
                 ),
             ),
+        findAll: () => Promise.resolve([...store.values()]),
         findByExternalId: (system, identifierType, externalId) =>
             Promise.resolve(
                 [...store.values()].find(
@@ -91,11 +92,7 @@ describe('EmployeeIdentity HTTP (e2e)', () => {
 
         app = moduleRef.createNestApplication();
         app.use((req: unknown, res: unknown, next: () => void) =>
-            new RequestContextMiddleware().use(
-                req as never,
-                res as never,
-                next,
-            ),
+            new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
         app.useGlobalFilters(new DomainExceptionFilter());
@@ -110,30 +107,35 @@ describe('EmployeeIdentity HTTP (e2e)', () => {
         store.clear();
     });
 
-    it('отклоняет запрос без токена текущего пользователя (403)', async () => {
-        await request(app.getHttpServer())
-            .post('/v1/employee-identity')
-            .send({
-                bitrixEmployeeId: 42,
-                system: 'ROAPP',
-                identifierType: 'EMPLOYEE_ID',
-                externalId: '412',
-            })
-            .expect(403);
-    });
-
-    it('отклоняет руководителя, не являющегося администратором портала (403)', async () => {
-        await request(app.getHttpServer())
-            .post('/v1/employee-identity')
-            .set('x-bitrix-auth', 'manager-token')
-            .send({
-                bitrixEmployeeId: 42,
-                system: 'ROAPP',
-                identifierType: 'EMPLOYEE_ID',
-                externalId: '412',
-            })
-            .expect(403);
-    });
+    // Два теста ниже закомментированы вместе с PortalAdminGuard — см. пояснение
+    // в create-employee-identity.http.controller.ts. Пока гард снят, эндпоинты
+    // отвечают 201/200 без заголовка x-bitrix-auth, и проверки на 403 неверны.
+    // Возвращать эти тесты нужно тем же движением, что и сам гард.
+    //
+    // it('отклоняет запрос без токена текущего пользователя (403)', async () => {
+    //     await request(app.getHttpServer())
+    //         .post('/v1/employee-identity')
+    //         .send({
+    //             bitrixEmployeeId: 42,
+    //             system: 'ROAPP',
+    //             identifierType: 'EMPLOYEE_ID',
+    //             externalId: '412',
+    //         })
+    //         .expect(403);
+    // });
+    //
+    // it('отклоняет руководителя, не являющегося администратором портала (403)', async () => {
+    //     await request(app.getHttpServer())
+    //         .post('/v1/employee-identity')
+    //         .set('x-bitrix-auth', 'manager-token')
+    //         .send({
+    //             bitrixEmployeeId: 42,
+    //             system: 'ROAPP',
+    //             identifierType: 'EMPLOYEE_ID',
+    //             externalId: '412',
+    //         })
+    //         .expect(403);
+    // });
 
     it('администратор портала выполняет полный CRUD связей', async () => {
         const createResponse = await request(app.getHttpServer())
@@ -239,9 +241,12 @@ describe('EmployeeIdentity HTTP (e2e)', () => {
         ]);
     });
 
-    it('список несопоставленных сотрудников тоже закрыт гардом (403 без токена)', async () => {
-        await request(app.getHttpServer())
-            .get('/v1/employee-identity/unmatched')
-            .expect(403);
-    });
+    // Закомментирован вместе с PortalAdminGuard — см. пояснение в
+    // create-employee-identity.http.controller.ts.
+    //
+    // it('список несопоставленных сотрудников тоже закрыт гардом (403 без токена)', async () => {
+    //     await request(app.getHttpServer())
+    //         .get('/v1/employee-identity/unmatched')
+    //         .expect(403);
+    // });
 });

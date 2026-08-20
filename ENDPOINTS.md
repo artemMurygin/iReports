@@ -5,7 +5,11 @@
 ## domains/service/modules/accounting (`/v1/service/accounting`, `/v1/service/motivation-schema`)
 - `GET /v1/service/accounting/salary_report/employee/:id/:period` — отчёт по зарплате сотрудника направления `service` за период (`period` — `YYYY-MM`). С Фазы 4 (см. `docs/service-shop-route-split`) ответ строго однонаправленный — один отчёт направления `service`: `{ period, direction: 'service', isClosed, total: { fact, prognose }, rules, salesPerformance, isPlanApproved }`, без `directions[]`/`grandTotal` (аналог для `shop` — независимый `GET /v1/shop/accounting/salary_report/employee/:id/:period`, см. ниже, не параметр этого же эндпоинта). Пара «факт/прогноз» — режим расчёта `FACT`/`PROGNOSE` (Фаза 9: прогноз берёт `SalesPrognose.percentCompletion` вместо `SalesFact.percentCompletion`, личная база сотрудника не экстраполируется), для `FloatPercent` — `floatPercent.{fact,prognose}.{currentThreshold,nextThreshold,diffToNext}`. Открытый период — ленивый кэш по штампу синхронизации/версии схемы/плана продаж (Фаза 6, ключ `(direction, period, employeeId)`); закрытый — отдаётся из неизменяемого снапшота
 - `GET /v1/service/accounting/salary_report/department/:id/:period` — отчёт по зарплатам отдела направления `service` за период (Фаза 9): тот же расчёт, что и у отчёта сотрудника, агрегированный по каждому сотруднику отдела, строго однонаправленный (`employees[].rules` — только строки `service`, `isClosed`/`total.prognose` — статус периода только этого направления). Контекст ERP-данных/`SalesPerformance`/схем/идентичностей/часов собирается один раз на весь отдел, без N+1 запросов на сотрудника
-- `POST /v1/service/motivation-schema` — создать мотивационную схему (цель + набор зарплатных правил, `direction: 'service'` — правила пишутся с этим дискриминатором в `salary_rules`). Find-or-create по естественному ключу `(targetType, targetId)` строки `motivation_schemas` (Фаза 13.5, issue #57) — если у сотрудника уже есть строка схемы, созданная с shop-стороны (`POST /v1/shop/accounting/motivation-schema` ниже, тот же `targetId`), вторая строка не создаётся, новые правила добавляются к существующей схеме; так сотрудник с идентичностями в обеих ERP получает ровно одну строку `motivation_schemas` независимо от порядка обращений с обеих сторон
+- `POST /v1/service/motivation-schema` — создать мотивационную схему (цель + набор зарплатных правил, `direction: 'service'` — правила пишутся с этим дискриминатором в `salary_rules`). Find-or-create по естественному ключу `(targetType, targetId)` строки `motivation_schemas` (Фаза 13.5, issue #57) — если у сотрудника уже есть строка схемы, созданная с shop-стороны (`POST /v1/shop/accounting/motivation-schema` ниже, тот же `targetId`), вторая строка не создаётся, новые правила добавляются к существующей схеме; так сотрудник с идентичностями в обеих ERP получает ровно одну строку `motivation_schemas` независимо от порядка обращений с обеих сторон. Поведение этого эндпоинта не изменилось фазой "Редактирование зарплатных схем" ниже — find-or-create остался прежним
+- Просмотр/редактирование зарплатных схем (страница списка/деталей, Фаза "Редактирование зарплатных схем") — направление схемы НЕ хранимое поле, а следствие того, что у строки `motivation_schemas` есть ≥1 правило `direction='service'`; строка с 0 такими правилами (все правила принадлежат `shop`-стороне той же схемы) для этих трёх эндпоинтов не существует:
+  - `GET /v1/service/motivation-schema` — список схем сервиса. Query: `targetType?` (`Department`/`Employee`), `targetId?`, `search?` (подстрока по `name`, без учёта регистра). Ответ — `MotivationSchemaListItem[]`: `{ id, name, direction: 'service', target: { type, id, name }, ruleCount, ruleTypes, updatedAt }`, `target.name` резолвится через `modules/directory` (`Неизвестно (id: N)`, если отдел/сотрудник не найден в справочнике), `ruleTypes` — уникальные типы правил схемы в порядке первого появления, `updatedAt = max(schema.updatedAt, ...rules[].updatedAt)`. Без пагинации/сортировки на бэкенде
+  - `GET /v1/service/motivation-schema/:id` — полная схема со всеми правилами (`MotivationSchemaDetailResponse`: `{ id, name, direction: 'service', target, rules: SalaryRuleResponse[], updatedAt }`, каждое правило — `{ id, type, name, targetRole, config }`) — предзаполнение формы редактирования. `404`, если строки `motivation_schemas` нет ИЛИ у неё 0 правил `direction='service'`
+  - `PATCH /v1/service/motivation-schema/:id` — переименовать схему и полностью заменить набор её правил направления `service` (`{ name, rules: SalaryRuleRequest[] }`, без `targetType`/`targetId` — цель схемы редактированием не меняется). Внутри одной транзакции: переименование → `deleteMany({ motivationSchemaId, direction: 'service' })` (не задевает правила `shop` той же строки) → пересоздание каждого правила из `rules` через тот же `CreateSalaryRuleCommand`, что и у `POST` выше (без diff отдельных правил — дельта вычисляется неявно, полная замена). `404` при тех же условиях, что и `GET .../motivation-schema/:id`. Ответ — `{ id }`
 - Расчётный период (`AccountingPeriod`, Фаза 6, дополнено Фазой 13.5 и разделено по направлениям Фазой 3 — см. docs/payroll/plan-payroll-calculation.md и docs/service-shop-route-split) — сервис и магазин закрываются НЕЗАВИСИМЫМИ эндпоинтами без `:direction` в пути (свой `AccountingPeriod`/снапшот на каждое направление): закрытие `service` не трогает открытый период/снапшот `shop`, и наоборот. `close` обслуживают два независимых класса-хендлера (`CloseAccountingPeriodHandler` здесь и `CloseShopAccountingPeriodHandler` в `domains/shop/modules/accounting`, без общего кода/кросс-доменных импортов); `get`/`reopen`/`recalculate` — общие, generic-по-`direction` классы, переиспользуемые обоими доменами через один `CommandBus`. Эндпоинты без гарда (см. «неблокирующие вопросы» PRD, то же решение, что и у `sales`):
   - `GET /v1/service/accounting/period/:period` — статус периода направления `service`; для периода без записи в БД возвращает `status = OPEN`
   - `POST /v1/service/accounting/period/:period/close` — закрыть период (`{ closedBy }`): отклоняется (`409`) со списком строк в `metadata.rows`, если в плане продаж периода есть неутверждённые строки; при успехе создаёт неизменяемый снапшот по каждому сотруднику с личной мотивационной схемой
@@ -37,9 +41,15 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
   отдаются сотрудники всех отделов
 
 ## modules/employee-identity (`/v1/employee-identity`)
-Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Все эндпоинты закрыты
-`PortalAdminGuard` — доступны только администратору портала Bitrix24 (заголовок `x-bitrix-auth` с
-access token текущего пользователя из `BX24.getAuth()`); без токена или не-администратору — `403`.
+Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Эндпоинты блока временно
+открыты: `PortalAdminGuard` (заголовок `x-bitrix-auth` с access token текущего пользователя из
+`BX24.getAuth()`) закомментирован на контроллерах по решению пользователя — страница управления
+связями работает вне встроенного в Bitrix24 контекста и этот заголовок прислать не может. Сам гард
+и `BitrixPortalAdminCheckService` остаются в `src/integrations/bitrix/auth` и могут быть возвращены;
+как именно — см. комментарий в `create-employee-identity.http.controller.ts`.
+- `GET /v1/employee-identity` — все связи разом (`EmployeeIdentityResponse[]`, отсортированы по
+  `bitrixEmployeeId`, затем `createdAt`) — вход для экрана «сотрудники × их связи», чтобы не звать
+  `GET /v1/employee-identity/employee/:employeeId` на каждого сотрудника (N+1)
 - `POST /v1/employee-identity` — создать связь «сотрудник Bitrix × внешняя система × внешний идентификатор»
 - `PATCH /v1/employee-identity/:id` — изменить тип идентификатора и/или внешний ID связи
 - `DELETE /v1/employee-identity/:id` — удалить связь
@@ -167,7 +177,31 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
   `MotivationRequestSchema` контракт, `rules` — `ShopSalaryRuleRequest[]`); правила пишутся в
   `salary_rules` с `direction: 'shop'`. Find-or-create по `(targetType, targetId)`, см. выше — тот же
   `targetId`, отправленный сюда и в `POST /v1/service/motivation-schema` сервиса, даёт одну строку
-  `motivation_schemas` с правилами обоих направлений, а не две
+  `motivation_schemas` с правилами обоих направлений, а не две. Поведение этого эндпоинта не изменилось
+  фазой "Редактирование зарплатных схем" ниже — find-or-create остался прежним
+- Просмотр/редактирование зарплатных схем магазина (страница списка/деталей, зеркало одноимённых
+  эндпоинтов `service` выше) — направление схемы НЕ хранимое поле, а следствие того, что у строки
+  `motivation_schemas` есть ≥1 правило `direction='shop'`; строка с 0 такими правилами (все правила
+  принадлежат `service`-стороне той же схемы) для этих трёх эндпоинтов не существует:
+  - `GET /v1/shop/accounting/motivation-schema` — список схем магазина. Query: `targetType?`
+    (`Department`/`Employee`), `targetId?`, `search?` (подстрока по `name`, без учёта регистра). Ответ —
+    `ShopMotivationSchemaListItem[]`: `{ id, name, direction: 'shop', target: { type, id, name },
+    ruleCount, ruleTypes, updatedAt }`, `target.name` резолвится через `modules/directory`
+    (`Неизвестно (id: N)`, если отдел/сотрудник не найден в справочнике), `ruleTypes` — уникальные типы
+    правил схемы в порядке первого появления, `updatedAt = max(schema.updatedAt, ...rules[].updatedAt)`.
+    Без пагинации/сортировки на бэкенде
+  - `GET /v1/shop/accounting/motivation-schema/:id` — полная схема со всеми правилами
+    (`ShopMotivationSchemaDetailResponse`: `{ id, name, direction: 'shop', target, rules:
+    ShopSalaryRuleResponse[], updatedAt }`, каждое правило — `{ id, type, name, targetRole, config }`) —
+    предзаполнение формы редактирования. `404`, если строки `motivation_schemas` нет ИЛИ у неё 0 правил
+    `direction='shop'`
+  - `PATCH /v1/shop/accounting/motivation-schema/:id` — переименовать схему и полностью заменить набор
+    её правил направления `shop` (`{ name, rules: ShopSalaryRuleRequest[] }`, без `targetType`/
+    `targetId` — цель схемы редактированием не меняется). Внутри одной транзакции: переименование →
+    `deleteMany({ motivationSchemaId, direction: 'shop' })` (не задевает правила `service` той же
+    строки) → пересоздание каждого правила из `rules` через тот же `CreateShopSalaryRuleCommand`, что и
+    у `POST` выше (без diff отдельных правил — дельта вычисляется неявно, полная замена). `404` при тех
+    же условиях, что и `GET .../motivation-schema/:id`. Ответ — `{ id }`
 - Выполнение задачи сотрудником магазина (`ShopTaskCompletion`, Фаза 13.5) — независимая сущность
   (не переиспользует `TaskCompletion` сервиса), тот же двухступенчатый воркфлоу подтверждения
   (`PENDING_CONFIRMATION` → `CONFIRMED`/`REJECTED`, без интеграции с Bitrix24 Tasks) и та же общая

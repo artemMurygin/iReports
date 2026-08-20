@@ -1,0 +1,86 @@
+import type { MotivationSchemaDetailResponse, TargetRole } from 'ireports-contracts'
+import { RuleList } from '@/features/SalaryRuleForm'
+import type { RuleFormConfig, RuleType } from '@/features/SalaryRuleForm'
+
+import { Layout } from '../../ui/Layout.tsx'
+import { MobileSaveBar } from '../../ui/MobileSaveBar.tsx'
+import { PageHeader } from '../../ui/PageHeader.tsx'
+import { TargetSummaryCard } from '../../ui/TargetSummaryCard/TargetSummaryCard.tsx'
+import { useServiceSchemaEditForm } from '../model/useServiceSchemaEditForm.ts'
+
+export type ServiceSchemaEditFormProps = {
+    schema: MotivationSchemaDetailResponse
+    config: RuleFormConfig
+    allowedRolesByType: Partial<Record<RuleType, TargetRole[]>>
+    isRoleTypesLoading: boolean
+    roleTypesError: string | null
+}
+
+/**
+ * Мандатор-компонент формы редактирования (направление "Сервис") — зеркало
+ * `pages/SalaryRules/mediator/SalaryRulesCreate.tsx`: вызывает единственный хук
+ * (`useServiceSchemaEditForm`) и раскладывает его плоский результат по слотам `ui/Layout`. Никакого
+ * условного рендера здесь нет — он уже произошёл на уровень выше, в `ServiceSchemaEdit.tsx`
+ * (загрузка/ошибка), этот компонент существует только когда `schema` уже точно есть.
+ */
+export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
+    const page = useServiceSchemaEditForm(props)
+
+    const header = (
+        <PageHeader
+            schemaName={page.schemaName}
+            onSave={page.handleSave}
+            canSave={page.canSave}
+            isSubmitting={page.isSubmitting}
+        />
+    )
+
+    const target = (
+        <TargetSummaryCard
+            className="w-full md:w-[400px] md:shrink-0"
+            direction="service"
+            targetType={page.target.type}
+            targetName={page.target.name}
+            schemaName={page.schemaName}
+            onSchemaNameChange={page.onSchemaNameChange}
+            ruleCount={page.ruleCount}
+        />
+    )
+
+    const rules = (
+        <RuleList
+            className="w-full flex-1"
+            eyebrow="ПРАВИЛА СХЕМЫ"
+            drafts={page.rules.drafts}
+            expandedId={page.rules.expandedId}
+            categories={page.categories}
+            ruleFormProps={{
+                config: page.config,
+                allowedRolesByType: page.allowedRolesByType,
+                isRoleTypesLoading: page.isRoleTypesLoading,
+                roleTypesError: page.roleTypesError,
+                isCategoriesLoading: page.isCategoriesLoading,
+                categoriesError: page.categoriesError,
+                onChange: page.rules.updateDraft,
+                onChangeType: page.rules.changeType,
+                onChangeBorder: page.rules.updateBorder,
+                onCancel: page.rules.cancelExpanded,
+                onSave: page.rules.trySaveExpanded,
+            }}
+            onAdd={page.rules.addDraft}
+            onExpand={page.rules.toggleExpand}
+            onDelete={page.rules.removeDraft}
+        />
+    )
+
+    const mobileBar = (
+        <MobileSaveBar
+            className="sticky bottom-[var(--bottom-nav-h,4.5rem)] z-30 mt-auto md:hidden"
+            onSave={page.handleSave}
+            canSave={page.canSave}
+            isSubmitting={page.isSubmitting}
+        />
+    )
+
+    return <Layout header={header} target={target} rules={rules} mobileBar={mobileBar} />
+}

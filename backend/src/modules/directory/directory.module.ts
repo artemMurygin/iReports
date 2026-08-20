@@ -24,5 +24,10 @@ import { ListEmployeesHttpController } from './interface/http-controllers/list-e
             useClass: DirectoryRepository,
         },
     ],
+    // Экспорт токена — иначе AccountingModule/ShopAccountingModule не могут
+    // инжектить DIRECTORY_REPOSITORY для резолвинга target.name в
+    // ListMotivationSchemasService/GetMotivationSchemaService (см.
+    // apiDesign плана "Редактирование зарплатных схем").
+    exports: [DIRECTORY_REPOSITORY],
 })
 export class DirectoryModule {}

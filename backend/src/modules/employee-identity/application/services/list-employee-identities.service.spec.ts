@@ -19,6 +19,7 @@ describe('ListEmployeeIdentitiesService', () => {
                 delete: jest.fn(),
                 findById: jest.fn(),
                 findByEmployee,
+                findAll: jest.fn(),
                 findByExternalId: jest.fn(),
                 findUnmatchedEmployees: jest.fn(),
             };

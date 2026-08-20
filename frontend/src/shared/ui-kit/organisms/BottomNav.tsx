@@ -41,9 +41,10 @@ export type BottomNavProps = {
 const ITEM_CLASS =
     'flex flex-1 flex-col items-center justify-center gap-1 rounded-[10px] py-1 outline-none select-none focus-visible:ring-2 focus-visible:ring-brand/40'
 
-function BottomNav({ items, className }: BottomNavProps) {
+const BottomNav = React.forwardRef<HTMLElement, BottomNavProps>(function BottomNav({ items, className }, ref) {
     return (
         <nav
+            ref={ref}
             data-slot="bottom-nav"
             aria-label="Основная навигация"
             className={cn(
@@ -56,7 +57,7 @@ function BottomNav({ items, className }: BottomNavProps) {
             ))}
         </nav>
     )
-}
+})
 
 function BottomNavEntry({ label, icon, to, end, active, onClick, disabled }: BottomNavItem) {
     if (disabled) {

@@ -1,11 +1,14 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { UnmatchedEmployeeResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
 import { ListUnmatchedEmployeesService } from '../../application/services/list-unmatched-employees.service';
 
-@UseGuards(PortalAdminGuard)
+// Гард снят по решению пользователя — см. пояснение в
+// create-employee-identity.http.controller.ts.
+// import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
+
+// @UseGuards(PortalAdminGuard)
 @ApiTags('Идентификация сотрудников')
 @Controller(routesV1.version)
 export class ListUnmatchedEmployeesHttpController {

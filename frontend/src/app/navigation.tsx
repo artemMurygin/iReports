@@ -4,8 +4,10 @@ import {
     ChartNoAxesColumn,
     FileText,
     LayoutDashboard,
+    Link2,
     Percent,
     Receipt,
+    Settings,
     Target,
     TrendingUp,
     Wallet,
@@ -41,9 +43,13 @@ export type NavSection = {
  * (matches the previous plain header's treatment of "Отчёт по зарплатам") — most of this IA is
  * still placeholder until those pages exist; "Воронка продаж", "Услуги" (formerly flat
  * "Аналитика услуг", now nested under "Аналитика" per the updated design), "План продаж"
- * (view-only, see docs/sales-plan-view-page/plan-sales-plan-view-page.md), and "Правила
- * начисления" (create-only, service direction — see
- * docs/salary-schema-creation-ui/plan-salary-schema-creation-ui.md, Фаза 2) are real today.
+ * (view-only, see docs/sales-plan-view-page/plan-sales-plan-view-page.md), "Правила
+ * начисления" (`/salaries/rules` — the schema LIST page, `pages/SalaryRuleList`, see
+ * docs/salary-schema-list-ui; schema creation moved to the child route `/salaries/rules/new`,
+ * `pages/SalaryRules`, still linked from there via its "Создать схему" actions — see
+ * docs/salary-schema-creation-ui/plan-salary-schema-creation-ui.md, Фаза 2) and "Связи
+ * сотрудников" (единственная страница нового раздела «Настройки» — сопоставление сотрудников
+ * между ERP-системами, `/settings/employee-identity`) are real today.
  *
  * Lives in its own module (not inlined in `app/Header.tsx`) so both `app/Header.tsx` (desktop
  * Nav Bar + mobile drawer) and `app/BottomNav.tsx` (Pencil node `XXiyY`) can share one source
@@ -73,6 +79,15 @@ export const SECTIONS: NavSection[] = [
             { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
             { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
         ],
+    },
+    // Раздел «Настройки» — служебная часть IA (нет в Pencil-макете, там только
+    // Продажи/Аналитика/Зарплата/График). Пока в нём одна страница, поэтому Subnav для него
+    // не рисуется (`app/Header.tsx` показывает вкладки только при items.length > 1), а
+    // верхнеуровневая ссылка ведёт сразу на «Связи сотрудников».
+    {
+        label: 'Настройки',
+        icon: <Settings />,
+        items: [{ label: 'Связи сотрудников', to: '/settings/employee-identity', icon: <Link2 /> }],
     },
 ]
 
@@ -113,3 +128,22 @@ export const TOP_LEVEL_NAV_ITEMS: NavLeaf[] = [
     }),
     STANDALONE_ITEM,
 ]
+
+/**
+ * Пункты нижней мобильной навигации (`app/BottomNav.tsx`). Макет Pencil
+ * (design/sallary-first-iteration.pen, узел `XXiyY` `ERP/Mobile/Bottom Nav`, 390px) рассчитан
+ * ровно на 5 равных слотов, последний из которых — «Ещё» (открывает `NavDrawer`). После
+ * появления раздела «Настройки» верхнеуровневых пунктов стало 5, и шестой слот в ширину
+ * не помещается: подписи в 11px («Настройки», «График работы») начали бы обрезаться.
+ *
+ * Решение: из нижней навигации исключается именно «Настройки» — редко используемый служебный
+ * раздел, в отличие от четырёх ежедневных (Продажи/Аналитика/Зарплата/График работы), которые
+ * и стоят в макете. На мобильном раздел остаётся доступен через «Ещё»: `DRAWER_SECTIONS`
+ * строятся из `SECTIONS` целиком, поэтому в шторке он появляется автоматически. На десктопе
+ * (`app/Header.tsx`) ограничения нет — там рендерится полный `TOP_LEVEL_NAV_ITEMS`.
+ */
+const BOTTOM_NAV_EXCLUDED_LABELS = ['Настройки']
+
+export const BOTTOM_NAV_ITEMS: NavLeaf[] = TOP_LEVEL_NAV_ITEMS.filter(
+    (item) => !BOTTOM_NAV_EXCLUDED_LABELS.includes(item.label),
+)

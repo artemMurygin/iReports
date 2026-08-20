@@ -58,8 +58,8 @@ describe('ShopSalesPlanAutoCreationCron', () => {
         expect(logCronError).toHaveBeenCalledWith(
             'ShopSalesPlanAutoCreationCron.run',
             expect.any(Error),
-            expect.objectContaining({
-                period: expect.any(String) as unknown as string,
+            expect.objectContaining<{ period: string }>({
+                period: expect.any(String) as string,
             }),
         );
     });

@@ -4,15 +4,17 @@ import {
     HttpCode,
     HttpStatus,
     Param,
-    UseGuards,
 } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
-import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
 import { DeleteEmployeeIdentityCommand } from '../../application/command/delete-employee-identity.command';
 
-@UseGuards(PortalAdminGuard)
+// Гард снят по решению пользователя — см. пояснение в
+// create-employee-identity.http.controller.ts.
+// import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
+
+// @UseGuards(PortalAdminGuard)
 @ApiTags('Идентификация сотрудников')
 @Controller(routesV1.version)
 export class DeleteEmployeeIdentityHttpController {

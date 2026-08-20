@@ -14,6 +14,7 @@ describe('DeleteEmployeeIdentityHandler', () => {
             delete: deleteFn,
             findById: jest.fn().mockResolvedValue(found),
             findByEmployee: jest.fn(),
+            findAll: jest.fn(),
             findByExternalId: jest.fn(),
             findUnmatchedEmployees: jest.fn(),
         };

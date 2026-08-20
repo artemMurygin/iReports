@@ -22,6 +22,7 @@ describe('UpdateEmployeeIdentityHandler', () => {
             delete: jest.fn(),
             findById,
             findByEmployee: jest.fn(),
+            findAll: jest.fn(),
             findByExternalId,
             findUnmatchedEmployees: jest.fn(),
         };

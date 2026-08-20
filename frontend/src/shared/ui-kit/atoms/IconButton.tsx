@@ -25,6 +25,10 @@ const iconButtonVariants = cva(
                 danger: 'text-ink-faint hover:bg-danger-soft hover:text-danger',
             },
             size: {
+                // `sm` — маленькая кнопка-иконка 22px внутри ячейки таблицы (Pencil `CpVvw`,
+                // «Связи сотрудников»: Plus 13px рядом с чипами идентификаторов, добавляет
+                // второй идентификатор в ту же систему).
+                sm: "size-[22px] [&_svg:not([class*='size-'])]:size-[13px]",
                 default: 'size-7',
                 lg: 'size-8',
             },

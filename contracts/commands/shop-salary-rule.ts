@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import {
-    individualBonusFieldSchema,
     percentBordersSchema,
     salaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema,
@@ -16,8 +15,8 @@ import {
 // `type: 'PayPerHour'`/`type: 'TaskCompleted'` у обоих направлений совпадают
 // буквально — смешение узла discriminatedUnion дало бы неоднозначный тип
 // (то же решение и по той же причине для `TaskCompleted`, Фаза 13, что и
-// для `PayPerHour` в Фазе 12). `targetRoleSchema`/`percentBordersSchema`/
-// `individualBonusFieldSchema` — переиспользованы напрямую из
+// для `PayPerHour` в Фазе 12). `targetRoleSchema`/`percentBordersSchema` —
+// переиспользованы напрямую из
 // `salary-rule.ts`: это НЕ бизнес-логика (issue #57 запрещает
 // переиспользовать именно её), а разделяемый примитивный словарь форм
 // (см. комментарий у targetRoleSchema в salary-rule.ts).
@@ -42,7 +41,6 @@ export type ShopSalaryBasis = z.infer<typeof shopSalaryBasisSchema>;
 // не были технически связаны одним объектом.
 const payPerHourShopSalaryConfigSchema = z.object({
     price: z.number(),
-    bonus: individualBonusFieldSchema,
 });
 
 const payPerHourShopSalaryRuleSchema = z.object({
@@ -77,7 +75,6 @@ const productSoldSalaryConfigSchema = z.object({
             percentBorders: percentBordersSchema,
         }),
     ]),
-    bonus: individualBonusFieldSchema,
 });
 
 const productSoldSalaryRuleSchema = z.object({
@@ -109,7 +106,6 @@ const usedProductSoldSalaryConfigSchema = z.object({
             salaryBasis: shopSalaryBasisSchema,
         }),
     ]),
-    bonus: individualBonusFieldSchema,
 });
 
 const usedProductSoldSalaryRuleSchema = z.object({
@@ -139,7 +135,6 @@ const taskCompletedShopSalaryConfigSchema = z.object({
             percentBorders: percentBordersSchema,
         }),
     ]),
-    bonus: individualBonusFieldSchema,
 });
 
 const taskCompletedShopSalaryRuleSchema = z.object({
@@ -160,6 +155,27 @@ const shopSalaryRuleRequestSchema = z.discriminatedUnion('type', [
 
 export type ShopSalaryRuleRequest = z.infer<typeof shopSalaryRuleRequestSchema>;
 
+// ========================== Ответ (правило с id) ========================== //
+
+// Зеркало salaryRuleResponseSchema сервиса (contracts/commands/salary-rule.ts,
+// страница просмотра/редактирования зарплатных схем) — тот же
+// shopSalaryRuleRequestSchema, но с добавленным `id` на каждом варианте
+// union'а. Нужен для GET /v1/shop/accounting/motivation-schema/:id (rules[])
+// и как строительный блок ShopMotivationSchemaDetailResponse
+// (shop-motivation-schema.ts) — предзаполнение формы редактирования на
+// фронте, в отличие от shopSalaryRuleRequestSchema, требует знать id уже
+// существующего правила.
+const shopSalaryRuleResponseSchema = z.discriminatedUnion('type', [
+    payPerHourShopSalaryRuleSchema.extend({ id: z.string() }),
+    productSoldSalaryRuleSchema.extend({ id: z.string() }),
+    usedProductSoldSalaryRuleSchema.extend({ id: z.string() }),
+    taskCompletedShopSalaryRuleSchema.extend({ id: z.string() }),
+]);
+
+export type ShopSalaryRuleResponse = z.infer<
+    typeof shopSalaryRuleResponseSchema
+>;
+
 // ========================== Список типов правил магазина для UI ========================== //
 
 // Форма ответа идентична сервисной (salaryRuleTypeInfoSchema/
@@ -170,6 +186,7 @@ export type ShopSalaryRuleRequest = z.infer<typeof shopSalaryRuleRequestSchema>;
 // же экспортированный zod-схема-тип, а не дублируется.
 export {
     shopSalaryRuleRequestSchema,
+    shopSalaryRuleResponseSchema,
     shopSalaryBasisSchema,
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,

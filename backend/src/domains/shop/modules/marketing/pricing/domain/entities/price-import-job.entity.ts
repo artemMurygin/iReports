@@ -13,10 +13,7 @@ import { PriceImportJobCompletedDomainEvent } from '../events/price-import-job-c
 import { PriceImportJobFailedDomainEvent } from '../events/price-import-job-failed.domain-event';
 
 export type PriceImportJobStatus =
-    | 'CREATED'
-    | 'RUNNING'
-    | 'COMPLETED'
-    | 'FAILED';
+    'CREATED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
 export interface PriceImportJobResult {
     readonly matches: ProductMatch[];

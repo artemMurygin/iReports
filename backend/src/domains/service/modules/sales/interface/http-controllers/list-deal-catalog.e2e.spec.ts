@@ -125,11 +125,7 @@ describe('GET /v1/service/sales/deals/{stages,managers,sources,stage-groups,mode
 
         app = moduleRef.createNestApplication();
         app.use((req: unknown, res: unknown, next: () => void) =>
-            new RequestContextMiddleware().use(
-                req as never,
-                res as never,
-                next,
-            ),
+            new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
         app.useGlobalFilters(new DomainExceptionFilter());

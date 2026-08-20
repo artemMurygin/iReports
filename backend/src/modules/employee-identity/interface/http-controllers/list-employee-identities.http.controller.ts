@@ -1,12 +1,15 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { EmployeeIdentityResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
 import { ArgumentInvalidException } from '@/shared/exceptions';
-import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
 import { ListEmployeeIdentitiesService } from '../../application/services/list-employee-identities.service';
 
-@UseGuards(PortalAdminGuard)
+// Гард снят по решению пользователя — см. пояснение в
+// create-employee-identity.http.controller.ts.
+// import { PortalAdminGuard } from '@/integrations/bitrix/auth/portal-admin.guard';
+
+// @UseGuards(PortalAdminGuard)
 @ApiTags('Идентификация сотрудников')
 @Controller(routesV1.version)
 export class ListEmployeeIdentitiesHttpController {

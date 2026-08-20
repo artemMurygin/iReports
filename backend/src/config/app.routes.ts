@@ -108,9 +108,10 @@ export const routesV1 = {
         departments: `${directoryRoot}/departments`,
         employees: `${directoryRoot}/employees`,
     },
-    // Все маршруты этого блока закрыты PortalAdminGuard — доступны только
-    // администратору портала Bitrix24 (см. Фаза 2,
-    // docs/payroll/prd-payroll-calculation.md, раздел 1).
+    // Маршруты этого блока были закрыты PortalAdminGuard (Фаза 2,
+    // docs/payroll/prd-payroll-calculation.md, раздел 1), но ограничение снято
+    // по решению пользователя — гард закомментирован на контроллерах, см.
+    // пояснение в create-employee-identity.http.controller.ts.
     employeeIdentity: {
         root: employeeIdentityRoot,
         byId: `/${employeeIdentityRoot}/:id`,
@@ -118,12 +119,12 @@ export const routesV1 = {
         unmatched: `/${employeeIdentityRoot}/unmatched`,
     },
     // Маршруты направления service (domains/service) — под префиксом
-    // /v1/service. Без модели прав в проекте эндпоинты не закрыты гардом, в
-    // отличие от employeeIdentity (см. "неблокирующие вопросы" PRD).
+    // /v1/service. Модели прав в проекте нет, гардом эндпоинты не закрыты (см.
+    // "неблокирующие вопросы" PRD).
     service: {
         motivationSchema: {
             root: serviceMotivationSchemaRoot,
-            delete: `${serviceMotivationSchemaRoot}/:id`,
+            byId: `${serviceMotivationSchemaRoot}/:id`,
         },
         accounting: {
             salaryRuleTypes: `${serviceAccountingRoot}/salary_role_types`,
@@ -228,7 +229,16 @@ export const routesV1 = {
             // namespace shopAccountingRoot, а не через общие константы сервиса
             // (см. запрет на импорт между domains/service и domains/shop в
             // backend/CLAUDE.md и src/domains/service/CLAUDE.md).
-            motivationSchema: `${shopAccountingRoot}/motivation-schema`,
+            // motivationSchema: { root, byId } — Фаза "Редактирование
+            // зарплатных схем" добавила GET-список/GET-по-id/PATCH к уже
+            // существующему POST; byId используется всеми тремя новыми
+            // маршрутами (GET/PATCH .../motivation-schema/:id), root — и
+            // старым POST, и новым GET-списком. Зеркалит
+            // service.motivationSchema (см. выше).
+            motivationSchema: {
+                root: `${shopAccountingRoot}/motivation-schema`,
+                byId: `${shopAccountingRoot}/motivation-schema/:id`,
+            },
             taskCompletions: `${shopAccountingRoot}/task_completions`,
             taskCompletionById: `${shopAccountingRoot}/task_completions/:id`,
             confirmTaskCompletion: `${shopAccountingRoot}/task_completions/:id/confirm`,

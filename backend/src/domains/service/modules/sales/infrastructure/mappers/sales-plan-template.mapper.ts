@@ -5,7 +5,6 @@ import {
 import { Mapper } from '@/shared/domain/mapper.interface';
 import { SalesPlanTemplate } from '@/domains/service/modules/sales/domain/entities/sales-plan-template.entity';
 import { SalesPlanScope } from '@/domains/service/modules/sales/domain/value-objects/sales-plan-scope.value-object';
-import type { SalesDirection } from '@/domains/service/modules/sales/domain/types/sales-plan.types';
 import { categoryToDomain, categoryToPersistence } from './sales-plan.mapper';
 
 export class SalesPlanTemplateMapper implements Mapper<
@@ -19,7 +18,7 @@ export class SalesPlanTemplateMapper implements Mapper<
             updatedAt: record.updatedAt,
             props: {
                 scope: SalesPlanScope.create(
-                    record.direction as SalesDirection,
+                    record.direction,
                     record.departmentId,
                     categoryToDomain(record.categoryId),
                 ),
