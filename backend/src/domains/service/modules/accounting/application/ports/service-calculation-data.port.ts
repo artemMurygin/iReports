@@ -12,7 +12,7 @@ import type {
 // для его сборки — один связный порт, а не три независимых DI-токена.
 //
 // Это порт чтения "через границы агрегатов" (EmployeeIdentity,
-// RoappServiceOrder/RoappOrder/RoappService, EmployeeHoursEntry) — не
+// RoappServiceOrder/RoappOrder/RoappService, WorkScheduleEntry) — не
 // репозиторий одного аггрегата, а вход контекста расчёта, как и
 // ServiceSalesFactSourcePort в модуле sales.
 export interface ServiceCalculationDataPort {
@@ -33,8 +33,10 @@ export interface ServiceCalculationDataPort {
         to: Date,
     ): Promise<ServiceCompletedErpItem[]>;
 
-    // Отработанные часы сотрудника за период — ручной ввод (Фаза 7,
-    // EmployeeHoursEntry). 0, если записи нет.
+    // Отработанные часы сотрудника за период — сумма часов рабочих смен
+    // графика (WorkScheduleEntry.status = WORKING, Фаза 5,
+    // docs/employee-work-schedule) вместо прежнего ручного ввода
+    // EmployeeHoursEntry (модель удалена). 0, если рабочих смен нет.
     findHoursWorked(bitrixEmployeeId: number, period: string): Promise<number>;
 
     // Заказы, оплаченные в периоде (Фаза 8, "оплаченный" — по группе
@@ -73,8 +75,8 @@ export interface ServiceCalculationDataPort {
     ): Promise<Map<number, EmployeeIdentityRef[]>>;
 
     // Батч-версия findHoursWorked для отдела целиком (Фаза 9) — один запрос
-    // вместо одного на сотрудника. Сотрудники без записи получают 0 (как и
-    // в findHoursWorked).
+    // вместо одного на сотрудника. Сотрудники без рабочих смен за период
+    // получают 0 (как и в findHoursWorked).
     findHoursWorkedForEmployees(
         bitrixEmployeeIds: number[],
         period: string,

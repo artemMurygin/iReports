@@ -79,11 +79,11 @@ export type UpsertWorkScheduleEntryRequest = z.infer<
 >;
 
 // Месяц графика в формате 'YYYY-MM' — тот же формат/шаблон, что и period в
-// contracts/commands/employee-hours-entry.ts и backend Period value object
+// contracts/commands/sales-plan.ts и backend Period value object
 // (shared/domain/period.value-object.ts), но своя копия схемы: у модуля
-// графика нет зависимости на accounting, а формат достаточно простой, чтобы
-// не заводить общий контрактный тип ради одного regexp (тот же выбор уже
-// сделан в employee-hours-entry.ts).
+// графика нет зависимости на accounting/sales, а формат достаточно простой,
+// чтобы не заводить общий контрактный тип ради одного regexp (тот же выбор
+// уже сделан в sales-plan.ts).
 const workScheduleMonthSchema = z
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Месяц должен быть в формате YYYY-MM');

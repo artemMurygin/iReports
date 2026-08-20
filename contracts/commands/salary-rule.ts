@@ -76,8 +76,10 @@ const percentBordersSchema = z.tuple([
 
 // ========================== Почасовая ставка ========================== //
 
-// hours больше не часть config: источник часов — ручной ввод за период
-// (EmployeeHoursEntry, см. Фазу 7 плана), а не захардкоженное значение в
+// hours больше не часть config: источник часов — сумма часов рабочих смен
+// графика сотрудника за период (WorkScheduleEntry.status = WORKING, см.
+// docs/employee-work-schedule, Фаза 5; заменил прежний ручной ввод
+// EmployeeHoursEntry из Фазы 7 плана), а не захардкоженное значение в
 // правиле. price — ставка за час.
 const payPerHourSalaryConfigSchema = z.object({
     price: z.number(),

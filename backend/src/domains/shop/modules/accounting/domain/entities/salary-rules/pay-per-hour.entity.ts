@@ -14,9 +14,9 @@ import {
 
 // Зеркало domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity.ts
 // (Фаза 12, issue #59) — независимая реализация в домене shop. Формула та
-// же (hours × price), источник часов — тоже общий EmployeeHoursEntry
-// (ручной ввод, направление-агностичен), но собственный класс: домен shop
-// не импортирует PayPerHoursEntity сервиса (issue #57).
+// же (hours × price), источник часов — тоже общий график работы
+// (WorkScheduleEntry, Фаза 5, direction-агностичен), но собственный класс:
+// домен shop не импортирует PayPerHoursEntity сервиса (issue #57).
 export class PayPerHourShopEntity
     extends Entity<PayPerHourShopSalaryRule>
     implements ShopSalaryRule

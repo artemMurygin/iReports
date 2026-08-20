@@ -35,10 +35,12 @@ export type ShopSalaryBasis = z.infer<typeof shopSalaryBasisSchema>;
 // ========================== Почасовая ставка ========================== //
 
 // Зеркало payPerHourSalaryConfigSchema сервиса (Фаза 12) — тот же смысл
-// поля (hours приходит из ручного ввода EmployeeHoursEntry, общей для
-// обоих направлений таблицы, см. domains/shop/modules/accounting/CLAUDE
-// комментарии на бэкенде), но отдельный литерал схемы, чтобы направления
-// не были технически связаны одним объектом.
+// поля (hours приходит из суммы часов рабочих смен графика,
+// WorkScheduleEntry.status = WORKING, общей для обоих направлений таблицы,
+// см. docs/employee-work-schedule, Фаза 5, и
+// domains/shop/modules/accounting/CLAUDE комментарии на бэкенде), но
+// отдельный литерал схемы, чтобы направления не были технически связаны
+// одним объектом.
 const payPerHourShopSalaryConfigSchema = z.object({
     price: z.number(),
 });

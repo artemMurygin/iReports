@@ -156,8 +156,6 @@ export const routesV1 = {
             taskCompletionById: `${serviceAccountingRoot}/task_completions/:id`,
             confirmTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/confirm`,
             rejectTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/reject`,
-            employeeHours: `${serviceAccountingRoot}/employee_hours`,
-            employeeHoursById: `${serviceAccountingRoot}/employee_hours/:id`,
             // Расчётный период направления service (Фаза 3) — раньше жил на
             // общем для service/shop пути /accounting/period/:direction/:period
             // с direction, читаемым из route-параметра (см.

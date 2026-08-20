@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
+import { Period } from '@/shared/domain/period.value-object';
 import type {
     ConfirmedTaskCompletionErpItem,
     OrderPayedErpItem,
@@ -9,6 +10,7 @@ import type {
 } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import { PAID_ORDER_STATUS_GROUPS } from '@/domains/service/modules/accounting/domain/services/paid-order-status';
+import { WORKING_STATUS } from '@/modules/work-schedule/domain/constants/working-status';
 
 @Injectable()
 export class ServiceCalculationDataRepository
@@ -76,16 +78,30 @@ export class ServiceCalculationDataRepository
         }));
     }
 
+    // Часы сотрудника за период — сумма часов рабочих смен графика
+    // (WorkScheduleEntry.status = WORKING) в границах периода (Фаза 5,
+    // docs/employee-work-schedule) вместо прежнего ручного ввода
+    // EmployeeHoursEntry (модель удалена). Границы — тот же
+    // Period.getBounds(), что и у остальных ERP-выборок этого репозитория
+    // (UTC-полночь первого дня — UTC 23:59:59.999 последнего);
+    // WorkScheduleEntry.date хранится тем же UTC-принципом (см.
+    // ScheduleDate), поэтому day-колонка @db.Date корректно попадает в
+    // диапазон gte/lte. Нет ни одной подходящей смены — Prisma `_sum`
+    // отдаёт null, приводим к 0 (как и раньше у отсутствующей записи).
     async findHoursWorked(
         bitrixEmployeeId: number,
         period: string,
     ): Promise<number> {
-        const record = await this.client.employeeHoursEntry.findUnique({
+        const { from, to } = Period.create(period).getBounds();
+        const result = await this.client.workScheduleEntry.aggregate({
             where: {
-                employeeId_period: { employeeId: bitrixEmployeeId, period },
+                employeeId: bitrixEmployeeId,
+                status: WORKING_STATUS,
+                date: { gte: from, lte: to },
             },
+            _sum: { hours: true },
         });
-        return record?.hours ?? 0;
+        return result._sum.hours ?? 0;
     }
 
     // "Оплаченный заказ" (Фаза 8) — заказ, чей ТЕКУЩИЙ статус относится к
@@ -191,6 +207,12 @@ export class ServiceCalculationDataRepository
         return map;
     }
 
+    // Батч-версия findHoursWorked для отдела целиком (Фаза 9) — один
+    // groupBy вместо findUnique на сотрудника (Фаза 5 переиспользует тот же
+    // приём "один запрос на отдел", что и остальные find*ForEmployees).
+    // Сотрудник без единой рабочей смены за период в результат groupBy не
+    // попадает — карта просто не содержит его ключ, вызывающая сторона (см.
+    // findHoursWorked) уже трактует отсутствие как 0.
     async findHoursWorkedForEmployees(
         bitrixEmployeeIds: number[],
         period: string,
@@ -199,12 +221,18 @@ export class ServiceCalculationDataRepository
         if (bitrixEmployeeIds.length === 0) {
             return map;
         }
-        const records = await this.client.employeeHoursEntry.findMany({
-            where: { employeeId: { in: bitrixEmployeeIds }, period },
-            select: { employeeId: true, hours: true },
+        const { from, to } = Period.create(period).getBounds();
+        const rows = await this.client.workScheduleEntry.groupBy({
+            by: ['employeeId'],
+            where: {
+                employeeId: { in: bitrixEmployeeIds },
+                status: WORKING_STATUS,
+                date: { gte: from, lte: to },
+            },
+            _sum: { hours: true },
         });
-        for (const record of records) {
-            map.set(record.employeeId, record.hours);
+        for (const row of rows) {
+            map.set(row.employeeId, row._sum.hours ?? 0);
         }
         return map;
     }

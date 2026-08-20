@@ -33,8 +33,8 @@ export type ListDepartmentsResponse = z.infer<
 
 // departmentId — необязательный фильтр; без него отдаются сотрудники всех
 // отделов. z.coerce.number() (не z.coerce.date()) в query безопасен для
-// генерации OpenAPI — тот же приём, что и listEmployeeHoursEntriesQuerySchema
-// (см. contracts/commands/employee-hours-entry.ts).
+// генерации OpenAPI — тот же приём, что и у departmentId в
+// getMonthlyWorkScheduleQuerySchema (см. contracts/commands/work-schedule.ts).
 const listEmployeesQuerySchema = z.object({
     departmentId: z.coerce.number().int().positive().optional(),
 });

@@ -84,12 +84,14 @@ domains/service/
   обоих местах. `PeriodCalculationOrchestrator` (`domain/services/`) вызывает `calculate()` каждого
   правила схемы и суммирует строки — правила независимы, не ссылаются на результаты друг друга.
 - **Команды** (`application/command/`): помимо создания схемы/правила — `CloseAccountingPeriodCommand`,
-  `ReopenAccountingPeriodCommand`, `RecalculateAccountingPeriodCommand`, CRUD `EmployeeHoursEntry` и
-  `TaskCompletion` (`Create/Delete...`, `ConfirmTaskCompletion`) — стандартный `@nestjs/cqrs`
-  `CommandBus` (`CqrsModule` импортирован в `accounting.module.ts`).
+  `ReopenAccountingPeriodCommand`, `RecalculateAccountingPeriodCommand` и CRUD `TaskCompletion`
+  (`Create/Delete...`, `ConfirmTaskCompletion`) — стандартный `@nestjs/cqrs`
+  `CommandBus` (`CqrsModule` импортирован в `accounting.module.ts`). CRUD `EmployeeHoursEntry` (Фаза 7)
+  удалён Фазой 5 `docs/employee-work-schedule` — источник часов `PayPerHour` теперь общий модуль
+  `modules/work-schedule` (см. ниже).
 - **События**: `MotivationSchemaCreatedDomainEvent` → `MotivationSchemaCreatedEventHandler`;
   `AccountingPeriodClosedDomainEvent` → `AccountingPeriodClosedEventHandler` (создаёт снапшот).
-- HTTP-вход: `CreateMotivationSchemaHttpController`, эндпоинты периода/часов/отчётов/задач (см.
+- HTTP-вход: `CreateMotivationSchemaHttpController`, эндпоинты периода/отчётов/задач (см.
   `ENDPOINTS.md`, раздел `domains/service/modules/accounting`). Правила зарплаты (`/salary-rules/*`
   из `ENDPOINTS.md`) обслуживаются другим, ещё не мигрированным модулем `salary` (см.
   закомментированный импорт `SalaryModule` в `app.module.ts`) — не путай его с `accounting`, они пока
@@ -105,10 +107,12 @@ domains/service/
   — единственное место, где `CalculationContext.erpData`/`employee.identities` реально заполняются из
   БД (`ServiceCalculationDataPort`/`ServiceCalculationDataRepository`): собирает вход для оркестратора
   и для `GetEmployeeSalaryReportService`/`GetDepartmentSalaryReportService`, и для
-  `CloseAccountingPeriodHandler`. Источник часов `PayPerHour` — `EmployeeHoursEntry`
-  (`domain/entities/employee-hours-entry.entity.ts`), простой CRUD без CQRS-событий
-  (`POST|PATCH|DELETE|GET /v1/service/accounting/employee_hours*`, см. `ENDPOINTS.md`) — ручной ввод
-  отработанных часов сотрудника за период, полноценный график работы вне скоупа. Источник `TaskCompleted` —
+  `CloseAccountingPeriodHandler`. Источник часов `PayPerHour` (Фаза 5,
+  `docs/employee-work-schedule`) — сумма часов рабочих смен графика (`WorkScheduleEntry.status =
+  WORKING` за период), читаемая `ServiceCalculationDataRepository.findHoursWorked` напрямую из общего
+  модуля `modules/work-schedule` (не через его HTTP-порт); прежний ручной ввод часов (CRUD-эндпоинты
+  под `/v1/service/accounting`, теперь удалённые вместе с моделью) заменён этим источником, данные
+  перенесены разовой миграцией (`npm run migrate:work-schedule-hours`). Источник `TaskCompleted` —
   `TaskCompletion` (`domain/entities/task-completion.entity.ts`) — временный внутренний двухступенчатый
   воркфлоу подтверждения (сотрудник отмечает выполненной → руководитель подтверждает `CONFIRMED`) без
   интеграции с Bitrix24 Tasks (реальная синхронизация запланирована отдельной будущей фазой); только
@@ -268,8 +272,9 @@ ERP, разные правила) — это **не общий переиспо�
 ## Данные и тесты
 
 - Prisma-схема: `prisma/schema/roapp.prisma` (собственные таблицы `roapp*`),
-  `prisma/schema/salary.prisma` (`MotivationSchema`/`SalaryRule`/`EmployeeHoursEntry`/
-  `TaskCompletion` — `TaskCompletion` общая с `shop`, дискриминатор `direction`),
+  `prisma/schema/salary.prisma` (`MotivationSchema`/`SalaryRule`/`TaskCompletion` — `TaskCompletion`
+  общая с `shop`, дискриминатор `direction`; `EmployeeHoursEntry` удалена Фазой 5, см.
+  `prisma/schema/work-schedule.prisma`),
   `prisma/schema/accounting-period.prisma` (`AccountingPeriod`/`AccountingCalculationCache`/
   `AccountingPeriodSnapshot`), `prisma/schema/sales.prisma` (`SalesPlan`/`SalesPlanTemplate`, тоже
   общие с `shop` через `direction`) и `prisma/schema/bitrix.prisma` (общие с CRM-контуром, читаются

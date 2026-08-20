@@ -3,10 +3,10 @@ import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/e
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
 
-// Часы сотрудника за период — одно значение из ручного ввода (общее для
-// service/shop EmployeeHoursEntry), общее для всех правил его схемы вне
-// зависимости от роли; независимость правил демонстрируется разными
-// ставками (price), а не разными часами.
+// Часы сотрудника за период — одно значение, сумма часов рабочих смен
+// графика (общий для service/shop WorkScheduleEntry, Фаза 5), общее для
+// всех правил его схемы вне зависимости от роли; независимость правил
+// демонстрируется разными ставками (price), а не разными часами.
 const buildContext = (hoursWorked = 5): CalculationContext => ({
     employee: { id: 1, identities: [] },
     period: {

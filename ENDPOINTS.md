@@ -15,11 +15,7 @@
   - `POST /v1/service/accounting/period/:period/close` — закрыть период (`{ closedBy }`): отклоняется (`409`) со списком строк в `metadata.rows`, если в плане продаж периода есть неутверждённые строки; при успехе создаёт неизменяемый снапшот по каждому сотруднику с личной мотивационной схемой
   - `POST /v1/service/accounting/period/:period/reopen` — повторно открыть закрытый период (`{ confirm: true }`), удаляет снапшот целиком
   - `POST /v1/service/accounting/period/:period/recalculate` — сбросить кэш открытого периода (действие «пересчитать» для руководителя); `204`, закрытый период — `409`
-- Ручной ввод часов сотрудника за период (`EmployeeHoursEntry`, Фаза 7, см. docs/payroll/plan-payroll-calculation.md) — минимальный источник данных для `PayPerHour.calculate()` (полноценный график работы вне скоупа); эндпоинты без гарда, как и остальной `accounting`:
-  - `POST /v1/service/accounting/employee_hours` — создать запись (`{ employeeId, period, hours }`); повтор на ту же пару `(employeeId, period)` отклоняется (`409`)
-  - `PATCH /v1/service/accounting/employee_hours/:id` — изменить количество часов
-  - `DELETE /v1/service/accounting/employee_hours/:id` — удалить запись
-  - `GET /v1/service/accounting/employee_hours?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
+- Источник часов `PayPerHour.calculate()` (Фаза 5, `docs/employee-work-schedule`) — сумма часов смен `WorkScheduleEntry.status = WORKING` сотрудника за период (`modules/work-schedule`, см. ниже), читаемая `ServiceCalculationDataRepository.findHoursWorked` напрямую из БД. Прежний ручной ввод часов (`EmployeeHoursEntry`, CRUD-эндпоинты под `/v1/service/accounting`, Фаза 7) удалён вместе с моделью; существующие записи перенесены разовой миграцией `npm run migrate:work-schedule-hours` (`backend/src/shared/migrateWorkScheduleHours.ts`), которая также сбрасывает кэш расчёта (`AccountingCalculationCache`) затронутых открытых периодов
 - `GET /v1/service/accounting/salary_role_types` — типы зарплатных правил сервиса (`PayPerHour`, `ServiceCompleted`, `OrderPayed`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого (Фаза 8)
 - Выполнение задачи сотрудником (`TaskCompletion`, Фаза 8, см. docs/payroll/plan-payroll-calculation.md) — временный внутренний двухступенчатый воркфлоу подтверждения без интеграции с Bitrix24 Tasks (синхронизация с реальными задачами запланирована отдельной фазой); эндпоинты без гарда, как и остальной `accounting`. `TaskCompletion.direction` (Фаза 13, дефолт `'service'`) — эти эндпоинты всегда пишут/читают `direction: 'service'`; направление `shop` пишет/читает ту же таблицу (`direction: 'shop'`) через собственный, независимый CQRS-вход `POST/GET /v1/shop/accounting/task_completions*` (Фаза 13.5, см. ниже) — ту же пару Zod-контрактов (`createTaskCompletionRequestSchema`/`confirmTaskCompletionRequestSchema`/…) переиспользует HTTP-DTO, а не бизнес-логика:
   - `POST /v1/service/accounting/task_completions` — сотрудник отмечает задачу выполненной (`{ employeeId, period, description, createdBy }`), сразу в статусе `PENDING_CONFIRMATION`
@@ -164,7 +160,7 @@ docs/payroll/phase-13.5-shop-report-integration.md) — собственный �
 `infrastructure`/`interface`, независимый от одноимённого модуля `domains/service/modules/accounting`
 (зеркальные, но раздельные классы — ни один класс сервисного `accounting` здесь не импортируется, см.
 `backend/CLAUDE.md`). Четыре типа правил (свои реестр `shopSalaryRuleRegistry` и фабрика
-`ShopSalaryRuleFactory`): `PayPerHour` (`hours × price`, источник часов — общий `EmployeeHoursEntry`),
+`ShopSalaryRuleFactory`): `PayPerHour` (`hours × price`, источник часов — общий `WorkScheduleEntry`, Фаза 5),
 `ProductSold` (награда `Fixed`/`FixedPercent`/`FloatPercent` за проданный товар в категории
 `MoySkladProductFolder`, с раскрытием вложенных папок; база `REVENUE`/`MARGIN`, без
 `SALARY_MINUS_ENGINEER_SALARY`), `UsedProductSold` (Фаза 13 — вознаграждение закупщику БУ техники за
