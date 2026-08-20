@@ -64,8 +64,8 @@ export class OrderPayedEntity
 
     calculate(context: CalculationContext): CalculationLine {
         const erpData = context.erpData as
-            | ServiceCalculationErpData
-            | undefined;
+            ServiceCalculationErpData | undefined;
+
         const items = erpData?.orderPayedItems ?? [];
         const matched = this.dedupeBySource(
             items.filter((item) => this.matchesOrder(context, item)),
@@ -74,12 +74,11 @@ export class OrderPayedEntity
             type: 'order',
             id: item.orderId,
         }));
-        const bonus = this.props.config.bonus ?? 0;
         const award = this.props.config.award;
 
         switch (award.type) {
             case 'Fixed': {
-                const amount = award.price * matched.length + bonus;
+                const amount = award.price * matched.length;
                 return {
                     ruleId: this.id,
                     quantity: matched.length,
@@ -90,8 +89,7 @@ export class OrderPayedEntity
             }
             case 'FixedPercent': {
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount =
-                    roundRubles((base * award.percent) / 100) + bonus;
+                const amount = roundRubles((base * award.percent) / 100);
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,
@@ -112,9 +110,9 @@ export class OrderPayedEntity
                     context.salesPerformance.percentCompletion,
                 );
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount =
-                    roundRubles((base * award.basePercent * multiplier) / 100) +
-                    bonus;
+                const amount = roundRubles(
+                    (base * award.basePercent * multiplier) / 100,
+                );
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,
@@ -130,7 +128,7 @@ export class OrderPayedEntity
     validate(): void {}
 
     // Роль ENGINEER — единственная, для которой у заказа нет одного поля с
-    // сотрудником (в отличие от остальных пяти ролей, целиком лежащих на
+    // сотрудником (в отличие от остальных трёх ролей, целиком лежащих на
     // уровне заказа — см. service-role-source.ts): инженер закреплён за
     // ПОЗИЦИЕЙ заказа (услугой/товаром), а не за заказом целиком, и у
     // одного заказа их может быть несколько. Решение по этому открытому
@@ -139,7 +137,7 @@ export class OrderPayedEntity
     // хотя бы одной позиции этого заказа (item.engineerIds) — тот же дух,
     // что и у ServiceCompleted, где роль всегда определяется на уровне
     // позиции, но OrderPayed агрегирует начисление по заказу целиком.
-    // Остальные пять ролей переиспользуют employeeMatchesServiceRole
+    // Остальные три роли переиспользуют employeeMatchesServiceRole
     // (Фаза 7) без изменений — engineerId в фиктивном поле не участвует ни
     // в одной их ветке.
     private matchesOrder(
@@ -154,8 +152,6 @@ export class OrderPayedEntity
         return employeeMatchesServiceRole(context.employee, this.targetRole, {
             engineerId: 0,
             managerId: item.managerId,
-            createdById: item.createdById,
-            closedById: item.closedById,
             onlineManager: item.onlineManager,
         });
     }

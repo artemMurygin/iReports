@@ -83,7 +83,6 @@ export class ProductSoldEntity
             type: 'demandPosition',
             id: item.positionId,
         }));
-        const bonus = this.props.config.bonus ?? 0;
         const award = this.props.config.award;
         // Fixed на дробном quantity (issue #60): "сумма за единицу" магазина
         // считается по количеству, а не по числу позиций — товар может быть
@@ -98,7 +97,7 @@ export class ProductSoldEntity
 
         switch (award.type) {
             case 'Fixed': {
-                const amount = roundRubles(award.price * totalQuantity) + bonus;
+                const amount = roundRubles(award.price * totalQuantity);
                 return {
                     ruleId: this.id,
                     quantity: totalQuantity,
@@ -109,8 +108,7 @@ export class ProductSoldEntity
             }
             case 'FixedPercent': {
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount =
-                    roundRubles((base * award.percent) / 100) + bonus;
+                const amount = roundRubles((base * award.percent) / 100);
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,
@@ -155,9 +153,9 @@ export class ProductSoldEntity
                     percentCompletion,
                 );
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount =
-                    roundRubles((base * award.basePercent * multiplier) / 100) +
-                    bonus;
+                const amount = roundRubles(
+                    (base * award.basePercent * multiplier) / 100,
+                );
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,

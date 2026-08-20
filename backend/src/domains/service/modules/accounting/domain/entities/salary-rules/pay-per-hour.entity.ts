@@ -57,17 +57,15 @@ export class PayPerHoursEntity
     // обязано быть настроено для каждого сотрудника с этой ролью.
     calculate(context: CalculationContext): CalculationLine {
         const erpData = context.erpData as
-            | ServiceCalculationErpData
-            | undefined;
+            ServiceCalculationErpData | undefined;
         const hours = erpData?.hoursWorked ?? 0;
         const rate = this.props.config.price;
-        const bonus = this.props.config.bonus ?? 0;
 
         return {
             ruleId: this.id,
             quantity: hours,
             rate,
-            amount: roundRubles(hours * rate) + bonus,
+            amount: roundRubles(hours * rate),
             sources: [],
         };
     }

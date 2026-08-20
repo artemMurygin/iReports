@@ -10,7 +10,10 @@ describe('CreateSalaryRuleHandler', () => {
         const insert = jest
             .fn<Promise<void>, [SalaryRule, { motivationSchemaId: string }]>()
             .mockResolvedValue(undefined);
-        const salaryRuleRepo: SalaryRuleRepositoryPort = { insert };
+        const salaryRuleRepo: SalaryRuleRepositoryPort = {
+            insert,
+            deleteAllByMotivationSchema: jest.fn().mockResolvedValue(undefined),
+        };
         const handler = new CreateSalaryRuleHandler(salaryRuleRepo);
         return { handler, insert };
     };

@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
 import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
 import { PeriodCalculationOrchestrator as ShopPeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
@@ -13,12 +12,10 @@ import {
 import { buildShopSalaryReportRules } from '@/domains/shop/modules/accounting/application/mappers/to-shop-salary-report-rules';
 import {
     buildFreshnessStamp,
-    motivationSchemaVersion,
     stampOf,
 } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import { Period } from '@/shared/domain/period.value-object';
-import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -81,9 +78,8 @@ export class GetShopEmployeeSalaryReportService {
         private readonly domainSyncStatus: DomainSyncStatusPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
-        @Inject(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort,
         private readonly shopContextBuilder: BuildShopCalculationContextService,
+        private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
     ) {}
 
     async execute(
@@ -150,11 +146,17 @@ export class GetShopEmployeeSalaryReportService {
         employeeId: number,
     ): Promise<OpenDirectionReport> {
         const period = validatedPeriod.getValue();
-        const schema =
-            await this.shopMotivationSchemaRepo.findByEmployee(employeeId);
-        const rules = schema?.getProps().rules ?? [];
+        // Правила ОБЕИХ схем сотрудника — личной и его отдела (см.
+        // ResolveShopEmployeeSalaryRulesService): раньше здесь стоял прямой
+        // findByEmployee, и сотрудник со схемой, заведённой на отдел,
+        // получал пустой набор правил и нули во всём отчёте.
+        const { rules, schemasVersion } =
+            await this.salaryRulesResolver.forEmployee(employeeId);
 
-        const freshnessStamp = await this.computeFreshnessStamp(schema, period);
+        const freshnessStamp = await this.computeFreshnessStamp(
+            schemasVersion,
+            period,
+        );
 
         const cached = await this.cacheRepo.find('shop', period, employeeId);
         if (cached && cached.freshnessStamp === freshnessStamp) {
@@ -260,7 +262,7 @@ export class GetShopEmployeeSalaryReportService {
     // и не переиспользуется сервисом (см. backend/CLAUDE.md, "зеркальные,
     // но независимые" модули доменов).
     private async computeFreshnessStamp(
-        schema: ShopMotivationSchema | null,
+        schemasVersion: string,
         period: string,
     ): Promise<string> {
         const [domainSyncAt, plans] = await Promise.all([
@@ -274,7 +276,7 @@ export class GetShopEmployeeSalaryReportService {
         }, null);
 
         return buildFreshnessStamp({
-            motivationSchemaVersion: motivationSchemaVersion(schema),
+            motivationSchemaVersion: schemasVersion,
             domainSyncStamp: stampOf(domainSyncAt),
             salesPlanStamp: stampOf(salesPlanAt),
         });

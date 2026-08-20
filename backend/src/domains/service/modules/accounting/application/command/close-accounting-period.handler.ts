@@ -6,6 +6,7 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-context';
 import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
@@ -19,8 +20,6 @@ import type {
 } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
-import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
@@ -31,9 +30,10 @@ import { CloseAccountingPeriodCommand } from './close-accounting-period.command'
 // ленивый кэш и снапшоты"):
 // 1) отклоняется, если есть хоть одна неутверждённая строка плана продаж
 //    периода/направления;
-// 2) иначе снимает FACT-срез по каждому сотруднику с личной мотивационной
-//    схемой (тем же оркестратором, что и открытый расчёт) и фиксирует его
-//    неизменяемым снапшотом;
+// 2) иначе снимает FACT-срез по каждому сотруднику, у которого есть
+//    зарплатные правила — в личной схеме ИЛИ в схеме его отдела (тем же
+//    оркестратором, что и открытый расчёт), — и фиксирует его неизменяемым
+//    снапшотом;
 // 3) переводит период в CLOSED и порождает AccountingPeriodClosedDomainEvent.
 @CommandHandler(CloseAccountingPeriodCommand)
 export class CloseAccountingPeriodHandler implements ICommandHandler<
@@ -47,13 +47,12 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
         private readonly snapshotRepo: AccountingPeriodSnapshotPort,
         @Inject(ACCOUNTING_CALCULATION_CACHE)
         private readonly cacheRepo: AccountingCalculationCachePort,
-        @Inject(MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly motivationSchemaRepo: MotivationSchemaRepositoryPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
+        private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
     ) {}
 
     async execute(
@@ -89,9 +88,9 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
                 period: period.getValue(),
             });
 
-        // Снапшот — только сотрудники с личной мотивационной схемой (см.
-        // MotivationSchemaRepositoryPort.findAllEmployeeTargets); схемы на
-        // отдел здесь, как и в Фазе 1, не разворачиваются.
+        // Снапшот — все сотрудники, у которых есть зарплатные правила: с
+        // личной схемой и/или со схемой на их отдел (см.
+        // ResolveEmployeeSalaryRulesService.forAllTargets).
         const rows = await this.closeServiceDirection(period);
 
         periodEntity.close(command.closedBy, rows.length);
@@ -120,13 +119,18 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
     private async closeServiceDirection(
         period: Period,
     ): Promise<AccountingPeriodSnapshotRow[]> {
-        const schemas =
-            await this.motivationSchemaRepo.findAllEmployeeTargets();
+        const salaryRulesByEmployee =
+            await this.salaryRulesResolver.forAllTargets();
         const rows: AccountingPeriodSnapshotRow[] = [];
-        for (const schema of schemas) {
-            const props = schema.getProps();
-            const employeeId = props.target.getId();
-            const rules = props.rules;
+        for (const [employeeId, { rules }] of salaryRulesByEmployee) {
+            // Сотрудник отдела со схемой, у которого после фильтра по
+            // direction='service' не осталось ни одного правила (вся схема
+            // отдела — правила магазина), в снапшот не попадает: пустая
+            // строка на нулевую сумму завысила бы closedRows и ничего не
+            // фиксировала бы.
+            if (rules.length === 0) {
+                continue;
+            }
             const base = await this.contextBuilder.build(period, employeeId);
             const lines = await PeriodCalculationOrchestrator.calculate(rules, {
                 employee: base.employee,

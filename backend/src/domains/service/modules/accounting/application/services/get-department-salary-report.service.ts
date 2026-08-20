@@ -11,12 +11,10 @@ import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/
 import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/to-salary-report-rules';
 import {
     buildFreshnessStamp,
-    motivationSchemaVersion,
     stampOf,
 } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { Period } from '@/shared/domain/period.value-object';
-import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
-import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -71,9 +69,10 @@ const EMPTY_CONTRIBUTION: DirectionContribution = {
 // расчёта идёт ОДИН РАЗ на отдел, а не на каждого сотрудника (см. PRD:
 // "контекст ERP-данных должен собираться один раз на отдел ... чтобы не
 // было N+1 запросов"): erpData (period-wide и так не зависит от сотрудника),
-// SalesPerformance, мотивационные схемы, идентичности и часы читаются одним
+// SalesPerformance, зарплатные правила, идентичности и часы читаются одним
 // батч-запросом на весь отдел (ServiceCalculationDataPort/
-// MotivationSchemaRepositoryPort), а не по одному на сотрудника.
+// ResolveEmployeeSalaryRulesService.forDepartment), а не по одному на
+// сотрудника.
 //
 // Ленивый кэш — тот же ACCOUNTING_CALCULATION_CACHE, тот же ключ
 // (direction, period, employeeId), что и у отчёта сотрудника, — расчёт по
@@ -87,8 +86,6 @@ export class GetDepartmentSalaryReportService {
         private readonly dataSource: ServiceCalculationDataPort,
         @Inject(SALES_PERFORMANCE_READER)
         private readonly salesPerformanceReader: SalesPerformanceReaderPort,
-        @Inject(MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly motivationSchemaRepo: MotivationSchemaRepositoryPort,
         @Inject(ACCOUNTING_PERIOD_REPOSITORY)
         private readonly periodRepo: AccountingPeriodRepositoryPort,
         @Inject(ACCOUNTING_PERIOD_SNAPSHOT)
@@ -99,6 +96,7 @@ export class GetDepartmentSalaryReportService {
         private readonly domainSyncStatus: DomainSyncStatusPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
+        private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
     ) {}
 
     async execute(
@@ -215,7 +213,7 @@ export class GetDepartmentSalaryReportService {
             orderPayedItems,
             confirmedTaskCompletions,
             salesPerformanceDetail,
-            schemas,
+            salaryRulesByEmployee,
             domainSyncAt,
             plans,
         ] = await Promise.all([
@@ -230,14 +228,15 @@ export class GetDepartmentSalaryReportService {
                 departmentId,
                 null,
             ),
-            this.motivationSchemaRepo.findByEmployees(employeeIds),
+            // Правила ОБЕИХ схем каждого сотрудника — личной и схемы этого
+            // отдела (см. ResolveEmployeeSalaryRulesService): без второй
+            // половины сотрудники отдела, у которых нет личной схемы,
+            // считались нулями.
+            this.salaryRulesResolver.forDepartment(departmentId, employeeIds),
             this.domainSyncStatus.getLastSuccessfulSyncAt('service'),
             this.salesPlanRepo.findByDirectionAndPeriod('service', period),
         ]);
 
-        const schemaByEmployee = new Map(
-            schemas.map((schema) => [schema.getProps().target.getId(), schema]),
-        );
         const salesPlanAt = plans.reduce<Date | null>((latest, plan) => {
             const updatedAt = plan.getProps().updatedAt;
             return !latest || updatedAt > latest ? updatedAt : latest;
@@ -248,10 +247,10 @@ export class GetDepartmentSalaryReportService {
         const contributions = new Map<number, DirectionContribution>();
 
         for (const employee of employees) {
-            const schema = schemaByEmployee.get(employee.id) ?? null;
-            const rules = schema?.getProps().rules ?? [];
+            const resolved = salaryRulesByEmployee.get(employee.id);
+            const rules = resolved?.rules ?? [];
             const freshnessStamp = buildFreshnessStamp({
-                motivationSchemaVersion: motivationSchemaVersion(schema),
+                motivationSchemaVersion: resolved?.schemasVersion ?? 'none',
                 domainSyncStamp,
                 salesPlanStamp,
             });

@@ -65,8 +65,7 @@ export class TaskCompletedEntity
 
     calculate(context: CalculationContext): CalculationLine {
         const erpData = context.erpData as
-            | ServiceCalculationErpData
-            | undefined;
+            ServiceCalculationErpData | undefined;
         const completions = erpData?.confirmedTaskCompletions ?? [];
         const matched = completions.filter(
             (completion) => completion.employeeId === context.employee.id,
@@ -76,12 +75,11 @@ export class TaskCompletedEntity
             type: 'taskCompletion',
             id: completion.id,
         }));
-        const bonus = this.props.config.bonus ?? 0;
         const award = this.props.config.award;
 
         switch (award.type) {
             case 'Fixed': {
-                const amount = award.price * quantity + bonus;
+                const amount = award.price * quantity;
                 return {
                     ruleId: this.id,
                     quantity,
@@ -100,9 +98,9 @@ export class TaskCompletedEntity
                     award.percentBorders,
                     context.salesPerformance.percentCompletion,
                 );
-                const amount =
-                    roundRubles(award.basePrice * quantity * multiplier) +
-                    bonus;
+                const amount = roundRubles(
+                    award.basePrice * quantity * multiplier,
+                );
                 return {
                     ruleId: this.id,
                     quantity,

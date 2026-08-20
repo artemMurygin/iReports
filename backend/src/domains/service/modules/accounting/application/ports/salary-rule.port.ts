@@ -8,6 +8,14 @@ export interface SalaryRuleRepositoryPort {
         entity: SalaryRule,
         meta: { motivationSchemaId: string },
     ): Promise<void>;
+
+    // Используется PATCH .../motivation-schema/:id перед пересозданием
+    // правил из тела запроса (см. UpdateMotivationSchemaHandler) —
+    // реализация сама фиксирует direction='service' в WHERE, тем же
+    // приёмом, что insert()/toPersistence() фиксируют его при записи, чтобы
+    // не задеть правила направления shop той же строки motivation_schemas
+    // (сотрудник с идентичностями в обеих ERP).
+    deleteAllByMotivationSchema(motivationSchemaId: string): Promise<void>;
 }
 
 export const SALARY_RULE_REPOSITORY = Symbol('SALARY_RULE_REPOSITORY');

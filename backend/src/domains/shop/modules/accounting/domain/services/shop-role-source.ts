@@ -65,7 +65,7 @@ export function resolveShopRoleSource(role: TargetRole): ShopRoleSource {
                 identifierType: 'MOY_SKLAD_OFFLINE_PURCHASER_FIELD',
             };
         default:
-            // ENGINEER/ORDER_MANAGER/CREATED_BY/CLOSED_BY — роли сервиса,
+            // ENGINEER/ORDER_MANAGER — роли сервиса,
             // targetRoleSchema теперь общий enum обоих направлений (см.
             // contracts/commands/salary-rule.ts), но правило магазина их
             // никогда не должно получать — это ошибка конфигурации

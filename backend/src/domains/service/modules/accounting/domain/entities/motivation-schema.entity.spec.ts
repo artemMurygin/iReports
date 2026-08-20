@@ -81,4 +81,23 @@ describe('MotivationSchema', () => {
             });
         });
     });
+
+    describe('rename', () => {
+        it('меняет name прямой мутацией props, не трогая остальные поля', () => {
+            withRequestContext(() => {
+                const schema = MotivationSchema.create({
+                    ...baseProps,
+                    rules: [],
+                });
+
+                schema.rename('Новое имя');
+
+                const props = schema.getProps();
+                expect(props.name).toBe('Новое имя');
+                expect(props.target.getType()).toBe(baseProps.targetType);
+                expect(props.target.getId()).toBe(baseProps.targetId);
+                expect(props.rules).toEqual([]);
+            });
+        });
+    });
 });

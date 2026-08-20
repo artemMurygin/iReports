@@ -47,6 +47,18 @@ export class MotivationSchemaRepository
         return record ? this.mapper.toDomain(record) : null;
     }
 
+    async findByDepartment(
+        departmentId: number,
+    ): Promise<MotivationSchema | null> {
+        const record = await this.client.motivationSchema.findFirst({
+            where: { targetType: 'Department', targetId: departmentId },
+            // direction: 'service' — см. комментарий у findByEmployee выше.
+            include: { rules: { where: { direction: 'service' } } },
+        });
+
+        return record ? this.mapper.toDomain(record) : null;
+    }
+
     async findAllEmployeeTargets(): Promise<MotivationSchema[]> {
         const records = await this.client.motivationSchema.findMany({
             where: { targetType: 'Employee' },
@@ -59,6 +71,16 @@ export class MotivationSchemaRepository
             // строку и попытаться резолвнуть её несуществующим для этого
             // реестра типом. См. комментарий у SalaryRule.direction в
             // salary.prisma (Фаза 12).
+            include: { rules: { where: { direction: 'service' } } },
+        });
+
+        return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    async findAllDepartmentTargets(): Promise<MotivationSchema[]> {
+        const records = await this.client.motivationSchema.findMany({
+            where: { targetType: 'Department' },
+            // direction: 'service' — см. комментарий у findByEmployee выше.
             include: { rules: { where: { direction: 'service' } } },
         });
 
@@ -96,5 +118,54 @@ export class MotivationSchemaRepository
         });
 
         return record?.id ?? null;
+    }
+
+    async findById(id: string): Promise<MotivationSchema | null> {
+        const record = await this.client.motivationSchema.findUnique({
+            where: { id },
+            // direction: 'service' — см. комментарий у findByEmployee выше.
+            include: { rules: { where: { direction: 'service' } } },
+        });
+
+        return record ? this.mapper.toDomain(record) : null;
+    }
+
+    async findAll(filters: {
+        targetType?: string;
+        targetId?: number;
+        search?: string;
+    }): Promise<MotivationSchema[]> {
+        const records = await this.client.motivationSchema.findMany({
+            where: {
+                targetType: filters.targetType,
+                targetId: filters.targetId,
+                name: filters.search
+                    ? { contains: filters.search, mode: 'insensitive' }
+                    : undefined,
+            },
+            // direction: 'service' — см. комментарий у findByEmployee выше.
+            // Схемы, у которых после этого фильтра 0 правил, отбрасывает
+            // вызывающий сервис (ListMotivationSchemasService), а не
+            // репозиторий — та же граница ответственности, что и у
+            // GetMotivationSchemaService/findById.
+            include: { rules: { where: { direction: 'service' } } },
+        });
+
+        return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    async update(entity: MotivationSchema): Promise<void> {
+        const props = entity.getProps();
+        // Только имя — targetType/targetId неизменны после создания (нет
+        // сценария "перенести схему на другую цель"), а rules персистятся
+        // отдельно (SalaryRuleRepository.deleteAllByMotivationSchema +
+        // CreateSalaryRuleCommand на каждое новое правило, см.
+        // UpdateMotivationSchemaHandler).
+        await this.write(entity, (client) =>
+            client.motivationSchema.update({
+                where: { id: props.id },
+                data: { name: props.name },
+            }),
+        );
     }
 }

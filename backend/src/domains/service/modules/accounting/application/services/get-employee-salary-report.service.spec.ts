@@ -9,7 +9,9 @@ import type {
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
@@ -69,9 +71,28 @@ describe('GetEmployeeSalaryReportService', () => {
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee,
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees: jest.fn().mockResolvedValue([]),
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
+            findIdByTarget: jest.fn().mockResolvedValue(null),
+            findById: jest.fn().mockResolvedValue(null),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue(undefined),
         };
+
+        // ResolveEmployeeSalaryRulesService.forEmployee() читает отдел
+        // сотрудника через ServiceCalculationDataPort — в этих тестах у
+        // сотрудника всегда нет отдела (department-схемы здесь не
+        // проверяются), поэтому findEmployeeDepartmentId возвращает null и
+        // forEmployee() сводится ровно к findByEmployee(), как и раньше.
+        const calculationDataSource = {
+            findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
+        } as unknown as ServiceCalculationDataPort;
+        const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
+            motivationSchemaRepo,
+            calculationDataSource,
+        );
 
         const findByDirectionAndPeriodPeriod = jest
             .fn<Promise<AccountingPeriod | null>, [string, string]>()
@@ -155,13 +176,13 @@ describe('GetEmployeeSalaryReportService', () => {
         } as unknown as BuildServiceCalculationContextService;
 
         const service = new GetEmployeeSalaryReportService(
-            motivationSchemaRepo,
             periodRepo,
             snapshotRepo,
             cacheRepo,
             domainSyncStatus,
             salesPlanRepo,
             contextBuilder,
+            salaryRulesResolver,
         );
 
         return {
@@ -376,8 +397,6 @@ describe('GetEmployeeSalaryReportService', () => {
         const orderPayedItem = {
             orderId: 1,
             managerId: null,
-            createdById: 7,
-            closedById: null,
             onlineManager: null,
             engineerIds: [999],
             revenue: 1000,

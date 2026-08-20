@@ -17,30 +17,22 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 //   сопоставление идёт через EmployeeIdentity типа ONLINE_MANAGER_FIELD, а
 //   не по числовому ID.
 // - Остальные роли — обычные ссылки на RoappEmployee на уровне заказа.
-//   RoappOrder несёт только три таких поля (managerId, createdById,
-//   closedById) на четыре роли (OFFLINE_MANAGER, ORDER_MANAGER, CREATED_BY,
-//   CLOSED_BY): CREATED_BY и CLOSED_BY однозначно резолвятся по названию
-//   поля, а офлайн-менеджер и менеджер заказа отдельного поля не имеют —
-//   решение (ответ на открытый вопрос плана "полный перечень targetRole для
-//   сервиса", Фаза 7) — оба резолвятся через managerId. Один и тот же заказ
-//   может засчитаться под любой из этих двух ролей — это не два
-//   независимых источника данных, а два разных прочтения одного поля,
+//   Ни офлайн-менеджер, ни менеджер заказа отдельного поля в RoappOrder не
+//   имеют — решение (ответ на открытый вопрос плана "полный перечень
+//   targetRole для сервиса", Фаза 7) — оба резолвятся через managerId. Один
+//   и тот же заказ может засчитаться под любой из этих двух ролей — это не
+//   два независимых источника данных, а два разных прочтения одного поля,
 //   выбираемых конкретным правилом через его targetRole.
 export interface ServiceOrderRoleFields {
     engineerId: number;
     managerId: number | null;
-    createdById: number;
-    closedById: number | null;
     onlineManager: string | null;
 }
 
 type ServiceRoleSource =
     | { kind: 'ENGINEER_ID' }
     | { kind: 'ONLINE_MANAGER_FIELD' }
-    | {
-          kind: 'ORDER_EMPLOYEE_FIELD';
-          field: 'managerId' | 'createdById' | 'closedById';
-      };
+    | { kind: 'ORDER_EMPLOYEE_FIELD'; field: 'managerId' };
 
 export function resolveServiceRoleSource(role: TargetRole): ServiceRoleSource {
     switch (role) {
@@ -51,10 +43,6 @@ export function resolveServiceRoleSource(role: TargetRole): ServiceRoleSource {
         case 'OFFLINE_MANAGER':
         case 'ORDER_MANAGER':
             return { kind: 'ORDER_EMPLOYEE_FIELD', field: 'managerId' };
-        case 'CREATED_BY':
-            return { kind: 'ORDER_EMPLOYEE_FIELD', field: 'createdById' };
-        case 'CLOSED_BY':
-            return { kind: 'ORDER_EMPLOYEE_FIELD', field: 'closedById' };
         default:
             // ONLINE_PURCHASER/OFFLINE_PURCHASER — роли магазина, добавленные
             // в общий targetRoleSchema Фазой 12 (см.
@@ -94,7 +82,7 @@ export function employeeMatchesServiceRole(
 
 // Экспортируется отдельно от employeeMatchesServiceRole (Фаза 8) — нужна
 // OrderPayedEntity для роли ENGINEER, которая на уровне заказа определена не
-// одним полем (в отличие от остальных пяти ролей), а множеством инженеров
+// одним полем (в отличие от остальных трёх ролей), а множеством инженеров
 // его позиций (см. order-payed.entity.ts) — employeeMatchesServiceRole
 // рассчитан на ровно одно значение engineerId и не годится напрямую.
 export function hasRoappEmployeeIdentity(

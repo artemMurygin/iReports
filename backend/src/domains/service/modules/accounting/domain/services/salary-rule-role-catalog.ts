@@ -18,8 +18,6 @@ const ALL_SERVICE_ROLES: TargetRole[] = [
     'ONLINE_MANAGER',
     'OFFLINE_MANAGER',
     'ORDER_MANAGER',
-    'CREATED_BY',
-    'CLOSED_BY',
 ];
 
 export interface SalaryRuleTypeCatalogEntry {

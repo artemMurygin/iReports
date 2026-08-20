@@ -24,7 +24,6 @@ export type { TargetRole, ShopSalaryBasis, PercentBorder };
 // не хардкодится в config.
 export type PayPerHourShopSalaryConfig = {
     price: number;
-    bonus?: number;
 };
 
 export type PayPerHourShopSalaryRule = {
@@ -59,7 +58,6 @@ export type ProductSoldSalaryConfig = {
               salaryBasis: ShopSalaryBasis;
               percentBorders: [PercentBorder, PercentBorder, PercentBorder];
           };
-    bonus?: number;
 };
 
 export type ProductSoldSalaryRule = {
@@ -72,7 +70,7 @@ export type ProductSoldSalaryRule = {
 // ========================== Вознаграждение закупщику БУ техники ========================== //
 
 // Фаза 13 (issue #62/#63) — зеркало ProductSoldSalaryConfig по структуре
-// (category/award/bonus), но award — только Fixed/FixedPercent (без
+// (category/award), но award — только Fixed/FixedPercent (без
 // FloatPercent: закупщик не привязан к выполнению плана продаж, см.
 // contracts/commands/shop-salary-rule.ts).
 export type UsedProductSoldSalaryConfig = {
@@ -84,7 +82,6 @@ export type UsedProductSoldSalaryConfig = {
               percent: number;
               salaryBasis: ShopSalaryBasis;
           };
-    bonus?: number;
 };
 
 export type UsedProductSoldSalaryRule = {
@@ -107,7 +104,6 @@ export type TaskCompletedShopSalaryConfig = {
               basePrice: number;
               percentBorders: [PercentBorder, PercentBorder, PercentBorder];
           };
-    bonus?: number;
 };
 
 export type TaskCompletedShopSalaryRule = {

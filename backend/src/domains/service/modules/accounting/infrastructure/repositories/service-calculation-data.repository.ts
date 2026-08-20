@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
-import type {
-    EmployeeIdentityRef,
-    ExternalIdentifierType,
-    ExternalSystem,
-} from '@/shared/domain/calculation-context';
+import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import type {
     ConfirmedTaskCompletionErpItem,
     OrderPayedErpItem,
@@ -30,8 +26,8 @@ export class ServiceCalculationDataRepository
             where: { bitrixEmployeeId },
         });
         return records.map((record) => ({
-            system: record.system as ExternalSystem,
-            identifierType: record.identifierType as ExternalIdentifierType,
+            system: record.system,
+            identifierType: record.identifierType,
             externalId: record.externalId,
         }));
     }
@@ -61,8 +57,6 @@ export class ServiceCalculationDataRepository
                 order: {
                     select: {
                         managerId: true,
-                        createdById: true,
-                        closedById: true,
                         onlineManager: true,
                     },
                 },
@@ -78,8 +72,6 @@ export class ServiceCalculationDataRepository
             catalogEngineerBonus: row.service.engeneerBonus,
             engineerId: row.engineerId,
             managerId: row.order.managerId,
-            createdById: row.order.createdById,
-            closedById: row.order.closedById,
             onlineManager: row.order.onlineManager,
         }));
     }
@@ -118,8 +110,6 @@ export class ServiceCalculationDataRepository
                 cost: true,
                 engineerSalary: true,
                 managerId: true,
-                createdById: true,
-                closedById: true,
                 onlineManager: true,
                 serviceOrders: { select: { engineerId: true } },
                 productsOrders: { select: { engineerId: true } },
@@ -129,8 +119,6 @@ export class ServiceCalculationDataRepository
         return rows.map((row) => ({
             orderId: row.id,
             managerId: row.managerId,
-            createdById: row.createdById,
-            closedById: row.closedById,
             onlineManager: row.onlineManager,
             engineerIds: [
                 ...new Set([
@@ -195,8 +183,8 @@ export class ServiceCalculationDataRepository
         });
         for (const record of records) {
             map.get(record.bitrixEmployeeId)?.push({
-                system: record.system as ExternalSystem,
-                identifierType: record.identifierType as ExternalIdentifierType,
+                system: record.system,
+                identifierType: record.identifierType,
                 externalId: record.externalId,
             });
         }

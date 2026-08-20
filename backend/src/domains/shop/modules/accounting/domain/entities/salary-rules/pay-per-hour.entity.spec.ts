@@ -69,17 +69,6 @@ describe('PayPerHourShopEntity', () => {
             expect(rule.calculate(buildContext()).amount).toBe(0);
         });
 
-        it('индивидуальный бонус попадает в итоговую сумму', () => {
-            const rule = PayPerHourShopEntity.create({
-                type: 'PayPerHour',
-                name: 'Почасовая ставка',
-                targetRole: 'OFFLINE_MANAGER',
-                config: { price: 250, bonus: 300 },
-            });
-
-            expect(rule.calculate(buildContext(8)).amount).toBe(2300);
-        });
-
         it('округляет дробное произведение часов на ставку до целого рубля', () => {
             const rule = PayPerHourShopEntity.create({
                 type: 'PayPerHour',

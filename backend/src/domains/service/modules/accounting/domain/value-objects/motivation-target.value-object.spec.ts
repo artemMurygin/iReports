@@ -22,9 +22,9 @@ describe('MotivationTarget', () => {
 
         it('отклоняет недопустимый type', () => {
             withRequestContext(() => {
-                expect(() =>
-                    MotivationTarget.create('' as 'Employee', 42),
-                ).toThrow(ArgumentInvalidException);
+                expect(() => MotivationTarget.create('', 42)).toThrow(
+                    ArgumentInvalidException,
+                );
             });
         });
 

@@ -93,7 +93,6 @@ export class UsedProductSoldEntity
             type: 'demandPosition',
             id: item.positionId,
         }));
-        const bonus = this.props.config.bonus ?? 0;
         const award = this.props.config.award;
         // Fixed — "за единицу проданного устройства" (issue #62), то же
         // явное решение на дробном quantity, что у ProductSold (issue #60):
@@ -105,7 +104,7 @@ export class UsedProductSoldEntity
 
         switch (award.type) {
             case 'Fixed': {
-                const amount = roundRubles(award.price * totalQuantity) + bonus;
+                const amount = roundRubles(award.price * totalQuantity);
                 return {
                     ruleId: this.id,
                     quantity: totalQuantity,
@@ -116,8 +115,7 @@ export class UsedProductSoldEntity
             }
             case 'FixedPercent': {
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount =
-                    roundRubles((base * award.percent) / 100) + bonus;
+                const amount = roundRubles((base * award.percent) / 100);
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,

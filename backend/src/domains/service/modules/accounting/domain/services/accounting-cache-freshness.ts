@@ -53,6 +53,23 @@ export function motivationSchemaVersion(
     return latest.toISOString();
 }
 
+// Версия ПАРЫ схем, из которых собирается набор правил сотрудника — его
+// личной и схемы его отдела (см. mergeEmployeeSalaryRules). Обе версии
+// склеиваются в фиксированном порядке, а не сворачиваются в максимум:
+// максимум не заметил бы удаления той из двух схем, чей updatedAt меньше,
+// — сотрудник продолжил бы считаться по кэшу с уже несуществующими
+// правилами. 'none' на обе позиции (сотрудник без единой схемы) схлопнут в
+// одиночное 'none' — так строка совпадает с прежним форматом там, где схем
+// нет вовсе.
+export function motivationSchemasVersion(
+    schemas: (MotivationSchemaLike | null)[],
+): string {
+    if (schemas.every((schema) => !schema)) {
+        return 'none';
+    }
+    return schemas.map((schema) => motivationSchemaVersion(schema)).join('+');
+}
+
 export function stampOf(at: Date | null): string {
     return at ? at.toISOString() : 'never';
 }

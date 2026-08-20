@@ -6,7 +6,6 @@ import { Mapper } from '@/shared/domain/mapper.interface';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { Period } from '@/shared/domain/period.value-object';
 import { PeriodClosure } from '@/domains/service/modules/accounting/domain/value-objects/period-closure.value-object';
-import type { AccountingDirection } from '@/shared/domain/calculation-context';
 
 export class AccountingPeriodMapper implements Mapper<
     AccountingPeriod,
@@ -18,7 +17,7 @@ export class AccountingPeriodMapper implements Mapper<
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
             props: {
-                direction: record.direction as AccountingDirection,
+                direction: record.direction,
                 period: Period.create(record.period),
                 status: record.status,
                 closure:

@@ -91,9 +91,16 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
         findByEmployee: () => Promise.resolve(null),
         findByEmployees: () => Promise.resolve([]),
         findAllEmployeeTargets: () => Promise.resolve([]),
+        findByDepartment: () => Promise.resolve(null),
+        findAllDepartmentTargets: () => Promise.resolve([]),
+        findIdByTarget: () => Promise.resolve(null),
+        findById: () => Promise.resolve(null),
+        findAll: () => Promise.resolve([]),
+        update: () => Promise.resolve(),
     };
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
+        deleteAllByMotivationSchema: () => Promise.resolve(),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: () => Promise.resolve(null),

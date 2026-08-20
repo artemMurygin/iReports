@@ -5,8 +5,10 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
@@ -44,12 +46,30 @@ describe('CloseAccountingPeriodHandler', () => {
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees: jest.fn().mockResolvedValue([]),
             findIdByTarget: jest.fn(),
             findAllEmployeeTargets: jest
                 .fn()
                 .mockResolvedValue(overrides?.schemas ?? []),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
+            findById: jest.fn(),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn(),
         };
+
+        // ResolveEmployeeSalaryRulesService.forAllTargets() — единственный
+        // легальный вход к правилам сотрудников для снапшота закрытия периода
+        // (см. шапку resolve-employee-salary-rules.service.ts). Тесты этого
+        // файла заводят только личные (Employee) схемы, поэтому
+        // department-схем нет и findEmployeesInDepartment не вызывается.
+        const calculationDataSource = {
+            findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
+        } as unknown as ServiceCalculationDataPort;
+        const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
+            motivationSchemaRepo,
+            calculationDataSource,
+        );
 
         const salesPlanRepo: SalesPlanRepositoryPort = {
             insert: jest.fn(),
@@ -85,10 +105,10 @@ describe('CloseAccountingPeriodHandler', () => {
             periodRepo,
             snapshotRepo,
             cacheRepo,
-            motivationSchemaRepo,
             salesPlanRepo,
             unitOfWork,
             contextBuilder,
+            salaryRulesResolver,
         );
 
         return {

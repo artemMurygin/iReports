@@ -111,26 +111,6 @@ describe('UsedProductSoldEntity', () => {
                 ],
             });
         });
-
-        it('индивидуальный бонус попадает в сумму', () => {
-            const rule = UsedProductSoldEntity.create({
-                type: 'UsedProductSold',
-                name: 'Закупщик БУ техники',
-                targetRole: 'ONLINE_PURCHASER',
-                config: {
-                    category: null,
-                    award: { type: 'Fixed', price: 500 },
-                    bonus: 100,
-                },
-            });
-
-            const amount = rule.calculate(
-                buildContext([
-                    buildItem({ onlinePurchaserId: 'purchaser-42' }),
-                ]),
-            ).amount;
-            expect(amount).toBe(600);
-        });
     });
 
     describe('award FixedPercent', () => {

@@ -18,6 +18,14 @@ describe('CreateMotivationSchemaHandler', () => {
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert,
             findIdByTarget,
+            findByEmployee: jest.fn().mockResolvedValue(null),
+            findByEmployees: jest.fn().mockResolvedValue([]),
+            findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findByDepartment: jest.fn().mockResolvedValue(null),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
+            findById: jest.fn().mockResolvedValue(null),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue(undefined),
         };
         // run() выполняет переданную работу напрямую, без реальной транзакции —
         // для юнит-теста хендлера этого достаточно, транзакционность самого

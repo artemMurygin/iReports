@@ -14,7 +14,7 @@ import { CreateShopMotivationSchemaCommand } from '@/domains/shop/modules/accoun
 export class CreateShopMotivationSchemaHttpController {
     constructor(private readonly commandBus: CommandBus) {}
 
-    @Post(routesV1.shop.accounting.motivationSchema)
+    @Post(routesV1.shop.accounting.motivationSchema.root)
     @ApiOperation({
         summary: 'Создать мотивационную схему сотрудника или отдела магазина',
     })

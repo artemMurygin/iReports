@@ -75,10 +75,33 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
                     .filter((schema): schema is MotivationSchema => !!schema),
             ),
         findAllEmployeeTargets: () =>
-            Promise.resolve(Array.from(schemas.values())),
+            Promise.resolve(
+                Array.from(schemas.values()).filter((schema) =>
+                    schema.getProps().target.isEmployee(),
+                ),
+            ),
+        findByDepartment: (departmentId: number) =>
+            Promise.resolve(
+                Array.from(schemas.values()).find(
+                    (schema) =>
+                        schema.getProps().target.isDepartment() &&
+                        schema.getProps().target.getId() === departmentId,
+                ) ?? null,
+            ),
+        findAllDepartmentTargets: () =>
+            Promise.resolve(
+                Array.from(schemas.values()).filter((schema) =>
+                    schema.getProps().target.isDepartment(),
+                ),
+            ),
+        findIdByTarget: () => Promise.resolve(null),
+        findById: () => Promise.resolve(null),
+        findAll: () => Promise.resolve([]),
+        update: () => Promise.resolve(),
     };
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
+        deleteAllByMotivationSchema: () => Promise.resolve(),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: () => Promise.resolve(null),
@@ -196,11 +219,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
         // AppModule.configure(); здесь бутстрапится только AccountingModule,
         // поэтому подключаем ту же middleware вручную.
         app.use((req: unknown, res: unknown, next: () => void) =>
-            new RequestContextMiddleware().use(
-                req as never,
-                res as never,
-                next,
-            ),
+            new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
         app.useGlobalFilters(new DomainExceptionFilter());

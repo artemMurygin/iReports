@@ -11,6 +11,16 @@ export interface ShopSalaryRuleRepositoryPort {
         entity: ShopSalaryRule,
         meta: { motivationSchemaId: string },
     ): Promise<void>;
+
+    // PATCH /v1/shop/accounting/motivation-schema/:id (редактирование
+    // схемы) — «переименовать + удалить все правила НАПРАВЛЕНИЯ shop этой
+    // схемы + пересоздать из payload» (см. UpdateShopMotivationSchemaHandler).
+    // Реализация фиксирует direction='shop' в WHERE — критично: у одной
+    // строки motivation_schemas может быть смешанный набор правил
+    // service+shop (сотрудник с идентичностями в обеих ERP, см. комментарий
+    // у SalaryRule.direction в salary.prisma), удаление не должно задевать
+    // чужие (service) правила той же схемы.
+    deleteAllByMotivationSchema(motivationSchemaId: string): Promise<void>;
 }
 
 export const SHOP_SALARY_RULE_REPOSITORY = Symbol(

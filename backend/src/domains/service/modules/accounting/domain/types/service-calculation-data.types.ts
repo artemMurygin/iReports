@@ -28,8 +28,8 @@ export interface ServiceCompletedErpItem extends ServiceOrderRoleFields {
 // Один оплаченный заказ (Фаза 8, источник для OrderPayedEntity) — уровень
 // заказа целиком, а не позиции: "оплаченность" (см. paid-order-status.ts) и
 // суммы REVENUE/MARGIN/SALARY_MINUS_ENGINEER_SALARY определены только на
-// заказе. Ролевые поля заказа (managerId/createdById/closedById/
-// onlineManager) — те же, что и у ServiceOrderRoleFields, но engineerId
+// заказе. Ролевые поля заказа (managerId/onlineManager) — те же, что и у
+// ServiceOrderRoleFields, но engineerId
 // сюда намеренно не входит одним числом: у заказа может быть несколько
 // инженеров (по разным позициям), поэтому роль ENGINEER для OrderPayed
 // матчится отдельно, по множеству engineerIds (см.
@@ -37,8 +37,6 @@ export interface ServiceCompletedErpItem extends ServiceOrderRoleFields {
 export interface OrderPayedErpItem {
     orderId: number;
     managerId: number | null;
-    createdById: number;
-    closedById: number | null;
     onlineManager: string | null;
     // Инженеры позиций заказа (услуг и товаров), без дублей — источник для
     // роли ENGINEER (см. order-payed.entity.ts, комментарий у matchesOrder).

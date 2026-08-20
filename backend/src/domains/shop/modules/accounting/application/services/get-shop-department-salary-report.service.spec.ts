@@ -1,6 +1,7 @@
 import { GetShopDepartmentSalaryReportService } from './get-shop-department-salary-report.service';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -96,10 +97,26 @@ describe('GetShopDepartmentSalaryReportService', () => {
         const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
+            // Схемы на отдел в этих тестах нет — forDepartment() сводится
+            // ровно к findByEmployees(), как и раньше (покрытие
+            // department-схемы — в resolve-shop-employee-salary-rules.spec).
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees,
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
             findIdByTarget: jest.fn().mockResolvedValue(null),
+            findById: jest.fn().mockResolvedValue(null),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue(undefined),
         };
+
+        const salaryRulesResolver = new ResolveShopEmployeeSalaryRulesService(
+            shopMotivationSchemaRepo,
+            {
+                findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
+                findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
+            } as unknown as ShopCalculationDataPort,
+        );
 
         const findByDirectionAndPeriod = jest
             .fn()
@@ -144,13 +161,13 @@ describe('GetShopDepartmentSalaryReportService', () => {
 
         const service = new GetShopDepartmentSalaryReportService(
             shopDataSource,
-            shopMotivationSchemaRepo,
             shopSalesPerformanceReader,
             periodRepo,
             snapshotRepo,
             cacheRepo,
             domainSyncStatus,
             salesPlanRepo,
+            salaryRulesResolver,
         );
 
         return {

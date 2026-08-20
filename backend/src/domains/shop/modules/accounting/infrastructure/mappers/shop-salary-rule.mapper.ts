@@ -72,7 +72,7 @@ export class ShopSalaryRuleMapper implements Mapper<
             // См. комментарий у SalaryRule.direction в salary.prisma —
             // почему это поле не на MotivationSchema.
             direction: 'shop',
-            props: entity.config as Prisma.InputJsonValue,
+            props: entity.config,
             createdAt,
             updatedAt,
         };

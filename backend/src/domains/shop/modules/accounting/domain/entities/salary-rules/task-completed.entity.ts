@@ -80,7 +80,6 @@ export class TaskCompletedShopEntity
             type: 'taskCompletion',
             id: completion.id,
         }));
-        const bonus = this.props.config.bonus ?? 0;
         const award = this.props.config.award;
 
         switch (award.type) {
@@ -89,7 +88,7 @@ export class TaskCompletedShopEntity
                 // нужен (то же решение, что и у TaskCompletedEntity
                 // сервиса — в отличие от ProductSold/UsedProductSold, у
                 // TaskCompleted нет дробного quantity).
-                const amount = award.price * quantity + bonus;
+                const amount = award.price * quantity;
                 return {
                     ruleId: this.id,
                     quantity,
@@ -117,9 +116,9 @@ export class TaskCompletedShopEntity
                     award.percentBorders,
                     percentCompletion,
                 );
-                const amount =
-                    roundRubles(award.basePrice * quantity * multiplier) +
-                    bonus;
+                const amount = roundRubles(
+                    award.basePrice * quantity * multiplier,
+                );
                 return {
                     ruleId: this.id,
                     quantity,

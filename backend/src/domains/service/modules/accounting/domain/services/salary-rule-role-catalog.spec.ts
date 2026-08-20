@@ -14,7 +14,7 @@ describe('listSalaryRuleTypes', () => {
             expect(entry.allowedRoles).toEqual(
                 expect.arrayContaining(['ENGINEER', 'ONLINE_MANAGER']),
             );
-            expect(entry.allowedRoles.length).toBe(6);
+            expect(entry.allowedRoles.length).toBe(4);
         }
     });
 });

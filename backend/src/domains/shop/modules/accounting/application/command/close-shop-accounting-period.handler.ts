@@ -18,9 +18,8 @@ import type { AccountingCalculationCachePort } from '@/domains/service/modules/a
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { toAccountingPeriodResponse } from '@/domains/service/modules/accounting/application/mappers/to-accounting-period-response';
-import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import { PeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
 import { buildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
 import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-context';
@@ -61,13 +60,12 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
         private readonly snapshotRepo: AccountingPeriodSnapshotPort,
         @Inject(ACCOUNTING_CALCULATION_CACHE)
         private readonly cacheRepo: AccountingCalculationCachePort,
-        @Inject(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
         private readonly shopContextBuilder: BuildShopCalculationContextService,
+        private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
     ) {}
 
     async execute(
@@ -104,9 +102,9 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
                 period: period.getValue(),
             });
 
-        // Снапшот — только сотрудники с личной мотивационной схемой (см.
-        // ShopMotivationSchemaRepositoryPort.findAllEmployeeTargets); схемы
-        // на отдел здесь, как и у service, не разворачиваются.
+        // Снапшот — все сотрудники, у которых есть зарплатные правила: с
+        // личной схемой и/или со схемой на их отдел (см.
+        // ResolveShopEmployeeSalaryRulesService.forAllTargets).
         const rows = await this.closeShopDirection(period);
 
         periodEntity.close(command.closedBy, rows.length);
@@ -135,13 +133,18 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
     private async closeShopDirection(
         period: Period,
     ): Promise<AccountingPeriodSnapshotRow[]> {
-        const schemas =
-            await this.shopMotivationSchemaRepo.findAllEmployeeTargets();
+        const salaryRulesByEmployee =
+            await this.salaryRulesResolver.forAllTargets();
         const rows: AccountingPeriodSnapshotRow[] = [];
-        for (const schema of schemas) {
-            const props = schema.getProps();
-            const employeeId = props.target.getId();
-            const rules = props.rules;
+        for (const [employeeId, { rules }] of salaryRulesByEmployee) {
+            // Сотрудник отдела со схемой, у которого после фильтра по
+            // direction='shop' не осталось ни одного правила (вся схема
+            // отдела — правила сервиса), в снапшот не попадает: пустая
+            // строка на нулевую сумму завысила бы closedRows и ничего не
+            // фиксировала бы.
+            if (rules.length === 0) {
+                continue;
+            }
             const base = await this.shopContextBuilder.build(
                 period,
                 employeeId,

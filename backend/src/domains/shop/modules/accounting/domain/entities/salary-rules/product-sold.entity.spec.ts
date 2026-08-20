@@ -139,24 +139,6 @@ describe('ProductSoldEntity', () => {
             expect(line.quantity).toBe(1.5);
             expect(line.amount).toBe(150);
         });
-
-        it('индивидуальный бонус попадает в сумму', () => {
-            const rule = ProductSoldEntity.create({
-                type: 'ProductSold',
-                name: 'За проданный товар',
-                targetRole: 'ONLINE_MANAGER',
-                config: {
-                    category: null,
-                    award: { type: 'Fixed', price: 100 },
-                    bonus: 50,
-                },
-            });
-
-            const amount = rule.calculate(
-                buildContext([buildItem({ onlineManagerId: 'employee-42' })]),
-            ).amount;
-            expect(amount).toBe(150);
-        });
     });
 
     describe('award FixedPercent', () => {

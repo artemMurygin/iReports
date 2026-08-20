@@ -12,12 +12,9 @@ export type { TargetRole, SalaryBasis, PercentBorder };
 
 // hours больше не часть config (Фаза 7) — источник часов сотрудника за
 // период это EmployeeHoursEntry (ручной ввод), приходящий в
-// CalculationContext.erpData, а не хардкод в правиле. bonus — необязательный
-// индивидуальный бонус, общий для всех типов правил (см. contracts,
-// individualBonusFieldSchema).
+// CalculationContext.erpData, а не хардкод в правиле.
 export type PayPerHourSalaryConfig = {
     price: number;
-    bonus?: number;
 };
 
 export type PayPerHourSalaryRule = {
@@ -32,7 +29,6 @@ export type ServiceCompletedSalaryConfig = {
         | { type: 'Fixed'; price: number }
         | { type: 'ServiceFixed' }
         | { type: 'ServicePercent'; percent: number };
-    bonus?: number;
 };
 
 export type ServiceCompletedSalaryRule = {
@@ -60,7 +56,6 @@ export type OrderPayedSalaryConfig = {
               salaryBasis: SalaryBasis;
               percentBorders: [PercentBorder, PercentBorder, PercentBorder];
           };
-    bonus?: number;
 };
 
 export type OrderPayedSalaryRule = {
@@ -85,7 +80,6 @@ export type TaskCompletedSalaryConfig = {
               basePrice: number;
               percentBorders: [PercentBorder, PercentBorder, PercentBorder];
           };
-    bonus?: number;
 };
 
 export type TaskCompletedSalaryRule = {

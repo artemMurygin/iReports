@@ -29,4 +29,18 @@ export class SalaryRuleRepository
             }),
         );
     }
+
+    async deleteAllByMotivationSchema(
+        motivationSchemaId: string,
+    ): Promise<void> {
+        // direction: 'service' в WHERE — критично: не задевает правила
+        // направления shop той же строки motivation_schemas (сотрудник с
+        // идентичностями в обеих ERP), см. комментарий у
+        // SalaryRuleRepositoryPort.deleteAllByMotivationSchema.
+        await this.write(null, (client) =>
+            client.salaryRule.deleteMany({
+                where: { motivationSchemaId, direction: 'service' },
+            }),
+        );
+    }
 }

@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
-import type {
-    EmployeeIdentityRef,
-    ExternalIdentifierType,
-    ExternalSystem,
-} from '@/shared/domain/calculation-context';
+import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import type {
     ShopProductSoldErpItem,
     ShopTaskCompletionErpItem,
@@ -34,8 +30,8 @@ export class ShopCalculationDataRepository
             where: { bitrixEmployeeId },
         });
         return records.map((record) => ({
-            system: record.system as ExternalSystem,
-            identifierType: record.identifierType as ExternalIdentifierType,
+            system: record.system,
+            identifierType: record.identifierType,
             externalId: record.externalId,
         }));
     }
@@ -146,8 +142,8 @@ export class ShopCalculationDataRepository
         });
         for (const record of records) {
             map.get(record.bitrixEmployeeId)?.push({
-                system: record.system as ExternalSystem,
-                identifierType: record.identifierType as ExternalIdentifierType,
+                system: record.system,
+                identifierType: record.identifierType,
                 externalId: record.externalId,
             });
         }

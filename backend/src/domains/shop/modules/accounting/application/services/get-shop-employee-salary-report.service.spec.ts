@@ -9,6 +9,8 @@ import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
+import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import type { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
@@ -66,13 +68,31 @@ describe('GetShopEmployeeSalaryReportService', () => {
         const findShopByEmployee = jest
             .fn<Promise<ShopMotivationSchema | null>, [number]>()
             .mockResolvedValue(overrides?.shopSchema ?? null);
-        const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
+        const shopMotivationSchemaRepo = {
             insert: jest.fn(),
             findByEmployee: findShopByEmployee,
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees: jest.fn().mockResolvedValue([]),
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
             findIdByTarget: jest.fn().mockResolvedValue(null),
-        };
+            findById: jest.fn().mockResolvedValue(null),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn(),
+        } as unknown as ShopMotivationSchemaRepositoryPort;
+
+        // ResolveShopEmployeeSalaryRulesService.forEmployee() читает отдел
+        // сотрудника через ShopCalculationDataPort — в этих тестах у
+        // сотрудника всегда нет отдела (department-схемы здесь не
+        // проверяются), поэтому findEmployeeDepartmentId возвращает null и
+        // forEmployee() сводится ровно к findByEmployee(), как и раньше.
+        const salaryRulesResolver = new ResolveShopEmployeeSalaryRulesService(
+            shopMotivationSchemaRepo,
+            {
+                findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
+                findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
+            } as unknown as ShopCalculationDataPort,
+        );
 
         const findByDirectionAndPeriod = jest
             .fn<Promise<AccountingPeriod | null>, [string, string]>()
@@ -154,9 +174,12 @@ describe('GetShopEmployeeSalaryReportService', () => {
                     // зеркалит salesPerformanceDetail (отдел целиком), тот
                     // же приём, что и в BuildShopCalculationContextService.
                     // resolveSalesPerformanceByCategory.
-                    salesPerformanceByCategory: overrides?.shopSalesPerformanceDetail
-                        ? new Map([[null, overrides.shopSalesPerformanceDetail]])
-                        : new Map(),
+                    salesPerformanceByCategory:
+                        overrides?.shopSalesPerformanceDetail
+                            ? new Map([
+                                  [null, overrides.shopSalesPerformanceDetail],
+                              ])
+                            : new Map(),
                 }),
             ),
             findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),
@@ -168,8 +191,8 @@ describe('GetShopEmployeeSalaryReportService', () => {
             cacheRepo,
             domainSyncStatus,
             salesPlanRepo,
-            shopMotivationSchemaRepo,
             shopContextBuilder,
+            salaryRulesResolver,
         );
 
         return {

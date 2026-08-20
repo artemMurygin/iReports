@@ -32,4 +32,21 @@ export class ShopSalaryRuleRepository
             }),
         );
     }
+
+    // PATCH /v1/shop/accounting/motivation-schema/:id — часть "delete all
+    // + recreate" (см. UpdateShopMotivationSchemaHandler). direction:
+    // 'shop' в WHERE — не задевает правила направления service той же
+    // строки motivation_schemas (см. комментарий в
+    // ShopSalaryRuleRepositoryPort.deleteAllByMotivationSchema). write(null, ...)
+    // — тот же приём, что и у ShopTaskCompletionRepository.delete(): нет
+    // конкретного агрегата, чьи domain-события нужно опубликовать.
+    async deleteAllByMotivationSchema(
+        motivationSchemaId: string,
+    ): Promise<void> {
+        await this.write(null, (client) =>
+            client.salaryRule.deleteMany({
+                where: { motivationSchemaId, direction: 'shop' },
+            }),
+        );
+    }
 }

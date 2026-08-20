@@ -2,11 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-context';
 import {
     isSalesPerformancePlanApproved,
@@ -15,12 +15,9 @@ import {
 import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/to-salary-report-rules';
 import {
     buildFreshnessStamp,
-    motivationSchemaVersion,
     stampOf,
 } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
 import { Period } from '@/shared/domain/period.value-object';
-import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
-import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -70,8 +67,6 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 @Injectable()
 export class GetEmployeeSalaryReportService {
     constructor(
-        @Inject(MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly motivationSchemaRepo: MotivationSchemaRepositoryPort,
         @Inject(ACCOUNTING_PERIOD_REPOSITORY)
         private readonly periodRepo: AccountingPeriodRepositoryPort,
         @Inject(ACCOUNTING_PERIOD_SNAPSHOT)
@@ -83,6 +78,7 @@ export class GetEmployeeSalaryReportService {
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
+        private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
     ) {}
 
     async execute(
@@ -150,13 +146,16 @@ export class GetEmployeeSalaryReportService {
         employeeId: number,
     ): Promise<OpenDirectionReport> {
         const period = validatedPeriod.getValue();
-        const schema =
-            await this.motivationSchemaRepo.findByEmployee(employeeId);
-        const rules = schema?.getProps().rules ?? [];
+        // Правила ОБЕИХ схем сотрудника — личной и его отдела (см.
+        // ResolveEmployeeSalaryRulesService): раньше здесь стоял прямой
+        // findByEmployee, и сотрудник со схемой, заведённой на отдел,
+        // получал пустой набор правил и нули во всём отчёте.
+        const { rules, schemasVersion } =
+            await this.salaryRulesResolver.forEmployee(employeeId);
 
         const freshnessStamp = await this.computeFreshnessStamp(
             'service',
-            schema,
+            schemasVersion,
             period,
         );
 
@@ -257,7 +256,7 @@ export class GetEmployeeSalaryReportService {
     // строку сравнения — см. domain/services/accounting-cache-freshness.ts.
     private async computeFreshnessStamp(
         direction: AccountingDirection,
-        schema: MotivationSchema | null,
+        schemasVersion: string,
         period: string,
     ): Promise<string> {
         const [domainSyncAt, plans] = await Promise.all([
@@ -271,7 +270,7 @@ export class GetEmployeeSalaryReportService {
         }, null);
 
         return buildFreshnessStamp({
-            motivationSchemaVersion: motivationSchemaVersion(schema),
+            motivationSchemaVersion: schemasVersion,
             domainSyncStamp: stampOf(domainSyncAt),
             salesPlanStamp: stampOf(salesPlanAt),
         });

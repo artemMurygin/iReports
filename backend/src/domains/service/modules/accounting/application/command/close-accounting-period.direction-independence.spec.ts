@@ -7,10 +7,14 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
+import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import type { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -72,10 +76,22 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees: jest.fn().mockResolvedValue([]),
             findIdByTarget: jest.fn(),
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
+            findById: jest.fn(),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn(),
         };
+        const calculationDataSource = {
+            findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
+        } as unknown as ServiceCalculationDataPort;
+        const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
+            motivationSchemaRepo,
+            calculationDataSource,
+        );
         const salesPlanRepo: SalesPlanRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
@@ -106,10 +122,10 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             periodRepo,
             snapshotRepo,
             cacheRepo,
-            motivationSchemaRepo,
             salesPlanRepo,
             unitOfWork,
             contextBuilder,
+            salaryRulesResolver,
         );
     };
 
@@ -128,10 +144,23 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees: jest.fn().mockResolvedValue([]),
             findIdByTarget: jest.fn(),
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
+            findById: jest.fn(),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn(),
         };
+        const shopSalaryRulesResolver =
+            new ResolveShopEmployeeSalaryRulesService(
+                shopMotivationSchemaRepo,
+                {
+                    findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
+                    findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
+                } as unknown as ShopCalculationDataPort,
+            );
         const salesPlanRepo: SalesPlanRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
@@ -162,10 +191,10 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             periodRepo,
             snapshotRepo,
             cacheRepo,
-            shopMotivationSchemaRepo,
             salesPlanRepo,
             unitOfWork,
             shopContextBuilder,
+            shopSalaryRulesResolver,
         );
     };
 

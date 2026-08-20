@@ -5,6 +5,8 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
+import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import type { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
 import { Period } from '@/shared/domain/period.value-object';
@@ -48,12 +50,29 @@ describe('CloseShopAccountingPeriodHandler', () => {
         const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees: jest.fn().mockResolvedValue([]),
             findIdByTarget: jest.fn(),
             findAllEmployeeTargets: jest
                 .fn()
                 .mockResolvedValue(overrides?.shopSchemas ?? []),
+            // Схем на отдел в этих тестах нет — forAllTargets() сводится
+            // ровно к findAllEmployeeTargets(), как и раньше (покрытие
+            // разворачивания department-схемы в сотрудников — в
+            // resolve-shop-employee-salary-rules.service.spec.ts).
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
+            findById: jest.fn(),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn(),
         };
+
+        const salaryRulesResolver = new ResolveShopEmployeeSalaryRulesService(
+            shopMotivationSchemaRepo,
+            {
+                findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
+                findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
+            } as unknown as ShopCalculationDataPort,
+        );
 
         const salesPlanRepo: SalesPlanRepositoryPort = {
             insert: jest.fn(),
@@ -94,10 +113,10 @@ describe('CloseShopAccountingPeriodHandler', () => {
             periodRepo,
             snapshotRepo,
             cacheRepo,
-            shopMotivationSchemaRepo,
             salesPlanRepo,
             unitOfWork,
             shopContextBuilder,
+            salaryRulesResolver,
         );
 
         return {

@@ -18,9 +18,7 @@ import { ShopTaskCompletionInvalidStatusTransitionException } from '@/domains/sh
 // Синхронизация с реальными задачами Bitrix24 запланирована ОТДЕЛЬНОЙ
 // будущей фазой и не реализуется здесь.
 export type ShopTaskCompletionStatus =
-    | 'PENDING_CONFIRMATION'
-    | 'CONFIRMED'
-    | 'REJECTED';
+    'PENDING_CONFIRMATION' | 'CONFIRMED' | 'REJECTED';
 
 export interface ShopTaskCompletionProps {
     employeeId: number;

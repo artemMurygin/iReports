@@ -10,8 +10,6 @@ const buildFields = (
 ): ServiceOrderRoleFields => ({
     engineerId: 42,
     managerId: 7,
-    createdById: 3,
-    closedById: 9,
     onlineManager: 'ivan.petrov',
     ...overrides,
 });
@@ -41,17 +39,6 @@ describe('resolveServiceRoleSource', () => {
         expect(resolveServiceRoleSource('ORDER_MANAGER')).toEqual({
             kind: 'ORDER_EMPLOYEE_FIELD',
             field: 'managerId',
-        });
-    });
-
-    it('CREATED_BY и CLOSED_BY резолвятся к своим полям', () => {
-        expect(resolveServiceRoleSource('CREATED_BY')).toEqual({
-            kind: 'ORDER_EMPLOYEE_FIELD',
-            field: 'createdById',
-        });
-        expect(resolveServiceRoleSource('CLOSED_BY')).toEqual({
-            kind: 'ORDER_EMPLOYEE_FIELD',
-            field: 'closedById',
         });
     });
 });
@@ -130,16 +117,16 @@ describe('employeeMatchesServiceRole', () => {
         ).toBe(false);
     });
 
-    it('CLOSED_BY — не совпадает, если заказ ещё не закрыт (closedById = null)', () => {
+    it('ORDER_MANAGER — не совпадает, если у заказа нет менеджера (managerId = null)', () => {
         const employee = employeeWith([
-            { system: 'ROAPP', identifierType: 'EMPLOYEE_ID', externalId: '9' },
+            { system: 'ROAPP', identifierType: 'EMPLOYEE_ID', externalId: '7' },
         ]);
 
         expect(
             employeeMatchesServiceRole(
                 employee,
-                'CLOSED_BY',
-                buildFields({ closedById: null }),
+                'ORDER_MANAGER',
+                buildFields({ managerId: null }),
             ),
         ).toBe(false);
     });

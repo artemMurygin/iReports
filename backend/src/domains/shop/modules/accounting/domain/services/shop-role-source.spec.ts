@@ -35,7 +35,7 @@ describe('resolveShopRoleSource', () => {
     });
 
     it('бросает для ролей, не относящихся к shop (например, ENGINEER сервиса)', () => {
-        expect(() => resolveShopRoleSource('ENGINEER' as never)).toThrow();
+        expect(() => resolveShopRoleSource('ENGINEER')).toThrow();
     });
 });
 

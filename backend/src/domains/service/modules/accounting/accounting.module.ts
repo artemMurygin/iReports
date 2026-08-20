@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { SalesModule } from '@/domains/service/modules/sales/sales.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
+import { DirectoryModule } from '@/modules/directory/directory.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
+import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
 import { ReopenAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.handler';
@@ -17,10 +19,16 @@ import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accoun
 import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-department-salary-report.service';
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { ListEmployeeHoursEntriesService } from '@/domains/service/modules/accounting/application/services/list-employee-hours-entries.service';
 import { ListTaskCompletionsService } from '@/domains/service/modules/accounting/application/services/list-task-completions.service';
 import { ListSalaryRuleTypesService } from '@/domains/service/modules/accounting/application/services/list-salary-rule-types.service';
+import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/list-motivation-schemas.service';
+import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/get-motivation-schema.service';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-motivation-schema.http.controller';
+import { ListMotivationSchemasHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-motivation-schemas.http.controller';
+import { GetMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-motivation-schema.http.controller';
+import { UpdateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/update-motivation-schema.http.controller';
 import { GetEmployeeSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-employee-salary-report.http.controller';
 import { GetDepartmentSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-salary-report.http.controller';
 import { CloseAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/close-accounting-period.http.controller';
@@ -91,9 +99,12 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
 // независимость закрытия периода по direction; на providers/controllers/
 // imports этого модуля он не влияет.
 @Module({
-    imports: [CqrsModule, SalesModule, DomainSyncStatusModule],
+    imports: [CqrsModule, SalesModule, DomainSyncStatusModule, DirectoryModule],
     controllers: [
         CreateMotivationSchemaHttpController,
+        ListMotivationSchemasHttpController,
+        GetMotivationSchemaHttpController,
+        UpdateMotivationSchemaHttpController,
         GetEmployeeSalaryReportHttpController,
         GetDepartmentSalaryReportHttpController,
         CloseAccountingPeriodHttpController,
@@ -112,6 +123,9 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
     ],
     providers: [
         CreateMotivationSchemaHandler,
+        UpdateMotivationSchemaHandler,
+        ListMotivationSchemasService,
+        GetMotivationSchemaService,
         CreateSalaryRuleHandler,
         CloseAccountingPeriodHandler,
         ReopenAccountingPeriodHandler,
@@ -126,6 +140,7 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
         GetDepartmentSalaryReportService,
         GetAccountingPeriodService,
         BuildServiceCalculationContextService,
+        ResolveEmployeeSalaryRulesService,
         ListEmployeeHoursEntriesService,
         ListTaskCompletionsService,
         ListSalaryRuleTypesService,

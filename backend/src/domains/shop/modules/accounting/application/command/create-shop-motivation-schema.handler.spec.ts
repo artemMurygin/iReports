@@ -31,8 +31,13 @@ describe('CreateShopMotivationSchemaHandler', () => {
             insert,
             findByEmployee,
             findAllEmployeeTargets,
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees,
             findIdByTarget,
+            findById: jest.fn().mockResolvedValue(null),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue(undefined),
         };
         // run() выполняет переданную работу напрямую, без реальной транзакции —
         // для юнит-теста хендлера этого достаточно, транзакционность самого

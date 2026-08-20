@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
+import { Prisma } from '../../../../../../../prisma/generated/prisma/schema/client';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
 import { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
@@ -52,9 +53,31 @@ export class ShopMotivationSchemaRepository
         return record ? this.mapper.toDomain(record) : null;
     }
 
+    async findByDepartment(
+        departmentId: number,
+    ): Promise<ShopMotivationSchema | null> {
+        const record = await this.client.motivationSchema.findFirst({
+            where: { targetType: 'Department', targetId: departmentId },
+            // direction: 'shop' — см. комментарий в findByEmployee выше.
+            include: { rules: { where: { direction: 'shop' } } },
+        });
+
+        return record ? this.mapper.toDomain(record) : null;
+    }
+
     async findAllEmployeeTargets(): Promise<ShopMotivationSchema[]> {
         const records = await this.client.motivationSchema.findMany({
             where: { targetType: 'Employee' },
+            // direction: 'shop' — см. комментарий в findByEmployee выше.
+            include: { rules: { where: { direction: 'shop' } } },
+        });
+
+        return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    async findAllDepartmentTargets(): Promise<ShopMotivationSchema[]> {
+        const records = await this.client.motivationSchema.findMany({
+            where: { targetType: 'Department' },
             // direction: 'shop' — см. комментарий в findByEmployee выше.
             include: { rules: { where: { direction: 'shop' } } },
         });
@@ -93,5 +116,56 @@ export class ShopMotivationSchemaRepository
         });
 
         return record?.id ?? null;
+    }
+
+    // Страница просмотра/редактирования зарплатных схем (список + деталь).
+    // direction: 'shop' в include.rules — тот же приём, что и в
+    // findByEmployee выше; строка с 0 правилами shop не отфильтровывается
+    // здесь (это решение application-слоя, см. GetShopMotivationSchemaService/
+    // ListShopMotivationSchemasService), только маппится как есть.
+    async findById(id: string): Promise<ShopMotivationSchema | null> {
+        const record = await this.client.motivationSchema.findUnique({
+            where: { id },
+            include: { rules: { where: { direction: 'shop' } } },
+        });
+
+        return record ? this.mapper.toDomain(record) : null;
+    }
+
+    async findAll(filters: {
+        targetType?: 'Department' | 'Employee';
+        targetId?: number;
+        search?: string;
+    }): Promise<ShopMotivationSchema[]> {
+        const where: Prisma.MotivationSchemaWhereInput = {};
+        if (filters.targetType) {
+            where.targetType = filters.targetType;
+        }
+        if (filters.targetId !== undefined) {
+            where.targetId = filters.targetId;
+        }
+        if (filters.search) {
+            where.name = { contains: filters.search, mode: 'insensitive' };
+        }
+
+        const records = await this.client.motivationSchema.findMany({
+            where,
+            include: { rules: { where: { direction: 'shop' } } },
+        });
+
+        return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    // Персист ShopMotivationSchema.rename() — только name; target/rules
+    // этим методом не меняются (rules пишутся/удаляются отдельно через
+    // ShopSalaryRuleRepository, см. UpdateShopMotivationSchemaHandler).
+    async update(entity: ShopMotivationSchema): Promise<void> {
+        const props = entity.getProps();
+        await this.write(entity, (client) =>
+            client.motivationSchema.update({
+                where: { id: entity.id },
+                data: { name: props.name },
+            }),
+        );
     }
 }

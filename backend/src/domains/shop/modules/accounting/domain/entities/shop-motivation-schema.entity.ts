@@ -45,4 +45,14 @@ export class ShopMotivationSchema extends AggregateRoot<ShopMotivationSchemaProp
     }
 
     validate(): void {}
+
+    // Переименование схемы (PATCH /v1/shop/accounting/motivation-schema/:id,
+    // редактирование зарплатной схемы) — прямая мутация props, тот же
+    // паттерн, что у AccountingPeriod.close()/reopen() сервисного
+    // accounting. Без нового domain-события: инвалидация ленивого кэша
+    // расчёта уже опирается на updatedAt схемы/правил (Prisma `@updatedAt`
+    // проставит его сам при персисте), отдельное событие не нужно.
+    rename(name: string): void {
+        this.props.name = name;
+    }
 }

@@ -17,9 +17,7 @@ import { TaskCompletionInvalidStatusTransitionException } from '@/domains/servic
 // Синхронизация с реальными задачами Bitrix24 запланирована ОТДЕЛЬНОЙ
 // будущей фазой и не реализуется здесь.
 export type TaskCompletionStatus =
-    | 'PENDING_CONFIRMATION'
-    | 'CONFIRMED'
-    | 'REJECTED';
+    'PENDING_CONFIRMATION' | 'CONFIRMED' | 'REJECTED';
 
 export interface TaskCompletionProps {
     employeeId: number;

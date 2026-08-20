@@ -3,19 +3,27 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module';
 import { MoySkladSyncModule } from '@/domains/shop/sync/moySklad/moysklad-sync.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
+import { DirectoryModule } from '@/modules/directory/directory.module';
 import { ListShopSalaryRuleTypesService } from '@/domains/shop/modules/accounting/application/services/list-salary-rule-types.service';
 import { ListShopTaskCompletionsService } from '@/domains/shop/modules/accounting/application/services/list-shop-task-completions.service';
+import { ListShopMotivationSchemasService } from '@/domains/shop/modules/accounting/application/services/list-shop-motivation-schemas.service';
+import { GetShopMotivationSchemaService } from '@/domains/shop/modules/accounting/application/services/get-shop-motivation-schema.service';
 import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import { GetShopEmployeeSalaryReportService } from '@/domains/shop/modules/accounting/application/services/get-shop-employee-salary-report.service';
 import { GetShopDepartmentSalaryReportService } from '@/domains/shop/modules/accounting/application/services/get-shop-department-salary-report.service';
 import { CreateShopSalaryRuleHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-salary-rule.handler';
 import { CreateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-motivation-schema.handler';
+import { UpdateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/update-shop-motivation-schema.handler';
 import { CreateShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-task-completion.handler';
 import { ConfirmShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/confirm-shop-task-completion.handler';
 import { DeleteShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/delete-shop-task-completion.handler';
 import { CloseShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/close-shop-accounting-period.handler';
 import { ListShopSalaryRuleTypesHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { CreateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-motivation-schema.http.controller';
+import { ListShopMotivationSchemasHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/list-shop-motivation-schemas.http.controller';
+import { GetShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-motivation-schema.http.controller';
+import { UpdateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/update-shop-motivation-schema.http.controller';
 import { CreateShopTaskCompletionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-task-completion.http.controller';
 import { ConfirmShopTaskCompletionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/confirm-shop-task-completion.http.controller';
 import { DeleteShopTaskCompletionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/delete-shop-task-completion.http.controller';
@@ -118,10 +126,18 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         ShopSalesModule,
         MoySkladSyncModule,
         DomainSyncStatusModule,
+        // Справочник Bitrix (отделы/сотрудники) — вход
+        // ListShopMotivationSchemasService/GetShopMotivationSchemaService для
+        // резолвинга target.name (Фаза "Редактирование зарплатных схем", тот
+        // же приём, что и у одноимённого AccountingModule сервиса).
+        DirectoryModule,
     ],
     controllers: [
         ListShopSalaryRuleTypesHttpController,
         CreateShopMotivationSchemaHttpController,
+        ListShopMotivationSchemasHttpController,
+        GetShopMotivationSchemaHttpController,
+        UpdateShopMotivationSchemaHttpController,
         CreateShopTaskCompletionHttpController,
         ConfirmShopTaskCompletionHttpController,
         DeleteShopTaskCompletionHttpController,
@@ -137,11 +153,15 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         ListShopSalaryRuleTypesService,
         CreateShopSalaryRuleHandler,
         CreateShopMotivationSchemaHandler,
+        UpdateShopMotivationSchemaHandler,
+        ListShopMotivationSchemasService,
+        GetShopMotivationSchemaService,
         CreateShopTaskCompletionHandler,
         ConfirmShopTaskCompletionHandler,
         DeleteShopTaskCompletionHandler,
         ListShopTaskCompletionsService,
         BuildShopCalculationContextService,
+        ResolveShopEmployeeSalaryRulesService,
         CloseShopAccountingPeriodHandler,
         GetAccountingPeriodService,
         GetShopEmployeeSalaryReportService,

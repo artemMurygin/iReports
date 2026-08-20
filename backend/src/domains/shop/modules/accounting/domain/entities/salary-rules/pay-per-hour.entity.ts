@@ -58,13 +58,12 @@ export class PayPerHourShopEntity
         const erpData = context.erpData as ShopCalculationErpData | undefined;
         const hours = erpData?.hoursWorked ?? 0;
         const rate = this.props.config.price;
-        const bonus = this.props.config.bonus ?? 0;
 
         return {
             ruleId: this.id,
             quantity: hours,
             rate,
-            amount: roundRubles(hours * rate) + bonus,
+            amount: roundRubles(hours * rate),
             sources: [],
         };
     }

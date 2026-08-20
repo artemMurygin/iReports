@@ -20,8 +20,6 @@ const buildItem = (
     catalogEngineerBonus: 150,
     engineerId: 42,
     managerId: null,
-    createdById: 7,
-    closedById: null,
     onlineManager: null,
     ...overrides,
 });
@@ -194,39 +192,6 @@ describe('ServiceCompletedEntity', () => {
             ];
 
             expect(rule.calculate(buildContext(items)).amount).toBe(0);
-        });
-    });
-
-    describe('индивидуальный бонус', () => {
-        it('попадает в итоговую сумму поверх начисления по award', () => {
-            const rule = ServiceCompletedEntity.create({
-                type: 'ServiceCompleted',
-                name: 'За выполненную услугу',
-                targetRole: 'ENGINEER',
-                config: {
-                    award: { type: 'Fixed', price: 100 },
-                    bonus: 500,
-                },
-            });
-            const items = [
-                buildItem({ serviceOrderId: 1, quantity: 1, engineerId: 42 }),
-            ];
-
-            expect(rule.calculate(buildContext(items)).amount).toBe(600);
-        });
-
-        it('прибавляется даже когда совпавших позиций нет', () => {
-            const rule = ServiceCompletedEntity.create({
-                type: 'ServiceCompleted',
-                name: 'За выполненную услугу',
-                targetRole: 'ENGINEER',
-                config: {
-                    award: { type: 'Fixed', price: 100 },
-                    bonus: 500,
-                },
-            });
-
-            expect(rule.calculate(buildContext([])).amount).toBe(500);
         });
     });
 

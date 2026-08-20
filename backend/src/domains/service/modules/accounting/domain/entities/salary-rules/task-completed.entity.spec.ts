@@ -60,24 +60,7 @@ describe('TaskCompletedEntity', () => {
             });
         });
 
-        it('индивидуальный бонус попадает в сумму', () => {
-            const rule = TaskCompletedEntity.create({
-                type: 'TaskCompleted',
-                name: 'За задачу',
-                targetRole: 'ENGINEER',
-                config: {
-                    award: { type: 'Fixed', price: 200 },
-                    bonus: 50,
-                },
-            });
-
-            const amount = rule.calculate(
-                buildContext([{ id: 't1', employeeId: 1 }]),
-            ).amount;
-            expect(amount).toBe(250);
-        });
-
-        it('без подтверждённых задач возвращает нулевую сумму (плюс бонус, если есть)', () => {
+        it('без подтверждённых задач возвращает нулевую сумму', () => {
             const rule = TaskCompletedEntity.create({
                 type: 'TaskCompleted',
                 name: 'За задачу',

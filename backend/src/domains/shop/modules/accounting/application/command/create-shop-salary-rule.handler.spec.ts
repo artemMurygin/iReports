@@ -13,7 +13,10 @@ describe('CreateShopSalaryRuleHandler', () => {
                 [ShopSalaryRule, { motivationSchemaId: string }]
             >()
             .mockResolvedValue(undefined);
-        const shopSalaryRuleRepo: ShopSalaryRuleRepositoryPort = { insert };
+        const shopSalaryRuleRepo: ShopSalaryRuleRepositoryPort = {
+            insert,
+            deleteAllByMotivationSchema: jest.fn().mockResolvedValue(undefined),
+        };
         const handler = new CreateShopSalaryRuleHandler(shopSalaryRuleRepo);
         return { handler, insert };
     };

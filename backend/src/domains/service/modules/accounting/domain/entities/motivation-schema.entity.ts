@@ -39,5 +39,15 @@ export class MotivationSchema extends AggregateRoot<MotivationSchemaProps> {
         return motivationSchema;
     }
 
+    // Переименование схемы (PATCH .../motivation-schema/:id) — прямая
+    // мутация props, тот же паттерн, что и у AccountingPeriod.close()/
+    // reopen(). Замена набора правил (Delete+recreate) — ответственность
+    // application-слоя (UpdateMotivationSchemaHandler, координирующего
+    // SalaryRuleRepositoryPort/CommandBus), а не этой сущности: набор правил
+    // здесь читается (props.rules), но не персистится этим методом.
+    rename(name: string): void {
+        this.props.name = name;
+    }
+
     validate(): void {}
 }

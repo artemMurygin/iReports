@@ -59,8 +59,7 @@ export class ServiceCompletedEntity
     // периода на сумму не влияют.
     calculate(context: CalculationContext): CalculationLine {
         const erpData = context.erpData as
-            | ServiceCalculationErpData
-            | undefined;
+            ServiceCalculationErpData | undefined;
         const items = erpData?.serviceCompletedItems ?? [];
         const matched = items.filter((item) =>
             employeeMatchesServiceRole(context.employee, this.targetRole, item),
@@ -70,12 +69,11 @@ export class ServiceCompletedEntity
             type: 'serviceOrderItem',
             id: item.serviceOrderId,
         }));
-        const bonus = this.props.config.bonus ?? 0;
         const award = this.props.config.award;
 
         switch (award.type) {
             case 'Fixed': {
-                const amount = award.price * quantity + bonus;
+                const amount = award.price * quantity;
                 return {
                     ruleId: this.id,
                     quantity,
@@ -88,12 +86,11 @@ export class ServiceCompletedEntity
                 // Ставка "за услугу" из справочника (RoappService.engeneerBonus)
                 // — своя на каждую услугу, поэтому единого rate для строки
                 // нет (см. CalculationLine.rate — опционален).
-                const amount =
-                    matched.reduce(
-                        (sum, item) =>
-                            sum + item.catalogEngineerBonus * item.quantity,
-                        0,
-                    ) + bonus;
+                const amount = matched.reduce(
+                    (sum, item) =>
+                        sum + item.catalogEngineerBonus * item.quantity,
+                    0,
+                );
                 return { ruleId: this.id, quantity, amount, sources };
             }
             case 'ServicePercent': {
@@ -101,8 +98,7 @@ export class ServiceCompletedEntity
                     (sum, item) => sum + item.linePrice * item.quantity,
                     0,
                 );
-                const amount =
-                    roundRubles((base * award.percent) / 100) + bonus;
+                const amount = roundRubles((base * award.percent) / 100);
                 return {
                     ruleId: this.id,
                     // Базы REVENUE/MARGIN и т.п. у ServiceCompleted нет —

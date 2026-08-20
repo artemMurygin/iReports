@@ -7,17 +7,29 @@ import { MotivationSchema } from '@/domains/service/modules/accounting/domain/en
 export interface MotivationSchemaRepositoryPort {
     insert(entity: MotivationSchema): Promise<void>;
 
-    // Схема мотивации сотрудника (targetType = 'Employee') вместе с её
-    // правилами. Схем на отдел (targetType = 'Department') здесь
-    // сознательно не ищем — их учёт в отчёте сотрудника не входит в Фазу 1.
+    // ЛИЧНАЯ схема мотивации сотрудника (targetType = 'Employee') вместе с
+    // её правилами. Схему его отдела этот метод не возвращает — обе схемы
+    // сводит воедино ResolveEmployeeSalaryRulesService, единственный
+    // легальный вход к правилам сотрудника для расчёта (см. его шапку).
+    // Звать findByEmployee напрямую из расчёта нельзя: сотрудник без личной
+    // схемы, но со схемой на отдел, получил бы пустой набор правил и нули в
+    // отчёте.
     findByEmployee(employeeId: number): Promise<MotivationSchema | null>;
 
-    // Все схемы, нацеленные на сотрудника (targetType = 'Employee') — вход
-    // закрытия периода (Фаза 6, CloseAccountingPeriodHandler): снапшот
-    // строится по каждому сотруднику с личной схемой, а не по всем
-    // Bitrix-сотрудникам компании (у схем на отдел своя, ещё не
-    // реализованная логика раскрытия, см. PRD раздел "Мотивационные схемы").
+    // Схема, нацеленная на отдел (targetType = 'Department') — вторая
+    // половина набора правил сотрудника (см. findByEmployee выше).
+    findByDepartment(departmentId: number): Promise<MotivationSchema | null>;
+
+    // Все схемы, нацеленные на сотрудника (targetType = 'Employee') — одна
+    // из двух половин входа закрытия периода (Фаза 6,
+    // CloseAccountingPeriodHandler); вторая — findAllDepartmentTargets().
     findAllEmployeeTargets(): Promise<MotivationSchema[]>;
+
+    // Все схемы, нацеленные на отдел (targetType = 'Department') — вторая
+    // половина входа закрытия периода: хендлер разворачивает каждую такую
+    // схему в сотрудников её отдела, чтобы снапшот покрывал и тех, у кого
+    // личной схемы нет (иначе закрытие месяца зафиксировало бы им ноль).
+    findAllDepartmentTargets(): Promise<MotivationSchema[]>;
 
     // Батч-версия findByEmployee для отчёта по отделу (Фаза 9,
     // GetDepartmentSalaryReportService) — один запрос вместо одного на
@@ -36,6 +48,27 @@ export interface MotivationSchemaRepositoryPort {
         targetType: string,
         targetId: number,
     ): Promise<string | null>;
+
+    // Деталь схемы (GET .../motivation-schema/:id) — rules отфильтрованы по
+    // direction='service' на уровне Prisma-запроса, тот же приём, что и у
+    // findByEmployee выше. Схема с 0 правилами этого направления (все
+    // правила принадлежат shop-стороне той же строки) для домена service
+    // трактуется как не найденная — эту проверку делает вызывающий
+    // application-сервис/хендлер, а не репозиторий.
+    findById(id: string): Promise<MotivationSchema | null>;
+
+    // Список схем направления service (GET .../motivation-schema) с
+    // опциональными фильтрами по цели и подстрокой имени. rules
+    // отфильтрованы по direction='service' тем же приёмом.
+    findAll(filters: {
+        targetType?: string;
+        targetId?: number;
+        search?: string;
+    }): Promise<MotivationSchema[]>;
+
+    // Персист переименования (PATCH .../motivation-schema/:id) — только имя,
+    // targetType/targetId/rules этим методом не трогаются.
+    update(entity: MotivationSchema): Promise<void>;
 }
 
 export const MOTIVATION_SCHEMA_REPOSITORY = Symbol(

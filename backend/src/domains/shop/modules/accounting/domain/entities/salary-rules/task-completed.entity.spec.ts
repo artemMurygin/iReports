@@ -68,20 +68,6 @@ describe('TaskCompletedShopEntity', () => {
             });
         });
 
-        it('индивидуальный бонус попадает в сумму', () => {
-            const rule = TaskCompletedShopEntity.create({
-                type: 'TaskCompleted',
-                name: 'За выполненную задачу',
-                targetRole: 'ONLINE_MANAGER',
-                config: { award: { type: 'Fixed', price: 200 }, bonus: 50 },
-            });
-
-            const amount = rule.calculate(
-                buildContext(1, [{ id: 't1', employeeId: 1 }]),
-            ).amount;
-            expect(amount).toBe(250);
-        });
-
         it('без задач сотрудника в периоде — ноль', () => {
             const rule = TaskCompletedShopEntity.create({
                 type: 'TaskCompleted',

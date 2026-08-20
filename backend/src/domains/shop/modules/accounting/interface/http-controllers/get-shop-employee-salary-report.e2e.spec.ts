@@ -66,7 +66,21 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             return Promise.resolve();
         },
         findByEmployee: (employeeId) =>
-            Promise.resolve(shopSchemas.get(employeeId) ?? null),
+            Promise.resolve(
+                [...shopSchemas.values()].find(
+                    (schema) =>
+                        schema.getProps().target.isEmployee() &&
+                        schema.getProps().target.getId() === employeeId,
+                ) ?? null,
+            ),
+        findByDepartment: (departmentId) =>
+            Promise.resolve(
+                [...shopSchemas.values()].find(
+                    (schema) =>
+                        schema.getProps().target.isDepartment() &&
+                        schema.getProps().target.getId() === departmentId,
+                ) ?? null,
+            ),
         findByEmployees: (employeeIds) =>
             Promise.resolve(
                 employeeIds
@@ -76,11 +90,28 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
                     ),
             ),
         findAllEmployeeTargets: () =>
-            Promise.resolve(Array.from(shopSchemas.values())),
+            Promise.resolve(
+                [...shopSchemas.values()].filter((schema) =>
+                    schema.getProps().target.isEmployee(),
+                ),
+            ),
+        findAllDepartmentTargets: () =>
+            Promise.resolve(
+                [...shopSchemas.values()].filter((schema) =>
+                    schema.getProps().target.isDepartment(),
+                ),
+            ),
         findIdByTarget: () => Promise.resolve(null),
+        // Не используется этим e2e-тестом (он проверяет только отчёт по
+        // зарплате, а не страницу просмотра/редактирования схем) —
+        // добавлены исключительно ради соответствия интерфейсу порта.
+        findById: () => Promise.resolve(null),
+        findAll: () => Promise.resolve([]),
+        update: () => Promise.resolve(),
     };
     const fakeShopSalaryRuleRepo: ShopSalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
+        deleteAllByMotivationSchema: () => Promise.resolve(),
     };
     const fakeShopTaskCompletionRepo: ShopTaskCompletionRepositoryPort = {
         insert: () => Promise.resolve(),
@@ -341,11 +372,7 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         // Доменные исключения читают RequestContext в конструкторе — см. тот
         // же приём в сервисном e2e-зеркале.
         app.use((req: unknown, res: unknown, next: () => void) =>
-            new RequestContextMiddleware().use(
-                req as never,
-                res as never,
-                next,
-            ),
+            new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
         app.useGlobalFilters(new DomainExceptionFilter());

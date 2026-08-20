@@ -10,6 +10,7 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Отчёт по отделу (Фаза 9) — тот же расчёт, что и у отчёта сотрудника,
@@ -91,10 +92,24 @@ describe('GetDepartmentSalaryReportService', () => {
         const motivationSchemaRepo: MotivationSchemaRepositoryPort = {
             insert: jest.fn(),
             findByEmployee: jest.fn(),
+            findByDepartment: jest.fn().mockResolvedValue(null),
             findByEmployees,
             findAllEmployeeTargets: jest.fn().mockResolvedValue([]),
+            findAllDepartmentTargets: jest.fn().mockResolvedValue([]),
             findIdByTarget: jest.fn().mockResolvedValue(null),
+            findById: jest.fn().mockResolvedValue(null),
+            findAll: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue(undefined),
         };
+
+        // ResolveEmployeeSalaryRulesService.forDepartment() — единственный
+        // легальный вход к правилам сотрудников отдела для этого отчёта (см.
+        // шапку файла сервиса); построен поверх тех же фейков motivationSchemaRepo/
+        // dataSource, что и раньше читал сервис напрямую.
+        const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
+            motivationSchemaRepo,
+            dataSource,
+        );
 
         const findByDirectionAndPeriod = jest
             .fn()
@@ -140,12 +155,12 @@ describe('GetDepartmentSalaryReportService', () => {
         const service = new GetDepartmentSalaryReportService(
             dataSource,
             salesPerformanceReader,
-            motivationSchemaRepo,
             periodRepo,
             snapshotRepo,
             cacheRepo,
             domainSyncStatus,
             salesPlanRepo,
+            salaryRulesResolver,
         );
 
         return {

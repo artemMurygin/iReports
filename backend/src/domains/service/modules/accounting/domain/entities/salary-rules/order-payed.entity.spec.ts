@@ -13,8 +13,6 @@ const buildItem = (
 ): OrderPayedErpItem => ({
     orderId: 1,
     managerId: null,
-    createdById: 7,
-    closedById: null,
     onlineManager: null,
     engineerIds: [42],
     revenue: 1000,
@@ -98,23 +96,6 @@ describe('OrderPayedEntity', () => {
                     { type: 'order', id: 2 },
                 ],
             });
-        });
-
-        it('индивидуальный бонус попадает в сумму', () => {
-            const rule = OrderPayedEntity.create({
-                type: 'OrderPayed',
-                name: 'За оплаченный заказ',
-                targetRole: 'ENGINEER',
-                config: {
-                    award: { type: 'Fixed', price: 500 },
-                    bonus: 100,
-                },
-            });
-
-            const amount = rule.calculate(
-                buildContext([buildItem({ engineerIds: [42] })]),
-            ).amount;
-            expect(amount).toBe(600);
         });
     });
 
@@ -346,25 +327,25 @@ describe('OrderPayedEntity', () => {
                 targetRole: 'ENGINEER',
                 config: { award: { type: 'Fixed', price: 300 } },
             });
-            const createdByRule = OrderPayedEntity.create({
+            const orderManagerRule = OrderPayedEntity.create({
                 type: 'OrderPayed',
-                name: 'За создание заказа',
-                targetRole: 'CREATED_BY',
+                name: 'За менеджера заказа',
+                targetRole: 'ORDER_MANAGER',
                 config: { award: { type: 'Fixed', price: 200 } },
             });
             // Один и тот же сотрудник (identity EMPLOYEE_ID=42) — и инженер,
-            // и автор заказа одновременно.
+            // и менеджер заказа одновременно.
             const items = [
                 buildItem({
                     orderId: 1,
                     engineerIds: [42],
-                    createdById: 42,
+                    managerId: 42,
                 }),
             ];
             const context = buildContext(items);
 
             const lines = await PeriodCalculationOrchestrator.calculate(
-                [engineerRule, createdByRule],
+                [engineerRule, orderManagerRule],
                 context,
             );
 

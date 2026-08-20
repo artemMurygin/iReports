@@ -16,16 +16,13 @@ import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounti
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import {
     buildFreshnessStamp,
-    motivationSchemaVersion,
     stampOf,
 } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
-import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
-import type { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
 import { PeriodCalculationOrchestrator as ShopPeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
@@ -85,8 +82,6 @@ export class GetShopDepartmentSalaryReportService {
     constructor(
         @Inject(SHOP_CALCULATION_DATA)
         private readonly shopDataSource: ShopCalculationDataPort,
-        @Inject(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
-        private readonly shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort,
         @Inject(SHOP_SALES_PERFORMANCE_READER)
         private readonly shopSalesPerformanceReader: ShopSalesPerformanceReaderPort,
         @Inject(ACCOUNTING_PERIOD_REPOSITORY)
@@ -99,6 +94,7 @@ export class GetShopDepartmentSalaryReportService {
         private readonly domainSyncStatus: DomainSyncStatusPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
+        private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
     ) {}
 
     async execute(
@@ -220,7 +216,7 @@ export class GetShopDepartmentSalaryReportService {
             hoursByEmployee,
             productSoldItems,
             confirmedTaskCompletions,
-            schemas,
+            salaryRulesByEmployee,
             domainSyncAt,
             plans,
         ] = await Promise.all([
@@ -231,7 +227,11 @@ export class GetShopDepartmentSalaryReportService {
             ),
             this.shopDataSource.findProductSoldItems(from, to),
             this.shopDataSource.findConfirmedTaskCompletions(period),
-            this.shopMotivationSchemaRepo.findByEmployees(employeeIds),
+            // Правила ОБЕИХ схем каждого сотрудника — личной и схемы этого
+            // отдела (см. ResolveShopEmployeeSalaryRulesService): без второй
+            // половины сотрудники отдела, у которых нет личной схемы,
+            // считались нулями.
+            this.salaryRulesResolver.forDepartment(departmentId, employeeIds),
             this.domainSyncStatus.getLastSuccessfulSyncAt('shop'),
             this.salesPlanRepo.findByDirectionAndPeriod('shop', period),
         ]);
@@ -243,10 +243,15 @@ export class GetShopDepartmentSalaryReportService {
                 null,
             );
 
-        const schemaByEmployee = new Map(
-            schemas.map((schema) => [schema.getProps().target.getId(), schema]),
+        // Категории — по ОБЪЕДИНЁННЫМ правилам (личные + отдела): правило
+        // ProductSold/UsedProductSold, пришедшее из схемы отдела, тоже
+        // требует раскрытия своего дерева категорий, иначе оно сработает
+        // fail closed и не начислит ничего.
+        const categoryIds = this.collectProductCategoryIds(
+            [...salaryRulesByEmployee.values()].map(
+                (resolved) => resolved.rules,
+            ),
         );
-        const categoryIds = this.collectProductCategoryIds(schemas);
         const categoryDescendantFolderIds =
             await this.resolveShopCategoryDescendantFolderIds(categoryIds);
         // Одна и та же карта category → ShopSalesPerformance для всех
@@ -273,10 +278,10 @@ export class GetShopDepartmentSalaryReportService {
         const contributions = new Map<number, ShopContribution>();
 
         for (const employee of employees) {
-            const schema = schemaByEmployee.get(employee.id) ?? null;
-            const rules = schema?.getProps().rules ?? [];
+            const resolved = salaryRulesByEmployee.get(employee.id);
+            const rules = resolved?.rules ?? [];
             const freshnessStamp = buildFreshnessStamp({
-                motivationSchemaVersion: motivationSchemaVersion(schema),
+                motivationSchemaVersion: resolved?.schemasVersion ?? 'none',
                 domainSyncStamp,
                 salesPlanStamp,
             });
@@ -336,11 +341,11 @@ export class GetShopDepartmentSalaryReportService {
     // BuildShopCalculationContextService, но на весь список схем отдела, а
     // не одной схемы сотрудника.
     private collectProductCategoryIds(
-        schemas: ShopMotivationSchema[],
+        ruleSets: ShopSalaryRule[][],
     ): Set<string> {
         const categoryIds = new Set<string>();
-        for (const schema of schemas) {
-            for (const rule of schema.getProps().rules) {
+        for (const rules of ruleSets) {
+            for (const rule of rules) {
                 if (
                     rule.type !== 'ProductSold' &&
                     rule.type !== 'UsedProductSold'
