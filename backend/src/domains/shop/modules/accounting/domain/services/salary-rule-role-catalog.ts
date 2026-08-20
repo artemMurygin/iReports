@@ -10,6 +10,11 @@ import type { TargetRole } from '@/domains/shop/modules/accounting/domain/types/
 // правило само матчит только "свои" роли в рантайме (см.
 // employeeMatchesShopDemandRole/employeeMatchesShopPurchaserRole,
 // бросающие ArgumentInvalidException для несовместимой роли).
+//
+// OFFICE (Фаза 2 плана "График работы сотрудников") сюда намеренно не
+// входит по той же причине, что и в service-каталоге: список — фиксированный
+// литерал, появление OFFICE в targetRoleSchema его не расширяет, а роль
+// нужна графику работы, а не зарплатным правилам магазина.
 const ALL_SHOP_ROLES: TargetRole[] = [
     'ONLINE_MANAGER',
     'OFFLINE_MANAGER',

@@ -19,6 +19,14 @@ import { z } from 'zod';
 // "не смешивай контракты" (issue #60) относится к discriminatedUnion типов
 // правил (PayPerHour/ProductSold/... vs PayPerHour/ServiceCompleted/...),
 // а не к этому вспомогательному enum'у.
+//
+// OFFICE (Фаза 2 плана "График работы сотрудников") — роль офисного
+// сотрудника (не инженер и не менеджер продаж/заказов), нужна графику работы
+// (WorkScheduleEntry.role, contracts/commands/work-schedule.ts), а не
+// зарплатным правилам: ни один SalaryRule её сегодня не матчит, поэтому она
+// намеренно не входит в ALL_SERVICE_ROLES/ALL_SHOP_ROLES каталогов
+// salary-rule-role-catalog.ts обоих направлений — GET .../salary_role_types
+// её не предлагает.
 const targetRoleSchema = z.enum([
     'ENGINEER',
     'ONLINE_MANAGER',
@@ -26,6 +34,7 @@ const targetRoleSchema = z.enum([
     'ORDER_MANAGER',
     'ONLINE_PURCHASER',
     'OFFLINE_PURCHASER',
+    'OFFICE',
 ]);
 
 export type TargetRole = z.infer<typeof targetRoleSchema>;
