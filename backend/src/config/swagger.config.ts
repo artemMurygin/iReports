@@ -9,6 +9,7 @@ import { ShopAccountingModule } from '@/domains/shop/modules/accounting/shop-acc
 import { ShopWarehouseModule } from '@/domains/shop/modules/warehouse/shop-warehouse.module';
 import { EmployeeIdentityModule } from '@/modules/employee-identity/employee-identity.module';
 import { DirectoryModule } from '@/modules/directory/directory.module';
+import { WorkScheduleModule } from '@/modules/work-schedule/work-schedule.module';
 import { PricingModule } from '@/domains/service/modules/marketing/pricing/pricing.module';
 import { ShopPricingModule } from '@/domains/shop/modules/marketing/pricing/pricing.module';
 
@@ -68,7 +69,11 @@ export function setupSwagger(app: INestApplication): void {
         app,
         commonSwaggerConfig,
         {
-            include: [EmployeeIdentityModule, DirectoryModule],
+            include: [
+                EmployeeIdentityModule,
+                DirectoryModule,
+                WorkScheduleModule,
+            ],
         },
     );
     SwaggerModule.setup('docs/common', app, cleanupOpenApiDoc(commonDocument));

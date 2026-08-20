@@ -10,6 +10,14 @@ const v1 = 'v1';
 // и все не-legacy маршруты, но не под employeeIdentityRoot — разные модули.
 const directoryRoot = `/${v1}/directory`;
 
+// График работы сотрудников (Фаза 1, docs/employee-work-schedule) — общий
+// на компанию модуль (см. modules/work-schedule), не вложенный ни в
+// domains/service, ни в domains/shop: сущность не имеет дискриминатора
+// direction, её будут читать контексты расчёта обоих направлений (см. PRD,
+// "Технические ограничения"). Путь под /v1, тем же приёмом, что и
+// directoryRoot выше.
+const workScheduleRoot = `/${v1}/work-schedule`;
+
 // Направление service — все маршруты домена domains/service под общим
 // префиксом /v1/service, чтобы направление было видно уже в пути, а не
 // только в query/имени модуля (см. shopAccounting/shopWarehouse ниже,
@@ -107,6 +115,15 @@ export const routesV1 = {
     directory: {
         departments: `${directoryRoot}/departments`,
         employees: `${directoryRoot}/employees`,
+    },
+    // График работы сотрудников (Фаза 1, docs/employee-work-schedule) —
+    // без гарда, тот же принцип, что и directory выше (модель прав в
+    // проекте не введена, см. "Не в скоупе" PRD). entries — единственный
+    // маршрут Фазы 1: PUT — идемпотентный upsert записи дня по
+    // (employeeId, date), DELETE — возврат дня в «не заполнен».
+    workSchedule: {
+        entries: `${workScheduleRoot}/entries`,
+        entryById: `${workScheduleRoot}/entries/:id`,
     },
     // Маршруты этого блока были закрыты PortalAdminGuard (Фаза 2,
     // docs/payroll/prd-payroll-calculation.md, раздел 1), но ограничение снято

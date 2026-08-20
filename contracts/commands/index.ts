@@ -14,3 +14,4 @@ export * from './directory';
 export * from './report';
 export * from './service-pricing';
 export * from './shop-pricing';
+export * from './work-schedule';

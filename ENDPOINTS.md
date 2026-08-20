@@ -56,6 +56,20 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
 - `GET /v1/employee-identity/employee/:employeeId` — связи конкретного сотрудника
 - `GET /v1/employee-identity/unmatched` — сотрудники Bitrix без единой связи ни в одной системе
 
+## modules/work-schedule (`/v1/work-schedule`)
+График работы сотрудников (Фаза 1, `docs/employee-work-schedule`) — общая на компанию модель
+`WorkScheduleEntry` (пара «сотрудник × календарный день» → статус дня, часы смены, роль дня), модуль
+не привязан к домену `service`/`shop` (тот же принцип, что и у `modules/directory`/
+`modules/employee-identity`): читать график в Фазе 5 будут контексты расчёта зарплаты обоих
+направлений. Пока в модуле только запись дня; чтение месяца/состава смены — Фазы 3-4. Эндпоинты без
+гарда, тот же принцип, что и у `modules/directory`.
+- `PUT /v1/work-schedule/entries` — создать или изменить запись дня, идемпотентный upsert по
+  естественному ключу `(employeeId, date)` (`{ employeeId, date: 'YYYY-MM-DD', status, hours?, role? }`,
+  `status` — `WORKING`/`DAY_OFF`/`TIME_OFF`/`SICK_LEAVE`/`VACATION`); повтор на ту же пару правит
+  существующую запись, а не создаёт вторую. `hours` (2–16, шаг 0,5) и `role` (`TargetRole`) допустимы
+  только при `status = WORKING` — иначе `400`; часы вне диапазона/шага — тоже `400`
+- `DELETE /v1/work-schedule/entries/:id` — удалить запись (день возвращается в состояние «не заполнен»)
+
 ## domains/service/modules/sales (`/v1/service/sales/plan`, `/v1/service/sales/plan_template`, `/v1/service/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели (`SalesPlan`/
 `SalesPlanTemplate`) общие для направлений `service`/`shop` (общая Prisma-схема с дискриминатором

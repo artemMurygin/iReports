@@ -1,0 +1,39 @@
+// График работы сотрудников (Фаза 1, docs/employee-work-schedule) — одна
+// строка на пару (сотрудник, календарный день): работает человек в этот
+// день (сколько часов и в какой роли) или отсутствует и по какой причине.
+//
+// ПОЧЕМУ отдельный файл схемы, а не salary.prisma: сущность общая на
+// компанию и не принадлежит ни направлению service, ни shop (у неё нет
+// поля direction, в отличие от SalaryRule/TaskCompletion) — её пишет общий
+// модуль src/modules/work-schedule, а читать будут контексты расчёта обоих
+// направлений (см. PRD, "Технические ограничения").
+model WorkScheduleEntry {
+  id         String @id
+  employeeId Int    @map("employee_id")
+  // Календарный день без времени (@db.Date): смена — это «5 августа», а не
+  // момент времени, поэтому колонка DATE, а не TIMESTAMP — иначе часовой
+  // пояс сервера/клиента сдвигал бы день на сутки. В домене этой колонке
+  // соответствует ScheduleDate (строка YYYY-MM-DD ↔ UTC-полночь).
+  date       DateTime @db.Date
+  // Статус дня: WORKING / DAY_OFF / TIME_OFF / SICK_LEAVE / VACATION.
+  // Строка, а не enum БД — тем же приёмом, что TaskCompletion.status и
+  // SalaryRule.type: набор значений живёт в контрактах
+  // (workScheduleStatusSchema) и в домене, добавление нового статуса не
+  // требует миграции типа.
+  status     String
+  // hours/role заполнены только у статуса WORKING — инвариант домена
+  // (см. WorkDay value object), на уровне БД поля просто nullable.
+  hours      Float?
+  role       String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Естественный ключ: один день сотрудника — максимум одна запись
+  // (upsert PUT /v1/work-schedule/entries опирается на неё).
+  @@unique([employeeId, date])
+  // Выборка всего месяца одним запросом (Фаза 3) и состава смены на дату
+  // (Фаза 4) идут по диапазону/значению date.
+  @@index([date])
+  @@map("work_schedule_entries")
+}
