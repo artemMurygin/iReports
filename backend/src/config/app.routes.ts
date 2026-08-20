@@ -118,12 +118,16 @@ export const routesV1 = {
     },
     // График работы сотрудников (Фаза 1, docs/employee-work-schedule) —
     // без гарда, тот же принцип, что и directory выше (модель прав в
-    // проекте не введена, см. "Не в скоупе" PRD). entries — единственный
-    // маршрут Фазы 1: PUT — идемпотентный upsert записи дня по
-    // (employeeId, date), DELETE — возврат дня в «не заполнен».
+    // проекте не введена, см. "Не в скоупе" PRD). entries — маршруты
+    // Фазы 1: PUT — идемпотентный upsert записи дня по (employeeId, date),
+    // DELETE — возврат дня в «не заполнен». month — Фаза 3: GET всей
+    // таблицы «сотрудники × дни месяца» на корне модуля (как и
+    // documentation в PRD: `GET /v1/work-schedule?month=&departmentId=`,
+    // без вложенного сегмента пути — фильтры только в query).
     workSchedule: {
         entries: `${workScheduleRoot}/entries`,
         entryById: `${workScheduleRoot}/entries/:id`,
+        month: workScheduleRoot,
     },
     // Маршруты этого блока были закрыты PortalAdminGuard (Фаза 2,
     // docs/payroll/prd-payroll-calculation.md, раздел 1), но ограничение снято

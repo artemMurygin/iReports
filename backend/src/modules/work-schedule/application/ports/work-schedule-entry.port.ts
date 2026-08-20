@@ -13,6 +13,19 @@ export interface WorkScheduleEntryRepositoryPort {
         employeeId: number,
         date: string,
     ): Promise<WorkScheduleEntry | null>;
+
+    // Одна выборка на группу сотрудников и диапазон дат — источник и
+    // месячной таблицы графика, и годового счётчика отпуска (Фаза 3,
+    // GetMonthlyWorkScheduleService передаёт границы КАЛЕНДАРНОГО ГОДА
+    // месяца, не только сам месяц, — год всегда включает месяц целиком, а
+    // второй запрос не нужен). Один вызов на весь отдел, а не по одному на
+    // сотрудника/день — иначе таблица 13+ сотрудников × 31 день дала бы
+    // N+1 (см. PRD, "Технические ограничения").
+    findByEmployeeIdsAndDateRange(
+        employeeIds: number[],
+        from: Date,
+        to: Date,
+    ): Promise<WorkScheduleEntry[]>;
 }
 
 export const WORK_SCHEDULE_ENTRY_REPOSITORY = Symbol(

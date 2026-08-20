@@ -61,14 +61,24 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
 `WorkScheduleEntry` (пара «сотрудник × календарный день» → статус дня, часы смены, роль дня), модуль
 не привязан к домену `service`/`shop` (тот же принцип, что и у `modules/directory`/
 `modules/employee-identity`): читать график в Фазе 5 будут контексты расчёта зарплаты обоих
-направлений. Пока в модуле только запись дня; чтение месяца/состава смены — Фазы 3-4. Эндпоинты без
-гарда, тот же принцип, что и у `modules/directory`.
+направлений. Модуль импортирует `DirectoryModule` (список сотрудников отдела для чтения месяца).
+Чтение состава смены на дату — Фаза 4. Эндпоинты без гарда, тот же принцип, что и у
+`modules/directory`.
 - `PUT /v1/work-schedule/entries` — создать или изменить запись дня, идемпотентный upsert по
   естественному ключу `(employeeId, date)` (`{ employeeId, date: 'YYYY-MM-DD', status, hours?, role? }`,
   `status` — `WORKING`/`DAY_OFF`/`TIME_OFF`/`SICK_LEAVE`/`VACATION`); повтор на ту же пару правит
   существующую запись, а не создаёт вторую. `hours` (2–16, шаг 0,5) и `role` (`TargetRole`) допустимы
   только при `status = WORKING` — иначе `400`; часы вне диапазона/шага — тоже `400`
 - `DELETE /v1/work-schedule/entries/:id` — удалить запись (день возвращается в состояние «не заполнен»)
+- `GET /v1/work-schedule?month=YYYY-MM&departmentId=` (Фаза 3) — таблица «сотрудники × дни месяца»
+  отдела одним запросом: по каждому сотруднику — по одной ячейке (`date`, `entryId`, `status`, `hours`,
+  `role`, всё `null` у не заполненного дня) на каждый календарный день месяца (28-31), `totalHours` за
+  месяц, `vacationDaysUsed`/`vacationDaysLimit` — использованные дни отпуска и годовой лимит (константа
+  `ANNUAL_VACATION_DAYS_LIMIT = 31`), считаются за календарный год месяца из запроса, а не только за
+  сам месяц. Плюс агрегаты: `days[]` — число людей в смене (`peopleOnShift`) по каждому дню, `totalHours`
+  верхнего уровня — общий фонд часов месяца. `departmentId` не передан — сотрудники всех отделов, в
+  ответе `departmentId: null`. Ровно два запроса к БД независимо от числа сотрудников/дней (список
+  сотрудников + одна выборка записей графика за год)
 
 ## domains/service/modules/sales (`/v1/service/sales/plan`, `/v1/service/sales/plan_template`, `/v1/service/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели (`SalesPlan`/

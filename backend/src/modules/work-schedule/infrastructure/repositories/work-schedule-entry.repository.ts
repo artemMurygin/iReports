@@ -67,4 +67,23 @@ export class WorkScheduleEntryRepository
         });
         return record ? this.mapper.toDomain(record) : null;
     }
+
+    async findByEmployeeIdsAndDateRange(
+        employeeIds: number[],
+        from: Date,
+        to: Date,
+    ): Promise<WorkScheduleEntry[]> {
+        // Пустой список сотрудников (отдел без людей) — вернуть [] без
+        // похода в БД, а не выполнять IN () заведомо пустым результатом.
+        if (employeeIds.length === 0) {
+            return [];
+        }
+        const records = await this.client.workScheduleEntry.findMany({
+            where: {
+                employeeId: { in: employeeIds },
+                date: { gte: from, lte: to },
+            },
+        });
+        return records.map((record) => this.mapper.toDomain(record));
+    }
 }

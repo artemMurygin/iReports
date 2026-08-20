@@ -78,10 +78,103 @@ export type UpsertWorkScheduleEntryRequest = z.infer<
     typeof upsertWorkScheduleEntryRequestSchema
 >;
 
+// Месяц графика в формате 'YYYY-MM' — тот же формат/шаблон, что и period в
+// contracts/commands/employee-hours-entry.ts и backend Period value object
+// (shared/domain/period.value-object.ts), но своя копия схемы: у модуля
+// графика нет зависимости на accounting, а формат достаточно простой, чтобы
+// не заводить общий контрактный тип ради одного regexp (тот же выбор уже
+// сделан в employee-hours-entry.ts).
+const workScheduleMonthSchema = z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Месяц должен быть в формате YYYY-MM');
+export type WorkScheduleMonth = z.infer<typeof workScheduleMonthSchema>;
+
+// GET /v1/work-schedule?month=&departmentId= (Фаза 3, docs/employee-work-schedule)
+// — вся таблица «сотрудники × дни месяца» одним запросом. departmentId не
+// передан — сотрудники всех отделов, тем же приёмом, что и
+// listEmployeesQuerySchema в contracts/commands/directory.ts.
+const getMonthlyWorkScheduleQuerySchema = z.object({
+    month: workScheduleMonthSchema,
+    departmentId: z.coerce.number().int().positive().optional(),
+});
+export type GetMonthlyWorkScheduleQuery = z.infer<
+    typeof getMonthlyWorkScheduleQuerySchema
+>;
+
+// Одна ячейка таблицы — один день одного сотрудника. status: null означает
+// «день не заполнен» (записи графика нет вообще) — отдельное от любого из
+// пяти статусов состояние, поэтому не в workScheduleStatusSchema, а
+// .nullable() поверх неё (см. PRD, критерий готовности: "для месяца без
+// данных — пустые ячейки без ошибки").
+const workScheduleDayCellSchema = z.object({
+    date: scheduleDateSchema,
+    entryId: z.string().nullable(),
+    status: workScheduleStatusSchema.nullable(),
+    hours: z.number().nullable(),
+    role: targetRoleSchema.nullable(),
+});
+export type WorkScheduleDayCell = z.infer<typeof workScheduleDayCellSchema>;
+
+// Строка сотрудника в таблице месяца: days — по одной ячейке на каждый
+// календарный день месяца (28-31, PRD, критерий готовности), плюс три
+// итога, которые PRD требует видеть в строке/поповере сотрудника без
+// отдельного запроса — часы за месяц и остаток отпуска на год
+// (vacationDaysLimit - vacationDaysUsed) считаются один раз на бэкенде
+// (см. PRD, "Технические ограничения": "агрегаты считаются на бэкенде, а
+// не в браузере").
+const workScheduleEmployeeRowSchema = z.object({
+    employeeId: z.number(),
+    name: z.string(),
+    departmentId: z.number(),
+    days: z.array(workScheduleDayCellSchema),
+    totalHours: z.number(),
+    // Использованные дни отпуска — за календарный год месяца из запроса
+    // (не только за отображаемый месяц): годовой лимит осмысленен только в
+    // паре с использованием за тот же год (PRD, сценарий "видно остаток
+    // дней отпуска на текущий год").
+    vacationDaysUsed: z.number(),
+    vacationDaysLimit: z.number(),
+});
+export type WorkScheduleEmployeeRow = z.infer<
+    typeof workScheduleEmployeeRowSchema
+>;
+
+// Агрегат одного дня месяца по всем сотрудникам ответа — источник строки
+// «Человек в смене» (PRD, "В скоупе").
+const workScheduleDayAggregateSchema = z.object({
+    date: scheduleDateSchema,
+    peopleOnShift: z.number(),
+});
+export type WorkScheduleDayAggregate = z.infer<
+    typeof workScheduleDayAggregateSchema
+>;
+
+const monthlyWorkScheduleResponseSchema = z.object({
+    month: workScheduleMonthSchema,
+    // Отражает departmentId запроса как есть (null — фильтра не было), а
+    // не «отдел первого сотрудника»: ответ может быть пустым (сотрудников
+    // нет), и тогда единственный источник фильтра для клиента — это поле.
+    departmentId: z.number().nullable(),
+    employees: z.array(workScheduleEmployeeRowSchema),
+    days: z.array(workScheduleDayAggregateSchema),
+    // Общий фонд часов месяца — сумма totalHours всех сотрудников ответа
+    // (PRD, "В скоупе": "общий фонд часов за месяц").
+    totalHours: z.number(),
+});
+export type MonthlyWorkScheduleResponse = z.infer<
+    typeof monthlyWorkScheduleResponseSchema
+>;
+
 export {
     workScheduleStatusSchema,
     scheduleDateSchema,
     shiftHoursSchema,
     workScheduleEntrySchema,
     upsertWorkScheduleEntryRequestSchema,
+    workScheduleMonthSchema,
+    getMonthlyWorkScheduleQuerySchema,
+    workScheduleDayCellSchema,
+    workScheduleEmployeeRowSchema,
+    workScheduleDayAggregateSchema,
+    monthlyWorkScheduleResponseSchema,
 };
