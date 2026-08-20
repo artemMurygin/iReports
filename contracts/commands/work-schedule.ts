@@ -165,6 +165,97 @@ export type MonthlyWorkScheduleResponse = z.infer<
     typeof monthlyWorkScheduleResponseSchema
 >;
 
+// GET /v1/work-schedule/shift?date=&departmentId= (Фаза 4,
+// docs/employee-work-schedule) — состав смены на конкретную дату для
+// мобильного экрана «Отдел сегодня» (узел A5SbT дизайна): кто на смене и в
+// какой роли/на сколько часов, и кто нет — с причиной. departmentId
+// опционален тем же приёмом, что и в getMonthlyWorkScheduleQuerySchema
+// выше.
+const workScheduleShiftQuerySchema = z.object({
+    date: scheduleDateSchema,
+    departmentId: z.coerce.number().int().positive().optional(),
+});
+export type WorkScheduleShiftQuery = z.infer<
+    typeof workScheduleShiftQuerySchema
+>;
+
+// Причина отсутствия в списке «не на смене» — четыре статуса дня, кроме
+// WORKING, плюс NOT_FILLED: у сотрудника вообще нет записи графика на эту
+// дату (см. PRD, критерий готовности Фазы 4 — "Сотрудники без записи на дату
+// попадают в «не на смене» с отдельной причиной «не заполнен»"). Отдельное
+// перечисление, а не workScheduleStatusSchema.exclude(['WORKING']), потому
+// что NOT_FILLED не является статусом дня графика вообще — это отсутствие
+// записи.
+const workScheduleAbsenceReasonSchema = z.enum([
+    'DAY_OFF',
+    'TIME_OFF',
+    'SICK_LEAVE',
+    'VACATION',
+    'NOT_FILLED',
+]);
+export type WorkScheduleAbsenceReason = z.infer<
+    typeof workScheduleAbsenceReasonSchema
+>;
+
+// Сотрудник в списке «на смене»: role/hours nullable — статус WORKING не
+// гарантирует, что часы/роль уже заполнены (см. WorkDay value object,
+// оба поля опциональны даже у рабочего дня).
+const workScheduleShiftEmployeeSchema = z.object({
+    employeeId: z.number(),
+    name: z.string(),
+    role: targetRoleSchema.nullable(),
+    hours: z.number().nullable(),
+});
+export type WorkScheduleShiftEmployee = z.infer<
+    typeof workScheduleShiftEmployeeSchema
+>;
+
+// Сотрудник в списке «не на смене» — только имя, без роли/часов: у
+// отсутствующего дня они не заполняются по инварианту WorkDay.
+const workScheduleAbsentEmployeeSchema = z.object({
+    employeeId: z.number(),
+    name: z.string(),
+});
+export type WorkScheduleAbsentEmployee = z.infer<
+    typeof workScheduleAbsentEmployeeSchema
+>;
+
+// Одна группа списка «не на смене» — все отсутствующие с одной причиной.
+// Группы с пустым employees в ответе не отдаются (см. сервис) — фронту
+// незачем рендерить пустой блок причины.
+const workScheduleAbsenceGroupSchema = z.object({
+    reason: workScheduleAbsenceReasonSchema,
+    employees: z.array(workScheduleAbsentEmployeeSchema),
+});
+export type WorkScheduleAbsenceGroup = z.infer<
+    typeof workScheduleAbsenceGroupSchema
+>;
+
+// Счётчик роли среди тех, кто на смене (PRD, "В скоупе": "счётчики ролей на
+// смене"). Роли с нулём человек на смене в ответе не отдаются — тем же
+// приёмом, что и пустые группы отсутствия выше.
+const workScheduleShiftRoleCountSchema = z.object({
+    role: targetRoleSchema,
+    count: z.number(),
+});
+export type WorkScheduleShiftRoleCount = z.infer<
+    typeof workScheduleShiftRoleCountSchema
+>;
+
+const workScheduleShiftResponseSchema = z.object({
+    date: scheduleDateSchema,
+    departmentId: z.number().nullable(),
+    onShift: z.array(workScheduleShiftEmployeeSchema),
+    notOnShift: z.array(workScheduleAbsenceGroupSchema),
+    roleCounts: z.array(workScheduleShiftRoleCountSchema),
+    // Суммарные часы дня — сумма hours всех «на смене» (PRD, "В скоупе":
+    // "суммарные часы дня").
+    totalHours: z.number(),
+});
+export type WorkScheduleShiftResponse = z.infer<
+    typeof workScheduleShiftResponseSchema
+>;
+
 export {
     workScheduleStatusSchema,
     scheduleDateSchema,
@@ -177,4 +268,11 @@ export {
     workScheduleEmployeeRowSchema,
     workScheduleDayAggregateSchema,
     monthlyWorkScheduleResponseSchema,
+    workScheduleShiftQuerySchema,
+    workScheduleAbsenceReasonSchema,
+    workScheduleShiftEmployeeSchema,
+    workScheduleAbsentEmployeeSchema,
+    workScheduleAbsenceGroupSchema,
+    workScheduleShiftRoleCountSchema,
+    workScheduleShiftResponseSchema,
 };

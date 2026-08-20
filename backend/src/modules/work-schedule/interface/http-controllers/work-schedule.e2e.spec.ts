@@ -7,6 +7,7 @@ import request from 'supertest';
 import type {
     MonthlyWorkScheduleResponse,
     WorkScheduleEntryResponse,
+    WorkScheduleShiftResponse,
 } from 'ireports-contracts';
 import { WorkScheduleModule } from '@/modules/work-schedule/work-schedule.module';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
@@ -64,14 +65,18 @@ describe('WorkSchedule HTTP (e2e)', () => {
             ),
     };
 
-    // Два сотрудника в разных отделах — тот же набор, что и в
-    // directory.e2e.spec.ts, чтобы GET /v1/work-schedule?departmentId=
-    // можно было проверить фильтрацией по отделу 1 (только Иванов).
+    // Сотрудники в трёх отделах: 1 и 2 — тот же набор, что и в
+    // directory.e2e.spec.ts (для GET /v1/work-schedule?departmentId=,
+    // Фаза 3); отдел 3 — три сотрудника отдельно для GET
+    // /v1/work-schedule/shift (Фаза 4), чтобы проверять «на смене»/«не на
+    // смене» на группе, не задевая ассерты Фазы 3 по отделам 1/2 (там
+    // ожидается ровно по одному сотруднику).
     const fakeDirectory: DirectoryRepositoryPort = {
         findDepartments: () =>
             Promise.resolve([
                 { id: 1, name: 'Сервис' },
                 { id: 2, name: 'Магазин' },
+                { id: 3, name: 'Смена' },
             ]),
         findEmployees: (departmentId) =>
             Promise.resolve(
@@ -87,6 +92,24 @@ describe('WorkSchedule HTTP (e2e)', () => {
                         firstName: 'Пётр',
                         lastName: 'Петров',
                         departmentId: 2,
+                    },
+                    {
+                        id: 101,
+                        firstName: 'Анна',
+                        lastName: 'Сидорова',
+                        departmentId: 3,
+                    },
+                    {
+                        id: 102,
+                        firstName: 'Ольга',
+                        lastName: 'Кузнецова',
+                        departmentId: 3,
+                    },
+                    {
+                        id: 103,
+                        firstName: 'Сергей',
+                        lastName: 'Смирнов',
+                        departmentId: 3,
                     },
                 ].filter(
                     (employee) =>
@@ -309,5 +332,104 @@ describe('WorkSchedule HTTP (e2e)', () => {
 
     it('GET /v1/work-schedule без month отклоняется с 400', async () => {
         await request(app.getHttpServer()).get('/v1/work-schedule').expect(400);
+    });
+
+    it('GET /v1/work-schedule/shift — на смене, не на смене по причинам, счётчики ролей и суммарные часы', async () => {
+        // 101 — на смене; 102 — выходной; 103 — без записи на дату
+        // («не заполнен», см. PRD, критерий готовности Фазы 4).
+        await request(app.getHttpServer())
+            .put('/v1/work-schedule/entries')
+            .send({
+                employeeId: 101,
+                date: '2026-08-05',
+                status: 'WORKING',
+                hours: 8,
+                role: 'ENGINEER',
+            })
+            .expect(200);
+        await request(app.getHttpServer())
+            .put('/v1/work-schedule/entries')
+            .send({
+                employeeId: 102,
+                date: '2026-08-05',
+                status: 'DAY_OFF',
+            })
+            .expect(200);
+
+        const response = await request(app.getHttpServer())
+            .get('/v1/work-schedule/shift')
+            .query({ date: '2026-08-05', departmentId: 3 })
+            .expect(200);
+        const body = response.body as WorkScheduleShiftResponse;
+
+        expect(body.date).toBe('2026-08-05');
+        expect(body.departmentId).toBe(3);
+        expect(body.onShift).toEqual([
+            {
+                employeeId: 101,
+                name: 'Анна Сидорова',
+                role: 'ENGINEER',
+                hours: 8,
+            },
+        ]);
+        expect(body.notOnShift).toEqual([
+            {
+                reason: 'DAY_OFF',
+                employees: [{ employeeId: 102, name: 'Ольга Кузнецова' }],
+            },
+            {
+                reason: 'NOT_FILLED',
+                employees: [{ employeeId: 103, name: 'Сергей Смирнов' }],
+            },
+        ]);
+        expect(body.roleCounts).toEqual([{ role: 'ENGINEER', count: 1 }]);
+        expect(body.totalHours).toBe(8);
+
+        // Сумма «на смене» + «не на смене» равна числу сотрудников отдела
+        // (см. PRD, критерий готовности Фазы 4).
+        const notOnShiftCount = body.notOnShift.reduce(
+            (sum, group) => sum + group.employees.length,
+            0,
+        );
+        expect(body.onShift.length + notOnShiftCount).toBe(3);
+
+        // Счётчики ролей сходятся со списком «на смене».
+        const rolesInList = body.onShift
+            .filter((employee) => employee.role !== null)
+            .map((employee) => employee.role);
+        const rolesInCounts = body.roleCounts.reduce(
+            (sum, roleCount) => sum + roleCount.count,
+            0,
+        );
+        expect(rolesInCounts).toBe(rolesInList.length);
+    });
+
+    it('GET /v1/work-schedule/shift — дата без единой записи отдаёт всех сотрудников как «не заполнен»', async () => {
+        const response = await request(app.getHttpServer())
+            .get('/v1/work-schedule/shift')
+            .query({ date: '2026-09-01', departmentId: 3 })
+            .expect(200);
+        const body = response.body as WorkScheduleShiftResponse;
+
+        expect(body.onShift).toEqual([]);
+        expect(body.notOnShift).toEqual([
+            {
+                reason: 'NOT_FILLED',
+                employees: [
+                    { employeeId: 101, name: 'Анна Сидорова' },
+                    { employeeId: 102, name: 'Ольга Кузнецова' },
+                    { employeeId: 103, name: 'Сергей Смирнов' },
+                ],
+            },
+        ]);
+        expect(body.roleCounts).toEqual([]);
+        expect(body.totalHours).toBe(0);
+    });
+
+    it('GET /v1/work-schedule/shift без date отклоняется с 400', async () => {
+        await request(app.getHttpServer())
+            .get('/v1/work-schedule/shift')
+            .query({ departmentId: 3 })
+            .expect(400);
     });
 });

@@ -128,6 +128,9 @@ export const routesV1 = {
         entries: `${workScheduleRoot}/entries`,
         entryById: `${workScheduleRoot}/entries/:id`,
         month: workScheduleRoot,
+        // Состав смены на дату (Фаза 4, docs/employee-work-schedule) —
+        // источник данных мобильного экрана «Отдел сегодня».
+        shift: `${workScheduleRoot}/shift`,
     },
     // Маршруты этого блока были закрыты PortalAdminGuard (Фаза 2,
     // docs/payroll/prd-payroll-calculation.md, раздел 1), но ограничение снято

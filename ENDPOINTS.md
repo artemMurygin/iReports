@@ -61,9 +61,8 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
 `WorkScheduleEntry` (пара «сотрудник × календарный день» → статус дня, часы смены, роль дня), модуль
 не привязан к домену `service`/`shop` (тот же принцип, что и у `modules/directory`/
 `modules/employee-identity`): читать график в Фазе 5 будут контексты расчёта зарплаты обоих
-направлений. Модуль импортирует `DirectoryModule` (список сотрудников отдела для чтения месяца).
-Чтение состава смены на дату — Фаза 4. Эндпоинты без гарда, тот же принцип, что и у
-`modules/directory`.
+направлений. Модуль импортирует `DirectoryModule` (список сотрудников отдела для чтения месяца и
+состава смены на дату). Эндпоинты без гарда, тот же принцип, что и у `modules/directory`.
 - `PUT /v1/work-schedule/entries` — создать или изменить запись дня, идемпотентный upsert по
   естественному ключу `(employeeId, date)` (`{ employeeId, date: 'YYYY-MM-DD', status, hours?, role? }`,
   `status` — `WORKING`/`DAY_OFF`/`TIME_OFF`/`SICK_LEAVE`/`VACATION`); повтор на ту же пару правит
@@ -79,6 +78,15 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
   верхнего уровня — общий фонд часов месяца. `departmentId` не передан — сотрудники всех отделов, в
   ответе `departmentId: null`. Ровно два запроса к БД независимо от числа сотрудников/дней (список
   сотрудников + одна выборка записей графика за год)
+- `GET /v1/work-schedule/shift?date=YYYY-MM-DD&departmentId=` (Фаза 4) — состав смены на дату для
+  мобильного экрана «Отдел сегодня»: `onShift[]` — кто на смене (`employeeId`, `name`, `role`, `hours`,
+  `status = WORKING`), `notOnShift[]` — кто нет, сгруппированные по причине отсутствия (`reason`:
+  `DAY_OFF`/`TIME_OFF`/`SICK_LEAVE`/`VACATION`/`NOT_FILLED` — сотрудник без записи графика на эту дату
+  получает `NOT_FILLED`; группы с пустым `employees` в ответе не отдаются), `roleCounts[]` — счётчики
+  ролей среди тех, кто на смене (роли без единого человека в смене не отдаются), `totalHours` —
+  суммарные часы дня. Сумма `onShift` + всех `notOnShift[].employees` равна числу сотрудников отдела.
+  `departmentId` не передан — сотрудники всех отделов, в ответе `departmentId: null`. Ровно два запроса
+  к БД независимо от числа сотрудников (список сотрудников + одна выборка записей графика за день)
 
 ## domains/service/modules/sales (`/v1/service/sales/plan`, `/v1/service/sales/plan_template`, `/v1/service/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели (`SalesPlan`/
