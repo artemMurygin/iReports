@@ -52,6 +52,7 @@ describe('ListMotivationSchemasService', () => {
             findById: jest.fn().mockResolvedValue(null),
             findAll,
             update: jest.fn(),
+            initializeName: jest.fn(),
         };
         const findDepartments = jest
             .fn()

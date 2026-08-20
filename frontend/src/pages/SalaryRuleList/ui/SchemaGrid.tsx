@@ -25,7 +25,11 @@ function SchemaGrid({ schemas, className }: SchemaGridProps) {
         <div data-slot="schema-grid" className={className}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {schemas.map((schema) => (
-                    <Link key={schema.id} to={`/salaries/rules/${schema.direction}/${schema.id}`} className="block">
+                    <Link
+                        key={`${schema.direction}-${schema.id}`}
+                        to={`/salaries/rules/${schema.direction}/${schema.id}`}
+                        className="block"
+                    >
                         <SchemaCard
                             title={schema.name}
                             direction={schema.direction}

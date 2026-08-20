@@ -49,6 +49,19 @@ export class CreateShopMotivationSchemaHandler implements ICommandHandler<
 
             if (existingId) {
                 motivationSchemaId = existingId;
+                // Строка уже существует (создана раньше со стороны service
+                // для того же targetType/targetId), но это может быть
+                // первый create-запрос со стороны shop — initializeName
+                // выставляет shopName только если он ещё не задан
+                // (идемпотентно), иначе кросс-направленческий POST молча
+                // терял бы своё name (тот самый баг с общим `name`, см.
+                // комментарий у shopName в salary.prisma). Повторный POST с
+                // уже инициализированным shopName ничего не меняет —
+                // переименование делает только PATCH.
+                await this.shopMotivationSchemaRepo.initializeName(
+                    motivationSchemaId,
+                    command.name,
+                );
             } else {
                 const motivationSchema = ShopMotivationSchema.create({
                     targetType: command.targetType,

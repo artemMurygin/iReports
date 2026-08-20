@@ -84,6 +84,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             findById: jest.fn(),
             findAll: jest.fn().mockResolvedValue([]),
             update: jest.fn(),
+            initializeName: jest.fn(),
         };
         const calculationDataSource = {
             findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
@@ -152,6 +153,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             findById: jest.fn(),
             findAll: jest.fn().mockResolvedValue([]),
             update: jest.fn(),
+            initializeName: jest.fn(),
         };
         const shopSalaryRulesResolver =
             new ResolveShopEmployeeSalaryRulesService(

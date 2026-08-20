@@ -30,7 +30,12 @@ export class MotivationSchemaMapper implements Mapper<
                     record.targetType,
                     record.targetId,
                 ),
-                name: record.name,
+                // serviceName — direction-специфичное имя (см. комментарий
+                // в salary.prisma); фолбэк на общий `name` только для строк,
+                // заведённых до миграции add_motivation_schema_direction_name
+                // (или ни разу не создававшихся/переименовывавшихся со
+                // стороны service).
+                name: record.serviceName ?? record.name,
                 rules: record.rules.map((rule) =>
                     this.salaryRuleMapper.toDomain(rule),
                 ),
@@ -46,7 +51,11 @@ export class MotivationSchemaMapper implements Mapper<
             id: props.id,
             targetType: props.target.getType(),
             targetId: props.target.getId(),
+            // `name` — legacy-колонка, заполняется для обратной
+            // совместимости (историческое значение первой строки); реально
+            // читаемое service-направлением имя — serviceName ниже.
             name: props.name,
+            serviceName: props.name,
             createdAt: props.createdAt,
             updatedAt: props.updatedAt,
         };

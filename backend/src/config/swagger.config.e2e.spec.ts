@@ -97,6 +97,7 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
         findById: () => Promise.resolve(null),
         findAll: () => Promise.resolve([]),
         update: () => Promise.resolve(),
+        initializeName: () => Promise.resolve(),
     };
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),

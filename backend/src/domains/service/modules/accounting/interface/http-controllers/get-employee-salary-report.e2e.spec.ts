@@ -98,6 +98,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
         findById: () => Promise.resolve(null),
         findAll: () => Promise.resolve([]),
         update: () => Promise.resolve(),
+        initializeName: () => Promise.resolve(),
     };
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),

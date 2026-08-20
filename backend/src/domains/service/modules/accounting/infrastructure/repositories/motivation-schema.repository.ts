@@ -139,9 +139,33 @@ export class MotivationSchemaRepository
             where: {
                 targetType: filters.targetType,
                 targetId: filters.targetId,
-                name: filters.search
-                    ? { contains: filters.search, mode: 'insensitive' }
-                    : undefined,
+                // Поиск идёт по serviceName (реальное отображаемое имя для
+                // этого направления), а не по общей legacy-колонке `name` —
+                // после PATCH одного направления она перестаёт совпадать с
+                // именем, которое видит пользователь (см. комментарий у
+                // serviceName в salary.prisma). Вторая ветка OR — фолбэк на
+                // `name` для строк, у которых serviceName ещё NULL (до
+                // миграции/до первого create-запроса со стороны service),
+                // тот же приём, что и в MotivationSchemaMapper.toDomain.
+                ...(filters.search
+                    ? {
+                          OR: [
+                              {
+                                  serviceName: {
+                                      contains: filters.search,
+                                      mode: 'insensitive' as const,
+                                  },
+                              },
+                              {
+                                  serviceName: null,
+                                  name: {
+                                      contains: filters.search,
+                                      mode: 'insensitive' as const,
+                                  },
+                              },
+                          ],
+                      }
+                    : {}),
             },
             // direction: 'service' — см. комментарий у findByEmployee выше.
             // Схемы, у которых после этого фильтра 0 правил, отбрасывает
@@ -160,11 +184,32 @@ export class MotivationSchemaRepository
         // сценария "перенести схему на другую цель"), а rules персистятся
         // отдельно (SalaryRuleRepository.deleteAllByMotivationSchema +
         // CreateSalaryRuleCommand на каждое новое правило, см.
-        // UpdateMotivationSchemaHandler).
+        // UpdateMotivationSchemaHandler). Пишет ТОЛЬКО serviceName — общая
+        // с shop-направлением колонка `name` больше не трогается этим
+        // методом (кросс-направленческий баг переименования, см.
+        // комментарий у serviceName в salary.prisma).
         await this.write(entity, (client) =>
             client.motivationSchema.update({
                 where: { id: props.id },
-                data: { name: props.name },
+                data: { serviceName: props.name },
+            }),
+        );
+    }
+
+    async initializeName(id: string, name: string): Promise<void> {
+        // updateMany с условием serviceName: null в where — атомарная
+        // "установить, только если ещё не установлено": повторный
+        // create-запрос со стороны service на уже существующую (созданную
+        // shop-стороной) строку не переименовывает её, если serviceName уже
+        // был выставлен раньше этим же методом или update() выше. Идёт
+        // через write() (не через this.client напрямую), как и остальные
+        // записи в этом репозитории — CreateMotivationSchemaHandler вызывает
+        // его уже внутри unitOfWork.run(), поэтому reentrancy-guard просто
+        // переиспользует открытую транзакцию.
+        await this.write(null, (client) =>
+            client.motivationSchema.updateMany({
+                where: { id, serviceName: null },
+                data: { serviceName: name },
             }),
         );
     }

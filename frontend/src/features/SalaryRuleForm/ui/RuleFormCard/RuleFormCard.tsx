@@ -63,7 +63,8 @@ export function RuleFormCard({
         handleTypeChange,
         handleAwardKindChange,
         handleSave,
-    } = useRuleFormCard({ draft, config, allowedRolesByType, onChange, onChangeType, onChangeBorder, onSave })
+        handleCollapse,
+    } = useRuleFormCard({ draft, config, allowedRolesByType, onChange, onChangeType, onChangeBorder, onSave, onCancel })
 
     return (
         <div className={className}>
@@ -72,7 +73,7 @@ export function RuleFormCard({
                     draft={draft}
                     index={index}
                     categories={categories}
-                    onCancel={onCancel}
+                    onCancel={handleCollapse}
                     onDelete={() => onDelete(draft.draftId)}
                 />
 

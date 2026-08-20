@@ -2,7 +2,32 @@ model MotivationSchema {
   id         String   @id
   targetType String   @map("target_type")
   targetId   Int      @map("target_id")
+  // Legacy общее поле, оставлено для обратной совместимости и как
+  // историческое значение на момент первой миграции ниже — начиная с неё
+  // ни один из направленческих путей (create/PATCH) больше не пишет сюда.
+  // Не читай его напрямую для отображения пользователю: используй
+  // serviceName/shopName ниже (через MotivationSchemaMapper/
+  // ShopMotivationSchemaMapper, у которых уже есть фолбэк на это поле для
+  // строк, заведённых до миграции add_motivation_schema_direction_name).
   name       String
+  // Название схемы, как его видит направление service — независимое от
+  // shopName ниже поле (кросс-направленческий баг переименования, QA
+  // Фаза "Редактирование зарплатных схем": один motivation_schemas может
+  // адресовать общего targetType/targetId для service И shop одновременно
+  // (см. комментарий у SalaryRule.direction ниже про сотрудника с
+  // идентичностями в обеих ERP), но ДО этого поля общим было ещё и `name`
+  // — PATCH .../service/motivation-schema/:id молча переименовывал то,
+  // что видел пользователь на странице shop, и наоборот). NULL — строка
+  // создана до этой миграции ИЛИ ещё ни разу не была create/renamed со
+  // стороны service; в обоих случаях эффективное имя — фолбэк на `name`
+  // (см. мапперы). Пишется ТОЛЬКО из domains/service/modules/accounting
+  // (MotivationSchemaRepository.update()/insert()/initializeName()) —
+  // domains/shop в это поле никогда не пишет.
+  serviceName String? @map("service_name")
+  // Зеркало serviceName для направления shop — та же независимость, тот
+  // же фолбэк на `name` при NULL. Пишется ТОЛЬКО из
+  // domains/shop/modules/accounting (ShopMotivationSchemaRepository).
+  shopName    String? @map("shop_name")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

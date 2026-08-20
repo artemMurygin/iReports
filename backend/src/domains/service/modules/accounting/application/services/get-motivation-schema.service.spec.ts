@@ -44,6 +44,7 @@ describe('GetMotivationSchemaService', () => {
             findById,
             findAll: jest.fn().mockResolvedValue([]),
             update: jest.fn(),
+            initializeName: jest.fn(),
         };
         const findDepartments = jest
             .fn()

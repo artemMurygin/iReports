@@ -14,6 +14,8 @@ describe('ShopMotivationSchemaMapper', () => {
                 targetType: 'Employee',
                 targetId: 7,
                 name: 'Оклад',
+                serviceName: null,
+                shopName: null,
                 createdAt,
                 updatedAt,
                 rules: [
@@ -60,12 +62,49 @@ describe('ShopMotivationSchemaMapper', () => {
                 targetType: 'Department',
                 targetId: 1,
                 name: 'Оклад отдела',
+                serviceName: null,
+                shopName: null,
                 createdAt,
                 updatedAt,
                 rules: [],
             });
 
             expect(schema.getProps().rules).toEqual([]);
+        });
+
+        it('читает shopName, если он задан, вместо общей legacy-колонки name', () => {
+            const schema = mapper.toDomain({
+                id: 'schema-3',
+                targetType: 'Employee',
+                targetId: 9,
+                // Общее (историческое/service) значение — не должно попасть
+                // в props.name, когда shopName задан отдельно (регрессия на
+                // кросс-направленческий баг переименования).
+                name: 'Общее имя строки',
+                serviceName: 'Имя для service',
+                shopName: 'Имя для shop',
+                createdAt,
+                updatedAt,
+                rules: [],
+            });
+
+            expect(schema.getProps().name).toBe('Имя для shop');
+        });
+
+        it('фолбэк на legacy name, когда shopName ещё не задан (строка до миграции)', () => {
+            const schema = mapper.toDomain({
+                id: 'schema-4',
+                targetType: 'Employee',
+                targetId: 10,
+                name: 'Общее имя строки',
+                serviceName: 'Имя для service',
+                shopName: null,
+                createdAt,
+                updatedAt,
+                rules: [],
+            });
+
+            expect(schema.getProps().name).toBe('Общее имя строки');
         });
     });
 
@@ -86,6 +125,7 @@ describe('ShopMotivationSchemaMapper', () => {
                     targetType: 'Employee',
                     targetId: 7,
                     name: 'Оклад',
+                    shopName: 'Оклад',
                 });
                 expect(record).not.toHaveProperty('rules');
             });

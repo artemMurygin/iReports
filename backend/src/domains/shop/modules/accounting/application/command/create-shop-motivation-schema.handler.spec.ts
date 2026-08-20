@@ -27,6 +27,9 @@ describe('CreateShopMotivationSchemaHandler', () => {
         const findByEmployees = jest
             .fn<Promise<ShopMotivationSchema[]>, [number[]]>()
             .mockResolvedValue([]);
+        const initializeName = jest
+            .fn<Promise<void>, [string, string]>()
+            .mockResolvedValue(undefined);
         const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
             insert,
             findByEmployee,
@@ -38,6 +41,7 @@ describe('CreateShopMotivationSchemaHandler', () => {
             findById: jest.fn().mockResolvedValue(null),
             findAll: jest.fn().mockResolvedValue([]),
             update: jest.fn().mockResolvedValue(undefined),
+            initializeName,
         };
         // run() выполняет переданную работу напрямую, без реальной транзакции —
         // для юнит-теста хендлера этого достаточно, транзакционность самого
@@ -57,7 +61,14 @@ describe('CreateShopMotivationSchemaHandler', () => {
             commandBus,
         );
 
-        return { handler, insert, findIdByTarget, run, execute };
+        return {
+            handler,
+            insert,
+            findIdByTarget,
+            run,
+            execute,
+            initializeName,
+        };
     };
 
     it('оборачивает запись схемы и правил в unitOfWork.run', async () => {
@@ -189,6 +200,44 @@ describe('CreateShopMotivationSchemaHandler', () => {
                     'existing-schema-id',
                 );
             }
+        });
+    });
+
+    it('регрессия на кросс-направленческий баг переименования: если схема найдена по findIdByTarget (уже создана со стороны service), инициализирует shopName через initializeName, а не insert', async () => {
+        await withRequestContext(async () => {
+            const { handler, insert, initializeName } =
+                buildHandler('existing-schema-id');
+            const command = new CreateShopMotivationSchemaCommand({
+                targetType: 'Employee',
+                targetId: 1,
+                name: 'QA_SHOP_ORIGINAL',
+                rules: [],
+            });
+
+            await handler.execute(command);
+
+            expect(insert).not.toHaveBeenCalled();
+            expect(initializeName).toHaveBeenCalledTimes(1);
+            expect(initializeName).toHaveBeenCalledWith(
+                'existing-schema-id',
+                'QA_SHOP_ORIGINAL',
+            );
+        });
+    });
+
+    it('не вызывает initializeName, когда создаётся новая строка (insert уже сам сохраняет shopName)', async () => {
+        await withRequestContext(async () => {
+            const { handler, initializeName } = buildHandler(null);
+            const command = new CreateShopMotivationSchemaCommand({
+                targetType: 'Employee',
+                targetId: 1,
+                name: 'Оклад',
+                rules: [],
+            });
+
+            await handler.execute(command);
+
+            expect(initializeName).not.toHaveBeenCalled();
         });
     });
 

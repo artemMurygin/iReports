@@ -27,7 +27,11 @@ function SchemaListMobile({ schemas, totalCount, className }: SchemaListMobilePr
         <div data-slot="schema-list-mobile" className={className}>
             <div className="flex flex-col gap-2.5">
                 {schemas.map((schema) => (
-                    <Link key={schema.id} to={`/salaries/rules/${schema.direction}/${schema.id}`} className="block">
+                    <Link
+                        key={`${schema.direction}-${schema.id}`}
+                        to={`/salaries/rules/${schema.direction}/${schema.id}`}
+                        className="block"
+                    >
                         <SchemaCard
                             title={schema.name}
                             direction={schema.direction}

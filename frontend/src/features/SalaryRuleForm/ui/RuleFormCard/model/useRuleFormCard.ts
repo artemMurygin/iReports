@@ -14,6 +14,7 @@ export type UseRuleFormCardParams = {
     onChangeType: (id: string, type: RuleType) => void
     onChangeBorder: (id: string, index: number, patch: Partial<BorderDraft>) => void
     onSave: () => RuleSaveOutcome | null
+    onCancel: () => void
 }
 
 /**
@@ -34,6 +35,7 @@ export function useRuleFormCard({
     onChangeType,
     onChangeBorder,
     onSave,
+    onCancel,
 }: UseRuleFormCardParams) {
     const [errors, setErrors] = useState<RuleFieldErrors>({})
 
@@ -68,6 +70,23 @@ export function useRuleFormCard({
         if (result && !result.success) setErrors(result.errors)
     }
 
+    /**
+     * Заголовок карточки помечает эту кнопку как «Свернуть правило» (шеврон, см.
+     * `RuleFormCardHeader`), но для ещё не подтверждённого черновика `onCancel` не просто
+     * сворачивает — он его удаляет (см. инвариант в шапке `core/model/useSalaryRulesDraft.ts`).
+     * Раз надпись обещает "свернуть", а поведение — "удалить", подтверждаем это отдельно от
+     * футерной кнопки "Отмена" (та уже прямо называет своё действие и второго подтверждения не
+     * требует) — но только если пользователь успел что-то ввести (пустой только что добавленный
+     * черновик закрывается без лишнего вопроса).
+     */
+    function handleCollapse() {
+        const isDirty = draft.name.trim() !== '' || draft.targetRole !== '' || draft.price.trim() !== ''
+        if (!draft.confirmed && isDirty && !window.confirm('Свернуть без сохранения? Введённые данные правила будут потеряны.')) {
+            return
+        }
+        onCancel()
+    }
+
     return {
         errors,
         allowedRoles,
@@ -78,5 +97,6 @@ export function useRuleFormCard({
         handleTypeChange,
         handleAwardKindChange,
         handleSave,
+        handleCollapse,
     }
 }

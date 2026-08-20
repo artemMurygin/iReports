@@ -79,6 +79,7 @@ describe('GetEmployeeSalaryReportService', () => {
             findById: jest.fn().mockResolvedValue(null),
             findAll: jest.fn().mockResolvedValue([]),
             update: jest.fn().mockResolvedValue(undefined),
+            initializeName: jest.fn().mockResolvedValue(undefined),
         };
 
         // ResolveEmployeeSalaryRulesService.forEmployee() читает отдел

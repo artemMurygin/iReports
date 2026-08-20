@@ -67,8 +67,22 @@ export interface MotivationSchemaRepositoryPort {
     }): Promise<MotivationSchema[]>;
 
     // Персист переименования (PATCH .../motivation-schema/:id) — только имя,
-    // targetType/targetId/rules этим методом не трогаются.
+    // targetType/targetId/rules этим методом не трогаются. Пишет ТОЛЬКО
+    // direction-специфичную колонку (service_name) — см. комментарий у
+    // serviceName в salary.prisma; общая с shop колонка `name` этим методом
+    // больше не трогается (кросс-направленческий баг переименования).
     update(entity: MotivationSchema): Promise<void>;
+
+    // Find-or-create для CreateMotivationSchemaHandler: строка
+    // motivation_schemas может уже существовать (найдена по findIdByTarget
+    // раньше со стороны shop для того же targetType/targetId), но ни разу
+    // не видела create-запрос со стороны service — тогда её serviceName
+    // всё ещё NULL (фолбэк на общий `name`). Устанавливает serviceName
+    // строки ТОЛЬКО если он ещё не задан (идемпотентно, атомарно через
+    // condition в WHERE) — повторный POST с другим name НЕ переименовывает
+    // уже инициализированную схему, это ответственность PATCH/update()
+    // выше, не create.
+    initializeName(id: string, name: string): Promise<void>;
 }
 
 export const MOTIVATION_SCHEMA_REPOSITORY = Symbol(

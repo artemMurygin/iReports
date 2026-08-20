@@ -64,6 +64,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             findById: jest.fn(),
             findAll: jest.fn().mockResolvedValue([]),
             update: jest.fn(),
+            initializeName: jest.fn(),
         };
 
         const salaryRulesResolver = new ResolveShopEmployeeSalaryRulesService(

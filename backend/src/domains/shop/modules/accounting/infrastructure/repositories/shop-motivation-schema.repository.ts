@@ -145,7 +145,26 @@ export class ShopMotivationSchemaRepository
             where.targetId = filters.targetId;
         }
         if (filters.search) {
-            where.name = { contains: filters.search, mode: 'insensitive' };
+            // Поиск идёт по shopName (реальное отображаемое имя для этого
+            // направления), а не по общей legacy-колонке `name` — после
+            // PATCH другого направления она перестаёт совпадать с именем,
+            // которое видит пользователь (см. комментарий у shopName в
+            // salary.prisma). Вторая ветка OR — фолбэк на `name` для строк,
+            // у которых shopName ещё NULL (до миграции/до первого
+            // create-запроса со стороны shop), тот же приём, что и в
+            // ShopMotivationSchemaMapper.toDomain.
+            where.OR = [
+                {
+                    shopName: {
+                        contains: filters.search,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    shopName: null,
+                    name: { contains: filters.search, mode: 'insensitive' },
+                },
+            ];
         }
 
         const records = await this.client.motivationSchema.findMany({
@@ -159,12 +178,33 @@ export class ShopMotivationSchemaRepository
     // Персист ShopMotivationSchema.rename() — только name; target/rules
     // этим методом не меняются (rules пишутся/удаляются отдельно через
     // ShopSalaryRuleRepository, см. UpdateShopMotivationSchemaHandler).
+    // Пишет ТОЛЬКО shopName — общая с service-направлением колонка `name`
+    // больше не трогается этим методом (кросс-направленческий баг
+    // переименования, см. комментарий у shopName в salary.prisma).
     async update(entity: ShopMotivationSchema): Promise<void> {
         const props = entity.getProps();
         await this.write(entity, (client) =>
             client.motivationSchema.update({
                 where: { id: entity.id },
-                data: { name: props.name },
+                data: { shopName: props.name },
+            }),
+        );
+    }
+
+    async initializeName(id: string, name: string): Promise<void> {
+        // updateMany с условием shopName: null в where — атомарная
+        // "установить, только если ещё не установлено": повторный
+        // create-запрос со стороны shop на уже существующую (созданную
+        // service-стороной) строку не переименовывает её, если shopName уже
+        // был выставлен раньше этим же методом или update() выше. Идёт
+        // через write() (не через this.client напрямую), как и остальные
+        // записи в этом репозитории — CreateShopMotivationSchemaHandler
+        // вызывает его уже внутри unitOfWork.run(), поэтому
+        // reentrancy-guard просто переиспользует открытую транзакцию.
+        await this.write(null, (client) =>
+            client.motivationSchema.updateMany({
+                where: { id, shopName: null },
+                data: { shopName: name },
             }),
         );
     }

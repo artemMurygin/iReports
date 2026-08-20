@@ -36,7 +36,12 @@ export class ShopMotivationSchemaMapper implements Mapper<
                     record.targetType,
                     record.targetId,
                 ),
-                name: record.name,
+                // shopName — direction-специфичное имя (см. комментарий в
+                // salary.prisma); фолбэк на общий `name` только для строк,
+                // заведённых до миграции add_motivation_schema_direction_name
+                // (или ни разу не создававшихся/переименовывавшихся со
+                // стороны shop).
+                name: record.shopName ?? record.name,
                 rules: record.rules.map((rule) =>
                     this.shopSalaryRuleMapper.toDomain(rule),
                 ),
@@ -52,7 +57,11 @@ export class ShopMotivationSchemaMapper implements Mapper<
             id: props.id,
             targetType: props.target.getType(),
             targetId: props.target.getId(),
+            // `name` — legacy-колонка, заполняется для обратной
+            // совместимости (историческое значение первой строки); реально
+            // читаемое shop-направлением имя — shopName ниже.
             name: props.name,
+            shopName: props.name,
             createdAt: props.createdAt,
             updatedAt: props.updatedAt,
         };

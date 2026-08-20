@@ -47,6 +47,7 @@ describe('UpdateMotivationSchemaHandler', () => {
             findById,
             findAll: jest.fn().mockResolvedValue([]),
             update,
+            initializeName: jest.fn().mockResolvedValue(undefined),
         };
         const deleteAllByMotivationSchema = jest
             .fn<Promise<void>, [string]>()
