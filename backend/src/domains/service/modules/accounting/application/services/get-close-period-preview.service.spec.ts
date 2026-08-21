@@ -246,6 +246,34 @@ describe('GetClosePeriodPreviewService', () => {
         expect(error.metadata).toEqual({ rows: summary.unapprovedPlanRows });
     });
 
+    it('employeesWithoutHours считает сотрудников с PayPerHour без записи часов за месяц (PRD 1: руководитель может отменить закрытие и дозаполнить)', async () => {
+        const { preview } = setup({
+            schemas: [
+                buildHourlySchema(1, 250),
+                buildHourlySchema(2, 250),
+                buildHourlySchema(3, 250),
+            ],
+            plans: [],
+            dismissedEmployeeIds: [],
+            hoursEntries: [
+                EmployeeHoursEntry.create({
+                    employeeId: 2,
+                    period: PERIOD,
+                    hours: 8,
+                }),
+            ],
+            hoursByEmployee: { 2: 8 },
+        });
+
+        const summary = await withRequestContext(() =>
+            preview.execute('service', PERIOD),
+        );
+        // Сотрудники 1 и 3 — с правилом PayPerHour, но без записи часов; все
+        // трое при этом попадают в снапшот (нулевая сумма документ не отменяет).
+        expect(summary.employeesWithoutHours).toBe(2);
+        expect(summary.employeesCount).toBe(3);
+    });
+
     it('employeesWithoutHours = 0, если правил PayPerHour нет или у всех есть записи часов', async () => {
         const { preview } = setup({
             schemas: [buildHourlySchema(1, 250)],
