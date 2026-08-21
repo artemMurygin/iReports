@@ -1,6 +1,7 @@
 import { RoappSyncCron } from './roapp-sync.cron';
 import { RoappSyncService } from './roapp-sync.service';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
+import { DirectionSyncLock } from '@/shared/infrastructure/sync-lock/direction-sync-lock';
 
 // Штамп синхронизации (DomainSyncStatus, Фаза 6, см.
 // docs/payroll/plan-payroll-calculation.md) обновляется ровно тогда, когда
@@ -19,7 +20,11 @@ describe('RoappSyncCron', () => {
             getLastSuccessfulSyncAt: jest.fn(),
             markSuccessful,
         };
-        const cron = new RoappSyncCron(syncService, domainSyncStatus);
+        const cron = new RoappSyncCron(
+            syncService,
+            domainSyncStatus,
+            new DirectionSyncLock(),
+        );
         return { cron, syncService, markSuccessful };
     };
 
@@ -45,7 +50,11 @@ describe('RoappSyncCron', () => {
             getLastSuccessfulSyncAt: jest.fn(),
             markSuccessful,
         };
-        const cron = new RoappSyncCron(syncService, domainSyncStatus);
+        const cron = new RoappSyncCron(
+            syncService,
+            domainSyncStatus,
+            new DirectionSyncLock(),
+        );
 
         await cron.run();
 

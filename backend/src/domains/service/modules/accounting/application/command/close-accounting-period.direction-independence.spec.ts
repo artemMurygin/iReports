@@ -1,3 +1,6 @@
+import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
+import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
+import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
 import { CloseAccountingPeriodHandler } from './close-accounting-period.handler';
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';
 import { CloseShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/close-shop-accounting-period.handler';
@@ -186,8 +189,13 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             accrualDeps.employeeDismissal,
             unitOfWork,
             accrualDeps.eventEmitter,
-            contextBuilder,
-            salaryRulesResolver,
+            new CalculateServiceSnapshotRowsService(
+                contextBuilder,
+                salaryRulesResolver,
+            ),
+            new ErpPeriodSyncRunner({
+                syncPeriod: jest.fn().mockResolvedValue(undefined),
+            }),
         );
     };
 
@@ -264,8 +272,13 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             accrualDeps.employeeDismissal,
             unitOfWork,
             accrualDeps.eventEmitter,
-            shopContextBuilder,
-            shopSalaryRulesResolver,
+            new CalculateShopSnapshotRowsService(
+                shopContextBuilder,
+                shopSalaryRulesResolver,
+            ),
+            new ErpPeriodSyncRunner({
+                syncPeriod: jest.fn().mockResolvedValue(undefined),
+            }),
         );
     };
 
@@ -280,14 +293,14 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         // — если бы хендлер/репозиторий где-то читали/писали без учёта
         // direction, эта запись оказалась бы задета.
         store.set(
-            key('shop', '2026-08'),
-            AccountingPeriod.openFor({ direction: 'shop', period: '2026-08' }),
+            key('shop', '2026-07'),
+            AccountingPeriod.openFor({ direction: 'shop', period: '2026-07' }),
         );
 
         await withRequestContext(() =>
             handler.execute(
                 new CloseAccountingPeriodCommand({
-                    period: '2026-08',
+                    period: '2026-07',
                     closedBy: 1,
                 }),
             ),
@@ -295,13 +308,13 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
 
         const servicePeriod = await periodRepo.findByDirectionAndPeriod(
             'service',
-            '2026-08',
+            '2026-07',
         );
         expect(servicePeriod?.status).toBe('CLOSED');
 
         const shopPeriod = await periodRepo.findByDirectionAndPeriod(
             'shop',
-            '2026-08',
+            '2026-07',
         );
         expect(shopPeriod?.status).toBe('OPEN');
     });
@@ -313,17 +326,17 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         // Симметричная проверка: заранее заводим "чужую" строку под тем же
         // period, но direction=service.
         store.set(
-            key('service', '2026-08'),
+            key('service', '2026-07'),
             AccountingPeriod.openFor({
                 direction: 'service',
-                period: '2026-08',
+                period: '2026-07',
             }),
         );
 
         await withRequestContext(() =>
             handler.execute(
                 new CloseShopAccountingPeriodCommand({
-                    period: '2026-08',
+                    period: '2026-07',
                     closedBy: 1,
                 }),
             ),
@@ -331,13 +344,13 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
 
         const shopPeriod = await periodRepo.findByDirectionAndPeriod(
             'shop',
-            '2026-08',
+            '2026-07',
         );
         expect(shopPeriod?.status).toBe('CLOSED');
 
         const servicePeriod = await periodRepo.findByDirectionAndPeriod(
             'service',
-            '2026-08',
+            '2026-07',
         );
         expect(servicePeriod?.status).toBe('OPEN');
     });
@@ -358,7 +371,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         await withRequestContext(() =>
             shopHandler.execute(
                 new CloseShopAccountingPeriodCommand({
-                    period: '2026-08',
+                    period: '2026-07',
                     closedBy: 1,
                 }),
             ),
@@ -366,14 +379,14 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         const shopBefore =
             await accrualDeps.accrualRepo.findByDirectionAndPeriod(
                 'shop',
-                '2026-08',
+                '2026-07',
             );
         expect(shopBefore).toHaveLength(1);
 
         await withRequestContext(() =>
             serviceHandler.execute(
                 new CloseAccountingPeriodCommand({
-                    period: '2026-08',
+                    period: '2026-07',
                     closedBy: 1,
                 }),
             ),
@@ -382,12 +395,12 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         const serviceAccruals =
             await accrualDeps.accrualRepo.findByDirectionAndPeriod(
                 'service',
-                '2026-08',
+                '2026-07',
             );
         const shopAccruals =
             await accrualDeps.accrualRepo.findByDirectionAndPeriod(
                 'shop',
-                '2026-08',
+                '2026-07',
             );
         expect(serviceAccruals.map((a) => a.direction)).toEqual(['service']);
         // Документ shop остался тем же самым (не пересоздан и не удалён).

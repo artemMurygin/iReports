@@ -57,6 +57,7 @@ describe('UpdateServicePricesHandler', () => {
             fetchProducts: jest.fn(),
             fetchCreatedOrders: jest.fn(),
             fetchUpdatedOrders: jest.fn(),
+            fetchOrdersClosedBetween: jest.fn(),
             fetchOrderItems: jest.fn(),
             fetchServiceBonuses: jest.fn(),
             fetchServiceBonusById: jest.fn(),

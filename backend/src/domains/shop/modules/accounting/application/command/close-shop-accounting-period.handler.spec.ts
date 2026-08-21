@@ -1,3 +1,9 @@
+import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
+import {
+    ErpSyncFailedException,
+    PeriodNotExpiredException,
+} from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
+import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { CloseShopAccountingPeriodHandler } from './close-shop-accounting-period.handler';
 import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period.command';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -35,6 +41,8 @@ describe('CloseShopAccountingPeriodHandler', () => {
         // записанные документы откатываются вместе со всем остальным.
         failAfterAccrualsSaved?: boolean;
         hoursWorked?: () => number;
+        // Замоканная ERP (Фаза 2 PRD 1): синк по требованию перед расчётом.
+        syncPeriod?: jest.Mock;
     }) => {
         const save = jest.fn().mockResolvedValue(undefined);
         const findByDirectionAndPeriod = jest.fn().mockResolvedValue(null);
@@ -167,6 +175,10 @@ describe('CloseShopAccountingPeriodHandler', () => {
             build,
         } as unknown as BuildShopCalculationContextService;
 
+        const syncPeriod =
+            overrides?.syncPeriod ?? jest.fn().mockResolvedValue(undefined);
+        const erpSync = new ErpPeriodSyncRunner({ syncPeriod });
+
         const handler = new CloseShopAccountingPeriodHandler(
             periodRepo,
             snapshotRepo,
@@ -176,8 +188,11 @@ describe('CloseShopAccountingPeriodHandler', () => {
             employeeDismissal,
             unitOfWork,
             eventEmitter,
-            shopContextBuilder,
-            salaryRulesResolver,
+            new CalculateShopSnapshotRowsService(
+                shopContextBuilder,
+                salaryRulesResolver,
+            ),
+            erpSync,
         );
 
         return {
@@ -190,6 +205,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             accrualRepo,
             emitAsync,
             build,
+            syncPeriod,
         };
     };
 
@@ -215,7 +231,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 direction: 'shop',
                 department: 1,
                 category: null,
-                period: '2026-08',
+                period: '2026-07',
                 turnover: 1000,
                 margin: 100,
                 source: 'MANUAL',
@@ -230,7 +246,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 direction: 'shop',
                 department: 1,
                 category: null,
-                period: '2026-08',
+                period: '2026-07',
                 turnover: 1000,
                 margin: 100,
                 source: 'MANUAL',
@@ -242,7 +258,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             withRequestContext(() =>
                 handler.execute(
                     new CloseShopAccountingPeriodCommand({
-                        period: '2026-08',
+                        period: '2026-07',
                         closedBy: 1,
                     }),
                 ),
@@ -274,7 +290,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
         const response = await withRequestContext(() =>
             handler.execute(
                 new CloseShopAccountingPeriodCommand({
-                    period: '2026-08',
+                    period: '2026-07',
                     closedBy: 7,
                 }),
             ),
@@ -293,7 +309,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
         expect(rows).toEqual([
             expect.objectContaining({ employeeId: 42, total: 2000 }),
         ]);
-        expect(deleteCacheByPeriod).toHaveBeenCalledWith('shop', '2026-08');
+        expect(deleteCacheByPeriod).toHaveBeenCalledWith('shop', '2026-07');
     });
 
     it('пустой список планов (плана вообще нет) не блокирует закрытие', async () => {
@@ -302,7 +318,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
         const response = await withRequestContext(() =>
             handler.execute(
                 new CloseShopAccountingPeriodCommand({
-                    period: '2026-08',
+                    period: '2026-07',
                     closedBy: 1,
                 }),
             ),
@@ -330,7 +346,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             await withRequestContext(() =>
                 handler.execute(
                     new CloseShopAccountingPeriodCommand({
-                        period: '2026-08',
+                        period: '2026-07',
                         closedBy: 7,
                     }),
                 ),
@@ -348,7 +364,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             ];
             const accruals = await accrualRepo.findByDirectionAndPeriod(
                 'shop',
-                '2026-08',
+                '2026-07',
             );
             expect(accruals).toHaveLength(3);
             expect(accruals).toHaveLength(rows.length);
@@ -391,7 +407,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             await withRequestContext(() =>
                 handler.execute(
                     new CloseShopAccountingPeriodCommand({
-                        period: '2026-08',
+                        period: '2026-07',
                         closedBy: 7,
                     }),
                 ),
@@ -404,7 +420,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             ];
             expect(name).toBe('SalaryAccrualDocumentsCreatedDomainEvent');
             expect(event.direction).toBe('shop');
-            expect(event.period).toBe('2026-08');
+            expect(event.period).toBe('2026-07');
             expect(event.accrualIds).toEqual([...accrualRepo.store.keys()]);
         });
 
@@ -421,7 +437,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             await withRequestContext(() =>
                 handler.execute(
                     new CloseShopAccountingPeriodCommand({
-                        period: '2026-08',
+                        period: '2026-07',
                         closedBy: 7,
                     }),
                 ),
@@ -433,7 +449,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             expect(cacheResetOrder).toBeLessThan(buildOrder);
             const [accrual] = await accrualRepo.findByDirectionAndPeriod(
                 'shop',
-                '2026-08',
+                '2026-07',
             );
             expect(accrual.total).toBe(2500);
         });
@@ -449,7 +465,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 withRequestContext(() =>
                     handler.execute(
                         new CloseShopAccountingPeriodCommand({
-                            period: '2026-08',
+                            period: '2026-07',
                             closedBy: 7,
                         }),
                     ),
@@ -471,7 +487,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 withRequestContext(() =>
                     handler.execute(
                         new CloseShopAccountingPeriodCommand({
-                            period: '2026-08',
+                            period: '2026-07',
                             closedBy: 7,
                         }),
                     ),
@@ -483,6 +499,90 @@ describe('CloseShopAccountingPeriodHandler', () => {
             expect(saveAll).toHaveBeenCalledTimes(1);
             expect(accrualRepo.store.size).toBe(0);
             expect(emitAsync).not.toHaveBeenCalled();
+        });
+    });
+
+    // Фаза 2 PRD 1 docs/payroll-closing-and-accrual — зеркально сервису.
+    describe('неявная синхронизация ERP и ограничения закрытия', () => {
+        it('вызывает синк отгрузок до расчёта — свежие данные ERP попадают в снапшот и документ', async () => {
+            let hours = 8;
+            const syncPeriod = jest.fn().mockImplementation(() => {
+                hours = 10;
+                return Promise.resolve();
+            });
+            const { handler, accrualRepo, build } = buildHandler({
+                plans: [buildApprovedPlan()],
+                shopSchemas: [buildHourlySchema(42)],
+                hoursWorked: () => hours,
+                syncPeriod,
+            });
+
+            await withRequestContext(() =>
+                handler.execute(
+                    new CloseShopAccountingPeriodCommand({
+                        period: '2026-07',
+                        closedBy: 7,
+                    }),
+                ),
+            );
+
+            expect(syncPeriod).toHaveBeenCalledTimes(1);
+            expect(syncPeriod.mock.invocationCallOrder[0]).toBeLessThan(
+                build.mock.invocationCallOrder[0],
+            );
+            const [accrual] = await accrualRepo.findByDirectionAndPeriod(
+                'shop',
+                '2026-07',
+            );
+            expect(accrual.total).toBe(2500);
+        });
+
+        it('ошибка синка ERP → 409 ErpSyncFailedException, период открыт, ничего не создано', async () => {
+            const { handler, save, saveAll, accrualRepo, emitAsync } =
+                buildHandler({
+                    plans: [buildApprovedPlan()],
+                    shopSchemas: [buildHourlySchema(42)],
+                    syncPeriod: jest
+                        .fn()
+                        .mockRejectedValue(new Error('МойСклад недоступен')),
+                });
+
+            await expect(
+                withRequestContext(() =>
+                    handler.execute(
+                        new CloseShopAccountingPeriodCommand({
+                            period: '2026-07',
+                            closedBy: 7,
+                        }),
+                    ),
+                ),
+            ).rejects.toBeInstanceOf(ErpSyncFailedException);
+
+            expect(save).not.toHaveBeenCalled();
+            expect(saveAll).not.toHaveBeenCalled();
+            expect(accrualRepo.store.size).toBe(0);
+            expect(emitAsync).not.toHaveBeenCalled();
+        });
+
+        it('текущий месяц → 409 PeriodNotExpiredException, синк не вызывается', async () => {
+            const syncPeriod = jest.fn().mockResolvedValue(undefined);
+            const { handler } = buildHandler({
+                plans: [buildApprovedPlan()],
+                syncPeriod,
+            });
+
+            await expect(
+                withRequestContext(() =>
+                    handler.execute(
+                        new CloseShopAccountingPeriodCommand({
+                            period: Period.current().getValue(),
+                            closedBy: 7,
+                        }),
+                    ),
+                ),
+            ).rejects.toBeInstanceOf(PeriodNotExpiredException);
+
+            expect(syncPeriod).not.toHaveBeenCalled();
         });
     });
 });

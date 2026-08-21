@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { SalesModule } from '@/domains/service/modules/sales/sales.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
 import { DirectoryModule } from '@/modules/directory/directory.module';
+import { RoappSyncModule } from '@/domains/service/sync/roapp/roapp-sync.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
@@ -27,6 +28,10 @@ import { ListMotivationSchemasService } from '@/domains/service/modules/accounti
 import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/get-motivation-schema.service';
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
+import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
+import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
+import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
+import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-motivation-schema.http.controller';
 import { ListMotivationSchemasHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-motivation-schemas.http.controller';
 import { GetMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-motivation-schema.http.controller';
@@ -48,6 +53,7 @@ import { ListTaskCompletionsHttpController } from '@/domains/service/modules/acc
 import { ListSalaryRuleTypesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { ListSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-accruals.http.controller';
 import { GetSalaryAccrualHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-salary-accrual.http.controller';
+import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -58,6 +64,8 @@ import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/a
 import { TASK_COMPLETION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/task-completion.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
 import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema.repository';
 import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-rule.repository';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period.repository';
@@ -68,6 +76,7 @@ import { ServiceCalculationDataRepository } from '@/domains/service/modules/acco
 import { TaskCompletionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/task-completion.repository';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
 import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
+import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period-closed.event-handler';
 import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/salary-accrual-documents-created.event-handler';
@@ -108,7 +117,16 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
 // независимость закрытия периода по direction; на providers/controllers/
 // imports этого модуля он не влияет.
 @Module({
-    imports: [CqrsModule, SalesModule, DomainSyncStatusModule, DirectoryModule],
+    // RoappSyncModule — вход RoappErpPeriodSyncAdapter (ERP_PERIOD_SYNC):
+    // неявная синхронизация заказов RemOnline за месяц внутри закрытия
+    // периода (PRD 1 docs/payroll-closing-and-accrual, Фаза 2).
+    imports: [
+        CqrsModule,
+        SalesModule,
+        DomainSyncStatusModule,
+        DirectoryModule,
+        RoappSyncModule,
+    ],
     controllers: [
         CreateMotivationSchemaHttpController,
         ListMotivationSchemasHttpController,
@@ -131,6 +149,7 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         ListSalaryRuleTypesHttpController,
         ListSalaryAccrualsHttpController,
         GetSalaryAccrualHttpController,
+        GetClosePeriodPreviewHttpController,
     ],
     providers: [
         CreateMotivationSchemaHandler,
@@ -157,6 +176,10 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         ListSalaryRuleTypesService,
         ListSalaryAccrualsService,
         GetSalaryAccrualService,
+        GetClosePeriodPreviewService,
+        CalculateServiceSnapshotRowsService,
+        ErpPeriodSyncRunner,
+        EnsurePeriodNotClosedService,
         MotivationSchemaCreatedEventHandler,
         AccountingPeriodClosedEventHandler,
         SalaryAccrualDocumentsCreatedEventHandler,
@@ -203,6 +226,17 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         {
             provide: EMPLOYEE_DISMISSAL,
             useClass: EmployeeDismissalRepository,
+        },
+        // Фаза 2 PRD 1: калькулятор строк снапшота (общий для закрытия и
+        // close-preview) и синк ERP месяца по требованию — свои реализации
+        // направления под direction-агностичными токенами.
+        {
+            provide: SNAPSHOT_ROWS_CALCULATOR,
+            useExisting: CalculateServiceSnapshotRowsService,
+        },
+        {
+            provide: ERP_PERIOD_SYNC,
+            useClass: RoappErpPeriodSyncAdapter,
         },
     ],
 })

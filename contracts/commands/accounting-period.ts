@@ -49,6 +49,30 @@ export type UnapprovedSalesPlanRow = z.infer<
     typeof unapprovedSalesPlanRowSchema
 >;
 
+// Сводка окна подтверждения закрытия (PRD 1 docs/payroll-closing-and-accrual,
+// Фаза 2) — GET .../period/:period/close-preview. Считается тем же
+// калькулятором строк снапшота, что и само закрытие, поэтому при неизменных
+// данных БД значения совпадают с результатом реального закрытия:
+// employeesCount — сколько документов начисления будет создано (включая
+// нулевые и уволенных), dismissedEmployeesCount — сколько из них уволены,
+// totalAmount — фонд оплаты направления в целых рублях (как total снапшота),
+// unapprovedPlanRows — строки плана, из-за которых закрытие будет отклонено,
+// employeesWithoutHours — сотрудники с правилом PayPerHour без записи часов
+// за месяц. Сама синхронизация ERP в preview не выполняется — она шаг
+// закрытия.
+const closePeriodPreviewSchema = z.object({
+    direction: salesDirectionSchema,
+    period: periodSchema,
+    employeesCount: z.number().int().nonnegative(),
+    dismissedEmployeesCount: z.number().int().nonnegative(),
+    totalAmount: z.number().int(),
+    unapprovedPlanRows: z.array(unapprovedSalesPlanRowSchema),
+    employeesWithoutHours: z.number().int().nonnegative(),
+});
+export type ClosePeriodPreviewResponse = z.infer<
+    typeof closePeriodPreviewSchema
+>;
+
 // Повторное открытие закрытого периода — только с явным подтверждением
 // (см. PRD: "требует явного подтверждения и удаляет снапшот"). confirm — не
 // булев флаг "да/нет", а буквальный литерал true: запрос без него (или с
@@ -65,5 +89,6 @@ export {
     accountingPeriodSchema,
     closeAccountingPeriodRequestSchema,
     unapprovedSalesPlanRowSchema,
+    closePeriodPreviewSchema,
     reopenAccountingPeriodRequestSchema,
 };

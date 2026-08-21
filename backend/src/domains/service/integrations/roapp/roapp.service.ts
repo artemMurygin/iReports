@@ -21,6 +21,11 @@ function toErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
+// Roapp принимает ISO-дату без миллисекунд: %Y-%m-%dT%H:%M:%SZ
+function toRoappIsoDate(date: Date): string {
+    return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
 @Injectable()
 export class RoappService {
     constructor(private roApp: RoappHttpService) {}
@@ -33,21 +38,30 @@ export class RoappService {
         yield* this._fetchOrders(fromDate, 'updated');
     }
 
+    // Заказы, закрытые в диапазоне [from, to] — вход синка по требованию
+    // из закрытия расчётного периода (PRD 1 docs/payroll-closing-and-accrual):
+    // расчёт зарплаты считает по RoappOrder.closedAt, поэтому дотягиваем
+    // ровно те заказы, которые попадают в месяц, а не всё, что менялось.
+    async *fetchOrdersClosedBetween(from: Date, to: Date) {
+        yield* this._fetchOrdersByParams({
+            page: 1,
+            closed_at: [toRoappIsoDate(from), toRoappIsoDate(to)],
+        });
+    }
+
     async *_fetchOrders(
         fromDate: Date | undefined,
         createdOrUpdated: 'created' | 'updated',
     ) {
-        // Roapp принимает ISO-дату без миллисекунд: %Y-%m-%dT%H:%M:%SZ
-        const isoDateWithoutMs = fromDate
-            ?.toISOString()
-            .replace(/\.\d{3}Z$/, 'Z');
-
         const params: Params = {
             page: 1,
             [createdOrUpdated === 'created' ? 'created_at' : 'modified_at']:
-                isoDateWithoutMs,
+                fromDate ? toRoappIsoDate(fromDate) : undefined,
         };
+        yield* this._fetchOrdersByParams(params);
+    }
 
+    private async *_fetchOrdersByParams(params: Params) {
         while (true) {
             try {
                 const {

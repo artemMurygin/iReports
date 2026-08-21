@@ -16,6 +16,13 @@ import { delay } from '../../../../shared/delay';
 
 const PAGE_LIMIT = 1000;
 
+// Общие параметры выборки отгрузок (см. комментарий в _fetchDemands про
+// expand) — одни и те же для инкрементального синка крона и синка месяца.
+const DEMAND_EXPAND_PARAMS: Record<string, string> = {
+    expand: 'positions,positions.assortment',
+    fields: 'stock',
+};
+
 @Injectable()
 export class MoyskladService {
     constructor(private moysklad: MoyskladHttpService) {}
@@ -118,6 +125,25 @@ export class MoyskladService {
         yield* this._fetchDemands(fromDate, 'updated');
     }
 
+    // Отгрузки с датой документа (moment) в [from, to] — вход синка по
+    // требованию из закрытия расчётного периода (PRD 1
+    // docs/payroll-closing-and-accrual): расчёт зарплаты магазина считает
+    // по MoySkladDemand.moment, поэтому дотягиваем ровно отгрузки месяца.
+    async *fetchDemandsByMoment(from: Date, to: Date) {
+        yield* this._fetchPaged(
+            '/entity/demand',
+            DemandSchema,
+            undefined,
+            {
+                ...DEMAND_EXPAND_PARAMS,
+                filter:
+                    `moment>=${this.formatMoyskladDateTime(from)};` +
+                    `moment<=${this.formatMoyskladDateTime(to)}`,
+            },
+            100,
+        );
+    }
+
     private async *_fetchDemands(
         fromDate: Date | undefined,
         fromField: 'created' | 'updated',
@@ -129,10 +155,7 @@ export class MoyskladService {
         // expand: `demand.attributes` (ONLINE_MANAGER_ATTR_ID) уже работает
         // без `expand=attributes` в этом же запросе — по аналогии
         // ожидаем, что `positions[].attributes` придёт так же.
-        const extraParams: Record<string, string> = {
-            expand: 'positions,positions.assortment',
-            fields: 'stock',
-        };
+        const extraParams: Record<string, string> = { ...DEMAND_EXPAND_PARAMS };
         if (fromDate) {
             extraParams.filter = `${fromField}>=${this.formatMoyskladDateTime(fromDate)}`;
         }

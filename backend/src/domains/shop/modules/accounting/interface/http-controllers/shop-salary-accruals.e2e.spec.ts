@@ -1,4 +1,5 @@
 import type { Server } from 'http';
+import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -266,6 +267,10 @@ describe('Документы начисления магазина: close → sa
             .useValue(fakeAccountingCalculationCache)
             .overrideProvider(SALARY_ACCRUAL_REPOSITORY)
             .useValue(accrualRepo)
+            // Неявная синхронизация ERP внутри закрытия (Фаза 2 PRD 1) —
+            // в e2e заменена no-op: реальная ERP недоступна.
+            .overrideProvider(ERP_PERIOD_SYNC)
+            .useValue({ syncPeriod: () => Promise.resolve() })
             .overrideProvider(EMPLOYEE_DISMISSAL)
             .useValue(fakeEmployeeDismissal)
             .overrideProvider(DOMAIN_SYNC_STATUS)

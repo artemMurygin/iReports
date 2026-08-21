@@ -68,6 +68,10 @@ export class RoappGatewayAdapter implements RoappGateway {
         return this.roapp.fetchUpdatedOrders(fromDate);
     }
 
+    fetchOrdersClosedBetween(from: Date, to: Date): AsyncGenerator<Order[]> {
+        return this.roapp.fetchOrdersClosedBetween(from, to);
+    }
+
     async fetchOrderItems(orderId: number): Promise<OrderItem[]> {
         const items = await this.roapp.fetchOrderItems(orderId);
         return items.filter((item): item is OrderItem => item != null);

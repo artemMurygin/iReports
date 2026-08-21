@@ -64,6 +64,15 @@ export class Period extends ValueObject<string> {
         return Period.create(`${year}-${month}`);
     }
 
+    // Месяц целиком истёк к моменту `now` — "первое число следующего месяца
+    // и позже" (PRD 1 docs/payroll-closing-and-accrual: закрыть можно только
+    // истёкший календарный месяц). Граница — в UTC, как и getBounds(): иначе
+    // "истёкший месяц" закрытия и границы факта расчёта разъехались бы по
+    // временной зоне.
+    isExpired(now: Date = new Date()): boolean {
+        return now.getTime() > this.getBounds().to.getTime();
+    }
+
     // Сколько дней в месяце периода целиком — последнее число месяца
     // равно длине месяца (см. трюк "день 0 следующего месяца" в
     // getBounds()).

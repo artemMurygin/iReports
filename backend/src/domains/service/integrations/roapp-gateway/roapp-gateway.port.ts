@@ -43,6 +43,7 @@ export interface RoappGateway {
 
     fetchCreatedOrders(fromDate?: Date): AsyncGenerator<Order[]>;
     fetchUpdatedOrders(fromDate?: Date): AsyncGenerator<Order[]>;
+    fetchOrdersClosedBetween(from: Date, to: Date): AsyncGenerator<Order[]>;
     fetchOrderItems(orderId: number): Promise<OrderItem[]>;
 
     fetchServiceBonuses(): Promise<ServiceBonusForEngeneer[]>;

@@ -4,6 +4,7 @@ import { ProdCron } from '../../../../shared/cron/prod-cron.decorator';
 import { logCronError } from '../../../../shared/cron/cron-file-logger';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
+import { DirectionSyncLock } from '@/shared/infrastructure/sync-lock/direction-sync-lock';
 import { RoappSyncService } from './roapp-sync.service';
 
 @Injectable()
@@ -15,15 +16,22 @@ export class RoappSyncCron {
         private readonly syncService: RoappSyncService,
         @Inject(DOMAIN_SYNC_STATUS)
         private readonly domainSyncStatus: DomainSyncStatusPort,
+        private readonly lock: DirectionSyncLock,
     ) {}
 
+    // Тик идёт под блокировкой направления (DirectionSyncLock) — не
+    // параллельно с неявным синком месяца внутри закрытия периода (PRD 1
+    // docs/payroll-closing-and-accrual, RoappErpPeriodSyncAdapter).
     @ProdCron(CronExpression.EVERY_5_MINUTES)
     async run() {
         const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
 
         try {
-            const orderIds = await this.syncService.uploadUpdatedOrders(since);
-            await this.syncService.uploadOrderItems(orderIds);
+            await this.lock.runExclusive('service', async () => {
+                const orderIds =
+                    await this.syncService.uploadUpdatedOrders(since);
+                await this.syncService.uploadOrderItems(orderIds);
+            });
             this.logger.log('Successfully synced updated orders from Roapp');
             this.failedSince = null;
             // Штамп для ленивого кэша расчёта зарплаты (Фаза 6, см.

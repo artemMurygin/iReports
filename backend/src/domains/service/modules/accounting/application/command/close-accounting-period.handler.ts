@@ -5,13 +5,14 @@ import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { Period } from '@/shared/domain/period.value-object';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
-import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
-import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
-import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
-import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-context';
-import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
+import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
+import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
-import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
+import {
+    PeriodAlreadyClosedException,
+    PeriodNotExpiredException,
+    UnapprovedSalesPlanRowsException,
+} from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -55,6 +56,16 @@ import { CloseAccountingPeriodCommand } from './close-accounting-period.command'
 //    UnitOfWork, что снапшот и CLOSED (всё или ничего);
 // 6) после коммита публикуется SalaryAccrualDocumentsCreatedDomainEvent с
 //    перечнем accrualId — на него подпишется PRD 2.
+//
+// Фаза 2 PRD 1 — неявная синхронизация ERP и ограничения:
+// 7) закрыть можно только истёкший календарный месяц (Period.isExpired) и
+//    только ещё не закрытый период — иначе 409 до любых обращений к ERP;
+// 8) перед сбросом кэша и расчётом синхронизируются заказы RemOnline,
+//    закрытые в месяце (ErpPeriodSyncRunner → ERP_PERIOD_SYNC, таймаут 2
+//    мин, блокировка направления от тика крона); ошибка/таймаут →
+//    ErpSyncFailedException, период остаётся открытым, ничего не создано;
+// 9) строки снапшота считает CalculateServiceSnapshotRowsService — тот же
+//    код, что и у GET .../close-preview.
 @CommandHandler(CloseAccountingPeriodCommand)
 export class CloseAccountingPeriodHandler implements ICommandHandler<
     CloseAccountingPeriodCommand,
@@ -76,14 +87,18 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
         private readonly eventEmitter: EventEmitter2,
-        private readonly contextBuilder: BuildServiceCalculationContextService,
-        private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
+        private readonly rowsCalculator: CalculateServiceSnapshotRowsService,
+        private readonly erpSync: ErpPeriodSyncRunner,
     ) {}
 
     async execute(
         command: CloseAccountingPeriodCommand,
     ): Promise<AccountingPeriodResponse> {
         const period = Period.create(command.period);
+
+        if (!period.isExpired()) {
+            throw new PeriodNotExpiredException('service', period.getValue());
+        }
 
         const plans = await this.salesPlanRepo.findByDirectionAndPeriod(
             'service',
@@ -106,12 +121,22 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
             'service',
             period.getValue(),
         );
+        if (existing?.isClosed()) {
+            throw new PeriodAlreadyClosedException(
+                'service',
+                period.getValue(),
+            );
+        }
         const periodEntity =
             existing ??
             AccountingPeriod.openFor({
                 direction: 'service',
                 period: period.getValue(),
             });
+
+        // Неявная синхронизация ERP за месяц — до транзакции закрытия и до
+        // сброса кэша; её результат остаётся в БД даже при отклонении ниже.
+        await this.erpSync.run('service', period);
 
         // Сброс кэша ДО расчёта (PRD 1: "закрытие никогда не фиксирует
         // устаревший кэш") — снапшот считается по текущим данным БД, а
@@ -127,7 +152,7 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
         // Снапшот — все сотрудники, у которых есть зарплатные правила: с
         // личной схемой и/или со схемой на их отдел (см.
         // ResolveEmployeeSalaryRulesService.forAllTargets).
-        const rows = await this.closeServiceDirection(period);
+        const rows = await this.rowsCalculator.calculate(period);
         const accruals = await this.buildAccrualDocuments(period, rows);
 
         periodEntity.close(command.closedBy, rows.length);
@@ -168,41 +193,6 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
             'service',
             period.getValue(),
         );
-    }
-
-    private async closeServiceDirection(
-        period: Period,
-    ): Promise<AccountingPeriodSnapshotRow[]> {
-        const salaryRulesByEmployee =
-            await this.salaryRulesResolver.forAllTargets();
-        const rows: AccountingPeriodSnapshotRow[] = [];
-        for (const [employeeId, { rules }] of salaryRulesByEmployee) {
-            // Сотрудник отдела со схемой, у которого после фильтра по
-            // direction='service' не осталось ни одного правила (вся схема
-            // отдела — правила магазина), в снапшот не попадает: пустая
-            // строка на нулевую сумму завысила бы closedRows и ничего не
-            // фиксировала бы.
-            if (rules.length === 0) {
-                continue;
-            }
-            const base = await this.contextBuilder.build(period, employeeId);
-            const lines = await PeriodCalculationOrchestrator.calculate(rules, {
-                employee: base.employee,
-                period: base.period,
-                erpData: base.erpData,
-                mode: 'FACT',
-                salesPerformance: toSalesPerformanceContext(
-                    base.salesPerformanceDetail,
-                    'FACT',
-                ),
-            });
-            rows.push({
-                employeeId,
-                total: PeriodCalculationOrchestrator.total(lines),
-                lines: buildRuleBreakdown(rules, lines),
-            });
-        }
-        return rows;
     }
 
     // Документ на КАЖДУЮ строку снапшота, включая нулевые суммы (PRD 1:

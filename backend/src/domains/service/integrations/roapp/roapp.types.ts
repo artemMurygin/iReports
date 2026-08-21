@@ -1,6 +1,9 @@
 export type Params = {
     modified_at?: string;
     created_at?: string;
+    // Диапазон [from, to] по дате закрытия заказа (RoApp: массив из двух
+    // ISO-дат — границы включительно) — синк месяца для закрытия периода.
+    closed_at?: [string, string];
     page: number;
 };
 

@@ -39,3 +39,47 @@ export class UnapprovedSalesPlanRowsException extends ConflictException {
         );
     }
 }
+
+// Закрыть можно только истёкший календарный месяц — текущий и будущий
+// отклоняются до любых обращений к ERP/БД (PRD 1: "месяц ещё не закончился").
+export class PeriodNotExpiredException extends ConflictException {
+    constructor(direction: string, period: string) {
+        super(
+            `Нельзя закрыть период ${period} направления "${direction}" — месяц ещё не закончился`,
+            undefined,
+            { direction, period },
+        );
+    }
+}
+
+// Неявная синхронизация ERP перед расчётом закрытия не удалась (ошибка
+// интеграции или таймаут) — закрытие отклоняется целиком, период остаётся
+// открытым, снапшот и документы не создаются (PRD 1, "Финальный пересчёт").
+export class ErpSyncFailedException extends ConflictException {
+    constructor(direction: string, period: string, cause?: Error) {
+        super('Не удалось получить данные из ERP, повторите позже', cause, {
+            direction,
+            period,
+            reason: cause?.message ?? null,
+        });
+    }
+}
+
+// Запись в источники часов (EmployeeHoursEntry, в будущем — график работы)
+// за месяц, закрытый по направлению, отклоняется с указанием, кем и когда
+// месяц закрыт (PRD 1, "Блокировка графика работы и ручных часов"). Единая
+// точка проверки — EnsurePeriodNotClosedService.
+export class AccountingPeriodClosedException extends ConflictException {
+    constructor(
+        direction: string,
+        period: string,
+        closedBy: number | null,
+        closedAt: Date | null,
+    ) {
+        super(
+            `Период ${period} направления "${direction}" закрыт — изменение данных за этот месяц недоступно`,
+            undefined,
+            { direction, period, closedBy, closedAt },
+        );
+    }
+}

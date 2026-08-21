@@ -200,6 +200,14 @@ export class MoySkladSyncService {
         );
     }
 
+    // Синк месяца по требованию (закрытие расчётного периода, PRD 1
+    // docs/payroll-closing-and-accrual): отгрузки с moment в [from, to].
+    async uploadDemandsByMoment(from: Date, to: Date): Promise<void> {
+        await this._uploadDemands(undefined, () =>
+            this.moySklad.fetchDemandsByMoment(from, to),
+        );
+    }
+
     private async _uploadDemands(
         fromDate: Date | undefined,
         fetcher: (fromDate?: Date) => AsyncGenerator<Demand[]>,

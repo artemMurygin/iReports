@@ -18,6 +18,9 @@ import { UpdateShopMotivationSchemaHandler } from '@/domains/shop/modules/accoun
 import { CreateShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-task-completion.handler';
 import { ConfirmShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/confirm-shop-task-completion.handler';
 import { DeleteShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/delete-shop-task-completion.handler';
+import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
+import { MoySkladErpPeriodSyncAdapter } from '@/domains/shop/modules/accounting/infrastructure/sync/moysklad-erp-period-sync.adapter';
+import { GetShopClosePeriodPreviewHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-close-period-preview.http.controller';
 import { CloseShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/close-shop-accounting-period.handler';
 import { ListShopSalaryRuleTypesHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { CreateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-motivation-schema.http.controller';
@@ -47,6 +50,12 @@ import { ShopCalculationDataRepository } from '@/domains/shop/modules/accounting
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
+import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
+import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
+import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
+import { EMPLOYEE_HOURS_ENTRY_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
+import { EmployeeHoursEntryRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-hours-entry.repository';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
@@ -158,6 +167,7 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         GetShopDepartmentSalaryReportHttpController,
         ListShopSalaryAccrualsHttpController,
         GetShopSalaryAccrualHttpController,
+        GetShopClosePeriodPreviewHttpController,
     ],
     providers: [
         ListShopSalaryRuleTypesService,
@@ -174,6 +184,27 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         ResolveShopEmployeeSalaryRulesService,
         CloseShopAccountingPeriodHandler,
         GetAccountingPeriodService,
+        // Фаза 2 PRD 1: калькулятор строк снапшота (общий для закрытия и
+        // close-preview), синк отгрузок МойСклада за месяц по требованию и
+        // generic-по-direction сводка закрытия — свои экземпляры под теми
+        // же direction-агностичными токенами, что и в AccountingModule.
+        CalculateShopSnapshotRowsService,
+        ErpPeriodSyncRunner,
+        GetClosePeriodPreviewService,
+        {
+            provide: SNAPSHOT_ROWS_CALCULATOR,
+            useExisting: CalculateShopSnapshotRowsService,
+        },
+        {
+            provide: ERP_PERIOD_SYNC,
+            useClass: MoySkladErpPeriodSyncAdapter,
+        },
+        // Часы (EmployeeHoursEntry) — общий для направлений источник
+        // PayPerHour; здесь только чтение для employeesWithoutHours.
+        {
+            provide: EMPLOYEE_HOURS_ENTRY_REPOSITORY,
+            useClass: EmployeeHoursEntryRepository,
+        },
         // Документы начисления (PRD 1 docs/payroll-closing-and-accrual) —
         // generic-по-direction сервисы чтения и direction-агностичные
         // реализации портов, собственные экземпляры под теми же токенами

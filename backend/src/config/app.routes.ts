@@ -145,6 +145,9 @@ export const routesV1 = {
             period: {
                 byPeriod: `${serviceAccountingRoot}/period/:period`,
                 close: `${serviceAccountingRoot}/period/:period/close`,
+                // Сводка окна подтверждения закрытия (PRD 1
+                // docs/payroll-closing-and-accrual, Фаза 2).
+                closePreview: `${serviceAccountingRoot}/period/:period/close-preview`,
                 reopen: `${serviceAccountingRoot}/period/:period/reopen`,
                 recalculate: `${serviceAccountingRoot}/period/:period/recalculate`,
             },
@@ -258,6 +261,7 @@ export const routesV1 = {
             period: {
                 byPeriod: `${shopAccountingRoot}/period/:period`,
                 close: `${shopAccountingRoot}/period/:period/close`,
+                closePreview: `${shopAccountingRoot}/period/:period/close-preview`,
                 reopen: `${shopAccountingRoot}/period/:period/reopen`,
                 recalculate: `${shopAccountingRoot}/period/:period/recalculate`,
             },

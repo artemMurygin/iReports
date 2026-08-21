@@ -6,7 +6,12 @@ import { Period } from '@/shared/domain/period.value-object';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
-import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
+import {
+    PeriodAlreadyClosedException,
+    PeriodNotExpiredException,
+    UnapprovedSalesPlanRowsException,
+} from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
+import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -25,11 +30,7 @@ import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/applica
 import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/salary-accrual-documents-created.domain-event';
-import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
-import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
-import { PeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
-import { buildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
-import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-context';
+import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
 import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period.command';
 
 // Закрытие расчётного периода направления shop (Фаза 13.5, issue #57) —
@@ -64,6 +65,13 @@ import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period
 // CLOSED; после коммита — SalaryAccrualDocumentsCreatedDomainEvent.
 // SalaryAccrual/порты документа физически лежат в domains/service/modules/
 // accounting, но direction-агностичны (см. шапку выше про AccountingPeriod).
+//
+// Фаза 2 PRD 1 — зеркально сервису: только истёкший и ещё не закрытый
+// месяц (409 иначе), неявная синхронизация отгрузок МойСклада за месяц
+// (ErpPeriodSyncRunner → ERP_PERIOD_SYNC, таймаут 2 мин, блокировка
+// направления от тика крона; ошибка → ErpSyncFailedException, период
+// открыт, ничего не создано) до сброса кэша и расчёта; строки снапшота
+// считает CalculateShopSnapshotRowsService — тот же код, что и close-preview.
 @CommandHandler(CloseShopAccountingPeriodCommand)
 export class CloseShopAccountingPeriodHandler implements ICommandHandler<
     CloseShopAccountingPeriodCommand,
@@ -85,8 +93,8 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
         private readonly eventEmitter: EventEmitter2,
-        private readonly shopContextBuilder: BuildShopCalculationContextService,
-        private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
+        private readonly rowsCalculator: CalculateShopSnapshotRowsService,
+        private readonly erpSync: ErpPeriodSyncRunner,
     ) {}
 
     async execute(
@@ -94,6 +102,10 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
     ): Promise<AccountingPeriodResponse> {
         const direction = 'shop' as const;
         const period = Period.create(command.period);
+
+        if (!period.isExpired()) {
+            throw new PeriodNotExpiredException(direction, period.getValue());
+        }
 
         const plans = await this.salesPlanRepo.findByDirectionAndPeriod(
             direction,
@@ -116,12 +128,22 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
             direction,
             period.getValue(),
         );
+        if (existing?.isClosed()) {
+            throw new PeriodAlreadyClosedException(
+                direction,
+                period.getValue(),
+            );
+        }
         const periodEntity =
             existing ??
             AccountingPeriod.openFor({
                 direction,
                 period: period.getValue(),
             });
+
+        // Неявная синхронизация ERP за месяц — до транзакции закрытия и до
+        // сброса кэша; её результат остаётся в БД даже при отклонении ниже.
+        await this.erpSync.run(direction, period);
 
         // Сброс кэша ДО расчёта (PRD 1: "закрытие никогда не фиксирует
         // устаревший кэш"); повторное удаление внутри транзакции — чтобы не
@@ -134,7 +156,7 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
         // Снапшот — все сотрудники, у которых есть зарплатные правила: с
         // личной схемой и/или со схемой на их отдел (см.
         // ResolveShopEmployeeSalaryRulesService.forAllTargets).
-        const rows = await this.closeShopDirection(period);
+        const rows = await this.rowsCalculator.calculate(period);
         const accruals = await this.buildAccrualDocuments(period, rows);
 
         periodEntity.close(command.closedBy, rows.length);
@@ -175,45 +197,6 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
             direction,
             period.getValue(),
         );
-    }
-
-    private async closeShopDirection(
-        period: Period,
-    ): Promise<AccountingPeriodSnapshotRow[]> {
-        const salaryRulesByEmployee =
-            await this.salaryRulesResolver.forAllTargets();
-        const rows: AccountingPeriodSnapshotRow[] = [];
-        for (const [employeeId, { rules }] of salaryRulesByEmployee) {
-            // Сотрудник отдела со схемой, у которого после фильтра по
-            // direction='shop' не осталось ни одного правила (вся схема
-            // отдела — правила сервиса), в снапшот не попадает: пустая
-            // строка на нулевую сумму завысила бы closedRows и ничего не
-            // фиксировала бы.
-            if (rules.length === 0) {
-                continue;
-            }
-            const base = await this.shopContextBuilder.build(
-                period,
-                employeeId,
-                rules,
-            );
-            const lines = await PeriodCalculationOrchestrator.calculate(rules, {
-                employee: base.employee,
-                period: base.period,
-                erpData: base.erpData,
-                mode: 'FACT',
-                salesPerformance: toShopSalesPerformanceContext(
-                    base.salesPerformanceByCategory,
-                    'FACT',
-                ),
-            });
-            rows.push({
-                employeeId,
-                total: PeriodCalculationOrchestrator.total(lines),
-                lines: buildRuleBreakdown(rules, lines),
-            });
-        }
-        return rows;
     }
 
     // Документ на КАЖДУЮ строку снапшота, включая нулевые суммы и уволенных

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../../../shared/cron/prod-cron.decorator';
 import { logCronError } from '../../../../shared/cron/cron-file-logger';
+import { DirectionSyncLock } from '@/shared/infrastructure/sync-lock/direction-sync-lock';
 import { MoySkladSyncService } from './moysklad-sync.service';
 
 @Injectable()
@@ -9,14 +10,22 @@ export class MoySkladSyncCron {
     private readonly logger = new Logger(MoySkladSyncCron.name);
     private failedSince: Date | null = null;
 
-    constructor(private readonly syncService: MoySkladSyncService) {}
+    constructor(
+        private readonly syncService: MoySkladSyncService,
+        private readonly lock: DirectionSyncLock,
+    ) {}
 
+    // Тик идёт под блокировкой направления (DirectionSyncLock) — не
+    // параллельно с неявным синком месяца внутри закрытия периода (PRD 1
+    // docs/payroll-closing-and-accrual, MoySkladErpPeriodSyncAdapter).
     @ProdCron(CronExpression.EVERY_5_MINUTES)
     async run() {
         const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
 
         try {
-            await this.syncService.uploadUpdatedDemands(since);
+            await this.lock.runExclusive('shop', () =>
+                this.syncService.uploadUpdatedDemands(since),
+            );
             this.logger.log(
                 'Successfully synced updated demands from MoySklad',
             );

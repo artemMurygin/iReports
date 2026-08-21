@@ -5,6 +5,7 @@ import { UpdateEmployeeHoursEntryCommand } from './update-employee-hours-entry.c
 import { EmployeeHoursEntryNotFoundException } from '@/domains/service/modules/accounting/domain/exceptions/employee-hours-entry.exception';
 import { EMPLOYEE_HOURS_ENTRY_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
 import type { EmployeeHoursEntryRepositoryPort } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
+import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
 import { toEmployeeHoursEntryResponse } from '@/domains/service/modules/accounting/application/mappers/to-employee-hours-entry-response';
 
 @CommandHandler(UpdateEmployeeHoursEntryCommand)
@@ -15,6 +16,7 @@ export class UpdateEmployeeHoursEntryHandler implements ICommandHandler<
     constructor(
         @Inject(EMPLOYEE_HOURS_ENTRY_REPOSITORY)
         private readonly repo: EmployeeHoursEntryRepositoryPort,
+        private readonly ensurePeriodNotClosed: EnsurePeriodNotClosedService,
     ) {}
 
     async execute(
@@ -24,6 +26,10 @@ export class UpdateEmployeeHoursEntryHandler implements ICommandHandler<
         if (!entry) {
             throw new EmployeeHoursEntryNotFoundException();
         }
+
+        // Часы закрытого месяца заблокированы (PRD 1
+        // docs/payroll-closing-and-accrual) — 409 с closedBy/closedAt.
+        await this.ensurePeriodNotClosed.ensureNotClosed(entry.period);
 
         entry.edit(command.hours);
         await this.repo.update(entry);
