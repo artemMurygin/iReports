@@ -7,6 +7,7 @@ import { SalaryRulesPage } from '@/pages/SalaryRules'
 import { SalaryRuleListPage } from '@/pages/SalaryRuleList'
 import { SalaryRuleDetailPage } from '@/pages/SalaryRuleDetail'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
+import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { UiKitPreview } from '@/pages/UiKitPreview'
 import { queryClient } from '@/shared/api/query-client.ts'
 import { api as funnelReportApi } from '@/pages/FunnelReport/model/api.ts'
@@ -33,6 +34,13 @@ export const router = createBrowserRouter([
             {
                 path: 'sales-plan',
                 element: <SalesPlanPage />,
+            },
+            {
+                // Фаза 6 плана "График работы сотрудников" (docs/employee-work-schedule) — путь
+                // задан явно планом задачи ('/work-schedule'), а не переиспользует прежний
+                // плейсхолдер '/schedule' из app/navigation.tsx (см. правку STANDALONE_ITEM там же).
+                path: 'work-schedule',
+                element: <WorkSchedulePage />,
             },
             {
                 path: 'salaries/rules',

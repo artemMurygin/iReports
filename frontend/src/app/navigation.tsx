@@ -47,9 +47,11 @@ export type NavSection = {
  * начисления" (`/salaries/rules` — the schema LIST page, `pages/SalaryRuleList`, see
  * docs/salary-schema-list-ui; schema creation moved to the child route `/salaries/rules/new`,
  * `pages/SalaryRules`, still linked from there via its "Создать схему" actions — see
- * docs/salary-schema-creation-ui/plan-salary-schema-creation-ui.md, Фаза 2) and "Связи
+ * docs/salary-schema-creation-ui/plan-salary-schema-creation-ui.md, Фаза 2), "Связи
  * сотрудников" (единственная страница нового раздела «Настройки» — сопоставление сотрудников
- * между ERP-системами, `/settings/employee-identity`) are real today.
+ * между ERP-системами, `/settings/employee-identity`) and "График работы" (calendar view only,
+ * `/work-schedule` — `pages/WorkSchedule`, see docs/employee-work-schedule, Фаза 6) are real
+ * today.
  *
  * Lives in its own module (not inlined in `app/Header.tsx`) so both `app/Header.tsx` (desktop
  * Nav Bar + mobile drawer) and `app/BottomNav.tsx` (Pencil node `XXiyY`) can share one source
@@ -91,11 +93,13 @@ export const SECTIONS: NavSection[] = [
     },
 ]
 
+// Фаза 6 плана "График работы сотрудников" (docs/employee-work-schedule) реализует
+// `pages/WorkSchedule` на `/work-schedule` (см. app/router.tsx) — пункт больше не плейсхолдер
+// и включён (`disabled` снят), путь обновлён с прежнего '/schedule'.
 export const STANDALONE_ITEM: NavLeaf = {
     label: 'График работы',
-    to: '/schedule',
+    to: '/work-schedule',
     icon: <CalendarClock />,
-    disabled: true,
 }
 
 export const DRAWER_SECTIONS = [
