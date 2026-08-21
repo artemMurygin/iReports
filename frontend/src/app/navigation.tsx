@@ -75,7 +75,7 @@ export const SECTIONS: NavSection[] = [
         label: 'Зарплата',
         icon: <Wallet />,
         items: [
-            { label: 'Отчёт по зарплате', to: '/salaries', icon: <Receipt />, disabled: true },
+            { label: 'Отчёт по зарплате', to: '/salaries', icon: <Receipt /> },
             { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
             { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
         ],

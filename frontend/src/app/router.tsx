@@ -6,6 +6,7 @@ import { SalesPlanPage } from '@/pages/SalesPlan'
 import { SalaryRulesPage } from '@/pages/SalaryRules'
 import { SalaryRuleListPage } from '@/pages/SalaryRuleList'
 import { SalaryRuleDetailPage } from '@/pages/SalaryRuleDetail'
+import { SalaryReportPage } from '@/pages/SalaryReport'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
 import { UiKitPreview } from '@/pages/UiKitPreview'
 import { queryClient } from '@/shared/api/query-client.ts'
@@ -33,6 +34,10 @@ export const router = createBrowserRouter([
             {
                 path: 'sales-plan',
                 element: <SalesPlanPage />,
+            },
+            {
+                path: 'salaries',
+                element: <SalaryReportPage />,
             },
             {
                 path: 'salaries/rules',
