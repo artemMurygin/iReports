@@ -10,9 +10,6 @@ import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/ap
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
 import { ReopenAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
-import { CreateEmployeeHoursEntryHandler } from '@/domains/service/modules/accounting/application/command/create-employee-hours-entry.handler';
-import { UpdateEmployeeHoursEntryHandler } from '@/domains/service/modules/accounting/application/command/update-employee-hours-entry.handler';
-import { DeleteEmployeeHoursEntryHandler } from '@/domains/service/modules/accounting/application/command/delete-employee-hours-entry.handler';
 import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
 import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
 import { DeleteTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/delete-task-completion.handler';
@@ -21,7 +18,6 @@ import { GetDepartmentSalaryReportService } from '@/domains/service/modules/acco
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
-import { ListEmployeeHoursEntriesService } from '@/domains/service/modules/accounting/application/services/list-employee-hours-entries.service';
 import { ListTaskCompletionsService } from '@/domains/service/modules/accounting/application/services/list-task-completions.service';
 import { ListSalaryRuleTypesService } from '@/domains/service/modules/accounting/application/services/list-salary-rule-types.service';
 import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/list-motivation-schemas.service';
@@ -32,6 +28,8 @@ import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounti
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
+import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
+import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-motivation-schema.http.controller';
 import { ListMotivationSchemasHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-motivation-schemas.http.controller';
 import { GetMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-motivation-schema.http.controller';
@@ -42,10 +40,6 @@ import { CloseAccountingPeriodHttpController } from '@/domains/service/modules/a
 import { ReopenAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/reopen-accounting-period.http.controller';
 import { RecalculateAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/recalculate-accounting-period.http.controller';
 import { GetAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-accounting-period.http.controller';
-import { CreateEmployeeHoursEntryHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-employee-hours-entry.http.controller';
-import { UpdateEmployeeHoursEntryHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/update-employee-hours-entry.http.controller';
-import { DeleteEmployeeHoursEntryHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-employee-hours-entry.http.controller';
-import { ListEmployeeHoursEntriesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-employee-hours-entries.http.controller';
 import { CreateTaskCompletionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-task-completion.http.controller';
 import { ConfirmTaskCompletionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/confirm-task-completion.http.controller';
 import { DeleteTaskCompletionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-task-completion.http.controller';
@@ -59,7 +53,6 @@ import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/app
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import { EMPLOYEE_HOURS_ENTRY_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import { TASK_COMPLETION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/task-completion.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
@@ -71,7 +64,6 @@ import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infra
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period.repository';
 import { AccountingPeriodSnapshotRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period-snapshot.repository';
 import { AccountingCalculationCacheRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-calculation-cache.repository';
-import { EmployeeHoursEntryRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-hours-entry.repository';
 import { ServiceCalculationDataRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/service-calculation-data.repository';
 import { TaskCompletionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/task-completion.repository';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
@@ -138,10 +130,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         ReopenAccountingPeriodHttpController,
         RecalculateAccountingPeriodHttpController,
         GetAccountingPeriodHttpController,
-        CreateEmployeeHoursEntryHttpController,
-        UpdateEmployeeHoursEntryHttpController,
-        DeleteEmployeeHoursEntryHttpController,
-        ListEmployeeHoursEntriesHttpController,
         CreateTaskCompletionHttpController,
         ConfirmTaskCompletionHttpController,
         DeleteTaskCompletionHttpController,
@@ -160,9 +148,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         CloseAccountingPeriodHandler,
         ReopenAccountingPeriodHandler,
         RecalculateAccountingPeriodHandler,
-        CreateEmployeeHoursEntryHandler,
-        UpdateEmployeeHoursEntryHandler,
-        DeleteEmployeeHoursEntryHandler,
         CreateTaskCompletionHandler,
         ConfirmTaskCompletionHandler,
         DeleteTaskCompletionHandler,
@@ -171,7 +156,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         GetAccountingPeriodService,
         BuildServiceCalculationContextService,
         ResolveEmployeeSalaryRulesService,
-        ListEmployeeHoursEntriesService,
         ListTaskCompletionsService,
         ListSalaryRuleTypesService,
         ListSalaryAccrualsService,
@@ -204,10 +188,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
             useClass: AccountingCalculationCacheRepository,
         },
         {
-            provide: EMPLOYEE_HOURS_ENTRY_REPOSITORY,
-            useClass: EmployeeHoursEntryRepository,
-        },
-        {
             provide: SERVICE_CALCULATION_DATA,
             useClass: ServiceCalculationDataRepository,
         },
@@ -237,6 +217,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         {
             provide: ERP_PERIOD_SYNC,
             useClass: RoappErpPeriodSyncAdapter,
+        },
+        // GetClosePeriodPreviewService (employeesWithoutHours) — свой
+        // экземпляр под тем же токеном, что и в WorkScheduleModule/
+        // ShopAccountingModule (см. domains/shop/CLAUDE.md), а не импорт
+        // WorkScheduleModule целиком ради одного токена.
+        {
+            provide: WORK_SCHEDULE_ENTRY_REPOSITORY,
+            useClass: WorkScheduleEntryRepository,
         },
     ],
 })

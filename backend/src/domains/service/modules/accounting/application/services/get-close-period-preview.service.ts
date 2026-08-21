@@ -8,8 +8,8 @@ import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/a
 import type { SnapshotRowsCalculatorPort } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import { EMPLOYEE_HOURS_ENTRY_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
-import type { EmployeeHoursEntryRepositoryPort } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
+import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
+import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import type { AccountingPeriodSnapshotRow } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 
 const PAY_PER_HOUR_RULE_TYPE = 'PayPerHour';
@@ -28,8 +28,8 @@ export class GetClosePeriodPreviewService {
         private readonly rowsCalculator: SnapshotRowsCalculatorPort,
         @Inject(EMPLOYEE_DISMISSAL)
         private readonly employeeDismissal: EmployeeDismissalPort,
-        @Inject(EMPLOYEE_HOURS_ENTRY_REPOSITORY)
-        private readonly hoursRepo: EmployeeHoursEntryRepositoryPort,
+        @Inject(WORK_SCHEDULE_ENTRY_REPOSITORY)
+        private readonly workScheduleRepo: WorkScheduleEntryRepositoryPort,
     ) {}
 
     async execute(
@@ -72,8 +72,10 @@ export class GetClosePeriodPreviewService {
         };
     }
 
-    // Сотрудники с правилом PayPerHour, у которых за месяц нет записи часов
-    // — руководитель может отменить закрытие и дозаполнить (PRD 1).
+    // Сотрудники с правилом PayPerHour, у которых за месяц нет отработанных
+    // часов графика — руководитель может отменить закрытие и дозаполнить
+    // (PRD 1). Источник — WorkScheduleEntry (Фаза 5 docs/employee-work-
+    // schedule), заменивший прежний ручной ввод EmployeeHoursEntry.
     private async countEmployeesWithoutHours(
         period: Period,
         rows: AccountingPeriodSnapshotRow[],
@@ -84,8 +86,18 @@ export class GetClosePeriodPreviewService {
         if (hourly.length === 0) {
             return 0;
         }
-        const entries = await this.hoursRepo.findByPeriod(period.getValue());
-        const withHours = new Set(entries.map((entry) => entry.employeeId));
+        const { from, to } = period.getBounds();
+        const entries =
+            await this.workScheduleRepo.findByEmployeeIdsAndDateRange(
+                hourly.map((row) => row.employeeId),
+                from,
+                to,
+            );
+        const withHours = new Set(
+            entries
+                .filter((entry) => entry.day.hours !== null)
+                .map((entry) => entry.employeeId),
+        );
         return hourly.filter((row) => !withHours.has(row.employeeId)).length;
     }
 }

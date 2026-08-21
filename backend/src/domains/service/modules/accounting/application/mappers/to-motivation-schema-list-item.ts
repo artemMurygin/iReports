@@ -3,11 +3,10 @@ import { MotivationSchema } from '@/domains/service/modules/accounting/domain/en
 
 // Строка списка GET /v1/service/motivation-schema (Фаза "Редактирование
 // зарплатных схем") — ruleCount/ruleTypes/updatedAt считаются здесь, а не в
-// сервисе, тот же приём разделения "маппинг сущность → ответ" от "оркестрация
-// (резолвинг targetName, фильтрация 0-правильных схем)", что и у
-// to-employee-hours-entry-response.ts. targetName приходит извне —
-// резолвинг Bitrix-справочника не задача этого файла (см.
-// ListMotivationSchemasService).
+// сервисе: тот же приём разделения "маппинг сущность → ответ" от "оркестрация
+// (резолвинг targetName, фильтрация 0-правильных схем)", что и у остальных
+// мапперов модуля. targetName приходит извне — резолвинг Bitrix-справочника
+// не задача этого файла (см. ListMotivationSchemasService).
 export function toMotivationSchemaListItem(
     entity: MotivationSchema,
     targetName: string,

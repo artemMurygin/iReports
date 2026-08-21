@@ -32,8 +32,9 @@ export function formatPeriodLabel(period: string): string {
  * Mirrors `periodSchema`'s regex (`contracts/commands/sales-plan.ts`, 4-digit year + month
  * 01-12) rather than importing that schema — see `PeriodPicker`'s comment for why a *runtime*
  * import from `ireports-contracts` currently breaks the Vite dev server for this workspace
- * package (a real, verified limitation, not a style choice), and `employee-hours-entry.ts` for
- * a precedent of this same format being independently redefined elsewhere in the codebase.
+ * package (a real, verified limitation, not a style choice), and `work-schedule.ts`'s own
+ * `workScheduleMonthSchema` for a precedent of this same format being independently redefined
+ * elsewhere in the codebase.
  */
 export function isValidPeriod(period: string): boolean {
     return /^\d{4}-(0[1-9]|1[0-2])$/.test(period)

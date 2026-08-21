@@ -70,8 +70,9 @@ export interface ShopTaskCompletionErpItem {
 }
 
 export interface ShopCalculationErpData {
-    // Источник PayPerHour.calculate() — тот же EmployeeHoursEntry, что и у
-    // сервиса (Фаза 7/12), ручной ввод часов сотрудника за период.
+    // Источник PayPerHour.calculate() — сумма часов рабочих смен графика
+    // (WorkScheduleEntry.status = WORKING, Фаза 5,
+    // docs/employee-work-schedule), тот же источник, что и у сервиса.
     hoursWorked?: number;
     // Источник ProductSold И UsedProductSold (Фаза 13, issue #63) — один
     // массив на оба правила, см. комментарий у onlinePurchaserId выше.

@@ -17,11 +17,11 @@ export type { TargetRole, ShopSalaryBasis, PercentBorder };
 
 // ========================== Почасовая ставка ========================== //
 
-// Источник часов — тот же EmployeeHoursEntry, что и у сервиса (общая
-// Prisma-таблица `employee_hours_entries`, без direction — ручной ввод
-// часов сотрудника за период направление-агностичен, час работы не
-// принадлежит ERP). Приходит в CalculationContext.erpData.hoursWorked, а
-// не хардкодится в config.
+// Источник часов — сумма часов рабочих смен графика (WorkScheduleEntry,
+// Фаза 5, docs/employee-work-schedule; общая Prisma-таблица
+// `work_schedule_entries`, без direction — час работы направление-
+// агностичен), тот же источник, что и у сервиса. Приходит в
+// CalculationContext.erpData.hoursWorked, а не хардкодится в config.
 export type PayPerHourShopSalaryConfig = {
     price: number;
 };

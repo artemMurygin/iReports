@@ -1,22 +1,24 @@
 import { EnsurePeriodNotClosedService } from './ensure-period-not-closed.service';
-import { CreateEmployeeHoursEntryHandler } from '@/domains/service/modules/accounting/application/command/create-employee-hours-entry.handler';
-import { CreateEmployeeHoursEntryCommand } from '@/domains/service/modules/accounting/application/command/create-employee-hours-entry.command';
-import { UpdateEmployeeHoursEntryHandler } from '@/domains/service/modules/accounting/application/command/update-employee-hours-entry.handler';
-import { UpdateEmployeeHoursEntryCommand } from '@/domains/service/modules/accounting/application/command/update-employee-hours-entry.command';
-import { DeleteEmployeeHoursEntryHandler } from '@/domains/service/modules/accounting/application/command/delete-employee-hours-entry.handler';
-import { DeleteEmployeeHoursEntryCommand } from '@/domains/service/modules/accounting/application/command/delete-employee-hours-entry.command';
+import { UpsertWorkScheduleEntryHandler } from '@/modules/work-schedule/application/command/upsert-work-schedule-entry.handler';
+import { UpsertWorkScheduleEntryCommand } from '@/modules/work-schedule/application/command/upsert-work-schedule-entry.command';
+import { DeleteWorkScheduleEntryHandler } from '@/modules/work-schedule/application/command/delete-work-schedule-entry.handler';
+import { DeleteWorkScheduleEntryCommand } from '@/modules/work-schedule/application/command/delete-work-schedule-entry.command';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { EmployeeHoursEntryRepositoryPort } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
+import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
-import { EmployeeHoursEntry } from '@/domains/service/modules/accounting/domain/entities/employee-hours-entry.entity';
+import { WorkScheduleEntry } from '@/modules/work-schedule/domain/entities/work-schedule-entry.entity';
+import { ScheduleDate } from '@/modules/work-schedule/domain/value-objects/schedule-date.value-object';
+import { WorkDay } from '@/modules/work-schedule/domain/value-objects/work-day.value-object';
 import { AccountingPeriodClosedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Блокировка часов закрытого месяца (PRD 1 docs/payroll-closing-and-accrual,
 // "Блокировка графика работы и ручных часов"): единый сервис проверки,
-// подключённый ко всем трём хендлерам EmployeeHoursEntry.
-describe('EnsurePeriodNotClosedService — блокировка EmployeeHoursEntry', () => {
+// подключённый к обоим хендлерам записи графика работы (Фаза 5
+// docs/employee-work-schedule заменила прежний ручной ввод EmployeeHoursEntry
+// графиком — источник часов другой, гард тот же самый, не задублирован).
+describe('EnsurePeriodNotClosedService — блокировка WorkScheduleEntry', () => {
     const createPeriodStore = () => {
         const store = new Map<string, AccountingPeriod>();
         const key = (direction: AccountingDirection, period: string) =>
@@ -43,18 +45,25 @@ describe('EnsurePeriodNotClosedService — блокировка EmployeeHoursEnt
         return { store, key, periodRepo, closePeriod };
     };
 
-    const createHoursRepo = (entries: EmployeeHoursEntry[]) => {
+    const createScheduleRepo = (entries: WorkScheduleEntry[]) => {
         const byId = new Map(entries.map((entry) => [entry.id, entry]));
         const insert = jest.fn().mockResolvedValue(undefined);
         const update = jest.fn().mockResolvedValue(undefined);
         const remove = jest.fn().mockResolvedValue(undefined);
-        const repo: EmployeeHoursEntryRepositoryPort = {
+        const repo: WorkScheduleEntryRepositoryPort = {
             insert,
             update,
             delete: remove,
             findById: (id) => Promise.resolve(byId.get(id) ?? null),
-            findByEmployeeAndPeriod: jest.fn().mockResolvedValue(null),
-            findByPeriod: jest.fn().mockResolvedValue(entries),
+            findByEmployeeAndDate: (employeeId, date) =>
+                Promise.resolve(
+                    entries.find(
+                        (entry) =>
+                            entry.employeeId === employeeId &&
+                            entry.date.getValue() === date,
+                    ) ?? null,
+                ),
+            findByEmployeeIdsAndDateRange: jest.fn().mockResolvedValue([]),
         };
         return { repo, insert, update, remove };
     };
@@ -62,64 +71,57 @@ describe('EnsurePeriodNotClosedService — блокировка EmployeeHoursEnt
     const setup = () => {
         const periods = createPeriodStore();
         const guard = new EnsurePeriodNotClosedService(periods.periodRepo);
-        const julyEntry = EmployeeHoursEntry.create({
-            employeeId: 42,
-            period: '2026-07',
-            hours: 160,
-        });
-        const juneEntry = EmployeeHoursEntry.create({
-            employeeId: 42,
-            period: '2026-06',
-            hours: 150,
-        });
-        const hours = createHoursRepo([julyEntry, juneEntry]);
+        const julyEntry = withRequestContext(() =>
+            WorkScheduleEntry.create({
+                employeeId: 42,
+                date: ScheduleDate.create('2026-07-15'),
+                day: WorkDay.create({ status: 'WORKING', hours: 8 }),
+            }),
+        );
+        const juneEntry = withRequestContext(() =>
+            WorkScheduleEntry.create({
+                employeeId: 42,
+                date: ScheduleDate.create('2026-06-15'),
+                day: WorkDay.create({ status: 'WORKING', hours: 8 }),
+            }),
+        );
+        const schedule = createScheduleRepo([julyEntry, juneEntry]);
         return {
             ...periods,
-            ...hours,
+            ...schedule,
             guard,
             julyEntry,
             juneEntry,
-            createHandler: new CreateEmployeeHoursEntryHandler(
-                hours.repo,
+            upsertHandler: new UpsertWorkScheduleEntryHandler(
+                schedule.repo,
                 guard,
             ),
-            updateHandler: new UpdateEmployeeHoursEntryHandler(
-                hours.repo,
-                guard,
-            ),
-            deleteHandler: new DeleteEmployeeHoursEntryHandler(
-                hours.repo,
+            deleteHandler: new DeleteWorkScheduleEntryHandler(
+                schedule.repo,
                 guard,
             ),
         };
     };
 
-    it('POST/PATCH/DELETE часов закрытого месяца → 409 AccountingPeriodClosedException с closedBy/closedAt', async () => {
+    it('PUT/DELETE записи графика закрытого месяца → 409 AccountingPeriodClosedException с closedBy/closedAt', async () => {
         const ctx = setup();
         const closed = ctx.closePeriod('service', '2026-07', 7);
 
         const errors = await withRequestContext(() =>
             Promise.all([
-                ctx.createHandler
+                ctx.upsertHandler
                     .execute(
-                        new CreateEmployeeHoursEntryCommand({
+                        new UpsertWorkScheduleEntryCommand({
                             employeeId: 99,
-                            period: '2026-07',
+                            date: '2026-07-20',
+                            status: 'WORKING',
                             hours: 8,
-                        }),
-                    )
-                    .catch((e: unknown) => e),
-                ctx.updateHandler
-                    .execute(
-                        new UpdateEmployeeHoursEntryCommand({
-                            entryId: ctx.julyEntry.id,
-                            hours: 100,
                         }),
                     )
                     .catch((e: unknown) => e),
                 ctx.deleteHandler
                     .execute(
-                        new DeleteEmployeeHoursEntryCommand({
+                        new DeleteWorkScheduleEntryCommand({
                             entryId: ctx.julyEntry.id,
                         }),
                     )
@@ -143,46 +145,39 @@ describe('EnsurePeriodNotClosedService — блокировка EmployeeHoursEnt
         expect(ctx.remove).not.toHaveBeenCalled();
     });
 
-    it('часы другого (открытого) месяца редактируются, когда закрыт соседний', async () => {
+    it('запись графика другого (открытого) месяца правится, когда закрыт соседний', async () => {
         const ctx = setup();
         ctx.closePeriod('service', '2026-07');
 
         await withRequestContext(async () => {
-            await ctx.createHandler.execute(
-                new CreateEmployeeHoursEntryCommand({
-                    employeeId: 99,
-                    period: '2026-06',
-                    hours: 8,
-                }),
-            );
-            await ctx.updateHandler.execute(
-                new UpdateEmployeeHoursEntryCommand({
-                    entryId: ctx.juneEntry.id,
-                    hours: 100,
+            await ctx.upsertHandler.execute(
+                new UpsertWorkScheduleEntryCommand({
+                    employeeId: ctx.juneEntry.employeeId,
+                    date: ctx.juneEntry.date.getValue(),
+                    status: 'WORKING',
+                    hours: 6,
                 }),
             );
             await ctx.deleteHandler.execute(
-                new DeleteEmployeeHoursEntryCommand({
+                new DeleteWorkScheduleEntryCommand({
                     entryId: ctx.juneEntry.id,
                 }),
             );
         });
 
-        expect(ctx.insert).toHaveBeenCalledTimes(1);
         expect(ctx.update).toHaveBeenCalledTimes(1);
         expect(ctx.remove).toHaveBeenCalledTimes(1);
     });
 
-    it('часы — общий источник PayPerHour обоих направлений: закрытие месяца по shop тоже блокирует их', async () => {
+    it('график — общий источник PayPerHour обоих направлений: закрытие месяца по shop тоже блокирует его', async () => {
         const ctx = setup();
         ctx.closePeriod('shop', '2026-07', 5);
 
         const error = await withRequestContext(() =>
-            ctx.updateHandler
+            ctx.deleteHandler
                 .execute(
-                    new UpdateEmployeeHoursEntryCommand({
+                    new DeleteWorkScheduleEntryCommand({
                         entryId: ctx.julyEntry.id,
-                        hours: 100,
                     }),
                 )
                 .catch((e: unknown) => e),
@@ -208,16 +203,15 @@ describe('EnsurePeriodNotClosedService — блокировка EmployeeHoursEnt
         ).rejects.toBeInstanceOf(AccountingPeriodClosedException);
     });
 
-    it('после reopen блокировка снимается — часы снова редактируются', async () => {
+    it('после reopen блокировка снимается — запись графика снова редактируется', async () => {
         const ctx = setup();
         const closed = ctx.closePeriod('service', '2026-07');
 
         await expect(
             withRequestContext(() =>
-                ctx.updateHandler.execute(
-                    new UpdateEmployeeHoursEntryCommand({
+                ctx.deleteHandler.execute(
+                    new DeleteWorkScheduleEntryCommand({
                         entryId: ctx.julyEntry.id,
-                        hours: 100,
                     }),
                 ),
             ),
@@ -227,13 +221,12 @@ describe('EnsurePeriodNotClosedService — блокировка EmployeeHoursEnt
         await ctx.periodRepo.save(closed);
 
         await withRequestContext(() =>
-            ctx.updateHandler.execute(
-                new UpdateEmployeeHoursEntryCommand({
+            ctx.deleteHandler.execute(
+                new DeleteWorkScheduleEntryCommand({
                     entryId: ctx.julyEntry.id,
-                    hours: 100,
                 }),
             ),
         );
-        expect(ctx.update).toHaveBeenCalledTimes(1);
+        expect(ctx.remove).toHaveBeenCalledTimes(1);
     });
 });

@@ -8,6 +8,8 @@ import { SalaryRuleListPage } from '@/pages/SalaryRuleList'
 import { SalaryRuleDetailPage } from '@/pages/SalaryRuleDetail'
 import { SalaryReportPage } from '@/pages/SalaryReport'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
+import { WorkSchedulePage } from '@/pages/WorkSchedule'
+import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
 import { UiKitPreview } from '@/pages/UiKitPreview'
 import { queryClient } from '@/shared/api/query-client.ts'
 import { api as funnelReportApi } from '@/pages/FunnelReport/model/api.ts'
@@ -38,6 +40,22 @@ export const router = createBrowserRouter([
             {
                 path: 'salaries',
                 element: <SalaryReportPage />,
+            },
+            {
+                // Фаза 6 плана "График работы сотрудников" (docs/employee-work-schedule) — путь
+                // задан явно планом задачи ('/work-schedule'), а не переиспользует прежний
+                // плейсхолдер '/schedule' из app/navigation.tsx (см. правку STANDALONE_ITEM там же).
+                path: 'work-schedule',
+                element: <WorkSchedulePage />,
+            },
+            {
+                // Фаза 9 плана "График работы сотрудников" — мобильный экран «Отдел сегодня»
+                // (узел `A5SbT`, `pages/WorkScheduleToday`). Отдельный путь, а не адаптивный
+                // вариант '/work-schedule' — макет A5SbT самостоятельная страница со своей
+                // информационной архитектурой (лента недели + ростер), а не отзывчивая версия
+                // таблицы «сотрудники × дни месяца».
+                path: 'work-schedule/today',
+                element: <WorkScheduleTodayPage />,
             },
             {
                 path: 'salaries/rules',

@@ -54,8 +54,8 @@ import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounti
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
 import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
-import { EMPLOYEE_HOURS_ENTRY_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
-import { EmployeeHoursEntryRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-hours-entry.repository';
+import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
+import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
@@ -199,11 +199,11 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
             provide: ERP_PERIOD_SYNC,
             useClass: MoySkladErpPeriodSyncAdapter,
         },
-        // Часы (EmployeeHoursEntry) — общий для направлений источник
+        // График работы (WorkScheduleEntry) — общий для направлений источник
         // PayPerHour; здесь только чтение для employeesWithoutHours.
         {
-            provide: EMPLOYEE_HOURS_ENTRY_REPOSITORY,
-            useClass: EmployeeHoursEntryRepository,
+            provide: WORK_SCHEDULE_ENTRY_REPOSITORY,
+            useClass: WorkScheduleEntryRepository,
         },
         // Документы начисления (PRD 1 docs/payroll-closing-and-accrual) —
         // generic-по-direction сервисы чтения и direction-агностичные

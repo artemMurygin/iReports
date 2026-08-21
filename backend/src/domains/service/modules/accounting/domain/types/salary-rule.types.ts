@@ -11,7 +11,8 @@ import type {
 export type { TargetRole, SalaryBasis, PercentBorder };
 
 // hours больше не часть config (Фаза 7) — источник часов сотрудника за
-// период это EmployeeHoursEntry (ручной ввод), приходящий в
+// период это сумма часов рабочих смен графика (WorkScheduleEntry.status =
+// WORKING, Фаза 5, docs/employee-work-schedule), приходящая в
 // CalculationContext.erpData, а не хардкод в правиле.
 export type PayPerHourSalaryConfig = {
     price: number;

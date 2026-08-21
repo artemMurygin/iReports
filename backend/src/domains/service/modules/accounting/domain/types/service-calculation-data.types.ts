@@ -62,10 +62,11 @@ export interface ConfirmedTaskCompletionErpItem {
 
 export interface ServiceCalculationErpData {
     serviceCompletedItems: ServiceCompletedErpItem[];
-    // Часы сотрудника за период — ручной ввод (EmployeeHoursEntry), не
-    // ERP-данные в строгом смысле, но тот же принцип "правило не ходит в
-    // БД само" требует, чтобы значение пришло из контекста. 0, если записи
-    // нет.
+    // Часы сотрудника за период — сумма часов рабочих смен графика
+    // (WorkScheduleEntry.status = WORKING, Фаза 5,
+    // docs/employee-work-schedule), не ERP-данные в строгом смысле, но тот
+    // же принцип "правило не ходит в БД само" требует, чтобы значение
+    // пришло из контекста. 0, если рабочих смен нет.
     hoursWorked: number;
     // Фаза 8 — заказы, оплаченные в периоде (источник OrderPayedEntity), и
     // подтверждённые выполнения задач (источник TaskCompletedEntity).

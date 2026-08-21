@@ -4,8 +4,12 @@ import type { ServiceCalculationErpData } from '@/domains/service/modules/accoun
 
 // Юнит-тест на подготовленном объекте контекста — без поднятия БД и без
 // моков репозиториев (см. docs/payroll/prd-payroll-calculation.md, Фаза 1).
-// Источник часов с Фазы 7 — context.erpData.hoursWorked (ручной ввод,
-// EmployeeHoursEntry), а не config.hours.
+// Источник часов — context.erpData.hoursWorked (с Фазы 5, сумма часов
+// рабочих смен графика WorkScheduleEntry, см.
+// docs/employee-work-schedule), а не config.hours; правило само не знает,
+// откуда пришло число — 0 при отсутствии смен ничем не отличается от 0 при
+// отсутствии старой ручной записи, поэтому тест ниже "нет записи о часах"
+// покрывает и текущий источник.
 const buildContext = (hoursWorked = 0): CalculationContext => ({
     employee: { id: 1, identities: [] },
     period: {
@@ -42,7 +46,7 @@ describe('PayPerHoursEntity', () => {
     });
 
     describe('calculate', () => {
-        it('умножает часы из контекста (ручной ввод) на ставку и возвращает строку расчёта', () => {
+        it('умножает часы из контекста на ставку и возвращает строку расчёта', () => {
             const rule = PayPerHoursEntity.create({
                 type: 'PayPerHour',
                 name: 'Почасовая ставка',

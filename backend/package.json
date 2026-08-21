@@ -23,7 +23,8 @@
         "price:monitoring": "nest build -c nest-cli.json && node dist/src/utils/runPriceMonitoring.js",
         "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js",
         "export:roapp-orders": "nest build -c nest-cli.json && node dist/src/shared/exportRoappOrders.js",
-        "migrate:employee-identities": "nest build -c nest-cli.json && node dist/src/shared/migrateEmployeeIdentities.js"
+        "migrate:employee-identities": "nest build -c nest-cli.json && node dist/src/shared/migrateEmployeeIdentities.js",
+        "migrate:work-schedule-hours": "nest build -c nest-cli.json && node dist/src/shared/migrateWorkScheduleHours.js"
     },
     "dependencies": {
         "@nestjs/common": "^11.0.1",

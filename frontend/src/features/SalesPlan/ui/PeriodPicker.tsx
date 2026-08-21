@@ -41,8 +41,8 @@ export type PeriodPickerProps = {
  * transform on it; every existing usage elsewhere is `import type`, which TypeScript erases
  * entirely and so never actually hits that path. Fixing the package's build/resolution is out of
  * this task's scope (frontend-only) and out of proportion to one regex, so this duplicates the
- * literal pattern instead — same precedent as `employee-hours-entry.ts` defining its own
- * `periodSchema` rather than importing this one.
+ * literal pattern instead — same precedent as `work-schedule.ts`'s own `workScheduleMonthSchema`
+ * rather than importing this one.
  *
  * Deliberately uncontrolled `Popover` (no `open` state of our own) — arrow clicks are meant to
  * be repeatable without the dropdown closing after each one; it closes only via Radix's built-in

@@ -20,9 +20,11 @@ export interface ShopCalculationDataPort {
         bitrixEmployeeId: number,
     ): Promise<EmployeeIdentityRef[]>;
 
-    // Отработанные часы сотрудника за период — тот же ручной ввод
-    // EmployeeHoursEntry, что и у service (общая, направление-агностичная
-    // таблица). 0, если записи нет.
+    // Отработанные часы сотрудника за период — сумма часов рабочих смен
+    // графика (WorkScheduleEntry.status = WORKING, Фаза 5,
+    // docs/employee-work-schedule) — та же общая, направление-агностичная
+    // таблица, что и у service. Заменяет прежний ручной ввод
+    // EmployeeHoursEntry (модель удалена). 0, если рабочих смен нет.
     findHoursWorked(bitrixEmployeeId: number, period: string): Promise<number>;
 
     // Позиции отгрузок за период (Фаза 13, issue #63: "один источник на

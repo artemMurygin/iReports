@@ -146,8 +146,9 @@ ERP-специфичной логики, поэтому контроллеры `
 здесь не импортируется (в т.ч. `domain/services/shop-role-source.ts`, `money.ts`, `float-percent.ts`
 — зеркала, но отдельные файлы). Четыре типа правил:
 
-- **`PayPerHourEntity`** — почасовая оплата, тот же источник часов, что у `service`: общая модель
-  `EmployeeHoursEntry` (без направления в самой сущности — источник данных общий).
+- **`PayPerHourEntity`** — почасовая оплата, тот же источник часов, что у `service` (Фаза 5,
+  `docs/employee-work-schedule`): сумма часов рабочих смен графика (`WorkScheduleEntry.status =
+  WORKING`, общая модель без направления в самой сущности — источник данных общий).
 - **`ProductSoldEntity`** — вознаграждение за проданный товар в категории: роль `ONLINE_MANAGER`/
   `OFFLINE_MANAGER` (уровень **отгрузки**, `MoySkladDemand.onlineManagerId`/`offlineManagerId`),
   `award` `Fixed`/`FixedPercent`/`FloatPercent`, `salaryBasis` `REVENUE` (`sum`)/`MARGIN` (`profit`) —

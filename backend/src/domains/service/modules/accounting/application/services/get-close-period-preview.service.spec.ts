@@ -12,13 +12,15 @@ import type { AccountingCalculationCachePort } from '@/domains/service/modules/a
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import type { EmployeeHoursEntryRepositoryPort } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
+import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { EmployeeHoursEntry } from '@/domains/service/modules/accounting/domain/entities/employee-hours-entry.entity';
+import { WorkScheduleEntry } from '@/modules/work-schedule/domain/entities/work-schedule-entry.entity';
+import { ScheduleDate } from '@/modules/work-schedule/domain/value-objects/schedule-date.value-object';
+import { WorkDay } from '@/modules/work-schedule/domain/value-objects/work-day.value-object';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { Period } from '@/shared/domain/period.value-object';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -45,6 +47,15 @@ describe('GetClosePeriodPreviewService', () => {
             });
         });
 
+    const buildScheduleEntry = (employeeId: number, hours: number) =>
+        withRequestContext(() =>
+            WorkScheduleEntry.create({
+                employeeId,
+                date: ScheduleDate.create(`${PERIOD}-15`),
+                day: WorkDay.create({ status: 'WORKING', hours }),
+            }),
+        );
+
     const buildPlan = (approved: boolean) =>
         withRequestContext(() => {
             const plan = SalesPlan.create({
@@ -66,7 +77,7 @@ describe('GetClosePeriodPreviewService', () => {
         schemas: MotivationSchema[];
         plans: SalesPlan[];
         dismissedEmployeeIds: number[];
-        hoursEntries: EmployeeHoursEntry[];
+        scheduleEntries: WorkScheduleEntry[];
         hoursByEmployee: Record<number, number>;
     }) => {
         const motivationSchemaRepo = {
@@ -121,15 +132,17 @@ describe('GetClosePeriodPreviewService', () => {
                 ),
             ),
         };
-        const hoursRepo = {
-            findByPeriod: jest.fn().mockResolvedValue(options.hoursEntries),
-        } as unknown as EmployeeHoursEntryRepositoryPort;
+        const workScheduleRepo = {
+            findByEmployeeIdsAndDateRange: jest
+                .fn()
+                .mockResolvedValue(options.scheduleEntries),
+        } as unknown as WorkScheduleEntryRepositoryPort;
 
         const preview = new GetClosePeriodPreviewService(
             salesPlanRepo,
             rowsCalculator,
             employeeDismissal,
-            hoursRepo,
+            workScheduleRepo,
         );
 
         const periodRepo: AccountingPeriodRepositoryPort = {
@@ -174,13 +187,7 @@ describe('GetClosePeriodPreviewService', () => {
             ],
             plans: [buildPlan(true)],
             dismissedEmployeeIds: [3],
-            hoursEntries: [
-                EmployeeHoursEntry.create({
-                    employeeId: 1,
-                    period: PERIOD,
-                    hours: 10,
-                }),
-            ],
+            scheduleEntries: [buildScheduleEntry(1, 10)],
             hoursByEmployee: { 1: 10, 2: 8, 3: 0 },
         });
 
@@ -222,7 +229,7 @@ describe('GetClosePeriodPreviewService', () => {
             schemas: [buildHourlySchema(1, 250)],
             plans: [buildPlan(true), unapproved],
             dismissedEmployeeIds: [],
-            hoursEntries: [],
+            scheduleEntries: [],
             hoursByEmployee: { 1: 10 },
         });
 
@@ -255,13 +262,7 @@ describe('GetClosePeriodPreviewService', () => {
             ],
             plans: [],
             dismissedEmployeeIds: [],
-            hoursEntries: [
-                EmployeeHoursEntry.create({
-                    employeeId: 2,
-                    period: PERIOD,
-                    hours: 8,
-                }),
-            ],
+            scheduleEntries: [buildScheduleEntry(2, 8)],
             hoursByEmployee: { 2: 8 },
         });
 
@@ -279,13 +280,7 @@ describe('GetClosePeriodPreviewService', () => {
             schemas: [buildHourlySchema(1, 250)],
             plans: [],
             dismissedEmployeeIds: [],
-            hoursEntries: [
-                EmployeeHoursEntry.create({
-                    employeeId: 1,
-                    period: PERIOD,
-                    hours: 10,
-                }),
-            ],
+            scheduleEntries: [buildScheduleEntry(1, 10)],
             hoursByEmployee: { 1: 10 },
         });
 

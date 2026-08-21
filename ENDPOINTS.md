@@ -20,12 +20,7 @@
   - `GET /v1/service/accounting/salary_accruals?period=YYYY-MM` — список документов направления `service` за период: `{ direction, period, items: SalaryAccrual[], total }`, где `SalaryAccrual` — `{ id, direction, period, employeeId, employeeName, departmentId, status, isDismissed, total, linesCount, createdAt }` (`employeeName`/`departmentId` — из справочника Bitrix на чтении, `isDismissed` — зафиксирован в документе). До закрытия периода — пустой список; `period` обязателен (`400`)
   - `GET /v1/service/accounting/salary_accruals/:id` — карточка документа: то же + `lines: SalaryAccrualLine[]` — строка на каждое зарплатное правило снапшота (`ruleId, type, name, targetRole, salaryBasis, quantity, rate, amount, originalAmount, status, sources`); `404`, если документ не найден или принадлежит другому направлению
   - В ответе `GET .../salary_report/employee/:id/:period` появилось поле `accrualStatus` (`DRAFT | PARTIALLY_ACCRUED | ACCRUED | PAID | null`) — статус документа начисления сотрудника за закрытый период; `null` для открытого периода или если сотрудник в снапшот не попал
-- Ручной ввод часов сотрудника за период (`EmployeeHoursEntry`, Фаза 7, см. docs/payroll/plan-payroll-calculation.md) — минимальный источник данных для `PayPerHour.calculate()` (полноценный график работы вне скоупа); эндпоинты без гарда, как и остальной `accounting`:
-  - `POST /v1/service/accounting/employee_hours` — создать запись (`{ employeeId, period, hours }`); повтор на ту же пару `(employeeId, period)` отклоняется (`409`)
-  - `PATCH /v1/service/accounting/employee_hours/:id` — изменить количество часов
-  - `DELETE /v1/service/accounting/employee_hours/:id` — удалить запись
-  - Все три записи выше отклоняются `409` с `metadata.{ direction, period, closedBy, closedAt }`, если месяц записи закрыт (`AccountingPeriod` в `CLOSED`) — по ЛЮБОМУ направлению, т.к. `EmployeeHoursEntry` не привязана к направлению и питает `PayPerHour` и сервиса, и магазина (PRD 1 docs/payroll-closing-and-accrual, Фаза 2); проверка — единый `EnsurePeriodNotClosedService`, который подключит и будущий график работы; `reopen` снимает блокировку
-  - `GET /v1/service/accounting/employee_hours?period&employeeId` — записи за период (все сотрудники) или одна запись, если указан `employeeId`
+- Источник часов `PayPerHour.calculate()` (Фаза 5, `docs/employee-work-schedule`) — сумма часов смен `WorkScheduleEntry.status = WORKING` сотрудника за период (`modules/work-schedule`, см. ниже), читаемая `ServiceCalculationDataRepository.findHoursWorked` напрямую из БД. Прежний ручной ввод часов (`EmployeeHoursEntry`, CRUD-эндпоинты под `/v1/service/accounting`, Фаза 7) удалён вместе с моделью; существующие записи перенесены разовой миграцией `npm run migrate:work-schedule-hours` (`backend/src/shared/migrateWorkScheduleHours.ts`), которая также сбрасывает кэш расчёта (`AccountingCalculationCache`) затронутых открытых периодов. Запись/удаление дня графика (`PUT`/`DELETE /v1/work-schedule/entries*`, см. ниже) отклоняется `409` с `metadata.{ direction, period, closedBy, closedAt }`, если месяц записи закрыт (`AccountingPeriod` в `CLOSED`) по ЛЮБОМУ направлению — тот же `EnsurePeriodNotClosedService`, что раньше блокировал `EmployeeHoursEntry` (PRD 1 docs/payroll-closing-and-accrual, Фаза 2); `reopen` снимает блокировку
 - `GET /v1/service/accounting/salary_role_types` — типы зарплатных правил сервиса (`PayPerHour`, `ServiceCompleted`, `OrderPayed`, `TaskCompleted`) с перечнем допустимых `targetRole` для каждого (Фаза 8)
 - Выполнение задачи сотрудником (`TaskCompletion`, Фаза 8, см. docs/payroll/plan-payroll-calculation.md) — временный внутренний двухступенчатый воркфлоу подтверждения без интеграции с Bitrix24 Tasks (синхронизация с реальными задачами запланирована отдельной фазой); эндпоинты без гарда, как и остальной `accounting`. `TaskCompletion.direction` (Фаза 13, дефолт `'service'`) — эти эндпоинты всегда пишут/читают `direction: 'service'`; направление `shop` пишет/читает ту же таблицу (`direction: 'shop'`) через собственный, независимый CQRS-вход `POST/GET /v1/shop/accounting/task_completions*` (Фаза 13.5, см. ниже) — ту же пару Zod-контрактов (`createTaskCompletionRequestSchema`/`confirmTaskCompletionRequestSchema`/…) переиспользует HTTP-DTO, а не бизнес-логика:
   - `POST /v1/service/accounting/task_completions` — сотрудник отмечает задачу выполненной (`{ employeeId, period, description, createdBy }`), сразу в статусе `PENDING_CONFIRMATION`
@@ -61,6 +56,44 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
 - `DELETE /v1/employee-identity/:id` — удалить связь
 - `GET /v1/employee-identity/employee/:employeeId` — связи конкретного сотрудника
 - `GET /v1/employee-identity/unmatched` — сотрудники Bitrix без единой связи ни в одной системе
+
+## modules/work-schedule (`/v1/work-schedule`)
+График работы сотрудников (Фаза 1, `docs/employee-work-schedule`) — общая на компанию модель
+`WorkScheduleEntry` (пара «сотрудник × календарный день» → статус дня, часы смены, роль дня), модуль
+не привязан к домену `service`/`shop` (тот же принцип, что и у `modules/directory`/
+`modules/employee-identity`): читать график в Фазе 5 будут контексты расчёта зарплаты обоих
+направлений. Модуль импортирует `DirectoryModule` (список сотрудников отдела для чтения месяца и
+состава смены на дату). Читающие эндпоинты без гарда, тот же принцип, что и у `modules/directory`;
+`PUT`/`DELETE` ниже блокируются закрытым периодом (`EnsurePeriodNotClosedService`, свой экземпляр
+токена `ACCOUNTING_PERIOD_REPOSITORY` в модуле — тот же приём, что и у `ShopAccountingModule`, чтобы
+не тянуть в `modules/work-schedule` весь `AccountingModule` сервиса ради одного токена).
+- `PUT /v1/work-schedule/entries` — создать или изменить запись дня, идемпотентный upsert по
+  естественному ключу `(employeeId, date)` (`{ employeeId, date: 'YYYY-MM-DD', status, hours?, role? }`,
+  `status` — `WORKING`/`DAY_OFF`/`TIME_OFF`/`SICK_LEAVE`/`VACATION`); повтор на ту же пару правит
+  существующую запись, а не создаёт вторую. `hours` (2–16, шаг 0,5) и `role` (`TargetRole`) допустимы
+  только при `status = WORKING` — иначе `400`; часы вне диапазона/шага — тоже `400`. Месяц даты записи
+  закрыт по любому направлению (`AccountingPeriod` в `CLOSED`) → `409` с `metadata.{ direction, period,
+  closedBy, closedAt }` (PRD 1 docs/payroll-closing-and-accrual, Фаза 2)
+- `DELETE /v1/work-schedule/entries/:id` — удалить запись (день возвращается в состояние «не заполнен»);
+  та же блокировка закрытого периода, что и у `PUT` выше
+- `GET /v1/work-schedule?month=YYYY-MM&departmentId=` (Фаза 3) — таблица «сотрудники × дни месяца»
+  отдела одним запросом: по каждому сотруднику — по одной ячейке (`date`, `entryId`, `status`, `hours`,
+  `role`, всё `null` у не заполненного дня) на каждый календарный день месяца (28-31), `totalHours` за
+  месяц, `vacationDaysUsed`/`vacationDaysLimit` — использованные дни отпуска и годовой лимит (константа
+  `ANNUAL_VACATION_DAYS_LIMIT = 31`), считаются за календарный год месяца из запроса, а не только за
+  сам месяц. Плюс агрегаты: `days[]` — число людей в смене (`peopleOnShift`) по каждому дню, `totalHours`
+  верхнего уровня — общий фонд часов месяца. `departmentId` не передан — сотрудники всех отделов, в
+  ответе `departmentId: null`. Ровно два запроса к БД независимо от числа сотрудников/дней (список
+  сотрудников + одна выборка записей графика за год)
+- `GET /v1/work-schedule/shift?date=YYYY-MM-DD&departmentId=` (Фаза 4) — состав смены на дату для
+  мобильного экрана «Отдел сегодня»: `onShift[]` — кто на смене (`employeeId`, `name`, `role`, `hours`,
+  `status = WORKING`), `notOnShift[]` — кто нет, сгруппированные по причине отсутствия (`reason`:
+  `DAY_OFF`/`TIME_OFF`/`SICK_LEAVE`/`VACATION`/`NOT_FILLED` — сотрудник без записи графика на эту дату
+  получает `NOT_FILLED`; группы с пустым `employees` в ответе не отдаются), `roleCounts[]` — счётчики
+  ролей среди тех, кто на смене (роли без единого человека в смене не отдаются), `totalHours` —
+  суммарные часы дня. Сумма `onShift` + всех `notOnShift[].employees` равна числу сотрудников отдела.
+  `departmentId` не передан — сотрудники всех отделов, в ответе `departmentId: null`. Ровно два запроса
+  к БД независимо от числа сотрудников (список сотрудников + одна выборка записей графика за день)
 
 ## domains/service/modules/sales (`/v1/service/sales/plan`, `/v1/service/sales/plan_template`, `/v1/service/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели (`SalesPlan`/
@@ -138,7 +171,7 @@ docs/payroll/phase-13.5-shop-report-integration.md) — собственный �
 `infrastructure`/`interface`, независимый от одноимённого модуля `domains/service/modules/accounting`
 (зеркальные, но раздельные классы — ни один класс сервисного `accounting` здесь не импортируется, см.
 `backend/CLAUDE.md`). Четыре типа правил (свои реестр `shopSalaryRuleRegistry` и фабрика
-`ShopSalaryRuleFactory`): `PayPerHour` (`hours × price`, источник часов — общий `EmployeeHoursEntry`),
+`ShopSalaryRuleFactory`): `PayPerHour` (`hours × price`, источник часов — общий `WorkScheduleEntry`, Фаза 5),
 `ProductSold` (награда `Fixed`/`FixedPercent`/`FloatPercent` за проданный товар в категории
 `MoySkladProductFolder`, с раскрытием вложенных папок; база `REVENUE`/`MARGIN`, без
 `SALARY_MINUS_ENGINEER_SALARY`), `UsedProductSold` (Фаза 13 — вознаграждение закупщику БУ техники за

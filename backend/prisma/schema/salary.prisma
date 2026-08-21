@@ -82,23 +82,13 @@ model SalaryRule {
   @@map("salary_rules")
 }
 
-// Ручной ввод отработанных часов сотрудника за период — источник данных для
-// PayPerHour.calculate() (Фаза 7, см. docs/payroll/plan-payroll-calculation.md).
-// Полноценный график работы — вне скоупа этой итерации: одна запись — одно
-// значение часов на пару (сотрудник, период), заводится/правится
-// руководителем/администратором через простой CRUD.
-model EmployeeHoursEntry {
-  id         String @id
-  employeeId Int    @map("employee_id")
-  period     String
-  hours      Float
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([employeeId, period])
-  @@map("employee_hours_entries")
-}
+// EmployeeHoursEntry (ручной ввод часов сотрудника за период) удалена
+// (Фаза 5, docs/employee-work-schedule/plan-employee-work-schedule.md) —
+// источник часов PayPerHour.calculate() теперь WorkScheduleEntry (сумма
+// часов смен status=WORKING за период, см. work-schedule.prisma), а не
+// отдельная ручная таблица. Данные перенесены разовой миграцией
+// (npm run migrate:work-schedule-hours, backend/src/shared/migrateWorkScheduleHours.ts)
+// перед удалением модели.
 
 // Выполнение задачи сотрудником — источник данных для TaskCompleted.calculate()
 // (Фаза 8, см. docs/payroll/plan-payroll-calculation.md). ВРЕМЕННЫЙ
