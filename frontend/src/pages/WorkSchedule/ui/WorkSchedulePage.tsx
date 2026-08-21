@@ -21,6 +21,7 @@ export function WorkSchedulePage() {
         setDepartmentId,
         tab,
         setTab,
+        highlightedEmployeeId,
         departments,
         isDepartmentsLoading,
         days,
@@ -67,6 +68,7 @@ export function WorkSchedulePage() {
                     totalHours={totalHours}
                     hasData={hasData}
                     periodLabel={periodLabel}
+                    highlightedEmployeeId={highlightedEmployeeId}
                 />
             }
         />

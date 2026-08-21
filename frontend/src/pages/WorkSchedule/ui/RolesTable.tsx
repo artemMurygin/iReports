@@ -9,6 +9,7 @@ import { formatDayEditorDateLabel } from '../model/format.ts'
 import { isRoleEditableCell, roleCellLabel, roleCellStyle } from '../model/rolePresentation.ts'
 import { buildDayAggregateMap, buildEmployeeCellMap, isVacationLow, vacationDaysRemaining } from '../model/scheduleAggregates.ts'
 import { buildScheduleGridTemplate, type ScheduleDayMeta } from '../model/scheduleDays.ts'
+import { useScrollIntoViewOnce } from '../model/useScrollIntoViewOnce.ts'
 import { RolePickerPopover } from './RolePickerPopover'
 import { ScheduleTableFooterRow, ScheduleTableHeaderRow } from './ScheduleTable.tsx'
 
@@ -17,6 +18,9 @@ export type RolesTableProps = {
     employees: MonthlyWorkScheduleResponse['employees']
     dayAggregates: MonthlyWorkScheduleResponse['days']
     totalHours: number
+    /** Тот же смысл, что и у `ScheduleTable`'s `highlightedEmployeeId` — вкладка «Роли» рендерит
+     * свою собственную строку на сотрудника (`RolesTableRow`), ей нужна своя подсветка. */
+    highlightedEmployeeId?: number | null
     className?: string
 }
 
@@ -33,7 +37,14 @@ export type RolesTableProps = {
  * «Клик по нерабочему дню (без роли) — роль не редактируется». `isRoleEditableCell`
  * (`model/rolePresentation.ts`) — единственное место, решающее, какая это ячейка.
  */
-function RolesTable({ days, employees, dayAggregates, totalHours, className }: RolesTableProps) {
+function RolesTable({
+    days,
+    employees,
+    dayAggregates,
+    totalHours,
+    highlightedEmployeeId = null,
+    className,
+}: RolesTableProps) {
     const gridTemplateColumns = useMemo(() => buildScheduleGridTemplate(days.length), [days.length])
     const dayAggregateMap = useMemo(() => buildDayAggregateMap(dayAggregates), [dayAggregates])
 
@@ -52,6 +63,7 @@ function RolesTable({ days, employees, dayAggregates, totalHours, className }: R
                             employee={employee}
                             days={days}
                             gridTemplateColumns={gridTemplateColumns}
+                            isHighlighted={employee.employeeId === highlightedEmployeeId}
                         />
                     ))}
 
@@ -71,19 +83,26 @@ function RolesTableRow({
     employee,
     days,
     gridTemplateColumns,
+    isHighlighted = false,
 }: {
     employee: MonthlyWorkScheduleResponse['employees'][number]
     days: ScheduleDayMeta[]
     gridTemplateColumns: string
+    isHighlighted?: boolean
 }) {
     const cellsByDate = useMemo(() => buildEmployeeCellMap(employee), [employee])
     const remaining = vacationDaysRemaining(employee)
+    const rowRef = useScrollIntoViewOnce<HTMLDivElement>(isHighlighted)
 
     return (
         <div
+            ref={rowRef}
             data-slot="work-schedule-role-row"
             data-employee-id={employee.employeeId}
-            className="grid h-[42px] border-b border-hairline bg-surface last:border-b-0"
+            className={cn(
+                'grid h-[42px] border-b border-hairline bg-surface last:border-b-0',
+                isHighlighted && 'ring-2 ring-inset ring-brand-strong',
+            )}
             style={{ gridTemplateColumns }}
         >
             <div className="sticky left-0 z-10 flex items-center border-r border-hairline bg-surface px-3.5">

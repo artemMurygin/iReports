@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 
 import { useDepartments } from '@/features/TargetDirectory'
 
 import { api } from './api.ts'
-import { formatFullDateLabel, formatMonthLabel, getCurrentMonthIso, getTodayIso } from './format.ts'
+import { parseHighlightedEmployeeId } from './employeeHighlight.ts'
+import { formatFullDateLabel, formatMonthLabel, getCurrentMonthIso, getTodayIso, isValidMonth } from './format.ts'
 import { buildMonthDays } from './scheduleDays.ts'
 import type { WorkScheduleTab } from './tabs.ts'
 
@@ -22,9 +24,23 @@ import type { WorkScheduleTab } from './tabs.ts'
  * рендерят одни и те же `employees`/`days` месяца (план, Фаза 8 — «данные берутся из того же GET
  * /v1/work-schedule … отдельный запрос не нужен»), поэтому переключение вкладки не должно
  * перезапускать `useQuery` и, соответственно, не может само по себе сбросить `month`/`departmentId`.
+ *
+ * `month`/`highlightedEmployeeId` читают query-параметры `?month=&employeeId=` один раз при
+ * монтировании (`useState`-инициализатор, тот же приём, что и у `todayIso`) — это вход со стороны
+ * мобильного экрана «Отдел сегодня» (план, Фаза 9: «Переход с карточки сотрудника на его график»,
+ * см. `pages/WorkScheduleToday/model/employeeScheduleLink.ts`), а не состояние, которому нужно
+ * следить за URL после открытия страницы: руководитель может свободно листать месяцы дальше, не
+ * дёргая назад к тому, с которого пришёл переход.
  */
 export function useWorkSchedulePage() {
-    const [month, setMonth] = useState<string>(getCurrentMonthIso)
+    const [searchParams] = useSearchParams()
+    const [month, setMonth] = useState<string>(() => {
+        const fromQuery = searchParams.get('month')
+        return fromQuery && isValidMonth(fromQuery) ? fromQuery : getCurrentMonthIso()
+    })
+    const [highlightedEmployeeId] = useState<number | null>(() =>
+        parseHighlightedEmployeeId(searchParams.get('employeeId')),
+    )
     const [departmentId, setDepartmentId] = useState<number | null>(null)
     const [tab, setTab] = useState<WorkScheduleTab>('CALENDAR')
     const [todayIso] = useState<string>(getTodayIso)
@@ -54,6 +70,7 @@ export function useWorkSchedulePage() {
         setDepartmentId,
         tab,
         setTab,
+        highlightedEmployeeId,
         departments,
         isDepartmentsLoading: departmentsQuery.isLoading,
         days,

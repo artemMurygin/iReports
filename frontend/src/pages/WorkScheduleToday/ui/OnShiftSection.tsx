@@ -5,6 +5,8 @@ import { formatHours } from '../model/formatHours.ts'
 
 export type OnShiftSectionProps = {
     employees: WorkScheduleShiftEmployee[]
+    /** Дата выбранного дня ленты — прокидывается в `EmployeeRow` только для ссылки на график. */
+    date: string
     onShiftCount: number
     totalEmployees: number
     totalHours: number
@@ -15,10 +17,10 @@ export type OnShiftSectionProps = {
  * Pencil: design/sallary-first-iteration.pen, узел `A5SbT` -> `Section На смене` — заголовок
  * «На смене · N из M» + «Часы · N ч» и карточка-ростер сотрудников на смене выбранного дня.
  *
- * Блок «Не на смене» (следующая секция того же узла дизайна) сюда сознательно не входит — задача
- * следующего шага (план, Фаза 9b), не этого.
+ * Блок «Не на смене» (следующая секция того же узла дизайна) сюда сознательно не входит —
+ * отдельная секция `NotOnShiftSection`, см. `WorkScheduleTodayBody.tsx`.
  */
-export function OnShiftSection({ employees, onShiftCount, totalEmployees, totalHours, className }: OnShiftSectionProps) {
+export function OnShiftSection({ employees, date, onShiftCount, totalEmployees, totalHours, className }: OnShiftSectionProps) {
     return (
         <section className={className}>
             <div className="flex items-center justify-between gap-2">
@@ -35,7 +37,7 @@ export function OnShiftSection({ employees, onShiftCount, totalEmployees, totalH
             ) : (
                 <div className="mt-2 flex flex-col items-start overflow-hidden rounded-xl border border-hairline bg-surface">
                     {employees.map((employee, index) => (
-                        <EmployeeRow key={employee.employeeId} employee={employee} showDivider={index > 0} />
+                        <EmployeeRow key={employee.employeeId} employee={employee} date={date} showDivider={index > 0} />
                     ))}
                 </div>
             )}

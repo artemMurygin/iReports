@@ -1,15 +1,20 @@
 import { ChevronRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type { WorkScheduleShiftEmployee } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
 import { Avatar, AvatarFallback } from '@/shared/ui-kit/atoms/Avatar'
 
 import { getEmployeeInitials } from '../model/employeeInitials.ts'
+import { buildEmployeeScheduleLink } from '../model/employeeScheduleLink.ts'
 import { formatHours } from '../model/formatHours.ts'
 import { resolveRoleStyle } from '../model/rolePresentation.ts'
 
 export type EmployeeRowProps = {
     employee: WorkScheduleShiftEmployee
+    /** Дата смены — та же, что выбрана в ленте недели; нужна только для построения ссылки
+     * (`buildEmployeeScheduleLink`), сама строка её не отображает. */
+    date: string
     /** `false` для первой строки списка — без разделителя над ней. */
     showDivider: boolean
 }
@@ -18,17 +23,20 @@ export type EmployeeRowProps = {
  * Pencil: design/sallary-first-iteration.pen, узел `A5SbT` -> `Section На смене` -> `Roster Card`
  * -> `Row *` — аватар (инициалы, цвет роли) + имя/роль + часы + шеврон.
  *
- * Шеврон — визуальный задел под переход на график сотрудника (план, Фаза 9b), сама строка в этом
- * шаге не кликабельна: навигация на карточку сотрудника — задача следующего шага, не этого
- * («Переход с карточки сотрудника на его график» в критериях Фазы 9 плана).
+ * Шеврон был визуальным заделом под переход на график сотрудника (Фаза 9a) — теперь вся строка
+ * `Link` на десктопную таблицу `/work-schedule` с этим сотрудником (план, Фаза 9: «Переход с
+ * карточки сотрудника на его график», см. `model/employeeScheduleLink.ts`).
  */
-export function EmployeeRow({ employee, showDivider }: EmployeeRowProps) {
+export function EmployeeRow({ employee, date, showDivider }: EmployeeRowProps) {
     const style = resolveRoleStyle(employee.role)
 
     return (
         <>
             {showDivider ? <div className="h-px w-full shrink-0 bg-hairline" /> : null}
-            <div className="flex w-full items-center gap-2.5 px-3 py-2">
+            <Link
+                to={buildEmployeeScheduleLink(employee.employeeId, date)}
+                className="flex w-full items-center gap-2.5 px-3 py-2 transition-colors hover:bg-canvas"
+            >
                 <Avatar>
                     <AvatarFallback className={cn(style.bgClassName, style.textClassName)}>
                         {getEmployeeInitials(employee.name)}
@@ -45,7 +53,7 @@ export function EmployeeRow({ employee, showDivider }: EmployeeRowProps) {
                 </span>
 
                 <ChevronRight className="size-3.5 shrink-0 text-ink-faint" aria-hidden="true" />
-            </div>
+            </Link>
         </>
     )
 }

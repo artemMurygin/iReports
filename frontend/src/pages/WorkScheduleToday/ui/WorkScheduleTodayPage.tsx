@@ -7,9 +7,10 @@ import { WorkScheduleTodayBody } from './WorkScheduleTodayBody.tsx'
  * Pencil: design/sallary-first-iteration.pen, узел `A5SbT` (`График работы · Мобильный (Отдел
  * сегодня)`) — мобильный экран состава смены на выбранный день.
  *
- * Каркас Фазы 9 плана (`docs/employee-work-schedule`): лента дней недели, счётчики «На смене»/
- * «Часы»/«Роли на смене» и список сотрудников на смене. Блок «Не на смене» и переход с карточки
- * сотрудника на его график — задача следующего шага (Фаза 9b), здесь не реализованы.
+ * План, Фаза 9 (`docs/employee-work-schedule`): лента дней недели, счётчики «На смене»/«Часы»/
+ * «Роли на смене», список сотрудников на смене (Фаза 9a), блок «Не на смене» с группировкой по
+ * причине и переход с карточки сотрудника (что на смене, что не на смене) на его график —
+ * `EmployeeRow`/`AbsenceGroupRow`, `model/employeeScheduleLink.ts`.
  *
  * Чистый медиатор (frontend/CLAUDE.md): всё состояние — в `useWorkScheduleTodayPage`, весь
  * условный рендер — в `WorkScheduleTodayBody`; этот компонент только раскладывает результат хука
@@ -18,8 +19,10 @@ import { WorkScheduleTodayBody } from './WorkScheduleTodayBody.tsx'
 export function WorkScheduleTodayPage() {
     const {
         weekDays,
+        selectedDate,
         onSelectDate,
         onShift,
+        notOnShift,
         roleCounts,
         onShiftCount,
         totalEmployees,
@@ -40,8 +43,10 @@ export function WorkScheduleTodayPage() {
             body={
                 <WorkScheduleTodayBody
                     weekDays={weekDays}
+                    selectedDate={selectedDate}
                     onSelectDate={onSelectDate}
                     onShift={onShift}
+                    notOnShift={notOnShift}
                     roleCounts={roleCounts}
                     onShiftCount={onShiftCount}
                     totalEmployees={totalEmployees}

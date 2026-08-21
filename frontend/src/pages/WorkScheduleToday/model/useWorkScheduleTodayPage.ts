@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 
 import { api } from './api.ts'
+import { resolveSelectedDayIndex } from './selectedDayIndex.ts'
 import { totalEmployeesOfShift } from './shiftStats.ts'
 import { getTodayIso } from './today.ts'
 import { buildWeekDays } from './weekDays.ts'
@@ -33,9 +34,7 @@ export function useWorkScheduleTodayPage() {
         queries: weekDays.map((day) => api.getShift(day.date, null)),
     })
 
-    // findIndex, а не Map — семь элементов, обычный перебор быстрее любой структуры данных.
-    const rawSelectedIndex = weekDays.findIndex((day) => day.date === selectedDate)
-    const selectedIndex = rawSelectedIndex === -1 ? 0 : rawSelectedIndex
+    const selectedIndex = resolveSelectedDayIndex(weekDays, selectedDate)
     const selectedQuery = shiftQueries[selectedIndex]
     const shift = selectedQuery.data
 
@@ -55,6 +54,7 @@ export function useWorkScheduleTodayPage() {
         selectedDate: weekDays[selectedIndex].date,
         onSelectDate: setSelectedDate,
         onShift: shift?.onShift ?? [],
+        notOnShift: shift?.notOnShift ?? [],
         roleCounts: shift?.roleCounts ?? [],
         onShiftCount: shift?.onShift.length ?? 0,
         totalEmployees: shift ? totalEmployeesOfShift(shift) : 0,

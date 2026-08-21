@@ -13,6 +13,7 @@ import {
     vacationDaysRemaining,
 } from '../model/scheduleAggregates.ts'
 import { buildScheduleGridTemplate, type ScheduleDayMeta } from '../model/scheduleDays.ts'
+import { useScrollIntoViewOnce } from '../model/useScrollIntoViewOnce.ts'
 import { DayEditorPopover } from './DayEditorPopover'
 
 export type ScheduleTableProps = {
@@ -20,6 +21,9 @@ export type ScheduleTableProps = {
     employees: MonthlyWorkScheduleResponse['employees']
     dayAggregates: MonthlyWorkScheduleResponse['days']
     totalHours: number
+    /** Строка сотрудника, к которой прокрутить и которую подсветить — переход по `?employeeId=` с
+     * мобильного экрана «Отдел сегодня» (см. `ScheduleBody`'s `highlightedEmployeeId`). */
+    highlightedEmployeeId?: number | null
     className?: string
 }
 
@@ -40,7 +44,14 @@ export type ScheduleTableProps = {
  * один раз из первого дня месяца (все дни `days` принадлежат одному календарному году — это один
  * вызов `GET /v1/work-schedule?month=`), а не в каждой ячейке отдельно.
  */
-function ScheduleTable({ days, employees, dayAggregates, totalHours, className }: ScheduleTableProps) {
+function ScheduleTable({
+    days,
+    employees,
+    dayAggregates,
+    totalHours,
+    highlightedEmployeeId = null,
+    className,
+}: ScheduleTableProps) {
     const gridTemplateColumns = useMemo(() => buildScheduleGridTemplate(days.length), [days.length])
     const dayAggregateMap = useMemo(() => buildDayAggregateMap(dayAggregates), [dayAggregates])
     const year = useMemo(() => Number(days[0]?.date.slice(0, 4)) || new Date().getFullYear(), [days])
@@ -61,6 +72,7 @@ function ScheduleTable({ days, employees, dayAggregates, totalHours, className }
                             days={days}
                             year={year}
                             gridTemplateColumns={gridTemplateColumns}
+                            isHighlighted={employee.employeeId === highlightedEmployeeId}
                         />
                     ))}
 
@@ -137,20 +149,27 @@ function ScheduleTableRow({
     days,
     year,
     gridTemplateColumns,
+    isHighlighted = false,
 }: {
     employee: MonthlyWorkScheduleResponse['employees'][number]
     days: ScheduleDayMeta[]
     year: number
     gridTemplateColumns: string
+    isHighlighted?: boolean
 }) {
     const cellsByDate = useMemo(() => buildEmployeeCellMap(employee), [employee])
     const remaining = vacationDaysRemaining(employee)
+    const rowRef = useScrollIntoViewOnce<HTMLDivElement>(isHighlighted)
 
     return (
         <div
+            ref={rowRef}
             data-slot="work-schedule-row"
             data-employee-id={employee.employeeId}
-            className="grid h-[42px] border-b border-hairline bg-surface last:border-b-0"
+            className={cn(
+                'grid h-[42px] border-b border-hairline bg-surface last:border-b-0',
+                isHighlighted && 'ring-2 ring-inset ring-brand-strong',
+            )}
             style={{ gridTemplateColumns }}
         >
             <div className="sticky left-0 z-10 flex items-center border-r border-hairline bg-surface px-3.5">

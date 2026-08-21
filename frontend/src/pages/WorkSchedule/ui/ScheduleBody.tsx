@@ -16,6 +16,9 @@ export type ScheduleBodyProps = {
     totalHours: number
     hasData: boolean
     periodLabel: string
+    /** Сотрудник, на чью строку прокрутить и подсветить таблицу — переход по `?employeeId=` с
+     * мобильного экрана «Отдел сегодня» (план, Фаза 9). `null` — обычное открытие страницы. */
+    highlightedEmployeeId: number | null
 }
 
 /**
@@ -30,7 +33,16 @@ export type ScheduleBodyProps = {
  * нужен»), различаются только презентационные компоненты (`ScheduleTable`/`RolesTable`,
  * `LegendRow`/`RoleLegendRow`).
  */
-function ScheduleBody({ tab, days, employees, dayAggregates, totalHours, hasData, periodLabel }: ScheduleBodyProps) {
+function ScheduleBody({
+    tab,
+    days,
+    employees,
+    dayAggregates,
+    totalHours,
+    hasData,
+    periodLabel,
+    highlightedEmployeeId,
+}: ScheduleBodyProps) {
     if (!hasData) {
         return (
             <>
@@ -43,12 +55,24 @@ function ScheduleBody({ tab, days, employees, dayAggregates, totalHours, hasData
     return tab === 'CALENDAR' ? (
         <>
             <LegendRow />
-            <ScheduleTable days={days} employees={employees} dayAggregates={dayAggregates} totalHours={totalHours} />
+            <ScheduleTable
+                days={days}
+                employees={employees}
+                dayAggregates={dayAggregates}
+                totalHours={totalHours}
+                highlightedEmployeeId={highlightedEmployeeId}
+            />
         </>
     ) : (
         <>
             <RoleLegendRow />
-            <RolesTable days={days} employees={employees} dayAggregates={dayAggregates} totalHours={totalHours} />
+            <RolesTable
+                days={days}
+                employees={employees}
+                dayAggregates={dayAggregates}
+                totalHours={totalHours}
+                highlightedEmployeeId={highlightedEmployeeId}
+            />
         </>
     )
 }
