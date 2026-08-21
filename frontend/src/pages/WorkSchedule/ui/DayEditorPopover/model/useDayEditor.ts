@@ -28,8 +28,9 @@ type UseDayEditorArgs = {
  * он закрыт), так что повторное открытие уже подхватывает свежие `cell` из ответа сервера после
  * инвалидации.
  *
- * `role` этим поповером не редактируется (вкладка «Роли» — Фаза 8, вне скоупа), но сохраняется
- * при каждой правке как есть — см. комментарий `buildUpsertPayload`.
+ * `role` этим поповером не редактируется (её редактирует свой поповер на вкладке «Роли» — Фаза 8b,
+ * `ui/RolePickerPopover`), но сохраняется при каждой правке как есть — см. комментарий
+ * `buildUpsertPayload`.
  */
 export function useDayEditor({ employeeId, date, cell }: UseDayEditorArgs) {
     const [status, setStatus] = useState<WorkScheduleStatus | null>(cell.status)

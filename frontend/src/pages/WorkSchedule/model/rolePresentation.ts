@@ -17,6 +17,10 @@ type RoleStyle = {
     glyph: string
     bgClassName: string
     textClassName: string
+    /** Цвет 2px-рамки выбранной пилюли в поповере назначения роли (Фаза 8b, `ui/RolePickerPopover`)
+     * — тот же приём и то же поле, что и `selectedBorderClassName` в `STATUS_STYLE`
+     * (`cellPresentation.ts`): совпадает с акцентным токеном `textClassName` без префикса `text-`. */
+    selectedBorderClassName: string
 }
 
 /** PRD ограничивает вкладку «Роли» именно этими четырьмя ролями (раздел «Хочу видеть/делать»:
@@ -27,20 +31,34 @@ type RoleStyle = {
  * — так TypeScript сам не даст забыть добавить сюда пятую роль, если дизайн когда-нибудь её
  * покажет. */
 export const ROLE_STYLE: Record<'ENGINEER' | 'ONLINE_MANAGER' | 'OFFLINE_MANAGER' | 'OFFICE', RoleStyle> = {
-    ENGINEER: { label: 'Инженер', glyph: 'И', bgClassName: 'bg-brand-soft', textClassName: 'text-ok-ink' },
+    ENGINEER: {
+        label: 'Инженер',
+        glyph: 'И',
+        bgClassName: 'bg-brand-soft',
+        textClassName: 'text-ok-ink',
+        selectedBorderClassName: 'border-ok-ink',
+    },
     ONLINE_MANAGER: {
         label: 'Онлайн-менеджер',
         glyph: 'ОН',
         bgClassName: 'bg-info-soft',
         textClassName: 'text-info-ink',
+        selectedBorderClassName: 'border-info-ink',
     },
     OFFLINE_MANAGER: {
         label: 'Офлайн-менеджер',
         glyph: 'ОФ',
         bgClassName: 'bg-warn-soft',
         textClassName: 'text-warn-ink',
+        selectedBorderClassName: 'border-warn-ink',
     },
-    OFFICE: { label: 'Офис', glyph: 'ОС', bgClassName: 'bg-[#F1EDFD]', textClassName: 'text-[#6D28D9]' },
+    OFFICE: {
+        label: 'Офис',
+        glyph: 'ОС',
+        bgClassName: 'bg-[#F1EDFD]',
+        textClassName: 'text-[#6D28D9]',
+        selectedBorderClassName: 'border-[#6D28D9]',
+    },
 }
 
 /** Порядок легенды — порядок свотчей в дизайне (Инженер → Онлайн-менеджер → Офлайн-менеджер → Офис). */
@@ -54,6 +72,10 @@ export const NOT_WORKING_ROLE_STYLE: RoleStyle = {
     glyph: '—',
     bgClassName: 'bg-canvas',
     textClassName: 'text-ink-faint',
+    // `RolePickerPopover`/`RoleOptions` никогда не рендерят этот стиль как пилюлю (сам поповер не
+    // открывается у нерабочего дня, `isRoleEditableCell`) — поле только для соответствия `RoleStyle`,
+    // нейтральный `ink-muted` тем же приёмом, что и `DAY_OFF.selectedBorderClassName` в `STATUS_STYLE`.
+    selectedBorderClassName: 'border-ink-muted',
 }
 
 /** Рабочий день, для которого роль ещё не назначена (`role: null`) или назначена ролью вне
@@ -67,10 +89,22 @@ const UNASSIGNED_WORKING_ROLE_STYLE: RoleStyle = {
     glyph: '—',
     bgClassName: 'bg-surface',
     textClassName: 'text-ink-faint',
+    // Как и у `NOT_WORKING_ROLE_STYLE` — не рендерится как пилюля `RoleOptions` (там только четыре
+    // роли `ROLE_LEGEND_ORDER`), поле только для соответствия типу `RoleStyle`.
+    selectedBorderClassName: 'border-ink-muted',
 }
 
 function isLegendRole(role: TargetRole): role is keyof typeof ROLE_STYLE {
     return role in ROLE_STYLE
+}
+
+/** Клик по ячейке открывает выбор роли только у рабочего дня (план, Фаза 8: «Клик по нерабочему
+ * дню (без роли) — роль не редактируется») — `RolesTableRow` использует этот предикат, чтобы решать,
+ * оборачивать ли ячейку в `Popover`/кнопку или оставить обычным `div`, как у read-only ячеек
+ * нерабочих дней (Фаза 8a). Роль без назначения (`role: null`) у рабочего дня остаётся
+ * редактируемой — именно её и нужно назначить через поповер. */
+export function isRoleEditableCell(cell: Pick<WorkScheduleDayCell, 'status'>): boolean {
+    return cell.status === 'WORKING'
 }
 
 /** Единая точка выбора стиля ячейки: нерабочий день → `NOT_WORKING_ROLE_STYLE`, рабочий с одной

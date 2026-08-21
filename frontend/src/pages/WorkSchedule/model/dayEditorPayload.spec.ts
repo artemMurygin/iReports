@@ -75,4 +75,18 @@ describe('buildUpsertPayload', () => {
         const payload = buildUpsertPayload(7, '2026-08-20', 'VACATION', null, null)
         expect(payload.status).toBe('VACATION')
     })
+
+    // Критерий готовности Фазы 8b («Роли»): назначение роли из вкладки «Роли» переиспользует
+    // `buildUpsertPayload` (`useRolePicker.ts`) со статусом и часами дня как есть — меняется только
+    // `role`. Один и тот же билдер, что и у поповера «Календаря» (Фаза 7), гарантирует, что оба
+    // поповера собирают тело запроса одинаково.
+    it('changes only the role when the day already has a status and hours (role tab reassignment)', () => {
+        expect(buildUpsertPayload(7, '2026-08-20', 'WORKING', 6, 'OFFICE')).toEqual({
+            employeeId: 7,
+            date: '2026-08-20',
+            status: 'WORKING',
+            hours: 6,
+            role: 'OFFICE',
+        })
+    })
 })

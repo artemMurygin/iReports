@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+    isRoleEditableCell,
     NOT_WORKING_ROLE_STYLE,
     ROLE_LEGEND_ORDER,
     ROLE_STYLE,
@@ -60,5 +61,26 @@ describe('resolveRoleCellStyle', () => {
         for (const role of ROLE_LEGEND_ORDER) {
             expect(resolveRoleCellStyle({ status: 'WORKING', role })).toEqual(ROLE_STYLE[role])
         }
+    })
+})
+
+describe('ROLE_STYLE.selectedBorderClassName', () => {
+    it('gives each of the four legend roles a distinct selected-pill border, like STATUS_STYLE', () => {
+        const borders = ROLE_LEGEND_ORDER.map((role) => ROLE_STYLE[role].selectedBorderClassName)
+        expect(new Set(borders).size).toBe(ROLE_LEGEND_ORDER.length)
+    })
+})
+
+describe('isRoleEditableCell', () => {
+    it('allows editing a working day, with or without a role assigned yet', () => {
+        expect(isRoleEditableCell({ status: 'WORKING' })).toBe(true)
+    })
+
+    it('blocks editing every non-working/unfilled day (плана Фаза 8: "роль не редактируется")', () => {
+        expect(isRoleEditableCell({ status: 'DAY_OFF' })).toBe(false)
+        expect(isRoleEditableCell({ status: 'TIME_OFF' })).toBe(false)
+        expect(isRoleEditableCell({ status: 'SICK_LEAVE' })).toBe(false)
+        expect(isRoleEditableCell({ status: 'VACATION' })).toBe(false)
+        expect(isRoleEditableCell({ status: null })).toBe(false)
     })
 })

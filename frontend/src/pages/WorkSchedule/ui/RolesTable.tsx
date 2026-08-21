@@ -2,11 +2,14 @@ import { useMemo } from 'react'
 import type { MonthlyWorkScheduleResponse, WorkScheduleDayCell } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui-kit/atoms/Popover'
 
 import { formatHours } from '../model/cellPresentation.ts'
-import { roleCellLabel, roleCellStyle } from '../model/rolePresentation.ts'
+import { formatDayEditorDateLabel } from '../model/format.ts'
+import { isRoleEditableCell, roleCellLabel, roleCellStyle } from '../model/rolePresentation.ts'
 import { buildDayAggregateMap, buildEmployeeCellMap, isVacationLow, vacationDaysRemaining } from '../model/scheduleAggregates.ts'
 import { buildScheduleGridTemplate, type ScheduleDayMeta } from '../model/scheduleDays.ts'
+import { RolePickerPopover } from './RolePickerPopover'
 import { ScheduleTableFooterRow, ScheduleTableHeaderRow } from './ScheduleTable.tsx'
 
 export type RolesTableProps = {
@@ -21,10 +24,14 @@ export type RolesTableProps = {
  * Pencil: design/sallary-first-iteration.pen, узел `vO4tI` -> `Schedule Table`. Тот же каркас, что
  * и `ScheduleTable` (Фаза 6, узел `Cko6w`) — шапка и подвал переиспользуются как есть
  * (`ScheduleTableHeaderRow`/`ScheduleTableFooterRow`, экспортированы из `ScheduleTable.tsx`, см.
- * их комментарии), различается только тело строки: вместо часов смены и поповера редактирования —
- * сокращение роли дня (`И`/`ОН`/`ОФ`/`ОС`/`—`) без интерактива. Эта фаза — read-only часть вкладки
- * «Роли» (план: "Редактирование роли … Фаза 8b, вне скоупа"), поэтому в отличие от
- * `ScheduleTableRow` ячейки здесь — обычные `div`, не `button`/`Popover`.
+ * их комментарии), различается только тело строки: вместо часов смены — сокращение роли дня
+ * (`И`/`ОН`/`ОФ`/`ОС`/`—`).
+ *
+ * Ячейка рабочего дня (Фаза 8b, план: «Назначение роли рабочему дню из ячейки») — `button`/`Popover`
+ * с `RolePickerPopover` внутри, тем же паттерном, что и `ScheduleTableRow`'s `DayEditorPopover`
+ * (Фаза 7); ячейка нерабочего/незаполненного дня остаётся обычным `div` без интерактива — план,
+ * «Клик по нерабочему дню (без роли) — роль не редактируется». `isRoleEditableCell`
+ * (`model/rolePresentation.ts`) — единственное место, решающее, какая это ячейка.
  */
 function RolesTable({ days, employees, dayAggregates, totalHours, className }: RolesTableProps) {
     const gridTemplateColumns = useMemo(() => buildScheduleGridTemplate(days.length), [days.length])
@@ -96,13 +103,47 @@ function RolesTableRow({
                 const style = roleCellStyle(cell)
                 const label = roleCellLabel(cell)
 
+                // Нерабочий/незаполненный день — прочерк без интерактива (план: «роль не
+                // редактируется»), тот же `div`, что и до Фазы 8b.
+                if (!isRoleEditableCell(cell)) {
+                    return (
+                        <div
+                            key={day.date}
+                            className={cn('flex h-full w-full items-center justify-center', style.bgClassName)}
+                        >
+                            <span className={cn('font-ui text-[11px] font-semibold', style.textClassName)}>
+                                {label}
+                            </span>
+                        </div>
+                    )
+                }
+
                 return (
-                    <div
-                        key={day.date}
-                        className={cn('flex h-full w-full items-center justify-center', style.bgClassName)}
-                    >
-                        <span className={cn('font-ui text-[11px] font-semibold', style.textClassName)}>{label}</span>
-                    </div>
+                    <Popover key={day.date}>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className={cn(
+                                    'flex h-full w-full cursor-pointer items-center justify-center outline-none transition-colors hover:brightness-95 focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-inset',
+                                    style.bgClassName,
+                                )}
+                                aria-label={`${employee.name}, ${day.day} число, роль`}
+                            >
+                                <span className={cn('font-ui text-[11px] font-semibold', style.textClassName)}>
+                                    {label}
+                                </span>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                            <RolePickerPopover
+                                employeeId={employee.employeeId}
+                                employeeName={employee.name}
+                                date={day.date}
+                                dateLabel={formatDayEditorDateLabel(day.date)}
+                                cell={cell}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 )
             })}
 
