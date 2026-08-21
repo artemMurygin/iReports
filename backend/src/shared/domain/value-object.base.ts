@@ -42,7 +42,7 @@ export abstract class ValueObject<T> {
 
         const propsCopy = convertPropsToObject(this.props);
 
-        return Object.freeze(propsCopy);
+        return Object.freeze(propsCopy) as T;
     }
 
     private isDomainPrimitive(

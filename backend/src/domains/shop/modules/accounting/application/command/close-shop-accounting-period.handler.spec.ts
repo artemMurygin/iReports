@@ -15,6 +15,10 @@ import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/e
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/salary-accrual-documents-created.domain-event';
 
 // Зеркало domains/service/modules/accounting/application/command/
 // close-accounting-period.handler.spec.ts (только shop-кейсы) — независимый
@@ -24,6 +28,9 @@ describe('CloseShopAccountingPeriodHandler', () => {
     const buildHandler = (overrides?: {
         plans?: SalesPlan[];
         shopSchemas?: ShopMotivationSchema[];
+        dismissedEmployeeIds?: number[];
+        failSnapshotSave?: boolean;
+        hoursWorked?: () => number;
     }) => {
         const save = jest.fn().mockResolvedValue(undefined);
         const findByDirectionAndPeriod = jest.fn().mockResolvedValue(null);
@@ -32,7 +39,13 @@ describe('CloseShopAccountingPeriodHandler', () => {
             save,
         };
 
-        const saveAll = jest.fn().mockResolvedValue(undefined);
+        const saveAll = jest
+            .fn()
+            .mockImplementation(() =>
+                overrides?.failSnapshotSave
+                    ? Promise.reject(new Error('БД недоступна'))
+                    : Promise.resolve(undefined),
+            );
         const snapshotRepo: AccountingPeriodSnapshotPort = {
             saveAll,
             findByKey: jest.fn(),
@@ -87,27 +100,60 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 .mockResolvedValue(overrides?.plans ?? []),
         };
 
-        const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
+        // Фейковый UnitOfWork с откатом (см. одноимённый спек сервиса).
+        const accrualRepo = new InMemorySalaryAccrualRepository();
+        const unitOfWork: UnitOfWorkPort = {
+            run: async (work) => {
+                const before = new Map(accrualRepo.store);
+                try {
+                    return await work();
+                } catch (error) {
+                    accrualRepo.store.clear();
+                    for (const [id, accrual] of before) {
+                        accrualRepo.store.set(id, accrual);
+                    }
+                    throw error;
+                }
+            },
+        };
 
-        const shopContextBuilder = {
-            build: jest.fn((period: Period, employeeId: number) =>
-                Promise.resolve({
-                    employee: { id: employeeId, identities: [] },
-                    period: {
-                        direction: 'shop' as const,
-                        period: period.getValue(),
-                        ...period.getBounds(),
-                        status: 'OPEN' as const,
-                    },
-                    erpData: { hoursWorked: 8 },
-                    salesPerformanceDetail: null,
-                    // Карта по категориям (Фаза 2 плана
-                    // shop-sales-performance-by-category) — здесь всегда
-                    // пустая, ни один тест этого файла не использует
-                    // FloatPercent-правила.
-                    salesPerformanceByCategory: new Map(),
-                }),
+        const employeeDismissal: EmployeeDismissalPort = {
+            findDismissedEmployeeIds: jest.fn((ids: number[]) =>
+                Promise.resolve(
+                    new Set(
+                        ids.filter((id) =>
+                            (overrides?.dismissedEmployeeIds ?? []).includes(
+                                id,
+                            ),
+                        ),
+                    ),
+                ),
             ),
+        };
+
+        const emitAsync = jest.fn().mockResolvedValue([]);
+        const eventEmitter = { emitAsync } as unknown as EventEmitter2;
+
+        const build = jest.fn((period: Period, employeeId: number) =>
+            Promise.resolve({
+                employee: { id: employeeId, identities: [] },
+                period: {
+                    direction: 'shop' as const,
+                    period: period.getValue(),
+                    ...period.getBounds(),
+                    status: 'OPEN' as const,
+                },
+                erpData: { hoursWorked: overrides?.hoursWorked?.() ?? 8 },
+                salesPerformanceDetail: null,
+                // Карта по категориям (Фаза 2 плана
+                // shop-sales-performance-by-category) — здесь всегда
+                // пустая, ни один тест этого файла не использует
+                // FloatPercent-правила.
+                salesPerformanceByCategory: new Map(),
+            }),
+        );
+        const shopContextBuilder = {
+            build,
         } as unknown as BuildShopCalculationContextService;
 
         const handler = new CloseShopAccountingPeriodHandler(
@@ -115,7 +161,10 @@ describe('CloseShopAccountingPeriodHandler', () => {
             snapshotRepo,
             cacheRepo,
             salesPlanRepo,
+            accrualRepo,
+            employeeDismissal,
             unitOfWork,
+            eventEmitter,
             shopContextBuilder,
             salaryRulesResolver,
         );
@@ -127,8 +176,27 @@ describe('CloseShopAccountingPeriodHandler', () => {
             deleteCacheByPeriod,
             periodRepo,
             shopContextBuilder,
+            accrualRepo,
+            emitAsync,
+            build,
         };
     };
+
+    const buildHourlySchema = (targetId: number, price = 250) =>
+        withRequestContext(() => {
+            const rule = PayPerHourShopEntity.create({
+                type: 'PayPerHour',
+                name: 'Почасовая ставка',
+                targetRole: 'ONLINE_MANAGER',
+                config: { price },
+            });
+            return ShopMotivationSchema.create({
+                targetType: 'Employee',
+                targetId,
+                name: 'Оклад продавца',
+                rules: [rule],
+            });
+        });
 
     const buildApprovedPlan = () =>
         withRequestContext(() => {
@@ -231,5 +299,154 @@ describe('CloseShopAccountingPeriodHandler', () => {
 
         expect(response.status).toBe('CLOSED');
         expect(save).toHaveBeenCalledTimes(1);
+    });
+
+    // PRD 1 docs/payroll-closing-and-accrual — документы начисления при
+    // закрытии периода магазина (Фаза 1), зеркало одноимённого блока в
+    // спеке сервиса.
+    describe('документы начисления', () => {
+        it('создаёт документ DRAFT на каждого сотрудника снапшота — включая нулевого и уволенного', async () => {
+            const { handler, accrualRepo, saveAll } = buildHandler({
+                plans: [buildApprovedPlan()],
+                shopSchemas: [
+                    buildHourlySchema(42),
+                    buildHourlySchema(43),
+                    buildHourlySchema(44, 0),
+                ],
+                dismissedEmployeeIds: [43],
+            });
+
+            await withRequestContext(() =>
+                handler.execute(
+                    new CloseShopAccountingPeriodCommand({
+                        period: '2026-08',
+                        closedBy: 7,
+                    }),
+                ),
+            );
+
+            const [, , , rows] = saveAll.mock.calls[0] as [
+                string,
+                string,
+                string,
+                {
+                    employeeId: number;
+                    total: number;
+                    lines: { ruleId: string; amount: number }[];
+                }[],
+            ];
+            const accruals = await accrualRepo.findByDirectionAndPeriod(
+                'shop',
+                '2026-08',
+            );
+            expect(accruals).toHaveLength(3);
+            expect(accruals).toHaveLength(rows.length);
+            for (const row of rows) {
+                const accrual = accruals.find(
+                    (item) => item.employeeId === row.employeeId,
+                );
+                expect(accrual).toBeDefined();
+                expect(accrual?.status).toBe('DRAFT');
+                expect(accrual?.direction).toBe('shop');
+                expect(accrual?.total).toBe(row.total);
+                expect(
+                    accrual?.lines.map((line) => ({
+                        ruleId: line.ruleId,
+                        amount: line.amount,
+                    })),
+                ).toEqual(
+                    row.lines.map((line) => ({
+                        ruleId: line.ruleId,
+                        amount: line.amount,
+                    })),
+                );
+            }
+            const byEmployee = new Map(
+                accruals.map((accrual) => [accrual.employeeId, accrual]),
+            );
+            expect(byEmployee.get(42)?.total).toBe(2000);
+            expect(byEmployee.get(42)?.isDismissed).toBe(false);
+            expect(byEmployee.get(43)?.isDismissed).toBe(true);
+            expect(byEmployee.get(44)?.total).toBe(0);
+            expect(byEmployee.get(44)?.lines).toHaveLength(1);
+        });
+
+        it('публикует SalaryAccrualDocumentsCreatedDomainEvent направления shop', async () => {
+            const { handler, accrualRepo, emitAsync } = buildHandler({
+                plans: [buildApprovedPlan()],
+                shopSchemas: [buildHourlySchema(42)],
+            });
+
+            await withRequestContext(() =>
+                handler.execute(
+                    new CloseShopAccountingPeriodCommand({
+                        period: '2026-08',
+                        closedBy: 7,
+                    }),
+                ),
+            );
+
+            expect(emitAsync).toHaveBeenCalledTimes(1);
+            const [name, event] = emitAsync.mock.calls[0] as [
+                string,
+                SalaryAccrualDocumentsCreatedDomainEvent,
+            ];
+            expect(name).toBe('SalaryAccrualDocumentsCreatedDomainEvent');
+            expect(event.direction).toBe('shop');
+            expect(event.period).toBe('2026-08');
+            expect(event.accrualIds).toEqual([...accrualRepo.store.keys()]);
+        });
+
+        it('сбрасывает кэш до расчёта — изменённые после прогрева данные попадают в документ', async () => {
+            let hours = 8;
+            const { handler, accrualRepo, deleteCacheByPeriod, build } =
+                buildHandler({
+                    plans: [buildApprovedPlan()],
+                    shopSchemas: [buildHourlySchema(42)],
+                    hoursWorked: () => hours,
+                });
+            hours = 10;
+
+            await withRequestContext(() =>
+                handler.execute(
+                    new CloseShopAccountingPeriodCommand({
+                        period: '2026-08',
+                        closedBy: 7,
+                    }),
+                ),
+            );
+
+            const cacheResetOrder =
+                deleteCacheByPeriod.mock.invocationCallOrder[0];
+            const buildOrder = build.mock.invocationCallOrder[0];
+            expect(cacheResetOrder).toBeLessThan(buildOrder);
+            const [accrual] = await accrualRepo.findByDirectionAndPeriod(
+                'shop',
+                '2026-08',
+            );
+            expect(accrual.total).toBe(2500);
+        });
+
+        it('ошибка внутри транзакции — документов нет, событие не опубликовано', async () => {
+            const { handler, accrualRepo, emitAsync } = buildHandler({
+                plans: [buildApprovedPlan()],
+                shopSchemas: [buildHourlySchema(42)],
+                failSnapshotSave: true,
+            });
+
+            await expect(
+                withRequestContext(() =>
+                    handler.execute(
+                        new CloseShopAccountingPeriodCommand({
+                            period: '2026-08',
+                            closedBy: 7,
+                        }),
+                    ),
+                ),
+            ).rejects.toThrow('БД недоступна');
+
+            expect(accrualRepo.store.size).toBe(0);
+            expect(emitAsync).not.toHaveBeenCalled();
+        });
     });
 });

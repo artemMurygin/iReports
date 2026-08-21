@@ -158,6 +158,14 @@ export const routesV1 = {
                 employee: `${serviceAccountingRoot}/salary_report/employee/:id/:period`,
                 department: `${serviceAccountingRoot}/salary_report/department/:id/:period`,
             },
+            // Документы начисления зарплаты (PRD 1
+            // docs/payroll-closing-and-accrual, Фаза 1) — рождаются
+            // закрытием периода, чтение списка за месяц (?period) и
+            // карточки. Зеркало — shop.accounting.salaryAccruals ниже.
+            salaryAccruals: {
+                root: `${serviceAccountingRoot}/salary_accruals`,
+                byId: `${serviceAccountingRoot}/salary_accruals/:id`,
+            },
         },
         // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
         // направление в query (см. listSalesPerformanceQuerySchema).
@@ -271,6 +279,13 @@ export const routesV1 = {
             salaryReport: {
                 employee: `${shopAccountingRoot}/salary_report/employee/:id/:period`,
                 department: `${shopAccountingRoot}/salary_report/department/:id/:period`,
+            },
+            // Документы начисления магазина (PRD 1
+            // docs/payroll-closing-and-accrual) — зеркалит
+            // service.accounting.salaryAccruals в своём namespace.
+            salaryAccruals: {
+                root: `${shopAccountingRoot}/salary_accruals`,
+                byId: `${shopAccountingRoot}/salary_accruals/:id`,
             },
         },
         // Каталог (дерево категорий) магазина (Фаза 1, см.

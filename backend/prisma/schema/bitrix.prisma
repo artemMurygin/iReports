@@ -44,6 +44,12 @@ model BitrixEmployee {
   lastName     String
   departmentId Int    @map("department")
 
+  /// Активность пользователя в Bitrix24 (поле ACTIVE user.get) — false у уволенного
+  /// сотрудника. Синхронизируется BitrixSyncService.uploadEmployees(); читается
+  /// при закрытии расчётного периода для признака isDismissed документа
+  /// начисления (PRD 1 docs/payroll-closing-and-accrual).
+  isActive Boolean @default(true) @map("is_active")
+
   /// @deprecated Заменено на EmployeeIdentity(system: ROAPP, identifierType: EMPLOYEE_ID)
   /// — см. employee-identity.prisma и Фазу 2 docs/payroll/plan-payroll-calculation.md.
   /// Поле оставлено для истории/переходного периода, новые связи сюда не пишутся.

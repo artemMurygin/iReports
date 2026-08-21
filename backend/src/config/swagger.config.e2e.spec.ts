@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { DatabaseService } from '@/infrustructure/database/database.service';
@@ -157,6 +158,10 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
     it('SwaggerModule.createDocument({ include: [SalesModule, AccountingModule, ReportsModule] }) не бросает исключение', async () => {
         const moduleRef = await Test.createTestingModule({
             imports: [
+                // EventEmitter2 — зависимость CloseAccountingPeriodHandler
+                // (PRD 1 docs/payroll-closing-and-accrual); в приложении
+                // его глобально даёт AppModule.
+                EventEmitterModule.forRoot(),
                 FakeInfrastructureModule,
                 SalesModule,
                 AccountingModule,

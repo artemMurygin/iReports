@@ -9,6 +9,9 @@ import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounti
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SalaryAccrualsNotDraftException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
 import { ReopenAccountingPeriodCommand } from './reopen-accounting-period.command';
 
@@ -16,6 +19,13 @@ import { ReopenAccountingPeriodCommand } from './reopen-accounting-period.comman
 // (проверено на границе HTTP, см. ReopenAccountingPeriodCommand) и с
 // удалением снапшота целиком (см. PRD: "повторное открытие — только
 // руководителем, с явным подтверждением и удалением снапшота").
+//
+// PRD 1 docs/payroll-closing-and-accrual: вместе со снапшотом закрытие
+// породило документы начисления — переоткрытие удаляет и их, но только пока
+// все они в DRAFT; документ, уже проведённый на баланс (PRD 2), делает
+// переоткрытие невозможным — 409 с перечнем таких документов, ничего не
+// удаляется. Проверка идёт через порт SalaryAccrualRepositoryPort — хендлер
+// generic по direction и обслуживает оба домена (см. shop-accounting.module.ts).
 @CommandHandler(ReopenAccountingPeriodCommand)
 export class ReopenAccountingPeriodHandler implements ICommandHandler<
     ReopenAccountingPeriodCommand,
@@ -26,6 +36,8 @@ export class ReopenAccountingPeriodHandler implements ICommandHandler<
         private readonly periodRepo: AccountingPeriodRepositoryPort,
         @Inject(ACCOUNTING_PERIOD_SNAPSHOT)
         private readonly snapshotRepo: AccountingPeriodSnapshotPort,
+        @Inject(SALARY_ACCRUAL_REPOSITORY)
+        private readonly accrualRepo: SalaryAccrualRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
     ) {}
@@ -46,10 +58,31 @@ export class ReopenAccountingPeriodHandler implements ICommandHandler<
             );
         }
 
+        const accruals = await this.accrualRepo.findByDirectionAndPeriod(
+            command.direction,
+            period.getValue(),
+        );
+        const notDraft = accruals.filter((accrual) => !accrual.isDraft());
+        if (notDraft.length > 0) {
+            throw new SalaryAccrualsNotDraftException(
+                command.direction,
+                period.getValue(),
+                notDraft.map((accrual) => ({
+                    id: accrual.id,
+                    employeeId: accrual.employeeId,
+                    status: accrual.status,
+                })),
+            );
+        }
+
         periodEntity.reopen();
 
         await this.unitOfWork.run(async () => {
             await this.periodRepo.save(periodEntity);
+            await this.accrualRepo.deleteByDirectionAndPeriod(
+                command.direction,
+                period.getValue(),
+            );
             await this.snapshotRepo.deleteByDirectionAndPeriod(
                 command.direction,
                 period.getValue(),

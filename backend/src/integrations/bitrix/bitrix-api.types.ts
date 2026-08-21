@@ -18,6 +18,8 @@ export interface BitrixUser {
     NAME: string | null;
     LAST_NAME: string | null;
     UF_DEPARTMENT: Array<string | number>;
+    /** Активность пользователя — false у уволенного (user.get отдаёт и неактивных). */
+    ACTIVE?: boolean;
 }
 
 export interface BitrixEnumListItem {

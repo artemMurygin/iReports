@@ -43,6 +43,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
                 message: exception.message,
                 error: exception.code,
                 correlationId: exception.correlationId,
+                metadata: exception.metadata,
             }),
         );
     }

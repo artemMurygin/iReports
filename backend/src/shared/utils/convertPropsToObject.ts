@@ -8,13 +8,15 @@ function isEntity(obj: unknown): obj is Entity<unknown> {
      * until I find a solution :)
      */
     return (
-        Object.prototype.hasOwnProperty.call(obj, 'toObject') &&
-        Object.prototype.hasOwnProperty.call(obj, 'id') &&
-        ValueObject.isValueObject((obj as Entity<unknown>).id)
+        typeof obj === 'object' &&
+        obj !== null &&
+        'toObject' in obj &&
+        'id' in obj &&
+        ValueObject.isValueObject(obj.id)
     );
 }
 
-function convertToPlainObject(item: any): any {
+function convertToPlainObject(item: unknown): unknown {
     if (ValueObject.isValueObject(item)) {
         return item.unpack();
     }
@@ -29,15 +31,14 @@ function convertToPlainObject(item: any): any {
  * Useful for testing and debugging.
  * @param props
  */
-export function convertPropsToObject(props: any): any {
-    const propsCopy = structuredClone(props);
+export function convertPropsToObject(props: unknown): Record<string, unknown> {
+    const propsCopy = structuredClone(props) as Record<string, unknown>;
 
     for (const prop in propsCopy) {
-        if (Array.isArray(propsCopy[prop])) {
-            propsCopy[prop] = (propsCopy[prop] as Array<unknown>).map(
-                (item) => {
-                    return convertToPlainObject(item);
-                },
+        const value = propsCopy[prop];
+        if (Array.isArray(value)) {
+            propsCopy[prop] = (value as unknown[]).map((item) =>
+                convertToPlainObject(item),
             );
         }
         propsCopy[prop] = convertToPlainObject(propsCopy[prop]);

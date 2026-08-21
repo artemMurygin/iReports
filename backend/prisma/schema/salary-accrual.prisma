@@ -1,0 +1,84 @@
+// Документ начисления зарплаты — PRD 1 docs/payroll-closing-and-accrual/
+// prd-accounting-period-closing-pipeline.md, раздел "Документ начисления
+// (SalaryAccrual)". Создаётся транзакционно вместе со снапшотом при закрытии
+// расчётного периода (CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler)
+// — один документ на (direction, period, employeeId), включая сотрудников с
+// нулевой суммой и уволенных (isDismissed — активность BitrixEmployee на
+// момент закрытия, фиксируется в документе, а не вычисляется на чтении).
+// Удаляется вместе со снапшотом при повторном открытии периода, пока все
+// документы периода в DRAFT (ReopenAccountingPeriodHandler).
+//
+// Денежные поля — Int в тех же единицах, что и AccountingPeriodSnapshot
+// (целые рубли). Перечень статусов заложен целиком: переходы в
+// PARTIALLY_ACCRUED/ACCRUED — PRD 2, PAID — PRD 3.
+model SalaryAccrual {
+  id         String         @id
+  direction  SalesDirection
+  period     String
+  employeeId Int            @map("employee_id")
+
+  status      SalaryAccrualStatus @default(DRAFT)
+  isDismissed Boolean             @default(false) @map("is_dismissed")
+  total       Int
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lines SalaryAccrualLine[]
+
+  @@unique([direction, period, employeeId])
+  @@index([direction, period])
+  @@map("salary_accruals")
+}
+
+enum SalaryAccrualStatus {
+  DRAFT
+  PARTIALLY_ACCRUED
+  ACCRUED
+  PAID
+
+  @@map("salary_accrual_status")
+}
+
+// Строка документа — одна на зарплатное правило из разбивки снапшота
+// (RuleBreakdownLine хранится в снапшоте как Json, здесь — нормализованно,
+// потому что в PRD 2 строка становится самостоятельным объектом с собственным
+// статусом и движением по балансу). originalAmount — сумма из снапшота на
+// момент закрытия, amount — действующая сумма (корректировка — PRD 2, в PRD 1
+// всегда равна originalAmount). sources — CalculationSourceRef[] как Json.
+// position — порядок строк как в схеме мотивации (порядок правил снапшота).
+model SalaryAccrualLine {
+  id        String @id
+  accrualId String @map("accrual_id")
+  position  Int
+
+  ruleId      String  @map("rule_id")
+  type        String
+  name        String
+  targetRole  String  @map("target_role")
+  salaryBasis String? @map("salary_basis")
+  quantity    Float?
+  rate        Float?
+
+  originalAmount Int  @map("original_amount")
+  amount         Int
+  sources        Json
+
+  status SalaryAccrualLineStatus @default(DRAFT)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  accrual SalaryAccrual @relation(fields: [accrualId], references: [id], onDelete: Cascade)
+
+  @@index([accrualId])
+  @@map("salary_accrual_lines")
+}
+
+enum SalaryAccrualLineStatus {
+  DRAFT
+  ACCRUED
+  PAID
+
+  @@map("salary_accrual_line_status")
+}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { salaryAccrualStatusSchema } from './salary-accrual-status';
 
 // ========================== Роль правила ========================== //
 
@@ -314,6 +315,11 @@ const directionSalaryReportSchema = z.object({
     // момента у направления ещё нет ни плана, ни факта продаж.
     salesPerformance: salesPerformanceSummarySchema.nullable(),
     isPlanApproved: z.boolean(),
+    // Статус документа начисления сотрудника за закрытый период (PRD 1
+    // docs/payroll-closing-and-accrual: "ожидает начисление / начислено /
+    // выплачено"): null — период открыт либо документа у сотрудника нет
+    // (в снапшот не попал).
+    accrualStatus: salaryAccrualStatusSchema.nullable(),
 });
 
 // Ответ односторонний: один отчёт одного направления сотрудника за период,

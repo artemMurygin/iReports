@@ -1,6 +1,7 @@
 import type { Server } from 'http';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
@@ -193,7 +194,14 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
         schemas.set(42, schema);
 
         const moduleRef = await Test.createTestingModule({
-            imports: [FakeInfrastructureModule, AccountingModule],
+            // EventEmitterModule — EventEmitter2 для CloseAccountingPeriodHandler
+            // (SalaryAccrualDocumentsCreatedDomainEvent, PRD 1); в приложении его
+            // глобально даёт AppModule.
+            imports: [
+                EventEmitterModule.forRoot(),
+                FakeInfrastructureModule,
+                AccountingModule,
+            ],
         })
             .overrideProvider(MOTIVATION_SCHEMA_REPOSITORY)
             .useValue(fakeMotivationSchemaRepo)
@@ -252,6 +260,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
             ],
             salesPerformance: null,
             isPlanApproved: true,
+            accrualStatus: null,
         });
     });
 

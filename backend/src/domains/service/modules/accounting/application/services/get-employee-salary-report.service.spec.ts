@@ -21,6 +21,8 @@ import type { ServiceCalculationErpData } from '@/domains/service/modules/accoun
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import type { SalaryAccrualStatus } from 'ireports-contracts';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 
 // Отчёт сотрудника направления service (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит ОДНО
@@ -50,6 +52,7 @@ describe('GetEmployeeSalaryReportService', () => {
         });
 
     const buildService = (overrides?: {
+        accrualStatus?: SalaryAccrualStatus;
         schema?: MotivationSchema | null;
         accountingPeriod?: AccountingPeriod | null;
         snapshot?: Awaited<
@@ -176,10 +179,24 @@ describe('GetEmployeeSalaryReportService', () => {
             findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),
         } as unknown as BuildServiceCalculationContextService;
 
+        // Статус документа начисления (PRD 1 docs/payroll-closing-and-accrual)
+        // — читается только у закрытого периода.
+        const findAccrualStatus = jest
+            .fn()
+            .mockResolvedValue(overrides?.accrualStatus ?? null);
+        const accrualRepo: SalaryAccrualRepositoryPort = {
+            saveAll: jest.fn(),
+            findById: jest.fn(),
+            findByDirectionAndPeriod: jest.fn().mockResolvedValue([]),
+            findStatusByKey: findAccrualStatus,
+            deleteByDirectionAndPeriod: jest.fn(),
+        };
+
         const service = new GetEmployeeSalaryReportService(
             periodRepo,
             snapshotRepo,
             cacheRepo,
+            accrualRepo,
             domainSyncStatus,
             salesPlanRepo,
             contextBuilder,
@@ -188,6 +205,7 @@ describe('GetEmployeeSalaryReportService', () => {
 
         return {
             service,
+            findAccrualStatus,
             findByEmployee,
             findByDirectionAndPeriodPeriod,
             findSnapshot,
@@ -222,6 +240,7 @@ describe('GetEmployeeSalaryReportService', () => {
             rules: [],
             salesPerformance: null,
             isPlanApproved: true,
+            accrualStatus: null,
         });
     });
 
@@ -320,6 +339,7 @@ describe('GetEmployeeSalaryReportService', () => {
                 ],
                 salesPerformance: null,
                 isPlanApproved: true,
+                accrualStatus: null,
             });
             expect(findByEmployee).not.toHaveBeenCalled();
             expect(upsertCache).not.toHaveBeenCalled();
@@ -460,5 +480,32 @@ describe('GetEmployeeSalaryReportService', () => {
             expect(rule.amount.fact).not.toBe(rule.amount.prognose);
             expect(report.total).toEqual({ fact: 50, prognose: 100 });
         });
+    });
+
+    // PRD 1 docs/payroll-closing-and-accrual: отчёт за закрытый период
+    // дополняется статусом документа начисления сотрудника.
+    it('за закрытый период отдаёт статус документа начисления сотрудника', async () => {
+        const closedPeriod = withRequestContext(() => {
+            const period = AccountingPeriod.openFor({
+                direction: 'service',
+                period: '2026-07',
+            });
+            period.close(1, 1);
+            return period;
+        });
+        const { service, findAccrualStatus } = buildService({
+            accountingPeriod: closedPeriod,
+            accrualStatus: 'DRAFT',
+        });
+
+        const report = await service.execute(42, '2026-07');
+
+        expect(findAccrualStatus).toHaveBeenCalledWith(
+            'service',
+            '2026-07',
+            42,
+        );
+        expect(report.isClosed).toBe(true);
+        expect(report.accrualStatus).toBe('DRAFT');
     });
 });

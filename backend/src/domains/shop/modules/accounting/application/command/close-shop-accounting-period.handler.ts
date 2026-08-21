@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { Period } from '@/shared/domain/period.value-object';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
@@ -18,6 +19,12 @@ import type { AccountingCalculationCachePort } from '@/domains/service/modules/a
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { toAccountingPeriodResponse } from '@/domains/service/modules/accounting/application/mappers/to-accounting-period-response';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/salary-accrual-documents-created.domain-event';
 import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/build-shop-calculation-context.service';
 import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import { PeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
@@ -48,6 +55,15 @@ import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period
 //    мотивационной схемой (тем же оркестратором, что и открытый расчёт) и
 //    фиксирует его неизменяемым снапшотом;
 // 3) переводит период в CLOSED и порождает AccountingPeriodClosedDomainEvent.
+//
+// PRD 1 docs/payroll-closing-and-accrual (Фаза 1) — документы начисления,
+// зеркально CloseAccountingPeriodHandler сервиса, но своим кодом (общего
+// хендлера нет): сброс кэша до расчёта, документ SalaryAccrual (DRAFT) на
+// каждую строку снапшота, включая нулевые и уволенных (isDismissed по
+// активности BitrixEmployee), в той же транзакции UnitOfWork, что снапшот и
+// CLOSED; после коммита — SalaryAccrualDocumentsCreatedDomainEvent.
+// SalaryAccrual/порты документа физически лежат в domains/service/modules/
+// accounting, но direction-агностичны (см. шапку выше про AccountingPeriod).
 @CommandHandler(CloseShopAccountingPeriodCommand)
 export class CloseShopAccountingPeriodHandler implements ICommandHandler<
     CloseShopAccountingPeriodCommand,
@@ -62,8 +78,13 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
         private readonly cacheRepo: AccountingCalculationCachePort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
+        @Inject(SALARY_ACCRUAL_REPOSITORY)
+        private readonly accrualRepo: SalaryAccrualRepositoryPort,
+        @Inject(EMPLOYEE_DISMISSAL)
+        private readonly employeeDismissal: EmployeeDismissalPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
+        private readonly eventEmitter: EventEmitter2,
         private readonly shopContextBuilder: BuildShopCalculationContextService,
         private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
     ) {}
@@ -102,10 +123,19 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
                 period: period.getValue(),
             });
 
+        // Сброс кэша ДО расчёта (PRD 1: "закрытие никогда не фиксирует
+        // устаревший кэш"); повторное удаление внутри транзакции — чтобы не
+        // оставить строки, записанные отчётом между сбросом и коммитом.
+        await this.cacheRepo.deleteByDirectionAndPeriod(
+            direction,
+            period.getValue(),
+        );
+
         // Снапшот — все сотрудники, у которых есть зарплатные правила: с
         // личной схемой и/или со схемой на их отдел (см.
         // ResolveShopEmployeeSalaryRulesService.forAllTargets).
         const rows = await this.closeShopDirection(period);
+        const accruals = await this.buildAccrualDocuments(period, rows);
 
         periodEntity.close(command.closedBy, rows.length);
 
@@ -117,11 +147,28 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
                 period.getValue(),
                 rows,
             );
+            await this.accrualRepo.saveAll(
+                direction,
+                period.getValue(),
+                accruals,
+            );
             await this.cacheRepo.deleteByDirectionAndPeriod(
                 direction,
                 period.getValue(),
             );
         });
+
+        // unitOfWork.run резолвится только после коммита (см.
+        // DatabaseService.withTransaction) — событие не уйдёт при откате.
+        await this.eventEmitter.emitAsync(
+            SalaryAccrualDocumentsCreatedDomainEvent.name,
+            new SalaryAccrualDocumentsCreatedDomainEvent({
+                aggregateId: periodEntity.id,
+                direction,
+                period: period.getValue(),
+                accrualIds: accruals.map((accrual) => accrual.id),
+            }),
+        );
 
         return toAccountingPeriodResponse(
             periodEntity,
@@ -167,5 +214,26 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
             });
         }
         return rows;
+    }
+
+    // Документ на КАЖДУЮ строку снапшота, включая нулевые суммы и уволенных
+    // (isDismissed) — см. PRD 1, "Документы начисления".
+    private async buildAccrualDocuments(
+        period: Period,
+        rows: AccountingPeriodSnapshotRow[],
+    ): Promise<SalaryAccrual[]> {
+        const dismissed = await this.employeeDismissal.findDismissedEmployeeIds(
+            rows.map((row) => row.employeeId),
+        );
+        return rows.map((row) =>
+            SalaryAccrual.createFromSnapshot({
+                direction: 'shop',
+                period: period.getValue(),
+                employeeId: row.employeeId,
+                isDismissed: dismissed.has(row.employeeId),
+                total: row.total,
+                lines: row.lines,
+            }),
+        );
     }
 }

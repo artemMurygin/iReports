@@ -25,6 +25,8 @@ import { ListTaskCompletionsService } from '@/domains/service/modules/accounting
 import { ListSalaryRuleTypesService } from '@/domains/service/modules/accounting/application/services/list-salary-rule-types.service';
 import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/list-motivation-schemas.service';
 import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/get-motivation-schema.service';
+import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
+import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-motivation-schema.http.controller';
 import { ListMotivationSchemasHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-motivation-schemas.http.controller';
 import { GetMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-motivation-schema.http.controller';
@@ -44,6 +46,8 @@ import { ConfirmTaskCompletionHttpController } from '@/domains/service/modules/a
 import { DeleteTaskCompletionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-task-completion.http.controller';
 import { ListTaskCompletionsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-task-completions.http.controller';
 import { ListSalaryRuleTypesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
+import { ListSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-accruals.http.controller';
+import { GetSalaryAccrualHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-salary-accrual.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -52,6 +56,8 @@ import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounti
 import { EMPLOYEE_HOURS_ENTRY_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/employee-hours-entry.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import { TASK_COMPLETION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/task-completion.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema.repository';
 import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-rule.repository';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period.repository';
@@ -60,8 +66,11 @@ import { AccountingCalculationCacheRepository } from '@/domains/service/modules/
 import { EmployeeHoursEntryRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-hours-entry.repository';
 import { ServiceCalculationDataRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/service-calculation-data.repository';
 import { TaskCompletionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/task-completion.repository';
+import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
+import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period-closed.event-handler';
+import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/salary-accrual-documents-created.event-handler';
 
 // SalesModule — вход SALES_PLAN_REPOSITORY: закрытие периода читает
 // неутверждённые строки плана (CloseAccountingPeriodHandler), а ленивый
@@ -120,6 +129,8 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
         DeleteTaskCompletionHttpController,
         ListTaskCompletionsHttpController,
         ListSalaryRuleTypesHttpController,
+        ListSalaryAccrualsHttpController,
+        GetSalaryAccrualHttpController,
     ],
     providers: [
         CreateMotivationSchemaHandler,
@@ -144,8 +155,11 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
         ListEmployeeHoursEntriesService,
         ListTaskCompletionsService,
         ListSalaryRuleTypesService,
+        ListSalaryAccrualsService,
+        GetSalaryAccrualService,
         MotivationSchemaCreatedEventHandler,
         AccountingPeriodClosedEventHandler,
+        SalaryAccrualDocumentsCreatedEventHandler,
         {
             provide: MOTIVATION_SCHEMA_REPOSITORY,
             useClass: MotivationSchemaRepository,
@@ -177,6 +191,18 @@ import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/ac
         {
             provide: TASK_COMPLETION_REPOSITORY,
             useClass: TaskCompletionRepository,
+        },
+        // Документы начисления (PRD 1 docs/payroll-closing-and-accrual) и
+        // признак увольнения для них — direction-агностичные реализации,
+        // ShopAccountingModule заводит собственные экземпляры под теми же
+        // токенами (см. комментарий там).
+        {
+            provide: SALARY_ACCRUAL_REPOSITORY,
+            useClass: SalaryAccrualRepository,
+        },
+        {
+            provide: EMPLOYEE_DISMISSAL,
+            useClass: EmployeeDismissalRepository,
         },
     ],
 })

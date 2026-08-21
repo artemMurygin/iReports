@@ -1,6 +1,7 @@
 import type { Server } from 'http';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
@@ -345,7 +346,14 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         shopSchemas.set(43, shopSchemaProductSold);
 
         const moduleRef = await Test.createTestingModule({
-            imports: [FakeInfrastructureModule, ShopAccountingModule],
+            // EventEmitterModule — EventEmitter2 для CloseShopAccountingPeriodHandler
+            // (SalaryAccrualDocumentsCreatedDomainEvent, PRD 1); в приложении его
+            // глобально даёт AppModule.
+            imports: [
+                EventEmitterModule.forRoot(),
+                FakeInfrastructureModule,
+                ShopAccountingModule,
+            ],
         })
             .overrideProvider(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
             .useValue(fakeShopMotivationSchemaRepo)
@@ -405,6 +413,7 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             ],
             salesPerformance: null,
             isPlanApproved: true,
+            accrualStatus: null,
         });
     });
 

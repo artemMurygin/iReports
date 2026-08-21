@@ -22,6 +22,8 @@ import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting
 import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
@@ -74,6 +76,8 @@ export class GetShopEmployeeSalaryReportService {
         private readonly snapshotRepo: AccountingPeriodSnapshotPort,
         @Inject(ACCOUNTING_CALCULATION_CACHE)
         private readonly cacheRepo: AccountingCalculationCachePort,
+        @Inject(SALARY_ACCRUAL_REPOSITORY)
+        private readonly accrualRepo: SalaryAccrualRepositoryPort,
         @Inject(DOMAIN_SYNC_STATUS)
         private readonly domainSyncStatus: DomainSyncStatusPort,
         @Inject(SALES_PLAN_REPOSITORY)
@@ -105,11 +109,14 @@ export class GetShopEmployeeSalaryReportService {
         period: string,
         employeeId: number,
     ): Promise<ClosedDirectionReport> {
-        const snapshot = await this.snapshotRepo.findByKey(
-            'shop',
-            period,
-            employeeId,
-        );
+        // Статус документа начисления сотрудника (PRD 1
+        // docs/payroll-closing-and-accrual: "ожидает начисление / начислено /
+        // выплачено") — вместе со снапшотом, одним Promise.all; null — в
+        // снапшот сотрудник не попал и документа у него нет.
+        const [snapshot, accrualStatus] = await Promise.all([
+            this.snapshotRepo.findByKey('shop', period, employeeId),
+            this.accrualRepo.findStatusByKey('shop', period, employeeId),
+        ]);
         const total = snapshot?.total ?? 0;
         // Закрытый месяц прогноза не хранит (см. шапку файла) — amount.prognose
         // и итоговый prognose направления намеренно null, а не равны факту и
@@ -138,6 +145,7 @@ export class GetShopEmployeeSalaryReportService {
             rules,
             salesPerformance: null,
             isPlanApproved: true,
+            accrualStatus,
         };
     }
 
@@ -252,6 +260,9 @@ export class GetShopEmployeeSalaryReportService {
             isPlanApproved: isShopSalesPerformancePlanApproved(
                 salesPerformanceDetail,
             ),
+            // Документ начисления рождается только закрытием периода —
+            // у открытого периода его нет.
+            accrualStatus: null,
         };
     }
 

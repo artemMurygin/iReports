@@ -34,6 +34,8 @@ import { RecalculateShopAccountingPeriodHttpController } from '@/domains/shop/mo
 import { CloseShopAccountingPeriodHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/close-shop-accounting-period.http.controller';
 import { GetShopEmployeeSalaryReportHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-employee-salary-report.http.controller';
 import { GetShopDepartmentSalaryReportHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-department-salary-report.http.controller';
+import { ListShopSalaryAccrualsHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/list-shop-salary-accruals.http.controller';
+import { GetShopSalaryAccrualHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-salary-accrual.http.controller';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-rule.port';
 import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-task-completion.port';
@@ -43,6 +45,12 @@ import { ShopSalaryRuleRepository } from '@/domains/shop/modules/accounting/infr
 import { ShopTaskCompletionRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/shop-task-completion.repository';
 import { ShopCalculationDataRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/shop-calculation-data.repository';
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
+import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
+import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
+import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
@@ -148,6 +156,8 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         CloseShopAccountingPeriodHttpController,
         GetShopEmployeeSalaryReportHttpController,
         GetShopDepartmentSalaryReportHttpController,
+        ListShopSalaryAccrualsHttpController,
+        GetShopSalaryAccrualHttpController,
     ],
     providers: [
         ListShopSalaryRuleTypesService,
@@ -164,6 +174,12 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         ResolveShopEmployeeSalaryRulesService,
         CloseShopAccountingPeriodHandler,
         GetAccountingPeriodService,
+        // Документы начисления (PRD 1 docs/payroll-closing-and-accrual) —
+        // generic-по-direction сервисы чтения и direction-агностичные
+        // реализации портов, собственные экземпляры под теми же токенами
+        // (тот же приём, что и у ACCOUNTING_PERIOD_* ниже).
+        ListSalaryAccrualsService,
+        GetSalaryAccrualService,
         GetShopEmployeeSalaryReportService,
         GetShopDepartmentSalaryReportService,
         {
@@ -200,6 +216,14 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         {
             provide: SALES_PLAN_REPOSITORY,
             useClass: SalesPlanRepository,
+        },
+        {
+            provide: SALARY_ACCRUAL_REPOSITORY,
+            useClass: SalaryAccrualRepository,
+        },
+        {
+            provide: EMPLOYEE_DISMISSAL,
+            useClass: EmployeeDismissalRepository,
         },
     ],
     exports: [

@@ -80,10 +80,15 @@ export class BitrixSyncService {
                             firstName: e.NAME ?? '',
                             lastName: e.LAST_NAME ?? '',
                             departmentId: Number(e.UF_DEPARTMENT[0]),
+                            isActive: e.ACTIVE !== false,
                         },
+                        // isActive — признак увольнения для документов
+                        // начисления (PRD 1 docs/payroll-closing-and-accrual);
+                        // отсутствие поля в ответе трактуется как «активен».
                         update: {
                             firstName: e.NAME ?? '',
                             lastName: e.LAST_NAME ?? '',
+                            isActive: e.ACTIVE !== false,
                         },
                     }),
                 ),
