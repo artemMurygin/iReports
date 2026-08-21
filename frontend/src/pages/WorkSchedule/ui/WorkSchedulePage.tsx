@@ -5,10 +5,11 @@ import { PageHeader } from './PageHeader.tsx'
 import { ScheduleBody } from './ScheduleBody.tsx'
 
 /**
- * Pencil: design/sallary-first-iteration.pen, узел `Cko6w` (`График работы · Календарь`) —
- * режим просмотра (Фаза 6) + поповер редактирования дня по клику на ячейку (Фаза 7,
- * `ScheduleTable.tsx` -> `ui/DayEditorPopover`). Вкладка «Роли» узла `Cko6w` по-прежнему не
- * реализуется в этой фазе (см. `ControlRow`'s комментарий — Фаза 8, вне скоупа).
+ * Pencil: design/sallary-first-iteration.pen, узлы `Cko6w` (`График работы · Календарь`) и
+ * `vO4tI` (`· Роли`) — режим просмотра обеих вкладок (Фаза 6 + Фаза 8, read-only часть) + поповер
+ * редактирования дня по клику на ячейку календаря (Фаза 7, `ScheduleTable.tsx` -> `ui/DayEditorPopover`).
+ * Назначение роли рабочему дню из ячейки вкладки «Роли» — Фаза 8b, по-прежнему вне скоупа (см.
+ * `RolesTable.tsx`'s комментарий).
  *
  * Чистый медиатор (frontend/CLAUDE.md): всё состояние — в `useWorkSchedulePage`, весь условный
  * рендер — в `ScheduleBody`; этот компонент только раскладывает результат хука по слотам `Layout`.
@@ -19,6 +20,8 @@ export function WorkSchedulePage() {
         setMonth,
         departmentId,
         setDepartmentId,
+        tab,
+        setTab,
         departments,
         isDepartmentsLoading,
         days,
@@ -51,11 +54,14 @@ export function WorkSchedulePage() {
                         departmentId={departmentId}
                         onDepartmentIdChange={setDepartmentId}
                         isDepartmentsLoading={isDepartmentsLoading}
+                        tab={tab}
+                        onTabChange={setTab}
                     />
                 </div>
             }
             body={
                 <ScheduleBody
+                    tab={tab}
                     days={days}
                     employees={employees}
                     dayAggregates={dayAggregates}

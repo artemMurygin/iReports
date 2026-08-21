@@ -6,9 +6,10 @@ import { useDepartments } from '@/features/TargetDirectory'
 import { api } from './api.ts'
 import { formatFullDateLabel, formatMonthLabel, getCurrentMonthIso, getTodayIso } from './format.ts'
 import { buildMonthDays } from './scheduleDays.ts'
+import type { WorkScheduleTab } from './tabs.ts'
 
 /**
- * Владеет всем состоянием страницы «График работы»: выбранный месяц/отдел, запрос месяца
+ * Владеет всем состоянием страницы «График работы»: выбранный месяц/отдел/вкладка, запрос месяца
  * (`useWorkSchedulePage` — плоский объект по тому же соглашению, что и `useSalesPlanPage`/
  * `useServicesAnalytics`, см. frontend/CLAUDE.md), справочник отделов для фильтра и список
  * календарных дней месяца (`buildMonthDays`, общий для шапки/строк/подвала таблицы).
@@ -16,10 +17,16 @@ import { buildMonthDays } from './scheduleDays.ts'
  * `todayIso` вычисляется один раз при монтировании (`useState` с инициализатором, а не
  * пересчитывается на каждый рендер) — «сегодня» не должно скакать в рамках одной открытой
  * страницы, а полночь посреди сессии — не тот сценарий, ради которого стоит городить таймер.
+ *
+ * `tab` — свой независимый `useState`, а не третий параметр запроса: вкладки «Календарь»/«Роли»
+ * рендерят одни и те же `employees`/`days` месяца (план, Фаза 8 — «данные берутся из того же GET
+ * /v1/work-schedule … отдельный запрос не нужен»), поэтому переключение вкладки не должно
+ * перезапускать `useQuery` и, соответственно, не может само по себе сбросить `month`/`departmentId`.
  */
 export function useWorkSchedulePage() {
     const [month, setMonth] = useState<string>(getCurrentMonthIso)
     const [departmentId, setDepartmentId] = useState<number | null>(null)
+    const [tab, setTab] = useState<WorkScheduleTab>('CALENDAR')
     const [todayIso] = useState<string>(getTodayIso)
 
     const departmentsQuery = useDepartments()
@@ -45,6 +52,8 @@ export function useWorkSchedulePage() {
         setMonth,
         departmentId,
         setDepartmentId,
+        tab,
+        setTab,
         departments,
         isDepartmentsLoading: departmentsQuery.isLoading,
         days,

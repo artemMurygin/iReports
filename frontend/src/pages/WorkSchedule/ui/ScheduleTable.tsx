@@ -76,7 +76,10 @@ function ScheduleTable({ days, employees, dayAggregates, totalHours, className }
     )
 }
 
-function ScheduleTableHeaderRow({
+/** Экспортирован для переиспользования в `RolesTable.tsx` (Фаза 8, узел `vO4tI`) — шапка таблицы
+ * (числа дней/дни недели/колонки «Часы»/«Отпуск») у вкладок «Календарь» и «Роли» идентична, см.
+ * чтение design-vO4tI-roles.html: различается только тело строк. */
+export function ScheduleTableHeaderRow({
     days,
     gridTemplateColumns,
 }: {
@@ -226,7 +229,9 @@ function ScheduleTableRow({
     )
 }
 
-function ScheduleTableFooterRow({
+/** Экспортирован для переиспользования в `RolesTable.tsx` — см. комментарий у `ScheduleTableHeaderRow`;
+ * подвал «Человек в смене» + общий фонд часов месяца тоже общий для обеих вкладок. */
+export function ScheduleTableFooterRow({
     days,
     dayAggregateMap,
     totalHours,
