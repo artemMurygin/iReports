@@ -1,11 +1,19 @@
 import { useMemo } from 'react'
-import type { MonthlyWorkScheduleResponse } from 'ireports-contracts'
+import type { MonthlyWorkScheduleResponse, WorkScheduleDayCell } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui-kit/atoms/Popover'
 
 import { cellLabel, cellStyle, formatHours, resolveCellVariant } from '../model/cellPresentation.ts'
-import { buildDayAggregateMap, buildEmployeeCellMap, isVacationLow, vacationDaysRemaining } from '../model/scheduleAggregates.ts'
+import { formatDayEditorDateLabel } from '../model/format.ts'
+import {
+    buildDayAggregateMap,
+    buildEmployeeCellMap,
+    isVacationLow,
+    vacationDaysRemaining,
+} from '../model/scheduleAggregates.ts'
 import { buildScheduleGridTemplate, type ScheduleDayMeta } from '../model/scheduleDays.ts'
+import { DayEditorPopover } from './DayEditorPopover'
 
 export type ScheduleTableProps = {
     days: ScheduleDayMeta[]
@@ -27,14 +35,21 @@ export type ScheduleTableProps = {
  * колонка сотрудника"). Подпись паттерна под именем (`5/2 · 8 ч` в дизайне) не отрисовывается —
  * источника данных для неё нет (PRD, "Не в скоупе").
  *
- * Поповер редактирования дня (клик по ячейке) — Фаза 7, здесь ячейки не интерактивны.
+ * Поповер редактирования дня (клик по ячейке, Фаза 7 — `DayEditorPopover`) открывается с каждой
+ * ячейки `ScheduleTableRow`; `year` для подсказки об остатке отпуска в поповере вычисляется здесь
+ * один раз из первого дня месяца (все дни `days` принадлежат одному календарному году — это один
+ * вызов `GET /v1/work-schedule?month=`), а не в каждой ячейке отдельно.
  */
 function ScheduleTable({ days, employees, dayAggregates, totalHours, className }: ScheduleTableProps) {
     const gridTemplateColumns = useMemo(() => buildScheduleGridTemplate(days.length), [days.length])
     const dayAggregateMap = useMemo(() => buildDayAggregateMap(dayAggregates), [dayAggregates])
+    const year = useMemo(() => Number(days[0]?.date.slice(0, 4)) || new Date().getFullYear(), [days])
 
     return (
-        <div data-slot="work-schedule-table" className={cn('overflow-hidden rounded-xl border border-hairline bg-surface', className)}>
+        <div
+            data-slot="work-schedule-table"
+            className={cn('overflow-hidden rounded-xl border border-hairline bg-surface', className)}
+        >
             <div className="overflow-x-auto">
                 <div style={{ minWidth: 'max-content' }}>
                     <ScheduleTableHeaderRow days={days} gridTemplateColumns={gridTemplateColumns} />
@@ -44,6 +59,7 @@ function ScheduleTable({ days, employees, dayAggregates, totalHours, className }
                             key={employee.employeeId}
                             employee={employee}
                             days={days}
+                            year={year}
                             gridTemplateColumns={gridTemplateColumns}
                         />
                     ))}
@@ -116,10 +132,12 @@ function ScheduleTableHeaderRow({
 function ScheduleTableRow({
     employee,
     days,
+    year,
     gridTemplateColumns,
 }: {
     employee: MonthlyWorkScheduleResponse['employees'][number]
     days: ScheduleDayMeta[]
+    year: number
     gridTemplateColumns: string
 }) {
     const cellsByDate = useMemo(() => buildEmployeeCellMap(employee), [employee])
@@ -137,17 +155,56 @@ function ScheduleTableRow({
             </div>
 
             {days.map((day) => {
-                const cell = cellsByDate.get(day.date)
-                const variant = cell ? resolveCellVariant(cell) : 'EMPTY'
+                // Ячейка без записи графика (`cellsByDate.get` -> undefined) получает тот же
+                // "пустой" объект, что и остальной day-editor-стек (`WorkScheduleDayCell` со всеми
+                // полями null) — так `DayEditorPopover`/`useDayEditor` не должны отдельно обрабатывать
+                // `cell: undefined` вдобавок к `status: null`.
+                const cell: WorkScheduleDayCell = cellsByDate.get(day.date) ?? {
+                    date: day.date,
+                    entryId: null,
+                    status: null,
+                    hours: null,
+                    role: null,
+                }
+                const variant = resolveCellVariant(cell)
                 const style = cellStyle(variant)
-                const label = cell ? cellLabel(cell, variant) : '—'
+                const label = cellLabel(cell, variant)
 
                 return (
-                    <div key={day.date} className={cn('flex items-center justify-center', style.bgClassName)}>
-                        <span className={cn('font-ui', variant === 'WORKING' ? 'text-xs font-medium' : 'text-[11px]', style.textClassName)}>
-                            {label}
-                        </span>
-                    </div>
+                    <Popover key={day.date}>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className={cn(
+                                    'flex h-full w-full cursor-pointer items-center justify-center outline-none transition-colors hover:brightness-95 focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-inset',
+                                    style.bgClassName,
+                                )}
+                                aria-label={`${employee.name}, ${day.day} число`}
+                            >
+                                <span
+                                    className={cn(
+                                        'font-ui',
+                                        variant === 'WORKING' ? 'text-xs font-medium' : 'text-[11px]',
+                                        style.textClassName,
+                                    )}
+                                >
+                                    {label}
+                                </span>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                            <DayEditorPopover
+                                employeeId={employee.employeeId}
+                                employeeName={employee.name}
+                                date={day.date}
+                                dateLabel={formatDayEditorDateLabel(day.date)}
+                                cell={cell}
+                                vacationDaysUsed={employee.vacationDaysUsed}
+                                vacationDaysLimit={employee.vacationDaysLimit}
+                                year={year}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 )
             })}
 
@@ -155,7 +212,12 @@ function ScheduleTableRow({
                 <span className="font-ui text-[13px] font-medium text-ink">{formatHours(employee.totalHours)} ч</span>
             </div>
             <div className="flex items-center justify-center gap-1">
-                <span className={cn('font-ui text-[13px] font-semibold', isVacationLow(remaining) ? 'text-warn-ink' : 'text-ink')}>
+                <span
+                    className={cn(
+                        'font-ui text-[13px] font-semibold',
+                        isVacationLow(remaining) ? 'text-warn-ink' : 'text-ink',
+                    )}
+                >
                     {remaining}
                 </span>
                 <span className="font-ui text-[11px] text-ink-faint">из {employee.vacationDaysLimit}</span>
@@ -183,7 +245,12 @@ function ScheduleTableFooterRow({
 
             {days.map((day) => (
                 <div key={day.date} className="flex items-center justify-center">
-                    <span className={cn('font-ui text-xs font-semibold', day.isWeekend ? 'text-warn-ink' : 'text-ink-muted')}>
+                    <span
+                        className={cn(
+                            'font-ui text-xs font-semibold',
+                            day.isWeekend ? 'text-warn-ink' : 'text-ink-muted',
+                        )}
+                    >
                         {dayAggregateMap.get(day.date) ?? 0}
                     </span>
                 </div>

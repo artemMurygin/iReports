@@ -17,15 +17,52 @@ type StatusStyle = {
     legendGlyph: string
     bgClassName: string
     textClassName: string
+    /** Цвет 2px-рамки выбранной пилюли статуса в поповере редактирования дня (Фаза 7, узел
+     * `Cko6w` → `Day Editor` → `Status Options`) — не используется в самой ячейке таблицы. У
+     * четырёх «особых» статусов совпадает с их собственным акцентным токеном (`warn-ink` и т. д.,
+     * тот же, что и `textClassName` без префикса `text-`); у `DAY_OFF`, не имеющего акцентного
+     * цвета нигде в UI Kit, взят нейтральный `ink-muted` — единственный статус, для которого
+     * дизайн не показывает выбранное состояние (в мокапе выбран только `WORKING`). */
+    selectedBorderClassName: string
 }
 
 /** Порядок — порядок легенды в дизайне (Работает → Выходной → Отгул → Больничный → Отпуск). */
 export const STATUS_STYLE: Record<WorkScheduleStatus, StatusStyle> = {
-    WORKING: { label: 'Работает', legendGlyph: '8', bgClassName: 'bg-surface', textClassName: 'text-ink' },
-    DAY_OFF: { label: 'Выходной', legendGlyph: '—', bgClassName: 'bg-canvas', textClassName: 'text-ink-faint' },
-    TIME_OFF: { label: 'Отгул', legendGlyph: 'О', bgClassName: 'bg-warn-soft', textClassName: 'text-warn-ink' },
-    SICK_LEAVE: { label: 'Больничный', legendGlyph: 'Б', bgClassName: 'bg-danger-soft', textClassName: 'text-danger' },
-    VACATION: { label: 'Отпуск', legendGlyph: 'От', bgClassName: 'bg-info-soft', textClassName: 'text-info-ink' },
+    WORKING: {
+        label: 'Работает',
+        legendGlyph: '8',
+        bgClassName: 'bg-surface',
+        textClassName: 'text-ink',
+        selectedBorderClassName: 'border-brand-strong',
+    },
+    DAY_OFF: {
+        label: 'Выходной',
+        legendGlyph: '—',
+        bgClassName: 'bg-canvas',
+        textClassName: 'text-ink-faint',
+        selectedBorderClassName: 'border-ink-muted',
+    },
+    TIME_OFF: {
+        label: 'Отгул',
+        legendGlyph: 'О',
+        bgClassName: 'bg-warn-soft',
+        textClassName: 'text-warn-ink',
+        selectedBorderClassName: 'border-warn-ink',
+    },
+    SICK_LEAVE: {
+        label: 'Больничный',
+        legendGlyph: 'Б',
+        bgClassName: 'bg-danger-soft',
+        textClassName: 'text-danger',
+        selectedBorderClassName: 'border-danger',
+    },
+    VACATION: {
+        label: 'Отпуск',
+        legendGlyph: 'От',
+        bgClassName: 'bg-info-soft',
+        textClassName: 'text-info-ink',
+        selectedBorderClassName: 'border-info-ink',
+    },
 }
 
 export const LEGEND_ORDER: WorkScheduleStatus[] = ['WORKING', 'DAY_OFF', 'TIME_OFF', 'SICK_LEAVE', 'VACATION']

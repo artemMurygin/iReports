@@ -36,6 +36,12 @@ const MONTHS_GENITIVE = [
     'декабря',
 ]
 
+/** Полные (не сокращённые, как `weekdayShort` в `scheduleDays.ts`) названия дня недели — нужны
+ * только заголовку поповера редактирования дня (`Day Editor` → `Head` → `Date`, узел `Cko6w`),
+ * где день недели пишется словом целиком («четверг»), а не двумя буквами, как в шапке таблицы.
+ * Индекс — тот же `Date.getUTCDay()` (0 = воскресенье), что и `WEEKDAY_SHORT`. */
+const WEEKDAY_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
+
 /** '2026-08' -> 'август 2026'. Возвращает исходную строку, если она не соответствует `YYYY-MM`. */
 export function formatMonthLabel(month: string): string {
     const match = /^(\d{4})-(\d{2})$/.exec(month)
@@ -54,6 +60,21 @@ export function formatFullDateLabel(dateIso: string): string {
     const [, year, monthNum, day] = match
     const monthName = MONTHS_GENITIVE[Number(monthNum) - 1]
     return monthName ? `${Number(day)} ${monthName} ${year}` : dateIso
+}
+
+/** '2026-08-20' -> '20 августа, четверг' — заголовок поповера редактирования дня (Фаза 7, узел
+ * `Cko6w` → `Day Editor` → `Head` → `Date`). `Date.UTC`, тем же приёмом, что и `buildMonthDays` —
+ * день недели календарной даты не должен зависеть от часового пояса браузера. */
+export function formatDayEditorDateLabel(dateIso: string): string {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateIso)
+    if (!match) return dateIso
+
+    const [, yearStr, monthStr, dayStr] = match
+    const monthName = MONTHS_GENITIVE[Number(monthStr) - 1]
+    if (!monthName) return dateIso
+
+    const weekday = new Date(Date.UTC(Number(yearStr), Number(monthStr) - 1, Number(dayStr))).getUTCDay()
+    return `${Number(dayStr)} ${monthName}, ${WEEKDAY_FULL[weekday]}`
 }
 
 /** Зеркалит `workScheduleMonthSchema` (`contracts/commands/work-schedule.ts`) без рантайм-импорта

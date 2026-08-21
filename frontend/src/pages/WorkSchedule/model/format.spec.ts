@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatFullDateLabel, formatMonthLabel, isValidMonth, shiftMonth } from './format.ts'
+import { formatDayEditorDateLabel, formatFullDateLabel, formatMonthLabel, isValidMonth, shiftMonth } from './format.ts'
 
 describe('formatMonthLabel', () => {
     it('formats a valid month in nominative case', () => {
@@ -21,6 +21,21 @@ describe('formatFullDateLabel', () => {
 
     it('falls back to the raw string for an invalid date', () => {
         expect(formatFullDateLabel('nope')).toBe('nope')
+    })
+})
+
+describe('formatDayEditorDateLabel', () => {
+    it('formats a calendar date with genitive month and full weekday name (design node Cko6w)', () => {
+        // 2026-08-20 — четверг (та же дата, что и в мокапе Day Editor из design-Cko6w-calendar.html).
+        expect(formatDayEditorDateLabel('2026-08-20')).toBe('20 августа, четверг')
+    })
+
+    it('resolves a different weekday for a different date', () => {
+        expect(formatDayEditorDateLabel('2026-08-01')).toBe('1 августа, суббота')
+    })
+
+    it('falls back to the raw string for an invalid date', () => {
+        expect(formatDayEditorDateLabel('nope')).toBe('nope')
     })
 })
 

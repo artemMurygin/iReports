@@ -13,10 +13,18 @@ import { cn } from '@/shared/lib/tw'
  * Built on `radix-ui`'s `Slider` primitive for correct drag/keyboard/ARIA behavior, single value
  * only (`value`/`onValueChange` take/give a single number, not the primitive's array form) since
  * every usage in the mockup (Базовый процент 1–100%) is a single-thumb slider.
+ *
+ * `onValueCommit` (Фаза 7 «Редактирование дня», docs/employee-work-schedule) — optional, separate
+ * from `onValueChange`: часы смены в поповере графика сохраняются запросом на сервер, а
+ * `onValueChange` у Radix стреляет на каждый пиксель драга — без отдельного колбэка «отпустили
+ * ползунок» пришлось бы либо слать запрос на каждое промежуточное значение, либо городить
+ * дебаунс здесь, в атоме. `PercentSliderField` его не передаёт (там значение живёт в форме,
+ * сохраняемой отдельной кнопкой) — проп опционален и не ломает существующий вызов.
  */
 export type SliderProps = {
     value: number
     onValueChange: (value: number) => void
+    onValueCommit?: (value: number) => void
     min?: number
     max?: number
     step?: number
@@ -25,13 +33,24 @@ export type SliderProps = {
     'aria-label'?: string
 }
 
-function Slider({ value, onValueChange, min = 0, max = 100, step = 1, disabled, className, ...props }: SliderProps) {
+function Slider({
+    value,
+    onValueChange,
+    onValueCommit,
+    min = 0,
+    max = 100,
+    step = 1,
+    disabled,
+    className,
+    ...props
+}: SliderProps) {
     return (
         <SliderPrimitive.Root
             data-slot="slider"
             className={cn('relative flex h-[18px] w-full touch-none items-center select-none', className)}
             value={[value]}
             onValueChange={([next]) => next !== undefined && onValueChange(next)}
+            onValueCommit={onValueCommit ? ([next]) => next !== undefined && onValueCommit(next) : undefined}
             min={min}
             max={max}
             step={step}
