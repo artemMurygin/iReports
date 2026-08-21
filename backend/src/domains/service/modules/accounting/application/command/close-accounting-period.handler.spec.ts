@@ -27,6 +27,10 @@ describe('CloseAccountingPeriodHandler', () => {
         dismissedEmployeeIds?: number[];
         // Инъекция ошибки в транзакцию закрытия (PRD 1: "всё или ничего").
         failSnapshotSave?: boolean;
+        // Ошибка на последнем шаге транзакции — ПОСЛЕ записи документов
+        // (повторный сброс кэша внутри unitOfWork.run): проверяет, что уже
+        // записанные документы откатываются вместе со всем остальным.
+        failAfterAccrualsSaved?: boolean;
         // Часы из контекста расчёта — изменяемы снаружи, чтобы проверить,
         // что закрытие считает по текущим данным, а не по прогретому кэшу.
         hoursWorked?: () => number;
@@ -52,7 +56,14 @@ describe('CloseAccountingPeriodHandler', () => {
             deleteByDirectionAndPeriod: jest.fn(),
         };
 
-        const deleteCacheByPeriod = jest.fn().mockResolvedValue(undefined);
+        const deleteCacheByPeriod = jest
+            .fn()
+            .mockImplementation(() =>
+                overrides?.failAfterAccrualsSaved &&
+                deleteCacheByPeriod.mock.calls.length > 1
+                    ? Promise.reject(new Error('БД недоступна после записи'))
+                    : Promise.resolve(undefined),
+            );
         const cacheRepo: AccountingCalculationCachePort = {
             find: jest.fn(),
             upsert: jest.fn(),
@@ -476,6 +487,31 @@ describe('CloseAccountingPeriodHandler', () => {
             await expect(
                 periodRepo.findByDirectionAndPeriod('service', '2026-08'),
             ).resolves.toBeNull();
+        });
+
+        it('ошибка после записи документов внутри транзакции — документы откатываются, событие не опубликовано', async () => {
+            const { handler, accrualRepo, emitAsync, saveAll } = buildHandler({
+                plans: [buildApprovedPlan()],
+                schemas: [buildHourlySchema(42), buildHourlySchema(43)],
+                failAfterAccrualsSaved: true,
+            });
+
+            await expect(
+                withRequestContext(() =>
+                    handler.execute(
+                        new CloseAccountingPeriodCommand({
+                            period: '2026-08',
+                            closedBy: 7,
+                        }),
+                    ),
+                ),
+            ).rejects.toThrow('БД недоступна после записи');
+
+            // Снапшот и документы успели записаться внутри транзакции —
+            // после отката их нет, событие не уходит.
+            expect(saveAll).toHaveBeenCalledTimes(1);
+            expect(accrualRepo.store.size).toBe(0);
+            expect(emitAsync).not.toHaveBeenCalled();
         });
     });
 });
