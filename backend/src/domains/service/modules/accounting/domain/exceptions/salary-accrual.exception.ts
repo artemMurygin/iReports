@@ -3,7 +3,7 @@ import { ConflictException, NotFoundException } from '@/shared/exceptions';
 
 // Повторное открытие периода отклоняется целиком, пока хоть один документ
 // начисления периода не в DRAFT (PRD 1: "отказ с перечнем таких документов;
-// переоткрытие возможно только после сторно начислений"). Перечень едет в
+// переоткрытие возможно только после отмены начислений"). Перечень едет в
 // metadata.accruals — тем же приёмом, что и metadata.rows у
 // UnapprovedSalesPlanRowsException (форма — salaryAccrualNotDraftRowSchema в
 // contracts).

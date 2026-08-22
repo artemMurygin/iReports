@@ -10,7 +10,7 @@ import {
     ArgumentInvalidException,
     ArgumentNotProvidedException,
 } from '@/shared/exceptions';
-import { BalanceTransactionNotReversibleException } from '../exceptions/balance-transaction.exception';
+import { BalanceTransactionNotDeletableException } from '../exceptions/balance-transaction.exception';
 import { SalaryAccrual } from './salary-accrual.entity';
 import { SalaryAccrualLine } from './salary-accrual-line.entity';
 
@@ -31,11 +31,10 @@ const MANUAL_TYPES: ReadonlySet<BalanceTransactionType> = new Set([
     'ADJUSTMENT',
 ]);
 // Типы с обязательным комментарием: у штрафа и корректировки сотрудник
-// должен видеть причину, у сторно — почему движение отменено.
+// должен видеть причину.
 const COMMENT_REQUIRED_TYPES: ReadonlySet<BalanceTransactionType> = new Set([
     'PENALTY',
     'ADJUSTMENT',
-    'MANUAL_REVERSAL',
 ]);
 
 export type CreateManualBalanceTransactionProps = {
@@ -54,6 +53,9 @@ export type CreateManualBalanceTransactionProps = {
 
 export type BalanceTransactionProps = {
     employeeId: number;
+    // Атрибут происхождения движения (документ какого направления его
+    // породил / в какую кассу ERP уйдёт выплата — PRD 3). Баланс ОБЩИЙ по
+    // сотруднику (Фаза 8b): на остаток и группировку direction не влияет.
     direction: AccountingDirection;
     type: BalanceTransactionType;
     // Со знаком: приход положительный, расход отрицательный — остаток и
@@ -66,25 +68,24 @@ export type BalanceTransactionProps = {
     accrualId?: string;
     lineId?: string;
     ruleId?: string;
-    reversedTransactionId?: string;
     erpSyncRequired: boolean;
 };
 
 // Движение по балансу сотрудника (PRD 2 docs/payroll-closing-and-accrual/
 // prd-salary-accrual-and-employee-balance.md) — запись ленты, единственного
-// источника истины об остатке; хранимого поля «остаток» нет. Движение
-// неизменяемо: у ленты нет PATCH/DELETE, ручные движения исправляются
-// сторно (Фаза 7), а движения начисления удаляются только действием
-// «Отменить начисление» строки документа — единственное исключение из
-// неизменяемости (начисление до выплаты — черновик расчёта).
+// источника истины об остатке; хранимого поля «остаток» нет. У ленты нет
+// PATCH: ошибочное ручное движение без документа ERP руководитель УДАЛЯЕТ
+// (Фаза 8b, см. ensureDeletable), движения начисления удаляются только
+// действием «Отменить начисление» строки документа, движения с документом
+// ERP — вместе с документом ERP (PRD 3).
 //
-// Как и SalaryAccrual, сущность direction-агностична: направление — часть
-// ключа баланса (employeeId, direction), а не ветка поведения; оба домена
+// Как и SalaryAccrual, сущность direction-агностична: направление — лишь
+// атрибут происхождения движения, а не ветка поведения; оба домена
 // используют одну Prisma-реализацию порта под общим DI-токеном.
 //
-// Ссылки на источники (accrualId/lineId/ruleId/reversedTransactionId) —
-// идентификаторы, а не копии: разбивка начисления в ленте резолвится на
-// чтении из строки документа и не может с ней разойтись.
+// Ссылки на источники (accrualId/lineId/ruleId) — идентификаторы, а не
+// копии: детализация начисления живёт в документе, лента ведёт на него по
+// accrualId и не может с ним разойтись.
 export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
     declare protected readonly _id: AggregateID;
 
@@ -178,52 +179,29 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
         });
     }
 
-    // Сторно ручного движения (Фаза 7 PRD 2): всегда точная
-    // противоположность исходной суммы, обязательный комментарий, ссылка на
-    // сторнируемое движение. Единственный способ исправить ручное движение
-    // — PATCH/DELETE у ленты не существует. Сторнируются только ручные
-    // движения без документа ERP: начисления отменяются действием
-    // «Отменить начисление» строки, выплаты и движения с erpSyncRequired
-    // удаляются вместе с документом ERP (PRD 3), сторно сторно не бывает.
-    static reversalOf(
-        original: BalanceTransaction,
-        comment: string,
-        createdBy: number,
-    ): BalanceTransaction {
-        if (!original.isManual()) {
-            throw new BalanceTransactionNotReversibleException(
-                original.id,
-                'сторнируются только ручные движения (начисление отменяется на строке документа, выплата удаляется вместе с документом ERP)',
-            );
-        }
-        if (original.erpSyncRequired) {
-            throw new BalanceTransactionNotReversibleException(
-                original.id,
-                'движение проводится в кассе ERP и исправляется удалением вместе с документом ERP (PRD 3)',
-            );
-        }
-        return new BalanceTransaction({
-            id: randomUUID(),
-            props: {
-                employeeId: original.employeeId,
-                direction: original.direction,
-                type: 'MANUAL_REVERSAL',
-                amount: -original.amount,
-                occurredAt: new Date(),
-                createdBy,
-                comment,
-                period: original.period,
-                reversedTransactionId: original.id,
-                erpSyncRequired: false,
-            },
-        });
-    }
-
     // Ручное движение руководителя — единственный вид движения, доступный
-    // сторно (MANUAL_REVERSAL сам ручным движением в этом смысле не
-    // считается: ошибочное сторно исправляется повторным созданием).
+    // прямому удалению (Фаза 8b, см. ensureDeletable).
     isManual(): boolean {
         return MANUAL_TYPES.has(this.props.type);
+    }
+
+    // Прямое удаление движения (DELETE, Фаза 8b) разрешено только ручным
+    // движениям без документа ERP: движения начисления удаляются
+    // действием «Отменить начисление» строки документа, выплаты и движения
+    // с erpSyncRequired — вместе с документом ERP (PRD 3).
+    ensureDeletable(): void {
+        if (!this.isManual()) {
+            throw new BalanceTransactionNotDeletableException(
+                this.id,
+                'удаляются только ручные движения (начисление отменяется на строке документа, выплата удаляется вместе с документом ERP)',
+            );
+        }
+        if (this.erpSyncRequired) {
+            throw new BalanceTransactionNotDeletableException(
+                this.id,
+                'движение проводится в кассе ERP и удаляется вместе с документом ERP (PRD 3)',
+            );
+        }
     }
 
     get employeeId(): number {
@@ -268,10 +246,6 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
 
     get ruleId(): string | undefined {
         return this.props.ruleId;
-    }
-
-    get reversedTransactionId(): string | undefined {
-        return this.props.reversedTransactionId;
     }
 
     get erpSyncRequired(): boolean {
@@ -330,11 +304,10 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
                 'Движение начисления должно ссылаться на документ, строку и правило',
             );
         }
-        // Инварианты ручных движений и сторно (Фаза 7): знак зафиксирован
-        // типом (расход хранится отрицательным, приход положительным),
-        // ADJUSTMENT/MANUAL_REVERSAL не бывают нулевыми, у сторно есть
-        // ссылка на сторнируемое движение, а PENALTY/ADJUSTMENT/
-        // MANUAL_REVERSAL — обязательный комментарий с причиной.
+        // Инварианты ручных движений (Фаза 7): знак зафиксирован типом
+        // (расход хранится отрицательным, приход положительным),
+        // ADJUSTMENT не бывает нулевым, а у PENALTY/ADJUSTMENT —
+        // обязательный комментарий с причиной.
         if (
             MANUAL_OUTFLOW_TYPES.has(
                 this.props.type as ManualBalanceTransactionType,
@@ -355,21 +328,9 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
                 `Движение типа ${this.props.type} — приход: сумма хранится положительной`,
             );
         }
-        if (
-            (this.props.type === 'ADJUSTMENT' ||
-                this.props.type === 'MANUAL_REVERSAL') &&
-            this.props.amount === 0
-        ) {
+        if (this.props.type === 'ADJUSTMENT' && this.props.amount === 0) {
             throw new ArgumentInvalidException(
                 `Движение типа ${this.props.type} не может быть нулевым`,
-            );
-        }
-        if (
-            this.props.type === 'MANUAL_REVERSAL' &&
-            !this.props.reversedTransactionId
-        ) {
-            throw new ArgumentInvalidException(
-                'Сторно должно ссылаться на сторнируемое движение',
             );
         }
         if (

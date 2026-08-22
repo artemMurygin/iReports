@@ -15,7 +15,7 @@ import { AdjustSalaryAccrualLineHandler } from '@/domains/service/modules/accoun
 import { AccrueSalaryAccrualDocumentHandler } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-document.handler';
 import { AccruePeriodSalaryAccrualsHandler } from '@/domains/service/modules/accounting/application/command/accrue-period-salary-accruals.handler';
 import { CreateBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/create-balance-transaction.handler';
-import { ReverseBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/reverse-balance-transaction.handler';
+import { DeleteBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/delete-balance-transaction.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
 import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
 import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
@@ -63,7 +63,7 @@ import { GetEmployeeBalanceHttpController } from '@/domains/service/modules/acco
 import { AccrueSalaryAccrualDocumentHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-salary-accrual-document.http.controller';
 import { AccruePeriodSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-period-salary-accruals.http.controller';
 import { CreateBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-balance-transaction.http.controller';
-import { ReverseBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/reverse-balance-transaction.http.controller';
+import { DeleteBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-balance-transaction.http.controller';
 import { GetDepartmentBalancesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-balances.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
@@ -160,12 +160,15 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         AccrueSalaryAccrualLineHttpController,
         UnaccrueSalaryAccrualLineHttpController,
         AdjustSalaryAccrualLineHttpController,
-        // Массовое проведение, ручные движения, сторно и сводка отдела
-        // (PRD 2, Фаза 7).
+        // Массовое проведение (PRD 2, Фаза 7) и ОБЩИЙ баланс сотрудника
+        // (Фаза 8b): маршруты баланса живут под /v1/accounting/balance без
+        // направления в пути (см. routesV1.accounting.balance) — контроллеры
+        // зарегистрированы здесь один раз на оба домена, реализация
+        // direction-агностична; ошибочное ручное движение удаляется DELETE.
         AccrueSalaryAccrualDocumentHttpController,
         AccruePeriodSalaryAccrualsHttpController,
         CreateBalanceTransactionHttpController,
-        ReverseBalanceTransactionHttpController,
+        DeleteBalanceTransactionHttpController,
         GetDepartmentBalancesHttpController,
         GetEmployeeBalanceHttpController,
         GetClosePeriodPreviewHttpController,
@@ -188,13 +191,13 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         UnaccrueSalaryAccrualLineHandler,
         AdjustSalaryAccrualLineHandler,
         // Фаза 7 PRD 2: массовое проведение (построчно через диспатч
-        // AccrueSalaryAccrualLineCommand — своя транзакция на строку),
-        // ручные движения и сторно — те же generic по direction хендлеры
-        // на общем CommandBus.
+        // AccrueSalaryAccrualLineCommand — своя транзакция на строку) и
+        // ручные движения; Фаза 8b — удаление ошибочного ручного движения
+        // (DELETE) на общем балансе сотрудника.
         AccrueSalaryAccrualDocumentHandler,
         AccruePeriodSalaryAccrualsHandler,
         CreateBalanceTransactionHandler,
-        ReverseBalanceTransactionHandler,
+        DeleteBalanceTransactionHandler,
         CreateTaskCompletionHandler,
         ConfirmTaskCompletionHandler,
         DeleteTaskCompletionHandler,

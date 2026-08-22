@@ -1,19 +1,23 @@
 // Движение по балансу сотрудника — PRD 2 docs/payroll-closing-and-accrual/
 // prd-salary-accrual-and-employee-balance.md, раздел "Баланс сотрудника".
-// Лента движений — единственный источник истины об остатке (event sourcing
-// по доске): хранимого поля «остаток» нет, остаток на чтении — SUM(amount)
-// по паре (employeeId, direction). amount — Int в целых рублях со знаком
-// (приход положительный, расход отрицательный), та же единица, что у
-// снапшота периода и документа начисления.
+// Баланс ОБЩИЙ по сотруднику (Фаза 8b): один остаток и одна лента на
+// employeeId, остаток на чтении — SUM(amount) по employeeId; direction —
+// лишь атрибут происхождения движения (документ какого направления его
+// породил / в какую кассу ERP уйдёт выплата), на остаток не влияет.
+// amount — Int в целых рублях со знаком (приход положительный, расход
+// отрицательный), та же единица, что у снапшота периода и документа
+// начисления.
 //
-// Ссылки на источники (accrualId/lineId/ruleId/reversedTransactionId) —
-// идентификаторы, а не сериализованные копии (PRD 2, "Технические
-// ограничения"): раскрытие начисления в ленте резолвится по lineId в строку
-// документа на чтении и потому не может разойтись с документом. FK на
+// Ссылки на источники (accrualId/lineId/ruleId) — идентификаторы, а не
+// сериализованные копии (PRD 2, "Технические ограничения"): детализация
+// начисления живёт в документе, лента ведёт на него по accrualId. FK на
 // SalaryAccrualLine сознательно нет: движения SALARY_ACCRUAL/
 // ACCRUAL_ADJUSTMENT удаляются только действием «Отменить начисление», а
 // документы периода удаляются переоткрытием только пока все они DRAFT (то
 // есть без движений) — висячих ссылок не возникает по бизнес-инварианту.
+//
+// Ошибочное ручное движение без документа ERP исправляется удалением
+// записи (DELETE, Фаза 8b) — обратных/компенсирующих типов движений нет.
 //
 // Уникальный индекс (lineId, type) — идемпотентность проведения строки на
 // уровне БД, а не только проверкой в коде: повторный/параллельный accrue
@@ -35,15 +39,9 @@ model BalanceTransaction {
   comment    String?
   period     String?
 
-  accrualId             String? @map("accrual_id")
-  lineId                String? @map("line_id")
-  ruleId                String? @map("rule_id")
-  // @unique — идемпотентность сторно на уровне БД (Фаза 7), тот же приём,
-  // что (lineId, type) для проведения: два параллельных reverse одного
-  // движения не создадут второго MANUAL_REVERSAL (P2002 мапится в 409
-  // «уже сторнировано»). Поле заполнено только у MANUAL_REVERSAL, NULL под
-  // ограничение не попадает.
-  reversedTransactionId String? @unique @map("reversed_transaction_id")
+  accrualId String? @map("accrual_id")
+  lineId    String? @map("line_id")
+  ruleId    String? @map("rule_id")
 
   // Признак «должно отражаться в кассе ERP» — в PRD 2 только хранится,
   // сама синхронизация — PRD 3.
@@ -52,7 +50,7 @@ model BalanceTransaction {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([lineId, type])
-  @@index([employeeId, direction, occurredAt])
+  @@index([employeeId, occurredAt])
   @@map("balance_transactions")
 }
 
@@ -68,7 +66,6 @@ enum BalanceTransactionType {
   VACATION_PAY
   PENALTY
   ADJUSTMENT
-  MANUAL_REVERSAL
   PAYOUT
 
   @@map("balance_transaction_type")

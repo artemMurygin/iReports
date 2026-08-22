@@ -42,12 +42,8 @@ import { GetShopSalaryAccrualHttpController } from '@/domains/shop/modules/accou
 import { AccrueShopSalaryAccrualLineHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accrue-shop-salary-accrual-line.http.controller';
 import { UnaccrueShopSalaryAccrualLineHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/unaccrue-shop-salary-accrual-line.http.controller';
 import { AdjustShopSalaryAccrualLineHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/adjust-shop-salary-accrual-line.http.controller';
-import { GetShopEmployeeBalanceHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-employee-balance.http.controller';
 import { AccrueShopSalaryAccrualDocumentHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accrue-shop-salary-accrual-document.http.controller';
 import { AccruePeriodShopSalaryAccrualsHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accrue-period-shop-salary-accruals.http.controller';
-import { CreateShopBalanceTransactionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-balance-transaction.http.controller';
-import { ReverseShopBalanceTransactionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/reverse-shop-balance-transaction.http.controller';
-import { GetShopDepartmentBalancesHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-department-balances.http.controller';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-rule.port';
 import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-task-completion.port';
@@ -59,8 +55,6 @@ import { ShopCalculationDataRepository } from '@/domains/shop/modules/accounting
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
-import { GetEmployeeBalanceService } from '@/domains/service/modules/accounting/application/services/get-employee-balance.service';
-import { GetDepartmentBalancesService } from '@/domains/service/modules/accounting/application/services/get-department-balances.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
@@ -68,10 +62,8 @@ import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/a
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
-import { BalanceTransactionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -180,25 +172,22 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         GetShopDepartmentSalaryReportHttpController,
         ListShopSalaryAccrualsHttpController,
         GetShopSalaryAccrualHttpController,
-        // Действия над строками документа и баланс сотрудника (PRD 2,
-        // Фаза 6): контроллеры диспатчат generic по direction команды
+        // Действия над строками документа (PRD 2, Фаза 6): контроллеры
+        // диспатчат generic по direction команды
         // Accrue/Unaccrue/AdjustSalaryAccrualLineCommand через общий
         // CommandBus (хендлеры зарегистрированы в AccountingModule сервиса
-        // — тот же приём, что Reopen/Recalculate выше), баланс — свой
-        // экземпляр generic-сервиса чтения.
+        // — тот же приём, что Reopen/Recalculate выше).
         AccrueShopSalaryAccrualLineHttpController,
         UnaccrueShopSalaryAccrualLineHttpController,
         AdjustShopSalaryAccrualLineHttpController,
-        // Фаза 7 PRD 2: массовое проведение, ручные движения и сторно —
-        // тонкие контроллеры поверх generic по direction команд (общий
-        // CommandBus, хендлеры в AccountingModule сервиса); сводка отдела —
-        // свой экземпляр generic-сервиса чтения (см. providers).
+        // Фаза 7 PRD 2: массовое проведение — тонкие контроллеры поверх
+        // generic по direction команд (общий CommandBus, хендлеры в
+        // AccountingModule сервиса). Баланс сотрудника с Фазы 8b — ОБЩИЙ
+        // по employeeId: его эндпоинты (/v1/accounting/balance/*) и
+        // контроллеры живут только в AccountingModule сервиса, у shop
+        // собственных контроллеров/экземпляров баланса больше нет.
         AccrueShopSalaryAccrualDocumentHttpController,
         AccruePeriodShopSalaryAccrualsHttpController,
-        CreateShopBalanceTransactionHttpController,
-        ReverseShopBalanceTransactionHttpController,
-        GetShopDepartmentBalancesHttpController,
-        GetShopEmployeeBalanceHttpController,
         GetShopClosePeriodPreviewHttpController,
     ],
     providers: [
@@ -243,8 +232,6 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         // (тот же приём, что и у ACCOUNTING_PERIOD_* ниже).
         ListSalaryAccrualsService,
         GetSalaryAccrualService,
-        GetEmployeeBalanceService,
-        GetDepartmentBalancesService,
         GetShopEmployeeSalaryReportService,
         GetShopDepartmentSalaryReportService,
         {
@@ -286,15 +273,10 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
             provide: SALARY_ACCRUAL_REPOSITORY,
             useClass: SalaryAccrualRepository,
         },
-        // Лента баланса (PRD 2, Фаза 6) — direction-агностичная реализация,
-        // собственный экземпляр под тем же токеном (нужен GetEmployeeBalance-
-        // Service этого модуля; командные хендлеры Accrue/Unaccrue/Adjust
-        // живут в AccountingModule сервиса и берут его экземпляр — реализация
-        // одна и та же Prisma-based, направление всегда в данных).
-        {
-            provide: BALANCE_TRANSACTION_REPOSITORY,
-            useClass: BalanceTransactionRepository,
-        },
+        // BALANCE_TRANSACTION_REPOSITORY здесь больше не заводится: с
+        // Фазы 8b баланс общий по сотруднику, его чтение и команды живут
+        // только в AccountingModule сервиса (эндпоинты /v1/accounting/
+        // balance/* без направления в пути).
         {
             provide: EMPLOYEE_DISMISSAL,
             useClass: EmployeeDismissalRepository,

@@ -44,6 +44,6 @@ export class CreateBalanceTransactionHandler implements ICommandHandler<
 
         await this.transactionRepo.insertMany([transaction]);
 
-        return toBalanceTransactionResponse(transaction, null, false);
+        return toBalanceTransactionResponse(transaction);
     }
 }

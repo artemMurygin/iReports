@@ -52,14 +52,15 @@ import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
-// Сквозные сценарии Фазы 7 PRD 2 (docs/payroll-closing-and-accrual):
-// массовое проведение по документу и месяцу, ручные движения (каждый тип
-// доступен по HTTP; штраф без комментария — 400), сторно ручного движения
-// и запрет сторно начисления, движение задним числом в закрытом месяце без
-// изменения снапшота и документов, сводка балансов по отделу. Реальные
-// контроллеры, CommandBus и сущности AccountingModule, in-memory замена
-// только границы БД — тот же приём, что salary-accrual-lines.e2e.spec.ts.
-describe('Фаза 7: массовое проведение, ручные движения, сторно, сводка отдела (e2e)', () => {
+// Сквозные сценарии Фаз 7/8b PRD 2 (docs/payroll-closing-and-accrual):
+// массовое проведение по документу и месяцу, ручные движения на ОБЩЕМ
+// балансе сотрудника (каждый тип доступен по HTTP; штраф без комментария —
+// 400), удаление ошибочного ручного движения (DELETE) и запреты удаления,
+// движение задним числом в закрытом месяце без изменения снапшота и
+// документов, сводка общих балансов по отделу. Реальные контроллеры,
+// CommandBus и сущности AccountingModule, in-memory замена только границы
+// БД — тот же приём, что salary-accrual-lines.e2e.spec.ts.
+describe('Фазы 7/8b: массовое проведение, ручные движения, удаление, сводка отдела (e2e)', () => {
     let app: INestApplication<Server>;
     const schemas = new Map<number, MotivationSchema>();
     const periods = new Map<string, AccountingPeriod>();
@@ -306,7 +307,7 @@ describe('Фаза 7: массовое проведение, ручные дви
     it('ручные движения: каждый тип по HTTP, штраф без комментария → 400, минус — штатно; движение задним числом не меняет снапшот и документы', async () => {
         const before = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/42')
+                .get('/v1/accounting/balance/employee/42')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
 
@@ -338,10 +339,9 @@ describe('Фаза 7: массовое проведение, ручные дви
         for (const item of cases) {
             const created = (
                 await request(app.getHttpServer())
-                    .post(
-                        '/v1/service/accounting/balance/employee/42/transactions',
-                    )
+                    .post('/v1/accounting/balance/employee/42/transactions')
                     .send({
+                        direction: 'service',
                         type: item.type,
                         amount: item.amount,
                         comment: item.comment,
@@ -355,23 +355,32 @@ describe('Фаза 7: массовое проведение, ручные дви
                 employeeId: 42,
                 direction: 'service',
                 erpSyncRequired: false,
-                isReversed: false,
             });
         }
 
         // Штраф и корректировка без комментария — 400 на границе HTTP.
         await request(app.getHttpServer())
-            .post('/v1/service/accounting/balance/employee/42/transactions')
-            .send({ type: 'PENALTY', amount: 500, createdBy: 7 })
+            .post('/v1/accounting/balance/employee/42/transactions')
+            .send({
+                direction: 'service',
+                type: 'PENALTY',
+                amount: 500,
+                createdBy: 7,
+            })
             .expect(400);
         await request(app.getHttpServer())
-            .post('/v1/service/accounting/balance/employee/42/transactions')
-            .send({ type: 'ADJUSTMENT', amount: 500, createdBy: 7 })
+            .post('/v1/accounting/balance/employee/42/transactions')
+            .send({
+                direction: 'service',
+                type: 'ADJUSTMENT',
+                amount: 500,
+                createdBy: 7,
+            })
             .expect(400);
 
         const after = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/42')
+                .get('/v1/accounting/balance/employee/42')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         // -5000 -2000 +3000 +1500 +2500 -1000 -700 = -1700 к прежнему
@@ -389,8 +398,9 @@ describe('Фаза 7: массовое проведение, ручные дви
 
         const backdated = (
             await request(app.getHttpServer())
-                .post('/v1/service/accounting/balance/employee/42/transactions')
+                .post('/v1/accounting/balance/employee/42/transactions')
                 .send({
+                    direction: 'service',
                     type: 'ADVANCE',
                     amount: 800,
                     occurredAt: '2026-07-15T00:00:00.000Z',
@@ -419,86 +429,121 @@ describe('Фаза 7: массовое проведение, ручные дви
         expect(accrualsAfter).toEqual(accrualsBefore);
     });
 
-    it('сторно: ручное движение сторнируется с пометкой, начисление и повторное сторно — 409', async () => {
+    it('общий баланс: движения обоих направлений — одна лента и один остаток', async () => {
+        const before = (
+            await request(app.getHttpServer())
+                .get('/v1/accounting/balance/employee/43')
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+
+        // Ручное движение происхождения shop через тот же общий эндпоинт —
+        // остаток тот же самый, direction лишь атрибут движения.
+        const shopBonus = (
+            await request(app.getHttpServer())
+                .post('/v1/accounting/balance/employee/43/transactions')
+                .send({
+                    direction: 'shop',
+                    type: 'BONUS',
+                    amount: 1200,
+                    createdBy: 7,
+                })
+                .expect(201)
+        ).body as BalanceTransaction;
+        expect(shopBonus.direction).toBe('shop');
+
+        const after = (
+            await request(app.getHttpServer())
+                .get('/v1/accounting/balance/employee/43')
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(after.balance).toBe(before.balance + 1200);
+        expect(
+            after.transactions.some(
+                (transaction) => transaction.id === shopBonus.id,
+            ),
+        ).toBe(true);
+    });
+
+    it('удаление: ручное движение удаляется, остаток пересчитан; начисление и движение с ERP — 409', async () => {
         const advance = (
             await request(app.getHttpServer())
-                .post('/v1/service/accounting/balance/employee/43/transactions')
-                .send({ type: 'ADVANCE', amount: 4000, createdBy: 7 })
+                .post('/v1/accounting/balance/employee/43/transactions')
+                .send({
+                    direction: 'service',
+                    type: 'ADVANCE',
+                    amount: 4000,
+                    createdBy: 7,
+                })
                 .expect(201)
         ).body as BalanceTransaction;
 
         const balanceBefore = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/43')
+                .get('/v1/accounting/balance/employee/43')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
 
-        const reversal = (
-            await request(app.getHttpServer())
-                .post(
-                    `/v1/service/accounting/balance/transactions/${advance.id}/reverse`,
-                )
-                .send({ comment: 'Ошибочный аванс', createdBy: 9 })
-                .expect(201)
-        ).body as BalanceTransaction;
-        expect(reversal).toMatchObject({
-            type: 'MANUAL_REVERSAL',
-            amount: 4000,
-            reversedTransactionId: advance.id,
-            comment: 'Ошибочный аванс',
-        });
-
-        // Без комментария сторно не бывает — 400.
+        // Ошибочное ручное движение удаляется — запись исчезает из ленты.
         await request(app.getHttpServer())
-            .post(
-                `/v1/service/accounting/balance/transactions/${advance.id}/reverse`,
-            )
-            .send({ comment: '', createdBy: 9 })
-            .expect(400);
+            .delete(`/v1/accounting/balance/transactions/${advance.id}`)
+            .expect(204);
 
-        // Повторное сторно — 409.
+        // Повторное удаление — 404: записи больше нет.
         await request(app.getHttpServer())
-            .post(
-                `/v1/service/accounting/balance/transactions/${advance.id}/reverse`,
-            )
-            .send({ comment: 'Ещё раз', createdBy: 9 })
-            .expect(409);
+            .delete(`/v1/accounting/balance/transactions/${advance.id}`)
+            .expect(404);
 
         const balanceAfter = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/43')
+                .get('/v1/accounting/balance/employee/43')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balanceAfter.balance).toBe(balanceBefore.balance + 4000);
-        // Исходная запись осталась в ленте с пометкой «сторнировано».
-        const original = balanceAfter.transactions.find(
-            (transaction) => transaction.id === advance.id,
-        );
-        expect(original?.isReversed).toBe(true);
+        expect(
+            balanceAfter.transactions.find(
+                (transaction) => transaction.id === advance.id,
+            ),
+        ).toBeUndefined();
 
-        // Сторно движения начисления запрещено — только «Отменить
-        // начисление» на строке документа.
+        // Движение начисления прямым DELETE не удаляется — только
+        // «Отменить начисление» на строке документа.
         const accrualTransaction = balanceAfter.transactions.find(
             (transaction) => transaction.type === 'SALARY_ACCRUAL',
         );
         expect(accrualTransaction).toBeDefined();
         await request(app.getHttpServer())
-            .post(
-                `/v1/service/accounting/balance/transactions/${accrualTransaction!.id}/reverse`,
+            .delete(
+                `/v1/accounting/balance/transactions/${accrualTransaction!.id}`,
             )
-            .send({ comment: 'Нельзя', createdBy: 9 })
+            .expect(409);
+
+        // Движение с документом ERP (erpSyncRequired) — 409: удаляется
+        // вместе с документом ERP (PRD 3).
+        const erpAdvance = (
+            await request(app.getHttpServer())
+                .post('/v1/accounting/balance/employee/43/transactions')
+                .send({
+                    direction: 'service',
+                    type: 'ADVANCE',
+                    amount: 300,
+                    createdBy: 7,
+                    erpSyncRequired: true,
+                })
+                .expect(201)
+        ).body as BalanceTransaction;
+        await request(app.getHttpServer())
+            .delete(`/v1/accounting/balance/transactions/${erpAdvance.id}`)
             .expect(409);
     });
 
     it('сводка по отделу: остаток/начислено/авансы/ручные по сотрудникам текущего отдела, итог = сумма сотрудников', async () => {
         const summary = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/department/5/2026-07')
+                .get('/v1/accounting/balance/department/5/2026-07')
                 .expect(200)
         ).body as DepartmentBalancesResponse;
 
         expect(summary.departmentId).toBe(5);
-        expect(summary.direction).toBe('service');
         expect(summary.employees).toHaveLength(2);
         expect(summary.employees.map((row) => row.employeeId).sort()).toEqual([
             42, 43,
@@ -508,9 +553,7 @@ describe('Фаза 7: массовое проведение, ручные дви
         for (const row of summary.employees) {
             const balance = (
                 await request(app.getHttpServer())
-                    .get(
-                        `/v1/service/accounting/balance/employee/${row.employeeId}`,
-                    )
+                    .get(`/v1/accounting/balance/employee/${row.employeeId}`)
                     .expect(200)
             ).body as EmployeeBalanceResponse;
             expect(row.balance).toBe(balance.balance);

@@ -1,20 +1,18 @@
-import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
 import type {
     BalanceTransactionFilter,
     BalanceTransactionRepositoryPort,
 } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { SalaryAccrualLineAlreadyAccruedException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
-import { BalanceTransactionAlreadyReversedException } from '@/domains/service/modules/accounting/domain/exceptions/balance-transaction.exception';
 
 // In-memory реализация BalanceTransactionRepositoryPort для юнит- и
 // e2e-тестов проведения строк (тот же приём, что
-// InMemorySalaryAccrualRepository). Эмулирует и уникальный индекс
-// (lineId, type) — контракт идемпотентности проведения, и уникальность
-// reversedTransactionId — идемпотентность сторно (Фаза 7): повторная
-// вставка бросает тот же конфликт, что Prisma-реализация на P2002, причём
-// атомарно — частично вставленный батч откатывается, как откатилась бы
-// транзакция БД.
+// InMemorySalaryAccrualRepository). Баланс общий по сотруднику (Фаза 8b):
+// все выборки — по employeeId, направление движения не участвует.
+// Эмулирует уникальный индекс (lineId, type) — контракт идемпотентности
+// проведения: повторная вставка бросает тот же конфликт, что
+// Prisma-реализация на P2002, причём атомарно — частично вставленный батч
+// откатывается, как откатилась бы транзакция БД.
 export class InMemoryBalanceTransactionRepository implements BalanceTransactionRepositoryPort {
     readonly store = new Map<string, BalanceTransaction>();
 
@@ -27,11 +25,6 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
                         `${transaction.lineId}:${transaction.type}`,
                 ),
         );
-        const reversedIds = new Set(
-            [...this.store.values()]
-                .map((transaction) => transaction.reversedTransactionId)
-                .filter((id): id is string => Boolean(id)),
-        );
         for (const transaction of transactions) {
             if (
                 transaction.lineId &&
@@ -40,16 +33,6 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
                 return Promise.reject(
                     new SalaryAccrualLineAlreadyAccruedException(
                         transaction.lineId,
-                    ),
-                );
-            }
-            if (
-                transaction.reversedTransactionId &&
-                reversedIds.has(transaction.reversedTransactionId)
-            ) {
-                return Promise.reject(
-                    new BalanceTransactionAlreadyReversedException(
-                        transaction.reversedTransactionId,
                     ),
                 );
             }
@@ -64,16 +47,15 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
         return Promise.resolve(this.store.get(id) ?? null);
     }
 
-    sumByEmployees(
-        direction: AccountingDirection,
-        employeeIds: number[],
-    ): Promise<Map<number, number>> {
+    deleteById(id: string): Promise<void> {
+        this.store.delete(id);
+        return Promise.resolve();
+    }
+
+    sumByEmployees(employeeIds: number[]): Promise<Map<number, number>> {
         const sums = new Map<number, number>();
         for (const transaction of this.store.values()) {
-            if (
-                transaction.direction === direction &&
-                employeeIds.includes(transaction.employeeId)
-            ) {
+            if (employeeIds.includes(transaction.employeeId)) {
                 sums.set(
                     transaction.employeeId,
                     (sums.get(transaction.employeeId) ?? 0) +
@@ -85,7 +67,6 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
     }
 
     findForDepartmentSummary(
-        direction: AccountingDirection,
         employeeIds: number[],
         period: string,
         monthStart: Date,
@@ -94,7 +75,6 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
         return Promise.resolve(
             [...this.store.values()].filter(
                 (transaction) =>
-                    transaction.direction === direction &&
                     employeeIds.includes(transaction.employeeId) &&
                     ((transaction.occurredAt >= monthStart &&
                         transaction.occurredAt <= monthEnd) ||
@@ -117,7 +97,6 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
     }
 
     findByEmployee(
-        direction: AccountingDirection,
         employeeId: number,
         filter: BalanceTransactionFilter,
     ): Promise<BalanceTransaction[]> {
@@ -125,7 +104,6 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
             [...this.store.values()]
                 .filter(
                     (transaction) =>
-                        transaction.direction === direction &&
                         transaction.employeeId === employeeId &&
                         (!filter.from ||
                             transaction.occurredAt >= filter.from) &&
@@ -139,34 +117,11 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
         );
     }
 
-    sumByEmployee(
-        direction: AccountingDirection,
-        employeeId: number,
-    ): Promise<number> {
+    sumByEmployee(employeeId: number): Promise<number> {
         return Promise.resolve(
             [...this.store.values()]
-                .filter(
-                    (transaction) =>
-                        transaction.direction === direction &&
-                        transaction.employeeId === employeeId,
-                )
+                .filter((transaction) => transaction.employeeId === employeeId)
                 .reduce((sum, transaction) => sum + transaction.amount, 0),
-        );
-    }
-
-    findReversedIds(transactionIds: string[]): Promise<Set<string>> {
-        const ids = new Set(transactionIds);
-        return Promise.resolve(
-            new Set(
-                [...this.store.values()]
-                    .filter(
-                        (transaction) =>
-                            transaction.type === 'MANUAL_REVERSAL' &&
-                            transaction.reversedTransactionId &&
-                            ids.has(transaction.reversedTransactionId),
-                    )
-                    .map((transaction) => transaction.reversedTransactionId!),
-            ),
         );
     }
 }

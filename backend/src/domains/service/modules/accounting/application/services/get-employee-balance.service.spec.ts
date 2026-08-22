@@ -4,13 +4,13 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
 import type { BalanceTransactionProps } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
 import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
 
-// Баланс сотрудника (PRD 2, Фаза 6): остаток = SUM всей ленты пары
-// (employeeId, direction) — проверяется на смешанной ленте с приходами и
-// расходами; фильтры не влияют на остаток, но дают итог по выборке;
-// начисление раскрывается до строки документа.
+// Общий баланс сотрудника (PRD 2, Фаза 8b): остаток = SUM ВСЕЙ ленты
+// сотрудника независимо от направления движений — проверяется на смешанной
+// ленте с движениями service и shop; фильтры не влияют на остаток, но дают
+// итог по выборке; строка ленты не раскрывается — у движения начисления
+// есть ссылка на документ (accrualId).
 describe('GetEmployeeBalanceService', () => {
     const transaction = (
         overrides: Partial<BalanceTransactionProps> & { amount: number },
@@ -33,15 +33,11 @@ describe('GetEmployeeBalanceService', () => {
 
     const build = () => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
-        const accrualRepo = new InMemorySalaryAccrualRepository();
-        const service = new GetEmployeeBalanceService(
-            transactionRepo,
-            accrualRepo,
-        );
-        return { service, transactionRepo, accrualRepo };
+        const service = new GetEmployeeBalanceService(transactionRepo);
+        return { service, transactionRepo };
     };
 
-    it('остаток = сумма смешанной ленты; чужие сотрудник/направление не учитываются', async () => {
+    it('остаток = SUM всей ленты сотрудника независимо от направления движений; чужой сотрудник не учитывается', async () => {
         const { service, transactionRepo } = build();
         await transactionRepo.insertMany([
             transaction({ amount: 2000 }),
@@ -52,23 +48,24 @@ describe('GetEmployeeBalanceService', () => {
                 type: 'PENALTY',
                 comment: 'Опоздание',
             }),
-            // Другое направление и другой сотрудник — не в остатке service/42.
-            transaction({ amount: 9999, direction: 'shop' }),
+            // Движение направления shop — В ТОМ ЖЕ остатке: баланс общий,
+            // direction — лишь атрибут происхождения (Фаза 8b).
+            transaction({ amount: 1000, direction: 'shop' }),
+            // Другой сотрудник — не в остатке 42-го.
             transaction({ amount: 7777, employeeId: 43 }),
         ]);
 
-        const response = await service.execute('service', 42, {});
+        const response = await service.execute(42, {});
 
-        expect(response.balance).toBe(2000 - 500 + 300 - 100);
+        expect(response.balance).toBe(2000 - 500 + 300 - 100 + 1000);
         expect(response.selectionTotal).toBe(response.balance);
-        expect(response.transactions).toHaveLength(4);
+        expect(response.transactions).toHaveLength(5);
         expect(response.employeeId).toBe(42);
-        expect(response.direction).toBe('service');
     });
 
     it('сотрудник без движений — остаток 0 и пустая лента, не ошибка', async () => {
         const { service } = build();
-        const response = await service.execute('service', 42, {});
+        const response = await service.execute(42, {});
         expect(response).toMatchObject({
             balance: 0,
             selectionTotal: 0,
@@ -91,18 +88,19 @@ describe('GetEmployeeBalanceService', () => {
             transaction({
                 amount: -300,
                 type: 'ADVANCE',
+                direction: 'shop',
                 occurredAt: new Date('2026-08-05'),
             }),
         ]);
 
-        const byType = await service.execute('service', 42, {
+        const byType = await service.execute(42, {
             types: ['ADVANCE'],
         });
         expect(byType.balance).toBe(1200);
         expect(byType.selectionTotal).toBe(-800);
         expect(byType.transactions).toHaveLength(2);
 
-        const byRange = await service.execute('service', 42, {
+        const byRange = await service.execute(42, {
             from: new Date('2026-07-01'),
             to: new Date('2026-07-31'),
         });
@@ -110,8 +108,8 @@ describe('GetEmployeeBalanceService', () => {
         expect(byRange.transactions).toHaveLength(2);
     });
 
-    it('движение начисления раскрывается до строки документа (правило и источники идентичны строке)', async () => {
-        const { service, transactionRepo, accrualRepo } = build();
+    it('движение начисления несёт ссылку на документ (accrualId), лента не раскрывается', async () => {
+        const { service, transactionRepo } = build();
         const accrual = withRequestContext(() =>
             SalaryAccrual.createFromSnapshot({
                 direction: 'service',
@@ -133,7 +131,6 @@ describe('GetEmployeeBalanceService', () => {
                 ],
             }),
         );
-        accrualRepo.store.set(accrual.id, accrual);
         const line = accrual.lines[0];
         await transactionRepo.insertMany(
             withRequestContext(() =>
@@ -141,17 +138,18 @@ describe('GetEmployeeBalanceService', () => {
             ),
         );
 
-        const response = await service.execute('service', 42, {});
+        const response = await service.execute(42, {});
 
         expect(response.transactions).toHaveLength(1);
-        expect(response.transactions[0].accrualLine).toMatchObject({
-            id: line.id,
-            ruleId: 'rule-1',
-            name: 'Почасовая ставка',
-            type: 'PayPerHour',
+        expect(response.transactions[0]).toMatchObject({
+            type: 'SALARY_ACCRUAL',
             amount: 2000,
-            sources: line.sources,
+            accrualId: accrual.id,
+            lineId: line.id,
+            ruleId: 'rule-1',
         });
-        expect(response.transactions[0].isReversed).toBe(false);
+        // Детализация начисления живёт в документе — в ответе ленты нет
+        // раскрытия строки (Фаза 8b).
+        expect(response.transactions[0]).not.toHaveProperty('accrualLine');
     });
 });

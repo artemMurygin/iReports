@@ -261,12 +261,11 @@ describe('Проведение строк: close → accrue → balance → unac
         // До проведения баланс пуст.
         const emptyBalance = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/42')
+                .get('/v1/accounting/balance/employee/42')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(emptyBalance).toMatchObject({
             employeeId: 42,
-            direction: 'service',
             balance: 0,
             transactions: [],
         });
@@ -286,7 +285,7 @@ describe('Проведение строк: close → accrue → balance → unac
 
         const balance = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/42')
+                .get('/v1/accounting/balance/employee/42')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balance.balance).toBe(2000);
@@ -301,15 +300,11 @@ describe('Проведение строк: close → accrue → balance → unac
             accrualId,
             lineId,
             createdBy: 7,
-            isReversed: false,
         });
-        // Раскрытие начисления до строки документа — идентично карточке.
-        expect(balance.transactions[0].accrualLine).toMatchObject({
-            id: lineId,
-            type: 'PayPerHour',
-            name: 'Почасовая ставка',
-            amount: 2000,
-        });
+        // Лента не раскрывается (Фаза 8b): детализация начисления живёт в
+        // документе, движение ведёт на него ссылкой accrualId (проверена
+        // выше), поля accrualLine в ответе нет.
+        expect(balance.transactions[0]).not.toHaveProperty('accrualLine');
 
         // Повторное проведение той же строки → 409, второго движения нет.
         await request(app.getHttpServer())
@@ -347,7 +342,7 @@ describe('Проведение строк: close → accrue → balance → unac
 
         const balanceAfter = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/42')
+                .get('/v1/accounting/balance/employee/42')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balanceAfter.balance).toBe(0);
@@ -416,7 +411,7 @@ describe('Проведение строк: close → accrue → balance → unac
 
         const balance = (
             await request(app.getHttpServer())
-                .get('/v1/service/accounting/balance/employee/42')
+                .get('/v1/accounting/balance/employee/42')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balance.transactions).toHaveLength(2);
@@ -442,7 +437,7 @@ describe('Проведение строк: close → accrue → balance → unac
         const filtered = (
             await request(app.getHttpServer())
                 .get(
-                    '/v1/service/accounting/balance/employee/42?types=ACCRUAL_ADJUSTMENT',
+                    '/v1/accounting/balance/employee/42?types=ACCRUAL_ADJUSTMENT',
                 )
                 .expect(200)
         ).body as EmployeeBalanceResponse;

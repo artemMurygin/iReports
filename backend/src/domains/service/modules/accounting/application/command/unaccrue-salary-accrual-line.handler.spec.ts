@@ -14,7 +14,7 @@ import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accou
 import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
 
 // Отмена начисления (PRD 2, Фаза 6): движения SALARY_ACCRUAL и
-// ACCRUAL_ADJUSTMENT строки удаляются с баланса (не сторно), строка
+// ACCRUAL_ADJUSTMENT строки удаляются с баланса без следа, строка
 // возвращается в DRAFT и снова доступна для корректировки и проведения.
 describe('UnaccrueSalaryAccrualLineHandler', () => {
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
@@ -100,7 +100,7 @@ describe('UnaccrueSalaryAccrualLineHandler', () => {
 
             const response = await handler.execute(unaccrue(accrual, line.id));
 
-            // Оба движения строки удалены — не сторнированы: следа в ленте
+            // Оба движения строки удалены полностью: следа в ленте
             // не остаётся (PRD 2, единственное исключение из
             // неизменяемости ленты).
             expect(transactionRepo.store.size).toBe(0);

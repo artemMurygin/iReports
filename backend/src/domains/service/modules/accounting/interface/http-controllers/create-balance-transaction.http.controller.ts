@@ -11,17 +11,17 @@ import { CreateBalanceTransactionDto } from '../dto/create-balance-transaction.d
 export class CreateBalanceTransactionHttpController {
     constructor(private readonly commandBus: CommandBus) {}
 
-    @Post(routesV1.service.accounting.balance.employeeTransactions)
+    @Post(routesV1.accounting.balance.employeeTransactions)
     @ApiOperation({
         summary:
-            'Ручное движение по балансу сотрудника (service): аванс/доп. аванс/премия/больничный/отпускные/штраф/корректировка',
+            'Ручное движение по общему балансу сотрудника: аванс/доп. аванс/премия/больничный/отпускные/штраф/корректировка; direction — атрибут происхождения из тела',
     })
     async create(
         @Param('id', ParseIntPipe) id: number,
         @Body() body: CreateBalanceTransactionDto,
     ): Promise<BalanceTransaction> {
         const command = new CreateBalanceTransactionCommand({
-            direction: 'service',
+            direction: body.direction,
             employeeId: id,
             type: body.type,
             amount: body.amount,

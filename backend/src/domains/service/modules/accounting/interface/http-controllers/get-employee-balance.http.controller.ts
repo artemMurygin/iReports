@@ -12,10 +12,10 @@ export class GetEmployeeBalanceHttpController {
         private readonly getEmployeeBalance: GetEmployeeBalanceService,
     ) {}
 
-    @Get(routesV1.service.accounting.balance.employee)
+    @Get(routesV1.accounting.balance.employee)
     @ApiOperation({
         summary:
-            'Баланс сотрудника направления service: остаток (SUM ленты) и движения с фильтрами',
+            'Общий баланс сотрудника: остаток (SUM всей ленты по employeeId, без деления на направления) и движения с фильтрами',
     })
     async get(
         @Param('id', ParseIntPipe) id: number,
@@ -23,7 +23,7 @@ export class GetEmployeeBalanceHttpController {
     ): Promise<EmployeeBalanceResponse> {
         // Даты в query — ISO-строки (см. getEmployeeBalanceQuerySchema:
         // z.coerce.date() ломает генерацию OpenAPI), в фильтр порта — Date.
-        return this.getEmployeeBalance.execute('service', id, {
+        return this.getEmployeeBalance.execute(id, {
             from: query.from ? new Date(query.from) : undefined,
             to: query.to ? new Date(query.to) : undefined,
             types: query.types,

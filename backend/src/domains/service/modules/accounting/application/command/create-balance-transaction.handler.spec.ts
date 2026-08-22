@@ -66,8 +66,6 @@ describe('CreateBalanceTransactionHandler', () => {
                 direction: 'service',
                 createdBy: 7,
                 erpSyncRequired: false,
-                isReversed: false,
-                accrualLine: null,
             });
             expect(transactionRepo.store.size).toBe(1);
         },
@@ -107,7 +105,7 @@ describe('CreateBalanceTransactionHandler', () => {
         });
     });
 
-    it('PENALTY и ADJUSTMENT без комментария отклоняются (400), сторно-типа среди ручных нет', async () => {
+    it('PENALTY и ADJUSTMENT без комментария отклоняются (400)', async () => {
         const { handler, transactionRepo } = build();
 
         await withRequestContext(async () => {
@@ -175,8 +173,6 @@ describe('CreateBalanceTransactionHandler', () => {
             );
         });
 
-        await expect(
-            transactionRepo.sumByEmployee('service', 42),
-        ).resolves.toBe(-7000);
+        await expect(transactionRepo.sumByEmployee(42)).resolves.toBe(-7000);
     });
 });

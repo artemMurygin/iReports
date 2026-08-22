@@ -4,9 +4,10 @@ import {
 } from '../../../../../../../prisma/generated/prisma/schema/client';
 import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
 
-// Движение ленты неизменяемо (нет update — только insert и, для движений
-// начисления, delete при отмене), поэтому toPersistence отдаёт плоский
-// CreateManyInput; updatedAt у модели нет намеренно.
+// У движения ленты нет update (только insert и delete: отмена начисления
+// удаляет движения строки, ошибочное ручное движение удаляется напрямую —
+// Фаза 8b), поэтому toPersistence отдаёт плоский CreateManyInput;
+// updatedAt у модели нет намеренно.
 export class BalanceTransactionMapper {
     toDomain(record: BalanceTransactionRecord): BalanceTransaction {
         return new BalanceTransaction({
@@ -25,8 +26,6 @@ export class BalanceTransactionMapper {
                 accrualId: record.accrualId ?? undefined,
                 lineId: record.lineId ?? undefined,
                 ruleId: record.ruleId ?? undefined,
-                reversedTransactionId:
-                    record.reversedTransactionId ?? undefined,
                 erpSyncRequired: record.erpSyncRequired,
             },
         });
@@ -48,7 +47,6 @@ export class BalanceTransactionMapper {
             accrualId: entity.accrualId ?? null,
             lineId: entity.lineId ?? null,
             ruleId: entity.ruleId ?? null,
-            reversedTransactionId: entity.reversedTransactionId ?? null,
             erpSyncRequired: entity.erpSyncRequired,
             createdAt: entity.createdAt,
         };

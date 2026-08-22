@@ -18,6 +18,14 @@ const directoryRoot = `/${v1}/directory`;
 // directoryRoot выше.
 const workScheduleRoot = `/${v1}/work-schedule`;
 
+// Баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual, Фаза 8b) —
+// баланс ОБЩИЙ по сотруднику: один остаток и одна лента на employeeId, без
+// деления на направления, поэтому и эндпоинты общие — под /v1/accounting,
+// вне префиксов /v1/service и /v1/shop (тот же приём, что directoryRoot/
+// workScheduleRoot выше). direction движения — лишь атрибут происхождения,
+// в путь он не входит.
+const accountingBalanceRoot = `/${v1}/accounting/balance`;
+
 // Направление service — все маршруты домена domains/service под общим
 // префиксом /v1/service, чтобы направление было видно уже в пути, а не
 // только в query/имени модуля (см. shopAccounting/shopWarehouse ниже,
@@ -132,6 +140,19 @@ export const routesV1 = {
         // источник данных мобильного экрана «Отдел сегодня».
         shift: `${workScheduleRoot}/shift`,
     },
+    // Общий баланс сотрудника (PRD 2, Фаза 8b, см. комментарий у
+    // accountingBalanceRoot выше): остаток и лента по employeeId,
+    // ручные движения (employeeTransactions), удаление ошибочного ручного
+    // движения (transactionById — DELETE; PATCH движения не существует)
+    // и сводка по отделу (department).
+    accounting: {
+        balance: {
+            employee: `${accountingBalanceRoot}/employee/:id`,
+            employeeTransactions: `${accountingBalanceRoot}/employee/:id/transactions`,
+            transactionById: `${accountingBalanceRoot}/transactions/:id`,
+            department: `${accountingBalanceRoot}/department/:id/:period`,
+        },
+    },
     // Маршруты этого блока были закрыты PortalAdminGuard (Фаза 2,
     // docs/payroll/prd-payroll-calculation.md, раздел 1), но ограничение снято
     // по решению пользователя — гард закомментирован на контроллерах, см.
@@ -202,17 +223,8 @@ export const routesV1 = {
                 lineAccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
                 lineUnaccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
             },
-            // Баланс сотрудника (PRD 2, Фаза 6) — остаток и лента движений
-            // по направлению service. Фаза 7: ручные движения
-            // (employeeTransactions), сторно (reverseTransaction — PATCH/
-            // DELETE движения не существует) и сводка по отделу
-            // (department). Зеркало — shop.accounting.balance.
-            balance: {
-                employee: `${serviceAccountingRoot}/balance/employee/:id`,
-                employeeTransactions: `${serviceAccountingRoot}/balance/employee/:id/transactions`,
-                reverseTransaction: `${serviceAccountingRoot}/balance/transactions/:id/reverse`,
-                department: `${serviceAccountingRoot}/balance/department/:id/:period`,
-            },
+            // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
+            // маршруты живут вне направления: см. routesV1.accounting.balance.
         },
         // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
         // направление в query (см. listSalesPerformanceQuerySchema).
@@ -344,15 +356,8 @@ export const routesV1 = {
                 lineAccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
                 lineUnaccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
             },
-            // Баланс сотрудника направления shop (PRD 2, Фаза 6); Фаза 7 —
-            // ручные движения, сторно и сводка по отделу, зеркало
-            // service.accounting.balance.
-            balance: {
-                employee: `${shopAccountingRoot}/balance/employee/:id`,
-                employeeTransactions: `${shopAccountingRoot}/balance/employee/:id/transactions`,
-                reverseTransaction: `${shopAccountingRoot}/balance/transactions/:id/reverse`,
-                department: `${shopAccountingRoot}/balance/department/:id/:period`,
-            },
+            // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
+            // маршруты живут вне направления: см. routesV1.accounting.balance.
         },
         // Каталог (дерево категорий) магазина (Фаза 1, см.
         // domains/shop/modules/warehouse) — читает уже синхронизированную

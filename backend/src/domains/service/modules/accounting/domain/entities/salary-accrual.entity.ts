@@ -137,7 +137,7 @@ export class SalaryAccrual extends AggregateRoot<SalaryAccrualProps> {
     }
 
     // Отмена начисления (PRD 2): строка возвращается в DRAFT (её движения
-    // хендлер удаляет с баланса — не сторнирует: начисление до выплаты —
+    // хендлер удаляет с баланса без следа: начисление до выплаты —
     // черновик расчёта, а не факт движения денег). Запрещена для PAID.
     unaccrueLine(lineId: string): SalaryAccrualLine {
         this.ensureNotPaid();

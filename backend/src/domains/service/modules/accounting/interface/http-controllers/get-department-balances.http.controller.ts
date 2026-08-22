@@ -11,15 +11,15 @@ export class GetDepartmentBalancesHttpController {
         private readonly getDepartmentBalances: GetDepartmentBalancesService,
     ) {}
 
-    @Get(routesV1.service.accounting.balance.department)
+    @Get(routesV1.accounting.balance.department)
     @ApiOperation({
         summary:
-            'Сводка балансов по отделу за месяц (service): остаток/начислено/авансы/ручные по сотрудникам текущего отдела Bitrix24 и итог',
+            'Сводка общих балансов по отделу за месяц: остаток/начислено/авансы/ручные по сотрудникам текущего отдела Bitrix24 и итог',
     })
     async get(
         @Param('id', ParseIntPipe) id: number,
         @Param('period') period: string,
     ): Promise<DepartmentBalancesResponse> {
-        return this.getDepartmentBalances.execute('service', id, period);
+        return this.getDepartmentBalances.execute(id, period);
     }
 }

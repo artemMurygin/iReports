@@ -27,7 +27,7 @@ const NO_EMPLOYEE_NAMES: Record<number, string> = {}
  * нет — собрано из тех же частей, что диалог закрытия (`Modal` `XttYX`, тот же
  * bottom-sheet на мобильном). Ошибка `409` с `metadata.accruals` (документы не в
  * «Черновике», см. salaryAccrualNotDraftRowSchema) разворачивается в перечень
- * «кто уже начислен» — переоткрытие возможно только после сторно начислений (PRD 2).
+ * «кто уже начислен» — переоткрытие возможно только после отмены начислений (PRD 2).
  */
 function ReopenPeriodDialog({
     open,
