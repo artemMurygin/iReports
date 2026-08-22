@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 
 import { cn } from '@/shared/lib/tw'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
@@ -9,6 +9,10 @@ import { formatPeriodLabel, isValidPeriod, shiftPeriod } from '@/features/SalesP
 export type PeriodPickerProps = {
     period: string
     onPeriodChange: (period: string) => void
+    /** Расчётный период выбранного месяца закрыт (Фаза 4 docs/payroll-closing-and-accrual):
+     * чип меняет иконку календаря на замок c `info-ink` — «признак закрытого месяца в
+     * PeriodPicker» из плана; сам выбор месяца остаётся доступным. */
+    isClosed?: boolean
     className?: string
 }
 
@@ -50,7 +54,7 @@ export type PeriodPickerProps = {
  * draft value to the current `period` each time the popover opens, so a value typed and then
  * abandoned in a previous open doesn't linger stale.
  */
-function PeriodPicker({ period, onPeriodChange, className }: PeriodPickerProps) {
+function PeriodPicker({ period, onPeriodChange, isClosed = false, className }: PeriodPickerProps) {
     const [manualValue, setManualValue] = useState(period)
 
     function apply(candidate: string) {
@@ -67,12 +71,17 @@ function PeriodPicker({ period, onPeriodChange, className }: PeriodPickerProps) 
             <PopoverTrigger asChild>
                 <button
                     type="button"
+                    title={isClosed ? 'Месяц закрыт' : undefined}
                     className={cn(
                         'flex shrink-0 items-center gap-2 rounded-[7px] border border-hairline bg-surface px-2.5 py-[5px] transition-colors hover:bg-canvas',
                         className,
                     )}
                 >
-                    <Calendar className="size-[13px] text-ink-muted" />
+                    {isClosed ? (
+                        <Lock className="size-[13px] text-info-ink" />
+                    ) : (
+                        <Calendar className="size-[13px] text-ink-muted" />
+                    )}
                     <span className="font-ui text-xs font-medium text-ink">Период: {formatPeriodLabel(period)}</span>
                 </button>
             </PopoverTrigger>

@@ -26,18 +26,26 @@ import { cn } from '@/shared/lib/tw'
  * 18px padding and got ellipsis-truncated — sizing down under `md:` (rather than introducing a
  * second component) fixes that and matches the design's own smaller mobile value size.
  */
-export type KpiCardTone = 'default' | 'positive' | 'warning'
+/**
+ * `danger` — добавлен диалогом закрытия месяца (Фаза 4 docs/payroll-closing-and-accrual,
+ * узлы `KPPJ5`/`hhWeF`): карточка «Неутверждённых строк плана» с красной подписью
+ * «закрытие заблокировано» и розоватой рамкой. Симметричен `positive`
+ * (цветная рамка + цветная note), только на danger-токенах.
+ */
+export type KpiCardTone = 'default' | 'positive' | 'warning' | 'danger'
 
 const TONE_BORDER: Record<KpiCardTone, string> = {
     default: 'border-hairline',
     positive: 'border-brand-border',
     warning: 'border-hairline',
+    danger: 'border-danger/25',
 }
 
 const TONE_NOTE: Record<KpiCardTone, string> = {
     default: 'text-ink-muted',
     positive: 'text-ok-ink',
     warning: 'text-warn-ink',
+    danger: 'text-danger',
 }
 
 export type KpiCardProps = {

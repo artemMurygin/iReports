@@ -16,6 +16,7 @@ export { useApproveSalesPlanRows } from './model/useApproveSalesPlanRows.ts'
 // (отчёт по зарплате), вместо дублирования тех же однострочников в новой странице.
 export {
     formatPeriodLabel,
+    formatPeriodMonthName,
     isValidPeriod,
     shiftPeriod,
     formatCurrency,
