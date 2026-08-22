@@ -1,5 +1,6 @@
 import { Store, Wrench } from 'lucide-react'
 
+import { AccrualStatusBadge } from '@/features/SalaryAccruals'
 import { formatCurrency } from '@/features/SalesPlan'
 import { pluralizeRules } from '@/kernel/pluralizeRules.ts'
 import { cn } from '@/shared/lib/tw'
@@ -41,6 +42,10 @@ export function DirectionSection({ report, isRuleExpanded, onToggleRule, classNa
                         <span className="font-ui text-base font-bold text-ink">{report.label}</span>
                         <span className="font-ui text-xs text-ink-muted">{pluralizeRules(report.rules.length)}</span>
                     </div>
+                    {/* Статус документа начисления за закрытый период (Фаза 5
+                        docs/payroll-closing-and-accrual, PRD 1 «Отчёт сотрудника»): бейдж
+                        «Черновик → … → Выплачено»; null — период открыт или документа нет. */}
+                    {report.accrualStatus !== null && <AccrualStatusBadge status={report.accrualStatus} />}
                 </div>
 
                 <div className="flex items-center gap-5">

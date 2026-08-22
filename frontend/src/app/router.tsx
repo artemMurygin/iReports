@@ -7,6 +7,8 @@ import { SalaryRulesPage } from '@/pages/SalaryRules'
 import { SalaryRuleListPage } from '@/pages/SalaryRuleList'
 import { SalaryRuleDetailPage } from '@/pages/SalaryRuleDetail'
 import { SalaryReportPage } from '@/pages/SalaryReport'
+import { SalaryAccrualsPage } from '@/pages/SalaryAccruals'
+import { SalaryAccrualDocumentPage } from '@/pages/SalaryAccrualDocument'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
 import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
@@ -56,6 +58,21 @@ export const router = createBrowserRouter([
                 // таблицы «сотрудники × дни месяца».
                 path: 'work-schedule/today',
                 element: <WorkScheduleTodayPage />,
+            },
+            {
+                // Фаза 5 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual) —
+                // список документов начисления закрытого месяца. Адрес с query
+                // `?period=YYYY-MM&direction=` уже собирают переход после закрытия месяца и кнопка
+                // «Начисления за {месяц}» на странице плана продаж (Фаза 4, useSalesPlanPage).
+                path: 'salary-accruals',
+                element: <SalaryAccrualsPage />,
+            },
+            {
+                // Карточка документа начисления. Направление — query-параметр `?direction=`
+                // (GET живёт под префиксом направления), а не сегмент пути — путь задан планом
+                // Фазы 5 буквально как '/salary-accruals/:id'.
+                path: 'salary-accruals/:id',
+                element: <SalaryAccrualDocumentPage />,
             },
             {
                 path: 'salaries/rules',

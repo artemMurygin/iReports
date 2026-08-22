@@ -1,4 +1,5 @@
 import {
+    Banknote,
     CalendarCheck,
     CalendarClock,
     ChartNoAxesColumn,
@@ -78,6 +79,11 @@ export const SECTIONS: NavSection[] = [
         icon: <Wallet />,
         items: [
             { label: 'Отчёт по зарплате', to: '/salaries', icon: <Receipt /> },
+            // Фаза 5 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual):
+            // список документов начисления закрытого месяца (`pages/SalaryAccruals`). Через
+            // `SECTIONS` пункт автоматически попадает в Subnav десктопа (app/Header.tsx), в
+            // мобильную шторку (`DRAWER_SECTIONS`) и, через раздел «Зарплата», в Bottom Nav.
+            { label: 'Начисления', to: '/salary-accruals', icon: <Banknote /> },
             { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
             { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
         ],
