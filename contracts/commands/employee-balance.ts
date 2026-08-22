@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { periodSchema, salesDirectionSchema } from './sales-plan';
 import { salaryAccrualLineSchema } from './salary-accrual';
+import { salaryAccrualStatusSchema } from './salary-accrual-status';
 
 // Баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual/
 // prd-salary-accrual-and-employee-balance.md) — лента движений денег между
@@ -114,9 +115,149 @@ export type EmployeeBalanceResponse = z.infer<
     typeof employeeBalanceResponseSchema
 >;
 
+// ========================== Ручные движения (Фаза 7) ========================== //
+
+// POST /v1/{direction}/accounting/balance/employee/:id/transactions —
+// ручное движение руководителя (PRD 2, таблица типов). Знак определяется
+// типом: ADVANCE/EXTRA_ADVANCE/PENALTY — расход, BONUS/SICK_LEAVE/
+// VACATION_PAY — приход; клиент передаёт абсолютную величину (> 0), сервер
+// подставляет знак. Для ADJUSTMENT знак задаётся явно — amount со знаком
+// (≠ 0). SALARY_ACCRUAL/ACCRUAL_ADJUSTMENT рождаются только проведением
+// строки, MANUAL_REVERSAL — только сторно, PAYOUT — PRD 3, поэтому в
+// перечне ручных типов их нет.
+const manualBalanceTransactionTypeSchema = z.enum([
+    'ADVANCE',
+    'EXTRA_ADVANCE',
+    'BONUS',
+    'SICK_LEAVE',
+    'VACATION_PAY',
+    'PENALTY',
+    'ADJUSTMENT',
+]);
+export type ManualBalanceTransactionType = z.infer<
+    typeof manualBalanceTransactionTypeSchema
+>;
+
+// occurredAt — ISO-строка (не z.coerce.date(): DTO идёт в генерацию
+// OpenAPI, см. комментарий к getEmployeeBalanceQuerySchema выше); дата
+// задним числом разрешена, в т.ч. внутри закрытого месяца — снапшот и
+// документы начисления закрытого периода при этом не меняются (PRD 2).
+// Обязательность комментария для PENALTY/ADJUSTMENT проверяется и здесь
+// (400 на границе HTTP), и в домене. erpSyncRequired в этой итерации
+// только хранится и показывается — синхронизация с кассой ERP в PRD 3.
+const createBalanceTransactionRequestSchema = z
+    .object({
+        type: manualBalanceTransactionTypeSchema,
+        amount: z.number().int(),
+        occurredAt: isoDateStringSchema.optional(),
+        comment: z.string().optional(),
+        period: periodSchema.optional(),
+        createdBy: z.number(),
+        erpSyncRequired: z.boolean().optional(),
+    })
+    .superRefine((value, ctx) => {
+        if (value.type === 'ADJUSTMENT') {
+            if (value.amount === 0) {
+                ctx.addIssue({
+                    code: 'custom',
+                    path: ['amount'],
+                    message:
+                        'Сумма корректировки не может быть нулевой — знак задаётся явно',
+                });
+            }
+        } else if (value.amount <= 0) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['amount'],
+                message:
+                    'Сумма движения — положительное число: знак подставляется по типу',
+            });
+        }
+        if (
+            (value.type === 'PENALTY' || value.type === 'ADJUSTMENT') &&
+            (!value.comment || value.comment.trim().length === 0)
+        ) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['comment'],
+                message:
+                    'Для штрафа и корректировки комментарий с причиной обязателен',
+            });
+        }
+    });
+export type CreateBalanceTransactionRequest = z.infer<
+    typeof createBalanceTransactionRequestSchema
+>;
+
+// POST /v1/{direction}/accounting/balance/transactions/:id/reverse —
+// сторно ручного движения (MANUAL_REVERSAL): единственный способ исправить
+// ручное движение без документа ERP (PATCH/DELETE движения не существует).
+// Комментарий обязателен; сторно — всегда точная противоположность
+// исходной суммы, поэтому суммы в запросе нет.
+const reverseBalanceTransactionRequestSchema = z.object({
+    comment: z.string().min(1),
+    createdBy: z.number(),
+});
+export type ReverseBalanceTransactionRequest = z.infer<
+    typeof reverseBalanceTransactionRequestSchema
+>;
+
+// ========================== Сводка по отделу ========================== //
+
+// GET /v1/{direction}/accounting/balance/department/:id/:period — балансы
+// сотрудников текущего отдела (отдел — из Bitrix24 на момент запроса, в
+// движении не хранится, PRD 2). Суммы со знаком, как в ленте: advances и
+// manual у расходов отрицательные. accrued — движения начисления
+// (SALARY_ACCRUAL/ACCRUAL_ADJUSTMENT) запрошенного периода (по полю period
+// движения); advances — ADVANCE/EXTRA_ADVANCE с датой движения внутри
+// месяца; manual — остальные ручные типы и сторно (BONUS/SICK_LEAVE/
+// VACATION_PAY/PENALTY/ADJUSTMENT/MANUAL_REVERSAL) с датой внутри месяца.
+// balance — SUM всей ленты пары, от периода не зависит. accrualStatus —
+// статус документа начисления сотрудника за период (null — документа нет).
+const departmentEmployeeBalanceSchema = z.object({
+    employeeId: z.number(),
+    employeeName: z.string(),
+    balance: z.number(),
+    accrued: z.number(),
+    advances: z.number(),
+    manual: z.number(),
+    accrualStatus: salaryAccrualStatusSchema.nullable(),
+});
+export type DepartmentEmployeeBalance = z.infer<
+    typeof departmentEmployeeBalanceSchema
+>;
+
+const departmentBalancesTotalsSchema = z.object({
+    balance: z.number(),
+    accrued: z.number(),
+    advances: z.number(),
+    manual: z.number(),
+});
+export type DepartmentBalancesTotals = z.infer<
+    typeof departmentBalancesTotalsSchema
+>;
+
+// Итог по отделу — сумма строк сотрудников (инвариант проверяется тестом).
+const departmentBalancesResponseSchema = z.object({
+    departmentId: z.number(),
+    direction: salesDirectionSchema,
+    period: periodSchema,
+    employees: z.array(departmentEmployeeBalanceSchema),
+    totals: departmentBalancesTotalsSchema,
+});
+export type DepartmentBalancesResponse = z.infer<
+    typeof departmentBalancesResponseSchema
+>;
+
 export {
     balanceTransactionTypeSchema,
     balanceTransactionSchema,
     getEmployeeBalanceQuerySchema,
     employeeBalanceResponseSchema,
+    manualBalanceTransactionTypeSchema,
+    createBalanceTransactionRequestSchema,
+    reverseBalanceTransactionRequestSchema,
+    departmentEmployeeBalanceSchema,
+    departmentBalancesTotalsSchema,
+    departmentBalancesResponseSchema,
 };

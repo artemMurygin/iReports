@@ -38,7 +38,12 @@ model BalanceTransaction {
   accrualId             String? @map("accrual_id")
   lineId                String? @map("line_id")
   ruleId                String? @map("rule_id")
-  reversedTransactionId String? @map("reversed_transaction_id")
+  // @unique — идемпотентность сторно на уровне БД (Фаза 7), тот же приём,
+  // что (lineId, type) для проведения: два параллельных reverse одного
+  // движения не создадут второго MANUAL_REVERSAL (P2002 мапится в 409
+  // «уже сторнировано»). Поле заполнено только у MANUAL_REVERSAL, NULL под
+  // ограничение не попадает.
+  reversedTransactionId String? @unique @map("reversed_transaction_id")
 
   // Признак «должно отражаться в кассе ERP» — в PRD 2 только хранится,
   // сама синхронизация — PRD 3.

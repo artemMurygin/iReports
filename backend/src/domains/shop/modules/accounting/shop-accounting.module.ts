@@ -43,6 +43,11 @@ import { AccrueShopSalaryAccrualLineHttpController } from '@/domains/shop/module
 import { UnaccrueShopSalaryAccrualLineHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/unaccrue-shop-salary-accrual-line.http.controller';
 import { AdjustShopSalaryAccrualLineHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/adjust-shop-salary-accrual-line.http.controller';
 import { GetShopEmployeeBalanceHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-employee-balance.http.controller';
+import { AccrueShopSalaryAccrualDocumentHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accrue-shop-salary-accrual-document.http.controller';
+import { AccruePeriodShopSalaryAccrualsHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accrue-period-shop-salary-accruals.http.controller';
+import { CreateShopBalanceTransactionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-balance-transaction.http.controller';
+import { ReverseShopBalanceTransactionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/reverse-shop-balance-transaction.http.controller';
+import { GetShopDepartmentBalancesHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-department-balances.http.controller';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-rule.port';
 import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-task-completion.port';
@@ -55,6 +60,7 @@ import { GetAccountingPeriodService } from '@/domains/service/modules/accounting
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
 import { GetEmployeeBalanceService } from '@/domains/service/modules/accounting/application/services/get-employee-balance.service';
+import { GetDepartmentBalancesService } from '@/domains/service/modules/accounting/application/services/get-department-balances.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
@@ -183,6 +189,15 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         AccrueShopSalaryAccrualLineHttpController,
         UnaccrueShopSalaryAccrualLineHttpController,
         AdjustShopSalaryAccrualLineHttpController,
+        // Фаза 7 PRD 2: массовое проведение, ручные движения и сторно —
+        // тонкие контроллеры поверх generic по direction команд (общий
+        // CommandBus, хендлеры в AccountingModule сервиса); сводка отдела —
+        // свой экземпляр generic-сервиса чтения (см. providers).
+        AccrueShopSalaryAccrualDocumentHttpController,
+        AccruePeriodShopSalaryAccrualsHttpController,
+        CreateShopBalanceTransactionHttpController,
+        ReverseShopBalanceTransactionHttpController,
+        GetShopDepartmentBalancesHttpController,
         GetShopEmployeeBalanceHttpController,
         GetShopClosePeriodPreviewHttpController,
     ],
@@ -229,6 +244,7 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         ListSalaryAccrualsService,
         GetSalaryAccrualService,
         GetEmployeeBalanceService,
+        GetDepartmentBalancesService,
         GetShopEmployeeSalaryReportService,
         GetShopDepartmentSalaryReportService,
         {

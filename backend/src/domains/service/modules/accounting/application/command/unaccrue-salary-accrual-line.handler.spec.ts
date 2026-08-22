@@ -136,13 +136,18 @@ describe('UnaccrueSalaryAccrualLineHandler', () => {
     it('после отмены строку можно скорректировать и провести заново', async () => {
         const accrual = buildAccrual();
         const line = accrual.lines[0];
-        const { handler, accrueHandler, transactionRepo } = build(accrual);
+        const { handler, accrueHandler, accrualRepo, transactionRepo } =
+            build(accrual);
 
         await withRequestContext(async () => {
             await accrueHandler.execute(accrue(accrual, line.id));
             await handler.execute(unaccrue(accrual, line.id));
 
-            accrual.adjustLine(line.id, 1800, 'Пересчёт после отмены', 7);
+            // Корректировка после отмены — через свежепрочитанный из
+            // репозитория агрегат (чтение отдаёт копии, как настоящая БД).
+            const stored = (await accrualRepo.findById(accrual.id))!;
+            stored.adjustLine(line.id, 1800, 'Пересчёт после отмены', 7);
+            await accrualRepo.save(stored);
             const response = await accrueHandler.execute(
                 accrue(accrual, line.id),
             );

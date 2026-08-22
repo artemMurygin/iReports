@@ -51,6 +51,34 @@ export interface BalanceTransactionRepositoryPort {
     // сторно ещё не создаётся (Фаза 7), но признак isReversed в ответе
     // вычисляется честно уже сейчас.
     findReversedIds(transactionIds: string[]): Promise<Set<string>>;
+
+    // Исходное движение для сторно (Фаза 7): null — не найдено. Повторная
+    // вставка сторно того же движения обязана бросить
+    // BalanceTransactionAlreadyReversedException (уникальное ограничение
+    // reversedTransactionId, реализация мапит P2002) — гонка параллельных
+    // reverse не создаёт второго MANUAL_REVERSAL.
+    findById(id: string): Promise<BalanceTransaction | null>;
+
+    // Остатки набора сотрудников для сводки отдела (Фаза 7) — один запрос
+    // groupBy на весь отдел, а не sumByEmployee в цикле (нет N+1);
+    // сотрудник без движений в карте отсутствует (остаток 0).
+    sumByEmployees(
+        direction: AccountingDirection,
+        employeeIds: number[],
+    ): Promise<Map<number, number>>;
+
+    // Движения сотрудников отдела, относящиеся к месяцу сводки (Фаза 7):
+    // датированные месяцем (occurredAt в [monthStart, monthEnd]) ИЛИ
+    // движения начисления запрошенного периода (period — у них occurredAt
+    // — момент проведения, который может быть в другом месяце).
+    // Классификацию по колонкам (начислено/авансы/ручные) делает сервис.
+    findForDepartmentSummary(
+        direction: AccountingDirection,
+        employeeIds: number[],
+        period: string,
+        monthStart: Date,
+        monthEnd: Date,
+    ): Promise<BalanceTransaction[]>;
 }
 
 export const BALANCE_TRANSACTION_REPOSITORY = Symbol(

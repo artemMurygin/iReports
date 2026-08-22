@@ -120,10 +120,10 @@ PRD 3: 11 BE адаптеры ERP → 12 BE выплата → 13 Design → 14 
 **Цель**: Полный набор операций PRD 2 на бэкенде.
 **Что затрагивает?** backend, contracts
 **Задачи:**
-- [ ] `POST .../salary_accruals/:id/accrue` (документ) и `POST .../salary_accruals/accrue?period` (месяц) — построчно в своих транзакциях, ответ с перечнем неудачных
-- [ ] `POST .../balance/employee/:id/transactions` — ручные движения `ADVANCE`, `EXTRA_ADVANCE`, `BONUS`, `SICK_LEAVE`, `VACATION_PAY`, `PENALTY`, `ADJUSTMENT`; знак по типу, для `ADJUSTMENT` явно; обязательный комментарий для `PENALTY`/`ADJUSTMENT`; дата задним числом разрешена; `erpSyncRequired` только хранится
-- [ ] `POST .../balance/transactions/:id/reverse` — `MANUAL_REVERSAL` только для ручных движений без документа ERP, обязательный комментарий, пометка исходного «сторнировано»; `PATCH`/`DELETE` движения не существует
-- [ ] `GET .../balance/department/:id/:period` — остаток / начислено / авансы / ручные по сотрудникам текущего отдела (из Bitrix24), итог по отделу
+- [x] `POST .../salary_accruals/:id/accrue` (документ) и `POST .../salary_accruals/accrue?period` (месяц) — построчно в своих транзакциях, ответ с перечнем неудачных
+- [x] `POST .../balance/employee/:id/transactions` — ручные движения `ADVANCE`, `EXTRA_ADVANCE`, `BONUS`, `SICK_LEAVE`, `VACATION_PAY`, `PENALTY`, `ADJUSTMENT`; знак по типу, для `ADJUSTMENT` явно; обязательный комментарий для `PENALTY`/`ADJUSTMENT`; дата задним числом разрешена; `erpSyncRequired` только хранится
+- [x] `POST .../balance/transactions/:id/reverse` — `MANUAL_REVERSAL` только для ручных движений без документа ERP, обязательный комментарий, пометка исходного «сторнировано»; `PATCH`/`DELETE` движения не существует
+- [x] `GET .../balance/department/:id/:period` — остаток / начислено / авансы / ручные по сотрудникам текущего отдела (из Bitrix24), итог по отделу
 **Тесты**: массовое проведение с инъекцией ошибки на одной строке → остальные проведены, ошибка в ответе; каждый тип ручного движения; `PENALTY` без комментария → `400`; сторно ручного и запрет сторно начисления/движения с ERP; движение в закрытом месяце не меняет снапшот; итоги отдела = сумма сотрудников.
 **Когда готово**: все эндпоинты PRD 2 работают; тесты зелёные.
 

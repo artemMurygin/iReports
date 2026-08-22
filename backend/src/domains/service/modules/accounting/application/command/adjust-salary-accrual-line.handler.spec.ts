@@ -90,7 +90,7 @@ describe('AdjustSalaryAccrualLineHandler', () => {
     it('хранит историю корректировок: вторая корректировка добавляет запись, а не затирает первую', async () => {
         const accrual = buildAccrual();
         const line = accrual.lines[0];
-        const { handler } = build(accrual);
+        const { handler, accrualRepo } = build(accrual);
 
         await withRequestContext(async () => {
             await handler.execute(
@@ -101,20 +101,24 @@ describe('AdjustSalaryAccrualLineHandler', () => {
             );
         });
 
-        expect(line.adjustments).toHaveLength(2);
-        expect(line.adjustments[0]).toMatchObject({
+        // История читается из сохранённого состояния (чтение репозитория
+        // отдаёт копии, как настоящая БД) — не из локального объекта теста.
+        const saved = (await accrualRepo.findById(accrual.id))!;
+        const savedLine = saved.lines.find((item) => item.id === line.id)!;
+        expect(savedLine.adjustments).toHaveLength(2);
+        expect(savedLine.adjustments[0]).toMatchObject({
             previousAmount: 2000,
             newAmount: 1500,
             comment: 'Первая корректировка',
             adjustedBy: 7,
         });
-        expect(line.adjustments[1]).toMatchObject({
+        expect(savedLine.adjustments[1]).toMatchObject({
             previousAmount: 1500,
             newAmount: 1800,
             comment: 'Вторая корректировка',
         });
-        expect(line.adjustmentComment).toBe('Вторая корректировка');
-        expect(line.amount).toBe(1800);
+        expect(savedLine.adjustmentComment).toBe('Вторая корректировка');
+        expect(savedLine.amount).toBe(1800);
     });
 
     it('корректировка проведённой строки → 409', async () => {

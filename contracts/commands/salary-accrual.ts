@@ -133,6 +133,55 @@ export type AdjustSalaryAccrualLineRequest = z.infer<
     typeof adjustSalaryAccrualLineRequestSchema
 >;
 
+// ========================== Массовое проведение (Фаза 7) ========================== //
+
+// Строка перечня неудачных при массовом проведении («Начислить всё» /
+// «Начислить все документы месяца», PRD 2): каждая строка либо проведена
+// вместе со своим движением, либо попала сюда — частичный сбой не оставляет
+// половину строк проведёнными без записи об ошибке. ФИО и название правила
+// — для модалки результата (P2.1: «ФИО, правило, текст ошибки»).
+const salaryAccrualLineFailureSchema = z.object({
+    accrualId: z.string(),
+    employeeId: z.number(),
+    employeeName: z.string(),
+    lineId: z.string(),
+    ruleName: z.string(),
+    message: z.string(),
+});
+export type SalaryAccrualLineFailure = z.infer<
+    typeof salaryAccrualLineFailureSchema
+>;
+
+// POST .../salary_accruals/:id/accrue — «Начислить всё» по документу:
+// обновлённая карточка + перечень строк, которые провести не удалось.
+// Тело запроса — accrueSalaryAccrualLineRequestSchema ({ accruedBy }).
+const accrueSalaryAccrualDocumentResponseSchema = z.object({
+    accrual: salaryAccrualResponseSchema,
+    failures: z.array(salaryAccrualLineFailureSchema),
+});
+export type AccrueSalaryAccrualDocumentResponse = z.infer<
+    typeof accrueSalaryAccrualDocumentResponseSchema
+>;
+
+// POST .../salary_accruals/accrue?period — «Начислить все документы
+// месяца»: статистика для модалки результата («Начислено N из M документов
+// на X ₽») + перечень ошибок. documentsCount — документов направления за
+// период; accruedDocumentsCount — полностью проведённых после операции
+// (ACCRUED или PAID); accruedLinesCount/accruedAmount — строки, проведённые
+// именно этой операцией, и их действующая сумма.
+const accruePeriodSalaryAccrualsResponseSchema = z.object({
+    direction: salesDirectionSchema,
+    period: periodSchema,
+    documentsCount: z.number(),
+    accruedDocumentsCount: z.number(),
+    accruedLinesCount: z.number(),
+    accruedAmount: z.number(),
+    failures: z.array(salaryAccrualLineFailureSchema),
+});
+export type AccruePeriodSalaryAccrualsResponse = z.infer<
+    typeof accruePeriodSalaryAccrualsResponseSchema
+>;
+
 export {
     salaryAccrualLineStatusSchema,
     salaryAccrualLineSchema,
@@ -143,4 +192,7 @@ export {
     salaryAccrualNotDraftRowSchema,
     accrueSalaryAccrualLineRequestSchema,
     adjustSalaryAccrualLineRequestSchema,
+    salaryAccrualLineFailureSchema,
+    accrueSalaryAccrualDocumentResponseSchema,
+    accruePeriodSalaryAccrualsResponseSchema,
 };

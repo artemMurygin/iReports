@@ -12,6 +12,10 @@ import { ReopenAccountingPeriodHandler } from '@/domains/service/modules/account
 import { AccrueSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-line.handler';
 import { UnaccrueSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/unaccrue-salary-accrual-line.handler';
 import { AdjustSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/adjust-salary-accrual-line.handler';
+import { AccrueSalaryAccrualDocumentHandler } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-document.handler';
+import { AccruePeriodSalaryAccrualsHandler } from '@/domains/service/modules/accounting/application/command/accrue-period-salary-accruals.handler';
+import { CreateBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/create-balance-transaction.handler';
+import { ReverseBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/reverse-balance-transaction.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
 import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
 import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
@@ -28,6 +32,7 @@ import { GetMotivationSchemaService } from '@/domains/service/modules/accounting
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
 import { GetEmployeeBalanceService } from '@/domains/service/modules/accounting/application/services/get-employee-balance.service';
+import { GetDepartmentBalancesService } from '@/domains/service/modules/accounting/application/services/get-department-balances.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
@@ -55,6 +60,11 @@ import { AccrueSalaryAccrualLineHttpController } from '@/domains/service/modules
 import { UnaccrueSalaryAccrualLineHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/unaccrue-salary-accrual-line.http.controller';
 import { AdjustSalaryAccrualLineHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/adjust-salary-accrual-line.http.controller';
 import { GetEmployeeBalanceHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-employee-balance.http.controller';
+import { AccrueSalaryAccrualDocumentHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-salary-accrual-document.http.controller';
+import { AccruePeriodSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-period-salary-accruals.http.controller';
+import { CreateBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-balance-transaction.http.controller';
+import { ReverseBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/reverse-balance-transaction.http.controller';
+import { GetDepartmentBalancesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-balances.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
@@ -150,6 +160,13 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         AccrueSalaryAccrualLineHttpController,
         UnaccrueSalaryAccrualLineHttpController,
         AdjustSalaryAccrualLineHttpController,
+        // Массовое проведение, ручные движения, сторно и сводка отдела
+        // (PRD 2, Фаза 7).
+        AccrueSalaryAccrualDocumentHttpController,
+        AccruePeriodSalaryAccrualsHttpController,
+        CreateBalanceTransactionHttpController,
+        ReverseBalanceTransactionHttpController,
+        GetDepartmentBalancesHttpController,
         GetEmployeeBalanceHttpController,
         GetClosePeriodPreviewHttpController,
     ],
@@ -170,6 +187,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         AccrueSalaryAccrualLineHandler,
         UnaccrueSalaryAccrualLineHandler,
         AdjustSalaryAccrualLineHandler,
+        // Фаза 7 PRD 2: массовое проведение (построчно через диспатч
+        // AccrueSalaryAccrualLineCommand — своя транзакция на строку),
+        // ручные движения и сторно — те же generic по direction хендлеры
+        // на общем CommandBus.
+        AccrueSalaryAccrualDocumentHandler,
+        AccruePeriodSalaryAccrualsHandler,
+        CreateBalanceTransactionHandler,
+        ReverseBalanceTransactionHandler,
         CreateTaskCompletionHandler,
         ConfirmTaskCompletionHandler,
         DeleteTaskCompletionHandler,
@@ -183,6 +208,7 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         ListSalaryAccrualsService,
         GetSalaryAccrualService,
         GetEmployeeBalanceService,
+        GetDepartmentBalancesService,
         GetClosePeriodPreviewService,
         CalculateServiceSnapshotRowsService,
         ErpPeriodSyncRunner,

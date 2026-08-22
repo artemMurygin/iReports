@@ -5,14 +5,16 @@ import type {
     BalanceTransactionRepositoryPort,
 } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { SalaryAccrualLineAlreadyAccruedException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
+import { BalanceTransactionAlreadyReversedException } from '@/domains/service/modules/accounting/domain/exceptions/balance-transaction.exception';
 
 // In-memory реализация BalanceTransactionRepositoryPort для юнит- и
 // e2e-тестов проведения строк (тот же приём, что
 // InMemorySalaryAccrualRepository). Эмулирует и уникальный индекс
-// (lineId, type) — контракт идемпотентности проведения: повторная вставка
-// движения той же строки бросает тот же конфликт, что Prisma-реализация
-// на P2002, причём атомарно — частично вставленный батч откатывается, как
-// откатилась бы транзакция БД.
+// (lineId, type) — контракт идемпотентности проведения, и уникальность
+// reversedTransactionId — идемпотентность сторно (Фаза 7): повторная
+// вставка бросает тот же конфликт, что Prisma-реализация на P2002, причём
+// атомарно — частично вставленный батч откатывается, как откатилась бы
+// транзакция БД.
 export class InMemoryBalanceTransactionRepository implements BalanceTransactionRepositoryPort {
     readonly store = new Map<string, BalanceTransaction>();
 
@@ -25,6 +27,11 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
                         `${transaction.lineId}:${transaction.type}`,
                 ),
         );
+        const reversedIds = new Set(
+            [...this.store.values()]
+                .map((transaction) => transaction.reversedTransactionId)
+                .filter((id): id is string => Boolean(id)),
+        );
         for (const transaction of transactions) {
             if (
                 transaction.lineId &&
@@ -36,11 +43,64 @@ export class InMemoryBalanceTransactionRepository implements BalanceTransactionR
                     ),
                 );
             }
+            if (
+                transaction.reversedTransactionId &&
+                reversedIds.has(transaction.reversedTransactionId)
+            ) {
+                return Promise.reject(
+                    new BalanceTransactionAlreadyReversedException(
+                        transaction.reversedTransactionId,
+                    ),
+                );
+            }
         }
         for (const transaction of transactions) {
             this.store.set(transaction.id, transaction);
         }
         return Promise.resolve();
+    }
+
+    findById(id: string): Promise<BalanceTransaction | null> {
+        return Promise.resolve(this.store.get(id) ?? null);
+    }
+
+    sumByEmployees(
+        direction: AccountingDirection,
+        employeeIds: number[],
+    ): Promise<Map<number, number>> {
+        const sums = new Map<number, number>();
+        for (const transaction of this.store.values()) {
+            if (
+                transaction.direction === direction &&
+                employeeIds.includes(transaction.employeeId)
+            ) {
+                sums.set(
+                    transaction.employeeId,
+                    (sums.get(transaction.employeeId) ?? 0) +
+                        transaction.amount,
+                );
+            }
+        }
+        return Promise.resolve(sums);
+    }
+
+    findForDepartmentSummary(
+        direction: AccountingDirection,
+        employeeIds: number[],
+        period: string,
+        monthStart: Date,
+        monthEnd: Date,
+    ): Promise<BalanceTransaction[]> {
+        return Promise.resolve(
+            [...this.store.values()].filter(
+                (transaction) =>
+                    transaction.direction === direction &&
+                    employeeIds.includes(transaction.employeeId) &&
+                    ((transaction.occurredAt >= monthStart &&
+                        transaction.occurredAt <= monthEnd) ||
+                        transaction.period === period),
+            ),
+        );
     }
 
     deleteAccrualTransactionsByLineId(lineId: string): Promise<void> {

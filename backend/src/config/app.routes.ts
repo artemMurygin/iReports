@@ -190,6 +190,11 @@ export const routesV1 = {
             salaryAccruals: {
                 root: `${serviceAccountingRoot}/salary_accruals`,
                 byId: `${serviceAccountingRoot}/salary_accruals/:id`,
+                // Массовое проведение (PRD 2, Фаза 7): «Начислить все
+                // документы месяца» (?period) и «Начислить всё» по
+                // документу — построчно, каждая строка в своей транзакции.
+                accrueAll: `${serviceAccountingRoot}/salary_accruals/accrue`,
+                accrueDocument: `${serviceAccountingRoot}/salary_accruals/:id/accrue`,
                 // Действия над строкой документа (PRD 2, Фаза 6):
                 // проведение на баланс, отмена начисления, корректировка
                 // (PATCH lineById). Зеркало — shop.accounting.salaryAccruals.
@@ -198,9 +203,15 @@ export const routesV1 = {
                 lineUnaccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
             },
             // Баланс сотрудника (PRD 2, Фаза 6) — остаток и лента движений
-            // по направлению service. Зеркало — shop.accounting.balance.
+            // по направлению service. Фаза 7: ручные движения
+            // (employeeTransactions), сторно (reverseTransaction — PATCH/
+            // DELETE движения не существует) и сводка по отделу
+            // (department). Зеркало — shop.accounting.balance.
             balance: {
                 employee: `${serviceAccountingRoot}/balance/employee/:id`,
+                employeeTransactions: `${serviceAccountingRoot}/balance/employee/:id/transactions`,
+                reverseTransaction: `${serviceAccountingRoot}/balance/transactions/:id/reverse`,
+                department: `${serviceAccountingRoot}/balance/department/:id/:period`,
             },
         },
         // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
@@ -323,15 +334,24 @@ export const routesV1 = {
             salaryAccruals: {
                 root: `${shopAccountingRoot}/salary_accruals`,
                 byId: `${shopAccountingRoot}/salary_accruals/:id`,
+                // Массовое проведение (PRD 2, Фаза 7) — зеркало
+                // service.accounting.salaryAccruals в своём namespace.
+                accrueAll: `${shopAccountingRoot}/salary_accruals/accrue`,
+                accrueDocument: `${shopAccountingRoot}/salary_accruals/:id/accrue`,
                 // Действия над строкой документа (PRD 2, Фаза 6) — зеркалят
                 // service.accounting.salaryAccruals в своём namespace.
                 lineById: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId`,
                 lineAccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
                 lineUnaccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
             },
-            // Баланс сотрудника направления shop (PRD 2, Фаза 6).
+            // Баланс сотрудника направления shop (PRD 2, Фаза 6); Фаза 7 —
+            // ручные движения, сторно и сводка по отделу, зеркало
+            // service.accounting.balance.
             balance: {
                 employee: `${shopAccountingRoot}/balance/employee/:id`,
+                employeeTransactions: `${shopAccountingRoot}/balance/employee/:id/transactions`,
+                reverseTransaction: `${shopAccountingRoot}/balance/transactions/:id/reverse`,
+                department: `${shopAccountingRoot}/balance/department/:id/:period`,
             },
         },
         // Каталог (дерево категорий) магазина (Фаза 1, см.

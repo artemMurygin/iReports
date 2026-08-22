@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto';
-import type { BalanceTransactionType } from 'ireports-contracts';
+import type {
+    BalanceTransactionType,
+    ManualBalanceTransactionType,
+} from 'ireports-contracts';
 import { AggregateRoot } from '@/shared/domain/aggregate-root.base';
 import { AggregateID } from '@/shared/domain/entity.base';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
@@ -7,8 +10,47 @@ import {
     ArgumentInvalidException,
     ArgumentNotProvidedException,
 } from '@/shared/exceptions';
+import { BalanceTransactionNotReversibleException } from '../exceptions/balance-transaction.exception';
 import { SalaryAccrual } from './salary-accrual.entity';
 import { SalaryAccrualLine } from './salary-accrual-line.entity';
+
+// Знак ручного движения определяется типом (PRD 2, таблица типов): клиент
+// передаёт абсолютную величину, сущность подставляет знак. ADJUSTMENT в
+// перечнях ниже отсутствует — его знак задаётся явно (amount со знаком).
+const MANUAL_OUTFLOW_TYPES: ReadonlySet<ManualBalanceTransactionType> = new Set(
+    ['ADVANCE', 'EXTRA_ADVANCE', 'PENALTY'],
+);
+const MANUAL_INFLOW_TYPES: ReadonlySet<ManualBalanceTransactionType> = new Set([
+    'BONUS',
+    'SICK_LEAVE',
+    'VACATION_PAY',
+]);
+const MANUAL_TYPES: ReadonlySet<BalanceTransactionType> = new Set([
+    ...MANUAL_OUTFLOW_TYPES,
+    ...MANUAL_INFLOW_TYPES,
+    'ADJUSTMENT',
+]);
+// Типы с обязательным комментарием: у штрафа и корректировки сотрудник
+// должен видеть причину, у сторно — почему движение отменено.
+const COMMENT_REQUIRED_TYPES: ReadonlySet<BalanceTransactionType> = new Set([
+    'PENALTY',
+    'ADJUSTMENT',
+    'MANUAL_REVERSAL',
+]);
+
+export type CreateManualBalanceTransactionProps = {
+    employeeId: number;
+    direction: AccountingDirection;
+    type: ManualBalanceTransactionType;
+    // Для типов со знаком по типу — абсолютная величина (> 0), для
+    // ADJUSTMENT — со знаком (≠ 0), знак задаётся явно.
+    amount: number;
+    occurredAt?: Date;
+    createdBy: number;
+    comment?: string;
+    period?: string;
+    erpSyncRequired?: boolean;
+};
 
 export type BalanceTransactionProps = {
     employeeId: number;
@@ -93,6 +135,95 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
             );
         }
         return transactions;
+    }
+
+    // Ручное движение руководителя (Фаза 7 PRD 2): знак подставляется по
+    // типу (расход — минус, приход — плюс), для ADJUSTMENT берётся как
+    // передан (задаётся явно). Дата задним числом разрешена — в т.ч. внутри
+    // закрытого месяца, снапшот и документы начисления при этом не
+    // трогаются (движение их вообще не читает). Лимитов на аванс нет:
+    // отрицательный остаток — штатная ситуация, никакая проверка текущего
+    // баланса здесь сознательно не выполняется. erpSyncRequired в этой
+    // итерации только хранится (синхронизация с кассой ERP — PRD 3).
+    static createManual(
+        create: CreateManualBalanceTransactionProps,
+    ): BalanceTransaction {
+        const magnitude = create.amount;
+        let amount: number;
+        if (create.type === 'ADJUSTMENT') {
+            amount = magnitude;
+        } else {
+            if (magnitude <= 0) {
+                throw new ArgumentInvalidException(
+                    `Сумма движения типа ${create.type} — положительное число: знак подставляется по типу`,
+                );
+            }
+            amount = MANUAL_OUTFLOW_TYPES.has(create.type)
+                ? -magnitude
+                : magnitude;
+        }
+        return new BalanceTransaction({
+            id: randomUUID(),
+            props: {
+                employeeId: create.employeeId,
+                direction: create.direction,
+                type: create.type,
+                amount,
+                occurredAt: create.occurredAt ?? new Date(),
+                createdBy: create.createdBy,
+                comment: create.comment,
+                period: create.period,
+                erpSyncRequired: create.erpSyncRequired ?? false,
+            },
+        });
+    }
+
+    // Сторно ручного движения (Фаза 7 PRD 2): всегда точная
+    // противоположность исходной суммы, обязательный комментарий, ссылка на
+    // сторнируемое движение. Единственный способ исправить ручное движение
+    // — PATCH/DELETE у ленты не существует. Сторнируются только ручные
+    // движения без документа ERP: начисления отменяются действием
+    // «Отменить начисление» строки, выплаты и движения с erpSyncRequired
+    // удаляются вместе с документом ERP (PRD 3), сторно сторно не бывает.
+    static reversalOf(
+        original: BalanceTransaction,
+        comment: string,
+        createdBy: number,
+    ): BalanceTransaction {
+        if (!original.isManual()) {
+            throw new BalanceTransactionNotReversibleException(
+                original.id,
+                'сторнируются только ручные движения (начисление отменяется на строке документа, выплата удаляется вместе с документом ERP)',
+            );
+        }
+        if (original.erpSyncRequired) {
+            throw new BalanceTransactionNotReversibleException(
+                original.id,
+                'движение проводится в кассе ERP и исправляется удалением вместе с документом ERP (PRD 3)',
+            );
+        }
+        return new BalanceTransaction({
+            id: randomUUID(),
+            props: {
+                employeeId: original.employeeId,
+                direction: original.direction,
+                type: 'MANUAL_REVERSAL',
+                amount: -original.amount,
+                occurredAt: new Date(),
+                createdBy,
+                comment,
+                period: original.period,
+                reversedTransactionId: original.id,
+                erpSyncRequired: false,
+            },
+        });
+    }
+
+    // Ручное движение руководителя — единственный вид движения, доступный
+    // сторно (MANUAL_REVERSAL сам ручным движением в этом смысле не
+    // считается: ошибочное сторно исправляется повторным созданием).
+    isManual(): boolean {
+        return MANUAL_TYPES.has(this.props.type);
     }
 
     get employeeId(): number {
@@ -197,6 +328,56 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
         ) {
             throw new ArgumentInvalidException(
                 'Движение начисления должно ссылаться на документ, строку и правило',
+            );
+        }
+        // Инварианты ручных движений и сторно (Фаза 7): знак зафиксирован
+        // типом (расход хранится отрицательным, приход положительным),
+        // ADJUSTMENT/MANUAL_REVERSAL не бывают нулевыми, у сторно есть
+        // ссылка на сторнируемое движение, а PENALTY/ADJUSTMENT/
+        // MANUAL_REVERSAL — обязательный комментарий с причиной.
+        if (
+            MANUAL_OUTFLOW_TYPES.has(
+                this.props.type as ManualBalanceTransactionType,
+            ) &&
+            this.props.amount >= 0
+        ) {
+            throw new ArgumentInvalidException(
+                `Движение типа ${this.props.type} — расход: сумма хранится отрицательной`,
+            );
+        }
+        if (
+            MANUAL_INFLOW_TYPES.has(
+                this.props.type as ManualBalanceTransactionType,
+            ) &&
+            this.props.amount <= 0
+        ) {
+            throw new ArgumentInvalidException(
+                `Движение типа ${this.props.type} — приход: сумма хранится положительной`,
+            );
+        }
+        if (
+            (this.props.type === 'ADJUSTMENT' ||
+                this.props.type === 'MANUAL_REVERSAL') &&
+            this.props.amount === 0
+        ) {
+            throw new ArgumentInvalidException(
+                `Движение типа ${this.props.type} не может быть нулевым`,
+            );
+        }
+        if (
+            this.props.type === 'MANUAL_REVERSAL' &&
+            !this.props.reversedTransactionId
+        ) {
+            throw new ArgumentInvalidException(
+                'Сторно должно ссылаться на сторнируемое движение',
+            );
+        }
+        if (
+            COMMENT_REQUIRED_TYPES.has(this.props.type) &&
+            (!this.props.comment || this.props.comment.trim().length === 0)
+        ) {
+            throw new ArgumentNotProvidedException(
+                `Движение типа ${this.props.type} требует комментария с причиной`,
             );
         }
     }

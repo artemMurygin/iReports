@@ -8,6 +8,7 @@ import type {
     BalanceTransactionRepositoryPort,
 } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { SalaryAccrualLineAlreadyAccruedException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
+import { BalanceTransactionAlreadyReversedException } from '@/domains/service/modules/accounting/domain/exceptions/balance-transaction.exception';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { BalanceTransactionMapper } from '../mappers/balance-transaction.mapper';
 
@@ -35,15 +36,25 @@ export class BalanceTransactionRepository
                 }),
             );
         } catch (error) {
-            // Уникальный индекс (lineId, type) — идемпотентность проведения
-            // строки на уровне БД (PRD 2): параллельный повторный accrue
-            // упирается сюда, а не создаёт второе движение. Транзакция
-            // UnitOfWork при этом откатывается целиком — статус строки тоже
-            // не меняется.
+            // Два уникальных ограничения — две идемпотентности уровня БД:
+            // (lineId, type) — проведение строки (PRD 2, параллельный
+            // повторный accrue не создаёт второго движения), уникальный
+            // reversedTransactionId — сторно (Фаза 7, параллельный reverse
+            // не создаёт второго MANUAL_REVERSAL). Батч однороден (либо
+            // движения проведения строки, либо одно сторно), поэтому
+            // конфликт различаем по содержимому батча.
             if (
                 error instanceof Prisma.PrismaClientKnownRequestError &&
                 error.code === 'P2002'
             ) {
+                const reversal = transactions.find(
+                    (transaction) => transaction.reversedTransactionId,
+                );
+                if (reversal) {
+                    throw new BalanceTransactionAlreadyReversedException(
+                        reversal.reversedTransactionId!,
+                    );
+                }
                 const lineId = transactions.find(
                     (transaction) => transaction.lineId,
                 )?.lineId;
@@ -53,6 +64,13 @@ export class BalanceTransactionRepository
             }
             throw error;
         }
+    }
+
+    async findById(id: string): Promise<BalanceTransaction | null> {
+        const record = await this.client.balanceTransaction.findUnique({
+            where: { id },
+        });
+        return record ? this.mapper.toDomain(record) : null;
     }
 
     async deleteAccrualTransactionsByLineId(lineId: string): Promise<void> {
@@ -99,6 +117,46 @@ export class BalanceTransactionRepository
             _sum: { amount: true },
         });
         return aggregate._sum.amount ?? 0;
+    }
+
+    async sumByEmployees(
+        direction: AccountingDirection,
+        employeeIds: number[],
+    ): Promise<Map<number, number>> {
+        if (employeeIds.length === 0) {
+            return new Map();
+        }
+        const groups = await this.client.balanceTransaction.groupBy({
+            by: ['employeeId'],
+            where: { direction, employeeId: { in: employeeIds } },
+            _sum: { amount: true },
+        });
+        return new Map(
+            groups.map((group) => [group.employeeId, group._sum.amount ?? 0]),
+        );
+    }
+
+    async findForDepartmentSummary(
+        direction: AccountingDirection,
+        employeeIds: number[],
+        period: string,
+        monthStart: Date,
+        monthEnd: Date,
+    ): Promise<BalanceTransaction[]> {
+        if (employeeIds.length === 0) {
+            return [];
+        }
+        const records = await this.client.balanceTransaction.findMany({
+            where: {
+                direction,
+                employeeId: { in: employeeIds },
+                OR: [
+                    { occurredAt: { gte: monthStart, lte: monthEnd } },
+                    { period },
+                ],
+            },
+        });
+        return records.map((record) => this.mapper.toDomain(record));
     }
 
     async findReversedIds(transactionIds: string[]): Promise<Set<string>> {
