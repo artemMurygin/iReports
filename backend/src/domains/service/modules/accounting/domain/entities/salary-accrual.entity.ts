@@ -6,6 +6,10 @@ import { Period } from '@/shared/domain/period.value-object';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import {
+    SalaryAccrualLineNotFoundException,
+    SalaryAccrualPaidException,
+} from '../exceptions/salary-accrual.exception';
+import {
     SalaryAccrualLine,
     SalaryAccrualSourceLine,
 } from './salary-accrual-line.entity';
@@ -44,10 +48,12 @@ export type SalaryAccrualCreateProps = {
 // service-специфичная бизнес-логика (см. шапку
 // close-shop-accounting-period.handler.ts).
 //
-// В PRD 1 документ и все его строки всегда DRAFT; переходы
-// PARTIALLY_ACCRUED/ACCRUED (проведение строк на баланс) — PRD 2, PAID —
-// PRD 3. isDismissed фиксируется на момент закрытия по активности
-// BitrixEmployee и на чтении не пересчитывается.
+// Статус документа — производная от статусов строк (PRD 2, Фаза 6):
+// DRAFT — ни одна строка не проведена, PARTIALLY_ACCRUED — часть,
+// ACCRUED — все («ожидает выплаты»); пересчитывается после каждого
+// проведения/отмены (recalculateStatus). PAID выставляет выплата (PRD 3) и
+// блокирует любые действия над строками. isDismissed фиксируется на момент
+// закрытия по активности BitrixEmployee и на чтении не пересчитывается.
 export class SalaryAccrual extends AggregateRoot<SalaryAccrualProps> {
     declare protected readonly _id: AggregateID;
 
@@ -98,6 +104,82 @@ export class SalaryAccrual extends AggregateRoot<SalaryAccrualProps> {
 
     isDraft(): boolean {
         return this.props.status === 'DRAFT';
+    }
+
+    isPaid(): boolean {
+        return this.props.status === 'PAID';
+    }
+
+    // Число уже проведённых строк — прогресс «N из M» для списка
+    // (accruedLinesCount в контракте).
+    get accruedLinesCount(): number {
+        return this.props.lines.filter((line) => line.isAccrued()).length;
+    }
+
+    getLine(lineId: string): SalaryAccrualLine {
+        const line = this.props.lines.find((item) => item.id === lineId);
+        if (!line) {
+            throw new SalaryAccrualLineNotFoundException(this.id, lineId);
+        }
+        return line;
+    }
+
+    // Проведение строки (PRD 2): строка переходит в ACCRUED, статус
+    // документа пересчитывается. Сами движения баланса создаёт хендлер
+    // (BalanceTransaction.forAccruedLine) в одной транзакции с сохранением
+    // документа. Для выплаченного документа действия запрещены целиком.
+    accrueLine(lineId: string): SalaryAccrualLine {
+        this.ensureNotPaid();
+        const line = this.getLine(lineId);
+        line.markAccrued();
+        this.recalculateStatus();
+        return line;
+    }
+
+    // Отмена начисления (PRD 2): строка возвращается в DRAFT (её движения
+    // хендлер удаляет с баланса — не сторнирует: начисление до выплаты —
+    // черновик расчёта, а не факт движения денег). Запрещена для PAID.
+    unaccrueLine(lineId: string): SalaryAccrualLine {
+        this.ensureNotPaid();
+        const line = this.getLine(lineId);
+        line.revertToDraft();
+        this.recalculateStatus();
+        return line;
+    }
+
+    // Корректировка строки (PRD 2): только до проведения, обязательный
+    // комментарий; originalAmount строки не меняется, инвариант
+    // total = Σ originalAmount (см. validate()) корректировкой не задевается.
+    adjustLine(
+        lineId: string,
+        newAmount: number,
+        comment: string,
+        adjustedBy: number,
+    ): SalaryAccrualLine {
+        this.ensureNotPaid();
+        const line = this.getLine(lineId);
+        line.adjust(newAmount, comment, adjustedBy);
+        return line;
+    }
+
+    private ensureNotPaid(): void {
+        if (this.isPaid()) {
+            throw new SalaryAccrualPaidException(this.id);
+        }
+    }
+
+    // Статус документа — производная от строк: DRAFT / PARTIALLY_ACCRUED /
+    // ACCRUED. PAID сюда не попадает — его выставляет выплата (PRD 3), а
+    // все переходы строк для PAID заблокированы ensureNotPaid().
+    private recalculateStatus(): void {
+        const accrued = this.accruedLinesCount;
+        if (accrued === 0) {
+            this.props.status = 'DRAFT';
+        } else if (accrued === this.props.lines.length) {
+            this.props.status = 'ACCRUED';
+        } else {
+            this.props.status = 'PARTIALLY_ACCRUED';
+        }
     }
 
     validate(): void {

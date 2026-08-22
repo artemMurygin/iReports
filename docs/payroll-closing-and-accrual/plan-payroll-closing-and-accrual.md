@@ -108,11 +108,11 @@ PRD 3: 11 BE адаптеры ERP → 12 BE выплата → 13 Design → 14 
 **Цель**: «Начислить» строку создаёт движение на балансе; остаток читается как сумма ленты; отмена удаляет движение.
 **Что затрагивает?** backend, database, contracts
 **Задачи:**
-- [ ] `contracts`: `balanceTransactionTypeSchema` (полный перечень, включая `ACCRUAL_ADJUSTMENT`, `MANUAL_REVERSAL`, `PAYOUT`), `balanceTransactionSchema`, ответ баланса сотрудника, запросы accrue/unaccrue/корректировки
-- [ ] Prisma: `BalanceTransaction` (`employeeId`, `direction`, `type`, `amount` со знаком, `occurredAt`, `createdBy`, `comment`, `period?`, `accrualId?`, `lineId?`, `ruleId?`, `reversedTransactionId?`, `erpSyncRequired`); уникальный индекс `(lineId, type)` для идемпотентности; `SalaryAccrualLine.status`, история корректировок
-- [ ] Команды `AccrueLine` (движение `SALARY_ACCRUAL` на сумму снапшота + `ACCRUAL_ADJUSTMENT` на разницу при корректировке, одна транзакция), `UnaccrueLine` (удаление обоих движений + `DRAFT`, `409` для `PAID`), `AdjustLine` (только `DRAFT`, обязательный комментарий); пересчёт статуса документа из строк
-- [ ] `GET /v1/{direction}/accounting/balance/employee/:id?from&to&types` — остаток = `SUM`, лента с фильтрами и итогом по выборке, раскрытие начисления до строки документа
-- [ ] `reopen` периода: проверка документов не в `DRAFT` (уже из фазы 1) — сквозной тест с проведённой строкой
+- [x] `contracts`: `balanceTransactionTypeSchema` (полный перечень, включая `ACCRUAL_ADJUSTMENT`, `MANUAL_REVERSAL`, `PAYOUT`), `balanceTransactionSchema`, ответ баланса сотрудника, запросы accrue/unaccrue/корректировки
+- [x] Prisma: `BalanceTransaction` (`employeeId`, `direction`, `type`, `amount` со знаком, `occurredAt`, `createdBy`, `comment`, `period?`, `accrualId?`, `lineId?`, `ruleId?`, `reversedTransactionId?`, `erpSyncRequired`); уникальный индекс `(lineId, type)` для идемпотентности; `SalaryAccrualLine.status`, история корректировок
+- [x] Команды `AccrueLine` (движение `SALARY_ACCRUAL` на сумму снапшота + `ACCRUAL_ADJUSTMENT` на разницу при корректировке, одна транзакция), `UnaccrueLine` (удаление обоих движений + `DRAFT`, `409` для `PAID`), `AdjustLine` (только `DRAFT`, обязательный комментарий); пересчёт статуса документа из строк
+- [x] `GET /v1/{direction}/accounting/balance/employee/:id?from&to&types` — остаток = `SUM`, лента с фильтрами и итогом по выборке, раскрытие начисления до строки документа
+- [x] `reopen` периода: проверка документов не в `DRAFT` (уже из фазы 1) — сквозной тест с проведённой строкой
 **Тесты**: unit на команды (ровно одно движение; параллельный двойной accrue → одно движение по индексу; корректировка → два движения, сумма = новая; unaccrue удаляет оба; корректировка в `ACCRUED` → `409`; без комментария → `400`); остаток = сумма смешанной ленты; e2e `close → accrue → balance → unaccrue → reopen`.
 **Когда готово**: через API можно провести строку, увидеть остаток, отменить; тесты зелёные; `ENDPOINTS.md` обновлён.
 

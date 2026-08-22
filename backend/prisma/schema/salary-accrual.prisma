@@ -69,7 +69,8 @@ model SalaryAccrualLine {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  accrual SalaryAccrual @relation(fields: [accrualId], references: [id], onDelete: Cascade)
+  accrual     SalaryAccrual                 @relation(fields: [accrualId], references: [id], onDelete: Cascade)
+  adjustments SalaryAccrualLineAdjustment[]
 
   @@index([accrualId])
   @@map("salary_accrual_lines")
@@ -81,4 +82,27 @@ enum SalaryAccrualLineStatus {
   PAID
 
   @@map("salary_accrual_line_status")
+}
+
+// История корректировок строки (PRD 2, Фаза 6): каждая корректировка до
+// проведения — отдельная запись (предыдущая действующая сумма → новая,
+// обязательный комментарий, автор). Действующая сумма строки — amount на
+// самой строке; originalAmount никогда не меняется (след исходного
+// расчёта). Комментарий последней корректировки уходит в движение
+// ACCRUAL_ADJUSTMENT при проведении скорректированной строки.
+model SalaryAccrualLineAdjustment {
+  id     String @id
+  lineId String @map("line_id")
+
+  previousAmount Int    @map("previous_amount")
+  newAmount      Int    @map("new_amount")
+  comment        String
+  adjustedBy     Int    @map("adjusted_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  line SalaryAccrualLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+
+  @@index([lineId])
+  @@map("salary_accrual_line_adjustments")
 }

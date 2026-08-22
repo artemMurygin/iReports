@@ -78,6 +78,9 @@ describe('SalaryAccrualMapper', () => {
                     sources: line.sources as unknown as object,
                     createdAt: new Date('2026-09-01T00:00:00Z'),
                     updatedAt: new Date('2026-09-01T00:00:00Z'),
+                    // Prisma-запись всегда несёт adjustments (include в
+                    // репозитории); здесь корректировок нет.
+                    adjustments: [],
                 })),
             }),
         );

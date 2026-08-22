@@ -8,6 +8,7 @@ export * from './sales-performance';
 export * from './accounting-period';
 export * from './salary-accrual-status';
 export * from './salary-accrual';
+export * from './employee-balance';
 export * from './task-completion';
 export * from './catalog';
 export * from './deal';

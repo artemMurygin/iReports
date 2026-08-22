@@ -190,6 +190,17 @@ export const routesV1 = {
             salaryAccruals: {
                 root: `${serviceAccountingRoot}/salary_accruals`,
                 byId: `${serviceAccountingRoot}/salary_accruals/:id`,
+                // Действия над строкой документа (PRD 2, Фаза 6):
+                // проведение на баланс, отмена начисления, корректировка
+                // (PATCH lineById). Зеркало — shop.accounting.salaryAccruals.
+                lineById: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId`,
+                lineAccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
+                lineUnaccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
+            },
+            // Баланс сотрудника (PRD 2, Фаза 6) — остаток и лента движений
+            // по направлению service. Зеркало — shop.accounting.balance.
+            balance: {
+                employee: `${serviceAccountingRoot}/balance/employee/:id`,
             },
         },
         // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
@@ -312,6 +323,15 @@ export const routesV1 = {
             salaryAccruals: {
                 root: `${shopAccountingRoot}/salary_accruals`,
                 byId: `${shopAccountingRoot}/salary_accruals/:id`,
+                // Действия над строкой документа (PRD 2, Фаза 6) — зеркалят
+                // service.accounting.salaryAccruals в своём namespace.
+                lineById: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId`,
+                lineAccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
+                lineUnaccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
+            },
+            // Баланс сотрудника направления shop (PRD 2, Фаза 6).
+            balance: {
+                employee: `${shopAccountingRoot}/balance/employee/:id`,
             },
         },
         // Каталог (дерево категорий) магазина (Фаза 1, см.

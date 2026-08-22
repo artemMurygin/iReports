@@ -9,6 +9,9 @@ import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/account
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
 import { ReopenAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.handler';
+import { AccrueSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-line.handler';
+import { UnaccrueSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/unaccrue-salary-accrual-line.handler';
+import { AdjustSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/adjust-salary-accrual-line.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
 import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
 import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
@@ -24,6 +27,7 @@ import { ListMotivationSchemasService } from '@/domains/service/modules/accounti
 import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/get-motivation-schema.service';
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
+import { GetEmployeeBalanceService } from '@/domains/service/modules/accounting/application/services/get-employee-balance.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
@@ -47,6 +51,10 @@ import { ListTaskCompletionsHttpController } from '@/domains/service/modules/acc
 import { ListSalaryRuleTypesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { ListSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-accruals.http.controller';
 import { GetSalaryAccrualHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-salary-accrual.http.controller';
+import { AccrueSalaryAccrualLineHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-salary-accrual-line.http.controller';
+import { UnaccrueSalaryAccrualLineHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/unaccrue-salary-accrual-line.http.controller';
+import { AdjustSalaryAccrualLineHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/adjust-salary-accrual-line.http.controller';
+import { GetEmployeeBalanceHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-employee-balance.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
@@ -56,6 +64,7 @@ import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounti
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import { TASK_COMPLETION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/task-completion.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
 import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
@@ -67,6 +76,7 @@ import { AccountingCalculationCacheRepository } from '@/domains/service/modules/
 import { ServiceCalculationDataRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/service-calculation-data.repository';
 import { TaskCompletionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/task-completion.repository';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
+import { BalanceTransactionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
@@ -137,6 +147,10 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         ListSalaryRuleTypesHttpController,
         ListSalaryAccrualsHttpController,
         GetSalaryAccrualHttpController,
+        AccrueSalaryAccrualLineHttpController,
+        UnaccrueSalaryAccrualLineHttpController,
+        AdjustSalaryAccrualLineHttpController,
+        GetEmployeeBalanceHttpController,
         GetClosePeriodPreviewHttpController,
     ],
     providers: [
@@ -148,6 +162,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         CloseAccountingPeriodHandler,
         ReopenAccountingPeriodHandler,
         RecalculateAccountingPeriodHandler,
+        // Проведение/отмена/корректировка строк документов начисления
+        // (PRD 2, Фаза 6) — generic по direction CQRS-хендлеры,
+        // зарегистрированные здесь один раз на общий CommandBus;
+        // контроллеры shop диспатчат те же команды (тот же приём, что
+        // Reopen/RecalculateAccountingPeriodHandler).
+        AccrueSalaryAccrualLineHandler,
+        UnaccrueSalaryAccrualLineHandler,
+        AdjustSalaryAccrualLineHandler,
         CreateTaskCompletionHandler,
         ConfirmTaskCompletionHandler,
         DeleteTaskCompletionHandler,
@@ -160,6 +182,7 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         ListSalaryRuleTypesService,
         ListSalaryAccrualsService,
         GetSalaryAccrualService,
+        GetEmployeeBalanceService,
         GetClosePeriodPreviewService,
         CalculateServiceSnapshotRowsService,
         ErpPeriodSyncRunner,
@@ -202,6 +225,12 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         {
             provide: SALARY_ACCRUAL_REPOSITORY,
             useClass: SalaryAccrualRepository,
+        },
+        // Лента баланса сотрудника (PRD 2, Фаза 6) — direction-агностичная
+        // реализация, как SalaryAccrualRepository.
+        {
+            provide: BALANCE_TRANSACTION_REPOSITORY,
+            useClass: BalanceTransactionRepository,
         },
         {
             provide: EMPLOYEE_DISMISSAL,

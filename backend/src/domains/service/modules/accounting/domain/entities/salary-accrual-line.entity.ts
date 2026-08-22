@@ -3,6 +3,12 @@ import type { SalaryAccrualLineStatus } from 'ireports-contracts';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { CalculationSourceRef } from '@/shared/domain/calculation-line';
+import {
+    SalaryAccrualLineAlreadyAccruedException,
+    SalaryAccrualLineNotAccruedException,
+    SalaryAccrualLineNotDraftException,
+} from '../exceptions/salary-accrual.exception';
+import { SalaryAccrualLineAdjustment } from './salary-accrual-line-adjustment.entity';
 
 // Строка документа начисления — одна на зарплатное правило из разбивки
 // снапшота (PRD 1 docs/payroll-closing-and-accrual, "Документ начисления"):
@@ -47,6 +53,10 @@ export interface SalaryAccrualLineProps {
     amount: number;
     sources: CalculationSourceRef[];
     status: SalaryAccrualLineStatus;
+    // История корректировок (PRD 2, Фаза 6) — каждая корректировка до
+    // проведения добавляет запись; действующая сумма — amount, исходная —
+    // originalAmount (никогда не меняется).
+    adjustments: SalaryAccrualLineAdjustment[];
 }
 
 export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
@@ -74,6 +84,7 @@ export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
                 amount: line.amount,
                 sources: line.sources,
                 status: 'DRAFT',
+                adjustments: [],
             },
         });
     }
@@ -126,8 +137,75 @@ export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
         return this.props.status;
     }
 
+    get adjustments(): SalaryAccrualLineAdjustment[] {
+        return this.props.adjustments;
+    }
+
     isDraft(): boolean {
         return this.props.status === 'DRAFT';
+    }
+
+    isAccrued(): boolean {
+        return this.props.status !== 'DRAFT';
+    }
+
+    // Скорректирована ли строка: действующая сумма разошлась с исходной.
+    // Проведение такой строки создаёт два движения — SALARY_ACCRUAL на
+    // originalAmount и ACCRUAL_ADJUSTMENT на разницу (PRD 2).
+    isAdjusted(): boolean {
+        return this.props.amount !== this.props.originalAmount;
+    }
+
+    // Комментарий последней корректировки — уходит в движение
+    // ACCRUAL_ADJUSTMENT при проведении и показывается в UI рядом с
+    // зачёркнутой исходной суммой.
+    get adjustmentComment(): string | undefined {
+        const last = this.props.adjustments[this.props.adjustments.length - 1];
+        return last?.comment;
+    }
+
+    // Корректировка до проведения (PRD 2): только DRAFT, обязательный
+    // комментарий (валидируется самой записью корректировки), originalAmount
+    // не меняется. Скорректировать обратно в исходную сумму тоже можно —
+    // тогда при проведении ACCRUAL_ADJUSTMENT не создастся (разница 0), но
+    // история корректировок сохранит след.
+    adjust(newAmount: number, comment: string, adjustedBy: number): void {
+        if (!this.isDraft()) {
+            throw new SalaryAccrualLineNotDraftException(this.id);
+        }
+        if (!Number.isInteger(newAmount)) {
+            throw new ArgumentInvalidException(
+                'Сумма корректировки строки начисления должна быть целым числом рублей',
+            );
+        }
+        const adjustment = SalaryAccrualLineAdjustment.create({
+            previousAmount: this.props.amount,
+            newAmount,
+            comment,
+            adjustedBy,
+        });
+        this.props.adjustments.push(adjustment);
+        this.props.amount = newAmount;
+    }
+
+    // Проведение строки на баланс — переход DRAFT → ACCRUED. Повторное
+    // проведение конфликтует здесь, а гонку параллельных запросов
+    // останавливает уникальный индекс БД (см. BalanceTransactionRepository).
+    markAccrued(): void {
+        if (!this.isDraft()) {
+            throw new SalaryAccrualLineAlreadyAccruedException(this.id);
+        }
+        this.props.status = 'ACCRUED';
+    }
+
+    // Отмена начисления — обратный переход ACCRUED → DRAFT (движения строки
+    // при этом удаляются с баланса, см. UnaccrueSalaryAccrualLineHandler);
+    // строка снова доступна для корректировки и проведения.
+    revertToDraft(): void {
+        if (this.props.status !== 'ACCRUED') {
+            throw new SalaryAccrualLineNotAccruedException(this.id);
+        }
+        this.props.status = 'DRAFT';
     }
 
     validate(): void {

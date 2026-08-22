@@ -22,6 +22,17 @@ export interface SalaryAccrualRepositoryPort {
     // Карточка документа (GET .../salary_accruals/:id) — со строками.
     findById(id: string): Promise<SalaryAccrual | null>;
 
+    // Раскрытие движений начисления в ленте баланса до строк документов
+    // (GET .../balance/employee/:id): один запрос на все accrualId выборки,
+    // а не по движению (нет N+1).
+    findByIds(ids: string[]): Promise<SalaryAccrual[]>;
+
+    // Сохранение переходов PRD 2 (проведение/отмена/корректировка строки):
+    // статус документа, статус/действующая сумма строк и новые записи
+    // истории корректировок. Вызывается в транзакции UnitOfWork вместе с
+    // записью/удалением движений баланса (см. AccrueSalaryAccrualLineHandler).
+    save(accrual: SalaryAccrual): Promise<void>;
+
     // Список документов за период (GET .../salary_accruals?period) — со
     // строками: список отдаёт только их число (linesCount), но отдельный
     // «лёгкий» метод не нужен, пока документов в месяце — десятки.

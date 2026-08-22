@@ -35,6 +35,23 @@ export class InMemorySalaryAccrualRepository implements SalaryAccrualRepositoryP
         return Promise.resolve(this.withStatus(this.store.get(id)) ?? null);
     }
 
+    findByIds(ids: string[]): Promise<SalaryAccrual[]> {
+        return Promise.resolve(
+            ids
+                .map((id) => this.withStatus(this.store.get(id)))
+                .filter((accrual): accrual is SalaryAccrual =>
+                    Boolean(accrual),
+                ),
+        );
+    }
+
+    // Переходы PRD 2 (проведение/отмена/корректировка строки) — хранит
+    // сущность как есть, вместе со статусами строк и историей корректировок.
+    save(accrual: SalaryAccrual): Promise<void> {
+        this.store.set(accrual.id, accrual);
+        return Promise.resolve();
+    }
+
     findByDirectionAndPeriod(
         direction: AccountingDirection,
         period: string,

@@ -51,9 +51,20 @@ export class SalaryAccrualRepository
     async findById(id: string): Promise<SalaryAccrual | null> {
         const record = await this.client.salaryAccrual.findUnique({
             where: { id },
-            include: { lines: true },
+            include: { lines: { include: { adjustments: true } } },
         });
         return record ? this.mapper.toDomain(record) : null;
+    }
+
+    async findByIds(ids: string[]): Promise<SalaryAccrual[]> {
+        if (ids.length === 0) {
+            return [];
+        }
+        const records = await this.client.salaryAccrual.findMany({
+            where: { id: { in: ids } },
+            include: { lines: { include: { adjustments: true } } },
+        });
+        return records.map((record) => this.mapper.toDomain(record));
     }
 
     async findByDirectionAndPeriod(
@@ -62,10 +73,38 @@ export class SalaryAccrualRepository
     ): Promise<SalaryAccrual[]> {
         const records = await this.client.salaryAccrual.findMany({
             where: { direction, period },
-            include: { lines: true },
+            include: { lines: { include: { adjustments: true } } },
             orderBy: { employeeId: 'asc' },
         });
         return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    // Сохранение переходов PRD 2 (проведение/отмена/корректировка): статус
+    // документа, статус и действующая сумма строк, новые записи истории
+    // корректировок (skipDuplicates — уже сохранённые записи с тем же id
+    // пропускаются, корректировка неизменяема). Состав строк и originalAmount
+    // после закрытия не меняются, поэтому строки не пересоздаются — только
+    // update изменяемых полей.
+    async save(accrual: SalaryAccrual): Promise<void> {
+        const adjustments = this.mapper.adjustmentsToPersistence(accrual);
+        await this.write(accrual, async (client) => {
+            await client.salaryAccrual.update({
+                where: { id: accrual.id },
+                data: { status: accrual.status },
+            });
+            for (const line of accrual.lines) {
+                await client.salaryAccrualLine.update({
+                    where: { id: line.id },
+                    data: { amount: line.amount, status: line.status },
+                });
+            }
+            if (adjustments.length > 0) {
+                await client.salaryAccrualLineAdjustment.createMany({
+                    data: adjustments,
+                    skipDuplicates: true,
+                });
+            }
+        });
     }
 
     async findStatusByKey(

@@ -31,6 +31,7 @@ function accrual(overrides: Partial<SalaryAccrual> = {}): SalaryAccrual {
         isDismissed: false,
         total: 10_000,
         linesCount: 3,
+        accruedLinesCount: 0,
         createdAt: new Date('2026-07-01T10:00:00Z'),
         ...overrides,
     }
@@ -47,6 +48,7 @@ function line(overrides: Partial<SalaryAccrualLine> = {}): SalaryAccrualLine {
         originalAmount: 24_800,
         status: 'DRAFT',
         sources: [],
+        adjustmentComment: null,
         ...overrides,
     }
 }

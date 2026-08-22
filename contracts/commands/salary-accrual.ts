@@ -27,8 +27,11 @@ export type SalaryAccrualLineStatus = z.infer<
 // Одна строка на зарплатное правило из разбивки снапшота — повторяет
 // RuleBreakdownLine снапшота один в один (calculationLineSchema + атрибуты
 // правила type/name/targetRole). originalAmount — сумма из снапшота на
-// момент закрытия, amount — действующая сумма строки (в PRD 1 всегда равна
-// originalAmount; корректировка с комментарием — PRD 2).
+// момент закрытия, amount — действующая сумма строки (корректировка PRD 2
+// меняет только amount). adjustmentComment — комментарий последней
+// корректировки (null, если строка не корректировалась): UI показывает его
+// рядом с зачёркнутой исходной суммой, а проведение скорректированной
+// строки кладёт его в движение ACCRUAL_ADJUSTMENT (см. employee-balance.ts).
 const salaryAccrualLineSchema = calculationLineSchema.extend({
     id: z.string(),
     type: z.string(),
@@ -36,6 +39,7 @@ const salaryAccrualLineSchema = calculationLineSchema.extend({
     targetRole: targetRoleSchema,
     originalAmount: z.number(),
     status: salaryAccrualLineStatusSchema,
+    adjustmentComment: z.string().nullable(),
 });
 export type SalaryAccrualLine = z.infer<typeof salaryAccrualLineSchema>;
 
@@ -57,6 +61,11 @@ const salaryAccrualSchema = z.object({
     isDismissed: z.boolean(),
     total: z.number(),
     linesCount: z.number(),
+    // Число уже проведённых на баланс строк (PRD 2, Фаза 6) — точный
+    // прогресс «N из M» доступен прямо в списке, без загрузки карточки
+    // (см. deriveListProgress на фронтенде — до этого поля прогресс
+    // выводился из статуса документа).
+    accruedLinesCount: z.number(),
     createdAt: z.coerce.date(),
 });
 export type SalaryAccrual = z.infer<typeof salaryAccrualSchema>;
@@ -97,6 +106,33 @@ export type SalaryAccrualNotDraftRow = z.infer<
     typeof salaryAccrualNotDraftRowSchema
 >;
 
+// ========================== Действия над строкой (PRD 2, Фаза 6) ========================== //
+
+// POST .../salary_accruals/:id/lines/:lineId/accrue — проведение строки на
+// баланс. accruedBy — Bitrix ID руководителя, передаётся явно фронтендом
+// (текущего пользователя в бэкенде нет — тот же приём, что closedBy у
+// периода и approvedBy у плана продаж). Он же станет createdBy движений
+// баланса, порождённых проведением.
+const accrueSalaryAccrualLineRequestSchema = z.object({
+    accruedBy: z.number(),
+});
+export type AccrueSalaryAccrualLineRequest = z.infer<
+    typeof accrueSalaryAccrualLineRequestSchema
+>;
+
+// PATCH .../salary_accruals/:id/lines/:lineId — корректировка строки до
+// проведения (только DRAFT): новая действующая сумма + обязательный
+// комментарий + автор. originalAmount не меняется — исходный расчёт всегда
+// виден рядом со скорректированной суммой.
+const adjustSalaryAccrualLineRequestSchema = z.object({
+    amount: z.number().int(),
+    comment: z.string().min(1),
+    adjustedBy: z.number(),
+});
+export type AdjustSalaryAccrualLineRequest = z.infer<
+    typeof adjustSalaryAccrualLineRequestSchema
+>;
+
 export {
     salaryAccrualLineStatusSchema,
     salaryAccrualLineSchema,
@@ -105,4 +141,6 @@ export {
     listSalaryAccrualsQuerySchema,
     salaryAccrualListResponseSchema,
     salaryAccrualNotDraftRowSchema,
+    accrueSalaryAccrualLineRequestSchema,
+    adjustSalaryAccrualLineRequestSchema,
 };

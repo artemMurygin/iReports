@@ -36,6 +36,7 @@ export function toSalaryAccrualListItem(
         isDismissed: entity.isDismissed,
         total: entity.total,
         linesCount: entity.lines.length,
+        accruedLinesCount: entity.accruedLinesCount,
         createdAt: entity.createdAt,
     };
 }
@@ -50,7 +51,11 @@ export function toSalaryAccrualResponse(
     };
 }
 
-function toSalaryAccrualLineResponse(
+// Экспортирована отдельно: та же форма строки используется раскрытием
+// движения начисления в ленте баланса (GetEmployeeBalanceService) — PRD 2:
+// «начисление в ленте раскрывается до правила и источников, идентичных
+// строке документа начисления».
+export function toSalaryAccrualLineResponse(
     line: SalaryAccrualLine,
 ): SalaryAccrualLineContract {
     return {
@@ -70,5 +75,6 @@ function toSalaryAccrualLineResponse(
         amount: line.amount,
         sources: line.sources,
         status: line.status,
+        adjustmentComment: line.adjustmentComment ?? null,
     };
 }
