@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { endOfDay, startOfMonth } from 'date-fns'
 import type { ServicesFilters } from '@/pages/ServicesReport/model/types.ts'
@@ -28,7 +28,10 @@ export function useFilters() {
 
     const { debouncedValue: debouncedFilters, isDebouncing } = useDebounce(filters, DEBOUNCE_MS)
 
-    const [error, setError] = useState<string | null>(null)
+    // Ошибка, которую записывает useServicesAnalytics через setError; ошибка запроса
+    // категорий не копируется в стейт эффектом (react-hooks/set-state-in-effect),
+    // а выводится из queryError прямо при рендере.
+    const [externalError, setError] = useState<string | null>(null)
     const setFilters = (value: ServicesFilters) => {
         saveDataToStorage(STORAGE_KEY, value)
         setFiltersState(value)
@@ -36,11 +39,9 @@ export function useFilters() {
 
     const { data, error: queryError } = useQuery(api.getCategories())
 
-    useEffect(() => {
-        if (queryError) setError(queryError.message ?? 'Не удалось загрузить данные')
-    }, [queryError])
+    const error = externalError ?? (queryError ? (queryError.message ?? 'Не удалось загрузить данные') : null)
 
-    const categories = data ?? []
+    const categories = useMemo(() => data ?? [], [data])
 
     const resolvedCategoryIds = useMemo(() => {
         if (!debouncedFilters.selectedCategoryId) return []

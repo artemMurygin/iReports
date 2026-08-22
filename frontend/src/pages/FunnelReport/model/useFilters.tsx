@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { DashboardFilters } from '@/pages/FunnelReport/model/types.ts'
 import { api } from '@/pages/FunnelReport/model/api.ts'
@@ -19,13 +19,14 @@ export const defaults: DashboardFilters = {
 
 export function useFilters() {
     const [filters, setFilters] = useState<DashboardFilters>(defaults)
-    const [error, setError] = useState<string | null>(null)
+    // Ошибка, которую записывает useDeals через setError; ошибка запроса
+    // опций фильтров не копируется в стейт эффектом (react-hooks/
+    // set-state-in-effect), а выводится из queryError прямо при рендере.
+    const [externalError, setError] = useState<string | null>(null)
 
     const { data, error: queryError } = useQuery(api.getFilterOptions())
 
-    useEffect(() => {
-        if (queryError) setError(queryError.message ?? 'Не удалось загрузить данные')
-    }, [queryError])
+    const error = externalError ?? (queryError ? (queryError.message ?? 'Не удалось загрузить данные') : null)
 
     const employees = data?.employees ?? []
     const sources = data?.sources ?? []

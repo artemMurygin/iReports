@@ -21,7 +21,7 @@ export function useDeals(filters: DashboardFilters, setError: Dispatch<SetStateA
 
     useEffect(() => {
         if (queryError) setError(queryError.message ?? 'Не удалось загрузить данные')
-    }, [queryError])
+    }, [queryError, setError])
 
     const loading = isDebouncing || isFetching
     const isInitialLoad = loading && data?.deals.length === 0

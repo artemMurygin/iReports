@@ -26,7 +26,7 @@ export function useServicesAnalytics(
         if (queryError) setError(queryError.message ?? 'Не удалось загрузить данные')
     }, [queryError, setError])
 
-    const services = data?.services ?? []
+    const services = useMemo(() => data?.services ?? [], [data])
 
     const { series } = useMemo(
         () => buildChartSeries(services, categories, filters.selectedCategoryId),
