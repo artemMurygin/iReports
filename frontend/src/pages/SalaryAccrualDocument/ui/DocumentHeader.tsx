@@ -1,4 +1,5 @@
-import { ArrowLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, CheckCheck, ChevronRight, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import type { SalaryAccrualResponse } from 'ireports-contracts'
 
 import {
@@ -6,6 +7,7 @@ import {
     AccrualStatusBadge,
     DismissedBadge,
     employeeInitials,
+    useAccrueDocument,
     type AccrualProgress,
 } from '@/features/SalaryAccruals'
 import { formatCurrency } from '@/features/SalesPlan'
@@ -26,20 +28,46 @@ export type DocumentHeaderProps = {
 /**
  * Pencil `jb7fL` (шапка документа, desktop): хлебные крошки «Зарплата › Начисления ·
  * июль 2026 › ФИО», аватар + ФИО + статус-бейдж (+ «Уволен»), мета «Отдел · направление ·
- * период · документ», справа «Итого к начислению» крупно и secondary «Назад к списку».
- * Мобильная шапка (`wYi5o`) — та же карточка с прогрессом «Начислено N из M» и полосой
- * (ниже `md:` полоса видима, крошки сжимаются). Primary «Начислить всё» — Фаза 9.
- * Номер документа мокапа («№A-2026-07-118») бэкенд не отдаёт — показывается id документа.
+ * период · документ», справа «Итого к начислению» крупно, primary «Начислить всё»
+ * (Фаза 9 — видна, только пока в документе есть строки `DRAFT`, и скрывается для `PAID`,
+ * когда все действия документа уже завершены) и secondary «Назад к списку». Мобильная
+ * шапка (`wYi5o`) — та же карточка с прогрессом «Начислено N из M» и полосой (ниже `md:`
+ * полоса видима, крошки сжимаются). Номер документа мокапа («№A-2026-07-118») бэкенд не
+ * отдаёт — показывается id документа.
  */
-export function DocumentHeader({ document, directionLabel, periodLabel, departmentName, progress, onBack, className }: DocumentHeaderProps) {
-    const meta = [
-        departmentName,
-        `направление «${directionLabel}»`,
-        `период ${periodLabel}`,
-        `документ ${document.id}`,
-    ]
+export function DocumentHeader({
+    document,
+    directionLabel,
+    periodLabel,
+    departmentName,
+    progress,
+    onBack,
+    className,
+}: DocumentHeaderProps) {
+    const meta = [departmentName, `направление «${directionLabel}»`, `период ${periodLabel}`, `документ ${document.id}`]
         .filter((part): part is string => part !== null)
         .join(' · ')
+
+    const draftLineCount = document.lines.filter((line) => line.status === 'DRAFT').length
+    const canAccrueAll = document.status !== 'PAID' && draftLineCount > 0
+    const accrueDocument = useAccrueDocument(document.direction)
+
+    function handleAccrueAll() {
+        const total = draftLineCount
+        accrueDocument.mutate(document.id, {
+            onSuccess: (response) => {
+                const failedCount = response.failures.length
+                toast.success(`Начислено ${total - failedCount} из ${total} строк`)
+                if (failedCount > 0) {
+                    const [first, ...rest] = response.failures
+                    toast.error(rest.length > 0 ? `${first.message} и ещё ${rest.length}` : first.message)
+                }
+            },
+            onError: () => {
+                toast.error('Не удалось начислить документ, попробуйте ещё раз')
+            },
+        })
+    }
 
     return (
         <div data-slot="accrual-document-header" className={cn('flex flex-col gap-4', className)}>
@@ -87,6 +115,12 @@ export function DocumentHeader({ document, directionLabel, periodLabel, departme
                             {formatCurrency(document.total)}
                         </span>
                     </div>
+                    {canAccrueAll && (
+                        <Button type="button" onClick={handleAccrueAll} disabled={accrueDocument.isPending}>
+                            {accrueDocument.isPending ? <Loader2 className="animate-spin" /> : <CheckCheck />}
+                            {accrueDocument.isPending ? 'Начисляем…' : 'Начислить всё'}
+                        </Button>
+                    )}
                     <Button type="button" variant="secondary" onClick={onBack}>
                         <ArrowLeft />
                         Назад к списку

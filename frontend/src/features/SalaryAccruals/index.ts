@@ -7,6 +7,23 @@
 export { useSalaryAccruals, useSalaryAccrual } from './model/useSalaryAccruals.ts'
 export { SALARY_ACCRUALS_QUERY_KEY_PREFIX } from './model/api.ts'
 export {
+    useAccrueLine,
+    useUnaccrueLine,
+    useAdjustLine,
+    useAccrueDocument,
+    useAccruePeriod,
+    useInvalidateSalaryAccrualsData,
+} from './model/useAccrualMutations.ts'
+export { useAccrualSelection, type AccrualSelection } from './model/useAccrualSelection.ts'
+export {
+    aggregateAccrueBatch,
+    accrueBatchFromPeriodResponse,
+    mergeAccrueBatchRetry,
+    readAccrueErrorMessage,
+    type AccrueBatchResult,
+    type AccrueFailureItem,
+} from './model/accrueBatch.ts'
+export {
     deriveListProgress,
     deriveDocumentProgress,
     deriveAccrualsSummary,
@@ -30,3 +47,7 @@ export { AccrualCardList } from './ui/AccrualCardList.tsx'
 export { AccrualsEmptyState } from './ui/AccrualsEmptyState.tsx'
 export { AccrualLinesTable } from './ui/AccrualLinesTable.tsx'
 export { AccrualLineCardList } from './ui/AccrualLineCardList.tsx'
+export { SelectionBar } from './ui/SelectionBar.tsx'
+export { AccrueSelectedDialog } from './ui/AccrueSelectedDialog.tsx'
+export { AccruePeriodDialog } from './ui/AccruePeriodDialog.tsx'
+export { AccrueResultModal } from './ui/AccrueResultModal.tsx'

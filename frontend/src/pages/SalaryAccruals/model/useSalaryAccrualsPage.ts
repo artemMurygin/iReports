@@ -5,12 +5,20 @@ import type { SalesDirection } from 'ireports-contracts'
 
 import { DIRECTION_LABEL, useAccountingPeriod } from '@/features/AccountingPeriod'
 import {
+    accrueBatchFromPeriodResponse,
+    aggregateAccrueBatch,
     countByStatus,
     deriveAccrualsSummary,
     filterAccruals,
+    mergeAccrueBatchRetry,
     pluralizeDocuments,
+    readAccrueErrorMessage,
+    useAccrualSelection,
+    useAccrueDocument,
+    useAccruePeriod,
     useSalaryAccruals,
     type AccrualStatusFilter,
+    type AccrueBatchResult,
 } from '@/features/SalaryAccruals'
 import { DEFAULT_PERIOD, formatCurrency, formatPeriodLabel, isValidPeriod } from '@/features/SalesPlan'
 import { useDepartments, useEmployees } from '@/features/TargetDirectory'
@@ -92,6 +100,90 @@ export function useSalaryAccrualsPage() {
     const footerNote = `Показано ${filteredItems.length} из ${accruals.items.length} ${pluralizeDocuments(accruals.items.length)} · ${periodLabel} · направление «${DIRECTION_LABEL[direction]}»`
     const footerTotal = `Итого ${formatCurrency(summary.totalAmount)}`
 
+    // ── Проведение (Фаза 9 docs/payroll-closing-and-accrual, PRD 2) ─────────────────
+    // Selection Bar («Начислить выбранным») и Page Header («Начислить все документы
+    // месяца») делят один и тот же результат-модалку — оба сводятся к `AccrueBatchResult`
+    // (`accrueBatch.ts`) до того, как дойти до неё. Отбор строк — по `filteredItems`
+    // (тому же списку, что видит таблица/Selection Bar), не по полному `accruals.items`.
+    const selection = useAccrualSelection(direction, period, filteredItems)
+    const accrueDocument = useAccrueDocument(direction)
+    const accruePeriod = useAccruePeriod(direction)
+
+    const [isSelectedConfirmOpen, setIsSelectedConfirmOpen] = useState(false)
+    const [isPeriodConfirmOpen, setIsPeriodConfirmOpen] = useState(false)
+    // `accrueDocument` — одна mutation-инстанция, вызываемая параллельно по несколько раз
+    // (Promise.allSettled) — её общий `isPending` не отражает «весь батч ещё не завершён»,
+    // поэтому статус отправки батча отслеживается отдельным флагом.
+    const [isBatchSubmitting, setIsBatchSubmitting] = useState(false)
+    const [periodError, setPeriodError] = useState<string | null>(null)
+    const [result, setResult] = useState<AccrueBatchResult | null>(null)
+    const [isResultOpen, setIsResultOpen] = useState(false)
+    const [isRetrying, setIsRetrying] = useState(false)
+
+    // Не-`PAID` документов в текущем (отфильтрованном) списке — и условие видимости кнопки
+    // «Начислить все документы месяца» в Page Header, и число N в её confirm-модалке.
+    const nonPaidCount = filteredItems.filter((item) => item.status !== 'PAID').length
+    const selectedItems = filteredItems.filter((item) => selection.isSelected(item.id))
+
+    function openSelectedConfirm() {
+        if (selection.selectedCount === 0) return
+        setIsSelectedConfirmOpen(true)
+    }
+
+    function openPeriodConfirm() {
+        setPeriodError(null)
+        setIsPeriodConfirmOpen(true)
+    }
+
+    async function submitSelected() {
+        if (selectedItems.length === 0) return
+        setIsBatchSubmitting(true)
+        const settled = await Promise.allSettled(selectedItems.map((item) => accrueDocument.mutateAsync(item.id)))
+        setIsBatchSubmitting(false)
+        setIsSelectedConfirmOpen(false)
+        setResult(aggregateAccrueBatch(settled, selectedItems))
+        setIsResultOpen(true)
+        selection.clear()
+    }
+
+    function submitPeriod() {
+        setPeriodError(null)
+        accruePeriod.mutate(period, {
+            onSuccess: (response) => {
+                setIsPeriodConfirmOpen(false)
+                setResult(accrueBatchFromPeriodResponse(response))
+                setIsResultOpen(true)
+                selection.clear()
+            },
+            onError: (mutationError) => {
+                setPeriodError(readAccrueErrorMessage(mutationError))
+            },
+        })
+    }
+
+    // «Повторить для неудачных» в модалке результата — независимо от того, откуда взялся
+    // `result` (Selection Bar или Page Header), повтор всегда идёт через `accrueDocument`
+    // на уникальные `accrualId` из `result.failures` (task: «повторно вызывает
+    // accrueDocument только для accrualId из failures»).
+    async function retryFailures() {
+        if (result === null || result.failures.length === 0) return
+        const uniqueIds = Array.from(new Set(result.failures.map((failure) => failure.accrualId)))
+        const nameById = new Map(result.failures.map((failure) => [failure.accrualId, failure.employeeName]))
+
+        setIsRetrying(true)
+        const settled = await Promise.allSettled(uniqueIds.map((id) => accrueDocument.mutateAsync(id)))
+        const retryResult = aggregateAccrueBatch(
+            settled,
+            uniqueIds.map((id) => ({ id, employeeName: nameById.get(id) ?? id })),
+        )
+        setResult((prev) => (prev === null ? retryResult : mergeAccrueBatchRetry(prev, retryResult)))
+        setIsRetrying(false)
+    }
+
+    function closeResult() {
+        setIsResultOpen(false)
+    }
+
     // Направление — в query документа: GET карточки живёт под префиксом направления,
     // а сам путь по плану — `/salary-accruals/:id` (без направления в сегментах). Период —
     // для ссылки «Назад к списку» и блока план/факт до прихода самого документа.
@@ -132,5 +224,25 @@ export function useSalaryAccrualsPage() {
         dataVersion: accruals.dataVersion,
         error: accruals.error,
         periodDirectionLabel: `${periodLabel} · ${DIRECTION_LABEL[direction]}`,
+        // Проведение (Фаза 9)
+        selection,
+        nonPaidCount,
+        selectedItems,
+        isSelectedConfirmOpen,
+        openSelectedConfirm,
+        closeSelectedConfirm: () => setIsSelectedConfirmOpen(false),
+        isPeriodConfirmOpen,
+        openPeriodConfirm,
+        closePeriodConfirm: () => setIsPeriodConfirmOpen(false),
+        isBatchSubmitting,
+        periodError,
+        isAccruingPeriod: accruePeriod.isPending,
+        submitSelected,
+        submitPeriod,
+        result,
+        isResultOpen,
+        isRetrying,
+        retryFailures,
+        closeResult,
     }
 }

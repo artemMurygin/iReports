@@ -60,6 +60,9 @@ export function SalaryAccrualDocumentBody({
 
             <AccrualLinesTable
                 lines={document.lines}
+                direction={document.direction}
+                accrualId={document.id}
+                documentStatus={document.status}
                 isLineExpanded={isLineExpanded}
                 onToggleLine={onToggleLine}
                 footerNote={footerNote}

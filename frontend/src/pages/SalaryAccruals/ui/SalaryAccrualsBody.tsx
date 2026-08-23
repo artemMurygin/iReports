@@ -6,6 +6,8 @@ import {
     AccrualsKpiRow,
     AccrualStatusFilterRow,
     AccrualsTable,
+    SelectionBar,
+    type AccrualSelection,
     type AccrualStatusFilter,
     type AccrualsSummary,
 } from '@/features/SalaryAccruals'
@@ -26,12 +28,17 @@ export type SalaryAccrualsBodyProps = {
     footerTotal: string
     onOpenAccrual: (id: string) => void
     onGoToSalesPlan: () => void
+    /** `useAccrualSelection` (features/SalaryAccruals/model) — общая инстанция для таблицы
+     * (чекбоксы) и Selection Bar (Фаза 9). */
+    selection: AccrualSelection
+    onAccrueSelected: () => void
 }
 
 /**
  * Все ветвления страницы списка начислений (конвенция frontend/CLAUDE.md — медиатор без
  * условного рендера): месяц не закрыт -> empty-state `g6vEv`; закрыт -> KPI Row +
- * фильтр/поиск + таблица (`cfNlL`, `md:` и выше) / карточки (`Q0i6z3`, ниже `md:`).
+ * фильтр/поиск + Selection Bar (только пока `selection.selectedCount > 0`, Фаза 9) +
+ * таблица (`cfNlL`, `md:` и выше) / карточки (`Q0i6z3`, ниже `md:`).
  */
 export function SalaryAccrualsBody({
     isClosed,
@@ -49,6 +56,8 @@ export function SalaryAccrualsBody({
     footerTotal,
     onOpenAccrual,
     onGoToSalesPlan,
+    selection,
+    onAccrueSelected,
 }: SalaryAccrualsBodyProps) {
     if (!isClosed) {
         return <AccrualsEmptyState periodLabel={periodLabel} onGoToSalesPlan={onGoToSalesPlan} />
@@ -66,12 +75,25 @@ export function SalaryAccrualsBody({
                 onSearchChange={onSearchChange}
             />
 
+            {selection.selectedCount > 0 && (
+                <SelectionBar
+                    selectedCount={selection.selectedCount}
+                    onClear={selection.clear}
+                    onAccrueSelected={onAccrueSelected}
+                />
+            )}
+
             <AccrualsTable
                 items={items}
                 departmentNameById={departmentNameById}
                 onOpenAccrual={onOpenAccrual}
                 footerNote={footerNote}
                 footerTotal={footerTotal}
+                selectedIds={selection.selectedIds}
+                onToggleRow={selection.toggleRow}
+                onToggleAll={selection.toggleAll}
+                isAllSelected={selection.isAllSelected}
+                isIndeterminate={selection.isIndeterminate}
                 className="hidden md:block"
             />
             <AccrualCardList

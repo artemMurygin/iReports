@@ -1,3 +1,5 @@
+import { AccruePeriodDialog, AccrueResultModal, AccrueSelectedDialog } from '@/features/SalaryAccruals'
+
 import { useSalaryAccrualsPage } from '../model/useSalaryAccrualsPage.ts'
 import { Layout } from './Layout.tsx'
 import { PageHeader } from './PageHeader.tsx'
@@ -6,8 +8,11 @@ import { SalaryAccrualsBody } from './SalaryAccrualsBody.tsx'
 /**
  * Pencil: design/sallary-first-iteration.pen, секция «Закрытие месяца и начисления»
  * (`uKNkE`) — `cfNlL` (`Начисления · Список`, desktop), `g6vEv` (empty-state «месяц ещё
- * не закрыт»), `Q0i6z3` (мобильный). Фаза 5 docs/payroll-closing-and-accrual — чтение;
- * Selection Bar / «Начислить все документы месяца» (`yDI1H`) — Фаза 9.
+ * не закрыт»), `Q0i6z3` (мобильный). Фаза 5 — чтение; Фаза 9 (мутации) добавляет Selection
+ * Bar/«Начислить выбранным» (Selection Bar в `SalaryAccrualsBody`), «Начислить все
+ * документы месяца» (`yDI1H`, кнопка в `PageHeader`) и их confirm/результат-диалоги,
+ * смонтированные здесь — тот же приём, что `ClosePeriodDialog`/`ReopenPeriodDialog` в
+ * `SalesPlanPage`'s `header`-слоте.
  *
  * Чистый медиатор (frontend/CLAUDE.md): всё состояние — в `useSalaryAccrualsPage`,
  * ветвления — в `SalaryAccrualsBody`.
@@ -38,6 +43,25 @@ export function SalaryAccrualsPage() {
         dataVersion,
         error,
         periodDirectionLabel,
+        selection,
+        nonPaidCount,
+        selectedItems,
+        isSelectedConfirmOpen,
+        openSelectedConfirm,
+        closeSelectedConfirm,
+        isPeriodConfirmOpen,
+        openPeriodConfirm,
+        closePeriodConfirm,
+        isBatchSubmitting,
+        periodError,
+        isAccruingPeriod,
+        submitSelected,
+        submitPeriod,
+        result,
+        isResultOpen,
+        isRetrying,
+        retryFailures,
+        closeResult,
     } = useSalaryAccrualsPage()
 
     return (
@@ -47,14 +71,50 @@ export function SalaryAccrualsPage() {
             dataVersion={dataVersion}
             error={error}
             header={
-                <PageHeader
-                    direction={direction}
-                    onDirectionChange={setDirection}
-                    period={period}
-                    onPeriodChange={setPeriod}
-                    isPeriodClosed={isClosed}
-                    closedLabel={closedLabel}
-                />
+                <>
+                    <PageHeader
+                        direction={direction}
+                        onDirectionChange={setDirection}
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        isPeriodClosed={isClosed}
+                        closedLabel={closedLabel}
+                        nonPaidCount={nonPaidCount}
+                        onAccrueAllMonth={openPeriodConfirm}
+                    />
+
+                    <AccrueSelectedDialog
+                        open={isSelectedConfirmOpen}
+                        onOpenChange={(open) => {
+                            if (!open) closeSelectedConfirm()
+                        }}
+                        items={selectedItems}
+                        isSubmitting={isBatchSubmitting}
+                        onConfirm={() => void submitSelected()}
+                    />
+
+                    <AccruePeriodDialog
+                        open={isPeriodConfirmOpen}
+                        onOpenChange={(open) => {
+                            if (!open) closePeriodConfirm()
+                        }}
+                        periodDirectionLabel={periodDirectionLabel}
+                        count={nonPaidCount}
+                        isSubmitting={isAccruingPeriod}
+                        errorMessage={periodError}
+                        onConfirm={submitPeriod}
+                    />
+
+                    <AccrueResultModal
+                        open={isResultOpen}
+                        onOpenChange={(open) => {
+                            if (!open) closeResult()
+                        }}
+                        result={result}
+                        isRetrying={isRetrying}
+                        onRetryFailed={() => void retryFailures()}
+                    />
+                </>
             }
             body={
                 <SalaryAccrualsBody
@@ -73,6 +133,8 @@ export function SalaryAccrualsPage() {
                     footerTotal={footerTotal}
                     onOpenAccrual={openAccrual}
                     onGoToSalesPlan={goToSalesPlan}
+                    selection={selection}
+                    onAccrueSelected={openSelectedConfirm}
                 />
             }
         />

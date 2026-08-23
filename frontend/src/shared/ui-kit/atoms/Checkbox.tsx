@@ -20,6 +20,10 @@ import { cn } from '@/shared/lib/tw'
 export type CheckboxProps = {
     checked: boolean | 'indeterminate'
     onCheckedChange?: (checked: boolean) => void
+    /** e.g. a `PAID` salary accrual document — already fully processed, not selectable
+     * (see `AccrualsTable`). Radix disables pointer/keyboard interaction and exposes
+     * `aria-disabled` for free; the visual dimming is `disabled:opacity-50`. */
+    disabled?: boolean
     'aria-label'?: string
     className?: string
 }
@@ -35,6 +39,7 @@ function Checkbox({ checked, onCheckedChange, className, ...props }: CheckboxPro
                 'data-[state=checked]:border-brand-strong data-[state=checked]:bg-brand-strong',
                 'data-[state=indeterminate]:border-hairline data-[state=indeterminate]:bg-surface',
                 'focus-visible:ring-2 focus-visible:ring-brand/40',
+                'disabled:pointer-events-none disabled:opacity-50',
                 className,
             )}
             {...props}
