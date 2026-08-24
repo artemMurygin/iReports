@@ -4,6 +4,8 @@ import { SalesModule } from '@/domains/service/modules/sales/sales.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
 import { DirectoryModule } from '@/modules/directory/directory.module';
 import { RoappSyncModule } from '@/domains/service/sync/roapp/roapp-sync.module';
+import { RoappModule } from '@/domains/service/integrations/roapp/roapp.module';
+import { RoappCashDocumentAdapter } from '@/domains/service/integrations/roapp/roapp-cash-document.adapter';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
@@ -16,6 +18,7 @@ import { AccrueSalaryAccrualDocumentHandler } from '@/domains/service/modules/ac
 import { AccruePeriodSalaryAccrualsHandler } from '@/domains/service/modules/accounting/application/command/accrue-period-salary-accruals.handler';
 import { CreateBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/create-balance-transaction.handler';
 import { DeleteBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/delete-balance-transaction.handler';
+import { PutErpCashConfigHandler } from '@/domains/service/modules/accounting/application/command/put-erp-cash-config.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
 import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
 import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
@@ -32,6 +35,7 @@ import { GetMotivationSchemaService } from '@/domains/service/modules/accounting
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
 import { GetEmployeeBalanceService } from '@/domains/service/modules/accounting/application/services/get-employee-balance.service';
+import { GetErpCashConfigService } from '@/domains/service/modules/accounting/application/services/get-erp-cash-config.service';
 import { GetDepartmentBalancesService } from '@/domains/service/modules/accounting/application/services/get-department-balances.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
@@ -66,6 +70,8 @@ import { CreateBalanceTransactionHttpController } from '@/domains/service/module
 import { DeleteBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-balance-transaction.http.controller';
 import { GetDepartmentBalancesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-balances.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
+import { GetErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-erp-cash-config.http.controller';
+import { PutErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/put-erp-cash-config.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -76,6 +82,9 @@ import { TASK_COMPLETION_REPOSITORY } from '@/domains/service/modules/accounting
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
 import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
 import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema.repository';
@@ -88,6 +97,8 @@ import { TaskCompletionRepository } from '@/domains/service/modules/accounting/i
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
 import { BalanceTransactionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
+import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-config.repository';
+import { ErpCashDocumentRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-document.repository';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period-closed.event-handler';
@@ -138,6 +149,12 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         DomainSyncStatusModule,
         DirectoryModule,
         RoappSyncModule,
+        // RoappHttpService — вход RoappCashDocumentAdapter (SERVICE_ERP_CASH_DOCUMENT_PORT,
+        // PRD 3 docs/payroll-closing-and-accrual, Фаза 11): ни RoappSyncModule,
+        // ни RoappGatewayModule не экспортируют его наружу (обёртывают только
+        // RoappService/RoappGateway), поэтому RoappModule импортирован здесь
+        // напрямую.
+        RoappModule,
     ],
     controllers: [
         CreateMotivationSchemaHttpController,
@@ -172,6 +189,13 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         GetDepartmentBalancesHttpController,
         GetEmployeeBalanceHttpController,
         GetClosePeriodPreviewHttpController,
+        // Конфигурация кассы ERP направления (PRD 3
+        // docs/payroll-closing-and-accrual, Фаза 11) — GET/PUT под своим
+        // путём /v1/service/accounting/erp_cash_config; PUT — generic по
+        // direction команда, зеркальные контроллеры shop диспатчат её же
+        // (см. ShopAccountingModule).
+        GetErpCashConfigHttpController,
+        PutErpCashConfigHttpController,
     ],
     providers: [
         CreateMotivationSchemaHandler,
@@ -264,6 +288,31 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         {
             provide: EMPLOYEE_DISMISSAL,
             useClass: EmployeeDismissalRepository,
+        },
+        // Конфигурация кассы ERP и локальная связка «движение → документ
+        // ERP» (PRD 3 docs/payroll-closing-and-accrual, Фаза 11) —
+        // direction-агностичные реализации, тот же приём, что
+        // BALANCE_TRANSACTION_REPOSITORY выше: ShopAccountingModule заводит
+        // собственные экземпляры под теми же токенами.
+        PutErpCashConfigHandler,
+        GetErpCashConfigService,
+        {
+            provide: ERP_CASH_CONFIG_REPOSITORY,
+            useClass: ErpCashConfigRepository,
+        },
+        {
+            provide: ERP_CASH_DOCUMENT_REPOSITORY,
+            useClass: ErpCashDocumentRepository,
+        },
+        // Адаптер записи в кассу RemOnline (PRD 3, Фаза 11) — НЕ
+        // direction-агностичен, в отличие от ERP_CASH_CONFIG_REPOSITORY/
+        // ERP_CASH_DOCUMENT_REPOSITORY выше: у shop свой токен
+        // (SHOP_ERP_CASH_DOCUMENT_PORT) и своя реализация под МойСклад (см.
+        // domains/shop/modules/accounting/application/ports/erp-cash-document.port.ts) —
+        // порты уже объявлены разными файлами/типами специально для этого.
+        {
+            provide: SERVICE_ERP_CASH_DOCUMENT_PORT,
+            useClass: RoappCashDocumentAdapter,
         },
         // Фаза 2 PRD 1: калькулятор строк снапшота (общий для закрытия и
         // close-preview) и синк ERP месяца по требованию — свои реализации

@@ -225,6 +225,12 @@ export const routesV1 = {
             },
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.
+            // Конфигурация кассы ERP направления (PRD 3
+            // docs/payroll-closing-and-accrual, Фаза 11) — одна запись на
+            // направление, администратор заполняет один раз (см.
+            // ErpCashConfig в erp-cash.prisma); GET/PUT на одном пути.
+            // Зеркало — shop.accounting.erpCashConfig ниже.
+            erpCashConfig: `${serviceAccountingRoot}/erp_cash_config`,
         },
         // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
         // направление в query (см. listSalesPerformanceQuerySchema).
@@ -358,6 +364,11 @@ export const routesV1 = {
             },
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.
+            // Конфигурация кассы ERP направления shop (PRD 3
+            // docs/payroll-closing-and-accrual, Фаза 11) — зеркалит
+            // service.accounting.erpCashConfig выше, в своём namespace
+            // shopAccountingRoot.
+            erpCashConfig: `${shopAccountingRoot}/erp_cash_config`,
         },
         // Каталог (дерево категорий) магазина (Фаза 1, см.
         // domains/shop/modules/warehouse) — читает уже синхронизированную

@@ -1,0 +1,63 @@
+// Кассовые документы ERP и конфигурация кассы по направлению — PRD 3
+// (docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md),
+// Фаза 11. Обе модели direction-агностичны на уровне персистентности (как
+// AccountingPeriod/SalaryAccrual/BalanceTransaction, см. accounting-period.prisma
+// и salary.prisma): один физический класс/репозиторий, свой экземпляр под
+// тем же DI-токеном в модулях service и shop — сама запись/чтение кассового
+// документа не содержит бизнес-логики, специфичной для направления,
+// направление определяет только то, ЧЕРЕЗ КАКОЙ адаптер (RoApp/МойСклад,
+// ErpCashDocumentPort — уже НЕ переиспользуемый между доменами, см.
+// domains/{service,shop}/modules/accounting/application/ports/erp-cash-document.port.ts)
+// документ был создан.
+
+enum ErpCashDocumentKind {
+  INCOME
+  EXPENSE
+
+  @@map("erp_cash_document_kind")
+}
+
+// Связка «движение баланса → документ ERP» (PRD 3: «либо есть оба, либо нет
+// ни одного»). transactionId уникален — это и есть защита от задвоения на
+// уровне БД, на которую опирается ErpCashDocumentPort.findByKey (см. порт):
+// повторная попытка создать документ для уже обработанного движения обязана
+// упасть на уникальном индексе, а не молча создать второй документ в ERP.
+model ErpCashDocument {
+  id            String              @id
+  transactionId String              @unique @map("transaction_id")
+  system        ExternalSystem
+  kind          ErpCashDocumentKind
+  // Целые рубли, без знака — знак направления несёт kind (см. amount в
+  // contracts/commands/erp-cash.ts).
+  amount        Int
+  externalId    String              @map("external_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("erp_cash_documents")
+}
+
+// Одна запись на направление (Фаза 11): администратор заполняет один раз в
+// GET|PUT /v1/{direction}/accounting/erp_cash_config, форма выплаты/ручного
+// движения кассу/статью не выбирает (PRD 3, «Выбора кассы у пользователя
+// нет»). roappCashboxId — id единственной кассы (Finance Account) RemOnline
+// направления service; moySkladExpenseItemId/organizationId — обязательные
+// для cashout/cashin статья расходов и юрлицо направления shop.
+// moySkladIncomeItemId — см. WHY-комментарий у erpCashConfigSchema в
+// contracts/commands/erp-cash.ts: поле сохранено как задел, но исследование
+// API МойСклад (get_schema_fields('CashIn'), 2026-08-24) подтвердило, что у
+// приходного ордера нет аналога статьи расходов вообще — адаптер это поле
+// в ERP не отправляет.
+model ErpCashConfig {
+  id        String         @id
+  direction SalesDirection @unique
+
+  roappCashboxId        Int?    @map("roapp_cashbox_id")
+  moySkladExpenseItemId String? @map("moy_sklad_expense_item_id")
+  moySkladIncomeItemId  String? @map("moy_sklad_income_item_id")
+  organizationId        String? @map("organization_id")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("erp_cash_configs")
+}

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module';
 import { MoySkladSyncModule } from '@/domains/shop/sync/moySklad/moysklad-sync.module';
+import { MoyskladModule } from '@/domains/shop/integrations/moySklad/moysklad.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
 import { DirectoryModule } from '@/modules/directory/directory.module';
 import { ListShopSalaryRuleTypesService } from '@/domains/shop/modules/accounting/application/services/list-salary-rule-types.service';
@@ -21,6 +22,8 @@ import { DeleteShopTaskCompletionHandler } from '@/domains/shop/modules/accounti
 import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
 import { MoySkladErpPeriodSyncAdapter } from '@/domains/shop/modules/accounting/infrastructure/sync/moysklad-erp-period-sync.adapter';
 import { GetShopClosePeriodPreviewHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-close-period-preview.http.controller';
+import { GetShopErpCashConfigHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-erp-cash-config.http.controller';
+import { PutShopErpCashConfigHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/put-shop-erp-cash-config.http.controller';
 import { CloseShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/close-shop-accounting-period.handler';
 import { ListShopSalaryRuleTypesHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { CreateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-motivation-schema.http.controller';
@@ -53,6 +56,7 @@ import { ShopSalaryRuleRepository } from '@/domains/shop/modules/accounting/infr
 import { ShopTaskCompletionRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/shop-task-completion.repository';
 import { ShopCalculationDataRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/shop-calculation-data.repository';
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
+import { GetErpCashConfigService } from '@/domains/service/modules/accounting/application/services/get-erp-cash-config.service';
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
@@ -68,11 +72,19 @@ import { EmployeeDismissalRepository } from '@/domains/service/modules/accountin
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period.repository';
 import { AccountingPeriodSnapshotRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period-snapshot.repository';
 import { AccountingCalculationCacheRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-calculation-cache.repository';
+import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-config.repository';
+import { ErpCashDocumentRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-document.repository';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastructure/repositories/sales-plan.repository';
+import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/application/ports/employee-identity.port';
+import { EmployeeIdentityRepository } from '@/modules/employee-identity/infrastructure/repositories/employee-identity.repository';
+import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
+import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySklad/moysklad-cash-document.adapter';
 
 // Модуль accounting магазина (Фазы 12/13, issue #57/#64, персистентность и
 // оркестратор — Фаза 13.5, см.
@@ -153,6 +165,13 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         // резолвинга target.name (Фаза "Редактирование зарплатных схем", тот
         // же приём, что и у одноимённого AccountingModule сервиса).
         DirectoryModule,
+        // MoyskladHttpService для MoyskladCashDocumentAdapter (PRD 3, Фаза
+        // 11) — MoySkladSyncModule экспортирует только MoySkladSyncService/
+        // ProductFolderTreeService/DirectionSyncLockModule (см.
+        // moysklad-sync.module.ts), не сам MoyskladModule и не
+        // MoyskladHttpService, поэтому импортируем MoyskladModule напрямую,
+        // тем же приёмом, что modules/marketing/pricing/pricing.module.ts.
+        MoyskladModule,
     ],
     controllers: [
         ListShopSalaryRuleTypesHttpController,
@@ -189,6 +208,13 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         AccrueShopSalaryAccrualDocumentHttpController,
         AccruePeriodShopSalaryAccrualsHttpController,
         GetShopClosePeriodPreviewHttpController,
+        // Конфигурация кассы ERP направления shop (PRD 3
+        // docs/payroll-closing-and-accrual, Фаза 11) — зеркалит
+        // service.accounting.erpCashConfig, PUT диспатчит ту же generic по
+        // direction команду через общий CommandBus (хендлер зарегистрирован
+        // в AccountingModule сервиса).
+        GetShopErpCashConfigHttpController,
+        PutShopErpCashConfigHttpController,
     ],
     providers: [
         ListShopSalaryRuleTypesService,
@@ -272,6 +298,44 @@ import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastruct
         {
             provide: SALARY_ACCRUAL_REPOSITORY,
             useClass: SalaryAccrualRepository,
+        },
+        // Конфигурация кассы ERP и локальная связка «движение → документ
+        // ERP» (PRD 3 docs/payroll-closing-and-accrual, Фаза 11) —
+        // собственные экземпляры под теми же токенами, что и в
+        // AccountingModule сервиса (тот же приём, что ACCOUNTING_PERIOD_*
+        // выше); PutErpCashConfigHandler здесь НЕ заводится — это уже
+        // CQRS-хендлер, зарегистрированный в AccountingModule сервиса (см.
+        // комментарий выше про Reopen/RecalculateAccountingPeriodHandler).
+        GetErpCashConfigService,
+        {
+            provide: ERP_CASH_CONFIG_REPOSITORY,
+            useClass: ErpCashConfigRepository,
+        },
+        {
+            provide: ERP_CASH_DOCUMENT_REPOSITORY,
+            useClass: ErpCashDocumentRepository,
+        },
+        // EmployeeIdentity — сквозной справочник вне domains/service и
+        // domains/shop (см. modules/employee-identity/employee-identity.module.ts),
+        // но его модуль экспортирует только ResolveEmployeeByExternalIdService,
+        // не сам репозиторий/токен — импортировать EmployeeIdentityModule
+        // ради одного internal-провайдера избыточно. Собственный экземпляр
+        // класса под тем же токеном — тот же приём, что и у
+        // ACCOUNTING_PERIOD_REPOSITORY/ERP_CASH_CONFIG_REPOSITORY выше:
+        // класс не содержит бизнес-логики, специфичной для направления
+        // (EmployeeIdentity вообще не различает service/shop на уровне
+        // персистентности). Нужен MoyskladCashDocumentAdapter ниже, чтобы
+        // резолвить Bitrix ID сотрудника в id сотрудника МойСклада.
+        {
+            provide: EMPLOYEE_IDENTITY_REPOSITORY,
+            useClass: EmployeeIdentityRepository,
+        },
+        // Адаптер ErpCashDocumentPort направления shop (PRD 3, Фаза 11) —
+        // см. WHY-комментарии в самом адаптере (agent Employee/Counterparty,
+        // конвертация sum в копейки, отсутствие статьи доходов у CashIn).
+        {
+            provide: SHOP_ERP_CASH_DOCUMENT_PORT,
+            useClass: MoyskladCashDocumentAdapter,
         },
         // BALANCE_TRANSACTION_REPOSITORY здесь больше не заводится: с
         // Фазы 8b баланс общий по сотруднику, его чтение и команды живут

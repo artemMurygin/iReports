@@ -17,12 +17,16 @@ import {
     RoappPaginatedResponse,
 } from './roapp.types';
 
-function toErrorMessage(error: unknown): string {
+// Экспортированы — переиспользуются RoappCashDocumentAdapter
+// (../roapp-cash-document.adapter.ts, PRD 3 Фаза 11), которому нужен тот же
+// формат ошибки и той же ISO-даты без миллисекунд для custom_created_at, не
+// только для заказов.
+export function toErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
 // Roapp принимает ISO-дату без миллисекунд: %Y-%m-%dT%H:%M:%SZ
-function toRoappIsoDate(date: Date): string {
+export function toRoappIsoDate(date: Date): string {
     return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
