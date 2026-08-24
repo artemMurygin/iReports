@@ -9,6 +9,8 @@ import { SalaryRuleDetailPage } from '@/pages/SalaryRuleDetail'
 import { SalaryReportPage } from '@/pages/SalaryReport'
 import { SalaryAccrualsPage } from '@/pages/SalaryAccruals'
 import { SalaryAccrualDocumentPage } from '@/pages/SalaryAccrualDocument'
+import { EmployeeBalancePage } from '@/pages/EmployeeBalance'
+import { DepartmentBalancesPage } from '@/pages/DepartmentBalances'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
 import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
@@ -73,6 +75,22 @@ export const router = createBrowserRouter([
                 // Фазы 5 буквально как '/salary-accruals/:id'.
                 path: 'salary-accruals/:id',
                 element: <SalaryAccrualDocumentPage />,
+            },
+            {
+                // Фаза 10 плана "Закрытие месяца и начисления" — сводка балансов по отделу
+                // (пункт меню «Балансы», app/navigation.tsx). departmentId/period — query-
+                // параметры (`?departmentId=&period=YYYY-MM`), тот же приём, что у
+                // 'salary-accruals' с `?period=&direction=`.
+                path: 'balance/department',
+                element: <DepartmentBalancesPage />,
+            },
+            {
+                // Баланс сотрудника — общий, без направления в пути (Фаза 8b: баланс живёт
+                // под /v1/accounting/balance, вне /v1/service и /v1/shop). Открывается из
+                // таблицы балансов отдела ("Открыть баланс") и, в будущем, из карточки
+                // документа начисления.
+                path: 'balance/employee/:id',
+                element: <EmployeeBalancePage />,
             },
             {
                 path: 'salaries/rules',

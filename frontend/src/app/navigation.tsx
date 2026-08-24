@@ -4,6 +4,7 @@ import {
     CalendarClock,
     ChartNoAxesColumn,
     FileText,
+    HandCoins,
     LayoutDashboard,
     Link2,
     Percent,
@@ -84,6 +85,10 @@ export const SECTIONS: NavSection[] = [
             // `SECTIONS` пункт автоматически попадает в Subnav десктопа (app/Header.tsx), в
             // мобильную шторку (`DRAWER_SECTIONS`) и, через раздел «Зарплата», в Bottom Nav.
             { label: 'Начисления', to: '/salary-accruals', icon: <Banknote /> },
+            // Фаза 10 плана "Закрытие месяца и начисления" — сводка балансов по отделу
+            // (`pages/DepartmentBalances`), точка входа к балансу конкретного сотрудника
+            // (`pages/EmployeeBalance`, `/balance/employee/:id`, ссылками из этой таблицы).
+            { label: 'Балансы', to: '/balance/department', icon: <HandCoins /> },
             { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
             { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
         ],
