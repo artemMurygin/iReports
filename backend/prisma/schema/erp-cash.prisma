@@ -12,7 +12,7 @@
 
 enum ErpCashDocumentKind {
   INCOME
-  EXPENSE
+  OUTCOME
 
   @@map("erp_cash_document_kind")
 }

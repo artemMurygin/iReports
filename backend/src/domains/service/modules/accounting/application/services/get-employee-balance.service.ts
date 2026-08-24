@@ -5,6 +5,8 @@ import type {
     BalanceTransactionFilter,
     BalanceTransactionRepositoryPort,
 } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
+import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
 import { toBalanceTransactionResponse } from '../mappers/to-balance-transaction-response';
 
 // Общий баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual, Фаза 8b,
@@ -23,6 +25,8 @@ export class GetEmployeeBalanceService {
     constructor(
         @Inject(BALANCE_TRANSACTION_REPOSITORY)
         private readonly transactionRepo: BalanceTransactionRepositoryPort,
+        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
+        private readonly erpCashDocumentRepo: ErpCashDocumentRepositoryPort,
     ) {}
 
     async execute(
@@ -34,6 +38,21 @@ export class GetEmployeeBalanceService {
             this.transactionRepo.findByEmployee(employeeId, filter),
         ]);
 
+        // Внешний ID документа ERP в ленте (PRD 3, «Критерии готовности») —
+        // один батч-запрос по всем движениям выборки с erpSyncRequired,
+        // а не N+1 по одному на движение (см. WHY на
+        // ErpCashDocumentRepositoryPort.findByTransactionIds).
+        const erpTransactionIds = transactions
+            .filter((transaction) => transaction.erpSyncRequired)
+            .map((transaction) => transaction.id);
+        const erpDocuments =
+            await this.erpCashDocumentRepo.findByTransactionIds(
+                erpTransactionIds,
+            );
+        const erpByTransactionId = new Map(
+            erpDocuments.map((document) => [document.transactionId, document]),
+        );
+
         return {
             employeeId,
             balance,
@@ -41,9 +60,18 @@ export class GetEmployeeBalanceService {
                 (sum, transaction) => sum + transaction.amount,
                 0,
             ),
-            transactions: transactions.map((transaction) =>
-                toBalanceTransactionResponse(transaction),
-            ),
+            transactions: transactions.map((transaction) => {
+                const erpDocument = erpByTransactionId.get(transaction.id);
+                return toBalanceTransactionResponse(
+                    transaction,
+                    erpDocument
+                        ? {
+                              system: erpDocument.system,
+                              externalId: erpDocument.externalId,
+                          }
+                        : null,
+                );
+            }),
         };
     }
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { periodSchema, salesDirectionSchema } from './sales-plan';
 import { salaryAccrualStatusSchema } from './salary-accrual-status';
+import { externalSystemSchema } from './employee-identity';
 
 // Баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual/
 // prd-salary-accrual-and-employee-balance.md) — лента движений денег между
@@ -66,6 +67,23 @@ const balanceTransactionSchema = z.object({
     // Признак «должно отражаться в кассе ERP» — в PRD 2 только хранится и
     // показывается, сама синхронизация — PRD 3.
     erpSyncRequired: z.boolean(),
+    // Связка с документом ERP (PRD 3
+    // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
+    // «Критерии готовности»: «Внешний ID документа ERP сохраняется и
+    // показывается в ленте баланса») — null для движений без документа ERP
+    // (erpSyncRequired: false) и, теоретически, для erpSyncRequired: true
+    // движений, если запись ещё не подтянута (не должно происходить при
+    // штатной работе — документ создаётся в той же транзакции, что и
+    // движение). Только system+externalId — этого достаточно для
+    // иконки-ссылки в ленте (P3.3); полная форма ErpCashDocument (erp-cash.ts)
+    // не нужна здесь, чтобы не тащить figure kind/amount, дублирующие уже
+    // видимые в самом движении.
+    erp: z
+        .object({
+            system: externalSystemSchema,
+            externalId: z.string(),
+        })
+        .nullable(),
 });
 export type BalanceTransaction = z.infer<typeof balanceTransactionSchema>;
 
@@ -248,6 +266,10 @@ export type DepartmentBalancesResponse = z.infer<
 export {
     balanceTransactionTypeSchema,
     balanceTransactionSchema,
+    // Переиспользуется в salary-payout.ts (Фаза 12 PRD 3) для occurredAt
+    // выплаты — та же форма даты, что и у ручного движения, поэтому не
+    // дублируем regex/refine третий раз.
+    isoDateStringSchema,
     getEmployeeBalanceQuerySchema,
     employeeBalanceResponseSchema,
     manualBalanceTransactionTypeSchema,

@@ -51,6 +51,23 @@ export type CreateManualBalanceTransactionProps = {
     erpSyncRequired?: boolean;
 };
 
+// Выплата (PRD 3 docs/payroll-closing-and-accrual/
+// prd-salary-payout-and-erp-cash-documents.md): amount — абсолютная
+// величина (> 0, «Создаётся на любую сумму amount > 0»), знак подставляет
+// сама сущность (расход, как и у ручных outflow-типов) — тот же приём, что
+// у createManual. direction — направление кассы ERP, в которую уйдёт
+// расходный документ (страница выплаты конкретного направления); баланс,
+// который эта сумма уменьшает, общий по сотруднику (PRD 2) — direction
+// здесь ТОЛЬКО атрибут происхождения, не фильтр остатка.
+export type CreatePayoutProps = {
+    employeeId: number;
+    direction: AccountingDirection;
+    amount: number;
+    createdBy: number;
+    comment?: string;
+    occurredAt?: Date;
+};
+
 export type BalanceTransactionProps = {
     employeeId: number;
     // Атрибут происхождения движения (документ какого направления его
@@ -179,27 +196,61 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
         });
     }
 
+    // Выплата (PRD 3, Фаза 12): движение PAYOUT, всегда расход (amount
+    // хранится отрицательным — та же конвенция, что у ручных outflow-типов),
+    // erpSyncRequired всегда true — выплата обязана иметь связанный
+    // ErpCashDocument («Создаётся для каждой выплаты», PRD 3). Обработчик
+    // выплаты (следующие агенты Фазы 12) вызывает эту фабрику ПОСЛЕ
+    // успешного ErpCashDocumentPort.create() — сама сущность не обращается
+    // в ERP и не проверяет остаток (PRD 3: «Ограничений по остатку нет...
+    // остаток может быть нулевым или отрицательным» — предупреждение и
+    // confirmNegativeBalance — забота application-слоя, у него есть доступ
+    // к текущему остатку через BalanceTransactionRepositoryPort, сущность
+    // его не знает).
+    static forPayout(create: CreatePayoutProps): BalanceTransaction {
+        if (create.amount <= 0) {
+            throw new ArgumentInvalidException(
+                'Сумма выплаты — положительное число: остаток уменьшается автоматически',
+            );
+        }
+        return new BalanceTransaction({
+            id: randomUUID(),
+            props: {
+                employeeId: create.employeeId,
+                direction: create.direction,
+                type: 'PAYOUT',
+                amount: -create.amount,
+                occurredAt: create.occurredAt ?? new Date(),
+                createdBy: create.createdBy,
+                comment: create.comment,
+                erpSyncRequired: true,
+            },
+        });
+    }
+
     // Ручное движение руководителя — единственный вид движения, доступный
     // прямому удалению (Фаза 8b, см. ensureDeletable).
     isManual(): boolean {
         return MANUAL_TYPES.has(this.props.type);
     }
 
-    // Прямое удаление движения (DELETE, Фаза 8b) разрешено только ручным
-    // движениям без документа ERP: движения начисления удаляются
-    // действием «Отменить начисление» строки документа, выплаты и движения
-    // с erpSyncRequired — вместе с документом ERP (PRD 3).
+    // Прямое удаление движения (DELETE .../balance/transactions/:id)
+    // разрешено только ручным движениям (Фаза 8b): движения начисления
+    // удаляются действием «Отменить начисление» строки документа, выплата
+    // (PAYOUT, не входит в MANUAL_TYPES) — только своим собственным
+    // эндпоинтом DELETE .../payout/:id (PRD 3), не этим общим. Документ ERP
+    // сам по себе больше не блокирует удаление здесь (Фаза 11 отклоняла
+    // erpSyncRequired: true с 409 как временную заглушку, пока не было
+    // адаптера) — с Фазы 12 DeleteBalanceTransactionHandler умеет удалить
+    // связанный ErpCashDocument перед удалением движения (PRD 3, «Уточнение
+    // к PRD 2»: «Ручное движение с erpSyncRequired = true удаляется вместе
+    // с документом ERP»), поэтому наличие erpSyncRequired само по себе
+    // больше не 409.
     ensureDeletable(): void {
         if (!this.isManual()) {
             throw new BalanceTransactionNotDeletableException(
                 this.id,
-                'удаляются только ручные движения (начисление отменяется на строке документа, выплата удаляется вместе с документом ERP)',
-            );
-        }
-        if (this.erpSyncRequired) {
-            throw new BalanceTransactionNotDeletableException(
-                this.id,
-                'движение проводится в кассе ERP и удаляется вместе с документом ERP (PRD 3)',
+                'удаляются только ручные движения (начисление отменяется на строке документа, выплата удаляется своим DELETE .../payout/:id)',
             );
         }
     }
@@ -331,6 +382,15 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
         if (this.props.type === 'ADJUSTMENT' && this.props.amount === 0) {
             throw new ArgumentInvalidException(
                 `Движение типа ${this.props.type} не может быть нулевым`,
+            );
+        }
+        // Выплата (PRD 3, Фаза 12) — тот же приём, что MANUAL_OUTFLOW_TYPES
+        // выше: PAYOUT в этот набор не входит (isManual() должен оставаться
+        // false для выплаты, см. ensureDeletable), поэтому знак проверяется
+        // отдельной веткой, а не добавлением PAYOUT в MANUAL_OUTFLOW_TYPES.
+        if (this.props.type === 'PAYOUT' && this.props.amount >= 0) {
+            throw new ArgumentInvalidException(
+                'Движение типа PAYOUT — расход: сумма хранится отрицательной',
             );
         }
         if (

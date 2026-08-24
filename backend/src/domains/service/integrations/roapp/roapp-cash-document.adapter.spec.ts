@@ -89,11 +89,11 @@ describe('RoappCashDocumentAdapter', () => {
             );
         });
 
-        it('EXPENSE -> direction: "expense"', async () => {
+        it('OUTCOME -> direction: "expense"', async () => {
             post.mockResolvedValueOnce({ data: { id: 1 } });
 
             await withRequestContext(() =>
-                adapter.create({ ...baseParams, kind: 'EXPENSE' }),
+                adapter.create({ ...baseParams, kind: 'OUTCOME' }),
             );
 
             expect(post).toHaveBeenCalledWith(

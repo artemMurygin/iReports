@@ -7,6 +7,7 @@ import {
     SalaryAccrualLineAlreadyAccruedException,
     SalaryAccrualLineNotAccruedException,
     SalaryAccrualLineNotDraftException,
+    SalaryAccrualLineNotPaidException,
 } from '../exceptions/salary-accrual.exception';
 import { SalaryAccrualLineAdjustment } from './salary-accrual-line-adjustment.entity';
 
@@ -206,6 +207,29 @@ export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
             throw new SalaryAccrualLineNotAccruedException(this.id);
         }
         this.props.status = 'DRAFT';
+    }
+
+    // Выплата (PRD 3 docs/payroll-closing-and-accrual/
+    // prd-salary-payout-and-erp-cash-documents.md) — переход ACCRUED → PAID,
+    // вызывается только на строках уже выплаченного (SalaryAccrual.markPaid())
+    // документа: к моменту вызова markPaid() на документе все его строки уже
+    // ACCRUED (см. SalaryAccrual.recalculateStatus — статус ACCRUED
+    // достигается, только когда accruedLinesCount === lines.length),
+    // повторяем ту же проверку и здесь как защиту инварианта.
+    markPaid(): void {
+        if (this.props.status !== 'ACCRUED') {
+            throw new SalaryAccrualLineNotAccruedException(this.id);
+        }
+        this.props.status = 'PAID';
+    }
+
+    // Удаление выплаты (PRD 3: «возврат документов начисления из PAID в
+    // ACCRUED») — обратный переход PAID → ACCRUED.
+    revertToAccrued(): void {
+        if (this.props.status !== 'PAID') {
+            throw new SalaryAccrualLineNotPaidException(this.id);
+        }
+        this.props.status = 'ACCRUED';
     }
 
     validate(): void {

@@ -231,6 +231,24 @@ export const routesV1 = {
             // ErpCashConfig в erp-cash.prisma); GET/PUT на одном пути.
             // Зеркало — shop.accounting.erpCashConfig ниже.
             erpCashConfig: `${serviceAccountingRoot}/erp_cash_config`,
+            // Выплата направления service (PRD 3
+            // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
+            // Фаза 12): root — POST создания на одного сотрудника (employeeId
+            // в теле, не в пути — форма PRD 3, «Контракты»), batch —
+            // массовая выплата, byPeriod — GET таблицы сотрудников периода,
+            // byId — DELETE удаления выплаты (id — BalanceTransaction.id,
+            // не путать с общим routesV1.accounting.balance.transactionById,
+            // который для выплаты отклоняет запрос 409, см.
+            // BalanceTransactionNotPayoutException). Разные HTTP-методы на
+            // пересекающиеся сегменты пути (:period/:id/batch) не
+            // конфликтуют — Express/Nest резолвят маршрут по методу+пути
+            // независимо.
+            payout: {
+                root: `${serviceAccountingRoot}/payout`,
+                batch: `${serviceAccountingRoot}/payout/batch`,
+                byPeriod: `${serviceAccountingRoot}/payout/:period`,
+                byId: `${serviceAccountingRoot}/payout/:id`,
+            },
         },
         // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
         // направление в query (см. listSalesPerformanceQuerySchema).
@@ -369,6 +387,17 @@ export const routesV1 = {
             // service.accounting.erpCashConfig выше, в своём namespace
             // shopAccountingRoot.
             erpCashConfig: `${shopAccountingRoot}/erp_cash_config`,
+            // Выплата направления shop (PRD 3
+            // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
+            // Фаза 12) — зеркалит service.accounting.payout выше, в своём
+            // namespace shopAccountingRoot (см. запрет на импорт между
+            // domains/service и domains/shop в backend/CLAUDE.md).
+            payout: {
+                root: `${shopAccountingRoot}/payout`,
+                batch: `${shopAccountingRoot}/payout/batch`,
+                byPeriod: `${shopAccountingRoot}/payout/:period`,
+                byId: `${shopAccountingRoot}/payout/:id`,
+            },
         },
         // Каталог (дерево категорий) магазина (Фаза 1, см.
         // domains/shop/modules/warehouse) — читает уже синхронизированную

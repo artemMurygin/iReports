@@ -106,6 +106,38 @@ export class InMemorySalaryAccrualRepository implements SalaryAccrualRepositoryP
         return Promise.resolve();
     }
 
+    findAccruedByEmployee(
+        direction: AccountingDirection,
+        employeeId: number,
+    ): Promise<SalaryAccrual[]> {
+        return Promise.resolve(
+            Array.from(this.store.values())
+                .filter(
+                    (accrual) =>
+                        accrual.direction === direction &&
+                        accrual.employeeId === employeeId &&
+                        this.withStatus(accrual)!.status === 'ACCRUED',
+                )
+                .map((accrual) => this.cloned(this.withStatus(accrual))!),
+        );
+    }
+
+    findPaidByEmployee(
+        direction: AccountingDirection,
+        employeeId: number,
+    ): Promise<SalaryAccrual[]> {
+        return Promise.resolve(
+            Array.from(this.store.values())
+                .filter(
+                    (accrual) =>
+                        accrual.direction === direction &&
+                        accrual.employeeId === employeeId &&
+                        this.withStatus(accrual)!.status === 'PAID',
+                )
+                .map((accrual) => this.cloned(this.withStatus(accrual))!),
+        );
+    }
+
     markStatus(id: string, status: SalaryAccrualStatus): void {
         this.statusOverrides.set(id, status);
     }

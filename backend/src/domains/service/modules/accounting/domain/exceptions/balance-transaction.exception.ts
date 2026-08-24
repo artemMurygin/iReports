@@ -15,3 +15,18 @@ export class BalanceTransactionNotDeletableException extends ConflictException {
         super(`Движение баланса ${id} нельзя удалить: ${reason}`);
     }
 }
+
+// DELETE .../payout/:id (PRD 3, Фаза 12) принимает только движения типа
+// PAYOUT СВОЕГО направления — попытка удалить через этот эндпоинт ручное
+// движение, движение начисления или выплату другого направления отклоняется
+// явно (409), а не молча трактуется как «не найдено» (движение с таким id
+// существует, просто это не та выплата).
+export class BalanceTransactionNotPayoutException extends ConflictException {
+    constructor(id: string, direction: string) {
+        super(
+            `Движение ${id} не является выплатой направления "${direction}" — ` +
+                'удаляйте выплату через DELETE .../payout/:id своего направления, ' +
+                'ручное движение — через DELETE .../balance/transactions/:id',
+        );
+    }
+}

@@ -44,11 +44,20 @@ import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/dire
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
+import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+import type {
+    CreateErpCashDocumentParams,
+    DeleteErpCashDocumentParams,
+    ErpCashDocumentPort,
+} from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
+import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
 import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
@@ -57,9 +66,16 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // балансе сотрудника (каждый тип доступен по HTTP; штраф без комментария —
 // 400), удаление ошибочного ручного движения (DELETE) и запреты удаления,
 // движение задним числом в закрытом месяце без изменения снапшота и
-// документов, сводка общих балансов по отделу. Реальные контроллеры,
-// CommandBus и сущности AccountingModule, in-memory замена только границы
-// БД — тот же приём, что salary-accrual-lines.e2e.spec.ts.
+// документов, сводка общих балансов по отделу. С Фазы 12 PRD 3
+// (docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md)
+// сюда же добавлена касса ERP у ручных движений (erpSyncRequired: true) —
+// SERVICE_/SHOP_ERP_CASH_DOCUMENT_PORT и ERP_CASH_DOCUMENT_REPOSITORY
+// подменены in-memory фейками (см. ограничение безопасности PRD 3 — реальные
+// RemOnline/МойСклад в тестах не вызываются), сам факт вызова ERP и
+// создания/удаления локальной связки проверяется через erpCreateCalls/
+// erpDeleteCalls/erpCashDocumentRepo. Реальные контроллеры, CommandBus и
+// сущности AccountingModule, in-memory замена только границы БД и внешних
+// систем — тот же приём, что salary-accrual-lines.e2e.spec.ts.
 describe('Фазы 7/8b: массовое проведение, ручные движения, удаление, сводка отдела (e2e)', () => {
     let app: INestApplication<Server>;
     const schemas = new Map<number, MotivationSchema>();
@@ -164,6 +180,26 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
     };
     const fakeUnitOfWork: UnitOfWorkPort = { run: (work) => work() };
     const fakeDatabaseService = {} as unknown as DatabaseService;
+    const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+    // Фаза 12 PRD 3: erpSyncRequired: true теперь реально ходит в
+    // ErpCashDocumentPort — на границе e2e (без реальных RemOnline/МойСклад,
+    // см. ограничение безопасности PRD 3) оба направления подменены одним и
+    // тем же in-memory фейком, вызовы записываются для проверки.
+    const erpCreateCalls: CreateErpCashDocumentParams[] = [];
+    const erpDeleteCalls: DeleteErpCashDocumentParams[] = [];
+    const fakeErpCashDocumentPort: ErpCashDocumentPort = {
+        create: (params) => {
+            erpCreateCalls.push(params);
+            return Promise.resolve({
+                externalId: `erp-${params.transactionId}`,
+            });
+        },
+        delete: (params) => {
+            erpDeleteCalls.push(params);
+            return Promise.resolve();
+        },
+        findByKey: () => Promise.resolve(null),
+    };
 
     @Global()
     @Module({
@@ -228,6 +264,12 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             .useValue(fakeServiceCalculationData)
             .overrideProvider(DIRECTORY_REPOSITORY)
             .useValue(fakeDirectoryRepo)
+            .overrideProvider(SERVICE_ERP_CASH_DOCUMENT_PORT)
+            .useValue(fakeErpCashDocumentPort)
+            .overrideProvider(SHOP_ERP_CASH_DOCUMENT_PORT)
+            .useValue(fakeErpCashDocumentPort)
+            .overrideProvider(ERP_CASH_DOCUMENT_REPOSITORY)
+            .useValue(erpCashDocumentRepo)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -411,8 +453,19 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .expect(201)
         ).body as BalanceTransaction;
         expect(backdated.occurredAt).toBe('2026-07-15T00:00:00.000Z');
-        // erpSyncRequired только хранится и отдаётся — в ERP ничего не ушло.
+        // erpSyncRequired: true (PRD 3, Фаза 12) — движение записано только
+        // после успешного запроса в ERP (здесь — фейк порта), и вместе с ним
+        // создана локальная связка ErpCashDocument.
         expect(backdated.erpSyncRequired).toBe(true);
+        expect(
+            erpCreateCalls.some((call) => call.transactionId === backdated.id),
+        ).toBe(true);
+        expect(
+            erpCashDocumentRepo.store.size > 0 &&
+                [...erpCashDocumentRepo.store.values()].some(
+                    (document) => document.transactionId === backdated.id,
+                ),
+        ).toBe(true);
         // В ленте видно, что запись создана позже даты движения.
         expect(new Date(backdated.createdAt).getTime()).toBeGreaterThan(
             new Date(backdated.occurredAt).getTime(),
@@ -464,14 +517,20 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         ).toBe(true);
     });
 
-    it('удаление: ручное движение удаляется, остаток пересчитан; начисление и движение с ERP — 409', async () => {
+    it('удаление: ручное движение удаляется, остаток пересчитан; начисление — 409, движение с ERP удаляется вместе с документом', async () => {
+        // Сумма подобрана так, чтобы остаток сотрудника 43 не уходил в
+        // минус (см. PAID по остатку, Фаза 12 PRD 3) — иначе документ
+        // начисления этого сотрудника необратимо перешёл бы в PAID здесь же
+        // (удаление ручного движения НЕ откатывает PAID → ACCRUED, это
+        // делает только удаление выплаты, PRD 3), что смешало бы этот тест
+        // о самой механике удаления с несвязанным побочным эффектом.
         const advance = (
             await request(app.getHttpServer())
                 .post('/v1/accounting/balance/employee/43/transactions')
                 .send({
                     direction: 'service',
                     type: 'ADVANCE',
-                    amount: 4000,
+                    amount: 1000,
                     createdBy: 7,
                 })
                 .expect(201)
@@ -498,7 +557,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .get('/v1/accounting/balance/employee/43')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
-        expect(balanceAfter.balance).toBe(balanceBefore.balance + 4000);
+        expect(balanceAfter.balance).toBe(balanceBefore.balance + 1000);
         expect(
             balanceAfter.transactions.find(
                 (transaction) => transaction.id === advance.id,
@@ -517,8 +576,9 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             )
             .expect(409);
 
-        // Движение с документом ERP (erpSyncRequired) — 409: удаляется
-        // вместе с документом ERP (PRD 3).
+        // Движение с документом ERP (erpSyncRequired) — удаляется вместе с
+        // документом ERP: сначала ERP (фейк порта), потом движение (PRD 3,
+        // «Уточнение к PRD 2»).
         const erpAdvance = (
             await request(app.getHttpServer())
                 .post('/v1/accounting/balance/employee/43/transactions')
@@ -531,9 +591,17 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 })
                 .expect(201)
         ).body as BalanceTransaction;
+        const deleteCallsBefore = erpDeleteCalls.length;
         await request(app.getHttpServer())
             .delete(`/v1/accounting/balance/transactions/${erpAdvance.id}`)
-            .expect(409);
+            .expect(204);
+        expect(erpDeleteCalls.length).toBe(deleteCallsBefore + 1);
+        expect(erpDeleteCalls.at(-1)).toMatchObject({
+            externalId: `erp-${erpAdvance.id}`,
+        });
+        await expect(
+            erpCashDocumentRepo.findByTransactionId(erpAdvance.id),
+        ).resolves.toBeNull();
     });
 
     it('сводка по отделу: остаток/начислено/авансы/ручные по сотрудникам текущего отдела, итог = сумма сотрудников', async () => {
@@ -550,6 +618,16 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         ]);
 
         // Балансы по сводке совпадают с ответом баланса сотрудника.
+        // accrualStatus сотрудника 42 — PAID (Фаза 12 PRD 3, «В скоупе»):
+        // предыдущий тест «ручные движения» увёл его остаток в минус
+        // авансами — документ ACCRUED переходит в PAID, когда остаток после
+        // операции ≤ 0, «независимо от того, чем он закрыт... ручным
+        // приходом... или их комбинацией», не только выплатой. Сотрудник 43
+        // авансов не получал — остаётся ACCRUED.
+        const expectedAccrualStatus: Record<number, string> = {
+            42: 'PAID',
+            43: 'ACCRUED',
+        };
         for (const row of summary.employees) {
             const balance = (
                 await request(app.getHttpServer())
@@ -557,7 +635,9 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                     .expect(200)
             ).body as EmployeeBalanceResponse;
             expect(row.balance).toBe(balance.balance);
-            expect(row.accrualStatus).toBe('ACCRUED');
+            expect(row.accrualStatus).toBe(
+                expectedAccrualStatus[row.employeeId],
+            );
         }
 
         // Итог по отделу — сумма сотрудников (критерий PRD 2).
@@ -592,11 +672,14 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
+        // Сотрудник 43 (не 42 — его документ уже PAID, см. WHY в тесте
+        // «сводка по отделу» выше) — регресс чтения строк ACCRUED сам по
+        // себе не про PAID-переход, поэтому фиксируем документ, которого
+        // Фаза 12 не затронула.
+        const item = list.items.find((accrual) => accrual.employeeId === 43)!;
         const card = (
             await request(app.getHttpServer())
-                .get(
-                    `/v1/service/accounting/salary_accruals/${list.items[0].id}`,
-                )
+                .get(`/v1/service/accounting/salary_accruals/${item.id}`)
                 .expect(200)
         ).body as SalaryAccrualResponse;
         expect(card.status).toBe('ACCRUED');

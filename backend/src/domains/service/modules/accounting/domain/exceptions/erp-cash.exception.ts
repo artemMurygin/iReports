@@ -1,4 +1,4 @@
-import { ConflictException } from '@/shared/exceptions';
+import { ConflictException, NotFoundException } from '@/shared/exceptions';
 
 // «Пустая конфигурация — понятная ошибка до обращения в ERP» (PRD 3
 // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
@@ -44,6 +44,23 @@ export class ErpCashDocumentAlreadyExistsException extends ConflictException {
         super(
             `Кассовый документ ERP для движения ${transactionId} уже создан — ` +
                 'повторное создание отклонено уникальным индексом transactionId',
+        );
+    }
+}
+
+// Инвариант «либо есть оба, либо нет ни одного» (PRD 3, «Цель») нарушен:
+// движение с erpSyncRequired = true, для которого нет связки ErpCashDocument
+// — не должен встречаться при штатной работе (создание движения и связки —
+// одна транзакция, см. CreateBalanceTransactionHandler), но удаление такого
+// движения не может молча продолжить без документа для erpPort.delete().
+// NotFoundException, а не ConflictException — сам факт отсутствия записи,
+// а не конфликт состояния.
+export class ErpCashDocumentMissingForTransactionException extends NotFoundException {
+    constructor(transactionId: string) {
+        super(
+            `Движение ${transactionId} помечено erpSyncRequired, но связка ` +
+                'с документом ERP не найдена — данные рассинхронизированы, ' +
+                'удаление отклонено до ручной проверки',
         );
     }
 }

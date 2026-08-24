@@ -48,7 +48,7 @@ const MOY_SKLAD_IDENTITY = EmployeeIdentity.create({
 const BASE_PARAMS: CreateErpCashDocumentParams = {
     transactionId: 'tx-1',
     amount: 1500,
-    kind: 'EXPENSE',
+    kind: 'OUTCOME',
     employeeId: 42,
     purpose: 'Зарплата за 2026-07, Иванов И.И.',
     occurredAt: new Date(Date.UTC(2026, 6, 31, 10, 15, 30)),
@@ -82,7 +82,7 @@ describe('MoyskladCashDocumentAdapter', () => {
     });
 
     describe('create', () => {
-        it('собирает тело POST /entity/cashout для EXPENSE (сумма в копейках, статья расхода, agent = employee)', async () => {
+        it('собирает тело POST /entity/cashout для OUTCOME (сумма в копейках, статья расхода, agent = employee)', async () => {
             configRepo.findByDirection.mockResolvedValue(SHOP_CONFIG);
             employeeIdentityRepo.findByEmployee.mockResolvedValue([
                 MOY_SKLAD_IDENTITY,
@@ -157,7 +157,7 @@ describe('MoyskladCashDocumentAdapter', () => {
             });
         });
 
-        it('бросает ShopErpCashConfigIncompleteException, если для EXPENSE не задана статья расхода', async () => {
+        it('бросает ShopErpCashConfigIncompleteException, если для OUTCOME не задана статья расхода', async () => {
             await withRequestContext(async () => {
                 configRepo.findByDirection.mockResolvedValue(
                     ErpCashConfig.create({
@@ -243,12 +243,12 @@ describe('MoyskladCashDocumentAdapter', () => {
     });
 
     describe('delete', () => {
-        it('DELETE /entity/cashout/{id} для EXPENSE', async () => {
+        it('DELETE /entity/cashout/{id} для OUTCOME', async () => {
             http.delete.mockResolvedValue({});
 
             await adapter.delete({
                 externalId: 'cashout-1',
-                kind: 'EXPENSE',
+                kind: 'OUTCOME',
                 amount: 1500,
             });
 
@@ -279,7 +279,7 @@ describe('MoyskladCashDocumentAdapter', () => {
             await expect(
                 adapter.delete({
                     externalId: 'cashout-1',
-                    kind: 'EXPENSE',
+                    kind: 'OUTCOME',
                     amount: 1500,
                 }),
             ).rejects.toBeInstanceOf(BadGatewayException);
@@ -292,7 +292,7 @@ describe('MoyskladCashDocumentAdapter', () => {
                 ErpCashDocument.create({
                     transactionId: 'tx-1',
                     system: 'MOY_SKLAD',
-                    kind: 'EXPENSE',
+                    kind: 'OUTCOME',
                     amount: 1500,
                     externalId: 'cashout-1',
                 }),
@@ -305,7 +305,7 @@ describe('MoyskladCashDocumentAdapter', () => {
             );
             expect(result).toEqual({
                 externalId: 'cashout-1',
-                kind: 'EXPENSE',
+                kind: 'OUTCOME',
                 amount: 1500,
             });
         });

@@ -6,6 +6,13 @@ import { DirectoryModule } from '@/modules/directory/directory.module';
 import { RoappSyncModule } from '@/domains/service/sync/roapp/roapp-sync.module';
 import { RoappModule } from '@/domains/service/integrations/roapp/roapp.module';
 import { RoappCashDocumentAdapter } from '@/domains/service/integrations/roapp/roapp-cash-document.adapter';
+// MoyskladModule/MoyskladCashDocumentAdapter (PRD 3, Фаза 12) — см. WHY у
+// SHOP_ERP_CASH_DOCUMENT_PORT в providers ниже: единственная причина этого
+// импорта из domains/shop в модуль domains/service.
+import { MoyskladModule } from '@/domains/shop/integrations/moySklad/moysklad.module';
+import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySklad/moysklad-cash-document.adapter';
+import { EmployeeIdentityRepository } from '@/modules/employee-identity/infrastructure/repositories/employee-identity.repository';
+import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/employee-operation-lock.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
@@ -18,6 +25,9 @@ import { AccrueSalaryAccrualDocumentHandler } from '@/domains/service/modules/ac
 import { AccruePeriodSalaryAccrualsHandler } from '@/domains/service/modules/accounting/application/command/accrue-period-salary-accruals.handler';
 import { CreateBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/create-balance-transaction.handler';
 import { DeleteBalanceTransactionHandler } from '@/domains/service/modules/accounting/application/command/delete-balance-transaction.handler';
+import { CreatePayoutHandler } from '@/domains/service/modules/accounting/application/command/create-payout.handler';
+import { CreatePayoutBatchHandler } from '@/domains/service/modules/accounting/application/command/create-payout-batch.handler';
+import { DeletePayoutHandler } from '@/domains/service/modules/accounting/application/command/delete-payout.handler';
 import { PutErpCashConfigHandler } from '@/domains/service/modules/accounting/application/command/put-erp-cash-config.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
 import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
@@ -37,6 +47,7 @@ import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/ap
 import { GetEmployeeBalanceService } from '@/domains/service/modules/accounting/application/services/get-employee-balance.service';
 import { GetErpCashConfigService } from '@/domains/service/modules/accounting/application/services/get-erp-cash-config.service';
 import { GetDepartmentBalancesService } from '@/domains/service/modules/accounting/application/services/get-department-balances.service';
+import { GetPayoutPageService } from '@/domains/service/modules/accounting/application/services/get-payout-page.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
@@ -68,6 +79,10 @@ import { AccrueSalaryAccrualDocumentHttpController } from '@/domains/service/mod
 import { AccruePeriodSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-period-salary-accruals.http.controller';
 import { CreateBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-balance-transaction.http.controller';
 import { DeleteBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-balance-transaction.http.controller';
+import { CreatePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-payout.http.controller';
+import { CreatePayoutBatchHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-payout-batch.http.controller';
+import { GetPayoutPageHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-payout-page.http.controller';
+import { DeletePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-payout.http.controller';
 import { GetDepartmentBalancesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-balances.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { GetErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-erp-cash-config.http.controller';
@@ -85,6 +100,8 @@ import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/applica
 import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
 import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
+import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
 import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
 import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema.repository';
@@ -128,17 +145,43 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
 // GetShopDepartmentSalaryReportService в самом ShopAccountingModule (см.
 // domains/shop/CLAUDE.md).
 //
-// Итог: кросс-доменная связь domains/service ↔ domains/shop на уровне Nest DI
-// в этом модуле полностью устранена — ни один провайдер/контроллер ниже не
-// импортирует и не инжектирует ничего из domains/shop, проверено
-// `grep -rn "domains/shop\|SHOP_" accounting --include=*.ts | grep -v spec`
-// (единственные совпадения — этот комментарий и аналогичный комментарий в
-// get-employee-salary-report.service.ts, оба чисто документационные, не
-// импорты). Не путай с close-accounting-period.direction-independence.spec.ts
+// Итог на момент Фазы 13.5: кросс-доменная связь domains/service ↔
+// domains/shop на уровне Nest DI в этом модуле была полностью устранена — ни
+// один провайдер/контроллер не импортировал и не инжектировал ничего из
+// domains/shop. Не путай с close-accounting-period.direction-independence.spec.ts
 // — это регрессионный тест, который намеренно и легитимно импортирует классы
 // shop напрямую (без прохода через DI ShopAccountingModule), чтобы проверить
 // независимость закрытия периода по direction; на providers/controllers/
 // imports этого модуля он не влияет.
+//
+// PRD 3 (Фаза 12, docs/payroll-closing-and-accrual/
+// prd-salary-payout-and-erp-cash-documents.md) вносит ОДНО новое, узкое и
+// осознанное исключение из этого итога — MoyskladModule/
+// MoyskladCashDocumentAdapter (providers, SHOP_ERP_CASH_DOCUMENT_PORT) ниже.
+// Причина: CreateBalanceTransactionHandler/DeleteBalanceTransactionHandler —
+// ОДИН хендлер на оба домена (тот же приём, что уже был у самого баланса,
+// см. BALANCE_TRANSACTION_REPOSITORY выше и Reopen/RecalculateAccountingPeriodHandler)
+// — при erpSyncRequired: true им нужен ErpCashDocumentPort ОБОИХ направлений
+// одновременно (выбор адаптера зависит от command.direction, известного
+// только на вызове, а не от того, из какого модуля пришёл запрос). Это НЕ
+// импорт ShopAccountingModule (сам класс модуля бизнес-логики магазина
+// здесь по-прежнему не появляется и не появится) — только МойСклад-адаптер
+// кассовых документов и его HTTP-транспорт (MoyskladHttpService из
+// MoyskladModule), заведённые собственным экземпляром под тем же токеном
+// (SHOP_ERP_CASH_DOCUMENT_PORT), что и в ShopAccountingModule — ровно тот
+// же приём «свой экземпляр под тем же токеном», которым ShopAccountingModule
+// пользуется для классов domains/service (ACCOUNTING_PERIOD_REPOSITORY,
+// ERP_CASH_DOCUMENT_REPOSITORY и т.д.), только в обратную сторону: там,
+// где паттерн раньше был односторонним (shop переиспользует классы
+// service), теперь он симметричен ровно в этом одном месте. Проверено
+// перед выбором этого варианта: ShopAccountingModule НЕ импортирует
+// AccountingModule ни прямо, ни через цепочку своих imports (ShopSalesModule/
+// MoySkladSyncModule/DirectoryModule/MoyskladModule — ни один из них не
+// ссылается на domains/service/modules/accounting), поэтому и обратный путь
+// (AccountingModule импортирует MoyskladModule) не создаёт цикл. См. отчёт
+// агента Фазы 12 — там же вариант «импортировать ShopAccountingModule
+// целиком» и почему он не выбран (усложнение экспортов ради двух токенов,
+// когда более узкий и уже привычный проекту приём решает ту же задачу).
 @Module({
     // RoappSyncModule — вход RoappErpPeriodSyncAdapter (ERP_PERIOD_SYNC):
     // неявная синхронизация заказов RemOnline за месяц внутри закрытия
@@ -155,6 +198,18 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         // RoappService/RoappGateway), поэтому RoappModule импортирован здесь
         // напрямую.
         RoappModule,
+        // MoyskladHttpService — вход MoyskladCashDocumentAdapter
+        // (SHOP_ERP_CASH_DOCUMENT_PORT, PRD 3, Фаза 12) — см. WHY-блок в
+        // шапке файла. Тот же приём, что RoappModule выше, и тот же, что
+        // MoyskladModule в shop-accounting.module.ts (тот файл импортирует
+        // его напрямую по той же причине — MoySkladSyncModule не
+        // экспортирует MoyskladHttpService наружу).
+        MoyskladModule,
+        // Блокировка по сотруднику на время операции с erpSyncRequired (PRD
+        // 3, «Технические ограничения») — общий экземпляр EmployeeOperationLock
+        // на процесс, тот же приём, что DirectionSyncLockModule у
+        // RoappSyncModule/MoySkladSyncModule.
+        EmployeeOperationLockModule,
     ],
     controllers: [
         CreateMotivationSchemaHttpController,
@@ -196,6 +251,18 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         // (см. ShopAccountingModule).
         GetErpCashConfigHttpController,
         PutErpCashConfigHttpController,
+        // Выплата направления service (PRD 3
+        // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
+        // Фаза 12) — под своим путём /v1/service/accounting/payout*, в
+        // отличие от общего баланса (Фаза 8b) НЕ direction-агностична: у
+        // выплаты своя касса ERP (SERVICE_ERP_CASH_DOCUMENT_PORT), поэтому
+        // это отдельные хендлеры/контроллеры, а не диспатч общей команды
+        // (тот же приём, что CloseAccountingPeriodHandler — 'service'
+        // литералом внутри, а не поле команды).
+        CreatePayoutHttpController,
+        CreatePayoutBatchHttpController,
+        GetPayoutPageHttpController,
+        DeletePayoutHttpController,
     ],
     providers: [
         CreateMotivationSchemaHandler,
@@ -222,6 +289,12 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         AccruePeriodSalaryAccrualsHandler,
         CreateBalanceTransactionHandler,
         DeleteBalanceTransactionHandler,
+        // Выплата направления service (PRD 3, Фаза 12) — см. WHY у
+        // контроллеров выше.
+        CreatePayoutHandler,
+        CreatePayoutBatchHandler,
+        DeletePayoutHandler,
+        GetPayoutPageService,
         CreateTaskCompletionHandler,
         ConfirmTaskCompletionHandler,
         DeleteTaskCompletionHandler,
@@ -313,6 +386,28 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         {
             provide: SERVICE_ERP_CASH_DOCUMENT_PORT,
             useClass: RoappCashDocumentAdapter,
+        },
+        // Адаптер записи в кассу МойСклада (PRD 3, Фаза 12) — см. WHY-блок в
+        // шапке файла: CreateBalanceTransactionHandler/
+        // DeleteBalanceTransactionHandler (общий хендлер на оба домена,
+        // ниже) нуждаются в обоих ErpCashDocumentPort сразу. Собственный
+        // экземпляр под тем же токеном (SHOP_ERP_CASH_DOCUMENT_PORT), что и
+        // в ShopAccountingModule, тот же приём, что уже применён там для
+        // классов domains/service. EmployeeIdentityRepository —
+        // единственная дополнительная зависимость MoyskladCashDocumentAdapter
+        // (резолв Bitrix ID сотрудника в MoySkladEmployee.id), которой ещё не
+        // было в этом модуле — заведена собственным экземпляром под тем же
+        // токеном (EMPLOYEE_IDENTITY_REPOSITORY), что и в
+        // ShopAccountingModule/RoappCashDocumentAdapter (тот читает identity
+        // напрямую через DatabaseService, см. WHY там, поэтому до этой фазы
+        // токен здесь не требовался).
+        {
+            provide: EMPLOYEE_IDENTITY_REPOSITORY,
+            useClass: EmployeeIdentityRepository,
+        },
+        {
+            provide: SHOP_ERP_CASH_DOCUMENT_PORT,
+            useClass: MoyskladCashDocumentAdapter,
         },
         // Фаза 2 PRD 1: калькулятор строк снапшота (общий для закрытия и
         // close-preview) и синк ERP месяца по требованию — свои реализации

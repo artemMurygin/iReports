@@ -129,4 +129,31 @@ export class SalaryAccrualRepository
             client.salaryAccrual.deleteMany({ where: { direction, period } }),
         );
     }
+
+    // Выплата (PRD 3, Фаза 12) — см. WHY на портe (не ограничен периодом:
+    // выплата может закрывать остаток, накопленный за несколько месяцев).
+    async findAccruedByEmployee(
+        direction: AccountingDirection,
+        employeeId: number,
+    ): Promise<SalaryAccrual[]> {
+        const records = await this.client.salaryAccrual.findMany({
+            where: { direction, employeeId, status: 'ACCRUED' },
+            include: { lines: { include: { adjustments: true } } },
+            orderBy: { period: 'asc' },
+        });
+        return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    // Удаление выплаты (PRD 3, Фаза 12) — см. WHY на порте.
+    async findPaidByEmployee(
+        direction: AccountingDirection,
+        employeeId: number,
+    ): Promise<SalaryAccrual[]> {
+        const records = await this.client.salaryAccrual.findMany({
+            where: { direction, employeeId, status: 'PAID' },
+            include: { lines: { include: { adjustments: true } } },
+            orderBy: { period: 'asc' },
+        });
+        return records.map((record) => this.mapper.toDomain(record));
+    }
 }

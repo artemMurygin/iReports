@@ -5,6 +5,8 @@ import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/
 import type { BalanceTransactionProps } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
+import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
 
 // Общий баланс сотрудника (PRD 2, Фаза 8b): остаток = SUM ВСЕЙ ленты
 // сотрудника независимо от направления движений — проверяется на смешанной
@@ -33,8 +35,12 @@ describe('GetEmployeeBalanceService', () => {
 
     const build = () => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
-        const service = new GetEmployeeBalanceService(transactionRepo);
-        return { service, transactionRepo };
+        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const service = new GetEmployeeBalanceService(
+            transactionRepo,
+            erpCashDocumentRepo,
+        );
+        return { service, transactionRepo, erpCashDocumentRepo };
     };
 
     it('остаток = SUM всей ленты сотрудника независимо от направления движений; чужой сотрудник не учитывается', async () => {
@@ -151,5 +157,40 @@ describe('GetEmployeeBalanceService', () => {
         // Детализация начисления живёт в документе — в ответе ленты нет
         // раскрытия строки (Фаза 8b).
         expect(response.transactions[0]).not.toHaveProperty('accrualLine');
+    });
+
+    // PRD 3 (docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md),
+    // «Критерии готовности»: «Внешний ID документа ERP сохраняется и
+    // показывается в ленте баланса».
+    it('движение с документом ERP несёт system/externalId в поле erp; движение без документа — erp: null', async () => {
+        const { service, transactionRepo, erpCashDocumentRepo } = build();
+        const withErp = transaction({
+            amount: -1000,
+            type: 'ADVANCE',
+            erpSyncRequired: true,
+        });
+        const withoutErp = transaction({ amount: 500, type: 'BONUS' });
+        await transactionRepo.insertMany([withErp, withoutErp]);
+        await erpCashDocumentRepo.insert(
+            ErpCashDocument.create({
+                transactionId: withErp.id,
+                system: 'ROAPP',
+                kind: 'OUTCOME',
+                amount: 1000,
+                externalId: 'erp-ext-99',
+            }),
+        );
+
+        const response = await service.execute(42, {});
+
+        const erpRow = response.transactions.find((t) => t.id === withErp.id);
+        const plainRow = response.transactions.find(
+            (t) => t.id === withoutErp.id,
+        );
+        expect(erpRow!.erp).toEqual({
+            system: 'ROAPP',
+            externalId: 'erp-ext-99',
+        });
+        expect(plainRow!.erp).toBeNull();
     });
 });

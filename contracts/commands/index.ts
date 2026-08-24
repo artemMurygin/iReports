@@ -10,6 +10,7 @@ export * from './salary-accrual-status';
 export * from './salary-accrual';
 export * from './employee-balance';
 export * from './erp-cash';
+export * from './salary-payout';
 export * from './task-completion';
 export * from './catalog';
 export * from './deal';

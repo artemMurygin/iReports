@@ -7,6 +7,8 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import {
     SalaryAccrualLineNotFoundException,
+    SalaryAccrualNotAccruedException,
+    SalaryAccrualNotPaidException,
     SalaryAccrualPaidException,
 } from '../exceptions/salary-accrual.exception';
 import {
@@ -166,6 +168,54 @@ export class SalaryAccrual extends AggregateRoot<SalaryAccrualProps> {
         if (this.isPaid()) {
             throw new SalaryAccrualPaidException(this.id);
         }
+    }
+
+    // Выплата (PRD 3 docs/payroll-closing-and-accrual/
+    // prd-salary-payout-and-erp-cash-documents.md, «Документы начисления...
+    // в статусе ACCRUED переходят в PAID, когда остаток баланса после
+    // операции ≤ 0 — независимо от того, чем он закрыт»): только из ACCRUED
+    // — документ в DRAFT/PARTIALLY_ACCRUED остаётся как есть, даже если
+    // общий остаток сотрудника уже ≤ 0 («пока остаток > 0, документ
+    // остаётся ACCRUED» — а по документам, ещё не полностью проведённым,
+    // PRD не даёт другого критерия; решение консервативное, см. отчёт
+    // Фазы 12). Вызывающая сторона (обработчик выплаты/ручного движения)
+    // обязана сама отбирать документы этим статусом
+    // (SalaryAccrualRepositoryPort.findAccruedByEmployee) и решать, вызывать
+    // ли markPaid(), — сама сущность остаток не знает и не проверяет: это
+    // забота BalanceTransactionRepositoryPort (SUM ленты), а не
+    // SalaryAccrual.
+    //
+    // WHY только документы СВОЕГО направления: см. AccrueSalaryAccrualLineHandler
+    // и комментарий в отчёте Фазы 12 — операция выплаты направления X не
+    // может обращаться к SalaryAccrualRepositoryPort другого направления
+    // напрямую (изоляция доменов service/shop, backend/CLAUDE.md), поэтому
+    // документ другого направления не станет PAID от операции в этом
+    // направлении, даже если общий остаток уже ≤ 0 — станет PAID только
+    // когда в ЕГО направлении тоже пройдёт операция, проверяющая остаток.
+    // Это осознанный компромисс PRD 3 (баланс общий, но проверка — per
+    // direction), не баг.
+    markPaid(): void {
+        if (this.props.status !== 'ACCRUED') {
+            throw new SalaryAccrualNotAccruedException(this.id);
+        }
+        for (const line of this.props.lines) {
+            line.markPaid();
+        }
+        this.props.status = 'PAID';
+    }
+
+    // Удаление выплаты (PRD 3: «возврат документов начисления из PAID в
+    // ACCRUED») — обратный переход, симметричный markPaid(): все строки
+    // документа возвращаются в ACCRUED (recalculateStatus после этого
+    // всегда даёт ACCRUED, раз ни одна строка не осталась DRAFT).
+    revertToAccrued(): void {
+        if (!this.isPaid()) {
+            throw new SalaryAccrualNotPaidException(this.id);
+        }
+        for (const line of this.props.lines) {
+            line.revertToAccrued();
+        }
+        this.recalculateStatus();
     }
 
     // Статус документа — производная от строк: DRAFT / PARTIALLY_ACCRUED /

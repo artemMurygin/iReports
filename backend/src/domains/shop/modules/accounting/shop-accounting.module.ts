@@ -4,6 +4,7 @@ import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module'
 import { MoySkladSyncModule } from '@/domains/shop/sync/moySklad/moysklad-sync.module';
 import { MoyskladModule } from '@/domains/shop/integrations/moySklad/moysklad.module';
 import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-status/domain-sync-status.module';
+import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/employee-operation-lock.module';
 import { DirectoryModule } from '@/modules/directory/directory.module';
 import { ListShopSalaryRuleTypesService } from '@/domains/shop/modules/accounting/application/services/list-salary-rule-types.service';
 import { ListShopTaskCompletionsService } from '@/domains/shop/modules/accounting/application/services/list-shop-task-completions.service';
@@ -14,6 +15,10 @@ import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/ac
 import { GetShopEmployeeSalaryReportService } from '@/domains/shop/modules/accounting/application/services/get-shop-employee-salary-report.service';
 import { GetShopDepartmentSalaryReportService } from '@/domains/shop/modules/accounting/application/services/get-shop-department-salary-report.service';
 import { CreateShopSalaryRuleHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-salary-rule.handler';
+import { CreateShopPayoutHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-payout.handler';
+import { CreateShopPayoutBatchHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-payout-batch.handler';
+import { DeleteShopPayoutHandler } from '@/domains/shop/modules/accounting/application/command/delete-shop-payout.handler';
+import { GetShopPayoutPageService } from '@/domains/shop/modules/accounting/application/services/get-shop-payout-page.service';
 import { CreateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-motivation-schema.handler';
 import { UpdateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/update-shop-motivation-schema.handler';
 import { CreateShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-task-completion.handler';
@@ -24,6 +29,10 @@ import { MoySkladErpPeriodSyncAdapter } from '@/domains/shop/modules/accounting/
 import { GetShopClosePeriodPreviewHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-close-period-preview.http.controller';
 import { GetShopErpCashConfigHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-erp-cash-config.http.controller';
 import { PutShopErpCashConfigHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/put-shop-erp-cash-config.http.controller';
+import { CreateShopPayoutHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-payout.http.controller';
+import { CreateShopPayoutBatchHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-payout-batch.http.controller';
+import { DeleteShopPayoutHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/delete-shop-payout.http.controller';
+import { GetShopPayoutPageHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-payout-page.http.controller';
 import { CloseShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/close-shop-accounting-period.handler';
 import { ListShopSalaryRuleTypesHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { CreateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-motivation-schema.http.controller';
@@ -66,8 +75,10 @@ import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/a
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
+import { BalanceTransactionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
@@ -172,6 +183,16 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         // MoyskladHttpService, поэтому импортируем MoyskladModule напрямую,
         // тем же приёмом, что modules/marketing/pricing/pricing.module.ts.
         MoyskladModule,
+        // Блокировка по сотруднику на время операции выплаты/удаления (PRD 3,
+        // Фаза 12) — тот же ОДИН экземпляр EmployeeOperationLock на процесс,
+        // что и в AccountingModule сервиса (EmployeeOperationLockModule не
+        // @Global — импортируется явно каждым потребителем, но не
+        // пересоздаёт инстанс: Nest-модуль синглтон на всё приложение, тот
+        // же приём, что CqrsModule/CommandBus выше). Обязателен: без общего
+        // экземпляра выплата shop и, например, ручное движение service того
+        // же сотрудника не сериализовались бы друг с другом, хотя пишут в
+        // один и тот же общий баланс (PRD 2).
+        EmployeeOperationLockModule,
     ],
     controllers: [
         ListShopSalaryRuleTypesHttpController,
@@ -215,6 +236,20 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         // в AccountingModule сервиса).
         GetShopErpCashConfigHttpController,
         PutShopErpCashConfigHttpController,
+        // Выплата направления shop (PRD 3
+        // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
+        // Фаза 12) — зеркалит service.accounting.payout (см.
+        // domains/service/modules/accounting/accounting.module.ts), но
+        // собственные команды/хендлеры (CreateShopPayoutCommand и т.д.):
+        // ErpCashDocumentPort/адаптер МойСклада не переиспользуется между
+        // доменами, поэтому это не тот случай, что Reopen/RecalculateAccountingPeriod
+        // выше (общий хендлер на оба направления). DELETE .../balance/transactions/:id
+        // (ручные движения) по-прежнему обслуживается только AccountingModule
+        // сервиса — см. routesV1.accounting.balance.
+        CreateShopPayoutHttpController,
+        CreateShopPayoutBatchHttpController,
+        GetShopPayoutPageHttpController,
+        DeleteShopPayoutHttpController,
     ],
     providers: [
         ListShopSalaryRuleTypesService,
@@ -337,10 +372,31 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
             provide: SHOP_ERP_CASH_DOCUMENT_PORT,
             useClass: MoyskladCashDocumentAdapter,
         },
-        // BALANCE_TRANSACTION_REPOSITORY здесь больше не заводится: с
-        // Фазы 8b баланс общий по сотруднику, его чтение и команды живут
-        // только в AccountingModule сервиса (эндпоинты /v1/accounting/
-        // balance/* без направления в пути).
+        // Выплата направления shop (PRD 3, Фаза 12) — собственные
+        // command-хендлеры (см. WHY у контроллеров выше) и собственный
+        // экземпляр GetShopPayoutPageService (не CQRS-хендлер — обычный
+        // provider, own instance под тем же приёмом, что
+        // GetShopEmployeeSalaryReportService и т.п.). Им всем нужен
+        // BALANCE_TRANSACTION_REPOSITORY — до этой фазы здесь не заводился
+        // (с Фазы 8b мутации баланса живут только в AccountingModule
+        // сервиса, эндпоинты /v1/accounting/balance/* без направления в
+        // пути), но чтение остатка/ленты для payout — per-direction операция
+        // (собственный эндпоинт /v1/shop/accounting/payout*), поэтому
+        // репозиторий заведён здесь собственным экземпляром под тем же
+        // токеном — тот же приём, что уже применён для SALARY_ACCRUAL_REPOSITORY/
+        // ACCOUNTING_PERIOD_REPOSITORY выше: класс — Prisma-репозиторий без
+        // бизнес-логики, специфичной для направления (баланс общий по
+        // сотруднику, direction — лишь атрибут движения). Общий эндпоинт
+        // DELETE .../balance/transactions/:id (ручные движения) по-прежнему
+        // обслуживается только AccountingModule сервиса — это не отменяется.
+        {
+            provide: BALANCE_TRANSACTION_REPOSITORY,
+            useClass: BalanceTransactionRepository,
+        },
+        CreateShopPayoutHandler,
+        CreateShopPayoutBatchHandler,
+        DeleteShopPayoutHandler,
+        GetShopPayoutPageService,
         {
             provide: EMPLOYEE_DISMISSAL,
             useClass: EmployeeDismissalRepository,

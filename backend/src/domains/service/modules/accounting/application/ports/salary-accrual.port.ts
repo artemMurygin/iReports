@@ -56,6 +56,49 @@ export interface SalaryAccrualRepositoryPort {
         direction: AccountingDirection,
         period: string,
     ): Promise<void>;
+
+    // Выплата (PRD 3 docs/payroll-closing-and-accrual/
+    // prd-salary-payout-and-erp-cash-documents.md, Фаза 12): документы
+    // сотрудника направления в статусе ACCRUED — именно те, что кандидаты на
+    // переход в PAID, когда остаток после операции ≤ 0 (см.
+    // SalaryAccrual.markPaid). Не ограничен периодом намеренно — выплата не
+    // привязана к одному месяцу (руководитель может закрывать остаток,
+    // накопленный за несколько периодов, одной выплатой), поэтому
+    // обработчик выплаты обязан пройтись по ВСЕМ ACCRUED-документам
+    // сотрудника этого направления, а не только за период операции.
+    // Обработчик удаления выплаты решает симметричную задачу (найти
+    // документы, которые нужно вернуть из PAID в ACCRUED, см.
+    // SalaryAccrual.revertToAccrued) другим путём — через
+    // findByIds/сохранённые accrualId движений, отменяемых удалением
+    // выплаты, а не через этот метод (у него нет своего findPaidByEmployee:
+    // документы, которые выплата перевела в PAID, уже известны по своим id).
+    findAccruedByEmployee(
+        direction: AccountingDirection,
+        employeeId: number,
+    ): Promise<SalaryAccrual[]>;
+
+    // Удаление выплаты (PRD 3, Фаза 12, docs/payroll-closing-and-accrual/
+    // prd-salary-payout-and-erp-cash-documents.md, «возврат документов
+    // начисления из PAID в ACCRUED»): документы сотрудника направления в
+    // статусе PAID — кандидаты на revertToAccrued(). РЕШЕНИЕ (см. отчёт
+    // Фазы 12, вопрос "как определить затронутые документы"): движение
+    // PAYOUT не хранит accrualId (см. BalanceTransaction.forPayout — оно
+    // может закрывать остаток, накопленный сразу несколькими документами,
+    // см. markPaid), поэтому здесь нет точной обратной связи "эта конкретная
+    // выплата перевела в PAID именно эти документы". Обработчик удаления
+    // выплаты трактует "затронутые" максимально просто — ВСЕ PAID-документы
+    // сотрудника этого направления, раз PAID проставлялся пакетно тем же
+    // критерием (общий остаток ≤ 0). Задокументированная граница: если
+    // остаток сотрудника закрывался НЕСКОЛЬКИМИ операциями подряд (например,
+    // двумя выплатами), удаление одной из них вернёт в ACCRUED документы,
+    // закрытые и другой, ещё не удалённой операцией — точный расчёт
+    // потребовал бы отдельной связи "выплата → набор документов", что не
+    // входит в эту фазу. Не period-скоуплен намеренно, тем же приёмом, что
+    // findAccruedByEmployee выше.
+    findPaidByEmployee(
+        direction: AccountingDirection,
+        employeeId: number,
+    ): Promise<SalaryAccrual[]>;
 }
 
 export const SALARY_ACCRUAL_REPOSITORY = Symbol('SALARY_ACCRUAL_REPOSITORY');

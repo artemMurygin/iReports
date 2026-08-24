@@ -74,3 +74,46 @@ export class SalaryAccrualLineNotDraftException extends ConflictException {
         );
     }
 }
+
+// Строка выплачена вместе с документом (PAID) — обратный переход к ACCRUED
+// возможен только через SalaryAccrual.revertToAccrued() (удаление выплаты,
+// PRD 3), не напрямую.
+export class SalaryAccrualLineNotPaidException extends ConflictException {
+    constructor(lineId: string) {
+        super(`Строка начисления ${lineId} не выплачена — возвращать нечего`);
+    }
+}
+
+// SalaryAccrual.markPaid() (PRD 3 docs/payroll-closing-and-accrual/
+// prd-salary-payout-and-erp-cash-documents.md, «Документы начисления...
+// в статусе ACCRUED переходят в PAID») — вызывающая сторона (обработчик
+// выплаты) обязана сама отобрать документы со статусом ACCRUED (см.
+// SalaryAccrualRepositoryPort.findAccruedByEmployee) ДО вызова markPaid():
+// документ в DRAFT/PARTIALLY_ACCRUED не переходит в PAID даже при
+// закрытом остатке («пока остаток > 0, документ остаётся ACCRUED» — а если
+// остаток уже ≤ 0, а документ ещё не полностью проведён, PRD этот случай не
+// описывает, решение консервативное — PAID не выставляется, см. отчёт
+// Фазы 12). Это исключение — защита инварианта на случай, если вызывающая
+// сторона всё же передаст в markPaid() документ не в ACCRUED, а не штатный
+// путь работы обработчика.
+export class SalaryAccrualNotAccruedException extends ConflictException {
+    constructor(accrualId: string) {
+        super(
+            `Документ начисления ${accrualId} не в статусе «Ожидает выплаты» — ` +
+                'выплата не может пометить его выплаченным',
+        );
+    }
+}
+
+// Обратный переход SalaryAccrual.revertToAccrued() (удаление выплаты, PRD 3:
+// «возврат документов начисления из PAID в ACCRUED») — вызывается только для
+// документов, которые сама выплата (перед удалением) действительно перевела
+// в PAID; попытка откатить документ не в PAID — сигнал ошибки в вызывающем
+// коде, а не штатная ситуация.
+export class SalaryAccrualNotPaidException extends ConflictException {
+    constructor(accrualId: string) {
+        super(
+            `Документ начисления ${accrualId} не выплачен — возвращать в «Ожидает выплаты» нечего`,
+        );
+    }
+}

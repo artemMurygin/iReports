@@ -56,4 +56,16 @@ export class ErpCashDocumentRepository
         });
         return record ? this.mapper.toDomain(record) : null;
     }
+
+    async findByTransactionIds(
+        transactionIds: string[],
+    ): Promise<ErpCashDocument[]> {
+        if (transactionIds.length === 0) {
+            return [];
+        }
+        const records = await this.client.erpCashDocument.findMany({
+            where: { transactionId: { in: transactionIds } },
+        });
+        return records.map((record) => this.mapper.toDomain(record));
+    }
 }

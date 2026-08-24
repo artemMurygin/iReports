@@ -19,12 +19,16 @@ import { externalSystemSchema } from './employee-identity';
 
 // ========================== ErpCashDocument ========================== //
 
-// Тип документа назван по терминологии самих ERP, а не PRD (в тексте PRD —
-// «OUTCOME»): у RemOnline POST /finance/accounts/{id}/transactions прямо
-// принимает direction: "income" | "expense" — INCOME/EXPENSE здесь просто
-// повторяют вокабуляр ERP, которым документ создаётся, чтобы у адаптера не
-// было лишнего шага маппинга enum → enum.
-const erpCashDocumentKindSchema = z.enum(['INCOME', 'EXPENSE']);
+// Тип документа назван по терминологии PRD 3 (Фаза 12: переименовано из
+// EXPENSE в OUTCOME — «Сущность-связка: ... тип (OUTCOME / INCOME)», для
+// консистентности с остальным текстом PRD 3, который везде говорит
+// «OUTCOME»). Изначально (Фаза 11) было выбрано INCOME/EXPENSE по вокабуляру
+// самого RemOnline (POST /finance/accounts/{id}/transactions принимает
+// direction: "income" | "expense") — адаптеры по-прежнему сами мапят
+// OUTCOME → "expense"/cashout на границе с конкретной ERP (см.
+// RoappCashDocumentAdapter/MoyskladCashDocumentAdapter), лишнего шага
+// маппинга enum → enum это не создаёт, только имя внутреннего значения.
+const erpCashDocumentKindSchema = z.enum(['INCOME', 'OUTCOME']);
 export type ErpCashDocumentKind = z.infer<typeof erpCashDocumentKindSchema>;
 
 // Документ существует только вместе с движением баланса, которое его

@@ -1,6 +1,10 @@
 import { SalaryAccrual } from './salary-accrual.entity';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import {
+    SalaryAccrualNotAccruedException,
+    SalaryAccrualNotPaidException,
+} from '../exceptions/salary-accrual.exception';
 
 describe('SalaryAccrual', () => {
     const line = (ruleId: string, amount: number) => ({
@@ -96,5 +100,84 @@ describe('SalaryAccrual', () => {
                 }),
             ),
         ).toThrow(ArgumentInvalidException);
+    });
+
+    // ========================== PAID (PRD 3, Фаза 12) ========================== //
+
+    const accruedDocument = () => {
+        const accrual = withRequestContext(() =>
+            SalaryAccrual.createFromSnapshot({
+                direction: 'service',
+                period: '2026-08',
+                employeeId: 42,
+                isDismissed: false,
+                total: 3000,
+                lines: [line('r1', 2000), line('r2', 1000)],
+            }),
+        );
+        accrual.accrueLine(accrual.lines[0].id);
+        accrual.accrueLine(accrual.lines[1].id);
+        return accrual;
+    };
+
+    it('markPaid(): из ACCRUED — документ и все его строки переходят в PAID', () => {
+        const accrual = accruedDocument();
+        expect(accrual.status).toBe('ACCRUED');
+
+        accrual.markPaid();
+
+        expect(accrual.status).toBe('PAID');
+        expect(accrual.isPaid()).toBe(true);
+        expect(accrual.lines.every((l) => l.status === 'PAID')).toBe(true);
+    });
+
+    it('markPaid(): недостижим из DRAFT/PARTIALLY_ACCRUED — «пока остаток > 0, документ остаётся ACCRUED»', () => {
+        const draft = withRequestContext(() =>
+            SalaryAccrual.createFromSnapshot({
+                direction: 'service',
+                period: '2026-08',
+                employeeId: 42,
+                isDismissed: false,
+                total: 3000,
+                lines: [line('r1', 2000), line('r2', 1000)],
+            }),
+        );
+        expect(() => withRequestContext(() => draft.markPaid())).toThrow(
+            SalaryAccrualNotAccruedException,
+        );
+
+        draft.accrueLine(draft.lines[0].id);
+        expect(draft.status).toBe('PARTIALLY_ACCRUED');
+        expect(() => withRequestContext(() => draft.markPaid())).toThrow(
+            SalaryAccrualNotAccruedException,
+        );
+    });
+
+    it('markPaid(): PAID уже не ACCRUED — повторный markPaid() отклонён', () => {
+        const accrual = accruedDocument();
+        accrual.markPaid();
+        expect(() => withRequestContext(() => accrual.markPaid())).toThrow(
+            SalaryAccrualNotAccruedException,
+        );
+    });
+
+    it('revertToAccrued(): удаление выплаты возвращает PAID в ACCRUED вместе со строками', () => {
+        const accrual = accruedDocument();
+        accrual.markPaid();
+
+        accrual.revertToAccrued();
+
+        expect(accrual.status).toBe('ACCRUED');
+        expect(accrual.lines.every((l) => l.status === 'ACCRUED')).toBe(true);
+        // Документ снова доступен для действий над строками (ensureNotPaid
+        // больше не блокирует).
+        expect(() => accrual.unaccrueLine(accrual.lines[0].id)).not.toThrow();
+    });
+
+    it('revertToAccrued(): недостижим не из PAID', () => {
+        const accrual = accruedDocument();
+        expect(() =>
+            withRequestContext(() => accrual.revertToAccrued()),
+        ).toThrow(SalaryAccrualNotPaidException);
     });
 });

@@ -114,7 +114,7 @@ export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
             );
         }
         const expenseItemId = config.moySkladExpenseItemId;
-        if (params.kind === 'EXPENSE' && !expenseItemId) {
+        if (params.kind === 'OUTCOME' && !expenseItemId) {
             throw new ShopErpCashConfigIncompleteException(
                 'статья расходов (moySkladExpenseItemId)',
             );
@@ -148,14 +148,14 @@ export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
             // в МойСкладе.
             externalCode: params.transactionId,
         };
-        if (params.kind === 'EXPENSE' && expenseItemId) {
+        if (params.kind === 'OUTCOME' && expenseItemId) {
             body.expenseItem = metaRef('expenseitem', expenseItemId);
         }
         // CashIn: намеренно не добавляем аналог статьи доходов — см. WHY-блок
         // "moySkladIncomeItemId" выше.
 
         const endpoint =
-            params.kind === 'EXPENSE' ? '/entity/cashout' : '/entity/cashin';
+            params.kind === 'OUTCOME' ? '/entity/cashout' : '/entity/cashin';
         try {
             const { data } = await this.moysklad.instance.post<{
                 id: string;
@@ -172,7 +172,7 @@ export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
 
     async delete(document: DeleteErpCashDocumentParams): Promise<void> {
         const endpoint =
-            document.kind === 'EXPENSE'
+            document.kind === 'OUTCOME'
                 ? `/entity/cashout/${document.externalId}`
                 : `/entity/cashin/${document.externalId}`;
         try {
