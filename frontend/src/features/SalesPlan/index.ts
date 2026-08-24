@@ -7,7 +7,13 @@
 // модель + UI + форматтеры, которые нужны и features/SalesPlan/ui, и pages/SalesPlan/ui
 // (см. features/SalesPlan/model/format.ts). Уже так было в Фазе 1 (см. её комментарий в
 // истории этого файла), Фаза 2 лишь расширяет набор.
-export { useSalesPlan, DEFAULT_PERIOD, DEFAULT_DIRECTION, HARDCODED_DEPARTMENT_ID } from './model/useSalesPlan.ts'
+export {
+    useSalesPlan,
+    useShopCategoryNames,
+    DEFAULT_PERIOD,
+    DEFAULT_DIRECTION,
+    HARDCODED_DEPARTMENT_ID,
+} from './model/useSalesPlan.ts'
 export type { SalesPlanRow, SalesPlanTotals } from './model/useSalesPlan.ts'
 export { useSalesPlanSelection } from './model/useSalesPlanSelection.ts'
 export type { SalesPlanSelection } from './model/useSalesPlanSelection.ts'

@@ -3,10 +3,10 @@ import type { TargetRole } from 'ireports-contracts'
 import { ALL_RULE_TYPE_LABELS } from '@/kernel/ruleTypeLabels.ts'
 
 /**
- * Человекочитаемые роли (`targetRole`) для отчёта по зарплате — своя копия для этой страницы (не
- * реэкспорт `features/SalaryRuleForm`'s `ROLE_LABELS`, страница не может кросс-импортировать
- * чужую feature ради одной константы, а формулировки здесь чуть отличаются — "Менеджер заказа" в
- * единственном числе, как показывает Pencil `b6mfxv`'s "Role" ячейки, а не "Менеджер заказов").
+ * Человекочитаемые роли (`targetRole`) для отчёта по зарплате — своя копия для этого модуля (не
+ * реэкспорт `features/SalaryRuleForm`'s `ROLE_LABELS`, `features` не может кросс-импортировать
+ * другую `features` ради одной константы, а формулировки здесь чуть отличаются — "Менеджер заказа"
+ * в единственном числе, как показывает Pencil `b6mfxv`'s "Role" ячейки, а не "Менеджер заказов").
  * Общий на оба направления enum (см. `contracts/commands/salary-rule.ts`), поэтому карта покрывает
  * весь `TargetRole`, а не только роли, реально видимые в отчёте отдела/сотрудника.
  */
@@ -29,8 +29,8 @@ export function getRoleLabel(role: TargetRole): string {
 /**
  * Названия типов правил (`rule.type`) — реэкспорт объединённой карты `kernel/ruleTypeLabels.ts`
  * (уже покрывает оба направления, `PayPerHour`/`ServiceCompleted`/`OrderPayed`/`TaskCompleted`/
- * `ProductSold`/`UsedProductSold`) под именем, которое ожидает эта страница. Не копия — тот же
- * объект, чтобы не рассинхронизироваться с `kernel`, если список типов вырастет.
+ * `ProductSold`/`UsedProductSold`) под именем, которое ожидают потребители этого модуля. Не копия
+ * — тот же объект, чтобы не рассинхронизироваться с `kernel`, если список типов вырастет.
  */
 export const RULE_TYPE_LABELS: Record<string, string> = ALL_RULE_TYPE_LABELS
 

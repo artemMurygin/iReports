@@ -1,10 +1,9 @@
-import type { SalaryReportScope } from '../model/useSalaryReportPage.ts'
-import type { DepartmentReportVM, EmployeeReportVM } from '../model/types.ts'
+import type { DepartmentReportVM, EmployeeReportVM, SalaryReportScope } from '@/features/SalaryReportData'
 
-import { DepartmentReportBody } from './DepartmentReportBody.tsx'
-import { EmployeeReportBody } from './EmployeeReportBody.tsx'
+import { DepartmentReportBodyV2 } from './DepartmentReportBodyV2.tsx'
+import { EmployeeReportBodyV2 } from './EmployeeReportBodyV2.tsx'
 
-export type SalaryReportBodyProps = {
+export type SalaryReportBodyV2Props = {
     scope: SalaryReportScope
 
     employeeReport: EmployeeReportVM | null
@@ -14,6 +13,7 @@ export type SalaryReportBodyProps = {
 
     departmentReport: DepartmentReportVM | null
     isDepartmentSelected: boolean
+    departmentName: string | null
     isEmployeeExpanded: (employeeId: number) => boolean
     onToggleEmployee: (employeeId: number) => void
 
@@ -22,12 +22,13 @@ export type SalaryReportBodyProps = {
 }
 
 /**
- * Единственная точка ветвления по `scope` ("Сотрудник" vs "Отдел") — вынесена из
- * `SalaryReportPage` в этот презентационный компонент, чтобы страница осталась чистой склейкой
- * `useSalaryReportPage()` -> пропсы (правило «медиатор без `&&`/тернарников», см.
- * `pages/SalesPlan/ui/SalesPlanPage.tsx` -> `SalesPlanBody.tsx`).
+ * Единственная точка ветвления по `scope` ("Сотрудник" vs "Отдел") для `/salaries` — тот же
+ * приём, что и `pages/SalaryReport/ui/SalaryReportBody.tsx` (см. её комментарий: правило
+ * «медиатор без `&&`/тернарников», `frontend/CLAUDE.md`), заведённый заново вместо
+ * переиспользования, поскольку `pages` не может импортировать другую `pages`
+ * (`boundaries/dependencies`).
  */
-export function SalaryReportBody({
+export function SalaryReportBodyV2({
     scope,
     employeeReport,
     isEmployeeSelected,
@@ -35,14 +36,15 @@ export function SalaryReportBody({
     onToggleRule,
     departmentReport,
     isDepartmentSelected,
+    departmentName,
     isEmployeeExpanded,
     onToggleEmployee,
     isLoading,
     errorMessage,
-}: SalaryReportBodyProps) {
+}: SalaryReportBodyV2Props) {
     if (scope === 'employee') {
         return (
-            <EmployeeReportBody
+            <EmployeeReportBodyV2
                 report={employeeReport}
                 isLoading={isLoading}
                 errorMessage={errorMessage}
@@ -54,11 +56,12 @@ export function SalaryReportBody({
     }
 
     return (
-        <DepartmentReportBody
+        <DepartmentReportBodyV2
             report={departmentReport}
             isLoading={isLoading}
             errorMessage={errorMessage}
             isDepartmentSelected={isDepartmentSelected}
+            departmentName={departmentName}
             isEmployeeExpanded={isEmployeeExpanded}
             onToggleEmployee={onToggleEmployee}
         />

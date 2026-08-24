@@ -6,7 +6,7 @@ import { SalesPlanPage } from '@/pages/SalesPlan'
 import { SalaryRulesPage } from '@/pages/SalaryRules'
 import { SalaryRuleListPage } from '@/pages/SalaryRuleList'
 import { SalaryRuleDetailPage } from '@/pages/SalaryRuleDetail'
-import { SalaryReportPage } from '@/pages/SalaryReport'
+import { SalaryReportV2Page } from '@/pages/SalaryReportV2'
 import { SalaryAccrualsPage } from '@/pages/SalaryAccruals'
 import { SalaryAccrualDocumentPage } from '@/pages/SalaryAccrualDocument'
 import { EmployeeBalancePage } from '@/pages/EmployeeBalance'
@@ -42,8 +42,22 @@ export const router = createBrowserRouter([
                 element: <SalesPlanPage />,
             },
             {
+                // Отчёт по зарплате (Pencil: design/sallary-first-iteration.pen, `wLtzp`/`b63e8p`
+                // "Зарплата сотрудника" + `wVa5g`/`z5BwMk` "Зарплата отдела", `pages/SalaryReportV2`
+                // — исходный, ранее не переработанный дизайн этой страницы удалён вместе с роутом
+                // `/salaries-v2`, по которому этот компонент временно жил рядом со старым для
+                // сравнения). По умолчанию показывает отчёт отдела.
                 path: 'salaries',
-                element: <SalaryReportPage />,
+                element: <SalaryReportV2Page />,
+            },
+            {
+                // Отчёт сотрудника — свой URL (тот же приём, что `balance/employee/:id` у баланса,
+                // см. её комментарий чуть ниже): открывается кнопкой «Открыть отчёт» из строки
+                // сотрудника в отчёте отдела (`DepartmentEmployeeGroupV2`) или напрямую по ссылке.
+                // Тот же компонент `SalaryReportV2Page` — режим и выбранный сотрудник читаются из
+                // `:employeeId` в `useSalaryReportPage` (см. её комментарий).
+                path: 'salaries/employee/:employeeId',
+                element: <SalaryReportV2Page />,
             },
             {
                 // Фаза 6 плана "График работы сотрудников" (docs/employee-work-schedule) — путь

@@ -12,6 +12,10 @@ import type { SalaryDirection } from './types.ts'
  * `pages/ServicesReport/model/api.ts`) для `GET /v1/{direction}/accounting/salary_report/...`
  * (`ENDPOINTS.md`). Типы ответов — только `import type` из `ireports-contracts` (рантайм-импорт
  * из этого workspace-пакета ломает Vite dev server, см. комментарий `PeriodPicker.tsx`).
+ *
+ * Живёт в `features/SalaryReportData`, а не прямо в странице `pages/SalaryReportV2` (`/salaries`,
+ * Pencil `design/sallary-first-iteration.pen`) — переиспользуемая инфраструктура запросов
+ * отделена от конкретной вёрстки страницы.
  */
 export const api = {
     /**

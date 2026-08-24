@@ -9,9 +9,10 @@ import type {
 
 /**
  * Направление бизнеса — как и везде в проекте (`features/SalesPlan`'s `SalesDirection`), но
- * заведено заново в этом модуле (а не импортировано оттуда): страница не может импортировать
- * `model` другой фичи/страницы за пределами её публичного `index.ts`, а `SalesDirection` там не
- * реэкспортирован. Тот же приём, что и `RuleType` в `pages/SalaryRuleList/model/types.ts`.
+ * заведено заново в этом модуле (а не импортировано оттуда): `features` не может кросс-
+ * импортировать другую `features` (`frontend/CLAUDE.md`, `boundaries/dependencies`), а
+ * `SalesDirection` там не реэкспортирован. Тот же приём, что и `RuleType` в
+ * `pages/SalaryRuleList/model/types.ts`.
  */
 export type SalaryDirection = 'service' | 'shop'
 
@@ -19,6 +20,14 @@ export const SALARY_DIRECTION_LABELS: Record<SalaryDirection, string> = {
     service: 'Сервис',
     shop: 'Магазин',
 }
+
+/**
+ * Режим просмотра страницы отчёта — "Сотрудник" или "Отдел" (`SegmentedControl` в
+ * `SalaryReportFiltersV2`, страничный `scope`-стейт). Заведён здесь, а не в
+ * `pages/SalaryReportV2/model/useSalaryReportPage.ts` — тип нужен и `useSalaryReportSelection`
+ * (см. её комментарий) в этом же модуле.
+ */
+export type SalaryReportScope = 'employee' | 'department'
 
 /**
  * Статус документа начисления направления сотрудника за закрытый период — `null` для открытого
@@ -47,7 +56,11 @@ export type DirectionReportVM = {
     isClosed: boolean
     total: FactPrognoseAmount
     rules: SalaryReportRule[]
-    salesPerformance: SalesPerformanceSummary | null
+    /** Одна строка на каждую строку плана отдела за период — у `service` всегда 0 либо 1 элемент
+     * (план ведётся одной строкой на направление), у `shop` может быть несколько (план ведётся по
+     * категориям МойСклад) — см. `contracts/commands/salary-rule.ts`,
+     * `directionSalaryReportSchema.salesPerformance`. */
+    salesPerformance: SalesPerformanceSummary[]
     isPlanApproved: boolean
     accrualStatus: SalaryAccrualStatus
 }
@@ -75,12 +88,16 @@ export type EmployeeReportVM = {
 /** Один сотрудник в отчёте отдела — реэкспорт контрактного типа. */
 export type DepartmentReportEmployeeVM = DepartmentSalaryReportEmployee
 
-/** Отчёт отдела — строго однонаправленный (см. `contracts/commands/salary-rule.ts`,
- * `departmentSalaryReportResponseSchema`), поэтому `direction` тут — не массив, а одно
- * значение, выбранное фильтром страницы. */
+/** Отчёт отдела — на бэкенде строго однонаправленный (см. `contracts/commands/salary-rule.ts`,
+ * `departmentSalaryReportResponseSchema`), поэтому `direction` тут — не массив, а одно значение.
+ * `'all'` — сведение обоих направлений НА ФРОНТЕ (вкладка «Все», см.
+ * `pages/SalaryReportV2/model/useDepartmentSalaryReportAll.ts`, единственное место, которое его
+ * производит); ни один презентационный компонент `direction` не читает (только
+ * `.total`/`.employees`/`.isClosed`/`.period`/`.department`), поэтому расширение сюда, а не
+ * отдельным типом, безопасно. */
 export type DepartmentReportVM = {
     period: string
-    direction: SalaryDirection
+    direction: SalaryDirection | 'all'
     department: number
     isClosed: boolean
     total: FactPrognoseAmount

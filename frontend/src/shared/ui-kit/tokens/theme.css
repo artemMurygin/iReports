@@ -29,6 +29,8 @@
     --color-ok-ink: var(--uikit-ok-ink);
     --color-info-soft: var(--uikit-info-soft);
     --color-info-ink: var(--uikit-info-ink);
+    --color-violet-soft: var(--uikit-violet-soft);
+    --color-violet-ink: var(--uikit-violet-ink);
     --color-row-selected: var(--uikit-row-selected);
     --color-scrim: var(--uikit-scrim);
     --font-display: var(--uikit-font-display);
@@ -55,6 +57,13 @@
     --uikit-ok-ink: #0b7a3e;
     --uikit-info-soft: #eaf2fe;
     --uikit-info-ink: #1d4ed8;
+    /* "Магазин" direction accent (design/sallary-first-iteration.pen node `H7Mz74` "Ledger ·
+       Зарплата" -> `TMa9C` "Направление · Магазин") — added for pages/SalaryReportV2's ledger
+       card, which colors each direction block by a distinct accent (`brand-*` for "Сервис",
+       these for "Магазин") rather than the single shared brand color the old /salaries page
+       used everywhere. */
+    --uikit-violet-soft: #f1edfd;
+    --uikit-violet-ink: #6d28d9;
     --uikit-row-selected: #f6fdf9;
     --uikit-scrim: #01030659;
     --uikit-font-display: 'Montserrat Variable', sans-serif;

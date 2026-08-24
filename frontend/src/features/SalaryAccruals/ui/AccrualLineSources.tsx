@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ChevronsDown, CornerDownRight, Receipt } from 'lucide-react'
+import { ChevronsDown, CornerDownRight, ExternalLink, Receipt } from 'lucide-react'
 import type { SalaryAccrualLine } from 'ireports-contracts'
 
+import { formatCurrency } from '@/shared/lib/format.ts'
 import { cn } from '@/shared/lib/tw'
 
 import { pluralizeSources } from '../model/accrualView.ts'
@@ -11,11 +12,14 @@ const DEFAULT_VISIBLE_COUNT = 3
 
 /**
  * Разворот строки документа в источники (Pencil `jb7fL`, блок «Источники начисления · 42
- * заказа RemOnline»). Контракт (`calculationSourceRefSchema`) отдаёт на источник только
- * `{ type, id }` — без даты и суммы, которые обещает мокап, поэтому это «честная витрина»
- * того, что реально есть: человекочитаемый тип + id. Тот же вывод и прецедент, что у
- * pages/SalaryReport/ui/RuleSources.tsx (см. его комментарий): пиксель-точная разбивка
- * потребует обогащения `sources[]` на бэкенде.
+ * заказа RemOnline»). На источник заказа (`type: 'order'`/`'serviceOrderItem'`) бэкенд отдаёт
+ * человекочитаемый номер заказа RemOnline (`source.label`), ссылку на его карточку
+ * (`source.link`) и сумму начисления по этому источнику (`source.amount`) — см.
+ * `calculationSourceRefSchema` в `contracts/commands/salary-rule.ts`. Документ начисления
+ * фиксирует только факт (без прогноза), поэтому сумма источника здесь — одно число, в отличие
+ * от пары факт/прогноз у `pages/SalaryReport/ui/RuleSources.tsx`. Поля опциональны (не у всех
+ * типов источника есть документ в ERP, и строки, сохранённые до появления этих полей, их не
+ * несут) — при отсутствии строка деградирует к прежнему виду.
  */
 export type AccrualLineSourcesProps = {
     sources: SalaryAccrualLine['sources']
@@ -48,7 +52,24 @@ function AccrualLineSources({ sources, className }: AccrualLineSourcesProps) {
                 >
                     <Receipt className="size-3.5 shrink-0 text-ink-faint" />
                     <span className="font-medium text-ink">{getSourceTypeLabel(source.type)}</span>
-                    <span className="text-ink-muted">#{source.id}</span>
+                    {source.link ? (
+                        <a
+                            href={source.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-brand-strong hover:underline"
+                        >
+                            {source.label ?? `#${source.id}`}
+                            <ExternalLink className="size-3 shrink-0" />
+                        </a>
+                    ) : (
+                        <span className="text-ink-muted">{source.label ?? `#${source.id}`}</span>
+                    )}
+                    {source.amount !== undefined && (
+                        <span className="ml-auto shrink-0 font-semibold text-ink tabular-nums">
+                            {formatCurrency(source.amount)}
+                        </span>
+                    )}
                 </div>
             ))}
 

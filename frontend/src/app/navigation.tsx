@@ -79,6 +79,10 @@ export const SECTIONS: NavSection[] = [
         label: 'Зарплата',
         icon: <Wallet />,
         items: [
+            // `pages/SalaryReportV2` (Pencil: design/sallary-first-iteration.pen, `wLtzp`/`b63e8p`/
+            // `wVa5g`/`z5BwMk`) — исходный дизайн этой страницы (`pages/SalaryReport`, отдельный
+            // роут `/salaries-v2` рядом со старым для сравнения) удалён, это единственная страница
+            // отчёта по зарплате.
             { label: 'Отчёт по зарплате', to: '/salaries', icon: <Receipt /> },
             // Фаза 5 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual):
             // список документов начисления закрытого месяца (`pages/SalaryAccruals`). Через

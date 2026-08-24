@@ -67,6 +67,17 @@ function flattenCatalog(categories: CatalogResponse, map: Map<string, string> = 
     return map
 }
 
+/** Словарь `id категории МойСклад -> человекочитаемое полное имя` (см. `flattenCatalog` выше) —
+ * вынесен в отдельный хук, а не только внутрь `useSalesPlan`, потому что нужен и
+ * `pages/SalaryReportV2` (карточка плана продаж магазина с разбивкой по категориям, `/salaries`), у
+ * которой нет своего среза `SalesPerformance` по категории (тот приходит уже в отчёте по
+ * зарплате), только сами id категорий — резолвить их в имя нужно тем же каталогом, что и на
+ * `/sales-plan`. `staleTime` тот же, что у `api.getShopCatalog()` внутри `useSalesPlan`. */
+export function useShopCategoryNames() {
+    const { data: shopCatalog } = useQuery({ ...api.getShopCatalog(), placeholderData: keepPreviousData })
+    return useMemo(() => flattenCatalog(shopCatalog ?? []), [shopCatalog])
+}
+
 export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, period: string = DEFAULT_PERIOD) {
     const isShop = direction === 'shop'
 
