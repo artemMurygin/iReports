@@ -67,15 +67,29 @@ describe('GetShopDepartmentSalaryReportService', () => {
         const findEmployeeIdentitiesForEmployees = jest
             .fn()
             .mockResolvedValue(new Map());
+        // shopHoursByEmployee задаётся тестами как Map<employeeId, часы>
+        // (одно число) — оборачиваем в { fact, prognose } с одинаковым
+        // значением, т.к. эти тесты не проверяют разницу режимов PayPerHour.
         const findHoursWorkedForEmployees = jest
             .fn()
-            .mockResolvedValue(overrides.shopHoursByEmployee ?? new Map());
+            .mockResolvedValue(
+                new Map(
+                    [...(overrides.shopHoursByEmployee ?? new Map())].map(
+                        ([employeeId, hours]) => [
+                            employeeId,
+                            { fact: hours, prognose: hours },
+                        ],
+                    ),
+                ),
+            );
         const resolveCategoryDescendantFolderIds = jest
             .fn()
             .mockResolvedValue({});
         const shopDataSource: ShopCalculationDataPort = {
             findEmployeeIdentities: jest.fn().mockResolvedValue([]),
-            findHoursWorked: jest.fn().mockResolvedValue(0),
+            findHoursWorked: jest
+                .fn()
+                .mockResolvedValue({ fact: 0, prognose: 0 }),
             findProductSoldItems,
             findConfirmedTaskCompletions,
             findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
@@ -89,6 +103,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
         const shopSalesPerformanceReader: ShopSalesPerformanceReaderPort = {
             listForPeriod: jest.fn().mockResolvedValue([]),
             findForScope,
+            listForDepartment: jest.fn().mockResolvedValue([]),
         };
 
         const findByEmployees = jest

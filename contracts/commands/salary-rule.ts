@@ -28,6 +28,16 @@ import { salaryAccrualStatusSchema } from './salary-accrual-status';
 // намеренно не входит в ALL_SERVICE_ROLES/ALL_SHOP_ROLES каталогов
 // salary-rule-role-catalog.ts обоих направлений — GET .../salary_role_types
 // её не предлагает.
+//
+// SOLO_MANAGER — роль сотрудника графика работы (WorkScheduleEntry.role),
+// совмещающего онлайн- и офлайн-обязанности менеджера в одиночку. В отличие
+// от OFFICE, эта роль участвует в расчёте зарплаты: она включена в
+// PAY_PER_HOUR_ELIGIBLE_ROLES (domain/services/pay-per-hour-roles.ts) наравне
+// с ONLINE_MANAGER/OFFLINE_MANAGER, поэтому часы рабочих смен с этой ролью
+// засчитываются в почасовую оплату (PayPerHour). В ALL_SERVICE_ROLES она,
+// как и OFFICE, намеренно не входит — остальные три типа правил сервиса
+// (ServiceCompleted/OrderPayed/TaskCompleted) матчат сотрудника через
+// service-role-source.ts, где у неё нет собственного поля ERP.
 const targetRoleSchema = z.enum([
     'ENGINEER',
     'ONLINE_MANAGER',
@@ -36,6 +46,7 @@ const targetRoleSchema = z.enum([
     'ONLINE_PURCHASER',
     'OFFLINE_PURCHASER',
     'OFFICE',
+    'SOLO_MANAGER',
 ]);
 
 export type TargetRole = z.infer<typeof targetRoleSchema>;
@@ -53,13 +64,18 @@ const salaryBasisSchema = z.enum([
 export type SalaryBasis = z.infer<typeof salaryBasisSchema>;
 
 // Один из трёх порогов FloatPercent — { fromPlanPercent, multiplier, mode }.
-// FIX — множитель ступенькой при достижении порога, LINEAR — линейная
-// интерполяция между соседними порогами (см. PRD, раздел 2, и план, Фаза 8).
 // mode лежит на каждом пороге отдельно (а не одним полем на весь award) —
 // так задан контракт в PRD ("каждый — { fromPlanPercent, multiplier, mode }");
-// смысл: mode описывает, как считается участок МЕЖДУ предыдущим порогом
-// (или нулевой точкой, если это первый порог) и этим — см.
-// domain/services/float-percent.ts на бэкенде.
+// смысл: mode описывает, что происходит НА ЭТОМ пороге и ДАЛЬШЕ, вплоть до
+// следующего порога (или до бесконечности, если порог последний по
+// fromPlanPercent):
+// - FIX    — множитель ступенькой: от этого порога и до следующего действует
+//            множитель ЭТОГО порога;
+// - LINEAR — от этого порога до следующего множитель линейно
+//            интерполируется между множителем этого порога и множителем
+//            следующего.
+// См. domain/services/float-percent.ts на бэкенде (в обоих доменах —
+// service и shop, это независимые, но идентичные по семантике реализации).
 const percentBorderSchema = z.object({
     name: z.string(),
     fromPlanPercent: z.number(),
@@ -95,12 +111,17 @@ const payPerHourSalaryRuleSchema = z.object({
 
 // ========================== За выполненную услугу ========================== //
 
+// orderTypeIds (Фаза 3, docs/service-plan-salary-rule-order-category-filter)
+// — фильтр по категории заказа, т.е. RoappOrderType (RoappOrder.orderTypeId),
+// НЕ SalesPlan.category и не RoappServiceCategory/RoappProductCategory.
+// Пусто/не указано — правило учитывает заказы всех типов.
 const serviceCompletedSalaryConfigSchema = z.object({
     award: z.union([
         z.object({ type: z.literal('Fixed'), price: z.number() }),
         z.object({ type: z.literal('ServiceFixed') }),
         z.object({ type: z.literal('ServicePercent'), percent: z.number() }),
     ]),
+    orderTypeIds: z.array(z.number()).optional(),
 });
 
 const serviceCompletedSalaryRuleSchema = z.object({
@@ -116,6 +137,10 @@ const serviceCompletedSalaryRuleSchema = z.object({
 // engineerSalary), а не на предрассчитанный legacy-KPI RoappOrder.managerSalary
 // (жёстко зашитые 10% в sync/roapp) — см. PRD, "Технические ограничения",
 // и план, Фаза 8.
+// orderTypeIds (Фаза 3, docs/service-plan-salary-rule-order-category-filter)
+// — фильтр по категории заказа, т.е. RoappOrderType (RoappOrder.orderTypeId),
+// НЕ SalesPlan.category и не RoappServiceCategory/RoappProductCategory.
+// Пусто/не указано — правило учитывает заказы всех типов.
 const orderPayedSalaryConfigSchema = z.object({
     award: z.union([
         z.object({ type: z.literal('Fixed'), price: z.number() }),
@@ -131,6 +156,7 @@ const orderPayedSalaryConfigSchema = z.object({
             percentBorders: percentBordersSchema,
         }),
     ]),
+    orderTypeIds: z.array(z.number()).optional(),
 });
 
 const orderPayedSalaryRuleSchema = z.object({
@@ -233,9 +259,36 @@ export type SalaryRuleTypesResponse = z.infer<
 // на которых она получена. Форма едина для service и shop (зеркало
 // src/shared/domain/calculation-line.ts на бэкенде — там это внутренний
 // доменный тип, здесь — его сериализуемая форма).
+//
+// label/link/amount — опциональное обогащение источника (не у всех типов
+// источников есть: например, у 'taskCompletion' сегодня нет ни
+// человекочитаемого номера документа, ни ссылки в ERP; у 'demandPosition'
+// оба поля есть — см. ProductSoldEntity/UsedProductSoldEntity), поэтому
+// optional, а не часть базовой формы {type, id}. amount — сумма начисления,
+// приходящаяся на этот конкретный источник В РЕЖИМЕ текущей строки (FACT
+// либо PROGNOSE, см. calculationLineSchema.amount), а не персональная доля
+// от округлённой суммы всего правила. Опционально и здесь — уже закрытые
+// периоды/сохранённые документы начисления могли зафиксировать sources[] до
+// того, как это поле появилось (снапшот/документ — неизменяемый JSON,
+// заново не пересчитывается), фронт для таких строк просто не показывает
+// сумму/ссылку, как и раньше.
 const calculationSourceRefSchema = z.object({
     type: z.string(),
     id: z.union([z.string(), z.number()]),
+    label: z.string().optional(),
+    link: z.string().optional(),
+    amount: z.number().optional(),
+    // Наименование модели устройства и его неисправность — заполняются
+    // только там, где источник — заказ/позиция заказа RemOnline (см.
+    // label/link выше), для остальных типов источников отсутствуют.
+    brand: z.string().optional(),
+    deviceModel: z.string().optional(),
+    deviceColor: z.string().optional(),
+    malfunction: z.string().optional(),
+    // Название конкретного проданного товара/оказанной услуги
+    // (RoappService.name / MoySkladDemandPosition.assortmentName) —
+    // заполняется только там, где источник умеет его определить.
+    itemName: z.string().optional(),
 });
 
 const calculationLineSchema = z.object({
@@ -289,6 +342,36 @@ const floatPercentInfoSchema = z.object({
 
 export type FloatPercentInfo = z.infer<typeof floatPercentInfoSchema>;
 
+// Источник строки в ответе отчёта — та же форма, что и calculationSourceRefSchema,
+// но amount сведён по паре ФАКТ/ПРОГНОЗ (см. employeeSalaryReportRuleSchema.amount
+// ниже) — отчёт считает calculate() дважды (FACT и PROGNOSE) и сопоставляет
+// источники между двумя проходами по позиции (один и тот же список
+// ERP-объектов в обоих режимах — отличается только сумма, посчитанная на
+// каждый). Optional — сумма источника не заполняется у закрытого периода
+// (снапшот прогноза не хранит, см. factPrognoseAmountSchema) и у источников,
+// сохранённых до появления этого поля (см. calculationSourceRefSchema).
+const employeeSalaryReportSourceSchema = z.object({
+    type: z.string(),
+    id: z.union([z.string(), z.number()]),
+    label: z.string().optional(),
+    link: z.string().optional(),
+    amount: factPrognoseAmountSchema.optional(),
+    // Наименование модели устройства и его неисправность (см.
+    // calculationSourceRefSchema) — то же обогащение, что и там.
+    brand: z.string().optional(),
+    deviceModel: z.string().optional(),
+    deviceColor: z.string().optional(),
+    malfunction: z.string().optional(),
+    // Название конкретного проданного товара/оказанной услуги
+    // (RoappService.name / MoySkladDemandPosition.assortmentName) —
+    // заполняется только там, где источник умеет его определить.
+    itemName: z.string().optional(),
+});
+
+export type EmployeeSalaryReportSource = z.infer<
+    typeof employeeSalaryReportSourceSchema
+>;
+
 // Разбивка по правилу в отчёте — это calculationLineSchema, сведённый по
 // парам FACT/PROGNOSE, плюс атрибуты правила (type/name/targetRole), нужные
 // UI для отображения без дополнительных запросов. floatPercent — только для
@@ -305,7 +388,7 @@ const employeeSalaryReportRuleSchema = z.object({
     floatPercent: z
         .object({ fact: floatPercentInfoSchema, prognose: floatPercentInfoSchema })
         .optional(),
-    sources: z.array(calculationSourceRefSchema),
+    sources: z.array(employeeSalaryReportSourceSchema),
 });
 
 export type EmployeeSalaryReportRule = z.infer<
@@ -322,9 +405,15 @@ const directionSalaryReportSchema = z.object({
     isClosed: z.boolean(),
     total: factPrognoseAmountSchema,
     rules: z.array(employeeSalaryReportRuleSchema),
-    // Заполняется начиная с Фазы 5 (модуль sales/SalesPerformance) — до этого
-    // момента у направления ещё нет ни плана, ни факта продаж.
-    salesPerformance: salesPerformanceSummarySchema.nullable(),
+    // Одна строка на каждую отдельную строку плана отдела за период — у
+    // service это всегда 0 или 1 элемент (план всегда один, без разбивки по
+    // категориям), у shop может быть несколько (план magazина ведётся
+    // по категориям МойСклад, см. GetShopEmployeeSalaryReportService) — UI
+    // рендерит одну карточку "План продаж · <направление>" с одной строкой
+    // прогресса на каждый элемент массива. Пустой массив — плана ещё нет
+    // (Фаза 5, модуль sales/SalesPerformance) — до этого момента у
+    // направления ещё нет ни плана, ни факта продаж.
+    salesPerformance: z.array(salesPerformanceSummarySchema),
     isPlanApproved: z.boolean(),
     // Статус документа начисления сотрудника за закрытый период (PRD 1
     // docs/payroll-closing-and-accrual: "ожидает начисление / начислено /
@@ -393,6 +482,7 @@ export {
     factPrognoseAmountSchema,
     salesPerformanceSummarySchema,
     floatPercentInfoSchema,
+    employeeSalaryReportSourceSchema,
     employeeSalaryReportRuleSchema,
     employeeSalaryReportResponseSchema,
     departmentSalaryReportEmployeeSchema,

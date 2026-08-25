@@ -2,11 +2,12 @@ import { ShopCalculationDataRepository } from './shop-calculation-data.repositor
 import type { DatabaseService } from '@/infrustructure/database/database.service';
 import type { ProductFolderTreeService } from '@/domains/shop/sync/moySklad/product-folder-tree.service';
 
-// Фаза 5 (docs/employee-work-schedule) — зеркало
-// service-calculation-data.repository.hours.spec.ts: findHoursWorked/
-// findHoursWorkedForEmployees читают сумму часов рабочих смен графика
-// (WorkScheduleEntry.status = WORKING) из той же общей таблицы, что и у
-// service (WorkScheduleEntry не имеет дискриминатора direction).
+// Зеркало service-calculation-data.repository.hours.spec.ts: findHoursWorked/
+// findHoursWorkedForEmployees читают рабочие смены графика
+// (WorkScheduleEntry.status = WORKING) с ролью дня ONLINE_MANAGER/
+// OFFLINE_MANAGER из той же общей таблицы, что и у service
+// (WorkScheduleEntry не имеет дискриминатора direction), и делят их на
+// факт (по `now` включительно) и прогноз (весь период).
 describe('ShopCalculationDataRepository — часы графика', () => {
     // folderTree не участвует ни в одном из тестов ниже (нужен только
     // resolveCategoryDescendantFolderIds) — минимальный фейк вместо
@@ -14,13 +15,11 @@ describe('ShopCalculationDataRepository — часы графика', () => {
     const fakeFolderTree = {} as unknown as ProductFolderTreeService;
 
     describe('findHoursWorked', () => {
-        it('запрашивает сумму часов WORKING-смен сотрудника в границах периода', async () => {
-            const aggregate = jest
-                .fn()
-                .mockResolvedValue({ _sum: { hours: 24 } });
+        it('запрашивает WORKING-смены с ролью ONLINE_MANAGER/OFFLINE_MANAGER в границах периода', async () => {
+            const findMany = jest.fn().mockResolvedValue([]);
             const db = {
                 getClient: () => ({
-                    workScheduleEntry: { aggregate },
+                    workScheduleEntry: { findMany },
                 }),
             } as unknown as DatabaseService;
             const repository = new ShopCalculationDataRepository(
@@ -28,28 +27,53 @@ describe('ShopCalculationDataRepository — часы графика', () => {
                 fakeFolderTree,
             );
 
-            const result = await repository.findHoursWorked(42, '2026-08');
+            await repository.findHoursWorked(
+                42,
+                '2026-08',
+                new Date('2026-08-15T12:00:00.000Z'),
+            );
 
-            expect(result).toBe(24);
-            expect(aggregate).toHaveBeenCalledWith({
+            expect(findMany).toHaveBeenCalledWith({
                 where: {
                     employeeId: 42,
                     status: 'WORKING',
+                    role: { in: ['ONLINE_MANAGER', 'OFFLINE_MANAGER'] },
                     date: {
                         gte: new Date(Date.UTC(2026, 7, 1)),
                         lte: new Date(Date.UTC(2026, 7, 31, 23, 59, 59, 999)),
                     },
                 },
-                _sum: { hours: true },
+                select: { date: true, hours: true },
             });
         });
 
-        it('нет рабочих смен за период — возвращает 0, а не null/ошибку', async () => {
-            const aggregate = jest
-                .fn()
-                .mockResolvedValue({ _sum: { hours: null } });
+        it('факт — сумма часов дней по `now` включительно, прогноз — сумма часов всего периода', async () => {
+            const findMany = jest.fn().mockResolvedValue([
+                { date: new Date(Date.UTC(2026, 7, 1)), hours: 8 },
+                { date: new Date(Date.UTC(2026, 7, 15)), hours: 8 },
+                { date: new Date(Date.UTC(2026, 7, 20)), hours: 8 },
+            ]);
             const db = {
-                getClient: () => ({ workScheduleEntry: { aggregate } }),
+                getClient: () => ({ workScheduleEntry: { findMany } }),
+            } as unknown as DatabaseService;
+            const repository = new ShopCalculationDataRepository(
+                db,
+                fakeFolderTree,
+            );
+
+            const result = await repository.findHoursWorked(
+                42,
+                '2026-08',
+                new Date('2026-08-15T12:00:00.000Z'),
+            );
+
+            expect(result).toEqual({ fact: 16, prognose: 24 });
+        });
+
+        it('нет подходящих рабочих смен за период — возвращает { fact: 0, prognose: 0 }', async () => {
+            const findMany = jest.fn().mockResolvedValue([]);
+            const db = {
+                getClient: () => ({ workScheduleEntry: { findMany } }),
             } as unknown as DatabaseService;
             const repository = new ShopCalculationDataRepository(
                 db,
@@ -58,15 +82,15 @@ describe('ShopCalculationDataRepository — часы графика', () => {
 
             const result = await repository.findHoursWorked(42, '2026-08');
 
-            expect(result).toBe(0);
+            expect(result).toEqual({ fact: 0, prognose: 0 });
         });
     });
 
     describe('findHoursWorkedForEmployees', () => {
         it('пустой список сотрудников — не ходит в БД, возвращает пустую карту', async () => {
-            const groupBy = jest.fn();
+            const findMany = jest.fn();
             const db = {
-                getClient: () => ({ workScheduleEntry: { groupBy } }),
+                getClient: () => ({ workScheduleEntry: { findMany } }),
             } as unknown as DatabaseService;
             const repository = new ShopCalculationDataRepository(
                 db,
@@ -79,16 +103,29 @@ describe('ShopCalculationDataRepository — часы графика', () => {
             );
 
             expect(result).toEqual(new Map());
-            expect(groupBy).not.toHaveBeenCalled();
+            expect(findMany).not.toHaveBeenCalled();
         });
 
-        it('один groupBy на весь отдел — сотрудник без рабочих смен не попадает в карту', async () => {
-            const groupBy = jest.fn().mockResolvedValue([
-                { employeeId: 1, _sum: { hours: 16 } },
-                { employeeId: 2, _sum: { hours: 8 } },
+        it('один запрос на весь отдел — сотрудник без подходящих рабочих смен не попадает в карту', async () => {
+            const findMany = jest.fn().mockResolvedValue([
+                {
+                    employeeId: 1,
+                    date: new Date(Date.UTC(2026, 7, 1)),
+                    hours: 8,
+                },
+                {
+                    employeeId: 1,
+                    date: new Date(Date.UTC(2026, 7, 20)),
+                    hours: 8,
+                },
+                {
+                    employeeId: 2,
+                    date: new Date(Date.UTC(2026, 7, 1)),
+                    hours: 4,
+                },
             ]);
             const db = {
-                getClient: () => ({ workScheduleEntry: { groupBy } }),
+                getClient: () => ({ workScheduleEntry: { findMany } }),
             } as unknown as DatabaseService;
             const repository = new ShopCalculationDataRepository(
                 db,
@@ -98,13 +135,14 @@ describe('ShopCalculationDataRepository — часы графика', () => {
             const result = await repository.findHoursWorkedForEmployees(
                 [1, 2, 3],
                 '2026-08',
+                new Date('2026-08-15T00:00:00.000Z'),
             );
 
-            expect(groupBy).toHaveBeenCalledTimes(1);
+            expect(findMany).toHaveBeenCalledTimes(1);
             expect(result).toEqual(
                 new Map([
-                    [1, 16],
-                    [2, 8],
+                    [1, { fact: 8, prognose: 16 }],
+                    [2, { fact: 4, prognose: 4 }],
                 ]),
             );
             expect(result.has(3)).toBe(false);

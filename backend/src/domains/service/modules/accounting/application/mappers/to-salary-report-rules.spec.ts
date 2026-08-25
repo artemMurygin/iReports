@@ -171,4 +171,39 @@ describe('buildSalaryReportRules', () => {
 
         expect(entry.floatPercent).toBeUndefined();
     });
+
+    it('itemName источника пробрасывается в sources[] ответа', () => {
+        const rule = PayPerHoursEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
+            config: { price: 250 },
+        });
+        const factLines = [
+            {
+                ruleId: rule.id,
+                quantity: 1,
+                rate: 100,
+                amount: 100,
+                sources: [
+                    {
+                        type: 'serviceOrderItem',
+                        id: 1,
+                        label: 'А000100',
+                        amount: 100,
+                        itemName: 'Замена экрана',
+                    },
+                ],
+            },
+        ];
+
+        const [entry] = buildSalaryReportRules(
+            [rule],
+            factLines,
+            factLines,
+            null,
+        );
+
+        expect(entry.sources[0].itemName).toBe('Замена экрана');
+    });
 });

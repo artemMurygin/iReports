@@ -14,6 +14,17 @@ export interface ShopProductSoldErpItem {
     // (issue #61/#65).
     positionId: string;
     demandId: string;
+    // MoySkladDemandPosition.assortmentName — денормализованное название
+    // товара/услуги позиции (Фаза 3 плана
+    // docs/salary-accrual-source-item-detail/plan-salary-accrual-source-item-detail.md),
+    // зеркало OrderPayedErpItem.label по назначению — попадает в
+    // CalculationSourceRef.itemName источников ProductSold/UsedProductSold.
+    itemName: string;
+    // MoySkladDemand.name — человекочитаемый номер/название документа
+    // отгрузки, аналог RoappOrder.label у сервиса; вместе с demandId выше
+    // используется для построения ссылки на карточку отгрузки
+    // (buildMoySkladDemandLink, domain/services/moysklad-demand-link.ts).
+    demandLabel: string;
     // MoySkladProduct.folderId / MoySkladService.folderId позиции —
     // собственная (листовая) категория товара/услуги, не раскрытая до
     // предков. Раскрытие категории правила до потомков сравнивается с этим
@@ -69,11 +80,21 @@ export interface ShopTaskCompletionErpItem {
     employeeId: number;
 }
 
+// Пара факт/прогноз часов PayPerHour — зеркало PayPerHourHours сервиса (см.
+// service-calculation-data.types.ts). fact — сумма часов графика по
+// сегодняшний день включительно, prognose — сумма часов графика за весь
+// период (включая ещё не наступившие дни).
+export interface PayPerHourHours {
+    fact: number;
+    prognose: number;
+}
+
 export interface ShopCalculationErpData {
     // Источник PayPerHour.calculate() — сумма часов рабочих смен графика
-    // (WorkScheduleEntry.status = WORKING, Фаза 5,
-    // docs/employee-work-schedule), тот же источник, что и у сервиса.
-    hoursWorked?: number;
+    // (WorkScheduleEntry.status = WORKING) с ролью дня ONLINE_MANAGER/
+    // OFFLINE_MANAGER (см. domain/services/pay-per-hour-roles.ts), тот же
+    // источник, что и у сервиса.
+    hoursWorked?: PayPerHourHours;
     // Источник ProductSold И UsedProductSold (Фаза 13, issue #63) — один
     // массив на оба правила, см. комментарий у onlinePurchaserId выше.
     productSoldItems?: ShopProductSoldErpItem[];

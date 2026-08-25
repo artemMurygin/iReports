@@ -35,6 +35,15 @@ export interface ShopCalculationBaseContext {
     // TaskCompletedShopEntity.FloatPercent (у него категории нет вовсе) и
     // ProductSold/UsedProductSold с config.category === null.
     salesPerformanceByCategory: Map<string | null, ShopSalesPerformance>;
+    // Все строки ShopSalesPerformance отдела сотрудника за период (по
+    // каждой заведённой категории) — сырые данные для построчной
+    // разбивки "план продаж отдела" по категориям в ответе отчёта (см.
+    // findSalesPerformanceByDepartment и GetShopEmployeeSalaryReportService).
+    // Не путать с
+    // salesPerformanceByCategory — та служит расчёту FloatPercent КАЖДОГО
+    // правила по его category, эта — только отображению компактной
+    // сводки в самом ответе.
+    salesPerformanceByDepartment: ShopSalesPerformance[];
 }
 
 // Application-слой сборки контекста расчёта направления shop (Фаза 13.5,
@@ -86,11 +95,15 @@ export class BuildShopCalculationContextService {
 
         const categoryIds = this.collectProductCategoryIds(rules);
 
-        const [categoryDescendantFolderIds, salesPerformanceDetail] =
-            await Promise.all([
-                this.resolveCategoryDescendantFolderIds(categoryIds),
-                this.findSalesPerformance(period, departmentId, null),
-            ]);
+        const [
+            categoryDescendantFolderIds,
+            salesPerformanceDetail,
+            salesPerformanceByDepartment,
+        ] = await Promise.all([
+            this.resolveCategoryDescendantFolderIds(categoryIds),
+            this.findSalesPerformance(period, departmentId, null),
+            this.findSalesPerformanceByDepartment(period, departmentId),
+        ]);
 
         const salesPerformanceByCategory =
             await this.resolveSalesPerformanceByCategory(
@@ -111,6 +124,7 @@ export class BuildShopCalculationContextService {
             } satisfies ShopCalculationErpData,
             salesPerformanceDetail,
             salesPerformanceByCategory,
+            salesPerformanceByDepartment,
         };
     }
 
@@ -233,5 +247,36 @@ export class BuildShopCalculationContextService {
         const departmentId =
             await this.dataSource.findEmployeeDepartmentId(employeeId);
         return this.findSalesPerformance(period, departmentId, null);
+    }
+
+    // Все строки плана-факта-прогноза отдела за период (по каждой
+    // заведённой категории) — сырой вход для построчной разбивки
+    // "план продаж отдела" по категориям в ответе отчёта (см.
+    // GetShopEmployeeSalaryReportService.buildSalesPerformanceSummaries).
+    // У сотрудника без отдела в shop — пустой список, как и у
+    // findSalesPerformance с departmentId === null.
+    async findSalesPerformanceByDepartment(
+        period: Period,
+        departmentId: number | null,
+    ): Promise<ShopSalesPerformance[]> {
+        if (departmentId == null) {
+            return [];
+        }
+        return this.salesPerformanceReader.listForDepartment(
+            period.getValue(),
+            departmentId,
+        );
+    }
+
+    // Лёгкий путь для попадания в кэш (зеркало findSalesPerformanceForEmployee
+    // выше) — резолвит отдел сотрудника перед тем, как звать
+    // findSalesPerformanceByDepartment.
+    async findSalesPerformanceByDepartmentForEmployee(
+        period: Period,
+        employeeId: number,
+    ): Promise<ShopSalesPerformance[]> {
+        const departmentId =
+            await this.dataSource.findEmployeeDepartmentId(employeeId);
+        return this.findSalesPerformanceByDepartment(period, departmentId);
     }
 }

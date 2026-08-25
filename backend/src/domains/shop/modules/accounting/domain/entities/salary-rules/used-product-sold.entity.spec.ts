@@ -5,6 +5,7 @@ import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
 } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
+import { buildMoySkladDemandLink } from '@/domains/shop/modules/accounting/domain/services/moysklad-demand-link';
 
 // Юнит-тесты на подготовленном объекте контекста — без БД и без моков
 // репозиториев (issue #66, "Тесты UsedProductSold").
@@ -14,6 +15,8 @@ const buildItem = (
 ): ShopProductSoldErpItem => ({
     positionId: 'pos-1',
     demandId: 'demand-1',
+    itemName: 'iPhone 12 БУ 64GB',
+    demandLabel: 'А000002',
     folderId: null,
     quantity: 1,
     sum: 1000,
@@ -106,8 +109,22 @@ describe('UsedProductSoldEntity', () => {
                 rate: 500,
                 amount: 1000,
                 sources: [
-                    { type: 'demandPosition', id: 'p1' },
-                    { type: 'demandPosition', id: 'p2' },
+                    {
+                        type: 'demandPosition',
+                        id: 'p1',
+                        label: 'А000002',
+                        link: buildMoySkladDemandLink('demand-1'),
+                        itemName: 'iPhone 12 БУ 64GB',
+                        amount: 500,
+                    },
+                    {
+                        type: 'demandPosition',
+                        id: 'p2',
+                        label: 'А000002',
+                        link: buildMoySkladDemandLink('demand-1'),
+                        itemName: 'iPhone 12 БУ 64GB',
+                        amount: 500,
+                    },
                 ],
             });
         });
@@ -244,7 +261,14 @@ describe('UsedProductSoldEntity', () => {
 
             expect(line.quantity).toBe(1);
             expect(line.sources).toEqual([
-                { type: 'demandPosition', id: 'p-iphone' },
+                {
+                    type: 'demandPosition',
+                    id: 'p-iphone',
+                    label: 'А000002',
+                    link: buildMoySkladDemandLink('demand-1'),
+                    itemName: 'iPhone 12 БУ 64GB',
+                    amount: 10,
+                },
             ]);
         });
     });
@@ -296,11 +320,25 @@ describe('UsedProductSoldEntity', () => {
 
             expect(lineA.amount).toBe(100);
             expect(lineA.sources).toEqual([
-                { type: 'demandPosition', id: 'p1' },
+                {
+                    type: 'demandPosition',
+                    id: 'p1',
+                    label: 'А000002',
+                    link: buildMoySkladDemandLink('demand-1'),
+                    itemName: 'iPhone 12 БУ 64GB',
+                    amount: 100,
+                },
             ]);
             expect(lineB.amount).toBe(100);
             expect(lineB.sources).toEqual([
-                { type: 'demandPosition', id: 'p2' },
+                {
+                    type: 'demandPosition',
+                    id: 'p2',
+                    label: 'А000002',
+                    link: buildMoySkladDemandLink('demand-1'),
+                    itemName: 'iPhone 12 БУ 64GB',
+                    amount: 100,
+                },
             ]);
         });
 

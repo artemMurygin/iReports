@@ -50,7 +50,7 @@ describe('CreateShopSalaryRuleHandler', () => {
                         status: 'OPEN',
                     },
                     mode: 'FACT',
-                    erpData: { hoursWorked: 5 },
+                    erpData: { hoursWorked: { fact: 5, prognose: 5 } },
                     salesPerformance: null,
                 }).amount,
             ).toBe(1000);

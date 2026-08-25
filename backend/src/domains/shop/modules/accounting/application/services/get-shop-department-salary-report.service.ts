@@ -187,7 +187,16 @@ export class GetShopDepartmentSalaryReportService {
                 targetRole: line.targetRole,
                 amount: { fact: line.amount, prognose: null },
                 appliedPercent: line.salaryBasis ? line.rate : undefined,
-                sources: line.sources,
+                sources: line.sources.map((source) => ({
+                    type: source.type,
+                    id: source.id,
+                    label: source.label,
+                    link: source.link,
+                    amount:
+                        source.amount === undefined
+                            ? undefined
+                            : { fact: source.amount, prognose: null },
+                })),
             }));
             contributions.set(employee.id, { lines, fact, prognose: 0 });
         }
@@ -299,7 +308,10 @@ export class GetShopDepartmentSalaryReportService {
                     status: 'OPEN' as const,
                 },
                 erpData: {
-                    hoursWorked: hoursByEmployee.get(employee.id) ?? 0,
+                    hoursWorked: hoursByEmployee.get(employee.id) ?? {
+                        fact: 0,
+                        prognose: 0,
+                    },
                     productSoldItems,
                     categoryDescendantFolderIds,
                     taskCompletions: confirmedTaskCompletions,

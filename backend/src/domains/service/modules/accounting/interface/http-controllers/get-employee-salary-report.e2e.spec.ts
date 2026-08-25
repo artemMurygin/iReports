@@ -134,8 +134,9 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
         findByDirectionAndPeriod: () => Promise.resolve([]),
     };
     // Часы (Фаза 7) больше не в config правила — источник данных для
-    // BuildServiceCalculationContextService, hoursWorked: 8 сохраняет
-    // числовые ожидания теста (2000 = 8ч × 250).
+    // BuildServiceCalculationContextService, { fact: 8, prognose: 8 }
+    // сохраняет числовые ожидания теста (2000 = 8ч × 250, одинаково для
+    // факта и прогноза).
     // Фаза 8 расширила порт тремя источниками (OrderPayed/TaskCompleted/
     // отдел сотрудника) — пустые/null здесь достаточны: тест проверяет
     // только PayPerHour, а findEmployeeDepartmentId: null отключает поход
@@ -145,7 +146,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
         findServiceCompletedItems: () => Promise.resolve([]),
-        findHoursWorked: () => Promise.resolve(8),
+        findHoursWorked: () => Promise.resolve({ fact: 8, prognose: 8 }),
         findOrderPayedItems: () => Promise.resolve([]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
@@ -258,7 +259,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
                     amount: { fact: 2000, prognose: 2000 },
                 }),
             ],
-            salesPerformance: null,
+            salesPerformance: [],
             isPlanApproved: true,
             accrualStatus: null,
         });

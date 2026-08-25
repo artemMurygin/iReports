@@ -51,12 +51,19 @@ export class PayPerHourShopEntity
         });
     }
 
-    // Часов нет в контексте — 0, а не ошибка: правило не обязано быть
-    // настроено для каждого сотрудника с этой ролью (то же решение, что и
-    // у сервиса, Фаза 7).
+    // erpData.hoursWorked несёт ОБА значения (fact/prognose) сразу — режим
+    // (FACT/PROGNOSE) выбирает нужное, дата "сегодня" и фильтр по роли дня
+    // (ONLINE_MANAGER/OFFLINE_MANAGER, см. domain/services/
+    // pay-per-hour-roles.ts) уже учтены на стороне, собравшей контекст (см.
+    // ShopCalculationDataRepository.findHoursWorked). Часов нет в
+    // контексте — 0, а не ошибка: правило не обязано быть настроено для
+    // каждого сотрудника с этой ролью (то же решение, что и у сервиса).
     calculate(context: ShopCalculationContext): CalculationLine {
         const erpData = context.erpData as ShopCalculationErpData | undefined;
-        const hours = erpData?.hoursWorked ?? 0;
+        const hours =
+            context.mode === 'FACT'
+                ? (erpData?.hoursWorked?.fact ?? 0)
+                : (erpData?.hoursWorked?.prognose ?? 0);
         const rate = this.props.config.price;
 
         return {

@@ -71,10 +71,6 @@ export class TaskCompletedEntity
             (completion) => completion.employeeId === context.employee.id,
         );
         const quantity = matched.length;
-        const sources = matched.map((completion) => ({
-            type: 'taskCompletion',
-            id: completion.id,
-        }));
         const award = this.props.config.award;
 
         switch (award.type) {
@@ -85,7 +81,11 @@ export class TaskCompletedEntity
                     quantity,
                     rate: award.price,
                     amount,
-                    sources,
+                    sources: matched.map((completion) => ({
+                        type: 'taskCompletion',
+                        id: completion.id,
+                        amount: award.price,
+                    })),
                 };
             }
             case 'FloatPercent': {
@@ -101,12 +101,17 @@ export class TaskCompletedEntity
                 const amount = roundRubles(
                     award.basePrice * quantity * multiplier,
                 );
+                const perTaskAmount = roundRubles(award.basePrice * multiplier);
                 return {
                     ruleId: this.id,
                     quantity,
                     rate: award.basePrice * multiplier,
                     amount,
-                    sources,
+                    sources: matched.map((completion) => ({
+                        type: 'taskCompletion',
+                        id: completion.id,
+                        amount: perTaskAmount,
+                    })),
                 };
             }
         }

@@ -16,6 +16,7 @@ import type {
 } from '../../types/shop-calculation-data.types';
 import { employeeMatchesShopPurchaserRole } from '../../services/shop-role-source';
 import { roundRubles } from '../../services/money';
+import { buildMoySkladDemandLink } from '../../services/moysklad-demand-link';
 
 // Правило "вознаграждение закупщику за продажу выкупленной им БУ техники"
 // (Фаза 13, issue #62/#63, см. docs/payroll/plan-payroll-calculation.md и
@@ -89,10 +90,6 @@ export class UsedProductSoldEntity
                     this.matchesCategory(item, erpData),
             ),
         );
-        const sources = matched.map((item) => ({
-            type: 'demandPosition',
-            id: item.positionId,
-        }));
         const award = this.props.config.award;
         // Fixed — "за единицу проданного устройства" (issue #62), то же
         // явное решение на дробном quantity, что у ProductSold (issue #60):
@@ -110,7 +107,9 @@ export class UsedProductSoldEntity
                     quantity: totalQuantity,
                     rate: award.price,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(award.price * item.quantity),
+                    ),
                 };
             }
             case 'FixedPercent': {
@@ -122,13 +121,33 @@ export class UsedProductSoldEntity
                     quantity: totalQuantity,
                     rate: award.percent,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(
+                            (this.basisAmount(item, award.salaryBasis) *
+                                award.percent) /
+                                100,
+                        ),
+                    ),
                 };
             }
         }
     }
 
     validate(): void {}
+
+    private buildSources(
+        items: ShopProductSoldErpItem[],
+        amountFor: (item: ShopProductSoldErpItem) => number,
+    ) {
+        return items.map((item) => ({
+            type: 'demandPosition',
+            id: item.positionId,
+            label: item.demandLabel,
+            link: buildMoySkladDemandLink(item.demandId),
+            itemName: item.itemName,
+            amount: amountFor(item),
+        }));
+    }
 
     private matchesRole(
         context: ShopCalculationContext,

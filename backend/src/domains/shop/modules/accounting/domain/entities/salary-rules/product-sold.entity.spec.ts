@@ -8,6 +8,7 @@ import type {
     ShopCalculationContext,
     ShopSalesPerformanceByCategory,
 } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
+import { buildMoySkladDemandLink } from '@/domains/shop/modules/accounting/domain/services/moysklad-demand-link';
 
 // Юнит-тесты на подготовленном объекте контекста — без БД и без моков
 // репозиториев (issue #61, "Тесты правил ProductSold и PayPerHour
@@ -22,6 +23,8 @@ const buildItem = (
 ): ShopProductSoldErpItem => ({
     positionId: 'pos-1',
     demandId: 'demand-1',
+    itemName: 'iPhone 15 Pro 256GB',
+    demandLabel: 'А000001',
     folderId: null,
     quantity: 1,
     sum: 1000,
@@ -109,8 +112,22 @@ describe('ProductSoldEntity', () => {
                 rate: 100,
                 amount: 200,
                 sources: [
-                    { type: 'demandPosition', id: 'p1' },
-                    { type: 'demandPosition', id: 'p2' },
+                    {
+                        type: 'demandPosition',
+                        id: 'p1',
+                        label: 'А000001',
+                        link: buildMoySkladDemandLink('demand-1'),
+                        itemName: 'iPhone 15 Pro 256GB',
+                        amount: 100,
+                    },
+                    {
+                        type: 'demandPosition',
+                        id: 'p2',
+                        label: 'А000001',
+                        link: buildMoySkladDemandLink('demand-1'),
+                        itemName: 'iPhone 15 Pro 256GB',
+                        amount: 100,
+                    },
                 ],
             });
         });
@@ -488,8 +505,22 @@ describe('ProductSoldEntity', () => {
 
             expect(line.quantity).toBe(2);
             expect(line.sources).toEqual([
-                { type: 'demandPosition', id: 'p-root' },
-                { type: 'demandPosition', id: 'p-child' },
+                {
+                    type: 'demandPosition',
+                    id: 'p-root',
+                    label: 'А000001',
+                    link: buildMoySkladDemandLink('demand-1'),
+                    itemName: 'iPhone 15 Pro 256GB',
+                    amount: 10,
+                },
+                {
+                    type: 'demandPosition',
+                    id: 'p-child',
+                    label: 'А000001',
+                    link: buildMoySkladDemandLink('demand-1'),
+                    itemName: 'iPhone 15 Pro 256GB',
+                    amount: 10,
+                },
             ]);
         });
 
@@ -528,7 +559,14 @@ describe('ProductSoldEntity', () => {
 
             expect(line.quantity).toBe(1);
             expect(line.sources).toEqual([
-                { type: 'demandPosition', id: 'p-in' },
+                {
+                    type: 'demandPosition',
+                    id: 'p-in',
+                    label: 'А000001',
+                    link: buildMoySkladDemandLink('demand-1'),
+                    itemName: 'iPhone 15 Pro 256GB',
+                    amount: 10,
+                },
             ]);
         });
 

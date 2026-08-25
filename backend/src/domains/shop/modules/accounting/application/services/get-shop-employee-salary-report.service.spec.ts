@@ -33,8 +33,9 @@ import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/acco
 // без БД (тот же стиль, что и у остальных юнит-тестов accounting).
 describe('GetShopEmployeeSalaryReportService', () => {
     // Часы (Фаза 7/12) приходят из BuildShopCalculationContextService, а не
-    // из config — фейки ниже всегда возвращают hoursWorked: 8, чтобы
-    // числовое ожидание (800 = 8ч × 100) было верным.
+    // из config — фейки ниже всегда возвращают hoursWorked: { fact: 8,
+    // prognose: 8 }, чтобы числовое ожидание (800 = 8ч × 100, одинаково для
+    // факта и прогноза) было верным.
     const buildShopSchema = (employeeId: number) =>
         withRequestContext(() => {
             const rule = PayPerHourShopEntity.create({
@@ -168,7 +169,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
                         status: 'OPEN' as const,
                     },
                     erpData: overrides?.shopErpData ?? {
-                        hoursWorked: 8,
+                        hoursWorked: { fact: 8, prognose: 8 },
                     },
                     salesPerformanceDetail:
                         overrides?.shopSalesPerformanceDetail ?? null,
@@ -183,9 +184,25 @@ describe('GetShopEmployeeSalaryReportService', () => {
                                   [null, overrides.shopSalesPerformanceDetail],
                               ])
                             : new Map(),
+                    // Сырые строки для агрегированной сводки "план продаж
+                    // отдела" в ответе (см. buildSalesPerformanceSummary) —
+                    // зеркалит salesPerformanceDetail единственной записью
+                    // "весь отдел" (category: null), тот же приём, что и у
+                    // salesPerformanceByCategory выше.
+                    salesPerformanceByDepartment:
+                        overrides?.shopSalesPerformanceDetail
+                            ? [overrides.shopSalesPerformanceDetail]
+                            : [],
                 }),
             ),
             findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),
+            findSalesPerformanceByDepartmentForEmployee: jest
+                .fn()
+                .mockResolvedValue(
+                    overrides?.shopSalesPerformanceDetail
+                        ? [overrides.shopSalesPerformanceDetail]
+                        : [],
+                ),
         } as unknown as BuildShopCalculationContextService;
 
         // Статус документа начисления (PRD 1 docs/payroll-closing-and-accrual)
@@ -247,7 +264,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
             isClosed: false,
             total: { fact: 0, prognose: 0 },
             rules: [],
-            salesPerformance: null,
+            salesPerformance: [],
             isPlanApproved: true,
             accrualStatus: null,
         });
@@ -347,7 +364,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
                         sources: [],
                     },
                 ],
-                salesPerformance: null,
+                salesPerformance: [],
                 isPlanApproved: true,
                 accrualStatus: null,
             });
@@ -430,6 +447,8 @@ describe('GetShopEmployeeSalaryReportService', () => {
         const productSoldItem = {
             positionId: 'p1',
             demandId: 'd1',
+            itemName: 'Товар p1',
+            demandLabel: 'd1-label',
             folderId: null,
             quantity: 1,
             sum: 1000,
@@ -478,7 +497,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
             const { service } = buildService({
                 shopSchema,
                 shopErpData: {
-                    hoursWorked: 0,
+                    hoursWorked: { fact: 0, prognose: 0 },
                     productSoldItems: [productSoldItem],
                 },
                 shopIdentities: identities,
@@ -498,7 +517,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
             const { service } = buildService({
                 shopSchema,
                 shopErpData: {
-                    hoursWorked: 0,
+                    hoursWorked: { fact: 0, prognose: 0 },
                     productSoldItems: [productSoldItem],
                 },
                 shopIdentities: identities,
@@ -507,14 +526,16 @@ describe('GetShopEmployeeSalaryReportService', () => {
 
             const report = await service.execute(42, '2026-08');
 
-            expect(report.salesPerformance).toEqual({
-                department: 1,
-                category: null,
-                plan: { turnover: 0, margin: 0 },
-                fact: { turnover: 0, margin: 0 },
-                prognose: { turnover: 0, margin: 0 },
-                percentCompletion: 65,
-            });
+            expect(report.salesPerformance).toEqual([
+                {
+                    department: 1,
+                    category: null,
+                    plan: { turnover: 0, margin: 0 },
+                    fact: { turnover: 0, margin: 0 },
+                    prognose: { turnover: 0, margin: 0 },
+                    percentCompletion: 65,
+                },
+            ]);
             expect(report.isPlanApproved).toBe(true);
         });
     });

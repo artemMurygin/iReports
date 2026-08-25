@@ -103,7 +103,10 @@ describe('GetClosePeriodPreviewService', () => {
                     },
                     erpData: {
                         serviceCompletedItems: [],
-                        hoursWorked: options.hoursByEmployee[employeeId] ?? 0,
+                        hoursWorked: {
+                            fact: options.hoursByEmployee[employeeId] ?? 0,
+                            prognose: options.hoursByEmployee[employeeId] ?? 0,
+                        },
                     },
                     salesPerformanceDetail: null,
                 }),

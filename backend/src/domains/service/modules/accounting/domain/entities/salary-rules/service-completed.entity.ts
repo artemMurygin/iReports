@@ -10,7 +10,11 @@ import {
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { employeeMatchesServiceRole } from '@/domains/service/modules/accounting/domain/services/service-role-source';
 import { roundRubles } from '@/domains/service/modules/accounting/domain/services/money';
-import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type {
+    ServiceCalculationErpData,
+    ServiceCompletedErpItem,
+} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import { buildRoappOrderLink } from '@/domains/service/modules/accounting/domain/services/roapp-order-link';
 import { randomUUID } from 'crypto';
 
 export class ServiceCompletedEntity
@@ -61,14 +65,16 @@ export class ServiceCompletedEntity
         const erpData = context.erpData as
             ServiceCalculationErpData | undefined;
         const items = erpData?.serviceCompletedItems ?? [];
-        const matched = items.filter((item) =>
-            employeeMatchesServiceRole(context.employee, this.targetRole, item),
+        const matched = items.filter(
+            (item) =>
+                this.matchesOrderType(item) &&
+                employeeMatchesServiceRole(
+                    context.employee,
+                    this.targetRole,
+                    item,
+                ),
         );
         const quantity = matched.reduce((sum, item) => sum + item.quantity, 0);
-        const sources = matched.map((item) => ({
-            type: 'serviceOrderItem',
-            id: item.serviceOrderId,
-        }));
         const award = this.props.config.award;
 
         switch (award.type) {
@@ -79,7 +85,10 @@ export class ServiceCompletedEntity
                     quantity,
                     rate: award.price,
                     amount,
-                    sources,
+                    sources: this.buildSources(
+                        matched,
+                        (item) => award.price * item.quantity,
+                    ),
                 };
             }
             case 'ServiceFixed': {
@@ -91,7 +100,15 @@ export class ServiceCompletedEntity
                         sum + item.catalogEngineerBonus * item.quantity,
                     0,
                 );
-                return { ruleId: this.id, quantity, amount, sources };
+                return {
+                    ruleId: this.id,
+                    quantity,
+                    amount,
+                    sources: this.buildSources(
+                        matched,
+                        (item) => item.catalogEngineerBonus * item.quantity,
+                    ),
+                };
             }
             case 'ServicePercent': {
                 const base = matched.reduce(
@@ -108,11 +125,52 @@ export class ServiceCompletedEntity
                     quantity,
                     rate: award.percent,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(
+                            (item.linePrice * item.quantity * award.percent) /
+                                100,
+                        ),
+                    ),
                 };
             }
         }
     }
 
     validate(): void {}
+
+    // Фильтр по категории заказа (Фаза 3,
+    // docs/service-plan-salary-rule-order-category-filter/) —
+    // config.orderTypeIds указывает список допустимых RoappOrderType
+    // (RoappOrder.orderTypeId, здесь — item.orderTypeId позиции заказа).
+    // Пусто/не указано — условие не применяется, правило считает позиции
+    // заказов всех типов (совместимо с уже существующими правилами без
+    // этого поля).
+    private matchesOrderType(item: ServiceCompletedErpItem): boolean {
+        const { orderTypeIds } = this.props.config;
+        if (!orderTypeIds || orderTypeIds.length === 0) {
+            return true;
+        }
+        return orderTypeIds.includes(item.orderTypeId);
+    }
+
+    // Источник — позиция заказа (serviceOrderId), но человекочитаемый номер
+    // и ссылка ведут на её ЗАКАЗ целиком (RoappOrder.label/веб-карточка) —
+    // у отдельной позиции своего документа/номера в RemOnline нет.
+    private buildSources(
+        items: ServiceCompletedErpItem[],
+        amountFor: (item: ServiceCompletedErpItem) => number,
+    ) {
+        return items.map((item) => ({
+            type: 'serviceOrderItem',
+            id: item.serviceOrderId,
+            label: item.orderLabel,
+            link: buildRoappOrderLink(item.orderId),
+            amount: amountFor(item),
+            brand: item.brand ?? undefined,
+            deviceModel: item.deviceModel ?? undefined,
+            deviceColor: item.deviceColor ?? undefined,
+            malfunction: item.malfunction ?? undefined,
+            itemName: item.serviceName,
+        }));
+    }
 }

@@ -153,7 +153,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
         findServiceCompletedItems: () => Promise.resolve([]),
-        findHoursWorked: () => Promise.resolve(8),
+        findHoursWorked: () => Promise.resolve({ fact: 8, prognose: 8 }),
         findOrderPayedItems: () => Promise.resolve([]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),

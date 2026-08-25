@@ -187,7 +187,20 @@ export class GetDepartmentSalaryReportService {
                 targetRole: line.targetRole,
                 amount: { fact: line.amount, prognose: null },
                 appliedPercent: line.salaryBasis ? line.rate : undefined,
-                sources: line.sources,
+                sources: line.sources.map((source) => ({
+                    type: source.type,
+                    id: source.id,
+                    label: source.label,
+                    link: source.link,
+                    amount:
+                        source.amount === undefined
+                            ? undefined
+                            : { fact: source.amount, prognose: null },
+                    brand: source.brand,
+                    deviceModel: source.deviceModel,
+                    deviceColor: source.deviceColor,
+                    malfunction: source.malfunction,
+                })),
             }));
             contributions.set(employee.id, { lines, fact, prognose: 0 });
         }
@@ -271,7 +284,10 @@ export class GetDepartmentSalaryReportService {
                     serviceCompletedItems,
                     orderPayedItems,
                     confirmedTaskCompletions,
-                    hoursWorked: hoursByEmployee.get(employee.id) ?? 0,
+                    hoursWorked: hoursByEmployee.get(employee.id) ?? {
+                        fact: 0,
+                        prognose: 0,
+                    },
                 } satisfies ServiceCalculationErpData,
             };
 

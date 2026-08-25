@@ -12,12 +12,18 @@ const buildItem = (
     overrides: Partial<OrderPayedErpItem> = {},
 ): OrderPayedErpItem => ({
     orderId: 1,
+    label: 'А000001',
+    brand: null,
+    deviceModel: null,
+    deviceColor: null,
+    malfunction: null,
     managerId: null,
     onlineManager: null,
     engineerIds: [42],
     revenue: 1000,
     cost: 400,
     engineerSalary: 100,
+    orderTypeId: 1,
     ...overrides,
 });
 
@@ -48,7 +54,7 @@ const buildContext = (
     mode: 'FACT',
     erpData: {
         serviceCompletedItems: [],
-        hoursWorked: 0,
+        hoursWorked: { fact: 0, prognose: 0 },
         orderPayedItems: items,
         confirmedTaskCompletions: [],
     } satisfies ServiceCalculationErpData,
@@ -92,9 +98,49 @@ describe('OrderPayedEntity', () => {
                 rate: 500,
                 amount: 1000,
                 sources: [
-                    { type: 'order', id: 1 },
-                    { type: 'order', id: 2 },
+                    {
+                        type: 'order',
+                        id: 1,
+                        label: 'А000001',
+                        link: 'https://web.roapp.io/orders/table/1',
+                        amount: 500,
+                    },
+                    {
+                        type: 'order',
+                        id: 2,
+                        label: 'А000001',
+                        link: 'https://web.roapp.io/orders/table/2',
+                        amount: 500,
+                    },
                 ],
+            });
+        });
+
+        it('прокидывает наименование модели устройства и неисправность в sources', () => {
+            const rule = OrderPayedEntity.create({
+                type: 'OrderPayed',
+                name: 'За оплаченный заказ',
+                targetRole: 'ENGINEER',
+                config: { award: { type: 'Fixed', price: 500 } },
+            });
+            const items = [
+                buildItem({
+                    orderId: 1,
+                    engineerIds: [42],
+                    brand: 'Apple',
+                    deviceModel: 'iPhone 12 Pro',
+                    deviceColor: 'Space Gray',
+                    malfunction: 'Не включается',
+                }),
+            ];
+
+            const line = rule.calculate(buildContext(items));
+
+            expect(line.sources[0]).toMatchObject({
+                brand: 'Apple',
+                deviceModel: 'iPhone 12 Pro',
+                deviceColor: 'Space Gray',
+                malfunction: 'Не включается',
             });
         });
     });
@@ -143,7 +189,7 @@ describe('OrderPayedEntity', () => {
             expect(line.amount).toBe(60); // (1000-400) * 10%
         });
 
-        it('SALARY_MINUS_ENGINEER_SALARY — процент от суммы за вычетом зарплаты инженера', () => {
+        it('SALARY_MINUS_ENGINEER_SALARY — процент от суммы за вычетом себестоимости и зарплаты инженера', () => {
             const rule = OrderPayedEntity.create({
                 type: 'OrderPayed',
                 name: 'Правило',
@@ -158,7 +204,7 @@ describe('OrderPayedEntity', () => {
             });
 
             const line = rule.calculate(buildContext([item]));
-            expect(line.amount).toBe(90); // (1000-100) * 10%
+            expect(line.amount).toBe(50); // (1000-400-100) * 10%
         });
     });
 
@@ -293,6 +339,59 @@ describe('OrderPayedEntity', () => {
 
             const line = rule.calculate(buildContext(items));
             expect(line.amount).toBe(0);
+        });
+    });
+
+    describe('фильтр по категории заказа (orderTypeIds)', () => {
+        it('без orderTypeIds (или с []) считает заказы всех типов — регрессия', () => {
+            const ruleWithoutFilter = OrderPayedEntity.create({
+                type: 'OrderPayed',
+                name: 'Правило',
+                targetRole: 'ENGINEER',
+                config: { award: { type: 'Fixed', price: 100 } },
+            });
+            const ruleWithEmptyFilter = OrderPayedEntity.create({
+                type: 'OrderPayed',
+                name: 'Правило',
+                targetRole: 'ENGINEER',
+                config: {
+                    award: { type: 'Fixed', price: 100 },
+                    orderTypeIds: [],
+                },
+            });
+            const items = [
+                buildItem({ orderId: 1, engineerIds: [42], orderTypeId: 1 }),
+                buildItem({ orderId: 2, engineerIds: [42], orderTypeId: 2 }),
+            ];
+
+            expect(
+                ruleWithoutFilter.calculate(buildContext(items)).amount,
+            ).toBe(200);
+            expect(
+                ruleWithEmptyFilter.calculate(buildContext(items)).amount,
+            ).toBe(200);
+        });
+
+        it('с orderTypeIds считает только заказы указанных типов', () => {
+            const rule = OrderPayedEntity.create({
+                type: 'OrderPayed',
+                name: 'Правило',
+                targetRole: 'ENGINEER',
+                config: {
+                    award: { type: 'Fixed', price: 100 },
+                    orderTypeIds: [1],
+                },
+            });
+            const items = [
+                buildItem({ orderId: 1, engineerIds: [42], orderTypeId: 1 }),
+                buildItem({ orderId: 2, engineerIds: [42], orderTypeId: 2 }),
+            ];
+
+            const line = rule.calculate(buildContext(items));
+            expect(line.quantity).toBe(1);
+            expect(line.amount).toBe(100);
+            expect(line.sources).toHaveLength(1);
+            expect(line.sources[0].id).toBe(1);
         });
     });
 

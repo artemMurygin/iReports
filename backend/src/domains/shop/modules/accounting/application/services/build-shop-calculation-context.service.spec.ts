@@ -38,7 +38,9 @@ describe('BuildShopCalculationContextService', () => {
         performanceByCategory?: Record<string, ShopSalesPerformance | null>;
     }) => {
         const findEmployeeIdentities = jest.fn().mockResolvedValue([]);
-        const findHoursWorked = jest.fn().mockResolvedValue(8);
+        const findHoursWorked = jest
+            .fn()
+            .mockResolvedValue({ fact: 8, prognose: 8 });
         const findProductSoldItems = jest.fn().mockResolvedValue([]);
         const findConfirmedTaskCompletions = jest.fn().mockResolvedValue([]);
         const findEmployeeDepartmentId = jest
@@ -81,6 +83,7 @@ describe('BuildShopCalculationContextService', () => {
         const salesPerformanceReader: ShopSalesPerformanceReaderPort = {
             listForPeriod: jest.fn().mockResolvedValue([]),
             findForScope,
+            listForDepartment: jest.fn().mockResolvedValue([]),
         };
 
         const service = new BuildShopCalculationContextService(
@@ -277,7 +280,10 @@ describe('BuildShopCalculationContextService', () => {
                 externalId: '7',
             },
         ]);
-        (dataSource.findHoursWorked as jest.Mock).mockResolvedValue(120);
+        (dataSource.findHoursWorked as jest.Mock).mockResolvedValue({
+            fact: 120,
+            prognose: 120,
+        });
 
         const context = await service.build(Period.create('2026-01'), 7, []);
 
@@ -291,7 +297,10 @@ describe('BuildShopCalculationContextService', () => {
                 },
             ],
         });
-        expect(context.erpData.hoursWorked).toBe(120);
+        expect(context.erpData.hoursWorked).toEqual({
+            fact: 120,
+            prognose: 120,
+        });
         expect(context.period.direction).toBe('shop');
         expect(context.period.period).toBe('2026-01');
     });

@@ -2,6 +2,7 @@ import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import type {
     ConfirmedTaskCompletionErpItem,
     OrderPayedErpItem,
+    PayPerHourHours,
     ServiceCompletedErpItem,
 } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 
@@ -33,11 +34,17 @@ export interface ServiceCalculationDataPort {
         to: Date,
     ): Promise<ServiceCompletedErpItem[]>;
 
-    // Отработанные часы сотрудника за период — сумма часов рабочих смен
-    // графика (WorkScheduleEntry.status = WORKING, Фаза 5,
-    // docs/employee-work-schedule) вместо прежнего ручного ввода
-    // EmployeeHoursEntry (модель удалена). 0, если рабочих смен нет.
-    findHoursWorked(bitrixEmployeeId: number, period: string): Promise<number>;
+    // Отработанные часы сотрудника за период (только дни графика с ролью
+    // ONLINE_MANAGER/OFFLINE_MANAGER, см. domain/services/
+    // pay-per-hour-roles.ts) — пара факт (по сегодняшний день включительно)
+    // / прогноз (весь период). now — необязательный параметр с дефолтом
+    // new Date() (та же идиома, что у Period), точка инъекции "сегодня" в
+    // тестах. 0 по обоим полям, если подходящих рабочих смен нет.
+    findHoursWorked(
+        bitrixEmployeeId: number,
+        period: string,
+        now?: Date,
+    ): Promise<PayPerHourHours>;
 
     // Заказы, оплаченные в периоде (Фаза 8, "оплаченный" — по группе
     // статуса, см. domain/services/paid-order-status.ts) — источник для
@@ -75,12 +82,13 @@ export interface ServiceCalculationDataPort {
     ): Promise<Map<number, EmployeeIdentityRef[]>>;
 
     // Батч-версия findHoursWorked для отдела целиком (Фаза 9) — один запрос
-    // вместо одного на сотрудника. Сотрудники без рабочих смен за период
-    // получают 0 (как и в findHoursWorked).
+    // вместо одного на сотрудника. Сотрудники без подходящих рабочих смен
+    // за период получают { fact: 0, prognose: 0 } (как и в findHoursWorked).
     findHoursWorkedForEmployees(
         bitrixEmployeeIds: number[],
         period: string,
-    ): Promise<Map<number, number>>;
+        now?: Date,
+    ): Promise<Map<number, PayPerHourHours>>;
 }
 
 export const SERVICE_CALCULATION_DATA = Symbol('SERVICE_CALCULATION_DATA');

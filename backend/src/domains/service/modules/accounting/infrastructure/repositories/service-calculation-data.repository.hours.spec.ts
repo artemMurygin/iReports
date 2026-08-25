@@ -1,61 +1,112 @@
 import { ServiceCalculationDataRepository } from './service-calculation-data.repository';
 import type { DatabaseService } from '@/infrustructure/database/database.service';
 
-// Фаза 5 (docs/employee-work-schedule): findHoursWorked/findHoursWorkedForEmployees
-// читают сумму часов рабочих смен графика (WorkScheduleEntry.status =
-// WORKING) вместо прежнего ручного ввода EmployeeHoursEntry. Тот же приём
-// мока DatabaseService, что и в moysklad-sales-fact-source.repository.spec.ts
-// / directory.repository.spec.ts — PrismaRepository.client делегирует в
-// db.getClient(), фейковому db достаточно реализовать только этот метод.
+// findHoursWorked/findHoursWorkedForEmployees читают рабочие смены графика
+// (WorkScheduleEntry.status = WORKING) с ролью дня ONLINE_MANAGER/
+// OFFLINE_MANAGER/SOLO_MANAGER (см. domain/services/pay-per-hour-roles.ts) и
+// делят их на
+// факт (по `now` включительно) и прогноз (весь период) — вместо прежней
+// одной Prisma `aggregate`/`_sum`, conditional-агрегация по двум диапазонам
+// дат одним запросом Prisma без raw SQL недоступна, поэтому читаем строки
+// (`findMany`) и суммируем в коде. Тот же приём мока DatabaseService, что и
+// в moysklad-sales-fact-source.repository.spec.ts — PrismaRepository.client
+// делегирует в db.getClient(), фейковому db достаточно реализовать только
+// используемый метод.
 describe('ServiceCalculationDataRepository — часы графика', () => {
     describe('findHoursWorked', () => {
-        it('запрашивает сумму часов WORKING-смен сотрудника в границах периода', async () => {
-            const aggregate = jest
-                .fn()
-                .mockResolvedValue({ _sum: { hours: 24 } });
+        it('запрашивает WORKING-смены с ролью ONLINE_MANAGER/OFFLINE_MANAGER/SOLO_MANAGER в границах периода', async () => {
+            const findMany = jest.fn().mockResolvedValue([]);
             const db = {
                 getClient: () => ({
-                    workScheduleEntry: { aggregate },
+                    workScheduleEntry: { findMany },
                 }),
             } as unknown as DatabaseService;
             const repository = new ServiceCalculationDataRepository(db);
 
-            const result = await repository.findHoursWorked(42, '2026-08');
+            await repository.findHoursWorked(
+                42,
+                '2026-08',
+                new Date('2026-08-15T12:00:00.000Z'),
+            );
 
-            expect(result).toBe(24);
-            expect(aggregate).toHaveBeenCalledWith({
+            expect(findMany).toHaveBeenCalledWith({
                 where: {
                     employeeId: 42,
                     status: 'WORKING',
+                    role: {
+                        in: [
+                            'ONLINE_MANAGER',
+                            'OFFLINE_MANAGER',
+                            'SOLO_MANAGER',
+                        ],
+                    },
                     date: {
                         gte: new Date(Date.UTC(2026, 7, 1)),
                         lte: new Date(Date.UTC(2026, 7, 31, 23, 59, 59, 999)),
                     },
                 },
-                _sum: { hours: true },
+                select: { date: true, hours: true },
             });
         });
 
-        it('нет рабочих смен за период — возвращает 0, а не null/ошибку', async () => {
-            const aggregate = jest
-                .fn()
-                .mockResolvedValue({ _sum: { hours: null } });
+        it('факт — сумма часов дней по `now` включительно, прогноз — сумма часов всего периода', async () => {
+            const findMany = jest.fn().mockResolvedValue([
+                { date: new Date(Date.UTC(2026, 7, 1)), hours: 8 },
+                { date: new Date(Date.UTC(2026, 7, 15)), hours: 8 },
+                // День после `now` — считается только в прогноз.
+                { date: new Date(Date.UTC(2026, 7, 20)), hours: 8 },
+            ]);
             const db = {
-                getClient: () => ({ workScheduleEntry: { aggregate } }),
+                getClient: () => ({ workScheduleEntry: { findMany } }),
+            } as unknown as DatabaseService;
+            const repository = new ServiceCalculationDataRepository(db);
+
+            const result = await repository.findHoursWorked(
+                42,
+                '2026-08',
+                new Date('2026-08-15T12:00:00.000Z'),
+            );
+
+            expect(result).toEqual({ fact: 16, prognose: 24 });
+        });
+
+        it('`now` позже конца периода — факт равен прогнозу (весь месяц уже позади)', async () => {
+            const findMany = jest.fn().mockResolvedValue([
+                { date: new Date(Date.UTC(2026, 7, 1)), hours: 8 },
+                { date: new Date(Date.UTC(2026, 7, 31)), hours: 8 },
+            ]);
+            const db = {
+                getClient: () => ({ workScheduleEntry: { findMany } }),
+            } as unknown as DatabaseService;
+            const repository = new ServiceCalculationDataRepository(db);
+
+            const result = await repository.findHoursWorked(
+                42,
+                '2026-08',
+                new Date('2026-09-05T00:00:00.000Z'),
+            );
+
+            expect(result).toEqual({ fact: 16, prognose: 16 });
+        });
+
+        it('нет подходящих рабочих смен за период — возвращает { fact: 0, prognose: 0 }', async () => {
+            const findMany = jest.fn().mockResolvedValue([]);
+            const db = {
+                getClient: () => ({ workScheduleEntry: { findMany } }),
             } as unknown as DatabaseService;
             const repository = new ServiceCalculationDataRepository(db);
 
             const result = await repository.findHoursWorked(42, '2026-08');
 
-            expect(result).toBe(0);
+            expect(result).toEqual({ fact: 0, prognose: 0 });
         });
     });
 
     describe('findHoursWorkedForEmployees', () => {
         it('пустой список сотрудников — не ходит в БД, возвращает пустую карту', async () => {
-            const groupBy = jest.fn();
+            const findMany = jest.fn();
             const db = {
-                getClient: () => ({ workScheduleEntry: { groupBy } }),
+                getClient: () => ({ workScheduleEntry: { findMany } }),
             } as unknown as DatabaseService;
             const repository = new ServiceCalculationDataRepository(db);
 
@@ -65,41 +116,61 @@ describe('ServiceCalculationDataRepository — часы графика', () => {
             );
 
             expect(result).toEqual(new Map());
-            expect(groupBy).not.toHaveBeenCalled();
+            expect(findMany).not.toHaveBeenCalled();
         });
 
-        it('один groupBy на весь отдел — сотрудник без рабочих смен не попадает в карту', async () => {
-            const groupBy = jest.fn().mockResolvedValue([
-                { employeeId: 1, _sum: { hours: 16 } },
-                { employeeId: 2, _sum: { hours: 8 } },
+        it('один запрос на весь отдел — сотрудник без подходящих рабочих смен не попадает в карту', async () => {
+            const findMany = jest.fn().mockResolvedValue([
+                {
+                    employeeId: 1,
+                    date: new Date(Date.UTC(2026, 7, 1)),
+                    hours: 8,
+                },
+                {
+                    employeeId: 1,
+                    date: new Date(Date.UTC(2026, 7, 20)),
+                    hours: 8,
+                },
+                {
+                    employeeId: 2,
+                    date: new Date(Date.UTC(2026, 7, 1)),
+                    hours: 4,
+                },
             ]);
             const db = {
-                getClient: () => ({ workScheduleEntry: { groupBy } }),
+                getClient: () => ({ workScheduleEntry: { findMany } }),
             } as unknown as DatabaseService;
             const repository = new ServiceCalculationDataRepository(db);
 
             const result = await repository.findHoursWorkedForEmployees(
                 [1, 2, 3],
                 '2026-08',
+                new Date('2026-08-15T00:00:00.000Z'),
             );
 
-            expect(groupBy).toHaveBeenCalledTimes(1);
-            expect(groupBy).toHaveBeenCalledWith({
-                by: ['employeeId'],
+            expect(findMany).toHaveBeenCalledTimes(1);
+            expect(findMany).toHaveBeenCalledWith({
                 where: {
                     employeeId: { in: [1, 2, 3] },
                     status: 'WORKING',
+                    role: {
+                        in: [
+                            'ONLINE_MANAGER',
+                            'OFFLINE_MANAGER',
+                            'SOLO_MANAGER',
+                        ],
+                    },
                     date: {
                         gte: new Date(Date.UTC(2026, 7, 1)),
                         lte: new Date(Date.UTC(2026, 7, 31, 23, 59, 59, 999)),
                     },
                 },
-                _sum: { hours: true },
+                select: { employeeId: true, date: true, hours: true },
             });
             expect(result).toEqual(
                 new Map([
-                    [1, 16],
-                    [2, 8],
+                    [1, { fact: 8, prognose: 16 }],
+                    [2, { fact: 4, prognose: 4 }],
                 ]),
             );
             expect(result.has(3)).toBe(false);

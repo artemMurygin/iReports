@@ -174,12 +174,14 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
                       ]
                     : [],
             ),
-        findHoursWorked: () => Promise.resolve(5),
+        findHoursWorked: () => Promise.resolve({ fact: 5, prognose: 5 }),
         findProductSoldItems: () =>
             Promise.resolve([
                 {
                     positionId: 'shop-pos-1',
                     demandId: 'shop-demand-1',
+                    itemName: 'Товар shop-pos-1',
+                    demandLabel: 'shop-demand-1-label',
                     folderId: 'root-folder',
                     quantity: 1,
                     sum: 1000,
@@ -257,6 +259,14 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
                 );
             }
             return Promise.resolve(null);
+        },
+        listForDepartment: async (period, department) => {
+            const whole = await fakeShopSalesPerformanceReader.findForScope(
+                period,
+                department,
+                null,
+            );
+            return whole ? [whole] : [];
         },
     };
     // ShopAccountingModule заодно поднимает командные хендлеры
@@ -411,7 +421,7 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
                     amount: { fact: 1500, prognose: 1500 },
                 }),
             ],
-            salesPerformance: null,
+            salesPerformance: [],
             isPlanApproved: true,
             accrualStatus: null,
         });
@@ -468,12 +478,12 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             // поэтому здесь ожидаемо 40%, а не 90% процента категории —
             // сводка отчёта и расчёт FloatPercent намеренно читают разные
             // записи карты salesPerformanceByCategory.
-            expect(body.salesPerformance).toEqual(
+            expect(body.salesPerformance).toEqual([
                 expect.objectContaining({
                     department: 100,
                     percentCompletion: 40,
                 }),
-            );
+            ]);
         });
     });
 });

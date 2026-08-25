@@ -47,7 +47,10 @@ describe('CreateSalaryRuleHandler', () => {
                         status: 'OPEN',
                     },
                     mode: 'FACT',
-                    erpData: { serviceCompletedItems: [], hoursWorked: 5 },
+                    erpData: {
+                        serviceCompletedItems: [],
+                        hoursWorked: { fact: 5, prognose: 5 },
+                    },
                     salesPerformance: null,
                 }).amount,
             ).toBe(1000);

@@ -33,8 +33,9 @@ import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/acco
 // БД (тот же стиль, что и у остальных юнит-тестов accounting).
 describe('GetEmployeeSalaryReportService', () => {
     // Часы (Фаза 7) приходят из BuildServiceCalculationContextService, а не
-    // из config — фейк ниже всегда возвращает hoursWorked: 8, чтобы старые
-    // числовые ожидания этого файла (2000 = 8ч × 250) остались верны.
+    // из config — фейк ниже всегда возвращает hoursWorked: { fact: 8,
+    // prognose: 8 }, чтобы старые числовые ожидания этого файла (2000 = 8ч
+    // × 250, одинаково для факта и прогноза) остались верны.
     const buildSchema = (employeeId: number) =>
         withRequestContext(() => {
             const rule = PayPerHoursEntity.create({
@@ -170,7 +171,7 @@ describe('GetEmployeeSalaryReportService', () => {
                     },
                     erpData: overrides?.erpData ?? {
                         serviceCompletedItems: [],
-                        hoursWorked: 8,
+                        hoursWorked: { fact: 8, prognose: 8 },
                     },
                     salesPerformanceDetail:
                         overrides?.salesPerformanceDetail ?? null,
@@ -238,7 +239,7 @@ describe('GetEmployeeSalaryReportService', () => {
             isClosed: false,
             total: { fact: 0, prognose: 0 },
             rules: [],
-            salesPerformance: null,
+            salesPerformance: [],
             isPlanApproved: true,
             accrualStatus: null,
         });
@@ -337,7 +338,7 @@ describe('GetEmployeeSalaryReportService', () => {
                         sources: [],
                     },
                 ],
-                salesPerformance: null,
+                salesPerformance: [],
                 isPlanApproved: true,
                 accrualStatus: null,
             });
@@ -464,7 +465,7 @@ describe('GetEmployeeSalaryReportService', () => {
                 schema,
                 erpData: {
                     serviceCompletedItems: [],
-                    hoursWorked: 0,
+                    hoursWorked: { fact: 0, prognose: 0 },
                     orderPayedItems: [orderPayedItem],
                     confirmedTaskCompletions: [],
                 },

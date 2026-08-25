@@ -28,6 +28,7 @@ async function bootstrap() {
     try {
         if (erp.includes('B')) {
             await bitrix.uploadEmployees();
+            await bitrix;
             await bitrix.uploadStages();
             await bitrix.uploadDeviceTypes();
             await bitrix.uploadLeadSources();
@@ -45,13 +46,13 @@ async function bootstrap() {
         }
 
         if (erp.includes('R')) {
-            // await roapp.uploadEmployees();
-            // await roapp.uploadMarketingSources();
-            // await roapp.uploadOrderStatuses();
-            // await roapp.uploadOrderTypes();
-            // await roapp.uploadProductCategories();
-            // await roapp.uploadServiceCategories();
-            // await roapp.uploadServices();
+            await roapp.uploadEmployees();
+            await roapp.uploadMarketingSources();
+            await roapp.uploadOrderStatuses();
+            await roapp.uploadOrderTypes();
+            await roapp.uploadProductCategories();
+            await roapp.uploadServiceCategories();
+            await roapp.uploadServices();
             await roapp.uploadProducts();
             await roapp.uploadServiceBonuses();
             const ordersIds = await roapp.uploadCreatedOrders(fromDate);

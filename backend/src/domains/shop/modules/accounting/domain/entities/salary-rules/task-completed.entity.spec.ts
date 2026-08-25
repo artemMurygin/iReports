@@ -62,8 +62,8 @@ describe('TaskCompletedShopEntity', () => {
                 rate: 200,
                 amount: 400,
                 sources: [
-                    { type: 'taskCompletion', id: 't1' },
-                    { type: 'taskCompletion', id: 't2' },
+                    { type: 'taskCompletion', id: 't1', amount: 200 },
+                    { type: 'taskCompletion', id: 't2', amount: 200 },
                 ],
             });
         });

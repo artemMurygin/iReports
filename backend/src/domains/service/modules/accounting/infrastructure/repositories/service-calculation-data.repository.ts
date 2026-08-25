@@ -6,10 +6,12 @@ import { Period } from '@/shared/domain/period.value-object';
 import type {
     ConfirmedTaskCompletionErpItem,
     OrderPayedErpItem,
+    PayPerHourHours,
     ServiceCompletedErpItem,
 } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import { PAID_ORDER_STATUS_GROUPS } from '@/domains/service/modules/accounting/domain/services/paid-order-status';
+import { PAY_PER_HOUR_ELIGIBLE_ROLES } from '@/domains/service/modules/accounting/domain/services/pay-per-hour-roles';
 import { WORKING_STATUS } from '@/modules/work-schedule/domain/constants/working-status';
 
 @Injectable()
@@ -55,11 +57,17 @@ export class ServiceCalculationDataRepository
                 quantity: true,
                 price: true,
                 engineerId: true,
-                service: { select: { engeneerBonus: true } },
+                service: { select: { engeneerBonus: true, name: true } },
                 order: {
                     select: {
                         managerId: true,
                         onlineManager: true,
+                        label: true,
+                        deviceBrand: true,
+                        deviceModel: true,
+                        deviceColor: true,
+                        malfunction: true,
+                        orderTypeId: true,
                     },
                 },
             },
@@ -68,40 +76,65 @@ export class ServiceCalculationDataRepository
         return rows.map((row) => ({
             serviceOrderId: row.id,
             orderId: row.orderId,
+            orderLabel: row.order.label,
+            brand: row.order.deviceBrand,
+            deviceModel: row.order.deviceModel,
+            deviceColor: row.order.deviceColor,
+            malfunction: row.order.malfunction,
             serviceId: row.serviceId,
             quantity: row.quantity,
             linePrice: row.price,
             catalogEngineerBonus: row.service.engeneerBonus,
+            serviceName: row.service.name,
             engineerId: row.engineerId,
             managerId: row.order.managerId,
             onlineManager: row.order.onlineManager,
+            orderTypeId: row.order.orderTypeId,
         }));
     }
 
     // Часы сотрудника за период — сумма часов рабочих смен графика
-    // (WorkScheduleEntry.status = WORKING) в границах периода (Фаза 5,
-    // docs/employee-work-schedule) вместо прежнего ручного ввода
-    // EmployeeHoursEntry (модель удалена). Границы — тот же
-    // Period.getBounds(), что и у остальных ERP-выборок этого репозитория
-    // (UTC-полночь первого дня — UTC 23:59:59.999 последнего);
+    // (WorkScheduleEntry.status = WORKING), только дни с ролью
+    // ONLINE_MANAGER/OFFLINE_MANAGER (см. pay-per-hour-roles.ts) —
+    // почасовая оплата не начисляется за дни другой роли (в т.ч.
+    // ENGINEER/OFFICE — инженеры офиса). Граница периода — тот же
+    // Period.getBounds(), что и у остальных ERP-выборок этого репозитория;
     // WorkScheduleEntry.date хранится тем же UTC-принципом (см.
     // ScheduleDate), поэтому day-колонка @db.Date корректно попадает в
-    // диапазон gte/lte. Нет ни одной подходящей смены — Prisma `_sum`
-    // отдаёт null, приводим к 0 (как и раньше у отсутствующей записи).
+    // диапазон gte/lte. Возвращает пару факт/прогноз (Фаза "Pay Per Hour:
+    // график"): prognose — сумма часов всех подходящих дней периода
+    // (весь месяц по графику), fact — только тех, что не позже `now`
+    // ("по сегодняшний день включительно"), с учётом отсечки по концу
+    // периода. Conditional-агрегация по двум диапазонам дат одним
+    // Prisma-запросом без raw SQL невозможна — читаем строки и суммируем
+    // в коде, а не `aggregate`/`_sum`.
     async findHoursWorked(
         bitrixEmployeeId: number,
         period: string,
-    ): Promise<number> {
+        now: Date = new Date(),
+    ): Promise<PayPerHourHours> {
         const { from, to } = Period.create(period).getBounds();
-        const result = await this.client.workScheduleEntry.aggregate({
+        const factCutoff = now < to ? now : to;
+        const entries = await this.client.workScheduleEntry.findMany({
             where: {
                 employeeId: bitrixEmployeeId,
                 status: WORKING_STATUS,
+                role: { in: [...PAY_PER_HOUR_ELIGIBLE_ROLES] },
                 date: { gte: from, lte: to },
             },
-            _sum: { hours: true },
+            select: { date: true, hours: true },
         });
-        return result._sum.hours ?? 0;
+        return entries.reduce<PayPerHourHours>(
+            (acc, entry) => {
+                const hours = entry.hours ?? 0;
+                acc.prognose += hours;
+                if (entry.date <= factCutoff) {
+                    acc.fact += hours;
+                }
+                return acc;
+            },
+            { fact: 0, prognose: 0 },
+        );
     }
 
     // "Оплаченный заказ" (Фаза 8) — заказ, чей ТЕКУЩИЙ статус относится к
@@ -122,11 +155,17 @@ export class ServiceCalculationDataRepository
             },
             select: {
                 id: true,
+                label: true,
                 payed: true,
                 cost: true,
                 engineerSalary: true,
                 managerId: true,
                 onlineManager: true,
+                deviceBrand: true,
+                deviceModel: true,
+                deviceColor: true,
+                malfunction: true,
+                orderTypeId: true,
                 serviceOrders: { select: { engineerId: true } },
                 productsOrders: { select: { engineerId: true } },
             },
@@ -134,6 +173,11 @@ export class ServiceCalculationDataRepository
 
         return rows.map((row) => ({
             orderId: row.id,
+            label: row.label,
+            brand: row.deviceBrand,
+            deviceModel: row.deviceModel,
+            deviceColor: row.deviceColor,
+            malfunction: row.malfunction,
             managerId: row.managerId,
             onlineManager: row.onlineManager,
             engineerIds: [
@@ -145,6 +189,7 @@ export class ServiceCalculationDataRepository
             revenue: row.payed ?? 0,
             cost: row.cost ?? 0,
             engineerSalary: row.engineerSalary ?? 0,
+            orderTypeId: row.orderTypeId,
         }));
     }
 
@@ -207,32 +252,44 @@ export class ServiceCalculationDataRepository
         return map;
     }
 
-    // Батч-версия findHoursWorked для отдела целиком (Фаза 9) — один
-    // groupBy вместо findUnique на сотрудника (Фаза 5 переиспользует тот же
-    // приём "один запрос на отдел", что и остальные find*ForEmployees).
-    // Сотрудник без единой рабочей смены за период в результат groupBy не
-    // попадает — карта просто не содержит его ключ, вызывающая сторона (см.
-    // findHoursWorked) уже трактует отсутствие как 0.
+    // Батч-версия findHoursWorked для отдела целиком (Фаза 9) — один запрос
+    // вместо одного на сотрудника (тот же приём "один запрос на отдел", что
+    // и у остальных find*ForEmployees), та же пара факт/прогноз и тот же
+    // фильтр по роли дня, что и у findHoursWorked — см. комментарий там.
+    // Сотрудник без единой подходящей рабочей смены за период в выборку не
+    // попадает — карта просто не содержит его ключ, вызывающая сторона уже
+    // трактует отсутствие как { fact: 0, prognose: 0 }.
     async findHoursWorkedForEmployees(
         bitrixEmployeeIds: number[],
         period: string,
-    ): Promise<Map<number, number>> {
-        const map = new Map<number, number>();
+        now: Date = new Date(),
+    ): Promise<Map<number, PayPerHourHours>> {
+        const map = new Map<number, PayPerHourHours>();
         if (bitrixEmployeeIds.length === 0) {
             return map;
         }
         const { from, to } = Period.create(period).getBounds();
-        const rows = await this.client.workScheduleEntry.groupBy({
-            by: ['employeeId'],
+        const factCutoff = now < to ? now : to;
+        const entries = await this.client.workScheduleEntry.findMany({
             where: {
                 employeeId: { in: bitrixEmployeeIds },
                 status: WORKING_STATUS,
+                role: { in: [...PAY_PER_HOUR_ELIGIBLE_ROLES] },
                 date: { gte: from, lte: to },
             },
-            _sum: { hours: true },
+            select: { employeeId: true, date: true, hours: true },
         });
-        for (const row of rows) {
-            map.set(row.employeeId, row._sum.hours ?? 0);
+        for (const entry of entries) {
+            const hours = entry.hours ?? 0;
+            const current = map.get(entry.employeeId) ?? {
+                fact: 0,
+                prognose: 0,
+            };
+            current.prognose += hours;
+            if (entry.date <= factCutoff) {
+                current.fact += hours;
+            }
+            map.set(entry.employeeId, current);
         }
         return map;
     }

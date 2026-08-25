@@ -65,13 +65,27 @@ describe('GetDepartmentSalaryReportService', () => {
         const findEmployeeIdentitiesForEmployees = jest
             .fn()
             .mockResolvedValue(new Map());
+        // hoursByEmployee задаётся тестами как Map<employeeId, часы> (одно
+        // число) — оборачиваем в { fact, prognose } с одинаковым значением,
+        // т.к. эти тесты не проверяют разницу режимов PayPerHour.
         const findHoursWorkedForEmployees = jest
             .fn()
-            .mockResolvedValue(overrides.hoursByEmployee ?? new Map());
+            .mockResolvedValue(
+                new Map(
+                    [...(overrides.hoursByEmployee ?? new Map())].map(
+                        ([employeeId, hours]) => [
+                            employeeId,
+                            { fact: hours, prognose: hours },
+                        ],
+                    ),
+                ),
+            );
         const dataSource: ServiceCalculationDataPort = {
             findEmployeeIdentities: jest.fn().mockResolvedValue([]),
             findServiceCompletedItems,
-            findHoursWorked: jest.fn().mockResolvedValue(0),
+            findHoursWorked: jest
+                .fn()
+                .mockResolvedValue({ fact: 0, prognose: 0 }),
             findOrderPayedItems,
             findConfirmedTaskCompletions,
             findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),

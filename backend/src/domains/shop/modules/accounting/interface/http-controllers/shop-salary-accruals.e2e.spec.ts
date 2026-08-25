@@ -106,7 +106,7 @@ describe('Документы начисления магазина: close → sa
     };
     const fakeShopCalculationData: ShopCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
-        findHoursWorked: () => Promise.resolve(5),
+        findHoursWorked: () => Promise.resolve({ fact: 5, prognose: 5 }),
         findProductSoldItems: () => Promise.resolve([]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
@@ -118,6 +118,7 @@ describe('Документы начисления магазина: close → sa
     const fakeShopSalesPerformanceReader: ShopSalesPerformanceReaderPort = {
         listForPeriod: () => Promise.resolve([]),
         findForScope: () => Promise.resolve(null),
+        listForDepartment: () => Promise.resolve([]),
     };
     // Сервисный AccountingModule поднят только ради ReopenAccountingPeriodHandler
     // — его источники данных пустые.
@@ -141,7 +142,7 @@ describe('Документы начисления магазина: close → sa
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
         findServiceCompletedItems: () => Promise.resolve([]),
-        findHoursWorked: () => Promise.resolve(0),
+        findHoursWorked: () => Promise.resolve({ fact: 0, prognose: 0 }),
         findOrderPayedItems: () => Promise.resolve([]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),

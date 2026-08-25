@@ -135,7 +135,24 @@ export class GetEmployeeSalaryReportService {
             targetRole: line.targetRole,
             amount: { fact: line.amount, prognose: null },
             appliedPercent: line.salaryBasis ? line.rate : undefined,
-            sources: line.sources,
+            // Закрытый период не хранит прогноз (см. шапку файла) — сумма
+            // источника, как и сумма строки, тоже сведена fact/prognose:null.
+            // amount самого источника — undefined у снапшотов, сохранённых
+            // до появления этого поля (см. calculation-line.ts).
+            sources: line.sources.map((source) => ({
+                type: source.type,
+                id: source.id,
+                label: source.label,
+                link: source.link,
+                amount:
+                    source.amount === undefined
+                        ? undefined
+                        : { fact: source.amount, prognose: null },
+                brand: source.brand,
+                deviceModel: source.deviceModel,
+                deviceColor: source.deviceColor,
+                malfunction: source.malfunction,
+            })),
         }));
 
         return {
@@ -143,7 +160,7 @@ export class GetEmployeeSalaryReportService {
             isClosed: true,
             total: { fact: total, prognose: null },
             rules,
-            salesPerformance: null,
+            salesPerformance: [],
             isPlanApproved: true,
             accrualStatus,
         };
@@ -247,12 +264,17 @@ export class GetEmployeeSalaryReportService {
         const prognoseTotal =
             PeriodCalculationOrchestrator.total(prognoseLines);
 
+        // service ведёт план одной строкой на направление (без разбивки по
+        // категориям, в отличие от shop, см. directionSalaryReportSchema в
+        // contracts) — массив из 0 либо 1 элемента.
+        const summary = toSalesPerformanceSummary(salesPerformanceDetail);
+
         return {
             direction: 'service',
             isClosed: false,
             total: { fact: factTotal, prognose: prognoseTotal },
             rules: ruleBreakdown,
-            salesPerformance: toSalesPerformanceSummary(salesPerformanceDetail),
+            salesPerformance: summary ? [summary] : [],
             isPlanApproved: isSalesPerformancePlanApproved(
                 salesPerformanceDetail,
             ),

@@ -18,7 +18,7 @@ const buildContext = (hoursWorked = 5): CalculationContext => ({
     },
     mode: 'FACT',
     erpData: {
-        hoursWorked,
+        hoursWorked: { fact: hoursWorked, prognose: hoursWorked },
     } satisfies ShopCalculationErpData,
     salesPerformance: null,
 });

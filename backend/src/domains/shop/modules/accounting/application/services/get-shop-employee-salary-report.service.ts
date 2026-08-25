@@ -6,9 +6,11 @@ import { BuildShopCalculationContextService } from '@/domains/shop/modules/accou
 import { PeriodCalculationOrchestrator as ShopPeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
 import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-context';
 import {
-    isShopSalesPerformancePlanApproved,
+    isShopSalesPerformancePlanApprovedList,
     toShopSalesPerformanceSummary,
 } from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-summary';
+import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object';
+import type { SalesPerformanceSummary } from 'ireports-contracts';
 import { buildShopSalaryReportRules } from '@/domains/shop/modules/accounting/application/mappers/to-shop-salary-report-rules';
 import {
     buildFreshnessStamp,
@@ -135,7 +137,20 @@ export class GetShopEmployeeSalaryReportService {
             targetRole: line.targetRole,
             amount: { fact: line.amount, prognose: null },
             appliedPercent: line.salaryBasis ? line.rate : undefined,
-            sources: line.sources,
+            // Закрытый период не хранит прогноз (см. шапку файла) — сумма
+            // источника, как и сумма строки, тоже сведена fact/prognose:null.
+            // amount самого источника — undefined у снапшотов, сохранённых
+            // до появления этого поля (см. calculation-line.ts).
+            sources: line.sources.map((source) => ({
+                type: source.type,
+                id: source.id,
+                label: source.label,
+                link: source.link,
+                amount:
+                    source.amount === undefined
+                        ? undefined
+                        : { fact: source.amount, prognose: null },
+            })),
         }));
 
         return {
@@ -143,7 +158,7 @@ export class GetShopEmployeeSalaryReportService {
             isClosed: true,
             total: { fact: total, prognose: null },
             rules,
-            salesPerformance: null,
+            salesPerformance: [],
             isPlanApproved: true,
             accrualStatus,
         };
@@ -168,16 +183,23 @@ export class GetShopEmployeeSalaryReportService {
 
         const cached = await this.cacheRepo.find('shop', period, employeeId);
         if (cached && cached.freshnessStamp === freshnessStamp) {
-            const salesPerformanceDetail =
-                await this.shopContextBuilder.findSalesPerformanceForEmployee(
-                    validatedPeriod,
-                    employeeId,
-                );
+            const [salesPerformanceDetail, salesPerformanceByDepartment] =
+                await Promise.all([
+                    this.shopContextBuilder.findSalesPerformanceForEmployee(
+                        validatedPeriod,
+                        employeeId,
+                    ),
+                    this.shopContextBuilder.findSalesPerformanceByDepartmentForEmployee(
+                        validatedPeriod,
+                        employeeId,
+                    ),
+                ]);
             return this.buildDirectionResponse(
                 rules,
                 cached.factLines,
                 cached.prognoseLines,
                 salesPerformanceDetail,
+                salesPerformanceByDepartment,
             );
         }
 
@@ -227,6 +249,7 @@ export class GetShopEmployeeSalaryReportService {
             factLines,
             prognoseLines,
             baseContext.salesPerformanceDetail,
+            baseContext.salesPerformanceByDepartment,
         );
     }
 
@@ -237,6 +260,7 @@ export class GetShopEmployeeSalaryReportService {
         salesPerformanceDetail: Parameters<
             typeof buildShopSalaryReportRules
         >[3],
+        salesPerformanceByDepartment: ShopSalesPerformance[],
     ): OpenDirectionReport {
         const ruleBreakdown = buildShopSalaryReportRules(
             rules,
@@ -249,20 +273,46 @@ export class GetShopEmployeeSalaryReportService {
         const prognoseTotal =
             ShopPeriodCalculationOrchestrator.total(prognoseLines);
 
+        const { salesPerformance, isPlanApproved } =
+            this.buildSalesPerformanceSummaries(salesPerformanceByDepartment);
+
         return {
             direction: 'shop',
             isClosed: false,
             total: { fact: factTotal, prognose: prognoseTotal },
             rules: ruleBreakdown,
-            salesPerformance: toShopSalesPerformanceSummary(
-                salesPerformanceDetail,
-            ),
-            isPlanApproved: isShopSalesPerformancePlanApproved(
-                salesPerformanceDetail,
-            ),
+            salesPerformance,
+            isPlanApproved,
             // Документ начисления рождается только закрытием периода —
             // у открытого периода его нет.
             accrualStatus: null,
+        };
+    }
+
+    // Одна строка ответа на каждую строку плана отдела за период (по
+    // каждой заведённой категории МойСклад, включая "весь отдел", если
+    // такая строка есть) — фронт строит одну карточку "План продаж ·
+    // Магазин" с построчной разбивкой по категориям вместо единственной
+    // сводки (см. directionSalaryReportSchema.salesPerformance в
+    // contracts). Это ЧИСТО отображение — на сам расчёт зарплаты
+    // (FloatPercent по category правила) не влияет: тот использует
+    // независимую salesPerformanceByCategory (см. calculate() правил).
+    private buildSalesPerformanceSummaries(
+        performances: ShopSalesPerformance[],
+    ): {
+        salesPerformance: SalesPerformanceSummary[];
+        isPlanApproved: boolean;
+    } {
+        return {
+            // toShopSalesPerformanceSummary типизирован под `| null` только
+            // из-за общего с одиночным findForScope-результатом сигнатуры —
+            // для элемента реального массива (никогда не null) она всегда
+            // возвращает объект.
+            salesPerformance: performances.map((performance) =>
+                toShopSalesPerformanceSummary(performance)!,
+            ),
+            isPlanApproved:
+                isShopSalesPerformancePlanApprovedList(performances),
         };
     }
 

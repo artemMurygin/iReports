@@ -171,7 +171,10 @@ describe('CloseAccountingPeriodHandler', () => {
                 },
                 erpData: {
                     serviceCompletedItems: [],
-                    hoursWorked: overrides?.hoursWorked?.() ?? 8,
+                    hoursWorked: {
+                        fact: overrides?.hoursWorked?.() ?? 8,
+                        prognose: overrides?.hoursWorked?.() ?? 8,
+                    },
                 },
                 salesPerformanceDetail: null,
             }),

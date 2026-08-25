@@ -14,13 +14,20 @@ const buildItem = (
 ): ServiceCompletedErpItem => ({
     serviceOrderId: 1,
     orderId: 100,
+    orderLabel: 'А000100',
+    brand: null,
+    deviceModel: null,
+    deviceColor: null,
+    malfunction: null,
     serviceId: 10,
     quantity: 1,
     linePrice: 1000,
     catalogEngineerBonus: 150,
+    serviceName: 'Замена экрана',
     engineerId: 42,
     managerId: null,
     onlineManager: null,
+    orderTypeId: 1,
     ...overrides,
 });
 
@@ -41,7 +48,7 @@ const buildContext = (
     mode: 'FACT',
     erpData: {
         serviceCompletedItems: items,
-        hoursWorked: 0,
+        hoursWorked: { fact: 0, prognose: 0 },
     } satisfies ServiceCalculationErpData,
     salesPerformance: null,
 });
@@ -87,8 +94,22 @@ describe('ServiceCompletedEntity', () => {
                 rate: 100,
                 amount: 300,
                 sources: [
-                    { type: 'serviceOrderItem', id: 1 },
-                    { type: 'serviceOrderItem', id: 2 },
+                    {
+                        type: 'serviceOrderItem',
+                        id: 1,
+                        label: 'А000100',
+                        link: 'https://web.roapp.io/orders/table/100',
+                        amount: 200,
+                        itemName: 'Замена экрана',
+                    },
+                    {
+                        type: 'serviceOrderItem',
+                        id: 2,
+                        label: 'А000100',
+                        link: 'https://web.roapp.io/orders/table/100',
+                        amount: 100,
+                        itemName: 'Замена экрана',
+                    },
                 ],
             });
         });
@@ -126,8 +147,22 @@ describe('ServiceCompletedEntity', () => {
                 quantity: 3,
                 amount: 700,
                 sources: [
-                    { type: 'serviceOrderItem', id: 1 },
-                    { type: 'serviceOrderItem', id: 2 },
+                    {
+                        type: 'serviceOrderItem',
+                        id: 1,
+                        label: 'А000100',
+                        link: 'https://web.roapp.io/orders/table/100',
+                        amount: 300,
+                        itemName: 'Замена экрана',
+                    },
+                    {
+                        type: 'serviceOrderItem',
+                        id: 2,
+                        label: 'А000100',
+                        link: 'https://web.roapp.io/orders/table/100',
+                        amount: 400,
+                        itemName: 'Замена экрана',
+                    },
                 ],
             });
         });
@@ -154,8 +189,75 @@ describe('ServiceCompletedEntity', () => {
                 quantity: 1,
                 rate: 15,
                 amount: 150,
-                sources: [{ type: 'serviceOrderItem', id: 1 }],
+                sources: [
+                    {
+                        type: 'serviceOrderItem',
+                        id: 1,
+                        label: 'А000100',
+                        link: 'https://web.roapp.io/orders/table/100',
+                        amount: 150,
+                        itemName: 'Замена экрана',
+                    },
+                ],
             });
+        });
+    });
+
+    describe('calculate — наименование модели устройства и неисправность', () => {
+        it('прокидывает brand/deviceModel/deviceColor/malfunction в sources', () => {
+            const rule = ServiceCompletedEntity.create({
+                type: 'ServiceCompleted',
+                name: 'За выполненную услугу',
+                targetRole: 'ENGINEER',
+                config: { award: { type: 'Fixed', price: 100 } },
+            });
+            const items = [
+                buildItem({
+                    serviceOrderId: 1,
+                    quantity: 1,
+                    brand: 'Apple',
+                    deviceModel: 'iPhone 12 Pro',
+                    deviceColor: 'Space Gray',
+                    malfunction: 'Не включается',
+                }),
+            ];
+
+            const line = rule.calculate(buildContext(items));
+
+            expect(line.sources[0]).toMatchObject({
+                brand: 'Apple',
+                deviceModel: 'iPhone 12 Pro',
+                deviceColor: 'Space Gray',
+                malfunction: 'Не включается',
+            });
+        });
+    });
+
+    describe('calculate — название услуги (itemName)', () => {
+        it('прокидывает RoappService.name из serviceName источника в sources[].itemName', () => {
+            const rule = ServiceCompletedEntity.create({
+                type: 'ServiceCompleted',
+                name: 'За выполненную услугу',
+                targetRole: 'ENGINEER',
+                config: { award: { type: 'Fixed', price: 100 } },
+            });
+            const items = [
+                buildItem({
+                    serviceOrderId: 1,
+                    quantity: 1,
+                    serviceName: 'Диагностика',
+                }),
+                buildItem({
+                    serviceOrderId: 2,
+                    quantity: 1,
+                    serviceName: 'Замена аккумулятора',
+                }),
+            ];
+
+            const line = rule.calculate(buildContext(items));
+
+            expect(line.sources[0].itemName).toBe('Диагностика');
+            expect(line.sources[1].itemName).toBe('Замена аккумулятора');
         });
     });
 
@@ -177,7 +279,16 @@ describe('ServiceCompletedEntity', () => {
 
             expect(line.quantity).toBe(1);
             expect(line.amount).toBe(100);
-            expect(line.sources).toEqual([{ type: 'serviceOrderItem', id: 1 }]);
+            expect(line.sources).toEqual([
+                {
+                    type: 'serviceOrderItem',
+                    id: 1,
+                    label: 'А000100',
+                    link: 'https://web.roapp.io/orders/table/100',
+                    amount: 100,
+                    itemName: 'Замена экрана',
+                },
+            ]);
         });
 
         it('без совпадающих позиций возвращает нулевую сумму', () => {
@@ -192,6 +303,59 @@ describe('ServiceCompletedEntity', () => {
             ];
 
             expect(rule.calculate(buildContext(items)).amount).toBe(0);
+        });
+    });
+
+    describe('фильтр по категории заказа (orderTypeIds)', () => {
+        it('без orderTypeIds (или с []) считает позиции заказов всех типов — регрессия', () => {
+            const ruleWithoutFilter = ServiceCompletedEntity.create({
+                type: 'ServiceCompleted',
+                name: 'За выполненную услугу',
+                targetRole: 'ENGINEER',
+                config: { award: { type: 'Fixed', price: 100 } },
+            });
+            const ruleWithEmptyFilter = ServiceCompletedEntity.create({
+                type: 'ServiceCompleted',
+                name: 'За выполненную услугу',
+                targetRole: 'ENGINEER',
+                config: {
+                    award: { type: 'Fixed', price: 100 },
+                    orderTypeIds: [],
+                },
+            });
+            const items = [
+                buildItem({ serviceOrderId: 1, quantity: 1, orderTypeId: 1 }),
+                buildItem({ serviceOrderId: 2, quantity: 1, orderTypeId: 2 }),
+            ];
+
+            expect(
+                ruleWithoutFilter.calculate(buildContext(items)).amount,
+            ).toBe(200);
+            expect(
+                ruleWithEmptyFilter.calculate(buildContext(items)).amount,
+            ).toBe(200);
+        });
+
+        it('с orderTypeIds считает только позиции заказов указанных типов', () => {
+            const rule = ServiceCompletedEntity.create({
+                type: 'ServiceCompleted',
+                name: 'За выполненную услугу',
+                targetRole: 'ENGINEER',
+                config: {
+                    award: { type: 'Fixed', price: 100 },
+                    orderTypeIds: [1],
+                },
+            });
+            const items = [
+                buildItem({ serviceOrderId: 1, quantity: 1, orderTypeId: 1 }),
+                buildItem({ serviceOrderId: 2, quantity: 1, orderTypeId: 2 }),
+            ];
+
+            const line = rule.calculate(buildContext(items));
+            expect(line.quantity).toBe(1);
+            expect(line.amount).toBe(100);
+            expect(line.sources).toHaveLength(1);
+            expect(line.sources[0].id).toBe(1);
         });
     });
 
@@ -226,7 +390,16 @@ describe('ServiceCompletedEntity', () => {
             const line = rule.calculate(buildContext(items, identities));
 
             expect(line.amount).toBe(50);
-            expect(line.sources).toEqual([{ type: 'serviceOrderItem', id: 1 }]);
+            expect(line.sources).toEqual([
+                {
+                    type: 'serviceOrderItem',
+                    id: 1,
+                    label: 'А000100',
+                    link: 'https://web.roapp.io/orders/table/100',
+                    amount: 50,
+                    itemName: 'Замена экрана',
+                },
+            ]);
         });
     });
 });

@@ -50,16 +50,23 @@ export class PayPerHoursEntity
         });
     }
 
-    // Источник часов — сумма часов рабочих смен графика сотрудника за
-    // период (WorkScheduleEntry.status = WORKING, Фаза 5,
-    // docs/employee-work-schedule), приходящая в контексте расчёта, а не
-    // захардкоженное значение в config (Фаза 7). Часов нет — 0, а не
-    // ошибка: правило не обязано быть настроено для каждого сотрудника с
-    // этой ролью.
+    // Источник часов — сумма часов рабочих смен графика сотрудника с ролью
+    // дня ONLINE_MANAGER/OFFLINE_MANAGER (Фаза 5, docs/employee-work-schedule,
+    // см. domain/services/pay-per-hour-roles.ts), приходящая в контексте
+    // расчёта, а не захардкоженное значение в config. erpData.hoursWorked
+    // несёт ОБА значения (fact/prognose) сразу — режим (FACT/PROGNOSE)
+    // выбирает нужное, дата "сегодня" уже учтена на стороне, собравшей
+    // контекст (см. ServiceCalculationDataRepository.findHoursWorked).
+    // Часов нет — 0, а не ошибка: правило не обязано быть настроено для
+    // каждого сотрудника с этой ролью.
     calculate(context: CalculationContext): CalculationLine {
         const erpData = context.erpData as
             ServiceCalculationErpData | undefined;
-        const hours = erpData?.hoursWorked ?? 0;
+        const hours = erpData
+            ? context.mode === 'FACT'
+                ? erpData.hoursWorked.fact
+                : erpData.hoursWorked.prognose
+            : 0;
         const rate = this.props.config.price;
 
         return {

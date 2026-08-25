@@ -162,7 +162,12 @@ describe('CloseShopAccountingPeriodHandler', () => {
                     ...period.getBounds(),
                     status: 'OPEN' as const,
                 },
-                erpData: { hoursWorked: overrides?.hoursWorked?.() ?? 8 },
+                erpData: {
+                    hoursWorked: {
+                        fact: overrides?.hoursWorked?.() ?? 8,
+                        prognose: overrides?.hoursWorked?.() ?? 8,
+                    },
+                },
                 salesPerformanceDetail: null,
                 // Карта по категориям (Фаза 2 плана
                 // shop-sales-performance-by-category) — здесь всегда

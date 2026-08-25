@@ -1,5 +1,6 @@
 import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import type {
+    PayPerHourHours,
     ShopProductSoldErpItem,
     ShopTaskCompletionErpItem,
 } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
@@ -20,12 +21,18 @@ export interface ShopCalculationDataPort {
         bitrixEmployeeId: number,
     ): Promise<EmployeeIdentityRef[]>;
 
-    // Отработанные часы сотрудника за период — сумма часов рабочих смен
-    // графика (WorkScheduleEntry.status = WORKING, Фаза 5,
-    // docs/employee-work-schedule) — та же общая, направление-агностичная
-    // таблица, что и у service. Заменяет прежний ручной ввод
-    // EmployeeHoursEntry (модель удалена). 0, если рабочих смен нет.
-    findHoursWorked(bitrixEmployeeId: number, period: string): Promise<number>;
+    // Отработанные часы сотрудника за период (только дни графика с ролью
+    // ONLINE_MANAGER/OFFLINE_MANAGER, см. domain/services/
+    // pay-per-hour-roles.ts) — та же общая, направление-агностичная таблица
+    // графика, что и у service. Пара факт (по сегодняшний день включительно)
+    // / прогноз (весь период) — now: необязательный параметр с дефолтом
+    // new Date(), точка инъекции "сегодня" в тестах. 0 по обоим полям, если
+    // подходящих рабочих смен нет.
+    findHoursWorked(
+        bitrixEmployeeId: number,
+        period: string,
+        now?: Date,
+    ): Promise<PayPerHourHours>;
 
     // Позиции отгрузок за период (Фаза 13, issue #63: "один источник на
     // ProductSold И UsedProductSold") — период-широкий набор, без фильтра по
@@ -63,7 +70,8 @@ export interface ShopCalculationDataPort {
     findHoursWorkedForEmployees(
         bitrixEmployeeIds: number[],
         period: string,
-    ): Promise<Map<number, number>>;
+        now?: Date,
+    ): Promise<Map<number, PayPerHourHours>>;
 
     // Раскрытие категории правила ProductSold/UsedProductSold до всех
     // потомков дерева MoySkladProductFolder (issue #50) — один батч-вызов на

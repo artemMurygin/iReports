@@ -1,8 +1,12 @@
 import type {
     EmployeeSalaryReportRule,
+    EmployeeSalaryReportSource,
     FloatPercentInfo,
 } from 'ireports-contracts';
-import { CalculationLine } from '@/shared/domain/calculation-line';
+import {
+    CalculationLine,
+    CalculationSourceRef,
+} from '@/shared/domain/calculation-line';
 import {
     PercentBorder,
     ProductSoldSalaryConfig,
@@ -56,7 +60,35 @@ export function buildShopSalaryReportRules(
                           ),
                       }
                     : undefined,
-            sources: fact.sources,
+            sources: buildResponseSources(fact.sources, prognose.sources),
+        };
+    });
+}
+
+// Сводит sources[] пары ФАКТ/ПРОГНОЗ по позиции — зеркало buildResponseSources
+// направления service (to-salary-report-rules.ts): fact.sources и
+// prognose.sources построены из одной и той же выборки erpData, порядок и
+// состав идентичны в обоих режимах, поэтому сопоставление по индексу
+// безопасно.
+function buildResponseSources(
+    factSources: CalculationSourceRef[],
+    prognoseSources: CalculationSourceRef[],
+): EmployeeSalaryReportSource[] {
+    return factSources.map((source, index) => {
+        const prognoseSource = prognoseSources[index];
+        return {
+            type: source.type,
+            id: source.id,
+            label: source.label,
+            link: source.link,
+            itemName: source.itemName,
+            amount:
+                source.amount === undefined
+                    ? undefined
+                    : {
+                          fact: source.amount,
+                          prognose: prognoseSource?.amount ?? null,
+                      },
         };
     });
 }

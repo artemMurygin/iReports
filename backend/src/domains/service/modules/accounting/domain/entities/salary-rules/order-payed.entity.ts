@@ -16,6 +16,7 @@ import {
 } from '@/domains/service/modules/accounting/domain/services/service-role-source';
 import { roundRubles } from '@/domains/service/modules/accounting/domain/services/money';
 import { resolveFloatPercentMultiplier } from '@/domains/service/modules/accounting/domain/services/float-percent';
+import { buildRoappOrderLink } from '@/domains/service/modules/accounting/domain/services/roapp-order-link';
 import { SalesPerformanceRequiredException } from '@/domains/service/modules/accounting/domain/exceptions/float-percent.exception';
 import type {
     OrderPayedErpItem,
@@ -70,10 +71,6 @@ export class OrderPayedEntity
         const matched = this.dedupeBySource(
             items.filter((item) => this.matchesOrder(context, item)),
         );
-        const sources = matched.map((item) => ({
-            type: 'order',
-            id: item.orderId,
-        }));
         const award = this.props.config.award;
 
         switch (award.type) {
@@ -84,7 +81,7 @@ export class OrderPayedEntity
                     quantity: matched.length,
                     rate: award.price,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, () => award.price),
                 };
             }
             case 'FixedPercent': {
@@ -96,7 +93,13 @@ export class OrderPayedEntity
                     quantity: matched.length,
                     rate: award.percent,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(
+                            (this.basisAmount(item, award.salaryBasis) *
+                                award.percent) /
+                                100,
+                        ),
+                    ),
                 };
             }
             case 'FloatPercent': {
@@ -119,10 +122,40 @@ export class OrderPayedEntity
                     quantity: matched.length,
                     rate: award.basePercent * multiplier,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(
+                            (this.basisAmount(item, award.salaryBasis) *
+                                award.basePercent *
+                                multiplier) /
+                                100,
+                        ),
+                    ),
                 };
             }
         }
+    }
+
+    // Строит sources[] с суммой начисления, приходящейся на каждый
+    // конкретный заказ (не персональная доля от округлённой суммы всего
+    // правила, а независимо посчитанная база×ставка для этого заказа —
+    // см. calculation-line.ts), плюс человекочитаемый номер заказа и прямую
+    // ссылку на его карточку в RemOnline, чтобы сотрудник мог перейти и
+    // увидеть, за что начислена сумма.
+    private buildSources(
+        items: OrderPayedErpItem[],
+        amountFor: (item: OrderPayedErpItem) => number,
+    ) {
+        return items.map((item) => ({
+            type: 'order',
+            id: item.orderId,
+            label: item.label,
+            link: buildRoappOrderLink(item.orderId),
+            amount: amountFor(item),
+            brand: item.brand ?? undefined,
+            deviceModel: item.deviceModel ?? undefined,
+            deviceColor: item.deviceColor ?? undefined,
+            malfunction: item.malfunction ?? undefined,
+        }));
     }
 
     validate(): void {}
@@ -144,6 +177,9 @@ export class OrderPayedEntity
         context: CalculationContext,
         item: OrderPayedErpItem,
     ): boolean {
+        if (!this.matchesOrderType(item)) {
+            return false;
+        }
         if (this.targetRole === 'ENGINEER') {
             return item.engineerIds.some((engineerId) =>
                 hasRoappEmployeeIdentity(context.employee, engineerId),
@@ -154,6 +190,20 @@ export class OrderPayedEntity
             managerId: item.managerId,
             onlineManager: item.onlineManager,
         });
+    }
+
+    // Фильтр по категории заказа (Фаза 3,
+    // docs/service-plan-salary-rule-order-category-filter/) —
+    // config.orderTypeIds указывает список допустимых RoappOrderType
+    // (RoappOrder.orderTypeId). Пусто/не указано — условие не применяется,
+    // правило считает заказы всех типов (совместимо с уже существующими
+    // правилами без этого поля).
+    private matchesOrderType(item: OrderPayedErpItem): boolean {
+        const { orderTypeIds } = this.props.config;
+        if (!orderTypeIds || orderTypeIds.length === 0) {
+            return true;
+        }
+        return orderTypeIds.includes(item.orderTypeId);
     }
 
     // Дедупликация «правило × источник» (Фаза 8, см. PRD "для правил с
@@ -183,7 +233,7 @@ export class OrderPayedEntity
             case 'MARGIN':
                 return item.revenue - item.cost;
             case 'SALARY_MINUS_ENGINEER_SALARY':
-                return item.revenue - item.engineerSalary;
+                return item.revenue - item.cost - item.engineerSalary;
         }
     }
 }

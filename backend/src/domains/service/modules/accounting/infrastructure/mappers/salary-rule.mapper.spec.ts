@@ -44,7 +44,10 @@ describe('SalaryRuleMapper', () => {
             expect(
                 entity.calculate({
                     ...buildContext(),
-                    erpData: { serviceCompletedItems: [], hoursWorked: 4 },
+                    erpData: {
+                        serviceCompletedItems: [],
+                        hoursWorked: { fact: 4, prognose: 4 },
+                    },
                 }).amount,
             ).toBe(1200);
         });

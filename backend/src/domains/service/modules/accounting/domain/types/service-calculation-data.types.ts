@@ -13,6 +13,17 @@ export interface ServiceCompletedErpItem extends ServiceOrderRoleFields {
     // Источник строки расчёта (CalculationSourceRef.id).
     serviceOrderId: number;
     orderId: number;
+    // RoappOrder.label — человекочитаемый номер заказа ("А123456"),
+    // источник CalculationSourceRef.label/link (см. service-completed.entity.ts).
+    orderLabel: string;
+    // RoappOrder.deviceBrand/deviceModel/deviceColor/malfunction — источник
+    // CalculationSourceRef.brand/deviceModel/deviceColor/malfunction (см.
+    // service-completed.entity.ts). null, если ERP не отдал соответствующее
+    // поле по заказу.
+    brand: string | null;
+    deviceModel: string | null;
+    deviceColor: string | null;
+    malfunction: string | null;
     serviceId: number;
     quantity: number;
     // RoappServiceOrder.price — фактическая цена услуги по этому заказу
@@ -23,6 +34,14 @@ export interface ServiceCompletedErpItem extends ServiceOrderRoleFields {
     // RoappService.engeneerBonus — ставка "за услугу" из справочника услуг,
     // источник для award.type === 'ServiceFixed'.
     catalogEngineerBonus: number;
+    // RoappService.name — источник CalculationSourceRef.itemName (см.
+    // service-completed.entity.ts).
+    serviceName: string;
+    // RoappOrder.orderTypeId — "категория заказа" в терминах Фазы 3
+    // (docs/service-plan-salary-rule-order-category-filter), источник для
+    // фильтра ServiceCompletedSalaryConfig.orderTypeIds (см.
+    // service-completed.entity.ts). НЕ SalesPlan.category.
+    orderTypeId: number;
 }
 
 // Один оплаченный заказ (Фаза 8, источник для OrderPayedEntity) — уровень
@@ -36,6 +55,17 @@ export interface ServiceCompletedErpItem extends ServiceOrderRoleFields {
 // order-payed.entity.ts).
 export interface OrderPayedErpItem {
     orderId: number;
+    // RoappOrder.label — человекочитаемый номер заказа ("А123456"),
+    // источник CalculationSourceRef.label/link (см. order-payed.entity.ts).
+    label: string;
+    // RoappOrder.deviceBrand/deviceModel/deviceColor/malfunction — источник
+    // CalculationSourceRef.brand/deviceModel/deviceColor/malfunction (см.
+    // order-payed.entity.ts). null, если ERP не отдал соответствующее поле
+    // по заказу.
+    brand: string | null;
+    deviceModel: string | null;
+    deviceColor: string | null;
+    malfunction: string | null;
     managerId: number | null;
     onlineManager: string | null;
     // Инженеры позиций заказа (услуг и товаров), без дублей — источник для
@@ -49,6 +79,11 @@ export interface OrderPayedErpItem {
     revenue: number;
     cost: number;
     engineerSalary: number;
+    // RoappOrder.orderTypeId — "категория заказа" в терминах Фазы 3
+    // (docs/service-plan-salary-rule-order-category-filter), источник для
+    // фильтра OrderPayedSalaryConfig.orderTypeIds (см.
+    // order-payed.entity.ts). НЕ SalesPlan.category.
+    orderTypeId: number;
 }
 
 // Одна подтверждённая руководителем запись о выполнении задачи (Фаза 8,
@@ -60,14 +95,27 @@ export interface ConfirmedTaskCompletionErpItem {
     employeeId: number;
 }
 
+// Пара факт/прогноз часов PayPerHour — считаются один раз (см.
+// ServiceCalculationDataRepository.findHoursWorked) и передаются в ОБА
+// прохода calculate() (FACT и PROGNOSE читают один и тот же erpData,
+// различается только context.mode, см. get-employee-salary-report.service.ts) —
+// правило само выбирает нужное поле по режиму, а не пересчитывает дату.
+// fact — сумма часов графика по сегодняшний день включительно, prognose —
+// сумма часов графика за весь период (включая ещё не наступившие дни).
+export interface PayPerHourHours {
+    fact: number;
+    prognose: number;
+}
+
 export interface ServiceCalculationErpData {
     serviceCompletedItems: ServiceCompletedErpItem[];
     // Часы сотрудника за период — сумма часов рабочих смен графика
-    // (WorkScheduleEntry.status = WORKING, Фаза 5,
-    // docs/employee-work-schedule), не ERP-данные в строгом смысле, но тот
-    // же принцип "правило не ходит в БД само" требует, чтобы значение
-    // пришло из контекста. 0, если рабочих смен нет.
-    hoursWorked: number;
+    // (WorkScheduleEntry.status = WORKING, роль дня — ONLINE_MANAGER/
+    // OFFLINE_MANAGER, см. domain/services/pay-per-hour-roles.ts) — не
+    // ERP-данные в строгом смысле, но тот же принцип "правило не ходит в
+    // БД само" требует, чтобы значение пришло из контекста. 0 по обоим
+    // полям, если подходящих рабочих смен нет.
+    hoursWorked: PayPerHourHours;
     // Фаза 8 — заказы, оплаченные в периоде (источник OrderPayedEntity), и
     // подтверждённые выполнения задач (источник TaskCompletedEntity).
     // Опциональны (в отличие от serviceCompletedItems/hoursWorked Фазы 7) —

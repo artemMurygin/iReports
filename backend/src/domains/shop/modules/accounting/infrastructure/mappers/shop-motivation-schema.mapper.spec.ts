@@ -50,7 +50,7 @@ describe('ShopMotivationSchemaMapper', () => {
                         status: 'OPEN',
                     },
                     mode: 'FACT',
-                    erpData: { hoursWorked: 2 },
+                    erpData: { hoursWorked: { fact: 2, prognose: 2 } },
                     salesPerformance: null,
                 }).amount,
             ).toBe(600);

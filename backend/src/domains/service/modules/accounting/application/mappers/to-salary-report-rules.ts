@@ -1,8 +1,12 @@
 import type {
     EmployeeSalaryReportRule,
+    EmployeeSalaryReportSource,
     FloatPercentInfo,
 } from 'ireports-contracts';
-import { CalculationLine } from '@/shared/domain/calculation-line';
+import {
+    CalculationLine,
+    CalculationSourceRef,
+} from '@/shared/domain/calculation-line';
 import {
     OrderPayedSalaryConfig,
     PercentBorder,
@@ -57,7 +61,41 @@ export function buildSalaryReportRules(
                           ),
                       }
                     : undefined,
-            sources: fact.sources,
+            sources: buildResponseSources(fact.sources, prognose.sources),
+        };
+    });
+}
+
+// Сводит sources[] пары ФАКТ/ПРОГНОЗ по позиции — fact.sources и
+// prognose.sources построены из ОДНОГО и того же выборки erpData (одна и
+// та же матчащаяся выборка правила, различается только применённая ставка
+// FloatPercent/salesPerformance режима — см. entities/salary-rules/*.ts),
+// поэтому список источников и их порядок в обоих режимах идентичны, и
+// сопоставление по индексу безопасно (тот же приём, что buildRuleBreakdown
+// использует для строк правил).
+function buildResponseSources(
+    factSources: CalculationSourceRef[],
+    prognoseSources: CalculationSourceRef[],
+): EmployeeSalaryReportSource[] {
+    return factSources.map((source, index) => {
+        const prognoseSource = prognoseSources[index];
+        return {
+            type: source.type,
+            id: source.id,
+            label: source.label,
+            link: source.link,
+            amount:
+                source.amount === undefined
+                    ? undefined
+                    : {
+                          fact: source.amount,
+                          prognose: prognoseSource?.amount ?? null,
+                      },
+            brand: source.brand,
+            deviceModel: source.deviceModel,
+            deviceColor: source.deviceColor,
+            malfunction: source.malfunction,
+            itemName: source.itemName,
         };
     });
 }

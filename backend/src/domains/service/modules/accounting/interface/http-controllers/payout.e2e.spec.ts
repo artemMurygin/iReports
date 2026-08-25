@@ -150,7 +150,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
         findServiceCompletedItems: () => Promise.resolve([]),
-        findHoursWorked: () => Promise.resolve(20),
+        findHoursWorked: () => Promise.resolve({ fact: 20, prognose: 20 }),
         findOrderPayedItems: () => Promise.resolve([]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),

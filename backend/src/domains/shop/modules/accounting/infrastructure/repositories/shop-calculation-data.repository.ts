@@ -4,10 +4,12 @@ import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.rep
 import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import { Period } from '@/shared/domain/period.value-object';
 import type {
+    PayPerHourHours,
     ShopProductSoldErpItem,
     ShopTaskCompletionErpItem,
 } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
 import { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
+import { PAY_PER_HOUR_ELIGIBLE_ROLES } from '@/domains/shop/modules/accounting/domain/services/pay-per-hour-roles';
 import { ProductFolderTreeService } from '@/domains/shop/sync/moySklad/product-folder-tree.service';
 import { WORKING_STATUS } from '@/modules/work-schedule/domain/constants/working-status';
 
@@ -39,26 +41,42 @@ export class ShopCalculationDataRepository
     }
 
     // Часы сотрудника за период — сумма часов рабочих смен графика
-    // (WorkScheduleEntry.status = WORKING) за период (Фаза 5,
-    // docs/employee-work-schedule) — зеркало
+    // (WorkScheduleEntry.status = WORKING), только дни с ролью
+    // ONLINE_MANAGER/OFFLINE_MANAGER (см. pay-per-hour-roles.ts) — зеркало
     // ServiceCalculationDataRepository.findHoursWorked (независимая
     // реализация, issue #57), общая с ним таблица WorkScheduleEntry без
-    // дискриминатора direction (см. work-schedule.prisma). Заменяет
-    // прежний ручной ввод EmployeeHoursEntry (модель удалена).
+    // дискриминатора direction (см. work-schedule.prisma). Возвращает пару
+    // факт/прогноз: prognose — сумма часов всех подходящих дней периода,
+    // fact — только тех, что не позже `now`. Conditional-агрегация по двум
+    // диапазонам дат одним Prisma-запросом без raw SQL невозможна — читаем
+    // строки и суммируем в коде, а не `aggregate`/`_sum`.
     async findHoursWorked(
         bitrixEmployeeId: number,
         period: string,
-    ): Promise<number> {
+        now: Date = new Date(),
+    ): Promise<PayPerHourHours> {
         const { from, to } = Period.create(period).getBounds();
-        const result = await this.client.workScheduleEntry.aggregate({
+        const factCutoff = now < to ? now : to;
+        const entries = await this.client.workScheduleEntry.findMany({
             where: {
                 employeeId: bitrixEmployeeId,
                 status: WORKING_STATUS,
+                role: { in: [...PAY_PER_HOUR_ELIGIBLE_ROLES] },
                 date: { gte: from, lte: to },
             },
-            _sum: { hours: true },
+            select: { date: true, hours: true },
         });
-        return result._sum.hours ?? 0;
+        return entries.reduce<PayPerHourHours>(
+            (acc, entry) => {
+                const hours = entry.hours ?? 0;
+                acc.prognose += hours;
+                if (entry.date <= factCutoff) {
+                    acc.fact += hours;
+                }
+                return acc;
+            },
+            { fact: 0, prognose: 0 },
+        );
     }
 
     // Позиции отгрузок периода (MoySkladDemand.moment — тот же признак
@@ -74,6 +92,7 @@ export class ShopCalculationDataRepository
             select: {
                 id: true,
                 demandId: true,
+                assortmentName: true,
                 quantity: true,
                 sum: true,
                 profit: true,
@@ -82,7 +101,11 @@ export class ShopCalculationDataRepository
                 product: { select: { folderId: true } },
                 service: { select: { folderId: true } },
                 demand: {
-                    select: { onlineManagerId: true, offlineManagerId: true },
+                    select: {
+                        name: true,
+                        onlineManagerId: true,
+                        offlineManagerId: true,
+                    },
                 },
             },
         });
@@ -90,6 +113,8 @@ export class ShopCalculationDataRepository
         return positions.map((position) => ({
             positionId: position.id,
             demandId: position.demandId,
+            itemName: position.assortmentName,
+            demandLabel: position.demand.name,
             folderId:
                 position.product?.folderId ??
                 position.service?.folderId ??
@@ -164,28 +189,40 @@ export class ShopCalculationDataRepository
     }
 
     // Батч-версия findHoursWorked для отдела целиком — зеркало
-    // ServiceCalculationDataRepository.findHoursWorkedForEmployees (один
-    // groupBy вместо N findUnique).
+    // ServiceCalculationDataRepository.findHoursWorkedForEmployees, та же
+    // пара факт/прогноз и тот же фильтр по роли дня, что и у findHoursWorked
+    // (см. комментарий там).
     async findHoursWorkedForEmployees(
         bitrixEmployeeIds: number[],
         period: string,
-    ): Promise<Map<number, number>> {
-        const map = new Map<number, number>();
+        now: Date = new Date(),
+    ): Promise<Map<number, PayPerHourHours>> {
+        const map = new Map<number, PayPerHourHours>();
         if (bitrixEmployeeIds.length === 0) {
             return map;
         }
         const { from, to } = Period.create(period).getBounds();
-        const rows = await this.client.workScheduleEntry.groupBy({
-            by: ['employeeId'],
+        const factCutoff = now < to ? now : to;
+        const entries = await this.client.workScheduleEntry.findMany({
             where: {
                 employeeId: { in: bitrixEmployeeIds },
                 status: WORKING_STATUS,
+                role: { in: [...PAY_PER_HOUR_ELIGIBLE_ROLES] },
                 date: { gte: from, lte: to },
             },
-            _sum: { hours: true },
+            select: { employeeId: true, date: true, hours: true },
         });
-        for (const row of rows) {
-            map.set(row.employeeId, row._sum.hours ?? 0);
+        for (const entry of entries) {
+            const hours = entry.hours ?? 0;
+            const current = map.get(entry.employeeId) ?? {
+                fact: 0,
+                prognose: 0,
+            };
+            current.prognose += hours;
+            if (entry.date <= factCutoff) {
+                current.fact += hours;
+            }
+            map.set(entry.employeeId, current);
         }
         return map;
     }

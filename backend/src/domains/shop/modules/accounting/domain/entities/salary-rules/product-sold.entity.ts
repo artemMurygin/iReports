@@ -17,6 +17,7 @@ import type {
 import { employeeMatchesShopDemandRole } from '../../services/shop-role-source';
 import { roundRubles } from '../../services/money';
 import { resolveFloatPercentMultiplier } from '../../services/float-percent';
+import { buildMoySkladDemandLink } from '../../services/moysklad-demand-link';
 
 // Правило "вознаграждение за проданный товар в категории" (Фаза 12, issue
 // #59/#60, см. docs/payroll/plan-payroll-calculation.md и
@@ -79,10 +80,6 @@ export class ProductSoldEntity
                     this.matchesCategory(item, erpData),
             ),
         );
-        const sources = matched.map((item) => ({
-            type: 'demandPosition',
-            id: item.positionId,
-        }));
         const award = this.props.config.award;
         // Fixed на дробном quantity (issue #60): "сумма за единицу" магазина
         // считается по количеству, а не по числу позиций — товар может быть
@@ -103,7 +100,9 @@ export class ProductSoldEntity
                     quantity: totalQuantity,
                     rate: award.price,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(award.price * item.quantity),
+                    ),
                 };
             }
             case 'FixedPercent': {
@@ -115,7 +114,13 @@ export class ProductSoldEntity
                     quantity: totalQuantity,
                     rate: award.percent,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(
+                            (this.basisAmount(item, award.salaryBasis) *
+                                award.percent) /
+                                100,
+                        ),
+                    ),
                 };
             }
             case 'FloatPercent': {
@@ -162,13 +167,34 @@ export class ProductSoldEntity
                     quantity: totalQuantity,
                     rate: award.basePercent * multiplier,
                     amount,
-                    sources,
+                    sources: this.buildSources(matched, (item) =>
+                        roundRubles(
+                            (this.basisAmount(item, award.salaryBasis) *
+                                award.basePercent *
+                                multiplier) /
+                                100,
+                        ),
+                    ),
                 };
             }
         }
     }
 
     validate(): void {}
+
+    private buildSources(
+        items: ShopProductSoldErpItem[],
+        amountFor: (item: ShopProductSoldErpItem) => number,
+    ) {
+        return items.map((item) => ({
+            type: 'demandPosition',
+            id: item.positionId,
+            label: item.demandLabel,
+            link: buildMoySkladDemandLink(item.demandId),
+            itemName: item.itemName,
+            amount: amountFor(item),
+        }));
+    }
 
     private matchesRole(
         context: ShopCalculationContext,

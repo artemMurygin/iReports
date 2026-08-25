@@ -133,7 +133,7 @@ describe('Проведение строк: close → accrue → balance → unac
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
         findServiceCompletedItems: () => Promise.resolve([]),
-        findHoursWorked: () => Promise.resolve(8),
+        findHoursWorked: () => Promise.resolve({ fact: 8, prognose: 8 }),
         findOrderPayedItems: () => Promise.resolve([]),
         findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),

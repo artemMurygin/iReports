@@ -30,6 +30,12 @@ export type ServiceCompletedSalaryConfig = {
         | { type: 'Fixed'; price: number }
         | { type: 'ServiceFixed' }
         | { type: 'ServicePercent'; percent: number };
+    // Фильтр по категории заказа (Фаза 3, docs/service-plan-salary-rule-order-category-filter) —
+    // "категория заказа" здесь это RoappOrderType (RoappOrder.orderTypeId),
+    // НЕ SalesPlan.category и не RoappServiceCategory/RoappProductCategory.
+    // Пусто/не указано — правило учитывает заказы всех типов (поведение по
+    // умолчанию для уже существующих правил без этого поля).
+    orderTypeIds?: number[];
 };
 
 export type ServiceCompletedSalaryRule = {
@@ -57,6 +63,12 @@ export type OrderPayedSalaryConfig = {
               salaryBasis: SalaryBasis;
               percentBorders: [PercentBorder, PercentBorder, PercentBorder];
           };
+    // Фильтр по категории заказа (Фаза 3, docs/service-plan-salary-rule-order-category-filter) —
+    // "категория заказа" здесь это RoappOrderType (RoappOrder.orderTypeId),
+    // НЕ SalesPlan.category и не RoappServiceCategory/RoappProductCategory.
+    // Пусто/не указано — правило учитывает заказы всех типов (поведение по
+    // умолчанию для уже существующих правил без этого поля).
+    orderTypeIds?: number[];
 };
 
 export type OrderPayedSalaryRule = {

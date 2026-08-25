@@ -23,7 +23,7 @@ const buildContext = (
     mode: 'FACT',
     erpData: {
         serviceCompletedItems: [],
-        hoursWorked: 0,
+        hoursWorked: { fact: 0, prognose: 0 },
         orderPayedItems: [],
         confirmedTaskCompletions: completions,
     } satisfies ServiceCalculationErpData,
@@ -54,8 +54,8 @@ describe('TaskCompletedEntity', () => {
                 rate: 200,
                 amount: 400,
                 sources: [
-                    { type: 'taskCompletion', id: 't1' },
-                    { type: 'taskCompletion', id: 't2' },
+                    { type: 'taskCompletion', id: 't1', amount: 200 },
+                    { type: 'taskCompletion', id: 't2', amount: 200 },
                 ],
             });
         });
