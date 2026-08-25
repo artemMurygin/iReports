@@ -41,12 +41,23 @@ export function useWorkSchedulePage() {
     const [highlightedEmployeeId] = useState<number | null>(() =>
         parseHighlightedEmployeeId(searchParams.get('employeeId')),
     )
-    const [departmentId, setDepartmentId] = useState<number | null>(null)
+    // `undefined` — фильтр ещё не тронут руководителем (дефолт — отдел «Розница», как только
+    // подгрузится справочник), `null` — руководитель осознанно выбрал «все» (см. `effectiveDepartmentId`
+    // ниже); два состояния не могут делить одно значение `null`, иначе выбор «все» после дефолта
+    // был бы неотличим от «дефолт ещё не применён» и тут же откатывался обратно на «Розница».
+    const [departmentId, setDepartmentId] = useState<number | null | undefined>(undefined)
     const [tab, setTab] = useState<WorkScheduleTab>('CALENDAR')
     const [todayIso] = useState<string>(getTodayIso)
 
     const departmentsQuery = useDepartments()
     const departments = departmentsQuery.data ?? []
+
+    // Дефолт фильтра отдела — «Розница», выведенный, а не выставленный императивно через
+    // `setState` в эффекте (react-hooks/set-state-in-effect): пока справочник не загружен, id ещё
+    // нет и `effectiveDepartmentId` останется `null` («все») до следующего рендера с данными —
+    // одним и тем же способом что для первого рендера, что после того, как отдел найдётся.
+    const defaultDepartmentId = departments.find((department) => department.name === 'Розница')?.id ?? null
+    const effectiveDepartmentId = departmentId === undefined ? defaultDepartmentId : departmentId
 
     // placeholderData: keepPreviousData — переключение месяца/отдела не схлопывает уже
     // отрисованную таблицу в спиннер (см. frontend/CLAUDE.md, "isInitialLoad / isRefreshing").
@@ -55,7 +66,7 @@ export function useWorkSchedulePage() {
         isFetching,
         error: queryError,
         dataUpdatedAt,
-    } = useQuery({ ...api.getMonthlySchedule(month, departmentId), placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getMonthlySchedule(month, effectiveDepartmentId), placeholderData: keepPreviousData })
 
     const employees = data?.employees ?? []
     const days = useMemo(() => buildMonthDays(month, todayIso), [month, todayIso])
@@ -66,7 +77,7 @@ export function useWorkSchedulePage() {
     return {
         month,
         setMonth,
-        departmentId,
+        departmentId: effectiveDepartmentId,
         setDepartmentId,
         tab,
         setTab,
