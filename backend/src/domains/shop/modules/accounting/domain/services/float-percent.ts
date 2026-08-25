@@ -13,19 +13,20 @@ import { roundRubles } from './money';
 // каждый может измениться без последствий для другого.
 //
 // Три порога percentBorders, каждый — { fromPlanPercent, multiplier, mode }.
-// mode лежит НА КАЖДОМ пороге и описывает участок МЕЖДУ предыдущим порогом
-// (или нулевой точкой, если порог первый по возрастанию fromPlanPercent) и
-// этим порогом:
+// mode лежит НА КАЖДОМ пороге и описывает участок ОТ ЭТОГО порога ВПЕРЁД, до
+// СЛЕДУЮЩЕГО порога (или до бесконечности, если порог последний по
+// возрастанию fromPlanPercent) — зеркало исправленной семантики
+// domains/service/modules/accounting/domain/services/float-percent.ts (см.
+// комментарий там же для истории решения):
 //
-// - FIX    — множитель ступенькой: пока percentCompletion не достиг
-//            fromPlanPercent этого порога, действует множитель предыдущего
-//            порога (0, если порог первый);
-// - LINEAR — на этом участке множитель линейно интерполируется между
-//            множителем предыдущего порога и множителем этого порога.
+// - FIX    — множитель ступенькой: от fromPlanPercent этого порога и до
+//            следующего действует множитель ЭТОГО порога;
+// - LINEAR — на отрезке [fromPlanPercent этого порога, fromPlanPercent
+//            следующего) множитель линейно интерполируется между
+//            множителем этого порога и множителем следующего.
 //
-// После последнего (по fromPlanPercent) порога множитель фиксируется на
-// его значении — не растёт дальше при перевыполнении плана сверх старшего
-// порога.
+// У последнего порога mode не имеет значения — множитель фиксируется на его
+// собственном значении. Ниже самого нижнего порога — множитель 0.
 export function resolveFloatPercentMultiplier(
     percentBorders: readonly [PercentBorder, PercentBorder, PercentBorder],
     percentCompletion: number,
@@ -34,25 +35,28 @@ export function resolveFloatPercentMultiplier(
         (a, b) => a.fromPlanPercent - b.fromPlanPercent,
     );
 
-    let prev = { fromPlanPercent: 0, multiplier: 0 };
-    for (const border of sorted) {
-        if (percentCompletion < border.fromPlanPercent) {
-            if (border.mode === 'FIX') {
-                return prev.multiplier;
-            }
-            const span = border.fromPlanPercent - prev.fromPlanPercent;
-            if (span <= 0) {
-                return border.multiplier;
-            }
-            const ratio = (percentCompletion - prev.fromPlanPercent) / span;
-            return (
-                prev.multiplier + ratio * (border.multiplier - prev.multiplier)
-            );
+    let currentIndex = -1;
+    for (let i = 0; i < sorted.length; i++) {
+        if (percentCompletion >= sorted[i].fromPlanPercent) {
+            currentIndex = i;
         }
-        prev = border;
+    }
+    if (currentIndex === -1) {
+        return 0;
     }
 
-    return prev.multiplier;
+    const current = sorted[currentIndex];
+    const next = sorted[currentIndex + 1];
+    if (current.mode === 'FIX' || !next) {
+        return current.multiplier;
+    }
+
+    const span = next.fromPlanPercent - current.fromPlanPercent;
+    if (span <= 0) {
+        return current.multiplier;
+    }
+    const ratio = (percentCompletion - current.fromPlanPercent) / span;
+    return current.multiplier + ratio * (next.multiplier - current.multiplier);
 }
 
 export interface FloatPercentThresholdInfo {

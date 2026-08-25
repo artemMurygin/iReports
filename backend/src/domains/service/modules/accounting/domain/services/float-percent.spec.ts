@@ -37,16 +37,16 @@ describe('resolveFloatPercentMultiplier', () => {
     });
 
     describe('LINEAR', () => {
-        it('ниже первого порога — линейная интерполяция от (0, 0)', () => {
-            expect(
-                resolveFloatPercentMultiplier(linearBorders, 25),
-            ).toBeCloseTo(0.25);
+        it('ниже первого порога — множитель 0 (правило ещё не действует)', () => {
+            expect(resolveFloatPercentMultiplier(linearBorders, 25)).toBe(0);
         });
 
-        it('между порогами — линейная интерполяция', () => {
+        it('между порогами — линейная интерполяция от ЭТОГО порога к СЛЕДУЮЩЕМУ', () => {
+            // A(50, 0.5) -> B(70, 1): на 60 (середина отрезка) -> 0.75.
             expect(
                 resolveFloatPercentMultiplier(linearBorders, 60),
             ).toBeCloseTo(0.75);
+            // B(70, 1) -> C(100, 1.5): на 85 (середина отрезка) -> 1.25.
             expect(
                 resolveFloatPercentMultiplier(linearBorders, 85),
             ).toBeCloseTo(1.25);
@@ -55,6 +55,57 @@ describe('resolveFloatPercentMultiplier', () => {
         it('на и выше старшего порога — множитель фиксируется', () => {
             expect(resolveFloatPercentMultiplier(linearBorders, 100)).toBe(1.5);
             expect(resolveFloatPercentMultiplier(linearBorders, 150)).toBe(1.5);
+        });
+    });
+
+    // Смешанный режим — реальный кейс правила "Начисление онлайн-менеджеру"
+    // (0-70% плоско, 70-120% линейно, свыше 120% плоско): mode лежит на
+    // пороге, задающем НИЖНЮЮ границу отрезка, и описывает, что происходит
+    // ПОСЛЕ него — а не отрезок ДО него.
+    describe('смешанный режим (FIX + LINEAR на разных порогах)', () => {
+        const mixedBorders: [PercentBorder, PercentBorder, PercentBorder] = [
+            {
+                name: 'Ниже плана',
+                fromPlanPercent: 0,
+                multiplier: 0.5,
+                mode: 'FIX',
+            },
+            {
+                name: 'Выполнение плана',
+                fromPlanPercent: 70,
+                multiplier: 0.7,
+                mode: 'LINEAR',
+            },
+            {
+                name: 'Перевыполнение',
+                fromPlanPercent: 120,
+                multiplier: 1.2,
+                mode: 'FIX',
+            },
+        ];
+
+        it('0-70% — плоско на множителе нижнего порога', () => {
+            expect(resolveFloatPercentMultiplier(mixedBorders, 0)).toBe(0.5);
+            expect(resolveFloatPercentMultiplier(mixedBorders, 30)).toBe(0.5);
+            expect(resolveFloatPercentMultiplier(mixedBorders, 69.9)).toBe(0.5);
+        });
+
+        it('70-120% — линейно от 0.7 (на 70%) до 1.2 (на 120%)', () => {
+            expect(resolveFloatPercentMultiplier(mixedBorders, 70)).toBe(0.7);
+            expect(resolveFloatPercentMultiplier(mixedBorders, 80)).toBeCloseTo(
+                0.8,
+            );
+            expect(resolveFloatPercentMultiplier(mixedBorders, 85)).toBeCloseTo(
+                0.85,
+            );
+            expect(
+                resolveFloatPercentMultiplier(mixedBorders, 110),
+            ).toBeCloseTo(1.1);
+        });
+
+        it('от 120% и выше — плоско на 1.2', () => {
+            expect(resolveFloatPercentMultiplier(mixedBorders, 120)).toBe(1.2);
+            expect(resolveFloatPercentMultiplier(mixedBorders, 150)).toBe(1.2);
         });
     });
 

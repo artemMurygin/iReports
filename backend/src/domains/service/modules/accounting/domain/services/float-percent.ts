@@ -6,21 +6,33 @@ import { roundRubles } from '@/domains/service/modules/accounting/domain/service
 // раздел 2). Три порога percentBorders, каждый — { fromPlanPercent,
 // multiplier, mode }; mode лежит НА КАЖДОМ пороге (так задан контракт PRD:
 // "каждый — { fromPlanPercent, multiplier, mode: FIX | LINEAR }"), а не
-// одним полем на всё правило — mode описывает, как считается участок между
-// ПРЕДЫДУЩИМ порогом (или нулевой точкой [0, 0], если порог первый по
-// возрастанию fromPlanPercent) и этим порогом:
+// одним полем на всё правило — mode описывает, как считается участок ОТ
+// ЭТОГО порога ВПЕРЁД, до СЛЕДУЮЩЕГО порога (или до бесконечности, если
+// порог последний по возрастанию fromPlanPercent):
 //
-// - FIX   — множитель ступенькой: пока percentCompletion не достиг
-//           fromPlanPercent этого порога, действует множитель предыдущего
-//           порога (0, если порог первый);
-// - LINEAR — на этом участке множитель линейно интерполируется между
-//           множителем предыдущего порога и множителем этого порога.
+// - FIX    — множитель ступенькой: от fromPlanPercent этого порога и до
+//            следующего порога действует множитель ЭТОГО порога as-is (т.е.
+//            "плоский" участок на всём отрезке [fromPlanPercent, следующий
+//            fromPlanPercent)) — это тот множитель, что указан в самом
+//            пороге, а не в соседнем;
+// - LINEAR — на отрезке [fromPlanPercent этого порога, fromPlanPercent
+//            следующего порога) множитель линейно интерполируется между
+//            множителем ЭТОГО порога и множителем СЛЕДУЮЩЕГО.
 //
-// После последнего (по fromPlanPercent) порога множитель не растёт дальше —
-// зафиксирован на его значении (сотрудник, перевыполнивший план сверх
-// старшего порога, получает множитель этого порога, а не экстраполяцию
-// вверх). Ниже самого нижнего порога, если у него FIX — множитель 0; если
-// LINEAR — линейная интерполяция от условной точки (0, 0).
+// (Уточнение бизнес-владельца после первой версии реализации: изначально
+// mode стоял на пороге, задающем ВЕРХНЮЮ границу отрезка, и описывал отрезок
+// ДО себя — это давало обратный эффект: LINEAR-порог интерполировал участок
+// НИЖЕ себя, а не выше, и плоский FIX-порог "замораживал" множитель
+// предыдущего порога вместо своего собственного. Верная семантика — mode
+// лежит на пороге, задающем НИЖНЮЮ границу отрезка, и описывает, что
+// происходит ПОСЛЕ него, до следующего порога.)
+//
+// У последнего (по fromPlanPercent) порога mode фактически не имеет
+// значения — множитель фиксируется на его собственном значении, расти
+// дальше (даже если mode = LINEAR) некуда без следующей точки. Ниже самого
+// нижнего порога — множитель 0 (правило ещё не начало действовать); в
+// реальных схемах нижний порог почти всегда стоит на fromPlanPercent = 0,
+// так что этот случай на практике не встречается.
 export function resolveFloatPercentMultiplier(
     percentBorders: readonly [PercentBorder, PercentBorder, PercentBorder],
     percentCompletion: number,
@@ -29,27 +41,30 @@ export function resolveFloatPercentMultiplier(
         (a, b) => a.fromPlanPercent - b.fromPlanPercent,
     );
 
-    let prev = { fromPlanPercent: 0, multiplier: 0 };
-    for (const border of sorted) {
-        if (percentCompletion < border.fromPlanPercent) {
-            if (border.mode === 'FIX') {
-                return prev.multiplier;
-            }
-            const span = border.fromPlanPercent - prev.fromPlanPercent;
-            if (span <= 0) {
-                return border.multiplier;
-            }
-            const ratio = (percentCompletion - prev.fromPlanPercent) / span;
-            return (
-                prev.multiplier + ratio * (border.multiplier - prev.multiplier)
-            );
+    // Текущий "активный" порог — последний по возрастанию fromPlanPercent,
+    // которого percentCompletion уже достиг.
+    let currentIndex = -1;
+    for (let i = 0; i < sorted.length; i++) {
+        if (percentCompletion >= sorted[i].fromPlanPercent) {
+            currentIndex = i;
         }
-        prev = border;
+    }
+    if (currentIndex === -1) {
+        return 0;
     }
 
-    // percentCompletion достиг или превысил все пороги — множитель
-    // фиксируется на значении старшего порога.
-    return prev.multiplier;
+    const current = sorted[currentIndex];
+    const next = sorted[currentIndex + 1];
+    if (current.mode === 'FIX' || !next) {
+        return current.multiplier;
+    }
+
+    const span = next.fromPlanPercent - current.fromPlanPercent;
+    if (span <= 0) {
+        return current.multiplier;
+    }
+    const ratio = (percentCompletion - current.fromPlanPercent) / span;
+    return current.multiplier + ratio * (next.multiplier - current.multiplier);
 }
 
 export interface FloatPercentThresholdInfo {
