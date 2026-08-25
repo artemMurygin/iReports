@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import type { BalanceTransaction, BalanceTransactionType } from 'ireports-contracts'
+import type { BalanceTransaction, BalanceTransactionType, SalesDirection } from 'ireports-contracts'
 
 import { api } from '@/features/EmployeeBalance'
+import { api as payoutApi } from '@/features/Payout'
 import { formatPeriodLabel } from '@/features/SalesPlan'
 import { useDepartments, useEmployees } from '@/features/TargetDirectory'
 
@@ -114,6 +115,40 @@ export function useEmployeeBalancePage() {
         setDeleteTarget(null)
     }
 
+    // ── Удаление выплаты (Фаза 15 docs/payroll-closing-and-accrual, P3.3) ──────────────────
+    const [deletePayoutTarget, setDeletePayoutTarget] = useState<BalanceTransaction | null>(null)
+    function requestDeletePayout(transaction: BalanceTransaction) {
+        setDeletePayoutTarget(transaction)
+    }
+    function closeDeletePayoutDialog() {
+        setDeletePayoutTarget(null)
+    }
+
+    // ── Выплата (Фаза 14 docs/payroll-closing-and-accrual, PRD 3) ──────────────────────────
+    // Страница баланса — общая по сотруднику, без Direction Tabs (Фаза 8b) — в отличие от
+    // `pages/Payout` (уже per-direction), здесь направление кассы выбирается прямо в
+    // `PayoutDrawer` (его собственный `onDirectionChange`, см. компонент).
+    const [isPayoutOpen, setIsPayoutOpen] = useState(false)
+    const [payoutDirection, setPayoutDirection] = useState<SalesDirection>('service')
+    function openPayout() {
+        setPayoutDirection('service')
+        setIsPayoutOpen(true)
+    }
+    function closePayout() {
+        setIsPayoutOpen(false)
+    }
+    const erpCashConfigQuery = useQuery({ ...payoutApi.getErpCashConfig(payoutDirection), enabled: isPayoutOpen })
+    const payoutCashLabel =
+        erpCashConfigQuery.data === undefined
+            ? 'Загрузка кассы…'
+            : payoutDirection === 'service'
+              ? erpCashConfigQuery.data.roappCashboxId !== null
+                  ? 'RemOnline · касса Основная'
+                  : 'Касса RemOnline не настроена'
+              : erpCashConfigQuery.data.moySkladExpenseItemId !== null && erpCashConfigQuery.data.organizationId !== null
+                ? 'МойСклад · статья «Зарплата»'
+                : 'Касса МойСклад не настроена'
+
     const isInitialLoad = balanceQuery.isFetching && balanceQuery.data === undefined
     const isRefreshing = balanceQuery.isFetching && !isInitialLoad
 
@@ -142,6 +177,18 @@ export function useEmployeeBalancePage() {
         deleteTarget,
         requestDelete,
         closeDeleteDialog,
+
+        deletePayoutTarget,
+        requestDeletePayout,
+        closeDeletePayoutDialog,
+
+        isPayoutOpen,
+        payoutDirection,
+        setPayoutDirection,
+        openPayout,
+        closePayout,
+        payoutCashLabel,
+        payoutTransactions: transactions,
 
         isInitialLoad,
         isRefreshing,

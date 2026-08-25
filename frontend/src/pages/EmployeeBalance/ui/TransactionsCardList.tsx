@@ -1,10 +1,10 @@
 import { Fragment } from 'react'
 import { format } from 'date-fns'
-import { ArrowDownRight, ArrowUpRight, FileText, Trash2 } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, ExternalLink, FileText, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { BalanceTransaction } from 'ireports-contracts'
 
-import { isDeletable, transactionTypeLabel } from '@/features/EmployeeBalance'
+import { ERP_SYSTEM_LABEL, isDeletable, isPayoutTransaction, transactionTypeLabel } from '@/features/EmployeeBalance'
 import { formatPeriodLabel, formatSignedCurrency } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
 import { Button } from '@/shared/ui-kit/atoms/Button'
@@ -15,6 +15,8 @@ export type TransactionsCardListProps = {
     employeeNameById: Record<number, string>
     readOnly?: boolean
     onDeleteTransaction: (transaction: BalanceTransaction) => void
+    /** «Удалить» у выплаты — свой путь (`DELETE .../payout/:id`, features/Payout, Фаза 15). */
+    onDeletePayout: (transaction: BalanceTransaction) => void
     className?: string
 }
 
@@ -36,6 +38,7 @@ export function TransactionsCardList({
     employeeNameById,
     readOnly = false,
     onDeleteTransaction,
+    onDeletePayout,
     className,
 }: TransactionsCardListProps) {
     if (transactions.length === 0) {
@@ -69,7 +72,9 @@ export function TransactionsCardList({
                                 transaction={transaction}
                                 author={employeeNameById[transaction.createdBy] ?? `ID ${transaction.createdBy}`}
                                 canDelete={!readOnly && isDeletable(transaction)}
+                                canDeletePayout={!readOnly && isPayoutTransaction(transaction)}
                                 onDelete={() => onDeleteTransaction(transaction)}
+                                onDeletePayout={() => onDeletePayout(transaction)}
                             />
                         ))}
                     </div>
@@ -83,12 +88,16 @@ function TransactionCard({
     transaction,
     author,
     canDelete,
+    canDeletePayout,
     onDelete,
+    onDeletePayout,
 }: {
     transaction: BalanceTransaction
     author: string
     canDelete: boolean
+    canDeletePayout: boolean
     onDelete: () => void
+    onDeletePayout: () => void
 }) {
     const isIncome = transaction.amount >= 0
 
@@ -115,9 +124,15 @@ function TransactionCard({
             <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-ui text-[11px] text-ink-muted">
                 <span>{author}</span>
                 {transaction.period !== null && <span>{formatPeriodLabel(transaction.period)}</span>}
+                {transaction.erp !== null && (
+                    <span className="inline-flex items-center gap-1 text-info-ink" title={`Открыть в ${ERP_SYSTEM_LABEL[transaction.erp.system]}`}>
+                        <ExternalLink className="size-3 shrink-0" />
+                        {transaction.erp.externalId}
+                    </span>
+                )}
             </span>
 
-            {(transaction.accrualId !== null || canDelete) && (
+            {(transaction.accrualId !== null || canDelete || canDeletePayout) && (
                 <span className="flex items-center justify-end gap-1.5 border-t border-hairline pt-2.5">
                     {transaction.accrualId !== null && (
                         <Button type="button" variant="secondary" size="sm" asChild>
@@ -129,6 +144,11 @@ function TransactionCard({
                     )}
                     {canDelete && (
                         <IconButton type="button" variant="danger" aria-label="Удалить движение" onClick={onDelete}>
+                            <Trash2 />
+                        </IconButton>
+                    )}
+                    {canDeletePayout && (
+                        <IconButton type="button" variant="danger" aria-label="Удалить выплату" onClick={onDeletePayout}>
                             <Trash2 />
                         </IconButton>
                     )}

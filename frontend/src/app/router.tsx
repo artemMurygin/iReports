@@ -11,6 +11,7 @@ import { SalaryAccrualsPage } from '@/pages/SalaryAccruals'
 import { SalaryAccrualDocumentPage } from '@/pages/SalaryAccrualDocument'
 import { EmployeeBalancePage } from '@/pages/EmployeeBalance'
 import { DepartmentBalancesPage } from '@/pages/DepartmentBalances'
+import { PayoutPage } from '@/pages/Payout'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
 import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
@@ -105,6 +106,14 @@ export const router = createBrowserRouter([
                 // документа начисления.
                 path: 'balance/employee/:id',
                 element: <EmployeeBalancePage />,
+            },
+            {
+                // Фаза 14 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual,
+                // PRD 3) — «Выплата зарплаты»: таблица сотрудников периода направления,
+                // выплата одному/выбранным. `direction`/`period` — query-параметры, тот же
+                // приём, что 'salary-accruals' (эндпоинты выплаты per-direction).
+                path: 'payout',
+                element: <PayoutPage />,
             },
             {
                 path: 'salaries/rules',

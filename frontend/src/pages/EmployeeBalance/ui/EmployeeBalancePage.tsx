@@ -1,4 +1,5 @@
 import { DeleteTransactionDialog, NewTransactionDrawer } from '@/features/EmployeeBalance'
+import { DeletePayoutDialog, PayoutDrawer } from '@/features/Payout'
 
 import { useEmployeeBalancePage } from '../model/useEmployeeBalancePage.ts'
 import { BalanceFilters } from './BalanceFilters.tsx'
@@ -46,6 +47,16 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
         deleteTarget,
         requestDelete,
         closeDeleteDialog,
+        deletePayoutTarget,
+        requestDeletePayout,
+        closeDeletePayoutDialog,
+        isPayoutOpen,
+        payoutDirection,
+        setPayoutDirection,
+        openPayout,
+        closePayout,
+        payoutCashLabel,
+        payoutTransactions,
         isInitialLoad,
         isRefreshing,
         dataVersion,
@@ -66,6 +77,7 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
                         balance={balance}
                         onAddIncome={openIncomeDrawer}
                         onAddOutcome={openOutcomeDrawer}
+                        onPay={openPayout}
                         readOnly={readOnly}
                     />
 
@@ -83,6 +95,7 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
                         selectionTotal={selectionTotal}
                         readOnly={readOnly}
                         onDeleteTransaction={requestDelete}
+                        onDeletePayout={requestDeletePayout}
                     />
 
                     <NewTransactionDrawer
@@ -96,6 +109,23 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
                     />
 
                     <DeleteTransactionDialog transaction={deleteTarget} onOpenChange={closeDeleteDialog} />
+
+                    <DeletePayoutDialog transaction={deletePayoutTarget} onOpenChange={closeDeletePayoutDialog} />
+
+                    <PayoutDrawer
+                        open={isPayoutOpen}
+                        onOpenChange={(open) => {
+                            if (!open) closePayout()
+                        }}
+                        direction={payoutDirection}
+                        onDirectionChange={setPayoutDirection}
+                        employeeId={employeeId}
+                        employeeName={employeeName}
+                        departmentName={departmentName}
+                        currentBalance={balance}
+                        cashLabel={payoutCashLabel}
+                        recentTransactions={payoutTransactions}
+                    />
                 </div>
             }
         />

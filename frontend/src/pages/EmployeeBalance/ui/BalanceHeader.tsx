@@ -1,4 +1,4 @@
-import { Minus, Plus } from 'lucide-react'
+import { Banknote, Minus, Plus } from 'lucide-react'
 
 import { employeeInitials } from '@/features/SalaryAccruals'
 import { formatCurrency } from '@/features/SalesPlan'
@@ -14,7 +14,10 @@ export type BalanceHeaderProps = {
     balance: number
     onAddIncome: () => void
     onAddOutcome: () => void
-    /** Личный кабинет сотрудника (будущий readOnly-маршрут) скрывает обе кнопки. */
+    /** Открывает `PayoutDrawer` (features/Payout, Фаза 14 docs/payroll-closing-and-accrual) —
+     * та же форма выплаты, что на странице «Выплата», доступна прямо со строки баланса. */
+    onPay: () => void
+    /** Личный кабинет сотрудника (будущий readOnly-маршрут) скрывает все три кнопки. */
     readOnly?: boolean
     className?: string
 }
@@ -33,6 +36,7 @@ export function BalanceHeader({
     balance,
     onAddIncome,
     onAddOutcome,
+    onPay,
     readOnly = false,
     className,
 }: BalanceHeaderProps) {
@@ -80,6 +84,10 @@ export function BalanceHeader({
                         <Button type="button" variant="secondary" onClick={onAddOutcome}>
                             <Minus />
                             Добавить расход
+                        </Button>
+                        <Button type="button" onClick={onPay}>
+                            <Banknote />
+                            Выплатить
                         </Button>
                     </div>
                 )}

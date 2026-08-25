@@ -15,7 +15,7 @@ export {
     useDeleteTransaction,
 } from './model/useEmployeeBalanceMutations.ts'
 export { INCOME_TRANSACTION_TYPES, OUTCOME_TRANSACTION_TYPES } from './model/manualTransactionTypes.ts'
-export { transactionTypeLabel, isDeletable } from './model/transactionLabels.ts'
+export { transactionTypeLabel, ERP_SYSTEM_LABEL, isDeletable, isPayoutTransaction } from './model/transactionLabels.ts'
 // UI (Фаза 10 docs/payroll-closing-and-accrual): drawer нового движения и confirm
 // удаления, собираемые pages/EmployeeBalance.
 export { NewTransactionDrawer, type NewTransactionKind } from './ui/NewTransactionDrawer.tsx'

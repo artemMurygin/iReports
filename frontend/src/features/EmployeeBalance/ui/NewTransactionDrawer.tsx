@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isAxiosError } from 'axios'
 import { format } from 'date-fns'
-import { Check, Loader2, TriangleAlert } from 'lucide-react'
+import { Check, Loader2, RotateCw, TriangleAlert } from 'lucide-react'
 import type { CreateBalanceTransactionRequest, ManualBalanceTransactionType, SalesDirection } from 'ireports-contracts'
 
 import { formatCurrency } from '@/shared/lib/format.ts'
@@ -45,6 +45,14 @@ const DIRECTION_LABEL: Record<SalesDirection, string> = {
     shop: 'Магазин',
 }
 const DIRECTION_OPTIONS: SalesDirection[] = ['service', 'shop']
+
+/** Подсказка типа документа по направлению и приходу/расходу (Фаза 15
+ * docs/payroll-closing-and-accrual, P3.3, дополнение P2.3) — показывается под переключателем
+ * «Провести в кассе ERP», когда он включён. */
+function erpDocumentHint(direction: SalesDirection, kind: NewTransactionKind): string {
+    if (direction === 'service') return 'Создаст движение по кассе RemOnline · «Основная»'
+    return kind === 'income' ? 'Создаст приходный ордер в МойСкладе' : 'Создаст расходный ордер в МойСкладе · статья «Зарплата»'
+}
 
 /** 400 с человекочитаемым `message` в теле (например, отсутствующий обязательный
  * комментарий для PENALTY/ADJUSTMENT, если клиентская валидация почему-то пропустила
@@ -176,8 +184,20 @@ export function NewTransactionDrawer({
                         Отмена
                     </Button>
                     <Button type="button" onClick={submit} disabled={isSaving}>
-                        {isSaving ? <Loader2 className="animate-spin" /> : <Check />}
-                        Создать
+                        {isSaving ? (
+                            <Loader2 className="animate-spin" />
+                        ) : serverError !== null ? (
+                            <RotateCw />
+                        ) : (
+                            <Check />
+                        )}
+                        {isSaving
+                            ? erpSyncRequired
+                                ? 'Создаём документ в ERP…'
+                                : 'Создаём…'
+                            : serverError !== null
+                              ? 'Повторить'
+                              : 'Создать'}
                     </Button>
                 </div>
             }
@@ -243,10 +263,15 @@ export function NewTransactionDrawer({
                     />
                 </Field>
 
-                <label className="flex items-center gap-2.5">
-                    <Checkbox checked={erpSyncRequired} onCheckedChange={setErpSyncRequired} aria-label="Провести в кассе ERP" />
-                    <span className="font-ui text-[13px] text-ink">Провести в кассе ERP</span>
-                </label>
+                <div className="flex flex-col gap-1.5">
+                    <label className="flex items-center gap-2.5">
+                        <Checkbox checked={erpSyncRequired} onCheckedChange={setErpSyncRequired} aria-label="Провести в кассе ERP" disabled={isSaving} />
+                        <span className="font-ui text-[13px] text-ink">Провести в кассе ERP</span>
+                    </label>
+                    {erpSyncRequired && (
+                        <p className="pl-[26px] font-ui text-xs text-ink-muted">{erpDocumentHint(direction, kind)}</p>
+                    )}
+                </div>
 
                 <div className="flex items-center justify-between gap-2 rounded-xl bg-canvas px-4 py-3">
                     <span className="font-ui text-xs text-ink-muted">Остаток после</span>

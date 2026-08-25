@@ -1,9 +1,9 @@
-import { ArrowDownRight, ArrowUpRight, FileText, Trash2 } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, ExternalLink, FileText, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import type { BalanceTransaction } from 'ireports-contracts'
 
-import { isDeletable, transactionTypeLabel } from '@/features/EmployeeBalance'
+import { ERP_SYSTEM_LABEL, isDeletable, isPayoutTransaction, transactionTypeLabel } from '@/features/EmployeeBalance'
 import { formatPeriodLabel, formatSignedCurrency } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
 import { Button } from '@/shared/ui-kit/atoms/Button'
@@ -11,7 +11,7 @@ import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 
 import { TransactionsCardList } from './TransactionsCardList.tsx'
 
-const COLUMNS = 'grid-cols-[96px_190px_130px_minmax(200px,1fr)_100px_150px_64px_160px]'
+const COLUMNS = 'grid-cols-[96px_190px_130px_minmax(200px,1fr)_100px_150px_120px_160px]'
 
 export type TransactionsLedgerProps = {
     transactions: BalanceTransaction[]
@@ -21,6 +21,10 @@ export type TransactionsLedgerProps = {
     /** Кнопка «Удалить» скрыта в личном кабинете (`readOnly`). */
     readOnly?: boolean
     onDeleteTransaction: (transaction: BalanceTransaction) => void
+    /** «Удалить» у выплаты (`type === 'PAYOUT'`) — свой путь, `DELETE .../payout/:id`
+     * (features/Payout, Фаза 15 docs/payroll-closing-and-accrual, P3.3), в отличие от
+     * `onDeleteTransaction` (обычные ручные движения). */
+    onDeletePayout: (transaction: BalanceTransaction) => void
     className?: string
 }
 
@@ -41,6 +45,7 @@ export function TransactionsLedger({
     selectionTotal,
     readOnly = false,
     onDeleteTransaction,
+    onDeletePayout,
     className,
 }: TransactionsLedgerProps) {
     const footer = (
@@ -61,6 +66,7 @@ export function TransactionsLedger({
                 employeeNameById={employeeNameById}
                 readOnly={readOnly}
                 onDeleteTransaction={onDeleteTransaction}
+                onDeletePayout={onDeletePayout}
                 className="md:hidden"
             />
 
@@ -88,6 +94,7 @@ export function TransactionsLedger({
                             const isIncome = transaction.amount >= 0
                             const author = employeeNameById[transaction.createdBy] ?? `ID ${transaction.createdBy}`
                             const canDelete = !readOnly && isDeletable(transaction)
+                            const canDeletePayout = !readOnly && isPayoutTransaction(transaction)
 
                             return (
                                 <div
@@ -126,7 +133,19 @@ export function TransactionsLedger({
                                         {transaction.period !== null ? formatPeriodLabel(transaction.period) : '—'}
                                     </span>
                                     <span className="truncate font-ui text-[13px] text-ink-muted">{author}</span>
-                                    <span className="font-ui text-[13px] text-ink-faint">—</span>
+                                    <span className="font-ui text-[13px]">
+                                        {transaction.erp !== null ? (
+                                            <span
+                                                className="inline-flex items-center gap-1 text-info-ink"
+                                                title={`Открыть в ${ERP_SYSTEM_LABEL[transaction.erp.system]}`}
+                                            >
+                                                <ExternalLink className="size-3.5 shrink-0" />
+                                                <span className="truncate">{transaction.erp.externalId}</span>
+                                            </span>
+                                        ) : (
+                                            <span className="text-ink-faint">—</span>
+                                        )}
+                                    </span>
                                     <span className="flex items-center justify-end gap-1.5">
                                         {transaction.accrualId !== null && (
                                             <Button type="button" variant="secondary" size="sm" asChild>
@@ -142,6 +161,16 @@ export function TransactionsLedger({
                                                 variant="danger"
                                                 aria-label="Удалить движение"
                                                 onClick={() => onDeleteTransaction(transaction)}
+                                            >
+                                                <Trash2 />
+                                            </IconButton>
+                                        )}
+                                        {canDeletePayout && (
+                                            <IconButton
+                                                type="button"
+                                                variant="danger"
+                                                aria-label="Удалить выплату"
+                                                onClick={() => onDeletePayout(transaction)}
                                             >
                                                 <Trash2 />
                                             </IconButton>

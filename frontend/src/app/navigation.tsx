@@ -3,6 +3,7 @@ import {
     CalendarCheck,
     CalendarClock,
     ChartNoAxesColumn,
+    CreditCard,
     FileText,
     HandCoins,
     LayoutDashboard,
@@ -93,6 +94,10 @@ export const SECTIONS: NavSection[] = [
             // (`pages/DepartmentBalances`), точка входа к балансу конкретного сотрудника
             // (`pages/EmployeeBalance`, `/balance/employee/:id`, ссылками из этой таблицы).
             { label: 'Балансы', to: '/balance/department', icon: <HandCoins /> },
+            // Фаза 14 плана "Закрытие месяца и начисления" (PRD 3, docs/payroll-closing-and-accrual)
+            // — «Выплата зарплаты» (`pages/Payout`, `/payout`): таблица сотрудников периода
+            // направления, выплата одному/выбранным.
+            { label: 'Выплата', to: '/payout', icon: <CreditCard /> },
             { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
             { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
         ],
