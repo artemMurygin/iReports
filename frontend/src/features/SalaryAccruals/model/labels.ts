@@ -33,6 +33,7 @@ export const ROLE_LABEL: Record<TargetRole, string> = {
     ONLINE_PURCHASER: 'Онлайн-закупщик',
     OFFLINE_PURCHASER: 'Офлайн-закупщик',
     OFFICE: 'Офис',
+    SOLO_MANAGER: 'Соло-менеджер',
 }
 
 /** База начисления процентных правил (`salaryBasis`, contracts/commands/salary-rule.ts) —

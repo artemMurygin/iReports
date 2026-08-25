@@ -13,16 +13,17 @@ import {
 describe('roleCellLabel', () => {
     it('shows the role glyph for a working day with a legend role', () => {
         expect(roleCellLabel({ status: 'WORKING', role: 'ENGINEER' })).toBe('И')
-        expect(roleCellLabel({ status: 'WORKING', role: 'ONLINE_MANAGER' })).toBe('ОН')
-        expect(roleCellLabel({ status: 'WORKING', role: 'OFFLINE_MANAGER' })).toBe('ОФ')
-        expect(roleCellLabel({ status: 'WORKING', role: 'OFFICE' })).toBe('ОС')
+        expect(roleCellLabel({ status: 'WORKING', role: 'ONLINE_MANAGER' })).toBe('Онл')
+        expect(roleCellLabel({ status: 'WORKING', role: 'OFFLINE_MANAGER' })).toBe('Офл')
+        expect(roleCellLabel({ status: 'WORKING', role: 'OFFICE' })).toBe('ОФ')
+        expect(roleCellLabel({ status: 'WORKING', role: 'SOLO_MANAGER' })).toBe('СМ')
     })
 
     it('shows a dash for a working day without a role yet', () => {
         expect(roleCellLabel({ status: 'WORKING', role: null })).toBe('—')
     })
 
-    it('shows a dash for a working day with a role outside the four the tab covers', () => {
+    it('shows a dash for a working day with a role outside the ones the tab covers', () => {
         expect(roleCellLabel({ status: 'WORKING', role: 'ORDER_MANAGER' })).toBe('—')
     })
 
@@ -36,7 +37,7 @@ describe('roleCellLabel', () => {
 })
 
 describe('roleCellStyle', () => {
-    it('gives each of the four legend roles a distinct color', () => {
+    it('gives each legend role a distinct color', () => {
         const styles = ROLE_LEGEND_ORDER.map(
             (role) => roleCellStyle({ status: 'WORKING', role }).textClassName,
         )
@@ -65,7 +66,7 @@ describe('resolveRoleCellStyle', () => {
 })
 
 describe('ROLE_STYLE.selectedBorderClassName', () => {
-    it('gives each of the four legend roles a distinct selected-pill border, like STATUS_STYLE', () => {
+    it('gives each legend role a distinct selected-pill border, like STATUS_STYLE', () => {
         const borders = ROLE_LEGEND_ORDER.map((role) => ROLE_STYLE[role].selectedBorderClassName)
         expect(new Set(borders).size).toBe(ROLE_LEGEND_ORDER.length)
     })

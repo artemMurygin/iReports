@@ -18,6 +18,7 @@ export const ROLE_LABELS: Record<TargetRole, string> = {
     ONLINE_PURCHASER: 'Онлайн-закупщик',
     OFFLINE_PURCHASER: 'Офлайн-закупщик',
     OFFICE: 'Офис',
+    SOLO_MANAGER: 'Соло-менеджер',
 }
 
 /** `role` — строго `TargetRole` по контракту, поэтому не нуждается в fallback-ветке (в отличие от
