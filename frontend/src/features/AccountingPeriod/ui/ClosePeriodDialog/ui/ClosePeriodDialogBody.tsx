@@ -1,7 +1,7 @@
 import { CircleCheck, RefreshCw, TriangleAlert, WifiOff } from 'lucide-react'
 import type { ClosePeriodPreviewResponse, SalesDirection } from 'ireports-contracts'
 
-import { formatCurrency, formatPeriodLabel, formatPeriodMonthGenitive } from '@/shared/lib/format.ts'
+import { formatCurrency, formatPeriodLabel } from '@/shared/lib/format.ts'
 import { Button } from '@/shared/ui-kit/atoms/Button'
 
 import { DIRECTION_ERP_FROM } from '../../../model/labels.ts'
@@ -91,7 +91,7 @@ function ClosePeriodDialogBody({
                     tone="ok"
                     icon={<CircleCheck />}
                     title="Проверки пройдены — месяц можно закрывать"
-                    description={`Будет создано ${preview.employeesCount} документов начисления на ${formatCurrency(preview.totalAmount)}. Часы ${formatPeriodMonthGenitive(period)} станут доступны только для чтения.`}
+                    description={`Будет создано ${preview.employeesCount} документов начисления на ${formatCurrency(preview.totalAmount)}. График работы за период будет нельзя редактировать.`}
                 />
             )}
 

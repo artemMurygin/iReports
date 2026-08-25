@@ -2,11 +2,14 @@ import { PageHeader } from '@/shared/ui-kit/organisms/PageHeader'
 
 import { useSalaryReportPage } from '../model/useSalaryReportPage.ts'
 
+import { DepartmentReportHeaderActions } from './DepartmentReportHeaderActions.tsx'
+import { EmployeeReportHeaderActions } from './EmployeeReportHeaderActions.tsx'
 import { Layout } from './Layout.tsx'
 import { SalaryReportBodyV2 } from './SalaryReportBodyV2.tsx'
 import { SalaryReportFiltersV2 } from './SalaryReportFiltersV2.tsx'
+import { SalaryReportHeading } from './SalaryReportHeading.tsx'
 
-const BREADCRUMBS = [{ label: 'Зарплата' }, { label: 'Отчёт по зарплате' }]
+const NO_BREADCRUMBS: never[] = []
 
 /**
  * `/salaries` — отчёт по зарплате сотрудника/отдела (Pencil: `design/sallary-first-iteration.pen`,
@@ -22,19 +25,16 @@ const BREADCRUMBS = [{ label: 'Зарплата' }, { label: 'Отчёт по з
 export function SalaryReportV2Page() {
     const {
         scope,
-        setScope,
         period,
         setPeriod,
-        employeeId,
-        setEmployeeId,
         isEmployeeSelected,
         departmentId,
         setDepartmentId,
         isDepartmentSelected,
         direction,
         setDirection,
-        employees,
-        isEmployeesLoading,
+        employeeSearch,
+        setEmployeeSearch,
         departments,
         isDepartmentsLoading,
         isInitialLoad,
@@ -43,35 +43,50 @@ export function SalaryReportV2Page() {
         dataVersion,
         employeeReport,
         departmentReport,
+        directionBreakdown,
         toggleRule,
-        toggleEmployee,
         isRuleExpanded,
-        isEmployeeExpanded,
+        toggleDirection,
+        isDirectionExpanded,
+        employeeName,
+        employeeDepartmentName,
+        isEmployeeIdentityLoading,
     } = useSalaryReportPage()
 
     const departmentName = departments.find((department) => department.id === departmentId)?.name ?? null
 
+    const actions = (
+        <>
+            <EmployeeReportHeaderActions scope={scope} period={period} onPeriodChange={setPeriod} />
+            <DepartmentReportHeaderActions scope={scope} report={departmentReport} />
+        </>
+    )
+
     const header = (
         <>
             <PageHeader
-                breadcrumbs={BREADCRUMBS}
-                title="Отчёт по зарплате"
-                subtitle="Начисления сотрудника или отдела по зарплатным правилам за период"
+                breadcrumbs={NO_BREADCRUMBS}
+                title={
+                    <SalaryReportHeading
+                        scope={scope}
+                        employeeName={employeeName}
+                        employeeDepartmentName={employeeDepartmentName}
+                        isEmployeeIdentityLoading={isEmployeeIdentityLoading}
+                    />
+                }
+                actions={actions}
             />
 
             <SalaryReportFiltersV2
                 scope={scope}
-                onScopeChange={setScope}
-                employees={employees}
-                isEmployeesLoading={isEmployeesLoading}
-                employeeId={employeeId}
-                onEmployeeIdChange={setEmployeeId}
                 departments={departments}
                 isDepartmentsLoading={isDepartmentsLoading}
                 departmentId={departmentId}
                 onDepartmentIdChange={setDepartmentId}
                 direction={direction}
                 onDirectionChange={setDirection}
+                employeeSearch={employeeSearch}
+                onEmployeeSearchChange={setEmployeeSearch}
                 period={period}
                 onPeriodChange={setPeriod}
             />
@@ -85,11 +100,13 @@ export function SalaryReportV2Page() {
             isEmployeeSelected={isEmployeeSelected}
             isRuleExpanded={isRuleExpanded}
             onToggleRule={toggleRule}
+            isDirectionExpanded={isDirectionExpanded}
+            onToggleDirection={toggleDirection}
             departmentReport={departmentReport}
             isDepartmentSelected={isDepartmentSelected}
             departmentName={departmentName}
-            isEmployeeExpanded={isEmployeeExpanded}
-            onToggleEmployee={toggleEmployee}
+            directionBreakdown={directionBreakdown}
+            employeeSearch={employeeSearch}
             isLoading={isInitialLoad}
             errorMessage={errorMessage}
         />

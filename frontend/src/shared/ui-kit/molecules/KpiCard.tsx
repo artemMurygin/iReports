@@ -25,12 +25,9 @@ import { cn } from '@/shared/lib/tw'
  * ~172px card width, real (non-mock) currency values reliably overflowed the 24px value at
  * 18px padding and got ellipsis-truncated — sizing down under `md:` (rather than introducing a
  * second component) fixes that and matches the design's own smaller mobile value size.
- */
-/**
- * `danger` — добавлен диалогом закрытия месяца (Фаза 4 docs/payroll-closing-and-accrual,
- * узлы `KPPJ5`/`hhWeF`): карточка «Неутверждённых строк плана» с красной подписью
- * «закрытие заблокировано» и розоватой рамкой. Симметричен `positive`
- * (цветная рамка + цветная note), только на danger-токенах.
+ *
+ * `danger` (used by `PayoutKpiRow`'s «С отрицательным остатком» card) mirrors `positive` —
+ * a colored border plus a colored note — on the danger tokens instead.
  */
 export type KpiCardTone = 'default' | 'positive' | 'warning' | 'danger'
 
@@ -49,7 +46,7 @@ const TONE_NOTE: Record<KpiCardTone, string> = {
 }
 
 export type KpiCardProps = {
-    label: string
+    label: React.ReactNode
     value: string
     note: string
     icon: React.ReactNode

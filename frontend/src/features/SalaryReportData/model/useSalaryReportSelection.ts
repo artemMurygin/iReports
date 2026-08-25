@@ -32,10 +32,20 @@ function getCurrentPeriod(): string {
  * собирать несколько фич вместе), просто разворачивая результат этого хука в свой плоский объект
  * состояния и добавляя `employees`/`departments`.
  *
- * Разворачивание строк (правило в отчёте сотрудника/отдела, сотрудник в отчёте отдела) — общий
- * локальный `Set`-стейт здесь, а не в каждом презентационном компоненте по отдельности: строка
- * идентифицируется собственным `ruleId`/`employeeId`, и оба режима используют одну и ту же пару
- * хелперов toggle/isExpanded независимо от текущего `scope`.
+ * Разворачивание строк правил (в отчёте сотрудника и в отчёте отдела) — общий локальный `Set`-стейт
+ * здесь, а не в каждом презентационном компоненте по отдельности: строка идентифицируется собственным
+ * `ruleId`, и оба режима используют одну и ту же пару хелперов toggle/isExpanded независимо от
+ * текущего `scope`. Строка сотрудника в отчёте отдела (`DepartmentEmployeeGroupV2`) сама по себе НЕ
+ * разворачивается — это ссылка на отдельный отчёт сотрудника, а не toggle (см. `SozIO`-редизайн,
+ * `docs/salary-department-first-navigation`), поэтому отдельного `Set`-стейта для неё здесь нет.
+ *
+ * Блоки направлений в карточке-гроссбухе отчёта сотрудника (`LedgerDirectionBlock`) сворачиваются
+ * той же общей схемой, но с ИНВЕРТИРОВАННОЙ семантикой `Set`'а — `collapsedDirectionKeys` хранит
+ * СВЁРНУТЫЕ направления, а не развёрнутые (в отличие от `expandedRuleKeys` выше). По умолчанию
+ * (до первого клика пользователя) "Сервис" свёрнут, а "Магазин" развёрнут — поэтому начальное
+ * значение `Set` не пустое, а сразу содержит `'service'` (не общий для обоих направлений дефолт,
+ * как было бы с пустым `Set`). Ключ — сам `SalaryDirection` ('service' | 'shop'), без комбинирования
+ * с id: направлений всего два, и оба всегда разные в пределах одного отчёта сотрудника.
  *
  * `options.initialScope`/`options.initialEmployeeId` — опциональные начальные значения (по
  * умолчанию `'employee'`/`null`). `pages/SalaryReportV2/model/useSalaryReportPage.ts` передаёт их
@@ -53,7 +63,9 @@ export function useSalaryReportSelection(options?: {
     const [departmentId, setDepartmentId] = useState<number | null>(null)
     const [direction, setDirection] = useState<SalaryDirection>('service')
     const [expandedRuleKeys, setExpandedRuleKeys] = useState<Set<string>>(new Set())
-    const [expandedEmployeeIds, setExpandedEmployeeIds] = useState<Set<number>>(new Set())
+    const [collapsedDirectionKeys, setCollapsedDirectionKeys] = useState<Set<SalaryDirection>>(
+        () => new Set(['service']),
+    )
 
     const employeeReportState = useEmployeeSalaryReport(scope === 'employee' ? employeeId : null, period)
     const departmentReportState = useDepartmentSalaryReport(
@@ -71,21 +83,21 @@ export function useSalaryReportSelection(options?: {
         })
     }
 
-    function toggleEmployee(id: number) {
-        setExpandedEmployeeIds((prev) => {
-            const next = new Set(prev)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-        })
-    }
-
     function isRuleExpanded(key: string) {
         return expandedRuleKeys.has(key)
     }
 
-    function isEmployeeExpanded(id: number) {
-        return expandedEmployeeIds.has(id)
+    function toggleDirection(direction: SalaryDirection) {
+        setCollapsedDirectionKeys((prev) => {
+            const next = new Set(prev)
+            if (next.has(direction)) next.delete(direction)
+            else next.add(direction)
+            return next
+        })
+    }
+
+    function isDirectionExpanded(direction: SalaryDirection) {
+        return !collapsedDirectionKeys.has(direction)
     }
 
     const activeReportState = scope === 'employee' ? employeeReportState : departmentReportState
@@ -113,9 +125,9 @@ export function useSalaryReportSelection(options?: {
         departmentReport: departmentReportState.report,
 
         toggleRule,
-        toggleEmployee,
         isRuleExpanded,
-        isEmployeeExpanded,
+        toggleDirection,
+        isDirectionExpanded,
     }
 }
 

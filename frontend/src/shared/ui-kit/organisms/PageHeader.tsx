@@ -30,7 +30,11 @@ export type PageHeaderBreadcrumb = {
 
 export type PageHeaderProps = {
     breadcrumbs: PageHeaderBreadcrumb[]
-    title: string
+    /** Обычно строка, но принимает любой `ReactNode` — например, чтобы заменить заголовок на
+     * составной блок (аватар + имя + мета), как в `pages/SalaryReportV2/ui/SalaryReportHeading.tsx`
+     * для отчёта конкретного сотрудника (тот же слот, что и обычный текстовый `<h1>`, просто с
+     * более сложным содержимым). */
+    title: ReactNode
     subtitle?: string
     /** Secondary + primary action buttons, rendered as-is (0-2 typical, per the mockup's `RL69s`
      * "Actions" frame). Omit for no action row. */

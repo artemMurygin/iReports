@@ -50,6 +50,8 @@ export function EmployeeReportBodyV2({
     isEmployeeSelected,
     isRuleExpanded,
     onToggleRule,
+    isDirectionExpanded,
+    onToggleDirection,
     className,
 }: EmployeeReportBodyV2Props) {
     if (!isEmployeeSelected) {
@@ -81,7 +83,14 @@ export function EmployeeReportBodyV2({
             data-slot="employee-report-body-v2"
             className={cn('grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_404px]', className)}
         >
-            <LedgerCard report={report} isRuleExpanded={isRuleExpanded} onToggleRule={onToggleRule} className="min-w-0" />
+            <LedgerCard
+                report={report}
+                isRuleExpanded={isRuleExpanded}
+                onToggleRule={onToggleRule}
+                isDirectionExpanded={isDirectionExpanded}
+                onToggleDirection={onToggleDirection}
+                className="min-w-0"
+            />
 
             {plansToShow.length > 0 && (
                 <div className="flex min-w-0 flex-col gap-4">

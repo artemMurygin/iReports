@@ -1,4 +1,4 @@
-import type { EmployeeReportVM } from '@/features/SalaryReportData'
+import type { EmployeeReportVM, SalaryDirection } from '@/features/SalaryReportData'
 
 /**
  * Контракт пропсов тела отчёта сотрудника нового дизайна (Pencil:
@@ -88,5 +88,10 @@ export type EmployeeReportBodyV2Props = {
      * (`useSalaryReportSelection`), этот компонент только читает/переключает его. */
     isRuleExpanded: (key: string) => boolean
     onToggleRule: (key: string) => void
+    /** Развёрнут ли блок направления (`fNwhK`/`TMa9C`) — по умолчанию оба блока развёрнуты
+     * (`Set`-стейт в `useSalaryReportSelection` хранит СВЁРНУТЫЕ направления, см. её комментарий),
+     * сворачивание доступно по клику на заголовок блока (`LedgerDirectionBlock`). */
+    isDirectionExpanded: (direction: SalaryDirection) => boolean
+    onToggleDirection: (direction: SalaryDirection) => void
     className?: string
 }

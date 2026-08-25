@@ -20,6 +20,15 @@ type MergedEmployee = {
     rules: SalaryReportRuleWithDirection[]
 }
 
+/** Суммы по каждому направлению ДО их слияния в общий `report.total` — нужны только герой-карточке
+ * (Pencil-диф "Split Bar + Legend", `eMEyq/I3gfR1`+`eMEyq/nC8in`), чтобы нарисовать разбивку
+ * Сервис/Магазин под общей суммой. Считается тем же кодом, что уже сводит `report.total` ниже —
+ * просто сохраняется до слияния, а не только используется и выбрасывается. */
+export type DepartmentDirectionBreakdown = {
+    service: { fact: number; prognose: number | null }
+    shop: { fact: number; prognose: number | null }
+}
+
 /**
  * Отчёт отдела по обоим направлениям сразу (вкладка «Все»). Бэкенд отдаёт отчёт отдела строго
  * однонаправленным — кросс-доменное сведение с `shop` в нём было и сознательно удалено (см.
@@ -119,7 +128,18 @@ export function useDepartmentSalaryReportAll(
         }
     }, [directionFilter, isInitialLoad, serviceState.report, shopState.report, departmentId, period])
 
-    return { report, isInitialLoad, isRefreshing, errorMessage, dataVersion }
+    // Показывать имеет смысл только на вкладке «Все» (см. `DepartmentDirectionBreakdown`'s
+    // комментарий) — при одиночном направлении разбивка по определению состоит из одного слагаемого
+    // и нечего сравнивать, а во время первичной загрузки суммы обоих направлений ещё не готовы.
+    const directionBreakdown = useMemo<DepartmentDirectionBreakdown | null>(() => {
+        if (directionFilter !== 'all' || isInitialLoad) return null
+        return {
+            service: serviceState.report?.total ?? { fact: 0, prognose: 0 },
+            shop: shopState.report?.total ?? { fact: 0, prognose: 0 },
+        }
+    }, [directionFilter, isInitialLoad, serviceState.report, shopState.report])
+
+    return { report, isInitialLoad, isRefreshing, errorMessage, dataVersion, directionBreakdown }
 }
 
 export type UseDepartmentSalaryReportAllResult = ReturnType<typeof useDepartmentSalaryReportAll>

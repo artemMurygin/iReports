@@ -31,6 +31,10 @@ function progressToneClassName(percent: number) {
 
 export type PlanCardProps = {
     categoryName: string
+    /** Pre-formatted "типы заказов" list, e.g. "Ремонт, Диагностика" — omitted (or empty) when
+     * the plan has no restriction (`orderTypeIds: []`, "все типы"), consistent with the desktop
+     * table not showing a badge for that default either (see `SalesPlanTable`). */
+    orderTypesLabel?: string
     status: SalesPlanStatus
     /** Pre-formatted "План, ₽" value, e.g. "1 450 000" (no currency suffix — the column label already carries "₽"). */
     planLabel: string
@@ -50,6 +54,7 @@ export type PlanCardProps = {
 
 function PlanCard({
     categoryName,
+    orderTypesLabel,
     status,
     planLabel,
     factLabel,
@@ -72,7 +77,12 @@ function PlanCard({
                 {onSelectedChange && (
                     <Checkbox checked={selected} onCheckedChange={onSelectedChange} aria-label={`Выбрать категорию ${categoryName}`} />
                 )}
-                <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">{categoryName}</span>
+                <div className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-ink">{categoryName}</span>
+                    {orderTypesLabel && (
+                        <span className="block truncate text-[11px] text-ink-muted">Типы заказов: {orderTypesLabel}</span>
+                    )}
+                </div>
                 <CellStatus status={status} />
             </div>
 

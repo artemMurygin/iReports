@@ -1,4 +1,6 @@
-import type { DepartmentReportVM, EmployeeReportVM, SalaryReportScope } from '@/features/SalaryReportData'
+import type { DepartmentReportVM, EmployeeReportVM, SalaryDirection, SalaryReportScope } from '@/features/SalaryReportData'
+
+import type { DepartmentDirectionBreakdown } from '../model/useDepartmentSalaryReportAll.ts'
 
 import { DepartmentReportBodyV2 } from './DepartmentReportBodyV2.tsx'
 import { EmployeeReportBodyV2 } from './EmployeeReportBodyV2.tsx'
@@ -10,12 +12,14 @@ export type SalaryReportBodyV2Props = {
     isEmployeeSelected: boolean
     isRuleExpanded: (key: string) => boolean
     onToggleRule: (key: string) => void
+    isDirectionExpanded: (direction: SalaryDirection) => boolean
+    onToggleDirection: (direction: SalaryDirection) => void
 
     departmentReport: DepartmentReportVM | null
     isDepartmentSelected: boolean
     departmentName: string | null
-    isEmployeeExpanded: (employeeId: number) => boolean
-    onToggleEmployee: (employeeId: number) => void
+    directionBreakdown: DepartmentDirectionBreakdown | null
+    employeeSearch: string
 
     isLoading: boolean
     errorMessage: string | null
@@ -34,11 +38,13 @@ export function SalaryReportBodyV2({
     isEmployeeSelected,
     isRuleExpanded,
     onToggleRule,
+    isDirectionExpanded,
+    onToggleDirection,
     departmentReport,
     isDepartmentSelected,
     departmentName,
-    isEmployeeExpanded,
-    onToggleEmployee,
+    directionBreakdown,
+    employeeSearch,
     isLoading,
     errorMessage,
 }: SalaryReportBodyV2Props) {
@@ -51,6 +57,8 @@ export function SalaryReportBodyV2({
                 isEmployeeSelected={isEmployeeSelected}
                 isRuleExpanded={isRuleExpanded}
                 onToggleRule={onToggleRule}
+                isDirectionExpanded={isDirectionExpanded}
+                onToggleDirection={onToggleDirection}
             />
         )
     }
@@ -62,8 +70,8 @@ export function SalaryReportBodyV2({
             errorMessage={errorMessage}
             isDepartmentSelected={isDepartmentSelected}
             departmentName={departmentName}
-            isEmployeeExpanded={isEmployeeExpanded}
-            onToggleEmployee={onToggleEmployee}
+            directionBreakdown={directionBreakdown}
+            employeeSearch={employeeSearch}
         />
     )
 }

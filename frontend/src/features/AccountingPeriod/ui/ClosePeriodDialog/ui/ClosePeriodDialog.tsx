@@ -72,7 +72,7 @@ function ClosePeriodDialog({
             open={open}
             onOpenChange={handleOpenChange}
             title={`Закрыть ${formatPeriodLabel(period)} · ${DIRECTION_LABEL[direction]}`}
-            subtitle={`Данные будут дотянуты ${DIRECTION_ERP_FROM[direction]}, затем зафиксирован снапшот и созданы документы начисления`}
+            subtitle={`Финально выгружаем данные ${DIRECTION_ERP_FROM[direction]}, затем сохраняем отчеты по зарплате, они больше не будут пересчитываться`}
             className="md:max-w-[720px] max-md:top-auto max-md:bottom-0 max-md:left-0 max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0"
             footer={
                 <ClosePeriodDialogFooter

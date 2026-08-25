@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/tw'
 
-import type { EmployeeReportVM } from '@/features/SalaryReportData'
+import type { EmployeeReportVM, SalaryDirection } from '@/features/SalaryReportData'
 
 import { LedgerDirectionBlock } from './LedgerDirectionBlock.tsx'
 import { LedgerHero } from './LedgerHero.tsx'
@@ -9,6 +9,8 @@ export type LedgerCardProps = {
     report: EmployeeReportVM
     isRuleExpanded: (key: string) => boolean
     onToggleRule: (key: string) => void
+    isDirectionExpanded: (direction: SalaryDirection) => boolean
+    onToggleDirection: (direction: SalaryDirection) => void
     className?: string
 }
 
@@ -18,7 +20,14 @@ export type LedgerCardProps = {
  * карточка с общей суммой (`LedgerHero`) наверху и направлениями (`LedgerDirectionBlock`) блоками
  * ниже внутри неё же, разделёнными хairline-границей — без отдельных вкладок в шапке страницы.
  */
-export function LedgerCard({ report, isRuleExpanded, onToggleRule, className }: LedgerCardProps) {
+export function LedgerCard({
+    report,
+    isRuleExpanded,
+    onToggleRule,
+    isDirectionExpanded,
+    onToggleDirection,
+    className,
+}: LedgerCardProps) {
     return (
         <div
             data-slot="ledger-card"
@@ -35,6 +44,8 @@ export function LedgerCard({ report, isRuleExpanded, onToggleRule, className }: 
                     report={directionReport}
                     isRuleExpanded={isRuleExpanded}
                     onToggleRule={onToggleRule}
+                    isExpanded={isDirectionExpanded(directionReport.direction)}
+                    onToggle={() => onToggleDirection(directionReport.direction)}
                     className="border-t border-hairline"
                 />
             ))}

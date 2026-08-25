@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { useDepartments, useEmployees } from '@/features/TargetDirectory'
 import { useSalaryReportSelection } from '@/features/SalaryReportData'
-import type { SalaryReportScope } from '@/features/SalaryReportData'
 
 import { useDepartmentSalaryReportAll, type DepartmentDirectionFilter } from './useDepartmentSalaryReportAll.ts'
 
@@ -17,18 +16,18 @@ export type { DepartmentDirectionFilter } from './useDepartmentSalaryReportAll.t
  * особенностями (см. `AskUserQuestion`-решения задачи "вкладка Все в отчёте отдела" + "отчёт
  * сотрудника — свой URL"):
  *
- * 1) **Отчёт сотрудника — свой URL.** Роут `/salaries/employee/:employeeId` (`app/router.tsx`)
- *    ведёт на этот же компонент; `employeeId` из `useParams()` задаёт начальный `scope`/`employeeId`
- *    `useSalaryReportSelection` при первом монтировании (прямой заход по ссылке/обновление
- *    страницы). Переход из карточки отдела кнопкой «Открыть отчёт» (`DepartmentEmployeeGroupV2`,
- *    `<Link to="/salaries/employee/:id">`) монтирования НЕ вызывает — обе записи роута рендерят
- *    один и тот же элемент `<SalaryReportV2Page />` на одной глубине дерева, React Router переиспользует
- *    уже смонтированный компонент, поэтому начальный `useState` в этот момент не срабатывает повторно.
- *    Это закрывает отдельный `useEffect` ниже: он реагирует на смену `employeeId` в URL и досинхронизирует
- *    `scope`/`employeeId` явно. Обратная синхронизация — обёрнутые `setScope`/`setEmployeeId` держат
- *    адресную строку в синхроне с выбором (переключение на "Отдел" -> `/salaries`, выбор сотрудника
- *    в режиме "Сотрудник" -> `/salaries/employee/:id`) — так что ссылку на конкретного сотрудника
- *    всегда можно скопировать/обновить страницу и получить тот же отчёт.
+ * 1) **Отчёт сотрудника — свой URL.** Режим отчёта не переключается вручную (см.
+ *    `SalaryReportFiltersV2`) — он полностью определяется маршрутом: `/salaries` -> "Отдел",
+ *    `/salaries/employee/:employeeId` -> "Сотрудник". Роут `/salaries/employee/:employeeId`
+ *    (`app/router.tsx`) ведёт на этот же компонент; `employeeId` из `useParams()` задаёт начальный
+ *    `scope`/`employeeId` `useSalaryReportSelection` при первом монтировании (прямой заход по
+ *    ссылке/обновление страницы, а также переход по `<Link to="/salaries/employee/:id">` из
+ *    `DepartmentEmployeeGroupV2`). Переход из карточки отдела монтирования НЕ вызывает — обе записи
+ *    роута рендерят один и тот же элемент `<SalaryReportV2Page />` на одной глубине дерева, React
+ *    Router переиспользует уже смонтированный компонент, поэтому начальный `useState` в этот момент
+ *    не срабатывает повторно. Это закрывает отдельный `useEffect` ниже: он реагирует на смену
+ *    `employeeId` в URL и досинхронизирует `scope`/`employeeId` явно — так что ссылку на конкретного
+ *    сотрудника всегда можно скопировать/обновить страницу и получить тот же отчёт.
  *    Дефолт при заходе без `employeeId` в пути — режим "Отдел" (не "Сотрудник", дефолт
  *    `useSalaryReportSelection` без опций): по задаче "по умолчанию отображается зарплата отдела".
  *
@@ -47,7 +46,6 @@ export type { DepartmentDirectionFilter } from './useDepartmentSalaryReportAll.t
  */
 export function useSalaryReportPage() {
     const { employeeId: employeeIdParam } = useParams()
-    const navigate = useNavigate()
     const routeEmployeeId = employeeIdParam != null ? Number(employeeIdParam) : null
 
     const selection = useSalaryReportSelection({
@@ -55,15 +53,19 @@ export function useSalaryReportPage() {
         initialEmployeeId: routeEmployeeId,
     })
 
-    // Досинхронизация при переходе БЕЗ перемонтирования (см. комментарий выше) — срабатывает
-    // только когда в пути реально есть `employeeId` (переход из отдела/по ссылке); переключение
-    // scope обратно на "Отдел" уже обрабатывает обёрнутый `setScope` ниже, сюда возвращаться не
-    // нужно.
+    // Досинхронизация при переходе БЕЗ перемонтирования (см. комментарий выше) — в обе стороны:
+    // появление `employeeId` в пути переключает на "Сотрудник" (переход из отдела/по ссылке), а его
+    // исчезновение (например, «Назад к отделу» -> `/salaries`) обязано вернуть обратно на "Отдел" —
+    // без этой ветки `scope` оставался бы `'employee'`, и страница продолжала бы показывать отчёт
+    // сотрудника при уже сменившемся на `/salaries` URL.
     useEffect(() => {
-        if (routeEmployeeId == null) return
-        if (selection.scope !== 'employee' || selection.employeeId !== routeEmployeeId) {
-            selection.setScope('employee')
-            selection.setEmployeeId(routeEmployeeId)
+        if (routeEmployeeId != null) {
+            if (selection.scope !== 'employee' || selection.employeeId !== routeEmployeeId) {
+                selection.setScope('employee')
+                selection.setEmployeeId(routeEmployeeId)
+            }
+        } else if (selection.scope !== 'department') {
+            selection.setScope('department')
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [routeEmployeeId])
@@ -72,25 +74,18 @@ export function useSalaryReportPage() {
     // сколько отдел получает суммарно, не переключаясь на Сервис/Магазин по отдельности.
     const [directionFilter, setDirectionFilter] = useState<DepartmentDirectionFilter>('all')
 
+    // Клиентский текстовый фильтр по имени сотрудника (Filter Row's Search, `SalaryReportFiltersV2`)
+    // — только для отчёта отдела, применяется в `DepartmentLedgerV2` поверх уже загруженного
+    // `departmentReport.employees[]` (см. `model/filterEmployeesBySearch.ts`), без нового запроса.
+    const [employeeSearch, setEmployeeSearch] = useState('')
+
     const merged = useDepartmentSalaryReportAll(
         selection.scope === 'department' ? selection.departmentId : null,
         directionFilter,
         selection.period,
     )
 
-    function setScope(scope: SalaryReportScope) {
-        selection.setScope(scope)
-        if (scope === 'department') navigate('/salaries', { replace: true })
-        else if (selection.employeeId != null) navigate(`/salaries/employee/${selection.employeeId}`, { replace: true })
-    }
-
-    function setEmployeeId(id: number | null) {
-        selection.setEmployeeId(id)
-        navigate(id != null ? `/salaries/employee/${id}` : '/salaries', { replace: true })
-    }
-
     const departmentsQuery = useDepartments()
-    const employeesQuery = useEmployees()
 
     useEffect(() => {
         if (selection.departmentId != null) return
@@ -99,25 +94,42 @@ export function useSalaryReportPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [departmentsQuery.data, selection.departmentId])
 
+    // Имя/отдел сотрудника для шапки отчёта сотрудника (`EmployeeIdentityHeading`, узлы Pencil
+    // `u32Yp`/`w4Eby` — шапка документа начисления, "по аналогии" перенесённая сюда) — контракт
+    // отчёта (`EmployeeReportVM`) не отдаёт ни имя, ни отдел сотрудника, только суммы по правилам,
+    // поэтому оба резолвятся из того же Bitrix-справочника (`useEmployees`/`useDepartments`,
+    // `EmployeeResponse.departmentId`), что раньше питал убранный `Select` выбора сотрудника.
+    const employeesQuery = useEmployees()
+    const currentEmployee =
+        selection.employeeId != null ? (employeesQuery.data ?? []).find((employee) => employee.id === selection.employeeId) ?? null : null
+    const employeeName = currentEmployee?.name ?? null
+    const employeeDepartmentName =
+        currentEmployee != null
+            ? ((departmentsQuery.data ?? []).find((department) => department.id === currentEmployee.departmentId)?.name ?? null)
+            : null
+
     const isDepartmentScope = selection.scope === 'department'
 
     return {
         ...selection,
-        setScope,
-        setEmployeeId,
 
         direction: directionFilter,
         setDirection: setDirectionFilter,
+        employeeSearch,
+        setEmployeeSearch,
         departmentReport: isDepartmentScope ? merged.report : null,
+        directionBreakdown: isDepartmentScope ? merged.directionBreakdown : null,
         isInitialLoad: isDepartmentScope ? merged.isInitialLoad : selection.isInitialLoad,
         isRefreshing: isDepartmentScope ? merged.isRefreshing : selection.isRefreshing,
         errorMessage: isDepartmentScope ? merged.errorMessage : selection.errorMessage,
         dataVersion: isDepartmentScope ? merged.dataVersion : selection.dataVersion,
 
-        employees: employeesQuery.data ?? [],
-        isEmployeesLoading: employeesQuery.isLoading,
         departments: departmentsQuery.data ?? [],
         isDepartmentsLoading: departmentsQuery.isLoading,
+
+        employeeName,
+        employeeDepartmentName,
+        isEmployeeIdentityLoading: employeesQuery.isLoading,
     }
 }
 

@@ -1,4 +1,4 @@
-import { ShoppingBag, Wrench } from 'lucide-react'
+import { ChevronDown, ShoppingBag, Wrench } from 'lucide-react'
 
 import { AccrualStatusBadge } from '@/features/SalaryAccruals'
 import { formatCurrency } from '@/features/SalesPlan'
@@ -15,6 +15,11 @@ export type LedgerDirectionBlockProps = {
     report: DirectionReportVM
     isRuleExpanded: (key: string) => boolean
     onToggleRule: (key: string) => void
+    /** Развёрнут ли блок направления целиком — дефолт задаётся вызывающей стороной (см.
+     * `useSalaryReportSelection`'s комментарий: "Сервис" свёрнут, "Магазин" развёрнут), дальше
+     * сворачивание переключается кликом по заголовку блока. */
+    isExpanded: boolean
+    onToggle: () => void
     className?: string
 }
 
@@ -43,15 +48,32 @@ const ICON_CLASS: Record<SalaryDirection, string> = {
  * аналог старой `pages/SalaryReport/ui/DirectionSection.tsx` (то же вычисление "Месяц закрыт" для
  * `total.prognose === null`), не переиспользованной напрямую по той же причине, что и остальные
  * компоненты этой страницы (`pages` не может импортировать другую `pages`).
+ *
+ * Тело блока (заголовок колонок таблицы правил + сами строки) сворачивается по клику на заголовок
+ * (`isExpanded`/`onToggle`, ключ — сам `report.direction`, собирается вызывающей стороной) — тот же
+ * приём "целая строка — кнопка + хвостовой шеврон", что и у `LedgerRuleRow`; дефолт до первого клика
+ * — "Сервис" свёрнут, "Магазин" развёрнут (см. `useSalaryReportSelection`'s комментарий про
+ * инвертированный `Set`). Заголовок остаётся видимым всегда — сворачивается только всё, что ниже
+ * него.
  */
-export function LedgerDirectionBlock({ report, isRuleExpanded, onToggleRule, className }: LedgerDirectionBlockProps) {
+export function LedgerDirectionBlock({
+    report,
+    isRuleExpanded,
+    onToggleRule,
+    isExpanded,
+    onToggle,
+    className,
+}: LedgerDirectionBlockProps) {
     const Icon = DIRECTION_ICON[report.direction]
 
     return (
         <div data-slot="ledger-direction-block" className={cn('flex flex-col', className)}>
-            <div
+            <button
+                type="button"
+                onClick={onToggle}
+                aria-expanded={isExpanded}
                 className={cn(
-                    'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-2.5 md:px-5 md:py-3',
+                    'flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-2.5 text-left transition-colors md:px-5 md:py-3',
                     HEADER_CLASS[report.direction],
                 )}
             >
@@ -76,37 +98,47 @@ export function LedgerDirectionBlock({ report, isRuleExpanded, onToggleRule, cla
                                 : '—'
                             : formatCurrency(report.total.prognose)}
                     </span>
+
+                    <span className={LEDGER_CHEVRON_COL}>
+                        <ChevronDown
+                            className={cn(
+                                'size-4 shrink-0 text-ink-muted transition-transform duration-150',
+                                isExpanded && 'rotate-180',
+                            )}
+                        />
+                    </span>
                 </div>
-            </div>
+            </button>
 
-            {report.rules.length === 0 ? (
-                <p className="px-3 py-4 text-center font-ui text-xs text-ink-muted md:px-5">
-                    В этом направлении нет зарплатных правил.
-                </p>
-            ) : (
-                <>
-                    <div className="hidden items-center gap-2 bg-canvas px-3 py-2.5 md:flex md:gap-3 md:px-5">
-                        <span className="min-w-0 flex-1 font-ui text-xs font-semibold text-ink">Правило начисления</span>
-                        <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-semibold text-ink')}>Факт, ₽</span>
-                        <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-medium text-ink-muted')}>Прогноз, ₽</span>
-                        <span className={LEDGER_CHEVRON_COL} />
-                    </div>
+            {isExpanded &&
+                (report.rules.length === 0 ? (
+                    <p className="px-3 py-4 text-center font-ui text-xs text-ink-muted md:px-5">
+                        В этом направлении нет зарплатных правил.
+                    </p>
+                ) : (
+                    <>
+                        <div className="hidden items-center gap-2 bg-canvas px-3 py-2.5 md:flex md:gap-3 md:px-5">
+                            <span className="min-w-0 flex-1 font-ui text-xs font-semibold text-ink">Правило начисления</span>
+                            <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-semibold text-ink')}>Факт, ₽</span>
+                            <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-medium text-ink-muted')}>Прогноз, ₽</span>
+                            <span className={LEDGER_CHEVRON_COL} />
+                        </div>
 
-                    {report.rules.map((rule) => {
-                        const key = `${report.direction}:${rule.ruleId}`
-                        return (
-                            <LedgerRuleRow
-                                key={rule.ruleId}
-                                rule={rule}
-                                direction={report.direction}
-                                isClosed={report.isClosed}
-                                isExpanded={isRuleExpanded(key)}
-                                onToggle={() => onToggleRule(key)}
-                            />
-                        )
-                    })}
-                </>
-            )}
+                        {report.rules.map((rule) => {
+                            const key = `${report.direction}:${rule.ruleId}`
+                            return (
+                                <LedgerRuleRow
+                                    key={rule.ruleId}
+                                    rule={rule}
+                                    direction={report.direction}
+                                    isClosed={report.isClosed}
+                                    isExpanded={isRuleExpanded(key)}
+                                    onToggle={() => onToggleRule(key)}
+                                />
+                            )
+                        })}
+                    </>
+                ))}
         </div>
     )
 }

@@ -47,8 +47,8 @@ export function DepartmentReportBodyV2({
     errorMessage,
     isDepartmentSelected,
     departmentName,
-    isEmployeeExpanded,
-    onToggleEmployee,
+    directionBreakdown,
+    employeeSearch,
     className,
 }: DepartmentReportBodyV2Props) {
     if (!isDepartmentSelected) {
@@ -77,8 +77,8 @@ export function DepartmentReportBodyV2({
         <DepartmentLedgerV2
             report={report}
             departmentName={departmentName}
-            isEmployeeExpanded={isEmployeeExpanded}
-            onToggleEmployee={onToggleEmployee}
+            directionBreakdown={directionBreakdown}
+            employeeSearch={employeeSearch}
             className={className}
         />
     )
