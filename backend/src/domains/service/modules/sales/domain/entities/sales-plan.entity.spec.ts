@@ -22,6 +22,21 @@ describe('SalesPlan', () => {
         expect(plan.source).toBe('MANUAL');
         expect(plan.approvedBy).toBeNull();
         expect(plan.approvedAt).toBeNull();
+        expect(plan.orderTypeIds).toEqual([]);
+    });
+
+    it('без указания orderTypeIds план учитывает заказы всех типов ([])', () => {
+        const plan = withRequestContext(() => SalesPlan.create(baseProps));
+
+        expect(plan.orderTypeIds).toEqual([]);
+    });
+
+    it('принимает явно выбранные типы заказов', () => {
+        const plan = withRequestContext(() =>
+            SalesPlan.create({ ...baseProps, orderTypeIds: [1, 2, 3] }),
+        );
+
+        expect(plan.orderTypeIds).toEqual([1, 2, 3]);
     });
 
     it('отклоняет отрицательный оборот', () => {
@@ -76,6 +91,19 @@ describe('SalesPlan', () => {
         expect(plan.margin).toBe(300_000);
         expect(plan.source).toBe('MANUAL');
         expect(plan.status).toBe('CREATED');
+    });
+
+    it('edit() правит orderTypeIds, не трогая непереданные поля', () => {
+        const plan = withRequestContext(() =>
+            SalesPlan.create({ ...baseProps, orderTypeIds: [1] }),
+        );
+
+        withRequestContext(() => plan.edit({ orderTypeIds: [2, 3] }));
+
+        expect(plan.orderTypeIds).toEqual([2, 3]);
+        expect(plan.turnover).toBe(baseProps.turnover);
+        expect(plan.margin).toBe(baseProps.margin);
+        expect(plan.source).toBe('MANUAL');
     });
 
     it('повторное approve() (переутверждение) идемпотентно обновляет утверждающего', () => {

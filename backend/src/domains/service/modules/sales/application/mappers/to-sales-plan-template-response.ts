@@ -11,6 +11,7 @@ export function toSalesPlanTemplateResponse(
         category: template.category,
         turnover: template.turnover,
         margin: template.margin,
+        orderTypeIds: template.orderTypeIds,
         growthPercent: template.growthPercent,
         createdAt: template.createdAt,
         updatedAt: template.updatedAt,

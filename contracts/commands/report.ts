@@ -31,6 +31,25 @@ export type ListServiceCategoriesResponse = z.infer<
     typeof listServiceCategoriesResponseSchema
 >;
 
+// ==================== Типы заказов ==================== //
+
+// RoappOrderType (roapp.prisma, roapp_order_types) — плоский справочник типов
+// заказов RoApp (Фаза 1, docs/service-plan-salary-rule-order-category-filter/
+// plan-service-plan-salary-rule-order-category-filter.md), для
+// GET /v1/service/reports/order-type. По форме — тот же паттерн, что и
+// serviceCategorySchema выше, но без parentId/depth: RoappOrderType — плоская
+// таблица id/name без иерархии.
+const orderTypeSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+});
+export type OrderTypeResponse = z.infer<typeof orderTypeSchema>;
+
+const listOrderTypesResponseSchema = z.array(orderTypeSchema);
+export type ListOrderTypesResponse = z.infer<
+    typeof listOrderTypesResponseSchema
+>;
+
 // ==================== Аналитика проданных услуг ==================== //
 
 // Query-параметры множественного выбора (categoryIds/serviceIds) — тот же приём, что
@@ -94,6 +113,8 @@ export type GetServicesAnalyticsResponse = z.infer<
 export {
     serviceCategorySchema,
     listServiceCategoriesResponseSchema,
+    orderTypeSchema,
+    listOrderTypesResponseSchema,
     getServicesAnalyticsQuerySchema,
     periodBreakdownEntrySchema,
     serviceAnalyticsItemSchema,

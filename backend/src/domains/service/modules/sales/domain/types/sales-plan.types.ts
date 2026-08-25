@@ -15,6 +15,12 @@ export interface SalesPlanProps {
     period: string;
     turnover: number;
     margin: number;
+    // Типы заказов RoApp (RoappOrderType.id), заказы которых учитываются в
+    // факте/прогнозе этой строки; [] = "все типы" (см. sales.prisma).
+    // Примитив, а не value object — id справочника без собственных
+    // инвариантов кроме "число", сам справочник read-only и живёт вне
+    // этого модуля (domains/service/modules/reports).
+    orderTypeIds: number[];
     source: SalesPlanSource;
     status: SalesPlanStatus;
     approval: SalesPlanApproval | null;
@@ -27,10 +33,12 @@ export interface SalesPlanCreateProps {
     period: string;
     turnover: number;
     margin: number;
+    orderTypeIds?: number[];
     source: SalesPlanSource;
 }
 
 export interface SalesPlanEditProps {
     turnover?: number;
     margin?: number;
+    orderTypeIds?: number[];
 }

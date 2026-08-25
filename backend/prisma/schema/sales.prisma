@@ -52,6 +52,11 @@ model SalesPlanTemplate {
 
   turnover      Int
   margin        Int
+  // Типы заказов RoApp (RoappOrderType.id), которые учитываются в плане,
+  // построенном из этого шаблона; [] = "все типы" (см. тот же контракт на
+  // SalesPlan.orderTypeIds ниже — сентинела здесь нет, пустой массив уже
+  // однозначно отличим от заполненного).
+  orderTypeIds  Int[]    @default([]) @map("order_type_ids")
   growthPercent Int      @default(10) @map("growth_percent")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -73,10 +78,16 @@ model SalesPlan {
   categoryId   String         @map("category_id")
   period       String
 
-  turnover Int
-  margin   Int
-  source   SalesPlanSource
-  status   SalesPlanStatus @default(CREATED)
+  turnover     Int
+  margin       Int
+  // Типы заказов RoApp (RoappOrderType.id), заказы которых учитываются при
+  // расчёте факта/прогноза этой строки плана (см.
+  // RoappSalesFactSourceRepository.aggregate/GetSalesPerformanceService);
+  // [] = "все типы" (поведение по умолчанию, в т.ч. для строк, созданных до
+  // появления этого поля — миграция им проставляет [] через @default([])).
+  orderTypeIds Int[]           @default([]) @map("order_type_ids")
+  source       SalesPlanSource
+  status       SalesPlanStatus @default(CREATED)
 
   // Bitrix ID руководителя, утвердившего строку, и когда — оба поля
   // заполняются/очищаются только вместе (см. SalesPlanApproval value

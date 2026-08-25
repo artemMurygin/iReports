@@ -146,6 +146,11 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
   умолчанию) / `week` / `month`)
 - `GET /v1/service/reports/service-categories` — плоский список категорий услуг (`id`/`name`/
   `parentId`/`depth`), без параметров
+- `GET /v1/service/reports/order-type` — справочник типов заказов RoApp (`roapp_order_types`,
+  `id`/`name`), без параметров; "категория заказа" в терминах `docs/
+  service-plan-salary-rule-order-category-filter` (Фаза 1) — источник значений для нового поля
+  `SalaryRule.orderTypeIds`, не путать с `SalesPlan.category` («категория услуги») или
+  `Roapp*Category`
 
 Сделки Bitrix24 (`/v1/service/sales/deals*`, Фазы 1-2, docs/todo-modules-ddd-refactoring) — новый дом
 для легаси `/deals*` (`backend/src/TODO/deals`, удалён): список сделок за диапазон дат создания и пять

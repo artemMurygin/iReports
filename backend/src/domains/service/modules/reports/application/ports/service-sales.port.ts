@@ -1,6 +1,7 @@
 import { DateRange } from '@/shared/domain/date-range.value-object';
 import { ServiceSaleEntity } from '../../domain/entities/service-sale.entity';
 import { ServiceCategory } from '../../domain/value-objects/service-category.value-object';
+import { OrderType } from '../../domain/value-objects/order-type.value-object';
 
 // Фильтр строк "услуга × заказ" (GET /v1/service/reports/services, Фаза 5)
 // — тот же набор, что у легаси getServicesSoldReportDTO (src/TODO/reports/
@@ -23,6 +24,7 @@ export interface ServiceSalesFilter {
 export interface ServiceSalesSourcePort {
     findByFilter(filter: ServiceSalesFilter): Promise<ServiceSaleEntity[]>;
     listCategories(): Promise<ServiceCategory[]>;
+    listOrderTypes(): Promise<OrderType[]>;
 }
 
 export const SERVICE_SALES_SOURCE = Symbol('SERVICE_SALES_SOURCE');

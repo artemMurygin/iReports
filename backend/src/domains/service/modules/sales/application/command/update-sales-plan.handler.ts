@@ -29,7 +29,11 @@ export class UpdateSalesPlanHandler implements ICommandHandler<
             throw new SalesPlanNotFoundException();
         }
 
-        plan.edit({ turnover: command.turnover, margin: command.margin });
+        plan.edit({
+            turnover: command.turnover,
+            margin: command.margin,
+            orderTypeIds: command.orderTypeIds,
+        });
         await this.repo.update(plan);
 
         return toSalesPlanResponse(plan);

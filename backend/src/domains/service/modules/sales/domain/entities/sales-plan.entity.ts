@@ -34,6 +34,7 @@ export class SalesPlan extends Entity<SalesPlanProps> {
                 period: create.period,
                 turnover: create.turnover,
                 margin: create.margin,
+                orderTypeIds: create.orderTypeIds ?? [],
                 source: create.source,
                 status: 'CREATED',
                 approval: null,
@@ -65,6 +66,13 @@ export class SalesPlan extends Entity<SalesPlanProps> {
         return this.props.margin;
     }
 
+    // [] = "учитывать заказы всех типов" — как для строк, где выбор сделан
+    // явно, так и для строк, созданных до появления этого поля (@default([])
+    // в sales.prisma, без разовой миграции данных).
+    get orderTypeIds(): number[] {
+        return this.props.orderTypeIds;
+    }
+
     get source(): SalesPlanSource {
         return this.props.source;
     }
@@ -92,6 +100,9 @@ export class SalesPlan extends Entity<SalesPlanProps> {
         }
         if (patch.margin !== undefined) {
             this.props.margin = patch.margin;
+        }
+        if (patch.orderTypeIds !== undefined) {
+            this.props.orderTypeIds = patch.orderTypeIds;
         }
         this.props.source = 'MANUAL';
         if (this.props.status === 'APPROVED') {

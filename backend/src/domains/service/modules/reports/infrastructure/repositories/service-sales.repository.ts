@@ -3,6 +3,7 @@ import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import { ServiceSaleEntity } from '@/domains/service/modules/reports/domain/entities/service-sale.entity';
 import { ServiceCategory } from '@/domains/service/modules/reports/domain/value-objects/service-category.value-object';
+import { OrderType } from '@/domains/service/modules/reports/domain/value-objects/order-type.value-object';
 import {
     ServiceSalesFilter,
     ServiceSalesSourcePort,
@@ -94,6 +95,22 @@ export class ServiceSalesRepository
                 parentId: row.parentId,
                 depth: row.depth,
             }),
+        );
+    }
+
+    // Справочник типов заказов RoApp (roapp_order_types) — "категория заказа"
+    // в терминах Фазы 1 (docs/service-plan-salary-rule-order-category-filter/
+    // plan-service-plan-salary-rule-order-category-filter.md), для
+    // GET /v1/service/reports/order-type. Плоская таблица без иерархии —
+    // orderBy по имени, как listCategories выше сортирует внутри depth.
+    async listOrderTypes(): Promise<OrderType[]> {
+        const rows = await this.client.roappOrderType.findMany({
+            select: { id: true, name: true },
+            orderBy: { name: 'asc' },
+        });
+
+        return rows.map((row) =>
+            OrderType.create({ id: row.id, name: row.name }),
         );
     }
 }

@@ -80,6 +80,53 @@ describe('EnsureSalesPlansForPeriodService', () => {
         });
     });
 
+    it('переносит orderTypeIds из плана предыдущего месяца, а не из шаблона', async () => {
+        await withRequestContext(async () => {
+            const previous = SalesPlan.create({
+                direction: 'service',
+                department: 1,
+                period: '2026-07',
+                turnover: 1_000_000,
+                margin: 200_000,
+                orderTypeIds: [1, 2],
+                source: 'MANUAL',
+            });
+            const template = SalesPlanTemplate.create({
+                direction: 'service',
+                department: 1,
+                turnover: 0,
+                margin: 0,
+                orderTypeIds: [9],
+                growthPercent: 20,
+            });
+            const { service, insert } = buildService([previous], [template]);
+
+            const result = await service.ensure('service', '2026-08');
+
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(result[0].orderTypeIds).toEqual([1, 2]);
+        });
+    });
+
+    it('без плана предыдущего месяца переносит orderTypeIds из шаблона', async () => {
+        await withRequestContext(async () => {
+            const template = SalesPlanTemplate.create({
+                direction: 'service',
+                department: 3,
+                turnover: 500_000,
+                margin: 100_000,
+                orderTypeIds: [4, 5],
+                growthPercent: 15,
+            });
+            const { service, insert } = buildService([], [template]);
+
+            const result = await service.ensure('service', '2026-08');
+
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(result[0].orderTypeIds).toEqual([4, 5]);
+        });
+    });
+
     it('без строки шаблона для комбинации использует growthPercent по умолчанию (10%)', async () => {
         await withRequestContext(async () => {
             const previous = SalesPlan.create({

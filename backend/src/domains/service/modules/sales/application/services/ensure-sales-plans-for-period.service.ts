@@ -126,6 +126,7 @@ export class EnsureSalesPlansForPeriodService {
             period,
             turnover: growBy(previous.turnover, growthPercent),
             margin: growBy(previous.margin, growthPercent),
+            orderTypeIds: previous.orderTypeIds,
             source: 'PREVIOUS_MONTH',
         });
     }
@@ -142,6 +143,7 @@ export class EnsureSalesPlansForPeriodService {
             period,
             turnover: template.turnover,
             margin: template.margin,
+            orderTypeIds: template.orderTypeIds,
             source: 'TEMPLATE',
         });
     }

@@ -34,6 +34,7 @@ export class SalesPlanTemplateRepository
                 data: {
                     turnover: entity.turnover,
                     margin: entity.margin,
+                    orderTypeIds: entity.orderTypeIds,
                     growthPercent: entity.growthPercent,
                     updatedAt: props.updatedAt,
                 },

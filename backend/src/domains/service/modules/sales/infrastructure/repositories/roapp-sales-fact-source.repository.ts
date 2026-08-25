@@ -28,14 +28,22 @@ import {
 //   достаточно достоверного признака, что деньги по заказу уже поступили.
 // - **Категория** для сервиса в этой фазе не определена на уровне
 //   ERP-данных (RoappOrder не хранит категорию заказа) — факт всегда
-//   агрегируется только по отделу, category = null. Строки плана с
-//   непустой категорией получают нулевой факт до появления источника
-//   категорий для сервиса (вне скоупа Фазы 5).
+//   агрегируется только по отделу (и, с
+//   docs/service-plan-salary-rule-order-category-filter, типу заказа),
+//   category = null. Строки плана с непустой категорией получают нулевой
+//   факт до появления источника категорий для сервиса (вне скоупа Фазы 5).
+// - **Тип заказа** — RoappOrder.orderTypeId, обязательное поле (см.
+//   roapp.prisma), поэтому у каждого заказа есть ровно один тип; бакеты
+//   агрегируются по паре (department, orderTypeId), а не только по отделу
+//   — так GetSalesPerformanceService может просуммировать по строке плана
+//   только бакеты нужных ей типов заказов (SalesPlan.orderTypeIds), не
+//   трогая семантику department/category выше.
 //
 // Один запрос на весь период (без N+1 по строкам плана), JS-агрегация по
-// отделу — набор заказов за месяц не настолько велик, чтобы это было
-// проблемой производительности; GROUP BY по полю через двойную relation
-// (closedBy → bitrixEmployee) в чистом Prisma без raw SQL не выразить.
+// (отделу, типу заказа) — набор заказов за месяц не настолько велик, чтобы
+// это было проблемой производительности; GROUP BY по полю через двойную
+// relation (closedBy → bitrixEmployee) в чистом Prisma без raw SQL не
+// выразить.
 @Injectable()
 export class RoappSalesFactSourceRepository
     extends PrismaRepository
@@ -56,6 +64,7 @@ export class RoappSalesFactSourceRepository
             select: {
                 payed: true,
                 cost: true,
+                orderTypeId: true,
                 closedBy: {
                     select: {
                         bitrixEmployee: { select: { departmentId: true } },
@@ -64,16 +73,28 @@ export class RoappSalesFactSourceRepository
             },
         });
 
-        const byDepartment = new Map<
-            number,
-            { turnover: number; cost: number; quantity: number }
+        // Ключ бакета — (departmentId, orderTypeId): один заказ всегда
+        // попадает ровно в один бакет, GetSalesPerformanceService потом
+        // суммирует нужные бакеты одного отдела по SalesPlan.orderTypeIds.
+        const byDepartmentAndOrderType = new Map<
+            string,
+            {
+                department: number;
+                orderTypeId: number;
+                turnover: number;
+                cost: number;
+                quantity: number;
+            }
         >();
         for (const order of orders) {
             const departmentId = order.closedBy?.bitrixEmployee?.departmentId;
             if (!departmentId) {
                 continue;
             }
-            const bucket = byDepartment.get(departmentId) ?? {
+            const key = `${departmentId}:${order.orderTypeId}`;
+            const bucket = byDepartmentAndOrderType.get(key) ?? {
+                department: departmentId,
+                orderTypeId: order.orderTypeId,
                 turnover: 0,
                 cost: 0,
                 quantity: 0,
@@ -81,11 +102,10 @@ export class RoappSalesFactSourceRepository
             bucket.turnover += order.payed ?? 0;
             bucket.cost += order.cost ?? 0;
             bucket.quantity += 1;
-            byDepartment.set(departmentId, bucket);
+            byDepartmentAndOrderType.set(key, bucket);
         }
 
-        return [...byDepartment.entries()].map(([department, agg]) => ({
-            department,
+        return [...byDepartmentAndOrderType.values()].map((agg) => ({
             category: null,
             ...agg,
         }));

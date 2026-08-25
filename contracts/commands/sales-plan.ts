@@ -29,6 +29,10 @@ export type SalesDirection = z.infer<typeof salesDirectionSchema>;
 // точка для самого первого месяца направления и запасной вариант, если
 // плана за предыдущий месяц ещё нет (Фаза 4). category = null — шаблон
 // действует на отдел целиком.
+// orderTypeIds — id типов заказов RoApp (RoappOrderType, справочник
+// GET /v1/service/reports/order-type), которые учитываются в плане/строке
+// шаблона; [] = "учитывать заказы всех типов" (в т.ч. для строк, созданных
+// до появления этого поля).
 const salesPlanTemplateSchema = z.object({
     id: z.string(),
     direction: salesDirectionSchema,
@@ -36,6 +40,7 @@ const salesPlanTemplateSchema = z.object({
     category: z.string().nullable(),
     turnover: z.number(),
     margin: z.number(),
+    orderTypeIds: z.array(z.number()),
     growthPercent: z.number(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
@@ -51,6 +56,7 @@ const putSalesPlanTemplateRequestSchema = z.object({
     category: z.string().nullable().optional(),
     turnover: z.number().nonnegative(),
     margin: z.number(),
+    orderTypeIds: z.array(z.number()).optional(),
     growthPercent: z.number().nonnegative(),
 });
 export type PutSalesPlanTemplateRequest = z.infer<
@@ -89,6 +95,10 @@ const salesPlanSchema = z.object({
     period: periodSchema,
     turnover: z.number(),
     margin: z.number(),
+    // Id типов заказов RoApp (RoappOrderType, справочник
+    // GET /v1/service/reports/order-type), заказы которых учитываются в
+    // факте/прогнозе этой строки; [] = "учитывать заказы всех типов".
+    orderTypeIds: z.array(z.number()),
     source: salesPlanSourceSchema,
     status: salesPlanStatusSchema,
     approvedBy: z.number().nullable(),
@@ -110,6 +120,7 @@ const createSalesPlanItemSchema = z.object({
     period: periodSchema,
     turnover: z.number().nonnegative(),
     margin: z.number(),
+    orderTypeIds: z.array(z.number()).optional(),
 });
 export type CreateSalesPlanItemRequest = z.infer<
     typeof createSalesPlanItemSchema
@@ -139,10 +150,17 @@ const updateSalesPlanRequestSchema = z
     .object({
         turnover: z.number().nonnegative().optional(),
         margin: z.number().optional(),
+        orderTypeIds: z.array(z.number()).optional(),
     })
-    .refine((data) => data.turnover !== undefined || data.margin !== undefined, {
-        message: 'Нужно указать turnover и/или margin',
-    });
+    .refine(
+        (data) =>
+            data.turnover !== undefined ||
+            data.margin !== undefined ||
+            data.orderTypeIds !== undefined,
+        {
+            message: 'Нужно указать turnover, margin и/или orderTypeIds',
+        },
+    );
 export type UpdateSalesPlanRequest = z.infer<
     typeof updateSalesPlanRequestSchema
 >;

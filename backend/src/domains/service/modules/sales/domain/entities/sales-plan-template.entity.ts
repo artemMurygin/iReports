@@ -32,6 +32,7 @@ export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
                 scope,
                 turnover: create.turnover,
                 margin: create.margin,
+                orderTypeIds: create.orderTypeIds ?? [],
                 growthPercent: create.growthPercent ?? DEFAULT_GROWTH_PERCENT,
             },
         });
@@ -61,12 +62,22 @@ export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
         return this.props.growthPercent;
     }
 
+    // [] = "учитывать заказы всех типов" — переносится на автосоздаваемый
+    // план (см. EnsureSalesPlansForPeriodService.fromTemplate()), когда для
+    // комбинации отдел/категория нет плана предыдущего месяца.
+    get orderTypeIds(): number[] {
+        return this.props.orderTypeIds;
+    }
+
     update(patch: SalesPlanTemplateEditProps): void {
         if (patch.turnover !== undefined) {
             this.props.turnover = patch.turnover;
         }
         if (patch.margin !== undefined) {
             this.props.margin = patch.margin;
+        }
+        if (patch.orderTypeIds !== undefined) {
+            this.props.orderTypeIds = patch.orderTypeIds;
         }
         if (patch.growthPercent !== undefined) {
             this.props.growthPercent = patch.growthPercent;

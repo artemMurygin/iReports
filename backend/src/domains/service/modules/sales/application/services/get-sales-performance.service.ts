@@ -13,10 +13,6 @@ import { SalesPerformance } from '../../domain/value-objects/sales-performance.v
 import { SalesPerformanceDirectionNotSupportedException } from '../../domain/exceptions/sales-performance.exception';
 import type { SalesDirection } from '../../domain/types/sales-plan.types';
 
-function scopeKey(department: number, category: string | null): string {
-    return `${department}:${category ?? 'null'}`;
-}
-
 // Единственная реализация SalesPerformanceReaderPort (Фаза 5) — план
 // никогда не бывает пустым (переиспользует то же ленивое достраивание
 // Фазы 4, что и ListSalesPlansService), факт агрегируется одним запросом
@@ -52,21 +48,44 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
             this.factSource.aggregate(period),
         ]);
 
-        const factsByScope = new Map<string, ServiceSalesFactErpAggregate>(
-            facts.map((fact) => [
-                scopeKey(fact.department, fact.category),
-                fact,
-            ]),
-        );
+        // Бакеты факта сгруппированы только по отделу здесь — какие из них
+        // относятся к конкретной строке плана, решает сама строка ниже
+        // через orderTypeIds, а не общий ключ scope, как раньше: один отдел
+        // за период обычно даёт несколько бакетов (по одному на
+        // встретившийся тип заказа).
+        const factsByDepartment = new Map<
+            number,
+            ServiceSalesFactErpAggregate[]
+        >();
+        for (const fact of facts) {
+            const bucket = factsByDepartment.get(fact.department) ?? [];
+            bucket.push(fact);
+            factsByDepartment.set(fact.department, bucket);
+        }
 
         return plans.map((plan) => {
-            const erp = factsByScope.get(
-                scopeKey(plan.department, plan.category),
+            const departmentFacts =
+                factsByDepartment.get(plan.department) ?? [];
+            // [] у плана = "все типы заказов" — тогда в расчёт идут все
+            // бакеты отдела; иначе — только бакеты перечисленных типов.
+            const matching =
+                plan.orderTypeIds.length === 0
+                    ? departmentFacts
+                    : departmentFacts.filter((bucket) =>
+                          plan.orderTypeIds.includes(bucket.orderTypeId),
+                      );
+            const erp = matching.reduce(
+                (sum, bucket) => ({
+                    turnover: sum.turnover + bucket.turnover,
+                    cost: sum.cost + bucket.cost,
+                    quantity: sum.quantity + bucket.quantity,
+                }),
+                { turnover: 0, cost: 0, quantity: 0 },
             );
             const fact = SalesFact.calculate({
-                turnover: erp?.turnover ?? 0,
-                cost: erp?.cost ?? 0,
-                quantity: erp?.quantity ?? 0,
+                turnover: erp.turnover,
+                cost: erp.cost,
+                quantity: erp.quantity,
                 planTurnover: plan.turnover,
             });
             const prognose = SalesPrognose.forPeriod(

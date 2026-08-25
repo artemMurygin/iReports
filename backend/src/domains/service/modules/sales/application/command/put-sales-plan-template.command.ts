@@ -7,6 +7,7 @@ export class PutSalesPlanTemplateCommand extends Command {
     readonly category?: string | null;
     readonly turnover: number;
     readonly margin: number;
+    readonly orderTypeIds?: number[];
     readonly growthPercent: number;
 
     constructor(props: CommandProps<PutSalesPlanTemplateCommand>) {
@@ -16,6 +17,7 @@ export class PutSalesPlanTemplateCommand extends Command {
         this.category = props.category;
         this.turnover = props.turnover;
         this.margin = props.margin;
+        this.orderTypeIds = props.orderTypeIds;
         this.growthPercent = props.growthPercent;
     }
 }

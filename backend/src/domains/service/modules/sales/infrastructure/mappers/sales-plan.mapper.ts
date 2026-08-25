@@ -45,6 +45,7 @@ export class SalesPlanMapper implements Mapper<
                 period: record.period,
                 turnover: record.turnover,
                 margin: record.margin,
+                orderTypeIds: record.orderTypeIds,
                 source: record.source,
                 status: record.status,
                 approval:
@@ -68,6 +69,7 @@ export class SalesPlanMapper implements Mapper<
             period: entity.period,
             turnover: entity.turnover,
             margin: entity.margin,
+            orderTypeIds: entity.orderTypeIds,
             source: entity.source,
             status: entity.status,
             approvedBy: entity.approvedBy,

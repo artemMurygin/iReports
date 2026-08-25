@@ -34,6 +34,7 @@ describe('SalesPlanMapper', () => {
                 period: '2026-08',
                 turnover: 1_000_000,
                 margin: 200_000,
+                orderTypeIds: [],
                 source: 'MANUAL',
                 status: 'CREATED',
                 approvedBy: null,
@@ -46,6 +47,7 @@ describe('SalesPlanMapper', () => {
             expect(plan.category).toBeNull();
             expect(plan.approvedBy).toBeNull();
             expect(plan.approvedAt).toBeNull();
+            expect(plan.orderTypeIds).toEqual([]);
         });
 
         it('восстанавливает утверждённый план вместе с approvedBy/approvedAt', () => {
@@ -58,6 +60,7 @@ describe('SalesPlanMapper', () => {
                 period: '2026-08',
                 turnover: 1_000_000,
                 margin: 200_000,
+                orderTypeIds: [1, 2],
                 source: 'PREVIOUS_MONTH',
                 status: 'APPROVED',
                 approvedBy: 42,
@@ -70,6 +73,7 @@ describe('SalesPlanMapper', () => {
             expect(plan.status).toBe('APPROVED');
             expect(plan.approvedBy).toBe(42);
             expect(plan.approvedAt).toEqual(approvedAt);
+            expect(plan.orderTypeIds).toEqual([1, 2]);
         });
     });
 
@@ -94,12 +98,31 @@ describe('SalesPlanMapper', () => {
                     period: '2026-08',
                     turnover: 1_000_000,
                     margin: 200_000,
+                    orderTypeIds: [],
                     source: 'MANUAL',
                     status: 'CREATED',
                     approvedBy: null,
                     approvedAt: null,
                 });
                 expect(record.department).toEqual({ connect: { id: 1 } });
+            });
+        });
+
+        it('сериализует явно выбранные типы заказов', () => {
+            withRequestContext(() => {
+                const plan = SalesPlan.create({
+                    direction: 'service',
+                    department: 1,
+                    period: '2026-08',
+                    turnover: 1_000_000,
+                    margin: 200_000,
+                    orderTypeIds: [3, 5],
+                    source: 'MANUAL',
+                });
+
+                const record = mapper.toPersistence(plan);
+
+                expect(record.orderTypeIds).toEqual([3, 5]);
             });
         });
     });

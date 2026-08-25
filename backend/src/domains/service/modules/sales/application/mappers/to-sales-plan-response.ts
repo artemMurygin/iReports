@@ -10,6 +10,7 @@ export function toSalesPlanResponse(plan: SalesPlan): SalesPlanResponse {
         period: plan.period,
         turnover: plan.turnover,
         margin: plan.margin,
+        orderTypeIds: plan.orderTypeIds,
         source: plan.source,
         status: plan.status,
         approvedBy: plan.approvedBy,

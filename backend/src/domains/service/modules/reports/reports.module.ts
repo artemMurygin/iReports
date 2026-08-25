@@ -3,8 +3,10 @@ import { SERVICE_SALES_SOURCE } from './application/ports/service-sales.port';
 import { ServiceSalesRepository } from './infrastructure/repositories/service-sales.repository';
 import { GetServicesAnalyticsService } from './application/services/get-services-analytics.service';
 import { ListServiceCategoriesService } from './application/services/list-service-categories.service';
+import { ListOrderTypesService } from './application/services/list-order-types.service';
 import { GetServicesAnalyticsHttpController } from './interface/http-controllers/get-services-analytics.http.controller';
 import { ListServiceCategoriesHttpController } from './interface/http-controllers/list-service-categories.http.controller';
+import { ListOrderTypesHttpController } from './interface/http-controllers/list-order-types.http.controller';
 
 // Модуль reports (Фаза 5, docs/todo-modules-ddd-refactoring/
 // plan-todo-modules-ddd-refactoring.md) — новый дом для аналитики продаж
@@ -18,11 +20,13 @@ import { ListServiceCategoriesHttpController } from './interface/http-controller
     controllers: [
         GetServicesAnalyticsHttpController,
         ListServiceCategoriesHttpController,
+        ListOrderTypesHttpController,
     ],
     providers: [
         { provide: SERVICE_SALES_SOURCE, useClass: ServiceSalesRepository },
         GetServicesAnalyticsService,
         ListServiceCategoriesService,
+        ListOrderTypesService,
     ],
 })
 export class ReportsModule {}

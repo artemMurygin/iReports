@@ -75,6 +75,7 @@ export class CreateSalesPlanHandler implements ICommandHandler<
                     period: item.period,
                     turnover: item.turnover,
                     margin: item.margin,
+                    orderTypeIds: item.orderTypeIds,
                     source: 'MANUAL',
                 });
 

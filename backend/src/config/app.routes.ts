@@ -300,6 +300,12 @@ export const routesV1 = {
         reports: {
             services: `${serviceReportsRoot}/services`,
             serviceCategories: `${serviceReportsRoot}/service-categories`,
+            // Справочник типов заказов RoApp (Фаза 1, docs/
+            // service-plan-salary-rule-order-category-filter/
+            // plan-service-plan-salary-rule-order-category-filter.md) —
+            // "категория заказа" в терминах этой фичи (RoappOrderType, не
+            // SalesPlan.category и не Roapp*Category).
+            orderType: `${serviceReportsRoot}/order-type`,
         },
         // Маркетинг (Фаза 7, см. комментарий у serviceMarketingPricingRoot
         // выше) — единственный поднабор саб-группы marketing на сегодня.

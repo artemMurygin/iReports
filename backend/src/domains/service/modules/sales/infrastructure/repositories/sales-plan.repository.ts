@@ -48,6 +48,7 @@ export class SalesPlanRepository
                 data: {
                     turnover: entity.turnover,
                     margin: entity.margin,
+                    orderTypeIds: entity.orderTypeIds,
                     source: entity.source,
                     status: entity.status,
                     approvedBy: entity.approvedBy,

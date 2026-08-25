@@ -35,6 +35,7 @@ export class PutSalesPlanTemplateHandler implements ICommandHandler<
             existing.update({
                 turnover: command.turnover,
                 margin: command.margin,
+                orderTypeIds: command.orderTypeIds,
                 growthPercent: command.growthPercent,
             });
             await this.repo.update(existing);
@@ -47,6 +48,7 @@ export class PutSalesPlanTemplateHandler implements ICommandHandler<
             category,
             turnover: command.turnover,
             margin: command.margin,
+            orderTypeIds: command.orderTypeIds,
             growthPercent: command.growthPercent,
         });
         await this.repo.insert(template);

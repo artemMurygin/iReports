@@ -6,6 +6,7 @@ export class UpdateSalesPlanCommand extends Command {
     readonly direction: SalesDirection;
     readonly turnover?: number;
     readonly margin?: number;
+    readonly orderTypeIds?: number[];
 
     constructor(props: CommandProps<UpdateSalesPlanCommand>) {
         super(props);
@@ -13,5 +14,6 @@ export class UpdateSalesPlanCommand extends Command {
         this.direction = props.direction;
         this.turnover = props.turnover;
         this.margin = props.margin;
+        this.orderTypeIds = props.orderTypeIds;
     }
 }

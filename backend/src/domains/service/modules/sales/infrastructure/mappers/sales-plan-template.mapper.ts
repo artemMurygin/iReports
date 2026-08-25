@@ -24,6 +24,7 @@ export class SalesPlanTemplateMapper implements Mapper<
                 ),
                 turnover: record.turnover,
                 margin: record.margin,
+                orderTypeIds: record.orderTypeIds,
                 growthPercent: record.growthPercent,
             },
         });
@@ -40,6 +41,7 @@ export class SalesPlanTemplateMapper implements Mapper<
             categoryId: categoryToPersistence(entity.category),
             turnover: entity.turnover,
             margin: entity.margin,
+            orderTypeIds: entity.orderTypeIds,
             growthPercent: entity.growthPercent,
             createdAt: props.createdAt,
             updatedAt: props.updatedAt,

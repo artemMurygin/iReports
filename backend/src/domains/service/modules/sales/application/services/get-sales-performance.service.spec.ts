@@ -15,6 +15,7 @@ describe('GetSalesPerformanceService', () => {
         plans: SalesPlan[],
         facts: {
             department: number;
+            orderTypeId: number;
             category: string | null;
             turnover: number;
             cost: number;
@@ -83,6 +84,7 @@ describe('GetSalesPerformanceService', () => {
                 [
                     {
                         department: 1,
+                        orderTypeId: 1,
                         category: null,
                         turnover: 400_000,
                         cost: 240_000,
@@ -116,6 +118,7 @@ describe('GetSalesPerformanceService', () => {
             const facts = [
                 {
                     department: 1,
+                    orderTypeId: 1,
                     category: null,
                     turnover: 500_000,
                     cost: 300_000,
@@ -163,6 +166,7 @@ describe('GetSalesPerformanceService', () => {
                 [
                     {
                         department: 99,
+                        orderTypeId: 1,
                         category: null,
                         turnover: 100,
                         cost: 50,
@@ -229,6 +233,91 @@ describe('GetSalesPerformanceService', () => {
 
             expect(found?.getPlan().id).toBe(plan.id);
             expect(notFound).toBeNull();
+        });
+    });
+
+    it('план с [] (все типы) получает факт по всем бакетам отдела, из разных типов заказов', async () => {
+        await withRequestContext(async () => {
+            const plan = SalesPlan.create({
+                direction: 'service',
+                department: 1,
+                period: '2026-08',
+                turnover: 1_000_000,
+                margin: 200_000,
+                source: 'MANUAL',
+            });
+            const { service } = buildService(
+                [plan],
+                [
+                    {
+                        department: 1,
+                        orderTypeId: 1,
+                        category: null,
+                        turnover: 300_000,
+                        cost: 150_000,
+                        quantity: 5,
+                    },
+                    {
+                        department: 1,
+                        orderTypeId: 2,
+                        category: null,
+                        turnover: 200_000,
+                        cost: 100_000,
+                        quantity: 3,
+                    },
+                ],
+            );
+
+            const performances = await service.listForPeriod(
+                'service',
+                '2026-08',
+            );
+
+            expect(performances[0].getFact().getTurnover()).toBe(500_000);
+            expect(performances[0].getFact().getQuantity()).toBe(8);
+        });
+    });
+
+    it('план с указанными orderTypeIds учитывает факт только этих типов заказов', async () => {
+        await withRequestContext(async () => {
+            const plan = SalesPlan.create({
+                direction: 'service',
+                department: 1,
+                period: '2026-08',
+                turnover: 1_000_000,
+                margin: 200_000,
+                orderTypeIds: [1],
+                source: 'MANUAL',
+            });
+            const { service } = buildService(
+                [plan],
+                [
+                    {
+                        department: 1,
+                        orderTypeId: 1,
+                        category: null,
+                        turnover: 300_000,
+                        cost: 150_000,
+                        quantity: 5,
+                    },
+                    {
+                        department: 1,
+                        orderTypeId: 2,
+                        category: null,
+                        turnover: 200_000,
+                        cost: 100_000,
+                        quantity: 3,
+                    },
+                ],
+            );
+
+            const performances = await service.listForPeriod(
+                'service',
+                '2026-08',
+            );
+
+            expect(performances[0].getFact().getTurnover()).toBe(300_000);
+            expect(performances[0].getFact().getQuantity()).toBe(5);
         });
     });
 
