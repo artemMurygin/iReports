@@ -42,6 +42,7 @@ export function useRuleFormCard({
     const allowedRoles = allowedRolesByType[draft.type] ?? []
     const awardOptions = config.awardOptionsByType[draft.type] ?? []
     const showCategory = config.categoryRuleTypes.includes(draft.type)
+    const showOrderTypeIds = config.orderTypeRuleTypes.includes(draft.type)
 
     function patchDraft(patch: Partial<RuleDraft>) {
         onChange(draft.draftId, patch)
@@ -92,6 +93,7 @@ export function useRuleFormCard({
         allowedRoles,
         awardOptions,
         showCategory,
+        showOrderTypeIds,
         patchDraft,
         changeBorder,
         handleTypeChange,

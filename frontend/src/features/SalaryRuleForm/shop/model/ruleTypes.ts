@@ -66,4 +66,7 @@ export const SHOP_RULE_FORM_CONFIG: RuleFormConfig = {
     awardOptionsByType: SHOP_AWARD_OPTIONS_BY_TYPE,
     salaryBasisOptions: SHOP_SALARY_BASIS_OPTIONS,
     categoryRuleTypes: SHOP_CATEGORY_RULE_TYPES,
+    // Никакой shop-тип правила не фильтрует по RoApp order type (Фаза 5,
+    // docs/service-plan-salary-rule-order-category-filter — вне скоупа для shop, см. PRD).
+    orderTypeRuleTypes: [],
 }

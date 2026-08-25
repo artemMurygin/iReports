@@ -57,10 +57,18 @@ export const AWARD_OPTIONS_BY_TYPE: Record<ServiceRuleType, AwardOptionConfig[]>
     ],
 }
 
+/** The service rule types whose `config` has an `orderTypeIds` field
+ * (`orderPayedSalaryConfigSchema`/`serviceCompletedSalaryConfigSchema`, Фаза 5,
+ * docs/service-plan-salary-rule-order-category-filter) — `core/ui/RuleFormCard` shows the
+ * `OrderTypeField` multiselect only for these two; `PayPerHour`/`TaskCompleted` don't accept the
+ * field at all. */
+export const SERVICE_ORDER_TYPE_RULE_TYPES: ServiceRuleType[] = ['OrderPayed', 'ServiceCompleted']
+
 export const SERVICE_RULE_FORM_CONFIG: RuleFormConfig = {
     ruleTypeOrder: RULE_TYPE_ORDER,
     ruleTypeLabels: RULE_TYPE_LABELS,
     awardOptionsByType: AWARD_OPTIONS_BY_TYPE,
     salaryBasisOptions: SALARY_BASIS_OPTIONS,
     categoryRuleTypes: [],
+    orderTypeRuleTypes: SERVICE_ORDER_TYPE_RULE_TYPES,
 }

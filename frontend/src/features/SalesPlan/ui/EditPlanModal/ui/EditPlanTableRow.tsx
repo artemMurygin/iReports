@@ -1,24 +1,36 @@
+import type { OrderTypeResponse } from 'ireports-contracts'
+
 import { cn } from '@/shared/lib/tw'
 import { CellStatus } from '@/shared/ui-kit/molecules/CellStatus'
-import type { EditRowView, FieldValues } from '@/features/SalesPlan/ui/EditPlanModal/model/useEditPlanForm.ts'
+import type { EditRowView } from '@/features/SalesPlan/ui/EditPlanModal/model/useEditPlanForm.ts'
 import { formatCurrency, formatPercent } from '@/features/SalesPlan/model/format.ts'
+import { OrderTypeSelect } from '@/features/SalesPlan/ui/EditPlanModal/ui/OrderTypeSelect.tsx'
 
 const CATEGORY_WIDTH = 'min-w-[160px] flex-1'
 const INPUT_WIDTH = 'w-[150px]'
+const ORDER_TYPES_WIDTH = 'w-[170px]'
 const FACT_WIDTH = 'w-[160px]'
 const STATUS_WIDTH = 'w-[116px]'
 
 type Props = {
     view: EditRowView
-    onFieldChange: (field: keyof FieldValues, value: string) => void
+    onFieldChange: (field: 'turnover' | 'margin', value: string) => void
+    /** Показывать колонку "Типы заказов" и принимать её правки — только для `direction ===
+     * 'service'` (см. `EditPlanTable`): у `shop` нет справочника `RoappOrderType`, см. PRD
+     * "не в скоупе". */
+    showOrderTypes: boolean
+    orderTypes: OrderTypeResponse[]
+    isOrderTypesLoading?: boolean
+    onOrderTypeIdsChange: (orderTypeIds: number[]) => void
 }
 
 /** One editable category row inside `EditPlanTable` (Pencil: `wumav` → `F7qa7`/`fdVVV`/...) —
  * name + "было X ₽"/margin-ratio note, the two editable turnover/margin cells (highlighted while
- * the row is dirty), the read-only fact/выполнение cell, and a status chip: "Изменён" while
- * dirty, otherwise the row's real `plan.status` via `CellStatus`. */
-export function EditPlanTableRow({ view, onFieldChange }: Props) {
-    const { row, values, draftTurnover, isDirty } = view
+ * the row is dirty), the optional "Типы заказов" multiselect (service only, Фаза 4
+ * docs/service-plan-salary-rule-order-category-filter), the read-only fact/выполнение cell, and a
+ * status chip: "Изменён" while dirty, otherwise the row's real `plan.status` via `CellStatus`. */
+export function EditPlanTableRow({ view, onFieldChange, showOrderTypes, orderTypes, isOrderTypesLoading, onOrderTypeIdsChange }: Props) {
+    const { row, values, draftTurnover, draftOrderTypeIds, isDirty } = view
     const factPercent = draftTurnover !== 0 ? formatPercent(row.fact.turnover, draftTurnover) : '0%'
     const marginPercent = row.plan.turnover !== 0 ? formatPercent(row.plan.margin, row.plan.turnover) : '0%'
 
@@ -48,6 +60,19 @@ export function EditPlanTableRow({ view, onFieldChange }: Props) {
                     onChange={(value) => onFieldChange('margin', value)}
                 />
             </div>
+
+            {showOrderTypes && (
+                <div className={cn('flex h-full shrink-0 items-center px-2', ORDER_TYPES_WIDTH)}>
+                    <OrderTypeSelect
+                        aria-label={`Типы заказов: ${row.categoryName}`}
+                        value={draftOrderTypeIds}
+                        onValueChange={onOrderTypeIdsChange}
+                        orderTypes={orderTypes}
+                        isLoading={isOrderTypesLoading}
+                        className={isDirty ? 'border-brand-border bg-brand-soft' : undefined}
+                    />
+                </div>
+            )}
 
             <div className={cn('flex h-full shrink-0 flex-col items-end justify-center gap-0.5 px-3', FACT_WIDTH)}>
                 <span className="font-ui text-[13px] font-medium text-ink">{formatCurrency(row.fact.turnover)}</span>

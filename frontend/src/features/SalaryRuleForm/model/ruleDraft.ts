@@ -76,6 +76,14 @@ export type RuleDraft = {
      * value; `null` is the deliberate default (see `createRuleDraft`), not an unset/error state. Read
      * only for `ProductSold`/`UsedProductSold`; ignored otherwise. */
     category: string | null
+    /** `OrderPayed.config.orderTypeIds` / `ServiceCompleted.config.orderTypeIds` (Фаза 5,
+     * docs/service-plan-salary-rule-order-category-filter, service only) — id'ы `RoappOrderType`
+     * (`RoappOrder.orderTypeId`), НЕ `SalesPlan.category`/`RoappServiceCategory`/`RoappProductCategory`.
+     * `[]` — «учитывать заказы всех типов», как и на бэкенде для отсутствующего/пустого поля (см.
+     * `orderPayedSalaryConfigSchema`/`serviceCompletedSalaryConfigSchema` в `contracts/commands/salary-rule.ts`),
+     * поэтому черновик всегда несёт значение (never `undefined`), а не отдельное "не задано" состояние.
+     * Read only for `OrderPayed`/`ServiceCompleted`; ignored otherwise. */
+    orderTypeIds: number[]
 }
 
 /** Default 3 threshold rows — pre-filled with the mockup's own example values (`design/
@@ -105,6 +113,7 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: null,
+        orderTypeIds: [],
     }
 }
 
@@ -125,5 +134,6 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: null,
+        orderTypeIds: [],
     }
 }

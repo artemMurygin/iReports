@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import type {
     CatalogResponse,
+    OrderTypeResponse,
     SalesPerformanceResponse,
     SalesPlanResponse,
     ServiceCategoryResponse,
@@ -37,6 +38,24 @@ export const api = {
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить категории услуг ' + error)
+                    }),
+        }),
+
+    // GET /v1/service/reports/order-type — read-only справочник типов заказов RoApp (Фаза 1
+    // docs/service-plan-salary-rule-order-category-filter), для мультиселекта "типы заказов" на
+    // строке плана (см. EditPlanModal) и для резолва id -> название на самой странице плана
+    // (useSalesPlan). Направление у справочника только service (см. PRD, "не в скоупе: shop") —
+    // вызывающая сторона сама решает, вызывать ли этот запрос для direction === 'shop'.
+    getOrderTypes: () =>
+        queryOptions({
+            queryKey: ['sales-plan', 'order-types'],
+            staleTime: 30 * 60 * 1000,
+            queryFn: ({ signal }) =>
+                apiInstance
+                    .get<OrderTypeResponse[]>('/v1/service/reports/order-type', { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError('Не удалось загрузить типы заказов ' + error)
                     }),
         }),
 

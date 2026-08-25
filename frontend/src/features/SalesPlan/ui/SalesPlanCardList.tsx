@@ -40,6 +40,7 @@ function SalesPlanCardList({ rows, direction, className, selectedIds, onToggleRo
                     <PlanCard
                         key={row.plan.id}
                         categoryName={row.categoryName}
+                        orderTypesLabel={row.orderTypeNames.length > 0 ? row.orderTypeNames.join(', ') : undefined}
                         status={row.plan.status}
                         planLabel={formatNumber(row.plan.turnover)}
                         factLabel={formatNumber(row.fact.turnover)}

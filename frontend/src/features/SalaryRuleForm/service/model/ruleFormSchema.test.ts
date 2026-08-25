@@ -63,6 +63,24 @@ describe('resolveRuleDraft — ServiceCompleted award variants', () => {
         }
     })
 
+    it('defaults to an empty orderTypeIds ("все типы") when none is selected', () => {
+        const result = resolveRuleDraft(baseDraft({ type: 'ServiceCompleted', awardKind: 'ServiceFixed' }))
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'ServiceCompleted') {
+            expect(result.data.config.orderTypeIds).toEqual([])
+        }
+    })
+
+    it('carries the selected orderTypeIds through to the payload', () => {
+        const result = resolveRuleDraft(
+            baseDraft({ type: 'ServiceCompleted', awardKind: 'ServiceFixed', orderTypeIds: [1, 2] }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'ServiceCompleted') {
+            expect(result.data.config.orderTypeIds).toEqual([1, 2])
+        }
+    })
+
     it('Fixed requires a price', () => {
         const result = resolveRuleDraft(baseDraft({ type: 'ServiceCompleted', awardKind: 'Fixed', price: '' }))
         expect(result.success).toBe(false)
@@ -96,6 +114,32 @@ describe('resolveRuleDraft — OrderPayed award variants', () => {
             baseDraft({ type: 'OrderPayed', awardKind: 'FixedPercent', percent: '12', salaryBasis: 'MARGIN' }),
         )
         expect(ok.success).toBe(true)
+    })
+
+    it('defaults to an empty orderTypeIds ("все типы") when none is selected', () => {
+        const result = resolveRuleDraft(
+            baseDraft({ type: 'OrderPayed', awardKind: 'FixedPercent', percent: '12', salaryBasis: 'MARGIN' }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'OrderPayed') {
+            expect(result.data.config.orderTypeIds).toEqual([])
+        }
+    })
+
+    it('carries the selected orderTypeIds through to the payload', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'OrderPayed',
+                awardKind: 'FixedPercent',
+                percent: '12',
+                salaryBasis: 'MARGIN',
+                orderTypeIds: [3, 7, 9],
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'OrderPayed') {
+            expect(result.data.config.orderTypeIds).toEqual([3, 7, 9])
+        }
     })
 
     it('FloatPercent succeeds with exactly 3 valid percentBorders', () => {
@@ -227,5 +271,25 @@ describe('resolveRuleDraft — TaskCompleted award variants', () => {
     it('Fixed succeeds with just a price', () => {
         const result = resolveRuleDraft(baseDraft({ type: 'TaskCompleted', awardKind: 'Fixed', price: '300' }))
         expect(result.success).toBe(true)
+    })
+
+    it('never carries orderTypeIds — the field only exists on OrderPayed/ServiceCompleted', () => {
+        const result = resolveRuleDraft(
+            baseDraft({ type: 'TaskCompleted', awardKind: 'Fixed', price: '300', orderTypeIds: [1, 2] }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'TaskCompleted') {
+            expect('orderTypeIds' in result.data.config).toBe(false)
+        }
+    })
+})
+
+describe('resolveRuleDraft — PayPerHour never carries orderTypeIds', () => {
+    it('the field only exists on OrderPayed/ServiceCompleted', () => {
+        const result = resolveRuleDraft(baseDraft({ type: 'PayPerHour', price: '450', orderTypeIds: [1, 2] }))
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'PayPerHour') {
+            expect('orderTypeIds' in result.data.config).toBe(false)
+        }
     })
 })

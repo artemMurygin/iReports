@@ -132,6 +132,9 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: rule.type === 'ProductSold' || rule.type === 'UsedProductSold' ? rule.config.category : null,
+        // orderTypeIds — сервисное поле (`OrderPayed`/`ServiceCompleted`, Фаза 5,
+        // docs/service-plan-salary-rule-order-category-filter), ни один shop-тип его не имеет.
+        orderTypeIds: [],
     }
 
     switch (rule.type) {

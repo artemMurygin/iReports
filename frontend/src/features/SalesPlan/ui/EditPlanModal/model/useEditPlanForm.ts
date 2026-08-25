@@ -1,12 +1,14 @@
 import { useState } from 'react'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { SalesDirection } from 'ireports-contracts'
 
+import { api } from '@/features/SalesPlan/model/api.ts'
 import type { SalesPlanRow } from '@/features/SalesPlan/model/useSalesPlan.ts'
 import { useUpdateSalesPlanRows, type PlanRowUpdate } from '@/features/SalesPlan/model/useUpdateSalesPlanRows.ts'
 
-export type FieldValues = { turnover: string; margin: string }
-type UpdateSalesPlanPayload = { turnover?: number; margin?: number }
+export type FieldValues = { turnover: string; margin: string; orderTypeIds: number[] }
+type UpdateSalesPlanPayload = { turnover?: number; margin?: number; orderTypeIds?: number[] }
 
 type UseEditPlanFormArgs = {
     open: boolean
@@ -24,6 +26,9 @@ export type EditRowView = {
     values: FieldValues
     draftTurnover: number
     draftMargin: number
+    /** = `values.orderTypeIds` — no fallback/parsing needed unlike `draftTurnover`/`draftMargin`
+     * (a multiselect has no "invalid intermediate text" state a plain number input does). */
+    draftOrderTypeIds: number[]
     isDirty: boolean
 }
 
@@ -48,12 +53,22 @@ const EMPTY_SUMMARY: EditPlanSummary = {
 }
 
 function defaultFieldValues(row: SalesPlanRow): FieldValues {
-    return { turnover: String(row.plan.turnover), margin: String(row.plan.margin) }
+    return { turnover: String(row.plan.turnover), margin: String(row.plan.margin), orderTypeIds: row.plan.orderTypeIds }
 }
 
 function parseOrFallback(value: string, fallback: number): number {
     const parsed = Number(value)
     return value.trim() !== '' && !Number.isNaN(parsed) ? parsed : fallback
+}
+
+/** Set-equality for `orderTypeIds` (order/duplicates don't carry meaning — a multiselect toggle
+ * never produces a duplicate, and comparison against `row.plan.orderTypeIds` shouldn't depend on
+ * either array's order). */
+function sameOrderTypeIds(a: number[], b: number[]): boolean {
+    if (a.length !== b.length) return false
+    const sortedA = [...a].sort((x, y) => x - y)
+    const sortedB = [...b].sort((x, y) => x - y)
+    return sortedA.every((id, index) => id === sortedB[index])
 }
 
 /**
@@ -71,6 +86,16 @@ export function useEditPlanForm({ open, onOpenChange, direction, rows }: UseEdit
     const [values, setValues] = useState<Record<string, FieldValues>>({})
     const updateRows = useUpdateSalesPlanRows(direction)
 
+    // "Типы заказов" (Фаза 4, docs/service-plan-salary-rule-order-category-filter) — service-only
+    // (RoApp; `shop`/МойСклад has no such concept, see the PRD's "не в скоупе"), so the
+    // dictionary (`GET .../reports/order-type`) is only fetched for `direction === 'service'`.
+    const showOrderTypes = direction === 'service'
+    const { data: orderTypes, isFetching: isOrderTypesFetching } = useQuery({
+        ...api.getOrderTypes(),
+        enabled: showOrderTypes,
+        placeholderData: keepPreviousData,
+    })
+
     const [wasOpen, setWasOpen] = useState(open)
     if (open !== wasOpen) {
         setWasOpen(open)
@@ -79,8 +104,12 @@ export function useEditPlanForm({ open, onOpenChange, direction, rows }: UseEdit
         }
     }
 
-    function setField(planId: string, field: keyof FieldValues, value: string) {
+    function setField(planId: string, field: 'turnover' | 'margin', value: string) {
         setValues((prev) => ({ ...prev, [planId]: { ...prev[planId], [field]: value } }))
+    }
+
+    function setOrderTypeIds(planId: string, orderTypeIds: number[]) {
+        setValues((prev) => ({ ...prev, [planId]: { ...prev[planId], orderTypeIds } }))
     }
 
     function getFieldValues(row: SalesPlanRow): FieldValues {
@@ -94,12 +123,17 @@ export function useEditPlanForm({ open, onOpenChange, direction, rows }: UseEdit
         const fieldValues = getFieldValues(row)
         const draftTurnover = parseOrFallback(fieldValues.turnover, row.plan.turnover)
         const draftMargin = parseOrFallback(fieldValues.margin, row.plan.margin)
+        const draftOrderTypeIds = fieldValues.orderTypeIds
         return {
             row,
             values: fieldValues,
             draftTurnover,
             draftMargin,
-            isDirty: draftTurnover !== row.plan.turnover || draftMargin !== row.plan.margin,
+            draftOrderTypeIds,
+            isDirty:
+                draftTurnover !== row.plan.turnover ||
+                draftMargin !== row.plan.margin ||
+                !sameOrderTypeIds(draftOrderTypeIds, row.plan.orderTypeIds),
         }
     })
 
@@ -138,7 +172,8 @@ export function useEditPlanForm({ open, onOpenChange, direction, rows }: UseEdit
         const payload: UpdateSalesPlanPayload = {}
         if (turnover !== row.plan.turnover) payload.turnover = turnover
         if (margin !== row.plan.margin) payload.margin = margin
-        if (payload.turnover !== undefined || payload.margin !== undefined) {
+        if (!sameOrderTypeIds(field.orderTypeIds, row.plan.orderTypeIds)) payload.orderTypeIds = field.orderTypeIds
+        if (payload.turnover !== undefined || payload.margin !== undefined || payload.orderTypeIds !== undefined) {
             updates.push({ id: row.plan.id, categoryName: row.categoryName, ...payload })
         }
     }
@@ -181,9 +216,13 @@ export function useEditPlanForm({ open, onOpenChange, direction, rows }: UseEdit
         rowViews,
         summary,
         setField,
+        setOrderTypeIds,
         canSave,
         isSaving: updateRows.isPending,
         handleCancel,
         handleSave,
+        showOrderTypes,
+        orderTypes: orderTypes ?? [],
+        isOrderTypesFetching,
     }
 }

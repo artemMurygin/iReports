@@ -1,4 +1,4 @@
-import type { CatalogCategoryResponse, TargetRole } from 'ireports-contracts'
+import type { CatalogCategoryResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
 import { Input } from '@/shared/ui-kit/atoms/Input'
@@ -8,6 +8,7 @@ import type { RuleFieldErrors } from '../../../model/formNumberUtils.ts'
 import type { RuleFormConfig } from '../../../model/ruleFormConfig.ts'
 import type { RuleDraft, RuleType } from '../../../model/ruleDraft.ts'
 import { CategoryField } from '../../CategoryField'
+import { OrderTypeField } from '../../OrderTypeField'
 
 import { FieldError } from './FieldError.tsx'
 import { RuleRoleField } from './RuleRoleField.tsx'
@@ -24,15 +25,24 @@ export type RuleFormCardFieldsProps = {
     categoriesError?: string | null
     /** `config.categoryRuleTypes.includes(draft.type)` — считается в `model/useRuleFormCard.ts`. */
     showCategory: boolean
+    orderTypes: OrderTypeResponse[]
+    isOrderTypesLoading?: boolean
+    orderTypesError?: string | null
+    /** `config.orderTypeRuleTypes.includes(draft.type)` — считается в `model/useRuleFormCard.ts`.
+     * Никогда не `true` одновременно с `showCategory` (Фаза 5, см. `ruleFormConfig.ts`'s комментарий
+     * про `orderTypeRuleTypes`), поэтому оба поля делят одну и ту же 4-ю колонку сетки. */
+    showOrderTypeIds: boolean
     onChange: (patch: Partial<RuleDraft>) => void
     onChangeType: (type: RuleType) => void
 }
 
 /**
- * Сетка основных полей карточки: `Название` / `Роль` / `Тип`(/`Категория`). Поле категории (node
- * `vtDMA`) появляется только для типов из `config.categoryRuleTypes` (`ProductSold`/
- * `UsedProductSold`), у сервиса этот список пуст — поэтому сетка переключается между 3 и 4
- * колонками на `sm:`.
+ * Сетка основных полей карточки: `Название` / `Роль` / `Тип`(/`Категория` или `Типы заказов`).
+ * Поле категории (node `vtDMA`) появляется только для типов из `config.categoryRuleTypes`
+ * (`ProductSold`/`UsedProductSold`, магазин); поле типов заказов (Фаза 5,
+ * docs/service-plan-salary-rule-order-category-filter) — только для `config.orderTypeRuleTypes`
+ * (`OrderPayed`/`ServiceCompleted`, сервис). Ни у одного направления оба списка не пересекаются,
+ * так что сетка переключается между 3 и 4 колонками на `sm:`, как и раньше.
  */
 export function RuleFormCardFields({
     draft,
@@ -45,11 +55,15 @@ export function RuleFormCardFields({
     isCategoriesLoading,
     categoriesError,
     showCategory,
+    orderTypes,
+    isOrderTypesLoading,
+    orderTypesError,
+    showOrderTypeIds,
     onChange,
     onChangeType,
 }: RuleFormCardFieldsProps) {
     return (
-        <div className={cn('grid grid-cols-1 gap-3', showCategory ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
+        <div className={cn('grid grid-cols-1 gap-3', showCategory || showOrderTypeIds ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
             <div className="flex flex-col gap-1.5">
                 <label className="font-ui text-xs font-medium text-ink-muted">Название правила</label>
                 <Input
@@ -96,6 +110,19 @@ export function RuleFormCardFields({
                         error={categoriesError}
                     />
                     <FieldError message={errors.category} />
+                </div>
+            )}
+
+            {showOrderTypeIds && (
+                <div className="flex flex-col gap-1.5">
+                    <label className="font-ui text-xs font-medium text-ink-muted">Типы заказов</label>
+                    <OrderTypeField
+                        value={draft.orderTypeIds}
+                        onValueChange={(orderTypeIds) => onChange({ orderTypeIds })}
+                        orderTypes={orderTypes}
+                        isLoading={isOrderTypesLoading}
+                        error={orderTypesError}
+                    />
                 </div>
             )}
         </div>

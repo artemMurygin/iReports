@@ -20,4 +20,8 @@ export const ROLE_LABELS: Record<TargetRole, string> = {
     // правил её не отдаёт (см. salary-rule-role-catalog.ts на бэкенде), но
     // карта покрывает весь enum контракта, как и остальные записи здесь.
     OFFICE: 'Офис',
+    // SOLO_MANAGER — как и OFFICE, роль графика работы, не входящая в
+    // ALL_SERVICE_ROLES (её часы всё же участвуют в расчёте PayPerHour, см.
+    // pay-per-hour-roles.ts), карта покрывает весь enum по той же причине.
+    SOLO_MANAGER: 'Соло-менеджер',
 }

@@ -37,10 +37,10 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             break
         }
         case 'ServiceCompleted':
-            config = { award: buildServiceCompletedAward(draft, errors) }
+            config = { award: buildServiceCompletedAward(draft, errors), orderTypeIds: draft.orderTypeIds }
             break
         case 'OrderPayed':
-            config = { award: buildOrderPayedAward(draft, errors) }
+            config = { award: buildOrderPayedAward(draft, errors), orderTypeIds: draft.orderTypeIds }
             break
         case 'TaskCompleted':
             config = { award: buildTaskCompletedAward(draft, errors) }
@@ -111,6 +111,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: null,
+        orderTypeIds: [],
     }
 
     switch (rule.type) {
@@ -119,7 +120,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
 
         case 'ServiceCompleted': {
             const award = rule.config.award
-            const withAward: RuleDraft = { ...base, awardKind: award.type }
+            const withAward: RuleDraft = { ...base, awardKind: award.type, orderTypeIds: rule.config.orderTypeIds ?? [] }
             switch (award.type) {
                 case 'Fixed':
                     return { ...withAward, price: String(award.price) }
@@ -133,7 +134,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
 
         case 'OrderPayed': {
             const award = rule.config.award
-            const withAward: RuleDraft = { ...base, awardKind: award.type }
+            const withAward: RuleDraft = { ...base, awardKind: award.type, orderTypeIds: rule.config.orderTypeIds ?? [] }
             switch (award.type) {
                 case 'Fixed':
                     return { ...withAward, price: String(award.price) }

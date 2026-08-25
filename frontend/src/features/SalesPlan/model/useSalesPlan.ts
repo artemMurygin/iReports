@@ -25,6 +25,12 @@ export type SalesPlanRow = SalesPerformanceResponse & {
     remainingMargin: number
     /** `fact.margin / plan.margin * 100` — прогресс-бар линии маржи (у `fact`/`prognose` есть готовый `percentCompletion` для выручки, но не для маржи). */
     marginPercent: number
+    /** Человекочитаемые названия `plan.orderTypeIds` (справочник `GET .../reports/order-type`,
+     * см. `api.getOrderTypes`) — пустой массив как для "все типы" (`orderTypeIds: []`), так и для
+     * направления `shop` (справочник типов заказов там не запрашивается, см. Фазу 1
+     * docs/service-plan-salary-rule-order-category-filter). Неизвестный id (справочник ещё не
+     * успел прогрузиться) отображается как сам id, а не молча пропадает. */
+    orderTypeNames: string[]
 }
 
 export type SalesPlanTotals = {
@@ -100,6 +106,12 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, peri
     } = useQuery({ ...api.getServiceCategories(), enabled: !isShop, placeholderData: keepPreviousData })
 
     const {
+        data: orderTypes,
+        isFetching: isOrderTypesFetching,
+        error: orderTypesError,
+    } = useQuery({ ...api.getOrderTypes(), enabled: !isShop, placeholderData: keepPreviousData })
+
+    const {
         data: shopPerformance,
         dataUpdatedAt: shopPerformanceUpdatedAt,
         isFetching: isShopPerformanceFetching,
@@ -114,15 +126,23 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, peri
 
     const performance = isShop ? shopPerformance : servicePerformance
     const isPerformanceFetching = isShop ? isShopPerformanceFetching : isServicePerformanceFetching
-    const isCategoriesFetching = isShop ? isShopCatalogFetching : isServiceCategoriesFetching
+    // Справочник типов заказов запрашивается только для service (см. api.getOrderTypes) — для
+    // shop isOrderTypesFetching/orderTypesError остаются в их начальном "выключенном" состоянии
+    // (false/null, запрос enabled: false) и не влияют на итоговые флаги ниже.
+    const isCategoriesFetching = isShop ? isShopCatalogFetching : isServiceCategoriesFetching || isOrderTypesFetching
     const performanceError = isShop ? shopPerformanceError : servicePerformanceError
-    const categoriesError = isShop ? shopCatalogError : serviceCategoriesError
+    const categoriesError = isShop ? shopCatalogError : (serviceCategoriesError ?? orderTypesError)
     const dataVersion = isShop ? shopPerformanceUpdatedAt : servicePerformanceUpdatedAt
 
     const categoryNameById = useMemo(() => {
         if (isShop) return flattenCatalog(shopCatalog ?? [])
         return new Map((serviceCategories ?? []).map((category) => [String(category.id), category.name]))
     }, [isShop, shopCatalog, serviceCategories])
+
+    const orderTypeNameById = useMemo(
+        () => new Map((orderTypes ?? []).map((orderType) => [orderType.id, orderType.name])),
+        [orderTypes],
+    )
 
     const rows = useMemo<SalesPlanRow[]>(() => {
         if (!performance) return []
@@ -135,8 +155,11 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, peri
                 remaining: row.plan.turnover - row.fact.turnover,
                 remainingMargin: row.plan.margin - row.fact.margin,
                 marginPercent: row.plan.margin !== 0 ? (row.fact.margin / row.plan.margin) * 100 : 0,
+                orderTypeNames: row.plan.orderTypeIds.map(
+                    (id) => orderTypeNameById.get(id) ?? String(id),
+                ),
             }))
-    }, [performance, categoryNameById])
+    }, [performance, categoryNameById, orderTypeNameById])
 
     const totals = useMemo<SalesPlanTotals>(() => {
         if (rows.length === 0) return EMPTY_TOTALS

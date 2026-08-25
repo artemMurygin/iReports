@@ -40,9 +40,26 @@ export type EditPlanModalProps = {
  * the save mutation live in `useEditPlanForm`; the body and footer slots are their own
  * components (`EditPlanModalBody`, `EditPlanModalFooter`, see `frontend/CLAUDE.md`'s "Слоты
  * вместо children"), assembled here as props rather than inlined into `Modal`'s JSX.
+ *
+ * "Типы заказов" (Фаза 4, docs/service-plan-salary-rule-order-category-filter) — the order-types
+ * multiselect column is `service`-only (RoApp; `shop`/МойСклад has no such concept, see the
+ * PRD's "не в скоупе"), so the dictionary (`GET .../reports/order-type`) is only fetched for
+ * `direction === 'service'`; `showOrderTypes` gates the column everywhere downstream.
  */
 function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlanModalProps) {
-    const { rowViews, summary, setField, canSave, isSaving, handleCancel, handleSave } = useEditPlanForm({
+    const {
+        rowViews,
+        summary,
+        setField,
+        setOrderTypeIds,
+        canSave,
+        isSaving,
+        handleCancel,
+        handleSave,
+        showOrderTypes,
+        orderTypes,
+        isOrderTypesFetching,
+    } = useEditPlanForm({
         open,
         onOpenChange,
         direction,
@@ -68,6 +85,10 @@ function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlan
                 rowViews={rowViews}
                 summary={summary}
                 onFieldChange={setField}
+                showOrderTypes={showOrderTypes}
+                orderTypes={orderTypes}
+                isOrderTypesLoading={isOrderTypesFetching}
+                onOrderTypeIdsChange={setOrderTypeIds}
             />
         </Modal>
     )

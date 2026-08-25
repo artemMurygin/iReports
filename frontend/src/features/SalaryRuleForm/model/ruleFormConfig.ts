@@ -30,6 +30,10 @@ export type AwardOptionConfig = {
  * passing a different `RuleFormConfig`, instead of branching on direction inside the shared UI
  * components. `categoryRuleTypes` — the subset of `ruleTypeOrder` that shows the `CategoryField`
  * (Фаза 4, node `vtDMA`) — is empty for service (no service rule type has a category).
+ * `orderTypeRuleTypes` (Фаза 5, docs/service-plan-salary-rule-order-category-filter) — the subset
+ * that shows the `OrderTypeField` multiselect (`OrderPayed`/`ServiceCompleted`) — is empty for
+ * shop (no shop rule type filters by RoApp order type). The two lists never overlap for a given
+ * direction, so `core/ui/RuleFormCard` treats them as mutually exclusive.
  */
 export type RuleFormConfig = {
     ruleTypeOrder: RuleType[]
@@ -37,4 +41,5 @@ export type RuleFormConfig = {
     awardOptionsByType: Partial<Record<RuleType, AwardOptionConfig[]>>
     salaryBasisOptions: SegmentedControlOption<SalaryBasisValue>[]
     categoryRuleTypes: RuleType[]
+    orderTypeRuleTypes: RuleType[]
 }

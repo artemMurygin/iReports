@@ -109,8 +109,14 @@ function SalesPlanTableRow({
 
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-[3px] py-2">
                 <div className="flex items-center">
-                    <span className="min-w-[200px] flex-1 truncate px-3 font-ui text-sm font-medium text-ink">
+                    <span
+                        className="min-w-[200px] flex-1 truncate px-3 font-ui text-sm font-medium text-ink"
+                        title={row.orderTypeNames.length > 0 ? `Типы заказов: ${row.orderTypeNames.join(', ')}` : undefined}
+                    >
                         {row.categoryName}
+                        {row.orderTypeNames.length > 0 && (
+                            <span className="ml-1.5 font-normal text-ink-muted">· {row.orderTypeNames.join(', ')}</span>
+                        )}
                     </span>
                     <span className={cn('shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink', COLUMN_WIDTH.plan)}>
                         {formatCurrency(row.plan.turnover)}

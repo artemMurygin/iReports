@@ -43,6 +43,7 @@ export { resolveRuleDraft, draftFromRule } from './service/model/ruleFormSchema.
 export type { RuleFieldErrors, ResolveRuleDraftResult } from './service/model/ruleFormSchema.ts'
 export { SERVICE_RULE_FORM_CONFIG, RULE_TYPE_LABELS, RULE_TYPE_ORDER } from './service/model/ruleTypes.ts'
 export { useSalaryRuleTypes } from './service/model/useSalaryRuleTypes.ts'
+export { useOrderTypes } from './service/model/useOrderTypes.ts'
 
 export { resolveShopRuleDraft, draftFromShopRule } from './shop/model/ruleFormSchema.ts'
 export type { ResolveShopRuleDraftResult } from './shop/model/ruleFormSchema.ts'

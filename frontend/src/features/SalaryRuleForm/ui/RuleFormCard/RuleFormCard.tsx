@@ -22,7 +22,10 @@ import { RuleFormCardHeader } from './ui/RuleFormCardHeader.tsx'
  * `SHOP_RULE_FORM_CONFIG`) rather than being imported directly, so this exact component
  * (award/thresholds included) renders both directions' cards — Pencil node `ZMEof` (Магазин) reuses
  * the same layout as `tSYIw` (Сервис) for this reason. The category field (node `vtDMA`) renders
- * only for `config.categoryRuleTypes` (`ProductSold`/`UsedProductSold`), never for service.
+ * only for `config.categoryRuleTypes` (`ProductSold`/`UsedProductSold`), never for service. The
+ * order-type multiselect (Фаза 5, docs/service-plan-salary-rule-order-category-filter) renders
+ * only for `config.orderTypeRuleTypes` (`OrderPayed`/`ServiceCompleted`), never for shop — the two
+ * are mutually exclusive per direction, see `RuleFormCardFields.tsx`.
  *
  * Validation errors only ever come from a `resolveRuleDraft`/`resolveShopRuleDraft` call the parent
  * runs (via `onSave`, see `core/model/useSalaryRulesDraft.ts`'s `trySaveExpanded`) — this component
@@ -45,6 +48,9 @@ export function RuleFormCard({
     categories,
     isCategoriesLoading,
     categoriesError,
+    orderTypes,
+    isOrderTypesLoading,
+    orderTypesError,
     onChange,
     onChangeType,
     onChangeBorder,
@@ -58,6 +64,7 @@ export function RuleFormCard({
         allowedRoles,
         awardOptions,
         showCategory,
+        showOrderTypeIds,
         patchDraft,
         changeBorder,
         handleTypeChange,
@@ -89,6 +96,10 @@ export function RuleFormCard({
                         isCategoriesLoading={isCategoriesLoading}
                         categoriesError={categoriesError}
                         showCategory={showCategory}
+                        orderTypes={orderTypes}
+                        isOrderTypesLoading={isOrderTypesLoading}
+                        orderTypesError={orderTypesError}
+                        showOrderTypeIds={showOrderTypeIds}
                         onChange={patchDraft}
                         onChangeType={handleTypeChange}
                     />
