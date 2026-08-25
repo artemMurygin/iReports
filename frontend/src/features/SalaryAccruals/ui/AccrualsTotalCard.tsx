@@ -29,6 +29,12 @@ export type AccrualsTotalCardProps = {
  *
  * `totals` считается по уже отфильтрованному (отдел + статус) списку страницы, поэтому карточка
  * отражает именно то, что видно ниже в таблице/карточках, а не весь список за период.
+ *
+ * Границы разные по брейкпоинту: на мобильном (`DtPgO`'s `z5nFJg`) это самостоятельная карточка
+ * (свои `rounded-xl border`) — на странице нет общего «Ledger»-контейнера, который бы её обрамил;
+ * на десктопе (`LvW0I`'s `RsJQs`) она — верхняя секция внутри `AccrualsLedgerCard`, где рамку и
+ * нижний разделитель даёт сам `AccrualsLedgerCard` (тот же приём, что `LedgerHero`/`LedgerCard`
+ * в `pages/SalaryReportV2`), поэтому здесь на `md:` рамка/скругление снимаются.
  */
 function AccrualsTotalCard({ totals, periodLabel, directionLabel, departmentName, className }: AccrualsTotalCardProps) {
     const totalDocsLabel = `${totals.totalDocsCount} ${pluralizeDocuments(totals.totalDocsCount)}`
@@ -40,7 +46,7 @@ function AccrualsTotalCard({ totals, periodLabel, directionLabel, departmentName
         <div
             data-slot="accruals-total-card"
             className={cn(
-                'flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between md:gap-6 md:p-5',
+                'flex flex-col gap-3 rounded-xl border border-hairline bg-surface p-4 md:flex-row md:items-center md:justify-between md:gap-6 md:rounded-none md:border-0 md:p-5',
                 className,
             )}
         >
@@ -67,8 +73,8 @@ function AccrualsTotalCard({ totals, periodLabel, directionLabel, departmentName
                             <p className="font-ui text-xs text-ink-muted">
                                 Сумма документов, начисленных полностью (все правила проведены). Частично начисленные
                                 документы пока не входят в эту сумму — точная сумма по проведённым строкам таких
-                                документов на уровне списка недоступна, они учтены только в счётчике «из M
-                                документов» справа.
+                                документов на уровне списка недоступна, они учтены только в счётчике «из M документов»
+                                справа.
                             </p>
                         </PopoverContent>
                     </Popover>

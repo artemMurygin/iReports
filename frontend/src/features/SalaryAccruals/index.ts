@@ -26,7 +26,8 @@ export {
 export {
     deriveListProgress,
     deriveDocumentProgress,
-    deriveAccrualsSummary,
+    deriveAccrualsTotals,
+    filterAccrualsByDepartment,
     countAdjustedLines,
     countByStatus,
     filterAccruals,
@@ -36,11 +37,12 @@ export {
     pluralizeDocuments,
     STATUS_FILTERS,
 } from './model/accrualView.ts'
-export type { AccrualProgress, AccrualsSummary, AccrualStatusFilter } from './model/accrualView.ts'
+export type { AccrualProgress, AccrualsTotals, AccrualStatusFilter } from './model/accrualView.ts'
 export { ACCRUAL_STATUS_LABEL, ACCRUAL_LINE_STATUS_LABEL, ROLE_LABEL } from './model/labels.ts'
 export { AccrualStatusBadge, AccrualLineStatusBadge, DismissedBadge } from './ui/AccrualStatusBadge.tsx'
 export { AccrualProgressBar } from './ui/AccrualProgressBar.tsx'
-export { AccrualsKpiRow } from './ui/AccrualsKpiRow.tsx'
+export { AccrualsTotalCard } from './ui/AccrualsTotalCard.tsx'
+export { AccrualsLedgerCard } from './ui/AccrualsLedgerCard.tsx'
 export { AccrualStatusFilterRow } from './ui/AccrualStatusFilter.tsx'
 export { AccrualsTable } from './ui/AccrualsTable.tsx'
 export { AccrualCardList } from './ui/AccrualCardList.tsx'

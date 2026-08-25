@@ -24,15 +24,20 @@ export function SalaryAccrualsPage() {
         period,
         setPeriod,
         periodLabel,
+        directionLabel,
         isClosed,
-        closedLabel,
         items,
-        summary,
+        totals,
         statusCounts,
         statusFilter,
         setStatusFilter,
         search,
         setSearch,
+        departments,
+        isDepartmentsLoading,
+        departmentId,
+        setDepartmentId,
+        departmentName,
         departmentNameById,
         footerNote,
         footerTotal,
@@ -75,10 +80,14 @@ export function SalaryAccrualsPage() {
                     <PageHeader
                         direction={direction}
                         onDirectionChange={setDirection}
+                        departments={departments}
+                        isDepartmentsLoading={isDepartmentsLoading}
+                        departmentId={departmentId}
+                        onDepartmentIdChange={setDepartmentId}
+                        departmentName={departmentName}
                         period={period}
                         onPeriodChange={setPeriod}
                         isPeriodClosed={isClosed}
-                        closedLabel={closedLabel}
                         nonPaidCount={nonPaidCount}
                         onAccrueAllMonth={openPeriodConfirm}
                     />
@@ -120,9 +129,10 @@ export function SalaryAccrualsPage() {
                 <SalaryAccrualsBody
                     isClosed={isClosed}
                     periodLabel={periodLabel}
-                    periodDirectionLabel={periodDirectionLabel}
+                    directionLabel={directionLabel}
+                    departmentName={departmentName}
                     items={items}
-                    summary={summary}
+                    totals={totals}
                     statusCounts={statusCounts}
                     statusFilter={statusFilter}
                     onStatusFilterChange={setStatusFilter}

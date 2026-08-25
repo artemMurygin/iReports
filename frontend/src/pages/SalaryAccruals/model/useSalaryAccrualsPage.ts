@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { format } from 'date-fns'
 import type { SalesDirection } from 'ireports-contracts'
 
 import { DIRECTION_LABEL, useAccountingPeriod } from '@/features/AccountingPeriod'
@@ -8,8 +7,9 @@ import {
     accrueBatchFromPeriodResponse,
     aggregateAccrueBatch,
     countByStatus,
-    deriveAccrualsSummary,
+    deriveAccrualsTotals,
     filterAccruals,
+    filterAccrualsByDepartment,
     mergeAccrueBatchRetry,
     pluralizeDocuments,
     readAccrueErrorMessage,
@@ -21,7 +21,7 @@ import {
     type AccrueBatchResult,
 } from '@/features/SalaryAccruals'
 import { DEFAULT_PERIOD, formatCurrency, formatPeriodLabel, isValidPeriod } from '@/features/SalesPlan'
-import { useDepartments, useEmployees } from '@/features/TargetDirectory'
+import { useDepartments } from '@/features/TargetDirectory'
 
 /**
  * Всё состояние `pages/SalaryAccruals` (Фаза 5 docs/payroll-closing-and-accrual):
@@ -39,6 +39,15 @@ export function useSalaryAccrualsPage() {
     const direction: SalesDirection = rawDirection === 'shop' ? 'shop' : 'service'
     const rawPeriod = searchParams.get('period')
     const period = rawPeriod !== null && isValidPeriod(rawPeriod) ? rawPeriod : DEFAULT_PERIOD
+
+    // Select «Отдел» в Scope Controls (`LvW0I`'s `wQY20`/`DtPgO`'s `U50So`) — новый фильтр,
+    // которого не было в исходном списке; `null` — «Все отделы», тот же query-параметр
+    // convention, что `direction`/`period`, отсутствует в URL по умолчанию (без фильтра).
+    const rawDepartment = searchParams.get('department')
+    const departmentId =
+        rawDepartment !== null && rawDepartment !== '' && !Number.isNaN(Number(rawDepartment))
+            ? Number(rawDepartment)
+            : null
 
     function setDirection(next: SalesDirection) {
         setSearchParams(
@@ -62,43 +71,52 @@ export function useSalaryAccrualsPage() {
         )
     }
 
+    function setDepartmentId(next: number | null) {
+        setSearchParams(
+            (prev) => {
+                const params = new URLSearchParams(prev)
+                if (next === null) params.delete('department')
+                else params.set('department', String(next))
+                return params
+            },
+            { replace: true },
+        )
+    }
+
     const accruals = useSalaryAccruals(direction, period)
     const { periodStatus, isClosed } = useAccountingPeriod(direction, period)
-    const employees = useEmployees()
     const departments = useDepartments()
 
     const [statusFilter, setStatusFilter] = useState<AccrualStatusFilter>('ALL')
     const [search, setSearch] = useState('')
 
-    const employeeNameById = useMemo(
-        () => Object.fromEntries((employees.data ?? []).map((employee) => [employee.id, employee.name])),
-        [employees.data],
-    )
     const departmentNameById = useMemo(
         () => Object.fromEntries((departments.data ?? []).map((department) => [department.id, department.name])),
         [departments.data],
     )
 
-    // «Период закрыт · Иван Петров · 01.08.2026 14:20» — та же сборка, что у плана продаж.
-    const closedLabel = useMemo(() => {
-        if (periodStatus === undefined || periodStatus.status !== 'CLOSED') return null
-        const name = periodStatus.closedBy !== null ? employeeNameById[periodStatus.closedBy] : undefined
-        const when = periodStatus.closedAt !== null ? format(new Date(periodStatus.closedAt), 'dd.MM.yyyy HH:mm') : null
-        return [name ?? (periodStatus.closedBy !== null ? `ID ${periodStatus.closedBy}` : null), when]
-            .filter((part): part is string => part !== null)
-            .join(' · ')
-    }, [periodStatus, employeeNameById])
-
     const periodLabel = formatPeriodLabel(period)
-    const summary = useMemo(() => deriveAccrualsSummary(accruals.items), [accruals.items])
-    const statusCounts = useMemo(() => countByStatus(accruals.items), [accruals.items])
-    const filteredItems = useMemo(
-        () => filterAccruals(accruals.items, statusFilter, search),
-        [accruals.items, statusFilter, search],
-    )
+    const directionLabel = DIRECTION_LABEL[direction]
+    const departmentName = departmentId !== null ? (departmentNameById[departmentId] ?? null) : null
 
-    const footerNote = `Показано ${filteredItems.length} из ${accruals.items.length} ${pluralizeDocuments(accruals.items.length)} · ${periodLabel} · направление «${DIRECTION_LABEL[direction]}»`
-    const footerTotal = `Итого ${formatCurrency(summary.totalAmount)}`
+    // Select «Отдел» сужает область до статус-фильтра/поиска — оба применяются поверх него, а не
+    // независимо, поэтому и «N из M» в подвале таблицы, и счётчики status-чипов (`statusCounts`)
+    // считаются уже в границах выбранного отдела.
+    const scopedItems = useMemo(
+        () => filterAccrualsByDepartment(accruals.items, departmentId),
+        [accruals.items, departmentId],
+    )
+    const statusCounts = useMemo(() => countByStatus(scopedItems), [scopedItems])
+    const filteredItems = useMemo(
+        () => filterAccruals(scopedItems, statusFilter, search),
+        [scopedItems, statusFilter, search],
+    )
+    // Карточка «Итого» (`AccrualsTotalCard`) считается по уже отфильтрованному (отдел + статус)
+    // списку — см. её собственный комментарий.
+    const totals = useMemo(() => deriveAccrualsTotals(filteredItems), [filteredItems])
+
+    const footerNote = `Показано ${filteredItems.length} из ${scopedItems.length} ${pluralizeDocuments(scopedItems.length)} · ${periodLabel}`
+    const footerTotal = `Итого ${formatCurrency(totals.toAccrueAmount)}`
 
     // ── Проведение (Фаза 9 docs/payroll-closing-and-accrual, PRD 2) ─────────────────
     // Selection Bar («Начислить выбранным») и Page Header («Начислить все документы
@@ -205,15 +223,20 @@ export function useSalaryAccrualsPage() {
         period,
         setPeriod,
         periodLabel,
+        directionLabel,
         isClosed,
-        closedLabel,
         items: filteredItems,
-        summary,
+        totals,
         statusCounts,
         statusFilter,
         setStatusFilter,
         search,
         setSearch,
+        departments: departments.data ?? [],
+        isDepartmentsLoading: departments.isLoading,
+        departmentId,
+        setDepartmentId,
+        departmentName,
         departmentNameById,
         footerNote,
         footerTotal,

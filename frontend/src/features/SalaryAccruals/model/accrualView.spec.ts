@@ -4,11 +4,12 @@ import type { SalaryAccrual, SalaryAccrualLine } from 'ireports-contracts'
 import {
     countAdjustedLines,
     countByStatus,
-    deriveAccrualsSummary,
+    deriveAccrualsTotals,
     deriveDocumentProgress,
     deriveListProgress,
     employeeInitials,
     filterAccruals,
+    filterAccrualsByDepartment,
     formatLineRate,
     isLineAdjusted,
     pluralizeLines,
@@ -130,25 +131,52 @@ describe('formatLineRate (ставка: процент vs деньги)', () => 
     })
 })
 
-describe('deriveAccrualsSummary (KPI Row списка)', () => {
-    it('суммирует фонд, сотрудников, уволенных, черновики и ожидающих выплаты', () => {
-        const summary = deriveAccrualsSummary([
+describe('deriveAccrualsTotals (карточка «Итого»)', () => {
+    it('«К начислению» — сумма total всех документов; «Начислено» — только ACCRUED/PAID', () => {
+        const totals = deriveAccrualsTotals([
             accrual({ id: 'a1', total: 10_000, status: 'DRAFT' }),
-            accrual({ id: 'a2', total: 20_000, status: 'DRAFT', isDismissed: true }),
-            accrual({ id: 'a3', total: 30_000, status: 'ACCRUED' }),
-            accrual({ id: 'a4', total: 40_000, status: 'PARTIALLY_ACCRUED' }),
-            accrual({ id: 'a5', total: 0, status: 'PAID' }),
+            accrual({ id: 'a2', total: 20_000, status: 'ACCRUED' }),
+            accrual({ id: 'a3', total: 30_000, status: 'PARTIALLY_ACCRUED' }),
+            accrual({ id: 'a4', total: 40_000, status: 'PAID' }),
         ])
 
-        expect(summary).toEqual({
-            totalAmount: 100_000,
-            employeesCount: 5,
-            dismissedCount: 1,
-            draftCount: 2,
-            draftAmount: 30_000,
-            awaitingCount: 1,
-            awaitingAmount: 30_000,
+        expect(totals).toEqual({
+            toAccrueAmount: 100_000,
+            // PARTIALLY_ACCRUED (a3) сознательно исключён из числителя — точная сумма по
+            // проведённым строкам такого документа на уровне списка недоступна.
+            accruedSoFarAmount: 60_000,
+            accruedDocsCount: 2,
+            totalDocsCount: 4,
         })
+    })
+
+    it('пустой список -> все поля 0', () => {
+        expect(deriveAccrualsTotals([])).toEqual({
+            toAccrueAmount: 0,
+            accruedSoFarAmount: 0,
+            accruedDocsCount: 0,
+            totalDocsCount: 0,
+        })
+    })
+})
+
+describe('filterAccrualsByDepartment (Select «Отдел» в Scope Controls)', () => {
+    const items = [
+        accrual({ id: 'a1', departmentId: 160 }),
+        accrual({ id: 'a2', departmentId: 161 }),
+        accrual({ id: 'a3', departmentId: null }),
+    ]
+
+    it('null («Все отделы») -> список без изменений', () => {
+        expect(filterAccrualsByDepartment(items, null)).toEqual(items)
+    })
+
+    it('фильтрует по id отдела', () => {
+        expect(filterAccrualsByDepartment(items, 160).map((i) => i.id)).toEqual(['a1'])
+    })
+
+    it('документ без отдела не попадает ни под один конкретный id', () => {
+        expect(filterAccrualsByDepartment(items, 999)).toHaveLength(0)
     })
 })
 

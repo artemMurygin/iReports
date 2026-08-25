@@ -4,10 +4,11 @@ import { SalaryAccrualDocumentBody } from './SalaryAccrualDocumentBody.tsx'
 
 /**
  * Pencil: design/sallary-first-iteration.pen, секция «Закрытие месяца и начисления»
- * (`uKNkE`) — `jb7fL` (`Начисление · Документ`, состояние «Черновик», desktop) / `wYi5o`
- * (мобильный); состояния `JEdfH`/`fX0wq`/`L6cTJ` покрываются теми же бейджами статусов.
- * Фаза 5 docs/payroll-closing-and-accrual — чтение; действия строк, «Начислить всё» и
- * drawer корректировки (`w1BVLM`) — Фаза 9.
+ * (`uKNkE`) — редизайн `DQ3tV` (`Начисление · Документ · Черновик REDESIGN`, desktop) /
+ * `g0onp` (мобильный REDESIGN), сменивший исходные `jb7fL`/`wYi5o`; состояния
+ * `JEdfH`/`fX0wq`/`L6cTJ` покрываются теми же бейджами статусов. Фаза 5
+ * docs/payroll-closing-and-accrual — чтение; действия строк и «Начислить всё» — Фаза 9
+ * (`AccrualLineActions`, `useAccrueDocument`); drawer корректировки — `AdjustLineModal`.
  */
 export function SalaryAccrualDocumentPage() {
     const {
@@ -15,7 +16,6 @@ export function SalaryAccrualDocumentPage() {
         directionLabel,
         periodLabel,
         departmentName,
-        planFact,
         progress,
         isLineExpanded,
         toggleLine,
@@ -41,7 +41,6 @@ export function SalaryAccrualDocumentPage() {
                     directionLabel={directionLabel}
                     periodLabel={periodLabel}
                     departmentName={departmentName}
-                    planFact={planFact}
                     progress={progress}
                     isLineExpanded={isLineExpanded}
                     onToggleLine={toggleLine}

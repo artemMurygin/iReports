@@ -3,21 +3,24 @@ import type { SalaryAccrual } from 'ireports-contracts'
 import {
     AccrualCardList,
     AccrualsEmptyState,
-    AccrualsKpiRow,
+    AccrualsLedgerCard,
     AccrualStatusFilterRow,
-    AccrualsTable,
+    AccrualsTotalCard,
     SelectionBar,
     type AccrualSelection,
+    type AccrualsTotals,
     type AccrualStatusFilter,
-    type AccrualsSummary,
 } from '@/features/SalaryAccruals'
 
 export type SalaryAccrualsBodyProps = {
     isClosed: boolean
     periodLabel: string
-    periodDirectionLabel: string
+    /** «Сервис» / «Магазин» — для карточки «Итого» (`AccrualsTotalCard`'s note). */
+    directionLabel: string
+    /** Название выбранного отдела, `null` — «Все отделы» (та же карточка). */
+    departmentName: string | null
     items: SalaryAccrual[]
-    summary: AccrualsSummary
+    totals: AccrualsTotals
     statusCounts: Record<AccrualStatusFilter, number>
     statusFilter: AccrualStatusFilter
     onStatusFilterChange: (filter: AccrualStatusFilter) => void
@@ -36,16 +39,22 @@ export type SalaryAccrualsBodyProps = {
 
 /**
  * Все ветвления страницы списка начислений (конвенция frontend/CLAUDE.md — медиатор без
- * условного рендера): месяц не закрыт -> empty-state `g6vEv`; закрыт -> KPI Row +
- * фильтр/поиск + Selection Bar (только пока `selection.selectedCount > 0`, Фаза 9) +
- * таблица (`cfNlL`, `md:` и выше) / карточки (`Q0i6z3`, ниже `md:`).
+ * условного рендера): месяц не закрыт -> empty-state `Ed0FF`; закрыт -> Selection Bar (только
+ * пока `selection.selectedCount > 0`, Фаза 9) + карточка-гроссбух `AccrualsLedgerCard`
+ * (`LvW0I`'s `JKQdY`, «Итого» + таблица под общей рамкой, `md:` и выше) / карточка «Итого» +
+ * статус-чипы/поиск + карточки документов (`DtPgO`, ниже `md:`).
+ *
+ * Редизайн убрал KPI Row (4 отдельные карточки) и Filter Row (статус-чипы + поиск) с
+ * десктопа целиком — заменены картой «Итого» внутри `AccrualsLedgerCard`; на мобильном
+ * статус-чипы + поиск (`AccrualStatusFilterRow`) остаются, как и в исходном макете.
  */
 export function SalaryAccrualsBody({
     isClosed,
     periodLabel,
-    periodDirectionLabel,
+    directionLabel,
+    departmentName,
     items,
-    summary,
+    totals,
     statusCounts,
     statusFilter,
     onStatusFilterChange,
@@ -65,16 +74,6 @@ export function SalaryAccrualsBody({
 
     return (
         <div className="flex flex-col gap-4">
-            <AccrualsKpiRow summary={summary} periodDirectionLabel={periodDirectionLabel} />
-
-            <AccrualStatusFilterRow
-                value={statusFilter}
-                onChange={onStatusFilterChange}
-                counts={statusCounts}
-                search={search}
-                onSearchChange={onSearchChange}
-            />
-
             {selection.selectedCount > 0 && (
                 <SelectionBar
                     selectedCount={selection.selectedCount}
@@ -83,7 +82,11 @@ export function SalaryAccrualsBody({
                 />
             )}
 
-            <AccrualsTable
+            <AccrualsLedgerCard
+                totals={totals}
+                periodLabel={periodLabel}
+                directionLabel={directionLabel}
+                departmentName={departmentName}
                 items={items}
                 departmentNameById={departmentNameById}
                 onOpenAccrual={onOpenAccrual}
@@ -96,14 +99,31 @@ export function SalaryAccrualsBody({
                 isIndeterminate={selection.isIndeterminate}
                 className="hidden md:block"
             />
-            <AccrualCardList
-                items={items}
-                departmentNameById={departmentNameById}
-                onOpenAccrual={onOpenAccrual}
-                headerLabel={`Документы · ${statusCounts.ALL}`}
-                footerNote={footerNote}
-                className="md:hidden"
-            />
+
+            <div className="flex flex-col gap-4 md:hidden">
+                <AccrualsTotalCard
+                    totals={totals}
+                    periodLabel={periodLabel}
+                    directionLabel={directionLabel}
+                    departmentName={departmentName}
+                />
+
+                <AccrualStatusFilterRow
+                    value={statusFilter}
+                    onChange={onStatusFilterChange}
+                    counts={statusCounts}
+                    search={search}
+                    onSearchChange={onSearchChange}
+                />
+
+                <AccrualCardList
+                    items={items}
+                    departmentNameById={departmentNameById}
+                    onOpenAccrual={onOpenAccrual}
+                    headerLabel={`Документы · ${statusCounts.ALL}`}
+                    footerNote={footerNote}
+                />
+            </div>
         </div>
     )
 }

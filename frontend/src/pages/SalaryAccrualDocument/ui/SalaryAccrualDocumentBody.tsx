@@ -3,7 +3,6 @@ import type { SalaryAccrualResponse } from 'ireports-contracts'
 import { AccrualLineCardList, AccrualLinesTable, type AccrualProgress } from '@/features/SalaryAccruals'
 
 import { DocumentHeader } from './DocumentHeader.tsx'
-import { DocumentPlanFactKpi, type PlanFact } from './DocumentPlanFactKpi.tsx'
 
 export type SalaryAccrualDocumentBodyProps = {
     /** `undefined` после первичной загрузки — документ не пришёл (ошибка уже показана `ErrorLayout`). */
@@ -11,8 +10,6 @@ export type SalaryAccrualDocumentBodyProps = {
     directionLabel: string
     periodLabel: string
     departmentName: string | null
-    /** `null` — у направления нет данных плана продаж за месяц, блок скрывается. */
-    planFact: PlanFact | null
     progress: AccrualProgress
     isLineExpanded: (id: string) => boolean
     onToggleLine: (id: string) => void
@@ -24,15 +21,16 @@ export type SalaryAccrualDocumentBodyProps = {
 
 /**
  * Все ветвления страницы документа (медиатор без условного рендера, frontend/CLAUDE.md):
- * шапка + план/факт отдела (если есть данные плана) + таблица строк (`jb7fL`, `md:` и
- * выше) / карточки строк (`wYi5o`, ниже `md:`).
+ * шапка + таблица строк, сгруппированная по направлению (`jb7fL`/`DQ3tV`, `md:` и выше) / карточки
+ * строк (`wYi5o`/`g0onp`, ниже `md:`). Блок план/факт отдела (`DocumentPlanFactKpi`) убран вместе
+ * с редизайном — его нет ни в `DQ3tV`, ни в `g0onp` (перепроверено скриншотом), тот же приём, что
+ * убрал KPI-строку из списка начислений.
  */
 export function SalaryAccrualDocumentBody({
     document,
     directionLabel,
     periodLabel,
     departmentName,
-    planFact,
     progress,
     isLineExpanded,
     onToggleLine,
@@ -47,20 +45,16 @@ export function SalaryAccrualDocumentBody({
         <div className="flex flex-col gap-4">
             <DocumentHeader
                 document={document}
-                directionLabel={directionLabel}
                 periodLabel={periodLabel}
                 departmentName={departmentName}
                 progress={progress}
                 onBack={onBack}
             />
 
-            {planFact !== null && (
-                <DocumentPlanFactKpi planFact={planFact} directionLabel={directionLabel} periodLabel={periodLabel} />
-            )}
-
             <AccrualLinesTable
                 lines={document.lines}
                 direction={document.direction}
+                directionLabel={directionLabel}
                 accrualId={document.id}
                 documentStatus={document.status}
                 isLineExpanded={isLineExpanded}
@@ -71,9 +65,14 @@ export function SalaryAccrualDocumentBody({
             />
             <AccrualLineCardList
                 lines={document.lines}
+                direction={document.direction}
+                directionLabel={directionLabel}
+                accrualId={document.id}
+                documentStatus={document.status}
                 isLineExpanded={isLineExpanded}
                 onToggleLine={onToggleLine}
                 footerNote={footerNoteMobile}
+                footerTotal={footerTotal}
                 className="md:hidden"
             />
         </div>

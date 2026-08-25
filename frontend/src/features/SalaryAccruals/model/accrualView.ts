@@ -1,7 +1,7 @@
 import type { SalaryAccrual, SalaryAccrualLine, SalaryAccrualStatus } from 'ireports-contracts'
 
 import { ALL_RULE_TYPE_LABELS } from '@/kernel/ruleTypeLabels.ts'
-import { formatNumber } from '@/shared/lib/format.ts'
+import { formatNumber, formatSignedCurrency } from '@/shared/lib/format.ts'
 
 import { getSourceTypeLabel, RULE_UNIT_FORMS, RULE_UNIT_PLURAL_LABEL } from './labels.ts'
 
@@ -74,6 +74,14 @@ export function countAdjustedLines(lines: SalaryAccrualLine[]): number {
     return lines.filter(isLineAdjusted).length
 }
 
+/** «корректировка +700 ₽» — вторая часть меты строки в мобильной карточке (Pencil `g0onp`'s
+ * `tZgud`), когда `isLineAdjusted(line)` истинно. Замещает десктопный отдельный `AdjustmentBadge`
+ * + зачёркнутое «Было» рядом с суммой — на мобильном для того же факта нет отдельного бейджа, он
+ * дописан в мету строки (перепроверено скриншотом `h8et8b`). */
+export function formatLineAdjustmentNote(line: Pick<SalaryAccrualLine, 'amount' | 'originalAmount'>): string {
+    return `корректировка ${formatSignedCurrency(line.amount - line.originalAmount)}`
+}
+
 // ========================== Ставка строки ========================== //
 
 /**
@@ -106,7 +114,9 @@ function pluralizeByForms(count: number, forms: readonly [string, string, string
  * Без `quantity` (правило без измеримой базы, например премия за выполнение плана) — «фикс за
  * период», как в макете, а не выдуманное число.
  */
-export function formatLineBasisNote(line: Pick<SalaryAccrualLine, 'type' | 'quantity' | 'rate' | 'salaryBasis'>): string {
+export function formatLineBasisNote(
+    line: Pick<SalaryAccrualLine, 'type' | 'quantity' | 'rate' | 'salaryBasis'>,
+): string {
     if (line.quantity === undefined) return 'фикс за период'
 
     const qty = formatNumber(line.quantity)
@@ -158,41 +168,48 @@ export function deriveHiddenSourcesTotal(sources: SalaryAccrualLine['sources'], 
     return sources.slice(visibleCount).reduce((sum, source) => sum + (source.amount ?? 0), 0)
 }
 
-// ========================== Сводка KPI списка ========================== //
+// ========================== Итого списка (карточка «Итого») ========================== //
 
-export type AccrualsSummary = {
-    /** Фонд оплаты — сумма `total` всех документов. */
-    totalAmount: number
-    employeesCount: number
-    dismissedCount: number
-    draftCount: number
-    draftAmount: number
-    /** `ACCRUED` — «Ожидает выплаты». */
-    awaitingCount: number
-    awaitingAmount: number
+export type AccrualsTotals = {
+    /** «К начислению» — сумма `total` по всем документам текущей области (отдел + статус). */
+    toAccrueAmount: number
+    /** «Начислено на текущий момент» — сумма `total` только документов, начисленных ПОЛНОСТЬЮ
+     * (`ACCRUED`/`PAID`). `PARTIALLY_ACCRUED` в эту сумму не входит — контракт списка
+     * (`salaryAccrualSchema`) отдаёт `accruedLinesCount`, но не сумму уже проведённых строк, а
+     * `total` документа включает и ещё не начисленные строки тоже, так что подставить его сюда
+     * значило бы посчитать не начисленное как начисленное. Это осознанное клиентское приближение
+     * (частично начисленные документы исключены из числителя, но учтены в знаменателе
+     * `totalDocsCount`/пилюле «N из M»), а не выдуманная пропорциональная разбивка — точную сумму
+     * такой карточке может отдать только бэкенд, добавляя поле в ответ списка.
+     */
+    accruedSoFarAmount: number
+    /** Документов, начисленных полностью (`ACCRUED`/`PAID`). */
+    accruedDocsCount: number
+    totalDocsCount: number
 }
 
-export function deriveAccrualsSummary(items: SalaryAccrual[]): AccrualsSummary {
-    return items.reduce<AccrualsSummary>(
-        (acc, item) => ({
-            totalAmount: acc.totalAmount + item.total,
-            employeesCount: acc.employeesCount + 1,
-            dismissedCount: acc.dismissedCount + (item.isDismissed ? 1 : 0),
-            draftCount: acc.draftCount + (item.status === 'DRAFT' ? 1 : 0),
-            draftAmount: acc.draftAmount + (item.status === 'DRAFT' ? item.total : 0),
-            awaitingCount: acc.awaitingCount + (item.status === 'ACCRUED' ? 1 : 0),
-            awaitingAmount: acc.awaitingAmount + (item.status === 'ACCRUED' ? item.total : 0),
-        }),
-        {
-            totalAmount: 0,
-            employeesCount: 0,
-            dismissedCount: 0,
-            draftCount: 0,
-            draftAmount: 0,
-            awaitingCount: 0,
-            awaitingAmount: 0,
+export function deriveAccrualsTotals(items: SalaryAccrual[]): AccrualsTotals {
+    return items.reduce<AccrualsTotals>(
+        (acc, item) => {
+            const isFullyAccrued = item.status === 'ACCRUED' || item.status === 'PAID'
+            return {
+                toAccrueAmount: acc.toAccrueAmount + item.total,
+                accruedSoFarAmount: acc.accruedSoFarAmount + (isFullyAccrued ? item.total : 0),
+                accruedDocsCount: acc.accruedDocsCount + (isFullyAccrued ? 1 : 0),
+                totalDocsCount: acc.totalDocsCount + 1,
+            }
         },
+        { toAccrueAmount: 0, accruedSoFarAmount: 0, accruedDocsCount: 0, totalDocsCount: 0 },
     )
+}
+
+// ========================== Фильтр по отделу ========================== //
+
+/** Select «Отдел» (Pencil `LvW0I`'s `wQY20`/`DtPgO`'s `U50So`) в Scope Controls — `null` («Все
+ * отделы») пропускает список без изменений. */
+export function filterAccrualsByDepartment(items: SalaryAccrual[], departmentId: number | null): SalaryAccrual[] {
+    if (departmentId === null) return items
+    return items.filter((item) => item.departmentId === departmentId)
 }
 
 // ========================== Фильтр по статусу и поиск ========================== //
