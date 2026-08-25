@@ -61,3 +61,34 @@ const SOURCE_TYPE_LABEL: Record<string, string> = {
 export function getSourceTypeLabel(type: string): string {
     return SOURCE_TYPE_LABEL[type] ?? type
 }
+
+/**
+ * Счётные формы существительного-единицы для «Основание» строки правила (Pencil `DQ3tV`/`g0onp`:
+ * «42 заказа × 8%», «18 продаж × 5%», «3 задачи × 1 000 ₽») — [1, 2–4, 5+] по числу `line.quantity`,
+ * ключ — `line.type` (те же значения `ServiceRuleType`/`ShopRuleType`, что и `ALL_RULE_TYPE_LABELS`
+ * в `kernel/ruleTypeLabels.ts`; не импортируется отсюда напрямую — `ослабленная` строка `type` в
+ * `salaryAccrualLineSchema`, тот же приём, что и `SALARY_BASIS_LABEL`/`SOURCE_TYPE_LABEL` выше).
+ * `PayPerHour` не участвует — часы форматируются отдельно (`accrualView.ts`'s
+ * `formatLineBasisNote`), у них не бывает «1 час/2 часа/5 часов» в макете, только голое «130 ч».
+ */
+export const RULE_UNIT_FORMS: Record<string, [one: string, few: string, many: string]> = {
+    OrderPayed: ['заказ', 'заказа', 'заказов'],
+    ServiceCompleted: ['услуга', 'услуги', 'услуг'],
+    TaskCompleted: ['задача', 'задачи', 'задач'],
+    ProductSold: ['продажа', 'продажи', 'продаж'],
+    UsedProductSold: ['продажа', 'продажи', 'продаж'],
+}
+
+/** Именительный падеж множественного числа той же единицы — вторая часть меты строки правила
+ * (Pencil «Процент от суммы работ · заказы» — тип берётся из `ALL_RULE_TYPE_LABELS`, источник
+ * отсюда), отдельно от счётных форм выше: для «заказ» они расходятся («2 заказа» ≠ «заказы»),
+ * совпадают только у форм женского рода. Бренд ERP («RemOnline»/«МойСклад») из макета сюда
+ * намеренно не попадает — `sources[].type` его не несёт (см. `AccrualLineSources.tsx`'s
+ * комментарий), показывать вместо него настоящий бренд значило бы придумывать данные. */
+export const RULE_UNIT_PLURAL_LABEL: Record<string, string> = {
+    OrderPayed: 'заказы',
+    ServiceCompleted: 'услуги',
+    TaskCompleted: 'задачи',
+    ProductSold: 'продажи',
+    UsedProductSold: 'продажи',
+}

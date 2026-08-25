@@ -41,8 +41,8 @@ export function SalaryReportHeading({
     if (scope !== 'employee') {
         return (
             <div className="flex flex-col gap-1">
-                <span>Зарплата сотрудников</span>
-                <span className="font-ui text-[13px] font-normal text-ink-muted">
+                <span className="font-display text-[26px] font-bold tracking-[-0.4px] text-ink">Зарплата сотрудников</span>
+                <span className="font-ui text-[14px] font-normal text-ink-muted">
                     Факт и прогноз начислений за период — по сотрудникам всех направлений
                 </span>
             </div>

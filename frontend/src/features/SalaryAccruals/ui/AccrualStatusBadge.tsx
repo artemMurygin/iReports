@@ -83,4 +83,21 @@ function DismissedBadge({ className }: { className?: string }) {
     )
 }
 
-export { AccrualStatusBadge, AccrualLineStatusBadge, DismissedBadge }
+/** Жёлтый бейдж «Корректировка» (Pencil `DQ3tV`'s `eO5JW`, `warn-soft`/`warn-ink` — та же пара
+ * токенов, что и у иконки комментария скорректированной строки в старой таблице) — рядом с чипом
+ * роли в строке правила, когда `isLineAdjusted(line)` истинно. */
+function AdjustmentBadge({ className }: { className?: string }) {
+    return (
+        <span
+            data-slot="adjustment-badge"
+            className={cn(
+                'inline-flex w-fit shrink-0 items-center rounded-md bg-warn-soft px-2 py-[3px] font-ui text-[11px] font-semibold whitespace-nowrap text-warn-ink',
+                className,
+            )}
+        >
+            Корректировка
+        </span>
+    )
+}
+
+export { AccrualStatusBadge, AccrualLineStatusBadge, DismissedBadge, AdjustmentBadge }

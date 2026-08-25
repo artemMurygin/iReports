@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { ChevronRight, ChevronDown, Layers, X } from 'lucide-react'
+import { ChevronRight, ChevronDown, Layers } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import { Chip } from '@/shared/ui-kit/atoms/Chip'
 import { cn } from '@/shared/lib/tw'
 import { buildTree, getAncestorIds, type TreeNode } from '@/shared/lib/tree.ts'
 import type { ServiceCategory } from '@/pages/ServicesReport/model/types.ts'
@@ -88,19 +89,17 @@ export function CategoryTreeSelect({ categories, selectedId, onChange }: Props) 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <button className="flex items-center justify-between gap-2 h-9 px-3 rounded-md border border-gray-200 w-[240px] cursor-pointer hover:border-gray-300 transition-colors text-sm text-gray-700">
-                    <Layers className="w-4 h-4 text-gray-500 shrink-0" />
-                    <span className="flex-1 truncate text-left">{selectedName ?? 'Все категории'}</span>
-                    {selectedId && (
-                        <X
-                            className="w-4 h-4 text-gray-400 hover:text-gray-600 shrink-0"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onChange(null)
-                            }}
-                        />
-                    )}
-                </button>
+                {selectedId && selectedName ? (
+                    <Chip
+                        icon={<Layers />}
+                        className="border-brand-border bg-brand-soft text-ok-ink"
+                        onRemove={() => onChange(null)}
+                    >
+                        {selectedName}
+                    </Chip>
+                ) : (
+                    <Chip icon={<Layers />}>Все категории</Chip>
+                )}
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-1 max-h-[400px] overflow-y-auto" align="start">
                 {tree.map((node) => (

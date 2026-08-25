@@ -1,5 +1,10 @@
 import type { SalaryAccrual, SalaryAccrualLine, SalaryAccrualStatus } from 'ireports-contracts'
 
+import { ALL_RULE_TYPE_LABELS } from '@/kernel/ruleTypeLabels.ts'
+import { formatNumber } from '@/shared/lib/format.ts'
+
+import { getSourceTypeLabel, RULE_UNIT_FORMS, RULE_UNIT_PLURAL_LABEL } from './labels.ts'
+
 /**
  * Чистые производные для страниц списка начислений и документа (Фаза 5
  * docs/payroll-closing-and-accrual). Все ветвления таблиц/карточек (статусы, прогресс,
@@ -80,6 +85,77 @@ export function formatLineRate(line: Pick<SalaryAccrualLine, 'rate' | 'salaryBas
     if (line.rate === undefined) return '—'
     const rate = line.rate.toLocaleString('ru-RU')
     return line.salaryBasis !== undefined ? `${rate}%` : `${rate} ₽`
+}
+
+function pluralizeByForms(count: number, forms: readonly [string, string, string]): string {
+    const mod10 = count % 10
+    const mod100 = count % 100
+    if (mod10 === 1 && mod100 !== 11) return forms[0]
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1]
+    return forms[2]
+}
+
+/**
+ * «Основание» под суммой строки правила (Pencil `DQ3tV`'s `duUGQ`/`jQeov`: «42 заказа × 8%»,
+ * `mP3Ib`: «130 ч × 200 ₽/ч», `fTj0d`: «3 задачи × 1 000 ₽», `V7PRHG`: «фикс за период»).
+ * `quantity`/`rate` — реальные поля строки (`calculationLineSchema`), единственное, что добавлено
+ * сверх них клиентски, — счётное существительное по `line.type` (`RULE_UNIT_FORMS`) и суффикс
+ * «/ч» у почасовой ставки (контракт не отдаёт отдельно единицу измерения ставки, но для
+ * `PayPerHour` она всегда часы — тот же вывод, что делает `getRuleRate` в
+ * `pages/SalaryReportV2/model/ruleRate.ts` для фиксированной ставки через `sources.length`).
+ * Без `quantity` (правило без измеримой базы, например премия за выполнение плана) — «фикс за
+ * период», как в макете, а не выдуманное число.
+ */
+export function formatLineBasisNote(line: Pick<SalaryAccrualLine, 'type' | 'quantity' | 'rate' | 'salaryBasis'>): string {
+    if (line.quantity === undefined) return 'фикс за период'
+
+    const qty = formatNumber(line.quantity)
+    if (line.type === 'PayPerHour') {
+        return line.rate === undefined ? `${qty} ч` : `${qty} ч × ${line.rate.toLocaleString('ru-RU')} ₽/ч`
+    }
+
+    const rate = formatLineRate(line)
+    const forms = RULE_UNIT_FORMS[line.type]
+    if (forms === undefined) return rate === '—' ? qty : `${qty} × ${rate}`
+
+    const unit = pluralizeByForms(line.quantity, forms)
+    return rate === '—' ? `${qty} ${unit}` : `${qty} ${unit} × ${rate}`
+}
+
+/**
+ * Вторая строка меты строки правила (Pencil `d6CF6L`: «Процент от суммы работ · заказы
+ * RemOnline» — тип правила `getRuleTypeLabel` уже отдаёт человекочитаемым, «заказы» отсюда;
+ * бренд ERP из макета опущен, см. `RULE_UNIT_PLURAL_LABEL`'s комментарий). Без источников (у
+ * `PayPerHour` их обычно нет — часы, не документы ERP) вторая часть не показывается.
+ */
+export function formatLineMeta(line: Pick<SalaryAccrualLine, 'type' | 'sources'>): string {
+    const typeLabel = (ALL_RULE_TYPE_LABELS as Record<string, string>)[line.type] ?? line.type
+    if (line.sources.length === 0) return typeLabel
+
+    const unitLabel = RULE_UNIT_PLURAL_LABEL[line.type] ?? getSourceTypeLabel(dominantSourceType(line.sources))
+    return `${typeLabel} · ${unitLabel}`
+}
+
+function dominantSourceType(sources: SalaryAccrualLine['sources']): string {
+    const counts = new Map<string, number>()
+    for (const source of sources) counts.set(source.type, (counts.get(source.type) ?? 0) + 1)
+    let best = sources[0].type
+    let bestCount = 0
+    for (const [type, count] of counts) {
+        if (count > bestCount) {
+            best = type
+            bestCount = count
+        }
+    }
+    return best
+}
+
+/** Сумма начислений по скрытым (не показанным) источникам строки — «ещё N заказов · 20 744 ₽»
+ * (Pencil `CVHtc`/`gEsPs`), не подгонка под один сэмпл: реальная сумма `source.amount` хвоста
+ * массива за вычетом видимых. `undefined` у источника без суммы (см. `calculationSourceRefSchema`'s
+ * комментарий про опциональность) — не учитывается отдельно, просто не прибавляется. */
+export function deriveHiddenSourcesTotal(sources: SalaryAccrualLine['sources'], visibleCount: number): number {
+    return sources.slice(visibleCount).reduce((sum, source) => sum + (source.amount ?? 0), 0)
 }
 
 // ========================== Сводка KPI списка ========================== //

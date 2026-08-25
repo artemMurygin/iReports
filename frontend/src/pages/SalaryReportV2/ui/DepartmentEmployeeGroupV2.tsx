@@ -87,13 +87,13 @@ export function DepartmentEmployeeGroupV2({ employee }: DepartmentEmployeeGroupV
                 </span>
 
                 <span className="flex shrink-0 items-center">
-                    <span className={cn(AMOUNT_COLUMN_CLASS, 'font-ui text-sm font-bold text-ink tabular-nums md:text-base')}>
+                    <span className={cn(AMOUNT_COLUMN_CLASS, 'font-ui text-sm text-ink tabular-nums md:text-base')}>
                         {formatCurrency(employee.total.fact)}
                     </span>
                     <span
                         className={cn(
                             AMOUNT_COLUMN_CLASS,
-                            'font-ui text-sm font-bold text-ink-muted tabular-nums md:text-base',
+                            'font-ui text-sm text-ink-muted tabular-nums md:text-base',
                         )}
                     >
                         {formatAmountOrDash(employee.total.prognose)}

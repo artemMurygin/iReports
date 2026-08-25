@@ -17,6 +17,12 @@ export type ServiceSaleProps = {
     serviceId: number;
     serviceName: string;
     categoryId: number | null;
+    // Розничная (каталожная) цена услуги — RoappService.price, справочная
+    // цена из карточки услуги в RemOnline. Не участвует в service-metrics
+    // calculator (это не показатель по проданным строкам, как price ниже),
+    // одинакова для всех строк одной услуги — читается с первой строки
+    // группы в GetServicesAnalyticsService и прокидывается как есть.
+    retailPrice: number;
     orderId: number;
     quantity: number;
     price: number;

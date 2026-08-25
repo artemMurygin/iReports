@@ -1,4 +1,3 @@
-import { CardContent } from '@/shared/ui/card'
 import type { ChartSeriesEntry } from '@/kernel/types'
 import { CHART_COLORS } from '@/kernel/chartColors'
 import { SeriesCard } from '@/features/ServicesChart/ui/SeriesCard.tsx'
@@ -11,22 +10,15 @@ type Props = {
 }
 
 export function ChartBody({ series, mode }: Props) {
+    if (series.length <= 1) {
+        return <CombinedChart series={series} mode={mode} />
+    }
+
     return (
-        <CardContent className="pt-2 pb-4">
-            {series.length > 1 ? (
-                <div className="grid grid-cols-2 gap-3">
-                    {series.map((s, i) => (
-                        <div
-                            key={s.id}
-                            className={series.length % 2 !== 0 && i === series.length - 1 ? 'col-span-2' : ''}
-                        >
-                            <SeriesCard series={s} mode={mode} color={CHART_COLORS[i % CHART_COLORS.length]} />
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <CombinedChart series={series} mode={mode} />
-            )}
-        </CardContent>
+        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-3 xl:grid-cols-5">
+            {series.map((s, i) => (
+                <SeriesCard key={s.id} series={s} mode={mode} color={CHART_COLORS[i % CHART_COLORS.length]} />
+            ))}
+        </div>
     )
 }

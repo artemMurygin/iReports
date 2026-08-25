@@ -81,6 +81,10 @@ export interface ServiceAnalyticsEntry {
     serviceId: number
     serviceName: string
     categoryId: number | null
+    // Розничная (каталожная) цена услуги из карточки услуги в RemOnline
+    // (RoappService.price) — справочная цена, не связана с фактической ценой
+    // продажи (avgServicePrice ниже считается по факту проданных строк).
+    retailPrice: number
     totalCount: number
     totalRevenue: number
     totalProfit: number

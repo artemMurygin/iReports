@@ -55,70 +55,63 @@ export function SalaryReportV2Page() {
 
     const departmentName = departments.find((department) => department.id === departmentId)?.name ?? null
 
-    const actions = (
-        <>
-            <EmployeeReportHeaderActions scope={scope} period={period} onPeriodChange={setPeriod} />
-            <DepartmentReportHeaderActions scope={scope} report={departmentReport} />
-        </>
-    )
-
-    const header = (
-        <>
-            <PageHeader
-                breadcrumbs={NO_BREADCRUMBS}
-                title={
-                    <SalaryReportHeading
-                        scope={scope}
-                        employeeName={employeeName}
-                        employeeDepartmentName={employeeDepartmentName}
-                        isEmployeeIdentityLoading={isEmployeeIdentityLoading}
-                    />
-                }
-                actions={actions}
-            />
-
-            <SalaryReportFiltersV2
-                scope={scope}
-                departments={departments}
-                isDepartmentsLoading={isDepartmentsLoading}
-                departmentId={departmentId}
-                onDepartmentIdChange={setDepartmentId}
-                direction={direction}
-                onDirectionChange={setDirection}
-                employeeSearch={employeeSearch}
-                onEmployeeSearchChange={setEmployeeSearch}
-                period={period}
-                onPeriodChange={setPeriod}
-            />
-        </>
-    )
-
-    const body = (
-        <SalaryReportBodyV2
-            scope={scope}
-            employeeReport={employeeReport}
-            isEmployeeSelected={isEmployeeSelected}
-            isRuleExpanded={isRuleExpanded}
-            onToggleRule={toggleRule}
-            isDirectionExpanded={isDirectionExpanded}
-            onToggleDirection={toggleDirection}
-            departmentReport={departmentReport}
-            isDepartmentSelected={isDepartmentSelected}
-            departmentName={departmentName}
-            directionBreakdown={directionBreakdown}
-            employeeSearch={employeeSearch}
-            isLoading={isInitialLoad}
-            errorMessage={errorMessage}
-        />
-    )
-
     return (
         <Layout
             isInitialLoad={isInitialLoad}
             isRefreshing={isRefreshing}
             dataVersion={dataVersion}
-            header={header}
-            body={body}
+            header={
+                <>
+                    <PageHeader
+                        title={
+                            <SalaryReportHeading
+                                scope={scope}
+                                employeeName={employeeName}
+                                employeeDepartmentName={employeeDepartmentName}
+                                isEmployeeIdentityLoading={isEmployeeIdentityLoading}
+                            />
+                        }
+                        actions={
+                            <>
+                                <EmployeeReportHeaderActions scope={scope} period={period} onPeriodChange={setPeriod} />
+                                <DepartmentReportHeaderActions scope={scope} report={departmentReport} />
+                            </>
+                        }
+                    />
+
+                    <SalaryReportFiltersV2
+                        scope={scope}
+                        departments={departments}
+                        isDepartmentsLoading={isDepartmentsLoading}
+                        departmentId={departmentId}
+                        onDepartmentIdChange={setDepartmentId}
+                        direction={direction}
+                        onDirectionChange={setDirection}
+                        employeeSearch={employeeSearch}
+                        onEmployeeSearchChange={setEmployeeSearch}
+                        period={period}
+                        onPeriodChange={setPeriod}
+                    />
+                </>
+            }
+            body={
+                <SalaryReportBodyV2
+                    scope={scope}
+                    employeeReport={employeeReport}
+                    isEmployeeSelected={isEmployeeSelected}
+                    isRuleExpanded={isRuleExpanded}
+                    onToggleRule={toggleRule}
+                    isDirectionExpanded={isDirectionExpanded}
+                    onToggleDirection={toggleDirection}
+                    departmentReport={departmentReport}
+                    isDepartmentSelected={isDepartmentSelected}
+                    departmentName={departmentName}
+                    directionBreakdown={directionBreakdown}
+                    employeeSearch={employeeSearch}
+                    isLoading={isInitialLoad}
+                    errorMessage={errorMessage}
+                />
+            }
         />
     )
 }

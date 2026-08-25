@@ -18,8 +18,3 @@ export interface ServiceCategory {
 export interface ServicesAnalyticsResponse {
     services: ServiceAnalyticsEntry[]
 }
-
-export interface BreadcrumbItem {
-    id: string | null
-    name: string
-}

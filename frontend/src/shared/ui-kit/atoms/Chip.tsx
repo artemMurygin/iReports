@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { X } from 'lucide-react'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/shared/lib/tw'
@@ -21,7 +22,11 @@ import { cn } from '@/shared/lib/tw'
  * чип чисто декоративный и рендерится `<span>` — так семантика не врёт скринридеру.
  */
 const chipVariants = cva(
-    "inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[7px] border border-hairline px-2.5 py-[5px] font-ui text-xs font-medium whitespace-nowrap transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[13px]",
+    // `[&>svg:first-child]:pointer-events-none` — не блокировать клики на ВСЕХ svg внутри чипа
+    // (`[&_svg]`), а только на ведущей декоративной иконке (`icon`-проп, всегда первый ребёнок):
+    // иначе съёмный крестик `onRemove` тоже становится некликабельным, и клик по нему "проваливается"
+    // на сам чип (открывает Popover вместо сброса) — баг, найденный вживую в Playwright.
+    "inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[7px] border border-hairline px-2.5 py-[5px] font-ui text-xs font-medium whitespace-nowrap transition-colors [&>svg:first-child]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[13px]",
     {
         variants: {
             variant: {
@@ -52,17 +57,34 @@ export type ChipProps = {
     variant?: NonNullable<VariantProps<typeof chipVariants>['variant']>
     /** Если передан — чип рендерится кнопкой. */
     onClick?: () => void
+    /**
+     * Кнопка сброса справа от подписи (обычно `<X />`) — рендерится своим отдельным
+     * flex-элементом вне обрезаемого `<span className="truncate">`, а не как часть `children`.
+     * `children` внутри truncate-обёртки — это текст; добавление к нему ещё и trailing-иконки
+     * ломает `text-overflow: ellipsis` (браузер уводит иконку на вторую строку вместо того,
+     * чтобы просто обрезать текст, см. баг с крестиком категории в `CategoryTreeSelect`).
+     */
+    onRemove?: () => void
     disabled?: boolean
     title?: string
     'aria-label'?: string
     className?: string
 }
 
-function Chip({ icon, children, variant = 'default', onClick, disabled, className, ...props }: ChipProps) {
+function Chip({ icon, children, variant = 'default', onClick, onRemove, disabled, className, ...props }: ChipProps) {
     const content = (
         <>
             {icon}
             <span className="truncate">{children}</span>
+            {onRemove && (
+                <X
+                    className="size-[13px] shrink-0 opacity-70 hover:opacity-100"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onRemove()
+                    }}
+                />
+            )}
         </>
     )
 

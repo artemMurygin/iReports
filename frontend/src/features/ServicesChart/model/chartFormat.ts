@@ -1,3 +1,5 @@
+import { format } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import type { ChartSeriesEntry } from '@/kernel/types'
 import type { ChartMode } from './types'
 
@@ -41,4 +43,22 @@ export function fmtCompact(n: number): string {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} млн ₽`
     if (n >= 1_000) return `${Math.round(n / 1_000)} тыс ₽`
     return `${n.toLocaleString('ru-RU')} ₽`
+}
+
+// Период приходит как ISO-дата бакета (день/начало недели/начало месяца, см.
+// PeriodBucket на бэкенде — все три гранулярности сериализуются как полная
+// дата "YYYY-MM-DD"). Короткий формат для подписей под мини-графиком карточки
+// серии, вида "29 июн" — date-fns уже используется с ru-локалью в проекте
+// (см. shared/ui/date-range-picker.tsx, features/Payout/ui/PayoutDrawer.tsx).
+export function formatShortDate(period: string): string {
+    const date = new Date(period)
+    if (Number.isNaN(date.getTime())) return period
+    return format(date, 'd MMM', { locale: ru }).replace(/\.$/, '')
+}
+
+// Уникальный id для SVG <linearGradient> заливки мини-графика — карточек
+// на странице несколько, у каждой свой градиент, id не должны коллизировать.
+export function gradientIdFor(seriesId: string): string {
+    const safe = seriesId.replace(/[^a-zA-Z0-9_-]/g, '') || 'series'
+    return `services-chart-area-${safe}`
 }

@@ -57,7 +57,8 @@ export class GetServicesAnalyticsService {
 
         const services = [...rowsByService.entries()].map(
             ([serviceId, serviceRows]) => {
-                const { serviceName, categoryId } = serviceRows[0].getProps();
+                const { serviceName, categoryId, retailPrice } =
+                    serviceRows[0].getProps();
                 const metrics = calculateServiceMetrics(serviceRows);
                 const breakdown = buildPeriodBreakdown(
                     serviceRows,
@@ -68,6 +69,7 @@ export class GetServicesAnalyticsService {
                     serviceId,
                     serviceName,
                     categoryId,
+                    retailPrice,
                     metrics,
                     breakdown,
                 );

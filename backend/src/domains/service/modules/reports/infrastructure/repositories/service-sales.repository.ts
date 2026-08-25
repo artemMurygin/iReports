@@ -54,7 +54,7 @@ export class ServiceSalesRepository
                 quantity: true,
                 price: true,
                 engeneerSalary: true,
-                service: { select: { name: true, categoryId: true } },
+                service: { select: { name: true, categoryId: true, price: true } },
                 order: { select: { closedAt: true, payed: true, cost: true } },
             },
         });
@@ -67,6 +67,7 @@ export class ServiceSalesRepository
                         serviceId: row.serviceId,
                         serviceName: row.service.name,
                         categoryId: row.service.categoryId,
+                        retailPrice: row.service.price,
                         orderId: row.orderId,
                         quantity: row.quantity,
                         price: row.price,

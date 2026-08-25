@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react'
+
 import type { ReactNode } from 'react'
 
 import { cn } from '@/shared/lib/tw'
@@ -29,7 +29,6 @@ export type PageHeaderBreadcrumb = {
 }
 
 export type PageHeaderProps = {
-    breadcrumbs: PageHeaderBreadcrumb[]
     /** Обычно строка, но принимает любой `ReactNode` — например, чтобы заменить заголовок на
      * составной блок (аватар + имя + мета), как в `pages/SalaryReportV2/ui/SalaryReportHeading.tsx`
      * для отчёта конкретного сотрудника (тот же слот, что и обычный текстовый `<h1>`, просто с
@@ -42,34 +41,13 @@ export type PageHeaderProps = {
     className?: string
 }
 
-function PageHeader({ breadcrumbs, title, subtitle, actions, className }: PageHeaderProps) {
+function PageHeader({ title, subtitle, actions, className }: PageHeaderProps) {
     return (
         <div data-slot="page-header" className={cn('flex flex-col gap-3', className)}>
-            {breadcrumbs.length > 0 && (
-                <div className="hidden items-center gap-1.5 md:flex">
-                    {breadcrumbs.map((crumb, index) => {
-                        const isLast = index === breadcrumbs.length - 1
-                        return (
-                            <span key={crumb.label} className="flex items-center gap-1.5">
-                                {index > 0 && <ChevronRight className="size-3 shrink-0 text-ink-faint" />}
-                                <span
-                                    className={cn(
-                                        'font-ui text-xs',
-                                        isLast ? 'font-medium text-ink' : 'text-ink-muted',
-                                    )}
-                                >
-                                    {crumb.label}
-                                </span>
-                            </span>
-                        )
-                    })}
-                </div>
-            )}
-
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                    <h1 className="font-display text-[20px] font-bold tracking-[-0.3px] text-ink">{title}</h1>
-                    {subtitle && <p className="font-ui text-[13px] text-ink-muted">{subtitle}</p>}
+                    <h1 className="font-display text-[26px] font-bold tracking-[-0.4px] text-ink">{title}</h1>
+                    {subtitle && <p className="font-ui text-[14px] font-normal text-ink-muted">{subtitle}</p>}
                 </div>
 
                 {actions && (

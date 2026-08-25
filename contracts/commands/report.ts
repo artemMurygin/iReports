@@ -87,10 +87,15 @@ export type PeriodBreakdownEntryResponse = z.infer<
 // Метрики одной услуги — форма 1:1 с возвратом легаси calcServiceMetrics
 // (avgOrderCheck считается по уникальным заказам, а не по строкам услуг — та же
 // дедупликация, что и в легаси, инкапсулирована в доменной VO ServiceMetrics).
+// Исключение — retailPrice: розничная (каталожная) цена услуги из RoappService.price,
+// не входит в calcServiceMetrics/ServiceMetrics VO, читается отдельно (см.
+// ServiceSaleEntity.retailPrice) и добавлена для редизайна страницы аналитики
+// услуг (design/sallary-first-iteration.pen, узел `h7eHG`).
 const serviceAnalyticsItemSchema = z.object({
     serviceId: z.number(),
     serviceName: z.string(),
     categoryId: z.number().nullable(),
+    retailPrice: z.number(),
     totalCount: z.number(),
     totalRevenue: z.number(),
     totalProfit: z.number(),

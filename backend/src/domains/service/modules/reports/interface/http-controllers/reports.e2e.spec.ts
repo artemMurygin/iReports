@@ -77,6 +77,7 @@ describe('domains/service/modules/reports (e2e)', () => {
         serviceId: number;
         serviceName: string;
         categoryId: number | null;
+        retailPrice: number;
         orderId: number;
         quantity: number;
         price: number;
@@ -91,6 +92,7 @@ describe('domains/service/modules/reports (e2e)', () => {
                 serviceId: overrides.serviceId,
                 serviceName: overrides.serviceName,
                 categoryId: overrides.categoryId,
+                retailPrice: overrides.retailPrice,
                 orderId: overrides.orderId,
                 quantity: overrides.quantity,
                 price: overrides.price,
@@ -111,6 +113,7 @@ describe('domains/service/modules/reports (e2e)', () => {
                     serviceId: 1,
                     serviceName: 'Замена экрана',
                     categoryId: 10,
+                    retailPrice: 1500,
                     orderId: 100,
                     quantity: 1,
                     price: 1000,
@@ -124,6 +127,7 @@ describe('domains/service/modules/reports (e2e)', () => {
                     serviceId: 1,
                     serviceName: 'Замена экрана',
                     categoryId: 10,
+                    retailPrice: 1500,
                     orderId: 100,
                     quantity: 1,
                     price: 1200,
@@ -137,6 +141,7 @@ describe('domains/service/modules/reports (e2e)', () => {
                     serviceId: 1,
                     serviceName: 'Замена экрана',
                     categoryId: 10,
+                    retailPrice: 1500,
                     orderId: 101,
                     quantity: 1,
                     price: 900,
@@ -151,6 +156,7 @@ describe('domains/service/modules/reports (e2e)', () => {
                     serviceId: 2,
                     serviceName: 'Диагностика',
                     categoryId: 20,
+                    retailPrice: 0,
                     orderId: 102,
                     quantity: 2,
                     price: 0,
@@ -174,6 +180,7 @@ describe('domains/service/modules/reports (e2e)', () => {
                 serviceId: 1,
                 serviceName: 'Замена экрана',
                 categoryId: 10,
+                retailPrice: 1500,
                 totalCount: 3,
                 // Уникальные заказы: (5000,2000) и (3000,1500)
                 totalRevenue: 8000,

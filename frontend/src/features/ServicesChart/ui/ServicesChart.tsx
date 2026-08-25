@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { ChartSeriesEntry } from '@/kernel/types'
-import { ChartHeader } from '@/shared/ui/ChartHeader.tsx'
-import { ChartLayout } from '@/shared/ui/ChartLayout.tsx'
+import { SegmentedControl } from '@/shared/ui-kit/atoms/SegmentedControl.tsx'
 import { ChartBody } from '@/features/ServicesChart/ui/ChartBody.tsx'
 import type { ChartMode } from '@/features/ServicesChart/model/types.ts'
 
@@ -31,25 +30,20 @@ export function ServicesChart({ series }: Props) {
     const [mode, setMode] = useState<ChartMode>('count')
 
     return (
-        <ChartLayout>
-            <ChartHeader
-                title={TITLES[mode]}
-                description={DESCRIPTIONS[mode]}
-                actions={
-                    <div className="flex rounded-md border border-gray-200 overflow-hidden text-xs shrink-0">
-                        {MODES.map((m) => (
-                            <button
-                                key={m.value}
-                                onClick={() => setMode(m.value)}
-                                className={`px-3 py-1.5 transition-colors ${mode === m.value ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                            >
-                                {m.label}
-                            </button>
-                        ))}
-                    </div>
-                }
-            />
+        <section className="flex flex-col gap-4 rounded-xl border border-hairline bg-surface p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col gap-0.5">
+                    <h2 className="font-ui text-base font-bold text-ink">{TITLES[mode]}</h2>
+                    <p className="font-ui text-[12.5px] text-ink-muted">{DESCRIPTIONS[mode]}</p>
+                </div>
+                <SegmentedControl
+                    options={MODES}
+                    value={mode}
+                    onValueChange={setMode}
+                    aria-label="Режим графика аналитики услуг"
+                />
+            </div>
             <ChartBody series={series} mode={mode} />
-        </ChartLayout>
+        </section>
     )
 }

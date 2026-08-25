@@ -8,6 +8,7 @@ export function toServiceAnalyticsItemResponse(
     serviceId: number,
     serviceName: string,
     categoryId: number | null,
+    retailPrice: number,
     metrics: ServiceMetrics,
     breakdown: PeriodBreakdownEntry[],
 ): ServiceAnalyticsItemResponse {
@@ -15,6 +16,7 @@ export function toServiceAnalyticsItemResponse(
         serviceId,
         serviceName,
         categoryId,
+        retailPrice,
         totalCount: metrics.getTotalCount(),
         totalRevenue: metrics.getTotalRevenue(),
         totalProfit: metrics.getTotalProfit(),

@@ -2,13 +2,13 @@ import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 import type { TooltipContentProps } from 'recharts'
 import type { ChartSeriesEntry } from '@/kernel/types'
 import { CHART_COLORS } from '@/kernel/chartColors'
-import { buildChartData, ruFmt } from '@/features/ServicesChart/model/chartFormat.ts'
+import { buildChartData, gradientIdFor, ruFmt } from '@/features/ServicesChart/model/chartFormat.ts'
 import type { ChartMode } from '@/features/ServicesChart/model/types.ts'
 
 const sharedAxisProps = {
     tickLine: false as const,
     axisLine: false as const,
-    tick: { fontSize: 10, fill: '#9ca3af' },
+    tick: { fontSize: 11, fill: 'var(--color-ink-muted)' },
 }
 
 type BigTooltipProps = Pick<TooltipContentProps<number, string>, 'active' | 'payload' | 'label'> & {
@@ -20,61 +20,19 @@ function BigTooltip({ active, payload, label, mode }: BigTooltipProps) {
     const sorted = [...payload].sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
     const isMoney = mode !== 'count'
     return (
-        <div
-            style={{
-                background: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: 8,
-                padding: '8px 12px',
-                fontSize: 12,
-                maxWidth: 280,
-            }}
-        >
-            <p style={{ marginBottom: 6, fontWeight: 600, color: '#374151' }}>{label}</p>
+        <div className="max-w-[280px] rounded-lg border border-hairline bg-surface px-3 py-2 font-ui text-xs shadow-sm">
+            <p className="mb-1.5 font-semibold text-ink">{label}</p>
             {sorted.map((entry) => {
                 const key = String(entry.dataKey ?? entry.name ?? '')
                 const val = isMoney ? `${ruFmt(Number(entry.value))} ₽` : entry.value
                 return (
-                    <div
-                        key={key}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            marginBottom: 3,
-                        }}
-                    >
+                    <div key={key} className="mb-0.5 flex items-center gap-1.5">
                         <span
-                            style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                background: entry.color ?? 'transparent',
-                                display: 'inline-block',
-                                flexShrink: 0,
-                            }}
+                            className="inline-block h-2 w-2 shrink-0 rounded-full"
+                            style={{ background: entry.color ?? 'transparent' }}
                         />
-                        <span
-                            style={{
-                                color: '#6b7280',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                maxWidth: 160,
-                            }}
-                        >
-                            {key}:
-                        </span>
-                        <span
-                            style={{
-                                fontWeight: 600,
-                                color: '#111827',
-                                marginLeft: 'auto',
-                                paddingLeft: 12,
-                            }}
-                        >
-                            {val}
-                        </span>
+                        <span className="max-w-[160px] truncate text-ink-muted">{key}:</span>
+                        <span className="ml-auto pl-3 font-semibold text-ink">{val}</span>
                     </div>
                 )
             })}
@@ -94,7 +52,18 @@ export function CombinedChart({ series, mode }: Props) {
         <ResponsiveContainer width="100%" height={400}>
             {mode === 'count' ? (
                 <AreaChart data={data}>
-                    <CartesianGrid vertical={false} stroke="#f3f4f6" />
+                    <defs>
+                        {series.map((s, i) => {
+                            const color = CHART_COLORS[i % CHART_COLORS.length]
+                            return (
+                                <linearGradient key={s.id} id={gradientIdFor(s.id)} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={color} stopOpacity={0.24} />
+                                    <stop offset="100%" stopColor={color} stopOpacity={0} />
+                                </linearGradient>
+                            )
+                        })}
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="var(--color-hairline)" />
                     <XAxis dataKey="label" {...sharedAxisProps} />
                     <YAxis {...sharedAxisProps} allowDecimals={false} />
                     {series.map((s, i) => (
@@ -103,8 +72,7 @@ export function CombinedChart({ series, mode }: Props) {
                             type="monotone"
                             dataKey={s.name}
                             stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                            fill={CHART_COLORS[i % CHART_COLORS.length]}
-                            fillOpacity={0.15}
+                            fill={`url(#${gradientIdFor(s.id)})`}
                             strokeWidth={2}
                             dot={false}
                             stackId="a"
@@ -114,7 +82,7 @@ export function CombinedChart({ series, mode }: Props) {
                 </AreaChart>
             ) : (
                 <LineChart data={data}>
-                    <CartesianGrid vertical={false} stroke="#f3f4f6" />
+                    <CartesianGrid vertical={false} stroke="var(--color-hairline)" />
                     <XAxis dataKey="label" {...sharedAxisProps} />
                     <YAxis {...sharedAxisProps} allowDecimals={false} tickFormatter={ruFmt} />
                     {series.map((s, i) => (
