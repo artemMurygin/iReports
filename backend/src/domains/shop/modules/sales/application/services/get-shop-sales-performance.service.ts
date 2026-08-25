@@ -98,4 +98,14 @@ export class GetShopSalesPerformanceService implements ShopSalesPerformanceReade
             ) ?? null
         );
     }
+
+    async listForDepartment(
+        period: string,
+        department: number,
+    ): Promise<ShopSalesPerformance[]> {
+        const performances = await this.listForPeriod(period);
+        return performances.filter(
+            (performance) => performance.getDepartment() === department,
+        );
+    }
 }

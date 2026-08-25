@@ -22,6 +22,19 @@ export interface ShopSalesPerformanceReaderPort {
         department: number,
         category: string | null,
     ): Promise<ShopSalesPerformance | null>;
+
+    // Все строки ShopSalesPerformance ОДНОГО отдела за период — по каждой
+    // заведённой категории, включая "весь отдел" (category: null), если
+    // такая строка плана есть. Вход для построчной разбивки плана-продаж по
+    // категориям в отчёте по зарплате (см.
+    // GetShopEmployeeSalaryReportService.buildSalesPerformanceSummaries) —
+    // иначе карточка плана продаж никогда не показывала бы категории для
+    // отделов, ведущих план по категориям, а не одной строкой на отдел
+    // целиком.
+    listForDepartment(
+        period: string,
+        department: number,
+    ): Promise<ShopSalesPerformance[]>;
 }
 
 export const SHOP_SALES_PERFORMANCE_READER = Symbol(

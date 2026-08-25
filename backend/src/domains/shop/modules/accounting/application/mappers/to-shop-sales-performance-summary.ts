@@ -35,15 +35,20 @@ export function toShopSalesPerformanceSummary(
     };
 }
 
-// Пока в периоде есть строки SalesPlan в статусе CREATED, план считается не
-// утверждённым — отчёт помечается признаком "план не утверждён, цифры
-// предварительные". Нет строки плана вовсе (для отдела ещё не создан ни
-// план, ни факт) — признак не блокирует ничего, остаётся true.
-export function isShopSalesPerformancePlanApproved(
-    performance: ShopSalesPerformance | null,
+// Ответ отчёта отдаёт `salesPerformance[]` — по одной строке на каждую
+// строку плана отдела за период (см. GetShopEmployeeSalaryReportService) —
+// план считается не утверждённым, если хотя бы одна из этих строк ещё в
+// статусе CREATED (та же логика "предварительные цифры", что и у отчёта
+// направления service, но по всему списку сразу, а не по одной сводке).
+// Нет ни одной строки плана вовсе — признак не блокирует ничего, остаётся
+// true.
+export function isShopSalesPerformancePlanApprovedList(
+    performances: ShopSalesPerformance[],
 ): boolean {
-    if (!performance) {
+    if (performances.length === 0) {
         return true;
     }
-    return performance.getPlan().status === 'APPROVED';
+    return performances.every(
+        (performance) => performance.getPlan().status === 'APPROVED',
+    );
 }
