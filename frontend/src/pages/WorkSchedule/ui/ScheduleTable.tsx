@@ -4,7 +4,7 @@ import type { MonthlyWorkScheduleResponse, WorkScheduleDayCell } from 'ireports-
 import { cn } from '@/shared/lib/tw'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui-kit/atoms/Popover'
 
-import { cellLabel, cellStyle, formatHours, resolveCellVariant } from '../model/cellPresentation.ts'
+import { cellLabel, cellStyle, dutyRingClassName, formatHours, resolveCellVariant } from '../model/cellPresentation.ts'
 import { formatDayEditorDateLabel } from '../model/format.ts'
 import {
     buildDayAggregateMap,
@@ -187,6 +187,7 @@ function ScheduleTableRow({
                     status: null,
                     hours: null,
                     role: null,
+                    isOnDuty: false,
                 }
                 const variant = resolveCellVariant(cell)
                 const style = cellStyle(variant)
@@ -200,6 +201,7 @@ function ScheduleTableRow({
                                 className={cn(
                                     'flex h-full w-full cursor-pointer items-center justify-center outline-none transition-colors hover:brightness-95 focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-inset',
                                     style.bgClassName,
+                                    dutyRingClassName(cell),
                                 )}
                                 aria-label={`${employee.name}, ${day.day} число`}
                             >

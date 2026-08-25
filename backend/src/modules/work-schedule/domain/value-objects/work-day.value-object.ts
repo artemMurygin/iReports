@@ -16,6 +16,7 @@ export interface WorkDayProps {
     status: WorkScheduleStatus;
     hours: ShiftHours | null;
     role: TargetRole | null;
+    isOnDuty: boolean;
 }
 
 export interface CreateWorkDayProps {
@@ -28,6 +29,7 @@ export interface CreateWorkDayProps {
     status: string;
     hours?: number | null;
     role?: string | null;
+    isOnDuty?: boolean;
 }
 
 // Состояние дня целиком: статус + часы + роль. ПОЧЕМУ это один value
@@ -42,6 +44,7 @@ export class WorkDay extends ValueObject<WorkDayProps> {
         const status = WorkDay.parseStatus(props.status);
         const hasHours = props.hours !== undefined && props.hours !== null;
         const hasRole = props.role !== undefined && props.role !== null;
+        const isOnDuty = props.isOnDuty ?? false;
 
         if (status !== 'WORKING') {
             // Не «молча обнуляем», а отклоняем: часы/роль у выходного —
@@ -57,7 +60,17 @@ export class WorkDay extends ValueObject<WorkDayProps> {
                     `Роль дня допустима только у статуса WORKING, получен статус ${status}`,
                 );
             }
-            return new WorkDay({ status, hours: null, role: null });
+            if (isOnDuty) {
+                throw new ArgumentInvalidException(
+                    `Отметка дежурства допустима только у статуса WORKING, получен статус ${status}`,
+                );
+            }
+            return new WorkDay({
+                status,
+                hours: null,
+                role: null,
+                isOnDuty: false,
+            });
         }
 
         return new WorkDay({
@@ -67,6 +80,7 @@ export class WorkDay extends ValueObject<WorkDayProps> {
             // это ячейка «работает, часы не указаны»).
             hours: hasHours ? ShiftHours.create(props.hours as number) : null,
             role: hasRole ? WorkDay.parseRole(props.role as string) : null,
+            isOnDuty,
         });
     }
 
@@ -80,6 +94,10 @@ export class WorkDay extends ValueObject<WorkDayProps> {
 
     get role(): TargetRole | null {
         return this.props.role;
+    }
+
+    get isOnDuty(): boolean {
+        return this.props.isOnDuty;
     }
 
     isWorking(): boolean {

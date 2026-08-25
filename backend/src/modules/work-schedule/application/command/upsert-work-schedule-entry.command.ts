@@ -7,6 +7,7 @@ export class UpsertWorkScheduleEntryCommand extends Command {
     readonly status: WorkScheduleStatus;
     readonly hours?: number;
     readonly role?: TargetRole;
+    readonly isOnDuty?: boolean;
 
     constructor(props: CommandProps<UpsertWorkScheduleEntryCommand>) {
         super(props);
@@ -15,5 +16,6 @@ export class UpsertWorkScheduleEntryCommand extends Command {
         this.status = props.status;
         this.hours = props.hours;
         this.role = props.role;
+        this.isOnDuty = props.isOnDuty;
     }
 }

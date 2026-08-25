@@ -6,6 +6,7 @@ import {
     buildUpsertPayload,
     clampHours,
     DEFAULT_SHIFT_HOURS,
+    resolveDutyForStatus,
     resolveHoursForStatus,
 } from '@/pages/WorkSchedule/model/dayEditorPayload.ts'
 
@@ -31,10 +32,16 @@ type UseDayEditorArgs = {
  * `role` этим поповером не редактируется (её редактирует свой поповер на вкладке «Роли» — Фаза 8b,
  * `ui/RolePickerPopover`), но сохраняется при каждой правке как есть — см. комментарий
  * `buildUpsertPayload`.
+ *
+ * `isOnDuty` — тот же echo-стейт + откат при ошибке, что и `status`/`hours`; переключение статуса
+ * прочь от `WORKING` сбрасывает его через `resolveDutyForStatus` тем же приёмом, что и
+ * `resolveHoursForStatus` для часов (отметка не может пережить день, на который её нельзя
+ * сохранить).
  */
 export function useDayEditor({ employeeId, date, cell }: UseDayEditorArgs) {
     const [status, setStatus] = useState<WorkScheduleStatus | null>(cell.status)
     const [hours, setHours] = useState<number>(cell.hours ?? DEFAULT_SHIFT_HOURS)
+    const [isOnDuty, setIsOnDuty] = useState<boolean>(cell.isOnDuty)
     const role: TargetRole | null = cell.role
 
     const mutation = useSaveWorkScheduleEntry()
@@ -42,16 +49,26 @@ export function useDayEditor({ employeeId, date, cell }: UseDayEditorArgs) {
     function save(
         nextStatus: WorkScheduleStatus,
         nextHours: number | null,
-        previous: { status: WorkScheduleStatus | null; hours: number },
+        nextIsOnDuty: boolean,
+        previous: { status: WorkScheduleStatus | null; hours: number; isOnDuty: boolean },
     ) {
         mutation.mutate(
-            buildUpsertPayload(employeeId, date, nextStatus, nextHours, nextStatus === 'WORKING' ? role : null),
+            buildUpsertPayload(
+                employeeId,
+                date,
+                nextStatus,
+                nextHours,
+                nextStatus === 'WORKING' ? role : null,
+                nextIsOnDuty,
+            ),
             {
                 onError: () => {
                     // Тост уже показал useSaveWorkScheduleEntry — здесь только откат локального эха,
-                    // чтобы пилюля/слайдер не остались зависшими в состоянии, которое не сохранилось.
+                    // чтобы пилюля/слайдер/переключатель не остались зависшими в состоянии, которое
+                    // не сохранилось.
                     setStatus(previous.status)
                     setHours(previous.hours)
+                    setIsOnDuty(previous.isOnDuty)
                 },
             },
         )
@@ -60,20 +77,22 @@ export function useDayEditor({ employeeId, date, cell }: UseDayEditorArgs) {
     function selectStatus(next: WorkScheduleStatus) {
         if (next === status) return
 
-        const previous = { status, hours }
+        const previous = { status, hours, isOnDuty }
         const nextHours = resolveHoursForStatus(next, hours)
+        const nextIsOnDuty = resolveDutyForStatus(next, isOnDuty)
         setStatus(next)
         if (nextHours !== null) setHours(nextHours)
-        save(next, nextHours, previous)
+        setIsOnDuty(nextIsOnDuty)
+        save(next, nextHours, nextIsOnDuty, previous)
     }
 
     // Степпер (+/- 0,5) и отпускание слайдера сохраняют сразу — оба уже дискретные, «закоммиченные»
     // действия пользователя, а не промежуточный кадр драга (тот идёт только в setHours, см. ниже).
     function commitHours(nextHours: number) {
         const clamped = clampHours(nextHours)
-        const previous = { status, hours }
+        const previous = { status, hours, isOnDuty }
         setHours(clamped)
-        if (status === 'WORKING') save('WORKING', clamped, previous)
+        if (status === 'WORKING') save('WORKING', clamped, isOnDuty, previous)
     }
 
     /** Живое значение слайдера во время драга — без сети, только локальный стейт для UI. */
@@ -85,13 +104,25 @@ export function useDayEditor({ employeeId, date, cell }: UseDayEditorArgs) {
         commitHours(hours + delta)
     }
 
+    /** Переключатель «Дежурный» — вызывается только у `WORKING`-дня (сам UI задизейблен иначе,
+     * см. `DayEditorPopover.tsx`), но проверка статуса здесь тоже нужна: без неё случайный вызов
+     * попытался бы сохранить `isOnDuty: true` на дне, где бэкенд его отклонит. */
+    function setOnDuty(next: boolean) {
+        if (status !== 'WORKING') return
+        const previous = { status, hours, isOnDuty }
+        setIsOnDuty(next)
+        save(status, hours, next, previous)
+    }
+
     return {
         status,
         hours,
+        isOnDuty,
         selectStatus,
         previewHours,
         commitHours,
         stepHours,
+        setOnDuty,
         isSaving: mutation.isPending,
     }
 }

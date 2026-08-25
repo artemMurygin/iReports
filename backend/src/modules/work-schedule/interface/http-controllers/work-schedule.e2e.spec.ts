@@ -251,6 +251,41 @@ describe('WorkSchedule HTTP (e2e)', () => {
         expect(store.size).toBe(0);
     });
 
+    it('PUT с isOnDuty: true на рабочий день отмечает сотрудника дежурным', async () => {
+        const response = await request(app.getHttpServer())
+            .put('/v1/work-schedule/entries')
+            .send({
+                employeeId: 42,
+                date: '2026-08-05',
+                status: 'WORKING',
+                hours: 8,
+                role: 'ENGINEER',
+                isOnDuty: true,
+            })
+            .expect(200);
+        const body = response.body as WorkScheduleEntryResponse;
+
+        expect(body).toMatchObject({
+            employeeId: 42,
+            date: '2026-08-05',
+            status: 'WORKING',
+            isOnDuty: true,
+        });
+    });
+
+    it('PUT отклоняет isOnDuty: true, переданный с не-WORKING статусом, с 400', async () => {
+        await request(app.getHttpServer())
+            .put('/v1/work-schedule/entries')
+            .send({
+                employeeId: 42,
+                date: '2026-08-05',
+                status: 'DAY_OFF',
+                isOnDuty: true,
+            })
+            .expect(400);
+        expect(store.size).toBe(0);
+    });
+
     it('DELETE возвращает день в состояние «не заполнен»', async () => {
         const entry = withRequestContext(() =>
             WorkScheduleEntry.create({
@@ -313,6 +348,46 @@ describe('WorkSchedule HTTP (e2e)', () => {
         const dayAggregate = body.days.find((d) => d.date === '2026-08-05');
         expect(dayAggregate?.peopleOnShift).toBe(1);
         expect(body.totalHours).toBe(8);
+    });
+
+    it('GET /v1/work-schedule — isOnDuty из PUT попадает в ячейку дня, остальные дни отдают isOnDuty: false', async () => {
+        await request(app.getHttpServer())
+            .put('/v1/work-schedule/entries')
+            .send({
+                employeeId: 42,
+                date: '2026-08-05',
+                status: 'WORKING',
+                hours: 8,
+                role: 'ENGINEER',
+                isOnDuty: true,
+            })
+            .expect(200);
+
+        const response = await request(app.getHttpServer())
+            .get('/v1/work-schedule')
+            .query({ month: '2026-08', departmentId: 1 })
+            .expect(200);
+        const body = response.body as MonthlyWorkScheduleResponse;
+
+        const [row] = body.employees;
+        // 5-е августа — индекс 4.
+        expect(row.days[4].entryId).toEqual(expect.any(String));
+        expect(row.days[4]).toMatchObject({
+            date: '2026-08-05',
+            status: 'WORKING',
+            hours: 8,
+            role: 'ENGINEER',
+            isOnDuty: true,
+        });
+        // Дни без записи графика — пустая ячейка с isOnDuty: false, а не
+        // null/undefined (см. Фазу 2 плана).
+        expect(row.days[5]).toMatchObject({
+            date: '2026-08-06',
+            entryId: null,
+            status: null,
+            isOnDuty: false,
+        });
+        expect(row.days.every((day) => day.isOnDuty !== undefined)).toBe(true);
     });
 
     it('GET /v1/work-schedule — месяц без единой записи отдаёт пустые ячейки и нули, а не ошибку', async () => {

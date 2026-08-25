@@ -11,6 +11,7 @@ export function toWorkScheduleEntryResponse(
         status: entry.day.status,
         hours: entry.day.hours,
         role: entry.day.role,
+        isOnDuty: entry.day.isOnDuty,
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt,
     };

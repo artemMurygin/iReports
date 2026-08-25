@@ -44,6 +44,7 @@ export class UpsertWorkScheduleEntryHandler implements ICommandHandler<
             status: command.status,
             hours: command.hours,
             role: command.role,
+            isOnDuty: command.isOnDuty,
         });
 
         const existing = await this.repo.findByEmployeeAndDate(

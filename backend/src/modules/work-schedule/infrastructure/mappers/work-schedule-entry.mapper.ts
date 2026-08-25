@@ -23,6 +23,7 @@ export class WorkScheduleEntryMapper implements Mapper<
                     status: record.status,
                     hours: record.hours,
                     role: record.role,
+                    isOnDuty: record.isOnDuty,
                 }),
             },
         });
@@ -39,6 +40,7 @@ export class WorkScheduleEntryMapper implements Mapper<
             status: entity.day.status,
             hours: entity.day.hours,
             role: entity.day.role,
+            isOnDuty: entity.day.isOnDuty,
             createdAt: props.createdAt,
             updatedAt: props.updatedAt,
         };

@@ -45,6 +45,7 @@ describe('UpsertWorkScheduleEntryHandler', () => {
                 'WORKING' | 'DAY_OFF' | 'TIME_OFF' | 'SICK_LEAVE' | 'VACATION';
             hours?: number;
             role?: string;
+            isOnDuty?: boolean;
         }> = {},
     ) =>
         new UpsertWorkScheduleEntryCommand({
@@ -123,6 +124,42 @@ describe('UpsertWorkScheduleEntryHandler', () => {
             expect(result.id).toBe(existing.id);
             expect(result.status).toBe('WORKING');
             expect(result.hours).toBe(6);
+        });
+    });
+
+    it('создаёт новую запись с отметкой isOnDuty: true', async () => {
+        await withRequestContext(async () => {
+            const { handler, insert } = buildHandler(null);
+
+            const result = await handler.execute(
+                buildCommand({ isOnDuty: true }),
+            );
+
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(result.isOnDuty).toBe(true);
+        });
+    });
+
+    it('повторный upsert с isOnDuty: false снимает ранее выставленную отметку', async () => {
+        await withRequestContext(async () => {
+            const existing = WorkScheduleEntry.create({
+                employeeId: 42,
+                date: ScheduleDate.create('2026-08-05'),
+                day: WorkDay.create({
+                    status: 'WORKING',
+                    hours: 8,
+                    role: 'ENGINEER',
+                    isOnDuty: true,
+                }),
+            });
+            const { handler, update } = buildHandler(existing);
+
+            const result = await handler.execute(
+                buildCommand({ isOnDuty: false }),
+            );
+
+            expect(update).toHaveBeenCalledTimes(1);
+            expect(result.isOnDuty).toBe(false);
         });
     });
 

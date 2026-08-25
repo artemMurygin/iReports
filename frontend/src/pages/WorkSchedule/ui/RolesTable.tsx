@@ -118,6 +118,7 @@ function RolesTableRow({
                     status: null,
                     hours: null,
                     role: null,
+                    isOnDuty: false,
                 }
                 const style = roleCellStyle(cell)
                 const label = roleCellLabel(cell)

@@ -1,6 +1,9 @@
 import { TreePalm } from 'lucide-react'
 import type { WorkScheduleDayCell } from 'ireports-contracts'
 
+import { cn } from '@/shared/lib/tw'
+import { Checkbox } from '@/shared/ui-kit/atoms/Checkbox'
+
 import { vacationDaysRemaining } from '@/pages/WorkSchedule/model/scheduleAggregates.ts'
 
 import { useDayEditor } from '../model/useDayEditor.ts'
@@ -24,7 +27,12 @@ export type DayEditorPopoverProps = {
  * (`Head`/`Status Options`/`Hours Row`+`Hours Slider`/`Divider`/`Hint`) вокруг `useDayEditor` —
  * весь стейт и сохранение живут в хуке, этот компонент только раскладывает его результат по вёрстке
  * (frontend/CLAUDE.md, «Mediator-компонент … не должен содержать условного рендера» — здесь его и
- * нет, `disabled` у `HoursEditor` уже булев проп, а не ветвление на JSX).
+ * нет, `disabled` у `HoursEditor`/`Checkbox` уже булев проп, а не ветвление на JSX).
+ *
+ * Переключатель «Дежурный» — не часть дизайна `Cko6w` (там его нет), добавлен вслед за полем
+ * `isOnDuty` (см. `docs/work-schedule-duty-mark`): та же строка `flex items-center justify-between`,
+ * что уже использует `HoursEditor`'s заголовок, и то же правило disabled/`opacity-50`, что у
+ * `HoursEditor` целиком — дежурство осмысленно только у рабочего дня.
  *
  * `Who` (design: «Артём Мурыгин · 5/2 · 8 ч») — только имя сотрудника: подпись паттерна смены не
  * реализуется (PRD, «Не в скоупе» — источника данных для неё нет).
@@ -39,7 +47,7 @@ function DayEditorPopover({
     vacationDaysLimit,
     year,
 }: DayEditorPopoverProps) {
-    const { status, hours, selectStatus, previewHours, commitHours, stepHours } = useDayEditor({
+    const { status, hours, isOnDuty, selectStatus, previewHours, commitHours, stepHours, setOnDuty } = useDayEditor({
         employeeId,
         date,
         cell,
@@ -64,6 +72,14 @@ function DayEditorPopover({
                 onStep={stepHours}
                 disabled={!isWorking}
             />
+
+            <div
+                data-slot="day-editor-duty"
+                className={cn('flex w-full items-center justify-between', !isWorking && 'opacity-50')}
+            >
+                <span className="font-ui text-xs font-normal text-ink-muted">Дежурный</span>
+                <Checkbox checked={isOnDuty} onCheckedChange={setOnDuty} disabled={!isWorking} aria-label="Дежурный" />
+            </div>
 
             <div data-slot="day-editor-divider" className="h-px w-full bg-hairline" />
 

@@ -93,3 +93,12 @@ export function cellStyle(variant: CellVariant): { bgClassName: string; textClas
     const { bgClassName, textClassName } = STATUS_STYLE[status]
     return { bgClassName, textClassName }
 }
+
+/** Зелёная обводка ячейки — сотрудник дежурит в этот день (`isOnDuty`; бэкенд допускает `true`
+ * только у `WORKING`, так что на практике обводка совпадает только с этим вариантом). Тот же
+ * зелёный акцент, что уже держит «сегодняшняя» колонка шапки и подсветка строки после перехода с
+ * мобильного экрана (`border-brand-strong`/`ring-brand-strong`) — не заводим отдельный цвет ради
+ * третьего похожего индикатора. */
+export function dutyRingClassName(cell: Pick<WorkScheduleDayCell, 'isOnDuty'>): string | undefined {
+    return cell.isOnDuty ? 'ring-2 ring-inset ring-brand-strong' : undefined
+}

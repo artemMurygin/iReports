@@ -24,6 +24,18 @@ describe('WorkDay', () => {
             expect(day.role).toBeNull();
         });
 
+        it('допускает отметку дежурного', () => {
+            const day = WorkDay.create({ status: 'WORKING', isOnDuty: true });
+
+            expect(day.isOnDuty).toBe(true);
+        });
+
+        it('по умолчанию не дежурный, если isOnDuty не передан', () => {
+            const day = WorkDay.create({ status: 'WORKING' });
+
+            expect(day.isOnDuty).toBe(false);
+        });
+
         it('отклоняет невалидные часы через ShiftHours', () => {
             withRequestContext(() => {
                 expect(() =>
@@ -54,6 +66,7 @@ describe('WorkDay', () => {
                 expect(day.hours).toBeNull();
                 expect(day.role).toBeNull();
                 expect(day.isWorking()).toBe(false);
+                expect(day.isOnDuty).toBe(false);
             });
 
             it('отклоняет часы, переданные вместе с нерабочим статусом', () => {
@@ -68,6 +81,14 @@ describe('WorkDay', () => {
                 withRequestContext(() => {
                     expect(() =>
                         WorkDay.create({ status, role: 'ENGINEER' }),
+                    ).toThrow(ArgumentInvalidException);
+                });
+            });
+
+            it('отклоняет отметку дежурного вместе с нерабочим статусом', () => {
+                withRequestContext(() => {
+                    expect(() =>
+                        WorkDay.create({ status, isOnDuty: true }),
                     ).toThrow(ArgumentInvalidException);
                 });
             });

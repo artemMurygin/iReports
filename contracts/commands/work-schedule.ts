@@ -52,6 +52,9 @@ const workScheduleEntrySchema = z.object({
     // у рабочего дня» (проверяется доменом, см. WorkDay value object).
     hours: z.number().nullable(),
     role: targetRoleSchema.nullable(),
+    // true допустимо только при status = WORKING — тот же инвариант, что и
+    // у hours/role (проверяется доменом, см. WorkDay value object).
+    isOnDuty: z.boolean(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
 });
@@ -73,8 +76,17 @@ const upsertWorkScheduleEntryRequestSchema = z.object({
     status: workScheduleStatusSchema,
     hours: shiftHoursSchema.optional(),
     role: targetRoleSchema.optional(),
+    // Отметка «дежурный». optional().default(false), а не обязательное
+    // поле — обратная совместимость со старыми клиентами, которые ещё не
+    // знают об этом поле.
+    isOnDuty: z.boolean().optional().default(false),
 });
-export type UpsertWorkScheduleEntryRequest = z.infer<
+// z.input, а не z.infer (= z.output): isOnDuty — единственное поле с
+// .default(), и в output-типе default() делает его обязательным, хотя
+// клиент по факту вправе его не передавать (см. комментарий над схемой).
+// Тип запроса должен описывать, что можно ОТПРАВИТЬ, а не то, что получится
+// после парсинга на сервере.
+export type UpsertWorkScheduleEntryRequest = z.input<
     typeof upsertWorkScheduleEntryRequestSchema
 >;
 
@@ -112,6 +124,10 @@ const workScheduleDayCellSchema = z.object({
     status: workScheduleStatusSchema.nullable(),
     hours: z.number().nullable(),
     role: targetRoleSchema.nullable(),
+    // false у дня без записи графика — тот же инвариант, что и у
+    // hours/role (см. WorkDay value object): дежурство возможно только у
+    // существующего рабочего дня.
+    isOnDuty: z.boolean(),
 });
 export type WorkScheduleDayCell = z.infer<typeof workScheduleDayCellSchema>;
 

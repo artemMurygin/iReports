@@ -16,11 +16,12 @@ describe('GetMonthlyWorkScheduleService', () => {
         status: 'WORKING' | 'DAY_OFF' | 'TIME_OFF' | 'SICK_LEAVE' | 'VACATION',
         hours?: number,
         role?: string,
+        isOnDuty?: boolean,
     ) =>
         WorkScheduleEntry.create({
             employeeId,
             date: ScheduleDate.create(date),
-            day: WorkDay.create({ status, hours, role }),
+            day: WorkDay.create({ status, hours, role, isOnDuty }),
         });
 
     const buildService = (overrides: {
@@ -98,6 +99,7 @@ describe('GetMonthlyWorkScheduleService', () => {
             status: null,
             hours: null,
             role: null,
+            isOnDuty: false,
         });
         expect(row.totalHours).toBe(14.5);
     });
@@ -214,6 +216,33 @@ describe('GetMonthlyWorkScheduleService', () => {
             new Date(Date.UTC(2026, 0, 1)),
             new Date(Date.UTC(2026, 11, 31, 23, 59, 59, 999)),
         );
+    });
+
+    it('isOnDuty ячейки отражает отметку дежурства записи, а не заполнена по умолчанию у всех остальных дней', async () => {
+        const employees = [
+            { id: 1, firstName: 'Иван', lastName: 'Иванов', departmentId: 1 },
+            { id: 2, firstName: 'Пётр', lastName: 'Петров', departmentId: 1 },
+        ];
+        const entries = [
+            buildEntry(1, '2026-08-05', 'WORKING', 8, 'ENGINEER', true),
+            buildEntry(1, '2026-08-06', 'WORKING', 8),
+            buildEntry(2, '2026-08-05', 'WORKING', 8),
+        ];
+        const { service } = buildService({ employees, entries });
+
+        const result = await service.execute('2026-08', 1);
+
+        const [employee1, employee2] = result.employees;
+        const duty = employee1.days.find((d) => d.date === '2026-08-05');
+        expect(duty?.isOnDuty).toBe(true);
+
+        const restOfEmployee1Days = employee1.days.filter(
+            (d) => d.date !== '2026-08-05',
+        );
+        expect(restOfEmployee1Days.every((d) => d.isOnDuty === false)).toBe(
+            true,
+        );
+        expect(employee2.days.every((d) => d.isOnDuty === false)).toBe(true);
     });
 
     it('число запросов к порту фиксировано (по одному вызову) независимо от числа сотрудников — без N+1', async () => {

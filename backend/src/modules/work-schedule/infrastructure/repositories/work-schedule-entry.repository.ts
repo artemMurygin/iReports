@@ -34,6 +34,7 @@ export class WorkScheduleEntryRepository
                     status: entity.day.status,
                     hours: entity.day.hours,
                     role: entity.day.role,
+                    isOnDuty: entity.day.isOnDuty,
                     updatedAt: props.updatedAt,
                 },
             }),

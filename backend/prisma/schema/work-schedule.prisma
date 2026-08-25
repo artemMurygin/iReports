@@ -8,8 +8,8 @@
 // модуль src/modules/work-schedule, а читать будут контексты расчёта обоих
 // направлений (см. PRD, "Технические ограничения").
 model WorkScheduleEntry {
-  id         String @id
-  employeeId Int    @map("employee_id")
+  id         String   @id
+  employeeId Int      @map("employee_id")
   // Календарный день без времени (@db.Date): смена — это «5 августа», а не
   // момент времени, поэтому колонка DATE, а не TIMESTAMP — иначе часовой
   // пояс сервера/клиента сдвигал бы день на сутки. В домене этой колонке
@@ -25,6 +25,7 @@ model WorkScheduleEntry {
   // (см. WorkDay value object), на уровне БД поля просто nullable.
   hours      Float?
   role       String?
+  isOnDuty   Boolean  @default(false) @map("is_on_duty")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

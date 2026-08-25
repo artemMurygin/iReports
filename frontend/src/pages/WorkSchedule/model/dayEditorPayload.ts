@@ -17,7 +17,7 @@ export const SHIFT_HOURS_STEP = 0.5
  * значение в таблице (см. легенду «Цифра в ячейке — часы за смену»). Не значение по умолчанию
  * бэкенда (там часы у `WORKING` необязательны вовсе, см. `WorkDay.create`) — только стартовая
  * позиция слайдера в UI, чтобы он не открывался «в никуда» на границе диапазона. */
-export const DEFAULT_SHIFT_HOURS = 8
+export const DEFAULT_SHIFT_HOURS = 10
 
 /** Округляет к шагу 0,5 и зажимает в диапазон 2–16. `toFixed(1)` — защита от плавающей запятой
  * (`0.1 + 0.2`-подобных артефактов) после деления/умножения на шаг. */
@@ -35,14 +35,24 @@ export function resolveHoursForStatus(status: WorkScheduleStatus, previousHours:
     return previousHours !== null ? previousHours : DEFAULT_SHIFT_HOURS
 }
 
+/** Дежурство осмысленно только у статуса `WORKING` (тот же инвариант, что и у часов, проверяется
+ * доменом на бэкенде через `WorkDay.create()`) — переключение статуса на любой другой сбрасывает
+ * отметку, а не оставляет её висеть на дне, где она не может быть сохранена. */
+export function resolveDutyForStatus(status: WorkScheduleStatus, previousIsOnDuty: boolean): boolean {
+    return status === 'WORKING' ? previousIsOnDuty : false
+}
+
 /**
  * Тело `PUT /v1/work-schedule/entries` для одной правки дня. `role` в поповере календаря
  * (Фаза 7) не редактируется — её редактирует свой поповер на вкладке «Роли» (Фаза 8b,
  * `ui/RolePickerPopover`, который вызывает этот же билдер), — но передаётся, если уже была задана:
  * `WorkScheduleEntry.edit()` на бэкенде заменяет состояние дня целиком (см.
  * `work-schedule-entry.entity.ts`), и не передать существующую роль здесь значило бы молча стереть
- * её при простой смене часов/статуса на «Работает». `hours`/`role`, переданные для не-`WORKING`
- * статуса, всегда отбрасываются (не только `undefined`) — тем же инвариантом, что и на бэкенде.
+ * её при простой смене часов/статуса на «Работает». `hours`/`role`/`isOnDuty`, переданные для
+ * не-`WORKING` статуса, всегда отбрасываются (не только `undefined`) — тем же инвариантом, что и
+ * на бэкенде. `isOnDuty` включается явным булевым значением (не только когда `true`, как
+ * `hours`/`role`) — это уже осознанно выставленное состояние переключателя, а не «неизвестно/не
+ * трогаем», молчаливый пропуск снятия отметки был бы багом.
  */
 export function buildUpsertPayload(
     employeeId: number,
@@ -50,6 +60,7 @@ export function buildUpsertPayload(
     status: WorkScheduleStatus,
     hours: number | null,
     role: TargetRole | null,
+    isOnDuty: boolean,
 ): UpsertWorkScheduleEntryRequest {
     if (status !== 'WORKING') {
         return { employeeId, date, status }
@@ -61,5 +72,6 @@ export function buildUpsertPayload(
         status,
         ...(hours !== null ? { hours } : {}),
         ...(role !== null ? { role } : {}),
+        isOnDuty,
     }
 }

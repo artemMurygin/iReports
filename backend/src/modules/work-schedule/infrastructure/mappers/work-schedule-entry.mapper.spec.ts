@@ -15,6 +15,7 @@ describe('WorkScheduleEntryMapper', () => {
             status: 'WORKING',
             hours: 8,
             role: 'ENGINEER',
+            isOnDuty: false,
             createdAt: now,
             updatedAt: now,
         });
@@ -37,6 +38,7 @@ describe('WorkScheduleEntryMapper', () => {
             status: 'VACATION',
             hours: null,
             role: null,
+            isOnDuty: false,
             createdAt: now,
             updatedAt: now,
         });
@@ -81,6 +83,7 @@ describe('WorkScheduleEntryMapper', () => {
             status: 'DAY_OFF',
             hours: null,
             role: null,
+            isOnDuty: false,
             createdAt: now,
             updatedAt: now,
         });
@@ -94,5 +97,47 @@ describe('WorkScheduleEntryMapper', () => {
             hours: null,
             role: null,
         });
+    });
+
+    it('toDomain → toPersistence сохраняет отметку дежурства (true)', () => {
+        const now = new Date('2026-08-10T12:00:00Z');
+        const entity = mapper.toDomain({
+            id: 'entry-4',
+            employeeId: 42,
+            date: new Date('2026-08-05T00:00:00.000Z'),
+            status: 'WORKING',
+            hours: 8,
+            role: 'ENGINEER',
+            isOnDuty: true,
+            createdAt: now,
+            updatedAt: now,
+        });
+
+        expect(entity.day.isOnDuty).toBe(true);
+
+        const record = mapper.toPersistence(entity);
+
+        expect(record.isOnDuty).toBe(true);
+    });
+
+    it('toDomain → toPersistence сохраняет отметку дежурства (false)', () => {
+        const now = new Date('2026-08-10T12:00:00Z');
+        const entity = mapper.toDomain({
+            id: 'entry-5',
+            employeeId: 42,
+            date: new Date('2026-08-05T00:00:00.000Z'),
+            status: 'WORKING',
+            hours: 8,
+            role: 'ENGINEER',
+            isOnDuty: false,
+            createdAt: now,
+            updatedAt: now,
+        });
+
+        expect(entity.day.isOnDuty).toBe(false);
+
+        const record = mapper.toPersistence(entity);
+
+        expect(record.isOnDuty).toBe(false);
     });
 });

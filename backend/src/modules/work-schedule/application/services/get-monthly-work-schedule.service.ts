@@ -143,6 +143,7 @@ export class GetMonthlyWorkScheduleService {
                     status: null,
                     hours: null,
                     role: null,
+                    isOnDuty: false,
                 };
             }
 
@@ -160,6 +161,7 @@ export class GetMonthlyWorkScheduleService {
                 status: entry.day.status,
                 hours: entry.day.hours,
                 role: entry.day.role,
+                isOnDuty: entry.day.isOnDuty,
             };
         });
 

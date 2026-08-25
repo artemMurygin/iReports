@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { cellLabel, cellStyle, formatHours, resolveCellVariant } from './cellPresentation.ts'
+import { cellLabel, cellStyle, dutyRingClassName, formatHours, resolveCellVariant } from './cellPresentation.ts'
 
 describe('resolveCellVariant', () => {
     it('maps status: null to EMPTY', () => {
@@ -55,5 +55,15 @@ describe('cellStyle', () => {
         const variants = ['WORKING', 'DAY_OFF', 'TIME_OFF', 'SICK_LEAVE', 'VACATION'] as const
         const styles = variants.map((variant) => cellStyle(variant).textClassName)
         expect(new Set(styles).size).toBe(variants.length)
+    })
+})
+
+describe('dutyRingClassName', () => {
+    it('returns a green ring class when the employee is on duty', () => {
+        expect(dutyRingClassName({ isOnDuty: true })).toBe('ring-2 ring-inset ring-brand-strong')
+    })
+
+    it('returns undefined when the employee is not on duty', () => {
+        expect(dutyRingClassName({ isOnDuty: false })).toBeUndefined()
     })
 })
