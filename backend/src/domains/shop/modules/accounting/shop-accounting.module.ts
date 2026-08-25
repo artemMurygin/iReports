@@ -28,7 +28,6 @@ import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/account
 import { MoySkladErpPeriodSyncAdapter } from '@/domains/shop/modules/accounting/infrastructure/sync/moysklad-erp-period-sync.adapter';
 import { GetShopClosePeriodPreviewHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-close-period-preview.http.controller';
 import { GetShopErpCashConfigHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-erp-cash-config.http.controller';
-import { PutShopErpCashConfigHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/put-shop-erp-cash-config.http.controller';
 import { CreateShopPayoutHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-payout.http.controller';
 import { CreateShopPayoutBatchHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-payout-batch.http.controller';
 import { DeleteShopPayoutHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/delete-shop-payout.http.controller';
@@ -88,7 +87,7 @@ import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounti
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period.repository';
 import { AccountingPeriodSnapshotRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period-snapshot.repository';
 import { AccountingCalculationCacheRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-calculation-cache.repository';
-import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-config.repository';
+import { ErpCashConfigProvider } from '@/domains/service/modules/accounting/infrastructure/config/erp-cash-config.provider';
 import { ErpCashDocumentRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-document.repository';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastructure/repositories/sales-plan.repository';
@@ -231,11 +230,9 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         GetShopClosePeriodPreviewHttpController,
         // Конфигурация кассы ERP направления shop (PRD 3
         // docs/payroll-closing-and-accrual, Фаза 11) — зеркалит
-        // service.accounting.erpCashConfig, PUT диспатчит ту же generic по
-        // direction команду через общий CommandBus (хендлер зарегистрирован
-        // в AccountingModule сервиса).
+        // service.accounting.erpCashConfig; read-only, PUT убран (правка
+        // пользователя от 2026-08-24, см. заметку в конце Фазы 11 плана).
         GetShopErpCashConfigHttpController,
-        PutShopErpCashConfigHttpController,
         // Выплата направления shop (PRD 3
         // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
         // Фаза 12) — зеркалит service.accounting.payout (см.
@@ -338,13 +335,15 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         // ERP» (PRD 3 docs/payroll-closing-and-accrual, Фаза 11) —
         // собственные экземпляры под теми же токенами, что и в
         // AccountingModule сервиса (тот же приём, что ACCOUNTING_PERIOD_*
-        // выше); PutErpCashConfigHandler здесь НЕ заводится — это уже
-        // CQRS-хендлер, зарегистрированный в AccountingModule сервиса (см.
-        // комментарий выше про Reopen/RecalculateAccountingPeriodHandler).
+        // выше). ErpCashConfigProvider читает файловый конфиг модуля
+        // (env-переменные), не БД — PUT убран (правка пользователя от
+        // 2026-08-24, см. заметку в конце Фазы 11 плана), поэтому здесь
+        // больше нет ни PutShopErpCashConfigHttpController, ни
+        // PutErpCashConfigHandler.
         GetErpCashConfigService,
         {
             provide: ERP_CASH_CONFIG_REPOSITORY,
-            useClass: ErpCashConfigRepository,
+            useClass: ErpCashConfigProvider,
         },
         {
             provide: ERP_CASH_DOCUMENT_REPOSITORY,

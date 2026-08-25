@@ -37,27 +37,12 @@ model ErpCashDocument {
   @@map("erp_cash_documents")
 }
 
-// Одна запись на направление (Фаза 11): администратор заполняет один раз в
-// GET|PUT /v1/{direction}/accounting/erp_cash_config, форма выплаты/ручного
-// движения кассу/статью не выбирает (PRD 3, «Выбора кассы у пользователя
-// нет»). roappCashboxId — id единственной кассы (Finance Account) RemOnline
-// направления service; moySkladExpenseItemId/organizationId — обязательные
-// для cashout/cashin статья расходов и юрлицо направления shop.
-// moySkladIncomeItemId — см. WHY-комментарий у erpCashConfigSchema в
-// contracts/commands/erp-cash.ts: поле сохранено как задел, но исследование
-// API МойСклад (get_schema_fields('CashIn'), 2026-08-24) подтвердило, что у
-// приходного ордера нет аналога статьи расходов вообще — адаптер это поле
-// в ERP не отправляет.
-model ErpCashConfig {
-  id        String         @id
-  direction SalesDirection @unique
-
-  roappCashboxId        Int?    @map("roapp_cashbox_id")
-  moySkladExpenseItemId String? @map("moy_sklad_expense_item_id")
-  moySkladIncomeItemId  String? @map("moy_sklad_income_item_id")
-  organizationId        String? @map("organization_id")
-
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("erp_cash_configs")
-}
+// Конфигурация кассы по направлению (roappCashboxId направления service;
+// moySkladExpenseItemId/moySkladIncomeItemId/organizationId направления
+// shop) БОЛЬШЕ НЕ Prisma-модель — правка пользователя от 2026-08-24 (см.
+// заметку в конце Фазы 11 плана docs/payroll-closing-and-accrual/
+// plan-payroll-closing-and-accrual.md): перенесена в файловый конфиг модуля
+// на основе env-переменных (backend/src/domains/{service,shop}/modules/
+// accounting/config/erp-cash.config.ts, читается ErpCashConfigProvider,
+// application/ports/erp-cash-config.port.ts). Таблица erp_cash_configs
+// удалена миграцией remove_erp_cash_config_table.

@@ -28,7 +28,6 @@ import { DeleteBalanceTransactionHandler } from '@/domains/service/modules/accou
 import { CreatePayoutHandler } from '@/domains/service/modules/accounting/application/command/create-payout.handler';
 import { CreatePayoutBatchHandler } from '@/domains/service/modules/accounting/application/command/create-payout-batch.handler';
 import { DeletePayoutHandler } from '@/domains/service/modules/accounting/application/command/delete-payout.handler';
-import { PutErpCashConfigHandler } from '@/domains/service/modules/accounting/application/command/put-erp-cash-config.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
 import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
 import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
@@ -86,7 +85,6 @@ import { DeletePayoutHttpController } from '@/domains/service/modules/accounting
 import { GetDepartmentBalancesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-balances.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { GetErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-erp-cash-config.http.controller';
-import { PutErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/put-erp-cash-config.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -114,7 +112,7 @@ import { TaskCompletionRepository } from '@/domains/service/modules/accounting/i
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
 import { BalanceTransactionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/employee-dismissal.repository';
-import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-config.repository';
+import { ErpCashConfigProvider } from '@/domains/service/modules/accounting/infrastructure/config/erp-cash-config.provider';
 import { ErpCashDocumentRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-document.repository';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
@@ -250,7 +248,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         // direction команда, зеркальные контроллеры shop диспатчат её же
         // (см. ShopAccountingModule).
         GetErpCashConfigHttpController,
-        PutErpCashConfigHttpController,
         // Выплата направления service (PRD 3
         // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
         // Фаза 12) — под своим путём /v1/service/accounting/payout*, в
@@ -366,12 +363,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         // ERP» (PRD 3 docs/payroll-closing-and-accrual, Фаза 11) —
         // direction-агностичные реализации, тот же приём, что
         // BALANCE_TRANSACTION_REPOSITORY выше: ShopAccountingModule заводит
-        // собственные экземпляры под теми же токенами.
-        PutErpCashConfigHandler,
+        // собственные экземпляры под теми же токенами. ErpCashConfigProvider
+        // читает файловый конфиг модуля (env-переменные), не БД — PUT убран
+        // (правка пользователя от 2026-08-24, см. заметку в конце Фазы 11
+        // плана).
         GetErpCashConfigService,
         {
             provide: ERP_CASH_CONFIG_REPOSITORY,
-            useClass: ErpCashConfigRepository,
+            useClass: ErpCashConfigProvider,
         },
         {
             provide: ERP_CASH_DOCUMENT_REPOSITORY,

@@ -19,6 +19,7 @@ describe('RoappCashDocumentAdapter', () => {
     const okConfig = ErpCashConfig.create({
         direction: 'service',
         roappCashboxId: 777,
+        roappCategoryId: 42,
     });
 
     let post: jest.Mock;
@@ -82,6 +83,7 @@ describe('RoappCashDocumentAdapter', () => {
                 {
                     amount: '1500.00',
                     direction: 'income',
+                    category_id: 42,
                     description: baseParams.purpose,
                     custom_created_at: '2026-07-31T10:00:00Z',
                 },
@@ -127,6 +129,22 @@ describe('RoappCashDocumentAdapter', () => {
         it('конфигурация без roappCashboxId — отказ до HTTP-вызова', async () => {
             findByDirection.mockResolvedValueOnce(
                 ErpCashConfig.create({ direction: 'service' }),
+            );
+
+            const error = await withRequestContext(() =>
+                adapter.create(baseParams).catch((e: unknown) => e),
+            );
+
+            expect(error).toBeInstanceOf(ErpCashConfigMissingException);
+            expect(post).not.toHaveBeenCalled();
+        });
+
+        it('конфигурация без roappCategoryId — отказ до HTTP-вызова', async () => {
+            findByDirection.mockResolvedValueOnce(
+                ErpCashConfig.create({
+                    direction: 'service',
+                    roappCashboxId: 777,
+                }),
             );
 
             const error = await withRequestContext(() =>

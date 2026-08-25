@@ -75,7 +75,7 @@ describe('MoyskladCashDocumentAdapter', () => {
 
         adapter = new MoyskladCashDocumentAdapter(
             { instance: http } as unknown as MoyskladHttpService,
-            configRepo as unknown as ErpCashConfigRepositoryPort,
+            configRepo,
             documentRepo as unknown as ErpCashDocumentRepositoryPort,
             employeeIdentityRepo as unknown as EmployeeIdentityRepositoryPort,
         );

@@ -7,44 +7,50 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 export type ErpCashConfigProps = {
     direction: AccountingDirection;
     roappCashboxId: number | null;
+    // Cashflow Category ID — RemOnline отклоняет POST .../transactions без
+    // category_id (400), хотя схема эндпоинта формально не помечает поле
+    // обязательным (см. WHY у resolveConfig() в roapp-cash-document.adapter.ts).
+    roappCategoryId: number | null;
     moySkladExpenseItemId: string | null;
     moySkladIncomeItemId: string | null;
     organizationId: string | null;
 };
 
-export type ErpCashConfigPatch = Partial<
+export type CreateErpCashConfigProps = {
+    direction: AccountingDirection;
+} & Partial<
     Pick<
         ErpCashConfigProps,
         | 'roappCashboxId'
+        | 'roappCategoryId'
         | 'moySkladExpenseItemId'
         | 'moySkladIncomeItemId'
         | 'organizationId'
     >
 >;
 
-export type CreateErpCashConfigProps = {
-    direction: AccountingDirection;
-} & ErpCashConfigPatch;
-
 // Конфигурация кассы направления (PRD 3
 // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md:
-// «Выбора кассы у пользователя нет») — одна запись на direction (Prisma
-// @unique, erp-cash.prisma), заполняется администратором один раз через PUT
-// /v1/{direction}/accounting/erp_cash_config, читается адаптером
-// ErpCashDocumentPort перед обращением в ERP; пустая конфигурация — отказ
-// до обращения в ERP (см. «Критерии готовности» PRD 3).
+// «Выбора кассы у пользователя нет») — читается адаптером ErpCashDocumentPort
+// перед обращением в ERP; пустая конфигурация — отказ до обращения в ERP
+// (см. «Критерии готовности» PRD 3). Значения приходят из файлового конфига
+// модуля на основе env-переменных (правка пользователя от 2026-08-24, см.
+// заметку в конце Фазы 11 плана) — ErpCashConfigProvider (infrastructure/
+// config/) строит эту сущность на лету при каждом findByDirection(), она
+// больше не персистентная запись БД и не редактируется через API (update()
+// и PUT убраны вместе с этим).
 //
 // Сущность физически определена в domains/service и переиспользуется в
-// domains/shop той же реализацией репозитория под тем же DI-токеном (тот же
-// приём, что AccountingPeriod, см. domains/service/CLAUDE.md) — сама запись
-// не содержит бизнес-логики, специфичной для направления, только форму
-// хранения. Поля обоих направлений не бывают одновременно осмысленно
+// domains/shop той же реализацией провайдера под тем же DI-токеном (тот же
+// приём, что AccountingPeriod, см. domains/service/CLAUDE.md) — сама она не
+// содержит бизнес-логики, специфичной для направления, только форму
+// значений. Поля обоих направлений не бывают одновременно осмысленно
 // заполненными: строка direction=service использует только roappCashboxId,
 // строка direction=shop — остальные три; сущность это не запрещает (в
 // комбинации полей нет нарушенного инварианта, только неиспользуемые
 // значения) — проверку «заполнено ли то, что нужно ИМЕННО этому
-// направлению» перед обращением в ERP делает будущий адаптер/хендлер
-// выплаты (Фаза 12), не эта сущность.
+// направлению» перед обращением в ERP делает адаптер/хендлер выплаты
+// (Фаза 12), не эта сущность.
 export class ErpCashConfig extends AggregateRoot<ErpCashConfigProps> {
     declare protected readonly _id: AggregateID;
 
@@ -54,31 +60,12 @@ export class ErpCashConfig extends AggregateRoot<ErpCashConfigProps> {
             props: {
                 direction: create.direction,
                 roappCashboxId: create.roappCashboxId ?? null,
+                roappCategoryId: create.roappCategoryId ?? null,
                 moySkladExpenseItemId: create.moySkladExpenseItemId ?? null,
                 moySkladIncomeItemId: create.moySkladIncomeItemId ?? null,
                 organizationId: create.organizationId ?? null,
             },
         });
-    }
-
-    // PUT — замена полей, переданных клиентом (put*ErpCashConfigRequestSchema
-    // из contracts различает поля по направлению): поле, отсутствующее в
-    // патче (undefined), не трогается, а не сбрасывается в null — иначе
-    // повторный PUT одним полем стирал бы уже настроенные остальные, если
-    // фронт когда-нибудь начнёт присылать поля направления shop раздельно.
-    update(patch: ErpCashConfigPatch): void {
-        if (patch.roappCashboxId !== undefined) {
-            this.props.roappCashboxId = patch.roappCashboxId;
-        }
-        if (patch.moySkladExpenseItemId !== undefined) {
-            this.props.moySkladExpenseItemId = patch.moySkladExpenseItemId;
-        }
-        if (patch.moySkladIncomeItemId !== undefined) {
-            this.props.moySkladIncomeItemId = patch.moySkladIncomeItemId;
-        }
-        if (patch.organizationId !== undefined) {
-            this.props.organizationId = patch.organizationId;
-        }
     }
 
     get direction(): AccountingDirection {
@@ -87,6 +74,10 @@ export class ErpCashConfig extends AggregateRoot<ErpCashConfigProps> {
 
     get roappCashboxId(): number | null {
         return this.props.roappCashboxId;
+    }
+
+    get roappCategoryId(): number | null {
+        return this.props.roappCategoryId;
     }
 
     get moySkladExpenseItemId(): string | null {
@@ -115,6 +106,15 @@ export class ErpCashConfig extends AggregateRoot<ErpCashConfigProps> {
         ) {
             throw new ArgumentInvalidException(
                 'ID кассы RemOnline должен быть положительным целым числом',
+            );
+        }
+        if (
+            this.props.roappCategoryId !== null &&
+            (!Number.isInteger(this.props.roappCategoryId) ||
+                this.props.roappCategoryId <= 0)
+        ) {
+            throw new ArgumentInvalidException(
+                'ID статьи движения денег RemOnline должен быть положительным целым числом',
             );
         }
     }

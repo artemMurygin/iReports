@@ -1,8 +1,10 @@
 import { BadGatewayException, Inject, Injectable } from '@nestjs/common';
+import axios from 'axios';
 import { RoappHttpService } from './roapp.instace';
-import { toErrorMessage, toRoappIsoDate } from './roapp.service';
+import { toRoappIsoDate } from './roapp.service';
 import { FinanceTransactionSchema } from './schemas/financeTransaction.schema';
 import { DatabaseService } from '@/infrustructure/database/database.service';
+import type { ErpCashConfig } from '@/domains/service/modules/accounting/domain/entities/erp-cash-config.entity';
 import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
 import type { ErpCashConfigRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
 import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
@@ -25,6 +27,25 @@ import {
 // (Фаза 12 не создаёт BalanceTransaction, пока create() не резолвится).
 const ROAPP_CASH_REQUEST_TIMEOUT_MS = 15_000;
 
+// error.message из axios отдаёт только "Request failed with status code
+// 400" без причины — тело ответа RemOnline (обычно там и есть конкретное
+// поле/правило, которое не устроило ERP) подмешиваем в само сообщение
+// исключения, чтобы оно долетало до фронта (BadGatewayException →
+// DomainExceptionFilter → ERP-error alert) без обращения к серверным логам.
+function describeError(error: unknown): string {
+    if (axios.isAxiosError(error)) {
+        const data = error.response?.data as unknown;
+        const detail =
+            data === undefined
+                ? undefined
+                : typeof data === 'string'
+                  ? data
+                  : JSON.stringify(data);
+        return detail ? `${error.message} — ${detail}` : error.message;
+    }
+    return error instanceof Error ? error.message : String(error);
+}
+
 // Реализация ErpCashDocumentPort (application/ports/erp-cash-document.port.ts)
 // для направления service — RemOnline. Исследование через MCP RoApp
 // (2026-08-24, см. отчёт предыдущего агента) подтвердило: POST/DELETE
@@ -44,7 +65,12 @@ export class RoappCashDocumentAdapter implements ErpCashDocumentPort {
     async create(
         params: CreateErpCashDocumentParams,
     ): Promise<{ externalId: string }> {
-        const cashboxId = await this.resolveCashboxId();
+        const config = await this.resolveConfig();
+        if (config.roappCashboxId === null || config.roappCategoryId === null) {
+            throw new ErpCashConfigMissingException('service');
+        }
+        const cashboxId = config.roappCashboxId;
+        const categoryId = config.roappCategoryId;
         await this.ensureEmployeeHasRoappIdentity(params.employeeId);
 
         try {
@@ -62,6 +88,11 @@ export class RoappCashDocumentAdapter implements ErpCashDocumentPort {
                     // — тем же вокабуляром назван erpCashDocumentKindSchema в
                     // contracts, лишнего маппинга enum→enum не нужно.
                     direction: params.kind === 'INCOME' ? 'income' : 'expense',
+                    // Cashflow Category ID — без него RemOnline отклоняет
+                    // запрос 400 (обнаружено 2026-08-25 на реальном стенде),
+                    // хотя схема эндпоинта формально не помечает category_id
+                    // обязательным.
+                    category_id: categoryId,
                     // В RemOnline нет поля для получателя-сотрудника как
                     // агента транзакции (client_id — контрагент/клиент, не
                     // сотрудник компании, см. WHY в erp-cash-document.port.ts)
@@ -77,13 +108,17 @@ export class RoappCashDocumentAdapter implements ErpCashDocumentPort {
             return { externalId: String(transaction.id) };
         } catch (error) {
             throw new BadGatewayException(
-                `Не удалось создать движение в кассе RemOnline: ${toErrorMessage(error)}`,
+                `Не удалось создать движение в кассе RemOnline: ${describeError(error)}`,
             );
         }
     }
 
     async delete(document: DeleteErpCashDocumentParams): Promise<void> {
-        const cashboxId = await this.resolveCashboxId();
+        const config = await this.resolveConfig();
+        if (config.roappCashboxId === null) {
+            throw new ErpCashConfigMissingException('service');
+        }
+        const cashboxId = config.roappCashboxId;
 
         try {
             await this.roapp.instance.delete(
@@ -92,7 +127,7 @@ export class RoappCashDocumentAdapter implements ErpCashDocumentPort {
             );
         } catch (error) {
             throw new BadGatewayException(
-                `Не удалось удалить движение ${document.externalId} в кассе RemOnline: ${toErrorMessage(error)}`,
+                `Не удалось удалить движение ${document.externalId} в кассе RemOnline: ${describeError(error)}`,
             );
         }
     }
@@ -117,14 +152,17 @@ export class RoappCashDocumentAdapter implements ErpCashDocumentPort {
 
     // «Пустая конфигурация — понятная ошибка ДО обращения в ERP» (PRD 3,
     // «Критерии готовности») — читается перед любым HTTP-вызовом, в т.ч.
-    // перед delete(), а не только create(): без account_id DELETE тоже не
-    // на чем строить.
-    private async resolveCashboxId(): Promise<number> {
+    // перед delete(), а не только create(). Один запрос к порту на вызов —
+    // create()/delete() сами решают, какие поля им обязательны
+    // (delete() не требует roappCategoryId: DELETE .../transactions/{id} не
+    // принимает category_id, у существующего движения она уже задана в
+    // RemOnline).
+    private async resolveConfig(): Promise<ErpCashConfig> {
         const config = await this.configRepo.findByDirection('service');
-        if (!config || config.roappCashboxId === null) {
+        if (!config) {
             throw new ErpCashConfigMissingException('service');
         }
-        return config.roappCashboxId;
+        return config;
     }
 
     // «EmployeeIdentity сотрудника в ERP направления обязательна... Проверка

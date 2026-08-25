@@ -55,31 +55,39 @@ export type ErpCashDocument = z.infer<typeof erpCashDocumentSchema>;
 // ========================== ErpCashConfig ========================== //
 
 // Конфигурация кассы направления — один общий z.object с полями обоих
-// направлений вместо z.discriminatedUnion<direction>: персистентность —
-// одна Prisma-модель ErpCashConfig на строку-направление (не две разных
-// формы), а GET/PUT уже даёт разделение по направлению через сам путь
-// (/v1/service/accounting/erp_cash_config и /v1/shop/.../erp_cash_config,
-// см. app.routes.ts) — дискриминированный union добавил бы вариантность
-// без объекта, к которому она была бы привязана: клиент каждого направления
-// и так знает, какие поля ему нужны (см. put*ErpCashConfigRequestSchema
-// ниже — раздельные схемы запроса на PUT уже дают проверку «не подсунуть
-// чужие поля своему направлению»). direction — только для отображения/
-// диагностики в ответе, не для ветвления клиентом.
+// направлений вместо z.discriminatedUnion<direction>: GET уже даёт
+// разделение по направлению через сам путь (/v1/service/accounting/
+// erp_cash_config и /v1/shop/.../erp_cash_config, см. app.routes.ts) —
+// дискриминированный union добавил бы вариантность без объекта, к которому
+// она была бы привязана. direction — только для отображения/диагностики в
+// ответе, не для ветвления клиентом.
 //
-// moySkladIncomeItemId — РЕШЕНИЕ: поле оставлено (Prisma-модель ErpCashConfig
-// и это API его хранят), но задел на будущее, не отправляется в API МойСклад:
-// исследование через MCP moysklad (get_schema_fields('CashIn'), 2026-08-24)
-// подтвердило, что схема CashIn не содержит поля вроде expenseItem вообще —
-// у приходного ордера МойСклада нет понятия «статья доходов» в принципе, в
-// отличие от статьи расходов CashOut. Адаптер МойСклада (Фаза 11, следующий
-// агент) не должен передавать это поле в теле POST /entity/cashin — оно
-// хранится только на случай, если МойСклад добавит такое поле или появится
-// другой способ разметки прихода (например, через attributes), либо будет
-// осознанно удалено, когда станет ясно, что оно не понадобится.
+// ПРАВКА ПОЛЬЗОВАТЕЛЯ (2026-08-24, см. заметку в конце Фазы 11 плана
+// docs/payroll-closing-and-accrual/plan-payroll-closing-and-accrual.md):
+// конфигурация больше не строка БД, редактируемая через PUT, а файловый
+// конфиг модуля на основе env-переменных
+// (backend/src/domains/{service,shop}/modules/accounting/config/
+// erp-cash.config.ts) — put*ErpCashConfigRequestSchema и PUT-эндпоинты
+// убраны, GET остался как read-only диагностика, updatedAt теперь всегда
+// null (нет БД-записи с меткой времени, поле оставлено ради формы ответа).
+//
+// moySkladIncomeItemId — РЕШЕНИЕ: поле оставлено, но задел на будущее, не
+// отправляется в API МойСклад: исследование через MCP moysklad
+// (get_schema_fields('CashIn'), 2026-08-24) подтвердило, что схема CashIn не
+// содержит поля вроде expenseItem вообще — у приходного ордера МойСклада
+// нет понятия «статья доходов» в принципе, в отличие от статьи расходов
+// CashOut. Адаптер МойСклада не передаёт это поле в теле POST /entity/cashin
+// — оно хранится только на случай, если МойСклад добавит такое поле или
+// появится другой способ разметки прихода (например, через attributes),
+// либо будет осознанно удалено, когда станет ясно, что оно не понадобится.
 const erpCashConfigSchema = z.object({
     direction: salesDirectionSchema,
     // service: id единственной кассы (Finance Account) RemOnline.
     roappCashboxId: z.number().int().positive().nullable(),
+    // service: Cashflow Category ID — RemOnline отклоняет POST
+    // .../transactions без category_id (400, обнаружено 2026-08-25), хотя
+    // формально схема эндпоинта не помечает поле обязательным.
+    roappCategoryId: z.number().int().positive().nullable(),
     // shop: статья расходов для cashout — обязательное поле МойСклада
     // (expenseItem), без него операция отклоняется до обращения в ERP.
     moySkladExpenseItemId: z.string().nullable(),
@@ -88,39 +96,9 @@ const erpCashConfigSchema = z.object({
     // shop: юрлицо (organization) — тоже обязательное поле и у cashout, и у
     // cashin.
     organizationId: z.string().nullable(),
-    // null — направление ещё ни разу не конфигурировали (GET до первого PUT).
+    // Всегда null — см. ПРАВКА ПОЛЬЗОВАТЕЛЯ выше.
     updatedAt: z.coerce.date().nullable(),
 });
 export type ErpCashConfigResponse = z.infer<typeof erpCashConfigSchema>;
 
-// PUT — upsert по направлению (естественный ключ, direction определяется
-// путём запроса, а не телом — тот же приём, что и у
-// putSalesPlanTemplateRequestSchema): раздельные схемы на service/shop,
-// чтобы поля другого направления нельзя было передать по ошибке — сервер бы
-// их всё равно проигнорировал (конфигурация читается по своим полям), но
-// схема отклоняет их уже на границе HTTP.
-const putServiceErpCashConfigRequestSchema = z.object({
-    roappCashboxId: z.number().int().positive(),
-});
-export type PutServiceErpCashConfigRequest = z.infer<
-    typeof putServiceErpCashConfigRequestSchema
->;
-
-const putShopErpCashConfigRequestSchema = z.object({
-    moySkladExpenseItemId: z.string().min(1),
-    organizationId: z.string().min(1),
-    // Опционален и пока ни на что не влияет — см. WHY-комментарий у
-    // moySkladIncomeItemId в erpCashConfigSchema.
-    moySkladIncomeItemId: z.string().min(1).optional(),
-});
-export type PutShopErpCashConfigRequest = z.infer<
-    typeof putShopErpCashConfigRequestSchema
->;
-
-export {
-    erpCashDocumentKindSchema,
-    erpCashDocumentSchema,
-    erpCashConfigSchema,
-    putServiceErpCashConfigRequestSchema,
-    putShopErpCashConfigRequestSchema,
-};
+export { erpCashDocumentKindSchema, erpCashDocumentSchema, erpCashConfigSchema };

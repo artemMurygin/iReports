@@ -226,9 +226,11 @@ export const routesV1 = {
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.
             // Конфигурация кассы ERP направления (PRD 3
-            // docs/payroll-closing-and-accrual, Фаза 11) — одна запись на
-            // направление, администратор заполняет один раз (см.
-            // ErpCashConfig в erp-cash.prisma); GET/PUT на одном пути.
+            // docs/payroll-closing-and-accrual, Фаза 11) — read-only GET;
+            // значения задаются файловым конфигом модуля на основе
+            // env-переменных, не через API (правка пользователя от
+            // 2026-08-24, см. заметку в конце Фазы 11 плана — исходно был
+            // ещё и PUT на этом же пути, теперь убран).
             // Зеркало — shop.accounting.erpCashConfig ниже.
             erpCashConfig: `${serviceAccountingRoot}/erp_cash_config`,
             // Выплата направления service (PRD 3
@@ -389,7 +391,7 @@ export const routesV1 = {
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.
             // Конфигурация кассы ERP направления shop (PRD 3
-            // docs/payroll-closing-and-accrual, Фаза 11) — зеркалит
+            // docs/payroll-closing-and-accrual, Фаза 11) — read-only, зеркалит
             // service.accounting.erpCashConfig выше, в своём namespace
             // shopAccountingRoot.
             erpCashConfig: `${shopAccountingRoot}/erp_cash_config`,

@@ -11,7 +11,8 @@ export class ErpCashConfigMissingException extends ConflictException {
     constructor(direction: string) {
         super(
             `Касса ERP направления "${direction}" не настроена — заполните ` +
-                `/v1/${direction}/accounting/erp_cash_config перед операцией`,
+                'нужные переменные окружения (см. config/erp-cash.config.ts ' +
+                `направления "${direction}") в .env и перезапустите backend`,
         );
     }
 }
