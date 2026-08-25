@@ -28,3 +28,6 @@ npm-debug.log*
 
 # Prisma generated
 backend/prisma/generated/
+
+# Playwright MCP debug artifacts
+.playwright-mcp/
