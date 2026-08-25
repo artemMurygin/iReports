@@ -16,7 +16,7 @@ export type LedgerDirectionBlockProps = {
     isRuleExpanded: (key: string) => boolean
     onToggleRule: (key: string) => void
     /** Развёрнут ли блок направления целиком — дефолт задаётся вызывающей стороной (см.
-     * `useSalaryReportSelection`'s комментарий: "Сервис" свёрнут, "Магазин" развёрнут), дальше
+     * `useSalaryReportSelection`'s комментарий: "Сервис" развёрнут, "Магазин" свёрнут), дальше
      * сворачивание переключается кликом по заголовку блока. */
     isExpanded: boolean
     onToggle: () => void
@@ -52,7 +52,7 @@ const ICON_CLASS: Record<SalaryDirection, string> = {
  * Тело блока (заголовок колонок таблицы правил + сами строки) сворачивается по клику на заголовок
  * (`isExpanded`/`onToggle`, ключ — сам `report.direction`, собирается вызывающей стороной) — тот же
  * приём "целая строка — кнопка + хвостовой шеврон", что и у `LedgerRuleRow`; дефолт до первого клика
- * — "Сервис" свёрнут, "Магазин" развёрнут (см. `useSalaryReportSelection`'s комментарий про
+ * — "Сервис" развёрнут, "Магазин" свёрнут (см. `useSalaryReportSelection`'s комментарий про
  * инвертированный `Set`). Заголовок остаётся видимым всегда — сворачивается только всё, что ниже
  * него.
  */
@@ -84,10 +84,13 @@ export function LedgerDirectionBlock({
                     {report.accrualStatus !== null && <AccrualStatusBadge status={report.accrualStatus} />}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-5">
-                    <span className="font-ui text-base font-bold text-ink tabular-nums">{formatCurrency(report.total.fact)}</span>
+                <div className="flex shrink-0 items-center gap-2 md:gap-3">
+                    <span className={cn(LEDGER_VALUE_COL, 'font-ui text-base font-bold text-ink tabular-nums')}>
+                        {formatCurrency(report.total.fact)}
+                    </span>
                     <span
                         className={cn(
+                            LEDGER_VALUE_COL,
                             'font-ui text-base font-bold tabular-nums',
                             report.total.prognose === null ? 'text-warn-ink' : 'text-ink-muted',
                         )}

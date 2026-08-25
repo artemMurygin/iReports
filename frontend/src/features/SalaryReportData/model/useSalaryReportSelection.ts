@@ -42,8 +42,8 @@ function getCurrentPeriod(): string {
  * Блоки направлений в карточке-гроссбухе отчёта сотрудника (`LedgerDirectionBlock`) сворачиваются
  * той же общей схемой, но с ИНВЕРТИРОВАННОЙ семантикой `Set`'а — `collapsedDirectionKeys` хранит
  * СВЁРНУТЫЕ направления, а не развёрнутые (в отличие от `expandedRuleKeys` выше). По умолчанию
- * (до первого клика пользователя) "Сервис" свёрнут, а "Магазин" развёрнут — поэтому начальное
- * значение `Set` не пустое, а сразу содержит `'service'` (не общий для обоих направлений дефолт,
+ * (до первого клика пользователя) "Сервис" развёрнут, а "Магазин" свёрнут — поэтому начальное
+ * значение `Set` не пустое, а сразу содержит `'shop'` (не общий для обоих направлений дефолт,
  * как было бы с пустым `Set`). Ключ — сам `SalaryDirection` ('service' | 'shop'), без комбинирования
  * с id: направлений всего два, и оба всегда разные в пределах одного отчёта сотрудника.
  *
@@ -64,7 +64,7 @@ export function useSalaryReportSelection(options?: {
     const [direction, setDirection] = useState<SalaryDirection>('service')
     const [expandedRuleKeys, setExpandedRuleKeys] = useState<Set<string>>(new Set())
     const [collapsedDirectionKeys, setCollapsedDirectionKeys] = useState<Set<SalaryDirection>>(
-        () => new Set(['service']),
+        () => new Set(['shop']),
     )
 
     const employeeReportState = useEmployeeSalaryReport(scope === 'employee' ? employeeId : null, period)

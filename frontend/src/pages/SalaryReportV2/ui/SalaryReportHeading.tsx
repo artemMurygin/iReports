@@ -41,10 +41,10 @@ export function SalaryReportHeading({
     if (scope !== 'employee') {
         return (
             <div className="flex flex-col gap-1">
-                <h1 className="font-display text-[20px] font-bold tracking-[-0.3px] text-ink">Зарплата сотрудников</h1>
-                <p className="font-ui text-[13px] text-ink-muted">
+                <span>Зарплата сотрудников</span>
+                <span className="font-ui text-[13px] font-normal text-ink-muted">
                     Факт и прогноз начислений за период — по сотрудникам всех направлений
-                </p>
+                </span>
             </div>
         )
     }
@@ -62,7 +62,7 @@ export function SalaryReportHeading({
     }
 
     if (employeeName == null) {
-        return <h1 className="font-display text-[20px] font-bold tracking-[-0.3px] text-ink">Отчёт по зарплате</h1>
+        return <span>Отчёт по зарплате</span>
     }
 
     return (
@@ -71,11 +71,11 @@ export function SalaryReportHeading({
                 <AvatarFallback>{employeeInitials(employeeName)}</AvatarFallback>
             </Avatar>
             <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="font-display text-[22px] font-bold tracking-[-0.4px] text-ink md:text-[26px]">
-                    {employeeName}
-                </h1>
+                <span className="truncate">{employeeName}</span>
                 {employeeDepartmentName && (
-                    <p className="truncate font-ui text-[13px] text-ink-muted">{employeeDepartmentName}</p>
+                    <span className="truncate font-ui text-[13px] font-normal text-ink-muted">
+                        {employeeDepartmentName}
+                    </span>
                 )}
             </div>
         </div>
