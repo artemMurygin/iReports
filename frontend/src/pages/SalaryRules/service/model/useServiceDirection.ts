@@ -6,6 +6,7 @@ import {
     resolveRuleDraft,
     SERVICE_RULE_FORM_CONFIG,
     useAllowedRolesByType,
+    useOrderTypes,
     useSalaryRuleTypes,
     useSalaryRulesDraft,
 } from '@/features/SalaryRuleForm'
@@ -28,6 +29,7 @@ const NO_CATEGORIES: CatalogCategoryResponse[] = []
  */
 export function useServiceDirection(): DirectionAdapter {
     const ruleTypesQuery = useSalaryRuleTypes()
+    const orderTypesQuery = useOrderTypes()
     const createSchema = useCreateMotivationSchema()
     const rules = useSalaryRulesDraft(resolveRuleDraft)
 
@@ -65,6 +67,9 @@ export function useServiceDirection(): DirectionAdapter {
         categories: NO_CATEGORIES,
         isCategoriesLoading: false,
         categoriesError: null,
+        orderTypes: orderTypesQuery.data ?? [],
+        isOrderTypesLoading: orderTypesQuery.isLoading,
+        orderTypesError: orderTypesQuery.error?.message ?? null,
         isSubmitting: createSchema.isPending,
         savedSchemaId: createSchema.isSuccess ? createSchema.data.id : null,
         submit,

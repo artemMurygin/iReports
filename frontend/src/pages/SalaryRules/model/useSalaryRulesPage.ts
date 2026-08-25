@@ -85,6 +85,9 @@ export function useSalaryRulesPage() {
         categories: active.categories,
         isCategoriesLoading: active.isCategoriesLoading,
         categoriesError: active.categoriesError,
+        orderTypes: active.orderTypes,
+        isOrderTypesLoading: active.isOrderTypesLoading,
+        orderTypesError: active.orderTypesError,
         ruleCount: active.rules.drafts.length,
 
         canSubmit,

@@ -1,4 +1,4 @@
-import type { CatalogCategoryResponse, MotivationRequest, TargetRole } from 'ireports-contracts'
+import type { CatalogCategoryResponse, MotivationRequest, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 
 import type { RuleFormConfig, RuleListState, RuleType } from '@/features/SalaryRuleForm'
 
@@ -45,6 +45,13 @@ export type DirectionAdapter = {
     categories: CatalogCategoryResponse[]
     isCategoriesLoading: boolean
     categoriesError: string | null
+    /** Справочник типов заказов RoApp (Фаза 5, docs/service-plan-salary-rule-order-category-filter) —
+     * для `OrderTypeField` у правил `OrderPayed`/`ServiceCompleted`. Пустая стабильная ссылка для
+     * "магазина" (см. `shop/model/useShopDirection.ts`), не запрашивается вовсе (нет ни одного
+     * shop-типа правила с этим полем). */
+    orderTypes: OrderTypeResponse[]
+    isOrderTypesLoading: boolean
+    orderTypesError: string | null
     isSubmitting: boolean
     /** `id` из ответа своей мутации (`MotivationResponse`/`ShopMotivationResponse` — строка, см.
      * `contracts/commands/motivation-schema.ts`), `null` пока схема этого направления не сохранена. */

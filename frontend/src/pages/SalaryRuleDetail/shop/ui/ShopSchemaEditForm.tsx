@@ -1,4 +1,9 @@
-import type { CatalogCategoryResponse, ShopMotivationSchemaDetailResponse, TargetRole } from 'ireports-contracts'
+import type {
+    CatalogCategoryResponse,
+    OrderTypeResponse,
+    ShopMotivationSchemaDetailResponse,
+    TargetRole,
+} from 'ireports-contracts'
 import { RuleList } from '@/features/SalaryRuleForm'
 import type { RuleFormConfig, RuleType } from '@/features/SalaryRuleForm'
 
@@ -17,6 +22,9 @@ export type ShopSchemaEditFormProps = {
     categories: CatalogCategoryResponse[]
     isCategoriesLoading: boolean
     categoriesError: string | null
+    orderTypes: OrderTypeResponse[]
+    isOrderTypesLoading: boolean
+    orderTypesError: string | null
 }
 
 /** Зеркало `service/ui/ServiceSchemaEditForm.tsx` для направления "Магазин". */
@@ -58,6 +66,9 @@ export function ShopSchemaEditForm(props: ShopSchemaEditFormProps) {
                 roleTypesError: page.roleTypesError,
                 isCategoriesLoading: page.isCategoriesLoading,
                 categoriesError: page.categoriesError,
+                orderTypes: page.orderTypes,
+                isOrderTypesLoading: page.isOrderTypesLoading,
+                orderTypesError: page.orderTypesError,
                 onChange: page.rules.updateDraft,
                 onChangeType: page.rules.changeType,
                 onChangeBorder: page.rules.updateBorder,

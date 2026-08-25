@@ -1,4 +1,9 @@
-import { useAllowedRolesByType, useSalaryRuleTypes, SERVICE_RULE_FORM_CONFIG } from '@/features/SalaryRuleForm'
+import {
+    useAllowedRolesByType,
+    useOrderTypes,
+    useSalaryRuleTypes,
+    SERVICE_RULE_FORM_CONFIG,
+} from '@/features/SalaryRuleForm'
 
 import { useMotivationSchema } from './useMotivationSchema.ts'
 
@@ -12,6 +17,7 @@ import { useMotivationSchema } from './useMotivationSchema.ts'
 export function useServiceSchemaEditPage(id: string) {
     const schemaQuery = useMotivationSchema(id)
     const ruleTypesQuery = useSalaryRuleTypes()
+    const orderTypesQuery = useOrderTypes()
 
     const allowedRolesByType = useAllowedRolesByType(ruleTypesQuery.data)
 
@@ -23,5 +29,8 @@ export function useServiceSchemaEditPage(id: string) {
         allowedRolesByType,
         isRoleTypesLoading: ruleTypesQuery.isLoading,
         roleTypesError: ruleTypesQuery.error?.message ?? null,
+        orderTypes: orderTypesQuery.data ?? [],
+        isOrderTypesLoading: orderTypesQuery.isLoading,
+        orderTypesError: orderTypesQuery.error?.message ?? null,
     }
 }

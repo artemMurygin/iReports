@@ -1,5 +1,10 @@
 import { useCallback, useState } from 'react'
-import type { CatalogCategoryResponse, ShopMotivationSchemaDetailResponse, TargetRole } from 'ireports-contracts'
+import type {
+    CatalogCategoryResponse,
+    OrderTypeResponse,
+    ShopMotivationSchemaDetailResponse,
+    TargetRole,
+} from 'ireports-contracts'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
@@ -22,6 +27,9 @@ export type UseShopSchemaEditFormArgs = {
     categories: CatalogCategoryResponse[]
     isCategoriesLoading: boolean
     categoriesError: string | null
+    orderTypes: OrderTypeResponse[]
+    isOrderTypesLoading: boolean
+    orderTypesError: string | null
 }
 
 /** Зеркало `service/model/useServiceSchemaEditForm.ts` — та же "фаза формы", смонтированная только
@@ -36,6 +44,9 @@ export function useShopSchemaEditForm({
     categories,
     isCategoriesLoading,
     categoriesError,
+    orderTypes,
+    isOrderTypesLoading,
+    orderTypesError,
 }: UseShopSchemaEditFormArgs) {
     const navigate = useNavigate()
     const [schemaName, setSchemaName] = useState(schema.name)
@@ -74,6 +85,9 @@ export function useShopSchemaEditForm({
         categories,
         isCategoriesLoading,
         categoriesError,
+        orderTypes,
+        isOrderTypesLoading,
+        orderTypesError,
         canSave,
         isSubmitting: updateSchema.isPending,
         handleSave,

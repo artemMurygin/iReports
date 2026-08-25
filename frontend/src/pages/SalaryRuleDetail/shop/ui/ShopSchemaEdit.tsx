@@ -28,6 +28,9 @@ export function ShopSchemaEdit({ id }: ShopSchemaEditProps) {
                     categories={page.categories}
                     isCategoriesLoading={page.isCategoriesLoading}
                     categoriesError={page.categoriesError}
+                    orderTypes={page.orderTypes}
+                    isOrderTypesLoading={page.isOrderTypesLoading}
+                    orderTypesError={page.orderTypesError}
                 />
             )}
         </RefreshTransitionLayout>

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { MotivationSchemaDetailResponse, TargetRole } from 'ireports-contracts'
+import type { MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
@@ -21,6 +21,9 @@ export type UseServiceSchemaEditFormArgs = {
     allowedRolesByType: Partial<Record<RuleType, TargetRole[]>>
     isRoleTypesLoading: boolean
     roleTypesError: string | null
+    orderTypes: OrderTypeResponse[]
+    isOrderTypesLoading: boolean
+    orderTypesError: string | null
 }
 
 /**
@@ -37,6 +40,9 @@ export function useServiceSchemaEditForm({
     allowedRolesByType,
     isRoleTypesLoading,
     roleTypesError,
+    orderTypes,
+    isOrderTypesLoading,
+    orderTypesError,
 }: UseServiceSchemaEditFormArgs) {
     const navigate = useNavigate()
     const [schemaName, setSchemaName] = useState(schema.name)
@@ -75,6 +81,9 @@ export function useServiceSchemaEditForm({
         categories: NO_CATEGORIES,
         isCategoriesLoading: false,
         categoriesError: null,
+        orderTypes,
+        isOrderTypesLoading,
+        orderTypesError,
         canSave,
         isSubmitting: updateSchema.isPending,
         handleSave,

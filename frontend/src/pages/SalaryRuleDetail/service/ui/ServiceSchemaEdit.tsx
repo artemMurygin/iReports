@@ -33,6 +33,9 @@ export function ServiceSchemaEdit({ id }: ServiceSchemaEditProps) {
                     allowedRolesByType={page.allowedRolesByType}
                     isRoleTypesLoading={page.isRoleTypesLoading}
                     roleTypesError={page.roleTypesError}
+                    orderTypes={page.orderTypes}
+                    isOrderTypesLoading={page.isOrderTypesLoading}
+                    orderTypesError={page.orderTypesError}
                 />
             )}
         </RefreshTransitionLayout>

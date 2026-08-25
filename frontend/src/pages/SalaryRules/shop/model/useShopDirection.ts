@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { ShopMotivationRequest } from 'ireports-contracts'
+import type { OrderTypeResponse, ShopMotivationRequest } from 'ireports-contracts'
 import { toast } from 'sonner'
 
 import {
@@ -14,6 +14,12 @@ import {
 import type { DirectionAdapter, SchemaTarget } from '../../model/types.ts'
 
 import { useCreateShopMotivationSchema } from './useCreateShopMotivationSchema.ts'
+
+/** У правил магазина нет поля `orderTypeIds` (`SHOP_RULE_FORM_CONFIG.orderTypeRuleTypes` пуст,
+ * Фаза 5, docs/service-plan-salary-rule-order-category-filter) — справочник типов заказов здесь не
+ * запрашивается вовсе, стабильная пустая ссылка вместо запроса (зеркало `NO_CATEGORIES` в
+ * `service/model/useServiceDirection.ts`). */
+const NO_ORDER_TYPES: OrderTypeResponse[] = []
 
 /**
  * Направление "Магазин" целиком — зеркало `service/model/useServiceDirection.ts` (Фаза 4): свой
@@ -63,6 +69,9 @@ export function useShopDirection(): DirectionAdapter {
         categories: catalogQuery.data ?? [],
         isCategoriesLoading: catalogQuery.isLoading,
         categoriesError: catalogQuery.error?.message ?? null,
+        orderTypes: NO_ORDER_TYPES,
+        isOrderTypesLoading: false,
+        orderTypesError: null,
         isSubmitting: createSchema.isPending,
         savedSchemaId: createSchema.isSuccess ? createSchema.data.id : null,
         submit,

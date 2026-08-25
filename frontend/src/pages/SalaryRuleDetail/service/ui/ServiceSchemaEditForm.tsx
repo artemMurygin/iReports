@@ -1,4 +1,4 @@
-import type { MotivationSchemaDetailResponse, TargetRole } from 'ireports-contracts'
+import type { MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 import { RuleList } from '@/features/SalaryRuleForm'
 import type { RuleFormConfig, RuleType } from '@/features/SalaryRuleForm'
 
@@ -14,6 +14,9 @@ export type ServiceSchemaEditFormProps = {
     allowedRolesByType: Partial<Record<RuleType, TargetRole[]>>
     isRoleTypesLoading: boolean
     roleTypesError: string | null
+    orderTypes: OrderTypeResponse[]
+    isOrderTypesLoading: boolean
+    orderTypesError: string | null
 }
 
 /**
@@ -61,6 +64,9 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
                 roleTypesError: page.roleTypesError,
                 isCategoriesLoading: page.isCategoriesLoading,
                 categoriesError: page.categoriesError,
+                orderTypes: page.orderTypes,
+                isOrderTypesLoading: page.isOrderTypesLoading,
+                orderTypesError: page.orderTypesError,
                 onChange: page.rules.updateDraft,
                 onChangeType: page.rules.changeType,
                 onChangeBorder: page.rules.updateBorder,
