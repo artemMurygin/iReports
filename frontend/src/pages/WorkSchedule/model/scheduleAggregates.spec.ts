@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { buildDayAggregateMap, buildEmployeeCellMap, isVacationLow, vacationDaysRemaining } from './scheduleAggregates.ts'
 
 function cell(date: string) {
-    return { date, entryId: null, status: null, hours: null, role: null }
+    return { date, entryId: null, status: null, hours: null, role: null, isOnDuty: false }
 }
 
 describe('buildEmployeeCellMap', () => {
