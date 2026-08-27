@@ -49,10 +49,8 @@ npx prisma studio --config prisma.config.ts
 One-off scripts (build first, they run from `dist/`):
 
 ```bash
-npm run initial                  # nest build -c nest-cli.json && node dist/src/shared/initialUploadData.js
+npm run initial                  # nest build -c nest-cli.json && node dist/src/scripts/initialUploadData.js
 npm run price:monitoring         # nest build -c nest-cli.json && node dist/src/utils/runPriceMonitoring.js
-npm run export:roapp-orders      # nest build -c nest-cli.json && node dist/src/shared/exportRoappOrders.js
-npm run migrate:employee-identities  # разовый перенос BitrixEmployee.roappId/moySkladId/roappOnlineName в EmployeeIdentity (Фаза 2, идемпотентно)
 ```
 
 To run a single test file directly with ts-jest, `cd backend` and use the `test` script with a path/name

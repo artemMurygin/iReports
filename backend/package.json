@@ -18,13 +18,10 @@
         "test:cov": "jest --coverage",
         "test:debug": "TS_NODE_PROJECT=tsconfig.json node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
         "test:e2e": "jest --config ./test/jest-e2e.json",
-        "initial": "nest build -c nest-cli.json && node dist/src/shared/initialUploadData.js",
-        "initialProd": "node dist/src/shared/initialUploadData.js",
+        "initial": "nest build -c nest-cli.json && node dist/src/scripts/initialUploadData.js",
+        "initialProd": "node dist/src/scripts/initialUploadData.js",
         "price:monitoring": "nest build -c nest-cli.json && node dist/src/utils/runPriceMonitoring.js",
-        "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js",
-        "export:roapp-orders": "nest build -c nest-cli.json && node dist/src/shared/exportRoappOrders.js",
-        "migrate:employee-identities": "nest build -c nest-cli.json && node dist/src/shared/migrateEmployeeIdentities.js",
-        "migrate:work-schedule-hours": "nest build -c nest-cli.json && node dist/src/shared/migrateWorkScheduleHours.js"
+        "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js"
     },
     "dependencies": {
         "@nestjs/common": "^11.0.1",
