@@ -10,8 +10,7 @@ import { SalaryReportV2Page } from '@/pages/SalaryReportV2'
 import { SalaryAccrualsPage } from '@/pages/SalaryAccruals'
 import { SalaryAccrualDocumentPage } from '@/pages/SalaryAccrualDocument'
 import { EmployeeBalancePage } from '@/pages/EmployeeBalance'
-import { DepartmentBalancesPage } from '@/pages/DepartmentBalances'
-import { PayoutPage } from '@/pages/Payout'
+import { EmployeeSettlementsPage } from '@/pages/EmployeeSettlements'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
 import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
@@ -92,12 +91,14 @@ export const router = createBrowserRouter([
                 element: <SalaryAccrualDocumentPage />,
             },
             {
-                // Фаза 10 плана "Закрытие месяца и начисления" — сводка балансов по отделу
-                // (пункт меню «Балансы», app/navigation.tsx). departmentId/period — query-
-                // параметры (`?departmentId=&period=YYYY-MM`), тот же приём, что у
-                // 'salary-accruals' с `?period=&direction=`.
-                path: 'balance/department',
-                element: <DepartmentBalancesPage />,
+                // «Взаиморасчёты с сотрудниками» (пункт меню «Зарплата», ранее «Выплата»,
+                // app/navigation.tsx) — docs/employee-settlements-page-redesign, Фаза 3.
+                // Заменяет прежний 'balance/department' (`DepartmentBalancesPage`, сводка ТОЛЬКО
+                // по выбранному отделу) сквозным списком по всем сотрудникам компании;
+                // `departmentId` — необязательный query-параметр (`?departmentId=`, отсутствует
+                // = «Все отделы»), тот же приём, что у прежнего роута.
+                path: 'balance',
+                element: <EmployeeSettlementsPage />,
             },
             {
                 // Баланс сотрудника — общий, без направления в пути (Фаза 8b: баланс живёт
@@ -106,14 +107,6 @@ export const router = createBrowserRouter([
                 // документа начисления.
                 path: 'balance/employee/:id',
                 element: <EmployeeBalancePage />,
-            },
-            {
-                // Фаза 14 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual,
-                // PRD 3) — «Выплата зарплаты»: таблица сотрудников периода направления,
-                // выплата одному/выбранным. `direction`/`period` — query-параметры, тот же
-                // приём, что 'salary-accruals' (эндпоинты выплаты per-direction).
-                path: 'payout',
-                element: <PayoutPage />,
             },
             {
                 path: 'salaries/rules',

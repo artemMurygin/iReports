@@ -1,4 +1,4 @@
-import type { BalanceTransaction, BalanceTransactionType, ExternalSystem } from 'ireports-contracts'
+import type { BalanceTransaction, BalanceTransactionType, ExternalSystem, SalesDirection } from 'ireports-contracts'
 
 /**
  * Русские названия типов движения для ленты баланса сотрудника (Фаза 10
@@ -19,6 +19,17 @@ export const transactionTypeLabel: Record<BalanceTransactionType, string> = {
     PAYOUT: 'Выплата',
 }
 
+/** «Сервис»/«Магазин» — подпись направления происхождения движения (Pencil `L73YCK`/`JTc29`,
+ * docs/employee-settlements-page-redesign, Фаза 5), показывается под типом в каждой строке
+ * ленты (`TransactionsLedger`/`TransactionsCardList`) — баланс сотрудника общий (Фаза 8b), но
+ * каждое ОТДЕЛЬНОЕ движение несёт направление своего происхождения. Задублирована локально по
+ * той же причине, что `ERP_SYSTEM_LABEL` ниже — `DIRECTION_LABEL` в `NewTransactionDrawer.tsx`
+ * не переиспользуется (кросс-импорт между features запрещён FSD, frontend/CLAUDE.md). */
+export const DIRECTION_LABEL: Record<SalesDirection, string> = {
+    service: 'Сервис',
+    shop: 'Магазин',
+}
+
 /** «RemOnline» / «МойСклад» — подпись системы документа ERP в ленте (P3.3, Фаза 15). Задублирован
  * локально (та же карта есть в `pages/EmployeeIdentity/model/identityLabels.ts`) — кросс-импорт
  * между `features` и `pages` запрещён FSD в эту сторону. */
@@ -37,8 +48,9 @@ export function isDeletable(transaction: BalanceTransaction): boolean {
     return transaction.accrualId === null && transaction.type !== 'PAYOUT'
 }
 
-/** Выплата удаляется отдельным путём (`DELETE .../payout/:id`, `features/Payout`) — не через
- * общий `isDeletable`/`DeleteTransactionDialog`. */
+/** Выплата удаляется отдельным путём (`DELETE .../payout/:id`, `ui/DeletePayoutDialog.tsx`
+ * этой же фичи, Фаза 6 docs/employee-settlements-page-redesign) — не через общий
+ * `isDeletable`/`DeleteTransactionDialog`. */
 export function isPayoutTransaction(transaction: BalanceTransaction): boolean {
     return transaction.type === 'PAYOUT'
 }

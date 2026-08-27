@@ -4,13 +4,7 @@ import { Header as UiKitHeader } from '@/shared/ui-kit/organisms/Header'
 
 import { ALL_LEAVES, DRAWER_SECTIONS, SECTIONS, TOP_LEVEL_NAV_ITEMS } from './navigation.tsx'
 
-export type HeaderProps = {
-    /** Controls the mobile drawer's open state from outside — see `app/Layout.tsx`, which shares this with `app/BottomNav.tsx` so its "Ещё" item opens the same drawer as the hamburger. Omit for the previous, fully self-contained behavior. */
-    open?: boolean
-    onOpenChange?: (open: boolean) => void
-}
-
-export function Header({ open, onOpenChange }: HeaderProps = {}) {
+export function Header() {
     const location = useLocation()
 
     // Pick the most specific match, not the first one in array order: with `end: false` (the
@@ -38,8 +32,6 @@ export function Header({ open, onOpenChange }: HeaderProps = {}) {
             subnavTabs={subnavTabs}
             drawerSections={DRAWER_SECTIONS}
             mobile={{ section: activeLeaf.section, page: activeLeaf.label }}
-            open={open}
-            onOpenChange={onOpenChange}
         />
     )
 }

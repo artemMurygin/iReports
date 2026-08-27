@@ -15,9 +15,8 @@ export type LayoutProps = {
  * набор карточки цели (редактируемая vs read-only), так что переиспользование дало бы условную
  * ветвистость внутри общего компонента вместо двух простых.
  *
- * `mobileBar` — последний потомок `<main>` с тем же обоснованием sticky-стыковки с `BottomNav`
- * (через `bottom-[var(--bottom-nav-h,...)]` на баре, не `bottom-0` — см. `app/Layout.tsx`), что у
- * `pages/SalaryRules/ui/MobileSaveBar/MobileSaveBar.tsx`'s комментария.
+ * `mobileBar` — последний потомок `<main>` (вместе с `mt-auto` на самом баре даёт классический
+ * "sticky footer", прижатый к низу `bottom-0` на коротких страницах).
  */
 export function Layout({ header, target, rules, mobileBar }: LayoutProps) {
     return (

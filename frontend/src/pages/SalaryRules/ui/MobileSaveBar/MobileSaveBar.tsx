@@ -21,15 +21,9 @@ export type MobileSaveBarProps = {
  * схему" button row.
  *
  * Rendered as the LAST child of `<main>` via `ui/Layout`'s `mobileBar` slot, with `mt-auto sticky
- * bottom-[var(--bottom-nav-h,4.5rem)]` at the call site (`mediator/SalaryRulesCreate.tsx`) —
- * `mt-auto` lets it consume any leftover height in `main`'s `flex-1` column so it still sits flush
- * with the viewport bottom on short pages, and the `bottom-[var(--bottom-nav-h,...)]` offset stacks
- * it directly above the global `BottomNav` (`app/BottomNav.tsx`) instead of `bottom-0`, which would
- * render it in the exact same spot as `BottomNav` — `BottomNav`'s own sticky containing block is
- * the whole `app/Layout.tsx` wrapper (not just `main`'s box), so it stays pinned to the viewport
- * bottom for virtually the entire scroll range, not only once a page reaches its end. See
- * `app/Layout.tsx`'s comment for how `--bottom-nav-h` is measured and published, and
- * `ui/Layout/Layout.tsx` for the surrounding structure this depends on.
+ * bottom-0` at the call site (`mediator/SalaryRulesCreate.tsx`) — `mt-auto` lets it consume any
+ * leftover height in `main`'s `flex-1` column so it still sits flush with the viewport bottom on
+ * short pages. See `ui/Layout/Layout.tsx` for the surrounding structure this depends on.
  *
  * "Отмена" doesn't discard already-*confirmed* rules (those represent real, deliberate work) — it
  * only resets Step 1's target selection (`targetId`/`schemaName`, owned by

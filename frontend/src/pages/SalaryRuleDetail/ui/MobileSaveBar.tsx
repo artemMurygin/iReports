@@ -12,11 +12,10 @@ export type MobileSaveBarProps = {
 }
 
 /**
- * Локальный аналог `pages/SalaryRules/ui/MobileSaveBar` — тот же sticky-паттерн (см. этого
- * компонента прототип и обоснование стыковки с `BottomNav` через `mt-auto`+"последний потомок
- * `<main>`"+`bottom-[var(--bottom-nav-h,...)]` (не `bottom-0`, см. `app/Layout.tsx`) в
- * `Layout.tsx`), но "Отмена" здесь — обычная ссылка "Назад к списку" (не сброс Шага 1, которого на
- * редактировании просто нет, цель схемы неизменяема).
+ * Локальный аналог `pages/SalaryRules/ui/MobileSaveBar` — тот же sticky-паттерн (см. `mt-auto`+
+ * "последний потомок `<main>`" в `Layout.tsx`, стик к `bottom-0`), но "Отмена" здесь — обычная
+ * ссылка "Назад к списку" (не сброс Шага 1, которого на редактировании просто нет, цель схемы
+ * неизменяема).
  */
 export function MobileSaveBar({ onSave, canSave, isSubmitting, className }: MobileSaveBarProps) {
     return (

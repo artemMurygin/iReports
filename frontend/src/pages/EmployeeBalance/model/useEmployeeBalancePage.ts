@@ -1,27 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import type { BalanceTransaction, BalanceTransactionType, SalesDirection } from 'ireports-contracts'
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import type { BalanceTransaction, BalanceTransactionType } from 'ireports-contracts'
 
 import { api } from '@/features/EmployeeBalance'
-import { api as payoutApi } from '@/features/Payout'
-import { formatPeriodLabel } from '@/features/SalesPlan'
+import { DEFAULT_PERIOD, formatPeriodLabel } from '@/features/SalesPlan'
 import { useDepartments, useEmployees } from '@/features/TargetDirectory'
 
+import { api as identityApi } from './api.ts'
+import { matchesCommentSearch } from './commentSearch.ts'
+import { buildErpLinkageLabel, buildHeaderSubtitle } from './headerInfo.ts'
+import { downloadEmployeeBalanceLedgerCsv } from './exportLedgerCsv.ts'
 import { periodToDateRange } from './periodRange.ts'
-
-/**
- * Текущий календарный месяц (`YYYY-MM`) — дефолт фильтра ленты баланса. НЕ переиспользует
- * `DEFAULT_PERIOD` из `features/SalesPlan` (зафиксированный демо-период отчётности,
- * `2026-06`): движения ленты, включая `SALARY_ACCRUAL`, несут `occurredAt` — дату
- * фактического проведения ("сейчас"), а не расчётный период — поэтому дефолт ленты
- * должен быть месяцем по системным часам, иначе свежепроведённые движения не попадают
- * в выборку по умолчанию.
- */
-function currentMonthPeriod(): string {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
 
 /** Направление drawer'а «Добавить движение», открываемого одной из двух кнопок шапки —
  * не путать с `SalesDirection` (service/shop) внутри самой формы движения (Фаза 8b/10
@@ -39,12 +29,17 @@ export function useEmployeeBalancePage() {
     const { id = '' } = useParams()
     const employeeId = Number(id)
 
-    // ── Фильтры ленты: месяц (Period Chip, как в остальных страницах фичи начислений) +
-    // мультиселект типов чипами-переключателями. Конвертация period -> from/to происходит
+    // ── Фильтры ленты (Фаза 8 docs/employee-settlements-page-redesign): период — НЕОБЯЗАТЕЛЬНОЕ
+    // сужение поверх дефолтного «за всё время» (`period === null`, ничего не выбрано — это НЕ
+    // текущий месяц, как было до Фазы 8). `PeriodPicker` в `BalanceActions` остаётся доступным
+    // как дополнительный фильтр (решение задачи из плана: «оставлять ли месячный PeriodPicker» —
+    // да, но его дефолт/сброс означает «всё время», а не текущий месяц), как в макете `L73YCK`/
+    // `JTc29`, где отдельного элемента периода нет вовсе — там лента сразу «за всё время».
+    // Типы — мультиселект чипами-переключателями; конвертация period -> from/to происходит
     // здесь, а не в `features/EmployeeBalance/model/api.ts` — фильтры ленты специфичны
     // для этой страницы, у карточки документа/будущего личного кабинета может быть свой
     // способ их задавать. ─────────────────────────────────────────────────────────────
-    const [period, setPeriod] = useState(currentMonthPeriod)
+    const [period, setPeriod] = useState<string | null>(null)
     const [selectedTypes, setSelectedTypes] = useState<readonly BalanceTransactionType[]>([])
 
     function toggleType(type: BalanceTransactionType) {
@@ -54,19 +49,64 @@ export function useEmployeeBalancePage() {
         setSelectedTypes([])
     }
 
-    const { from, to } = useMemo(() => periodToDateRange(period), [period])
+    // ── Поиск по комментарию (Фаза 5 docs/employee-settlements-page-redesign) — фильтр ленты
+    // клиентский (see `commentSearch.ts` — эндпоинт не поддерживает поиск по комментарию), без
+    // debounce. С Фазы 8 лента подгружается порциями — поиск применяется только к УЖЕ
+    // ЗАГРУЖЕННЫМ страницам, а не ко всей истории сотрудника (см. WHY в `commentSearch.ts`): это
+    // сознательное ограничение этой фазы, а не баг — увеличить охват поиска можно только добавив
+    // серверный параметр в контракт (не сделано, эндпоинт не поддерживает поиск по комментарию). ──
+    const [commentSearch, setCommentSearch] = useState('')
+
+    const { from, to } = useMemo(
+        () => (period === null ? { from: undefined, to: undefined } : periodToDateRange(period)),
+        [period],
+    )
     const filters = useMemo(
         () => ({ from, to, types: selectedTypes.length > 0 ? [...selectedTypes] : undefined }),
         [from, to, selectedTypes],
     )
 
-    const balanceQuery = useQuery({
+    // ── Лента — курсорная пагинация (Фаза 8, бэкенд — Фаза 7): изначально последние 20 движений
+    // «за всё время» (или в рамках сужения period/types), `fetchNextPage` подгружает следующие
+    // 20 более ранних (см. `TransactionsLedger`/`TransactionsCardList`'s sentinel,
+    // `useInfiniteScrollTrigger`). `placeholderData: keepPreviousData` переживает смену фильтра
+    // (типы/период) без "схлопывания" уже отрисованной ленты в спиннер. ──────────────────────
+    const balanceQuery = useInfiniteQuery({
         ...api.getEmployeeBalance(employeeId, filters),
         placeholderData: keepPreviousData,
     })
-    const transactions = balanceQuery.data?.transactions ?? []
-    const balance = balanceQuery.data?.balance ?? 0
-    const selectionTotal = balanceQuery.data?.selectionTotal ?? 0
+    const pages = balanceQuery.data?.pages
+    const rawTransactions = useMemo(() => (pages ?? []).flatMap((page) => page.transactions), [pages])
+    const balance = pages?.[0]?.balance ?? 0
+
+    // ── Лента, видимая пользователю: сервер уже отфильтровал по периоду/типам (и уже разбил на
+    // страницы), поиск по комментарию сужает УЖЕ ЗАГРУЖЕННЫЕ страницы ещё раз на клиенте (см.
+    // `commentSearch.ts`). ────────────────────────────────────────────────────────────────────
+    const transactions = useMemo(
+        () => rawTransactions.filter((transaction) => matchesCommentSearch(transaction, commentSearch)),
+        [rawTransactions, commentSearch],
+    )
+    // «Итого по выборке»: пока поиск по комментарию пуст, берём авторитетное значение бэкенда
+    // (`selectionTotal` — сумма ВСЕЙ отфильтрованной по period/types выборки, не только уже
+    // подгруженных страниц, см. WHY в contracts/commands/employee-balance.ts) — то же значение
+    // повторяется в ответе каждой страницы одного запроса, первой достаточно. Как только
+    // появляется текст поиска по комментарию — единственная НАДЁЖНАЯ сумма это сумма уже
+    // загруженных и отфильтрованных на клиенте строк (backend не знает о комментарии), поэтому
+    // переключаемся на неё — с тем же ограничением "только загруженное", что и у самого поиска.
+    const selectionTotal = useMemo(() => {
+        if (commentSearch.trim() !== '') {
+            return transactions.reduce((sum, transaction) => sum + transaction.amount, 0)
+        }
+        return pages?.[0]?.selectionTotal ?? 0
+    }, [commentSearch, transactions, pages])
+
+    const isFetchingNextPage = balanceQuery.isFetchingNextPage
+    const hasNextPage = balanceQuery.hasNextPage
+    function loadMoreTransactions() {
+        if (balanceQuery.hasNextPage && !balanceQuery.isFetchingNextPage) {
+            void balanceQuery.fetchNextPage()
+        }
+    }
 
     // ── ФИО/отдел сотрудника — тот же приём, что `useSalaryAccrualDocumentPage` резолвит
     // отдел документа (справочник Bitrix, не сам ответ баланса — `EmployeeBalanceResponse`
@@ -81,14 +121,32 @@ export function useEmployeeBalancePage() {
     const employeeName = employee?.name ?? `Сотрудник ${employeeId}`
     const departmentName = useMemo(() => {
         if (employee === undefined) return null
-        return (departments.data ?? []).find((department) => department.id === employee.departmentId)?.name ?? `Отдел ${employee.departmentId}`
+        return (
+            (departments.data ?? []).find((department) => department.id === employee.departmentId)?.name ??
+            `Отдел ${employee.departmentId}`
+        )
     }, [employee, departments.data])
     const employeeNameById = useMemo(
         () => Object.fromEntries((employees.data ?? []).map((item) => [item.id, item.name])),
         [employees.data],
     )
 
-    const periodLabel = formatPeriodLabel(period)
+    // ── Должность (шапка, Фаза 5) — только в сводке взаиморасчётов (`BalanceSummaryEmployee`,
+    // см. WHY в contracts/commands/employee-balance.ts), не в `/v1/directory/employees`. Тот же
+    // запрос, что открывает список `pages/EmployeeSettlements` — обычно уже тёплый в кэше после
+    // перехода оттуда по клику на строку сотрудника. ────────────────────────────────────────
+    const summaryQuery = useQuery(api.getBalanceSummary(DEFAULT_PERIOD, {}))
+    const position = summaryQuery.data?.employees.find((item) => item.employeeId === employeeId)?.position ?? null
+
+    // ── Связь с ERP-системами (шапка, Фаза 5) — «связан с RemOnline и МойСкладом», см.
+    // `headerInfo.ts`. ────────────────────────────────────────────────────────────────────
+    const identitiesQuery = useQuery(identityApi.getEmployeeIdentities(employeeId))
+    const erpLinkageLabel = buildErpLinkageLabel(identitiesQuery.data ?? [])
+    const headerSubtitle = buildHeaderSubtitle([departmentName, position, erpLinkageLabel])
+
+    // «Всё время» (period === null, дефолт Фазы 8) — своя подпись, formatPeriodLabel ожидает
+    // валидный `YYYY-MM` и не умеет null.
+    const periodLabel = period === null ? 'Всё время' : formatPeriodLabel(period)
 
     // ── Drawer «Добавить движение» ──────────────────────────────────────────────────────
     const [isDrawerOpen, setDrawerOpen] = useState(false)
@@ -124,42 +182,31 @@ export function useEmployeeBalancePage() {
         setDeletePayoutTarget(null)
     }
 
-    // ── Выплата (Фаза 14 docs/payroll-closing-and-accrual, PRD 3) ──────────────────────────
-    // Страница баланса — общая по сотруднику, без Direction Tabs (Фаза 8b) — в отличие от
-    // `pages/Payout` (уже per-direction), здесь направление кассы выбирается прямо в
-    // `PayoutDrawer` (его собственный `onDirectionChange`, см. компонент).
-    const [isPayoutOpen, setIsPayoutOpen] = useState(false)
-    const [payoutDirection, setPayoutDirection] = useState<SalesDirection>('service')
-    function openPayout() {
-        setPayoutDirection('service')
-        setIsPayoutOpen(true)
-    }
-    function closePayout() {
-        setIsPayoutOpen(false)
-    }
-    const erpCashConfigQuery = useQuery({ ...payoutApi.getErpCashConfig(payoutDirection), enabled: isPayoutOpen })
-    const payoutCashLabel =
-        erpCashConfigQuery.data === undefined
-            ? 'Загрузка кассы…'
-            : payoutDirection === 'service'
-              ? erpCashConfigQuery.data.roappCashboxId !== null
-                  ? 'RemOnline · касса Основная'
-                  : 'Касса RemOnline не настроена'
-              : erpCashConfigQuery.data.moySkladExpenseItemId !== null && erpCashConfigQuery.data.organizationId !== null
-                ? 'МойСклад · статья «Зарплата»'
-                : 'Касса МойСклад не настроена'
+    // isFetchingNextPage исключён из обоих флагов (Фаза 8): подгрузка следующей страницы ленты
+    // не должна ни показывать полноэкранный спиннер (isInitialLoad — данные уже есть), ни
+    // запускать fade/blur всей страницы (isRefreshing, RefreshTransitionLayout) — у неё свой,
+    // локальный индикатор в подвале ленты (см. `TransactionsLedger`/`TransactionsCardList`).
+    const isInitialLoad = balanceQuery.isFetching && !isFetchingNextPage && balanceQuery.data === undefined
+    const isRefreshing = balanceQuery.isFetching && !isFetchingNextPage && !isInitialLoad
 
-    const isInitialLoad = balanceQuery.isFetching && balanceQuery.data === undefined
-    const isRefreshing = balanceQuery.isFetching && !isInitialLoad
+    // ── «Выгрузить ленту» (шапка/панель действий, Фаза 5) — CSV уже отфильтрованной (тип +
+    // комментарий) выборки `transactions`, см. `exportLedgerCsv.ts`. ──────────────────────────
+    function exportLedger() {
+        downloadEmployeeBalanceLedgerCsv(employeeId, transactions, employeeNameById)
+    }
 
     return {
         employeeId,
         employeeName,
         departmentName,
+        headerSubtitle,
         employeeNameById,
         balance,
         transactions,
         selectionTotal,
+        hasNextPage,
+        isFetchingNextPage,
+        loadMoreTransactions,
 
         period,
         setPeriod,
@@ -167,6 +214,9 @@ export function useEmployeeBalancePage() {
         selectedTypes,
         toggleType,
         clearTypes,
+        commentSearch,
+        setCommentSearch,
+        exportLedger,
 
         isDrawerOpen,
         drawerKind,
@@ -181,14 +231,6 @@ export function useEmployeeBalancePage() {
         deletePayoutTarget,
         requestDeletePayout,
         closeDeletePayoutDialog,
-
-        isPayoutOpen,
-        payoutDirection,
-        setPayoutDirection,
-        openPayout,
-        closePayout,
-        payoutCashLabel,
-        payoutTransactions: transactions,
 
         isInitialLoad,
         isRefreshing,

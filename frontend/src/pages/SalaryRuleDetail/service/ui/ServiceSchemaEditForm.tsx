@@ -81,7 +81,7 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
 
     const mobileBar = (
         <MobileSaveBar
-            className="sticky bottom-[var(--bottom-nav-h,4.5rem)] z-30 mt-auto md:hidden"
+            className="sticky bottom-0 z-30 mt-auto md:hidden"
             onSave={page.handleSave}
             canSave={page.canSave}
             isSubmitting={page.isSubmitting}

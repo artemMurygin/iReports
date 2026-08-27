@@ -18,12 +18,8 @@ export type LayoutProps = {
  * Шаг 2 в одну колонку ниже `md:` (это и делает десктопный `md:flex-row` ниже), а "Сохранить схему"
  * переезжает в sticky-бар внизу (`mobileBar`, `md:hidden`) вместо кнопки в шапке
  * (`hidden md:inline-flex` у той). Слот `mobileBar` остаётся последним потомком `<main>` (вместе с
- * `mt-auto` на самом баре это даёт классический "sticky footer", прижатый к низу колонки на
- * коротких страницах), но его собственный `bottom`-оффсет — `var(--bottom-nav-h, ...)`, не `0`:
- * глобальный `BottomNav` (`app/BottomNav.tsx`) — sticky в пределах ВСЕГО `app/Layout.tsx`-обёртки,
- * а не только `<main>`, и потому липнет к низу viewport почти на всём скролле; `bottom-0` у этого
- * бара рисовал бы его в той же самой точке. См. комментарий в `app/Layout.tsx` (источник
- * `--bottom-nav-h`) и в `ui/MobileSaveBar/MobileSaveBar.tsx`.
+ * `mt-auto` на самом баре это даёт классический "sticky footer", прижатый к низу `bottom-0` на
+ * коротких страницах).
  *
  * Слоты именованные (frontend/CLAUDE.md, "Слоты вместо `children`"): Layout не знает, что лежит
  * внутри, и содержит только раскладку.

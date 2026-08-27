@@ -6,7 +6,7 @@ import type {
 } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
-import { ApiError } from '@/shared/errors/apiError.ts'
+import { ApiError, extractApiErrorMessage } from '@/shared/errors/apiError.ts'
 
 /**
  * `GET`/`PATCH /v1/service/motivation-schema/:id` — зеркалит структуру `pages/SalaryRules/service/model/api.ts`.
@@ -23,7 +23,7 @@ export const api = {
                     .get<MotivationSchemaDetailResponse>(`/v1/service/motivation-schema/${id}`, { signal })
                     .then((r) => r.data)
                     .catch((error) => {
-                        throw new ApiError('Не удалось загрузить зарплатную схему ' + error)
+                        throw new ApiError(extractApiErrorMessage(error, 'Не удалось загрузить зарплатную схему'))
                     }),
         }),
 
@@ -32,6 +32,6 @@ export const api = {
             .patch<MotivationResponse>(`/v1/service/motivation-schema/${id}`, payload)
             .then((r) => r.data)
             .catch((error) => {
-                throw new ApiError('Не удалось сохранить изменения схемы ' + error)
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить изменения схемы'))
             }),
 }

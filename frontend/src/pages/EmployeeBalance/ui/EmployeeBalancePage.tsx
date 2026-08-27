@@ -1,7 +1,7 @@
-import { DeleteTransactionDialog, NewTransactionDrawer } from '@/features/EmployeeBalance'
-import { DeletePayoutDialog, PayoutDrawer } from '@/features/Payout'
+import { DeletePayoutDialog, DeleteTransactionDialog, NewTransactionDrawer } from '@/features/EmployeeBalance'
 
 import { useEmployeeBalancePage } from '../model/useEmployeeBalancePage.ts'
+import { BalanceActions } from './BalanceActions.tsx'
 import { BalanceFilters } from './BalanceFilters.tsx'
 import { BalanceHeader } from './BalanceHeader.tsx'
 import { Layout } from './Layout.tsx'
@@ -16,11 +16,18 @@ export type EmployeeBalancePageProps = {
 
 /**
  * Pencil: design/sallary-first-iteration.pen, node `L73YCK` (десктоп-руководитель) /
- * `ps9b4` (десктоп-личный кабинет) / `lQM7O`, `b6g6Z` (мобильные), правки Фазы 8b —
- * баланс сотрудника ОБЩИЙ: без Direction Tabs и KPI-карточек по направлениям, одна
- * крупная цифра «Баланс» в шапке. Строки ленты не раскрываются (см.
- * `TransactionsLedger`); удаление ручного движения — confirm-модалка без комментария
- * (не «сторно»), `w3wDY`/`dypv7`.
+ * `ps9b4` (десктоп-личный кабинет) / `JTc29`, `lQM7O`, `b6g6Z` (мобильные), Фаза 5
+ * docs/employee-settlements-page-redesign — баланс сотрудника ОБЩИЙ: без Direction Tabs
+ * и KPI-карточек по направлениям, одна крупная цифра «Баланс» в шапке (Фаза 8b), панель
+ * действий («Добавить приход/расход», «Выгрузить ленту») — отдельной строкой под ней
+ * (`BalanceActions`). Строки ленты не раскрываются (см. `TransactionsLedger`); удаление
+ * ручного движения — confirm-модалка без комментария (не «сторно»), `w3wDY`/`dypv7`.
+ *
+ * Выплата (Фаза 6 того же плана) больше не отдельная кнопка/`PayoutDrawer` — тип «Выплата»
+ * выбирается в `NewTransactionDrawer` («Добавить расход»), см. WHY там же; `DeletePayoutDialog`
+ * остаётся отдельным путём только для удаления уже существующего движения `PAYOUT` из ленты
+ * (`onDeletePayout` ниже) — обе точки теперь из `features/EmployeeBalance`, бывшая
+ * `features/Payout` удалена.
  *
  * Чистый медиатор (frontend/CLAUDE.md): всё состояние — в `useEmployeeBalancePage`,
  * `readOnly` прокидывается вниз без ветвлений на этом уровне.
@@ -29,16 +36,22 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
     const {
         employeeId,
         employeeName,
-        departmentName,
+        headerSubtitle,
         employeeNameById,
         balance,
         transactions,
         selectionTotal,
+        hasNextPage,
+        isFetchingNextPage,
+        loadMoreTransactions,
         period,
         setPeriod,
         selectedTypes,
         toggleType,
         clearTypes,
+        commentSearch,
+        setCommentSearch,
+        exportLedger,
         isDrawerOpen,
         drawerKind,
         openIncomeDrawer,
@@ -50,13 +63,6 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
         deletePayoutTarget,
         requestDeletePayout,
         closeDeletePayoutDialog,
-        isPayoutOpen,
-        payoutDirection,
-        setPayoutDirection,
-        openPayout,
-        closePayout,
-        payoutCashLabel,
-        payoutTransactions,
         isInitialLoad,
         isRefreshing,
         dataVersion,
@@ -71,22 +77,23 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
             error={error}
             body={
                 <div className="flex flex-col gap-4">
-                    <BalanceHeader
-                        employeeName={employeeName}
-                        departmentName={departmentName}
-                        balance={balance}
+                    <BalanceHeader employeeName={employeeName} subtitle={headerSubtitle} balance={balance} />
+
+                    <BalanceActions
                         onAddIncome={openIncomeDrawer}
                         onAddOutcome={openOutcomeDrawer}
-                        onPay={openPayout}
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        onExport={exportLedger}
                         readOnly={readOnly}
                     />
 
                     <BalanceFilters
-                        period={period}
-                        onPeriodChange={setPeriod}
                         selectedTypes={selectedTypes}
                         onToggleType={toggleType}
                         onClearTypes={clearTypes}
+                        search={commentSearch}
+                        onSearchChange={setCommentSearch}
                     />
 
                     <TransactionsLedger
@@ -96,6 +103,9 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
                         readOnly={readOnly}
                         onDeleteTransaction={requestDelete}
                         onDeletePayout={requestDeletePayout}
+                        hasNextPage={hasNextPage}
+                        isFetchingNextPage={isFetchingNextPage}
+                        onLoadMore={loadMoreTransactions}
                     />
 
                     <NewTransactionDrawer
@@ -111,21 +121,6 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
                     <DeleteTransactionDialog transaction={deleteTarget} onOpenChange={closeDeleteDialog} />
 
                     <DeletePayoutDialog transaction={deletePayoutTarget} onOpenChange={closeDeletePayoutDialog} />
-
-                    <PayoutDrawer
-                        open={isPayoutOpen}
-                        onOpenChange={(open) => {
-                            if (!open) closePayout()
-                        }}
-                        direction={payoutDirection}
-                        onDirectionChange={setPayoutDirection}
-                        employeeId={employeeId}
-                        employeeName={employeeName}
-                        departmentName={departmentName}
-                        currentBalance={balance}
-                        cashLabel={payoutCashLabel}
-                        recentTransactions={payoutTransactions}
-                    />
                 </div>
             }
         />

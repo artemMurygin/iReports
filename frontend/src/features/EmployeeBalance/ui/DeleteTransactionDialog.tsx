@@ -18,7 +18,7 @@ export type DeleteTransactionDialogProps = {
 }
 
 /** 400/409/5xx с человекочитаемым `message` в теле — тот же приём, что
- * `readPayoutErrorMessage` (features/Payout/model/payoutView.ts): при ошибке ERP-удаления
+ * `readPayoutErrorMessage` (`model/payoutHelpers.ts`, этой же фичи): при ошибке ERP-удаления
  * бэкенд отдаёт конкретный текст («RemOnline не позволил удалить документ: …»). */
 function readDeleteErrorMessage(error: unknown): string {
     if (isAxiosError(error)) {
@@ -34,7 +34,7 @@ function readDeleteErrorMessage(error: unknown): string {
  * движение исчезает из ленты безвозвратно, не заменяется обратной записью. Для ручных движений
  * (кнопка видна в ленте, только когда `isDeletable(transaction)` — сама проверка снаружи, в
  * `TransactionsLedger`/`TransactionsCardList`; `PAYOUT` сюда не попадает — у него свой
- * `DeletePayoutDialog`, features/Payout).
+ * `DeletePayoutDialog`, этой же фичи).
  *
  * Когда у движения есть документ ERP (`transaction.erp !== null`), текст предупреждает, что
  * сначала удаляется именно он — и при отказе ERP («RemOnline не позволил удалить документ: …»)

@@ -28,6 +28,14 @@ import { cn } from '@/shared/lib/tw'
  *
  * `danger` (used by `PayoutKpiRow`'s «С отрицательным остатком» card) mirrors `positive` —
  * a colored border plus a colored note — on the danger tokens instead.
+ *
+ * `value` accepts `ReactNode`, not just `string` — `EmployeeSettlementsKpiRow` (Pencil
+ * `IFJW2`) needs the big number itself colored (green/red) for its «К выплате»/«Долг» cards,
+ * something no existing `tone` covers (every `tone` above only colors the border/note, by
+ * design — see comments). Wrapping just the value text in a colored `<span>` at the call site
+ * gets that without adding a new tone that would recolor the value for every OTHER `tone`
+ * consumer (`SalesPlan`/`DepartmentBalances`(now `EmployeeSettlements`)/`Payout` KPI rows),
+ * which none of them want. Existing callers passing a plain `string` are unaffected.
  */
 export type KpiCardTone = 'default' | 'positive' | 'warning' | 'danger'
 
@@ -47,7 +55,7 @@ const TONE_NOTE: Record<KpiCardTone, string> = {
 
 export type KpiCardProps = {
     label: React.ReactNode
-    value: string
+    value: React.ReactNode
     note: string
     icon: React.ReactNode
     tone?: KpiCardTone

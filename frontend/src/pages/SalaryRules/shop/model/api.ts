@@ -1,7 +1,7 @@
 import type { ShopMotivationRequest, ShopMotivationResponse } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
-import { ApiError } from '@/shared/errors/apiError.ts'
+import { ApiError, extractApiErrorMessage } from '@/shared/errors/apiError.ts'
 
 /**
  * Фаза 4 (docs/salary-schema-creation-ui) — POST-мутация создания зарплатной схемы магазина
@@ -24,6 +24,6 @@ export const api = {
             .post<ShopMotivationResponse>('/v1/shop/accounting/motivation-schema', payload)
             .then((r) => r.data)
             .catch((error) => {
-                throw new ApiError('Не удалось сохранить зарплатную схему магазина ' + error)
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить зарплатную схему магазина'))
             }),
 }

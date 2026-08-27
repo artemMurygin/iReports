@@ -21,10 +21,9 @@ import type { SubnavTab } from './Subnav'
  *
  * `open`/`onOpenChange` make that state optionally **controlled** from outside (standard
  * React controlled/uncontrolled hybrid, falling back to an internal `useState` when omitted —
- * every existing caller that doesn't pass them keeps working unchanged). This exists so the
- * global `BottomNav`'s "Ещё" item (Pencil node `XXiyY`, see `shared/ui-kit/organisms/BottomNav.tsx`)
- * can open the very same drawer the hamburger opens, instead of a second, desynced instance —
- * `app/Layout.tsx` lifts the state and feeds it to both.
+ * every existing caller that doesn't pass them keeps working unchanged) — for a future trigger
+ * elsewhere in the shell that needs to open this same drawer instead of a second, desynced
+ * instance. No current caller passes them; every caller today relies on the uncontrolled default.
  */
 export type HeaderProps = {
     /** Desktop Nav Bar's main navigation links. Not hardcoded — always supplied by the caller. */

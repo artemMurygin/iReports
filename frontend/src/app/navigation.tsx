@@ -3,7 +3,6 @@ import {
     CalendarCheck,
     CalendarClock,
     ChartNoAxesColumn,
-    CreditCard,
     FileText,
     HandCoins,
     LayoutDashboard,
@@ -33,8 +32,8 @@ export type NavSection = {
 
 /**
  * App-wide navigation, matching the Pencil mockup's IA (design/sallary-first-iteration.pen,
- * `dRfe8`/`e1eFSf` "Sections" on desktop, `UiFMw`/`Z5IedD` "Nav" in the mobile drawer, `XXiyY`
- * "Bottom Nav" on mobile). There is NO dropdown anywhere: on desktop, each section
+ * `dRfe8`/`e1eFSf` "Sections" on desktop, `UiFMw`/`Z5IedD` "Nav" in the mobile drawer). There is
+ * NO dropdown anywhere: on desktop, each section
  * (Продажи/Аналитика/Зарплата) is a **plain link** to its first available page — the chevron
  * some of them show is decorative (matches node `eM1Bp`'s chevron override), and the actual
  * second level is the separate `Subnav` row below the Nav Bar (node `SHMkH`), populated with
@@ -56,11 +55,9 @@ export type NavSection = {
  * `/work-schedule` — `pages/WorkSchedule`, see docs/employee-work-schedule, Фаза 6) are real
  * today.
  *
- * Lives in its own module (not inlined in `app/Header.tsx`) so both `app/Header.tsx` (desktop
- * Nav Bar + mobile drawer) and `app/BottomNav.tsx` (Pencil node `XXiyY`) can share one source
- * of truth for the IA — and so `app/Header.tsx` keeps exporting only its `Header` component
- * (`react-refresh/only-export-components` flags a component file that also exports plain
- * constants).
+ * Lives in its own module (not inlined in `app/Header.tsx`) so `app/Header.tsx` keeps exporting
+ * only its `Header` component (`react-refresh/only-export-components` flags a component file
+ * that also exports plain constants).
  */
 export const SECTIONS: NavSection[] = [
     {
@@ -87,17 +84,19 @@ export const SECTIONS: NavSection[] = [
             { label: 'Отчёт по зарплате', to: '/salaries', icon: <Receipt /> },
             // Фаза 5 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual):
             // список документов начисления закрытого месяца (`pages/SalaryAccruals`). Через
-            // `SECTIONS` пункт автоматически попадает в Subnav десктопа (app/Header.tsx), в
-            // мобильную шторку (`DRAWER_SECTIONS`) и, через раздел «Зарплата», в Bottom Nav.
+            // `SECTIONS` пункт автоматически попадает в Subnav десктопа (app/Header.tsx) и в
+            // мобильную шторку (`DRAWER_SECTIONS`).
             { label: 'Начисления', to: '/salary-accruals', icon: <Banknote /> },
-            // Фаза 10 плана "Закрытие месяца и начисления" — сводка балансов по отделу
-            // (`pages/DepartmentBalances`), точка входа к балансу конкретного сотрудника
-            // (`pages/EmployeeBalance`, `/balance/employee/:id`, ссылками из этой таблицы).
-            { label: 'Балансы', to: '/balance/department', icon: <HandCoins /> },
-            // Фаза 14 плана "Закрытие месяца и начисления" (PRD 3, docs/payroll-closing-and-accrual)
-            // — «Выплата зарплаты» (`pages/Payout`, `/payout`): таблица сотрудников периода
-            // направления, выплата одному/выбранным.
-            { label: 'Выплата', to: '/payout', icon: <CreditCard /> },
+            // docs/employee-settlements-page-redesign, Фаза 3 (PRD «Критерии готовности»:
+            // "Пункт меню «Зарплата» ведёт на новую страницу «Взаиморасчёты с сотрудниками»
+            // вместо «Выплата»") — заменяет прежние два пункта: «Балансы» (`/balance/department`,
+            // сводка ТОЛЬКО по выбранному отделу, `pages/DepartmentBalances`) и «Выплата»
+            // (`/payout` — роут, страница `pages/Payout` и фича `features/Payout` удалены Фазой 6
+            // того же плана: создание выплаты переехало в drawer «Добавить расход» страницы
+            // баланса сотрудника, `features/EmployeeBalance`). Новая страница
+            // `pages/EmployeeSettlements` покрывает обе роли: сквозной список балансов всех
+            // сотрудников с точкой входа на баланс одного (`/balance/employee/:id`).
+            { label: 'Взаиморасчёты', to: '/balance', icon: <HandCoins /> },
             { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
             { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
         ],
@@ -132,13 +131,12 @@ export const ALL_LEAVES: (NavLeaf & { section?: string })[] = [
     STANDALONE_ITEM,
 ]
 
-// Desktop Nav Bar's (and, since it's the same "one link per top-level section" shape,
-// `app/BottomNav.tsx`'s) items: one flat, direct link per section (labels are the section
-// names, e.g. "Продажи" — not the child page names), pointing at that section's first enabled
-// page. The whole pill/nav item is disabled when the section has no enabled page yet. No
-// trailing chevron on desktop — it read as a dropdown affordance even though nothing opens,
-// so it's off for every item. Pure function of `SECTIONS`/`STANDALONE_ITEM` above (no props/
-// hooks involved), so it's a module-level constant rather than recomputed per render.
+// Desktop Nav Bar's items: one flat, direct link per section (labels are the section names,
+// e.g. "Продажи" — not the child page names), pointing at that section's first enabled page.
+// The whole pill/nav item is disabled when the section has no enabled page yet. No trailing
+// chevron on desktop — it read as a dropdown affordance even though nothing opens, so it's off
+// for every item. Pure function of `SECTIONS`/`STANDALONE_ITEM` above (no props/hooks involved),
+// so it's a module-level constant rather than recomputed per render.
 export const TOP_LEVEL_NAV_ITEMS: NavLeaf[] = [
     ...SECTIONS.map((section) => {
         const primary = section.items.find((item) => !item.disabled)
@@ -152,22 +150,3 @@ export const TOP_LEVEL_NAV_ITEMS: NavLeaf[] = [
     }),
     STANDALONE_ITEM,
 ]
-
-/**
- * Пункты нижней мобильной навигации (`app/BottomNav.tsx`). Макет Pencil
- * (design/sallary-first-iteration.pen, узел `XXiyY` `ERP/Mobile/Bottom Nav`, 390px) рассчитан
- * ровно на 5 равных слотов, последний из которых — «Ещё» (открывает `NavDrawer`). После
- * появления раздела «Настройки» верхнеуровневых пунктов стало 5, и шестой слот в ширину
- * не помещается: подписи в 11px («Настройки», «График работы») начали бы обрезаться.
- *
- * Решение: из нижней навигации исключается именно «Настройки» — редко используемый служебный
- * раздел, в отличие от четырёх ежедневных (Продажи/Аналитика/Зарплата/График работы), которые
- * и стоят в макете. На мобильном раздел остаётся доступен через «Ещё»: `DRAWER_SECTIONS`
- * строятся из `SECTIONS` целиком, поэтому в шторке он появляется автоматически. На десктопе
- * (`app/Header.tsx`) ограничения нет — там рендерится полный `TOP_LEVEL_NAV_ITEMS`.
- */
-const BOTTOM_NAV_EXCLUDED_LABELS = ['Настройки']
-
-export const BOTTOM_NAV_ITEMS: NavLeaf[] = TOP_LEVEL_NAV_ITEMS.filter(
-    (item) => !BOTTOM_NAV_EXCLUDED_LABELS.includes(item.label),
-)

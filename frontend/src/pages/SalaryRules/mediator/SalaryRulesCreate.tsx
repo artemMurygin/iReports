@@ -73,7 +73,7 @@ export function SalaryRulesCreate() {
 
     const mobileBar = (
         <MobileSaveBar
-            className="sticky bottom-[var(--bottom-nav-h,4.5rem)] z-30 mt-auto md:hidden"
+            className="sticky bottom-0 z-30 mt-auto md:hidden"
             hintText={page.mobileHintText}
             onSave={page.handleSubmit}
             canSave={page.canSubmit}
