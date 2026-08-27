@@ -49,7 +49,7 @@ export function fmtCompact(n: number): string {
 // PeriodBucket на бэкенде — все три гранулярности сериализуются как полная
 // дата "YYYY-MM-DD"). Короткий формат для подписей под мини-графиком карточки
 // серии, вида "29 июн" — date-fns уже используется с ru-локалью в проекте
-// (см. shared/ui/date-range-picker.tsx, features/Payout/ui/PayoutDrawer.tsx).
+// (см. shared/ui/date-range-picker.tsx, features/EmployeeBalance/ui/NewTransactionDrawer.tsx).
 export function formatShortDate(period: string): string {
     const date = new Date(period)
     if (Number.isNaN(date.getTime())) return period

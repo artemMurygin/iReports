@@ -117,3 +117,30 @@ export function formatPercentPrecise(part: number, whole: number): string {
     if (whole === 0) return '0%'
     return `${((part / whole) * 100).toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
 }
+
+/**
+ * Explicit table rather than `Intl.DateTimeFormat('ru-RU', { month: 'short' })` — that locale
+ * formatter's exact output (trailing "." after the abbreviation, a trailing "г." after the year)
+ * varies across ICU/Node versions and doesn't match the mockups' style ("12 авг 2026"), so a
+ * fixed table is the only way to render it reliably everywhere. Originally lived only in
+ * `pages/SalaryRuleList/model/formatUpdatedAt.ts`; promoted here (frontend/CLAUDE.md: a pattern
+ * repeating in ≥2 places moves to `shared`) when `pages/EmployeeSettlements` needed the same
+ * "day short-month year" shape for its "Последнее движение"/"Данные на" columns — pages can't
+ * import one another, so the second place couldn't just reuse the first's local helper.
+ */
+const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+
+/** '12 авг 2026' — day + short month + year, no trailing periods. Accepts a `Date` or an
+ * ISO/parseable date string; `null` (no movement/timestamp yet) -> '—'. */
+export function formatShortDate(date: Date | string | null): string {
+    if (date === null) return '—'
+    const value = typeof date === 'string' ? new Date(date) : date
+    return `${value.getDate()} ${SHORT_MONTHS[value.getMonth()]} ${value.getFullYear()}`
+}
+
+/** '25 авг 2026, 14:30' — `formatShortDate` plus HH:mm, for "Данные на …" freshness notes. */
+export function formatShortDateTime(date: Date | number): string {
+    const value = typeof date === 'number' ? new Date(date) : date
+    const time = `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`
+    return `${formatShortDate(value)}, ${time}`
+}

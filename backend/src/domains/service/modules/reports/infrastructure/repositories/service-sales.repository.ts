@@ -54,7 +54,9 @@ export class ServiceSalesRepository
                 quantity: true,
                 price: true,
                 engeneerSalary: true,
-                service: { select: { name: true, categoryId: true, price: true } },
+                service: {
+                    select: { name: true, categoryId: true, price: true },
+                },
                 order: { select: { closedAt: true, payed: true, cost: true } },
             },
         });

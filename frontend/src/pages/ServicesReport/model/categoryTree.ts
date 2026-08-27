@@ -10,6 +10,31 @@ export function getDirectChildren(categories: ServiceCategory[], parentId: strin
     return getDirectChildrenById(categories, parentId !== null ? Number(parentId) : null)
 }
 
+export type CategorySearchMatch = { category: ServiceCategory; ancestors: ServiceCategory[] }
+
+function getAncestorChain(categories: ServiceCategory[], parentId: number | null): ServiceCategory[] {
+    const chain: ServiceCategory[] = []
+    let current = parentId !== null ? categories.find((c) => c.id === parentId) : undefined
+    while (current) {
+        chain.unshift(current)
+        current = current.parentId !== null ? categories.find((c) => c.id === current!.parentId) : undefined
+    }
+    return chain
+}
+
+/** Плоский список категорий, чьё название содержит `query` (без учёта регистра), каждая — с
+ * цепочкой предков (от корня) для хлебной крошки в результатах поиска, аналогично
+ * `catalogTree.ts` в `features/SalaryRuleForm` (тот же UX выбора категории, перенесённый на
+ * страницу услуг). Пустой запрос возвращает пустой список — вызывающий код в этом случае
+ * показывает обычное дерево, а не «ничего не найдено». */
+export function searchCategories(categories: ServiceCategory[], query: string): CategorySearchMatch[] {
+    const normalized = query.trim().toLowerCase()
+    if (normalized === '') return []
+    return categories
+        .filter((c) => c.name.toLowerCase().includes(normalized))
+        .map((c) => ({ category: c, ancestors: getAncestorChain(categories, c.parentId) }))
+}
+
 function mergePeriodBreakdowns(entries: ServiceAnalyticsEntry[]): ServiceBreakdownPoint[] {
     if (!entries.length) return []
     const periods = entries[0].breakdown.map((b) => b.period)
