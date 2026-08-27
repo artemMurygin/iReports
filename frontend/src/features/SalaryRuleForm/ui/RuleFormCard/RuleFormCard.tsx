@@ -5,6 +5,7 @@ import { AwardSection } from './ui/AwardSection.tsx'
 import { RuleFormCardFields } from './ui/RuleFormCardFields.tsx'
 import { RuleFormCardFooter } from './ui/RuleFormCardFooter.tsx'
 import { RuleFormCardHeader } from './ui/RuleFormCardHeader.tsx'
+import { TaskCompletedFields } from './ui/TaskCompletedFields.tsx'
 
 /**
  * Pencil: design/sallary-first-iteration.pen, node `tSYIw` → `Список правил` → `Правило 3 ·
@@ -106,8 +107,10 @@ export function RuleFormCard({
 
                     <div className="h-px w-full bg-hairline" />
 
-                    {/* Тип-зависимое тело: у `PayPerHour` это единственное поле ставки, у остальных
-                        типов — блок «Вариант награды» с под-полями выбранного варианта. */}
+                    {/* Тип-зависимое тело: у `PayPerHour` — единственное поле ставки, у `TaskCompleted`
+                        (change salary-rule-bitrix-task) — своя группа полей задачи Bitrix24 без
+                        варианта награды, у остальных типов — блок «Вариант награды» с под-полями
+                        выбранного варианта. */}
                     {draft.type === 'PayPerHour' ? (
                         <AmountField
                             label="Ставка, ₽ / час"
@@ -116,6 +119,8 @@ export function RuleFormCard({
                             error={errors.price}
                             onValueChange={(price) => patchDraft({ price })}
                         />
+                    ) : draft.type === 'TaskCompleted' ? (
+                        <TaskCompletedFields draft={draft} errors={errors} onChange={patchDraft} />
                     ) : (
                         <AwardSection
                             draft={draft}

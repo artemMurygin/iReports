@@ -5,6 +5,8 @@
 // Форма едина для service и shop; зеркало для HTTP-ответа —
 // contracts/commands/salary-rule.ts → calculationLineSchema.
 
+import type { TaskRuleStatus } from 'ireports-contracts';
+
 export interface CalculationSourceRef {
     // Конкретные типы источников определяет само правило своего домена
     // ('order' | 'orderItem' | 'demand' | 'demandPosition' | ...).
@@ -48,4 +50,22 @@ export interface CalculationLine {
     rate?: number;
     amount: number;
     sources: CalculationSourceRef[];
+    // true — правило-задача (TaskCompleted, change salary-rule-bitrix-task)
+    // не может дать начисление в этом проходе, потому что связанная задача
+    // Bitrix24 удалена/недоступна либо у неё не распознан тег расчётного
+    // месяца (spec.md, "Обработка недоступной задачи"); amount в этом
+    // случае всегда 0. Опционально — у остальных типов правил такого
+    // состояния нет, поле остаётся undefined. Зеркало
+    // contracts/commands/salary-rule.ts → employeeSalaryReportRuleSchema.
+    // isTaskUnavailable (маппинг line → строка отчёта — application-слой,
+    // не этот тип).
+    isUnavailable?: boolean;
+    // Статус связанной задачи Bitrix24 ЗА ПЕРИОД этой строки (TaskCompleted,
+    // change salary-rule-bitrix-task) — только когда для этого периода
+    // найдена подходящая задача (см. calculate()); используется
+    // application-слоем и для отображения (employeeSalaryReportRuleSchema.
+    // taskStatus), и как источник истины для того, доступен ли ручной ввод
+    // фактической суммы (только при 'COMPLETED', spec.md "Ручной ввод
+    // фактической суммы"). У остальных типов правил — всегда undefined.
+    taskStatus?: TaskRuleStatus | null;
 }

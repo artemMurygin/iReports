@@ -30,6 +30,12 @@ export const SALARY_BASIS_OPTIONS: SegmentedControlOption<SalaryBasisValue>[] = 
  * has no `FixedPercent` variant — see `taskCompletedSalaryConfigSchema`). `PayPerHour` has no
  * award at all (`config` is just `price`), hence the empty array — its own field
  * (`Ставка, ₽/час`) is rendered unconditionally by `core/ui/RuleFormCard`, not through this list.
+ *
+ * `TaskCompleted` is empty for the same reason since change salary-rule-bitrix-task
+ * (design.md, Decision 2 — `award`-union removed, единственный вид вознаграждения теперь
+ * фиксированная сумма, `taskCompletedSalaryConfigSchema.rewardAmount`) — its own field set
+ * (`Описание`/`Расчётный месяц`/`Вид`/`Дедлайн`/`Сумма вознаграждения`) is rendered unconditionally
+ * by `TaskCompletedFields`, not through `AwardSection`/this list.
  */
 export const AWARD_OPTIONS_BY_TYPE: Record<ServiceRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
@@ -51,10 +57,7 @@ export const AWARD_OPTIONS_BY_TYPE: Record<ServiceRuleType, AwardOptionConfig[]>
         { kind: 'FixedPercent', title: 'Фиксированный процент', description: 'Процент от выбранной базы' },
         { kind: 'FloatPercent', title: 'Плавающий процент', description: 'Базовый процент и 3 порога плана' },
     ],
-    TaskCompleted: [
-        { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за выполненную задачу' },
-        { kind: 'FloatPercent', title: 'Плавающий процент', description: 'Базовая ставка и 3 порога плана' },
-    ],
+    TaskCompleted: [],
 }
 
 /** The service rule types whose `config` has an `orderTypeIds` field

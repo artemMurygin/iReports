@@ -30,6 +30,7 @@ import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-statu
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
 
 // Тонкий сквозной путь Фазы 1, дополненный Фазой 6 ленивым кэшем и
 // снапшотом закрытого периода, и Фазой 9 парой факт/прогноз + компактным
@@ -83,6 +84,7 @@ export class GetEmployeeSalaryReportService {
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
         private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
+        private readonly ensureTaskRules: EnsureTaskRulesOnReadService,
     ) {}
 
     async execute(
@@ -178,6 +180,13 @@ export class GetEmployeeSalaryReportService {
         const { rules, schemasVersion } =
             await this.salaryRulesResolver.forEmployee(employeeId);
 
+        // Ленивое достраивание задачи регулярного правила-задачи на
+        // запрошенный период (задача 7.2 change salary-rule-bitrix-task,
+        // design.md Decision 5) — тот же приём, что ListSalesPlansService
+        // применяет к EnsureSalesPlansForPeriodService: @ProdCron первого
+        // числа не тикает в dev.
+        await this.ensureTaskRules.ensureAll(rules, employeeId, period);
+
         const freshnessStamp = await this.computeFreshnessStamp(
             'service',
             schemasVersion,
@@ -202,6 +211,7 @@ export class GetEmployeeSalaryReportService {
         const baseContext = await this.contextBuilder.build(
             validatedPeriod,
             employeeId,
+            rules,
         );
 
         const [factLines, prognoseLines] = await Promise.all([

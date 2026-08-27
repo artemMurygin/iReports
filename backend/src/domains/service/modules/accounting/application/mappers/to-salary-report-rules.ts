@@ -11,11 +11,15 @@ import {
     OrderPayedSalaryConfig,
     PercentBorder,
     SalaryRule,
-    TaskCompletedSalaryConfig,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
-import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
+import {
+    buildRuleBreakdown,
+    RuleBreakdownLine,
+} from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
 import { buildFloatPercentThresholdInfo } from '@/domains/service/modules/accounting/domain/services/float-percent';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
+import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
+import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix.config';
 
 // Разбирает разбивку по правилу для ответа зарплатного отчёта (Фаза 9, см.
 // docs/payroll/prd-payroll-calculation.md, раздел 6) — общая точка для
@@ -62,8 +66,50 @@ export function buildSalaryReportRules(
                       }
                     : undefined,
             sources: buildResponseSources(fact.sources, prognose.sources),
+            ...buildTaskRuleFields(rule, fact),
         };
     });
+}
+
+// bitrixTaskUrl/taskStatus/isTaskUnavailable/actualAmount — только для
+// TaskCompleted (change salary-rule-bitrix-task, design.md, contracts/
+// commands/salary-rule.ts → employeeSalaryReportRuleSchema); undefined для
+// остальных типов правил, поле в ответе просто отсутствует.
+//
+// bitrixTaskUrl строится от ТЕКУЩЕЙ (последней добавленной) задачи правила
+// (rule.bitrixTaskIds), а не от задачи, сматчившейся на конкретный период
+// (fact.sources) — ссылка на задачу в схеме/отчёте нужна независимо от
+// того, относится ли эта задача к отображаемому периоду (spec.md, "Ссылка
+// на задачу Bitrix24"). taskStatus/actualAmount, наоборот, ПЕРИОД-специфичны
+// (см. CalculationLine.taskStatus) — только когда задача сматчилась именно
+// на период этого отчёта, иначе поле ручного ввода суммы должно остаться
+// недоступным (spec.md, "Ручной ввод фактической суммы"). actualAmount —
+// значение fact.amount при статусе COMPLETED уже ЕСТЬ эффективная
+// фактическая сумма (введённая руководителем или, по умолчанию, полная
+// сумма правила — см. task-completed.entity.ts calculate()), отдельно поле
+// props.actualAmounts читать не нужно.
+function buildTaskRuleFields(
+    rule: SalaryRule,
+    fact: RuleBreakdownLine,
+): Pick<
+    EmployeeSalaryReportRule,
+    'bitrixTaskUrl' | 'taskStatus' | 'isTaskUnavailable' | 'actualAmount'
+> {
+    if (!(rule instanceof TaskCompletedEntity)) {
+        return {};
+    }
+
+    const currentTaskId = rule.bitrixTaskIds[rule.bitrixTaskIds.length - 1];
+
+    return {
+        bitrixTaskUrl:
+            currentTaskId !== undefined
+                ? buildBitrixTaskLink(currentTaskId)
+                : undefined,
+        taskStatus: fact.taskStatus ?? undefined,
+        isTaskUnavailable: fact.isUnavailable,
+        actualAmount: fact.taskStatus === 'COMPLETED' ? fact.amount : undefined,
+    };
 }
 
 // Сводит sources[] пары ФАКТ/ПРОГНОЗ по позиции — fact.sources и
@@ -130,20 +176,18 @@ function isPercentAward(rule: SalaryRule): boolean {
     return !!award && PERCENT_AWARD_TYPES.has(award.type);
 }
 
-// Пороги FloatPercent есть только у OrderPayed/TaskCompleted, и только
-// когда их award выбран как FloatPercent (а не Fixed/FixedPercent) — для
-// остальных типов правил (PayPerHour, ServiceCompleted) и остальных award
-// того же правила возвращает null, что и означает "поля floatPercent в
-// ответе не будет".
+// Пороги FloatPercent есть только у OrderPayed, и только когда его award
+// выбран как FloatPercent (а не Fixed/FixedPercent) — для остальных типов
+// правил (PayPerHour, ServiceCompleted) возвращает null, что и означает
+// "поля floatPercent в ответе не будет". TaskCompleted больше не имеет
+// award/FloatPercent вовсе (change salary-rule-bitrix-task, design.md
+// Decision 2 — единственный вид вознаграждения теперь фиксированная сумма
+// rewardAmount), поэтому для него всегда null.
 function getFloatPercentBorders(
     rule: SalaryRule,
 ): [PercentBorder, PercentBorder, PercentBorder] | null {
     if (rule.type === 'OrderPayed') {
         const award = (rule.config as OrderPayedSalaryConfig).award;
-        return award.type === 'FloatPercent' ? award.percentBorders : null;
-    }
-    if (rule.type === 'TaskCompleted') {
-        const award = (rule.config as TaskCompletedSalaryConfig).award;
         return award.type === 'FloatPercent' ? award.percentBorders : null;
     }
     return null;

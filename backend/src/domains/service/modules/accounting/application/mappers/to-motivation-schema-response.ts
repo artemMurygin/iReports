@@ -3,6 +3,8 @@ import type {
     SalaryRuleResponse,
 } from 'ireports-contracts';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
+import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix.config';
 
 // Деталь GET .../motivation-schema/:id — готова для предзаполнения формы
 // редактирования (id+type+name+targetRole+config каждого правила, см.
@@ -49,6 +51,19 @@ export function toMotivationSchemaResponse(
                     name: rule.name,
                     targetRole: rule.targetRole,
                     config: rule.config,
+                    // bitrixTaskUrl — только TaskCompleted, только когда у
+                    // правила уже есть накопленная задача (see
+                    // taskCompletedSalaryRuleResponseSchema).
+                    ...(rule instanceof TaskCompletedEntity &&
+                    rule.bitrixTaskIds.length > 0
+                        ? {
+                              bitrixTaskUrl: buildBitrixTaskLink(
+                                  rule.bitrixTaskIds[
+                                      rule.bitrixTaskIds.length - 1
+                                  ],
+                              ),
+                          }
+                        : {}),
                 }) as SalaryRuleResponse,
         ),
         updatedAt: updatedAt.toISOString(),

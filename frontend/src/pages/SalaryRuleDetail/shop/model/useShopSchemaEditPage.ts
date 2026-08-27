@@ -1,6 +1,7 @@
 import type { OrderTypeResponse } from 'ireports-contracts'
 
 import {
+    restrictRuleFormConfigToTarget,
     SHOP_RULE_FORM_CONFIG,
     useCatalog,
     useAllowedRolesByType,
@@ -27,7 +28,9 @@ export function useShopSchemaEditPage(id: string) {
         schema: schemaQuery.data ?? null,
         isLoading: schemaQuery.isLoading,
         errorMessage: schemaQuery.error?.message ?? null,
-        config: SHOP_RULE_FORM_CONFIG,
+        // TaskCompleted недоступен в схеме отдела — см. `useServiceSchemaEditPage.ts`'s зеркальный
+        // комментарий.
+        config: restrictRuleFormConfigToTarget(SHOP_RULE_FORM_CONFIG, schemaQuery.data?.target.type ?? null),
         allowedRolesByType,
         isRoleTypesLoading: ruleTypesQuery.isLoading,
         roleTypesError: ruleTypesQuery.error?.message ?? null,

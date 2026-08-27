@@ -43,4 +43,20 @@ export class SalaryRuleRepository
             }),
         );
     }
+
+    async findById(id: string): Promise<SalaryRule | null> {
+        const record = await this.client.salaryRule.findFirst({
+            where: { id, direction: 'service' },
+        });
+        return record ? this.mapper.toDomain(record) : null;
+    }
+
+    async update(entity: SalaryRule): Promise<void> {
+        await this.write(entity, (client) =>
+            client.salaryRule.update({
+                where: { id: entity.id },
+                data: { props: this.mapper.toPersistence(entity).props },
+            }),
+        );
+    }
 }

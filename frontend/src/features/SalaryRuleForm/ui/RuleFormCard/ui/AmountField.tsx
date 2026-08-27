@@ -12,8 +12,8 @@ export type AmountFieldProps = {
 
 /**
  * Денежное поле карточки правила: `Ставка, ₽ / час` (`PayPerHour`), `Сумма, ₽` (награда `Fixed`) и
- * `Базовая ставка, ₽` (`FloatPercent` у `TaskCompleted`) — одна и та же разметка с одинаковой
- * фильтрацией ввода (`[^0-9.,]`), отличаются только подпись и плейсхолдер.
+ * `Сумма вознаграждения, ₽` (`TaskCompleted`, `TaskCompletedFields.tsx`) — одна и та же разметка с
+ * одинаковой фильтрацией ввода (`[^0-9.,]`), отличаются только подпись и плейсхолдер.
  */
 export function AmountField({ label, value, placeholder, error, onValueChange }: AmountFieldProps) {
     return (

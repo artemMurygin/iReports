@@ -222,61 +222,80 @@ describe('resolveRuleDraft — OrderPayed award variants', () => {
     })
 })
 
-describe('resolveRuleDraft — TaskCompleted award variants', () => {
-    it('has no FixedPercent option — Fixed and FloatPercent only, per the contract', () => {
-        const result = resolveRuleDraft(baseDraft({ type: 'TaskCompleted', awardKind: 'FixedPercent' as never }))
-        expect(result.success).toBe(false)
-    })
+describe('resolveRuleDraft — TaskCompleted (change salary-rule-bitrix-task)', () => {
+    function taskDraft(overrides: Partial<RuleDraft> = {}): RuleDraft {
+        return baseDraft({
+            type: 'TaskCompleted',
+            description: 'Провести инвентаризацию склада',
+            period: '2026-08',
+            isRecurring: false,
+            dueDate: '2026-08-15',
+            price: '10000',
+            ...overrides,
+        })
+    }
 
-    it('FloatPercent requires basePrice and exactly 3 percentBorders, with no salaryBasis field', () => {
-        const missingPrice = resolveRuleDraft(
-            baseDraft({
-                type: 'TaskCompleted',
-                awardKind: 'FloatPercent',
-                basePrice: '',
-                percentBorders: defaultBorders(),
-            }),
-        )
-        expect(missingPrice.success).toBe(false)
-        if (!missingPrice.success) expect(missingPrice.errors.basePrice).toBeTruthy()
-
-        const ok = resolveRuleDraft(
-            baseDraft({
-                type: 'TaskCompleted',
-                awardKind: 'FloatPercent',
-                basePrice: '300',
-                percentBorders: defaultBorders(),
-            }),
-        )
-        expect(ok.success).toBe(true)
-        if (ok.success && ok.data.type === 'TaskCompleted' && ok.data.config.award.type === 'FloatPercent') {
-            expect('salaryBasis' in ok.data.config.award).toBe(false)
-            expect(ok.data.config.award.percentBorders).toHaveLength(3)
+    it('succeeds with all required fields, no award-union in the payload', () => {
+        const result = resolveRuleDraft(taskDraft())
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'TaskCompleted') {
+            expect(result.data.config).toEqual({
+                description: 'Провести инвентаризацию склада',
+                period: '2026-08',
+                isRecurring: false,
+                dueDate: '2026-08-15',
+                rewardAmount: 10000,
+            })
+            expect('award' in result.data.config).toBe(false)
         }
     })
 
-    it('FloatPercent fails with 2 percentBorders even when basePrice is set', () => {
-        const result = resolveRuleDraft(
-            baseDraft({
-                type: 'TaskCompleted',
-                awardKind: 'FloatPercent',
-                basePrice: '300',
-                percentBorders: defaultBorders().slice(0, 2),
-            }),
-        )
+    it('fails when description is missing', () => {
+        const result = resolveRuleDraft(taskDraft({ description: '  ' }))
         expect(result.success).toBe(false)
-        if (!result.success) expect(result.errors.thresholds).toContain('2')
+        if (!result.success) expect(result.errors.description).toBeTruthy()
     })
 
-    it('Fixed succeeds with just a price', () => {
-        const result = resolveRuleDraft(baseDraft({ type: 'TaskCompleted', awardKind: 'Fixed', price: '300' }))
+    it('fails when reward amount is missing', () => {
+        const result = resolveRuleDraft(taskDraft({ price: '' }))
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.price).toBeTruthy()
+    })
+
+    it('fails when due date is missing', () => {
+        const result = resolveRuleDraft(taskDraft({ dueDate: '' }))
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.dueDate).toBeTruthy()
+    })
+
+    it('accepts a due date on either boundary of the selected period', () => {
+        const firstDay = resolveRuleDraft(taskDraft({ period: '2026-02', dueDate: '2026-02-01' }))
+        expect(firstDay.success).toBe(true)
+
+        const lastDay = resolveRuleDraft(taskDraft({ period: '2026-02', dueDate: '2026-02-28' }))
+        expect(lastDay.success).toBe(true)
+    })
+
+    it('rejects a due date outside the selected period', () => {
+        const before = resolveRuleDraft(taskDraft({ period: '2026-08', dueDate: '2026-07-31' }))
+        expect(before.success).toBe(false)
+        if (!before.success) expect(before.errors.dueDate).toBeTruthy()
+
+        const after = resolveRuleDraft(taskDraft({ period: '2026-08', dueDate: '2026-09-01' }))
+        expect(after.success).toBe(false)
+        if (!after.success) expect(after.errors.dueDate).toBeTruthy()
+    })
+
+    it('carries isRecurring through to the payload', () => {
+        const result = resolveRuleDraft(taskDraft({ isRecurring: true }))
         expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'TaskCompleted') {
+            expect(result.data.config.isRecurring).toBe(true)
+        }
     })
 
     it('never carries orderTypeIds — the field only exists on OrderPayed/ServiceCompleted', () => {
-        const result = resolveRuleDraft(
-            baseDraft({ type: 'TaskCompleted', awardKind: 'Fixed', price: '300', orderTypeIds: [1, 2] }),
-        )
+        const result = resolveRuleDraft(taskDraft({ orderTypeIds: [1, 2] }))
         expect(result.success).toBe(true)
         if (result.success && result.data.type === 'TaskCompleted') {
             expect('orderTypeIds' in result.data.config).toBe(false)

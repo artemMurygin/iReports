@@ -4,7 +4,9 @@ import {
     salaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema,
     targetRoleSchema,
+    taskCompletedActualAmountEntrySchema,
 } from './salary-rule';
+import { periodSchema } from './sales-plan';
 
 // Контракты зарплатных правил направления `shop` (Фаза 12/13, issue
 // #57/#60/#62/#64, см. docs/payroll/plan-payroll-calculation.md). Отдельный
@@ -119,25 +121,53 @@ const usedProductSoldSalaryRuleSchema = z.object({
 
 // ========================== За выполненную задачу ========================== //
 
-// TaskCompleted магазина (Фаза 13, issue #64) — зеркало формы
-// taskCompletedSalaryConfigSchema сервиса (contracts/commands/salary-rule.ts),
-// но отдельный литерал схемы (issue #57 — направления технически не
-// связаны одним объектом, как и остальные типы правил этого файла).
-// Источник данных на бэкенде — тот же временный источник, что и у сервиса
-// (см. domain/entities/salary-rules/task-completed.entity.ts магазина):
-// открытый вопрос PRD "что считается задачей для TaskCompleted в магазине"
-// не решён, поэтому используется то же временное решение, что и у сервиса
-// в Фазе 8.
-const taskCompletedShopSalaryConfigSchema = z.object({
-    award: z.union([
-        z.object({ type: z.literal('Fixed'), price: z.number() }),
-        z.object({
-            type: z.literal('FloatPercent'),
-            basePrice: z.number(),
-            percentBorders: percentBordersSchema,
-        }),
-    ]),
-});
+// TaskCompleted магазина — зеркало формы taskCompletedSalaryConfigSchema
+// сервиса (contracts/commands/salary-rule.ts, change
+// salary-rule-bitrix-task), но отдельный литерал схемы (issue #57 —
+// направления технически не связаны одним объектом, как и остальные типы
+// правил этого файла). Как и у сервиса, "задача" — реальная задача
+// Bitrix24, привязанная к правилу (взамен временного воркфлоу
+// TaskCompletion), единственный вид вознаграждения — фиксированная сумма
+// (design.md, Decision 2). taskCompletedActualAmountEntrySchema
+// переиспользован из salary-rule.ts напрямую (не бизнес-логика — общий
+// примитивный словарь формы {period, amount}, та же причина, что у
+// targetRoleSchema/percentBordersSchema выше).
+const taskCompletedShopDueDateSchema = z
+    .string()
+    .regex(
+        /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
+        'Дедлайн должен быть в формате YYYY-MM-DD',
+    );
+
+function lastDayOfShopPeriod(period: string): number {
+    const [year, month] = period.split('-').map(Number);
+    return new Date(year, month, 0).getDate();
+}
+
+const taskCompletedShopSalaryConfigSchema = z
+    .object({
+        description: z.string().min(1),
+        period: periodSchema,
+        isRecurring: z.boolean(),
+        dueDate: taskCompletedShopDueDateSchema,
+        rewardAmount: z.number().nonnegative(),
+        bitrixTaskIds: z.array(z.number().int().positive()).optional(),
+        actualAmounts: z.array(taskCompletedActualAmountEntrySchema).optional(),
+    })
+    .superRefine((config, ctx) => {
+        const minDate = `${config.period}-01`;
+        const maxDate = `${config.period}-${String(
+            lastDayOfShopPeriod(config.period),
+        ).padStart(2, '0')}`;
+        if (config.dueDate < minDate || config.dueDate > maxDate) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['dueDate'],
+                message:
+                    'Дедлайн должен находиться в пределах выбранного расчётного месяца правила',
+            });
+        }
+    });
 
 const taskCompletedShopSalaryRuleSchema = z.object({
     type: z.literal('TaskCompleted'),

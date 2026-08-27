@@ -223,6 +223,52 @@ describe('CreateMotivationSchemaHandler', () => {
         });
     });
 
+    it('передаёт targetId как responsibleId в CreateSalaryRuleCommand для схемы на сотрудника (задача 6.2 change salary-rule-bitrix-task)', async () => {
+        await withRequestContext(async () => {
+            const { handler, execute } = buildHandler();
+            const command = new CreateMotivationSchemaCommand({
+                targetType: 'Employee',
+                targetId: 42,
+                name: 'Оклад',
+                rules: [
+                    {
+                        type: 'PayPerHour',
+                        name: 'Часы',
+                        targetRole: 'ENGINEER',
+                        config: { price: 100 },
+                    },
+                ],
+            });
+
+            await handler.execute(command);
+
+            expect(execute.mock.calls[0][0].responsibleId).toBe(42);
+        });
+    });
+
+    it('передаёт responsibleId: null в CreateSalaryRuleCommand для схемы на отдел', async () => {
+        await withRequestContext(async () => {
+            const { handler, execute } = buildHandler();
+            const command = new CreateMotivationSchemaCommand({
+                targetType: 'Department',
+                targetId: 7,
+                name: 'Оклад отдела',
+                rules: [
+                    {
+                        type: 'PayPerHour',
+                        name: 'Часы',
+                        targetRole: 'ENGINEER',
+                        config: { price: 100 },
+                    },
+                ],
+            });
+
+            await handler.execute(command);
+
+            expect(execute.mock.calls[0][0].responsibleId).toBeNull();
+        });
+    });
+
     it('вызывает findIdByTarget с targetType/targetId команды', async () => {
         await withRequestContext(async () => {
             const { handler, findIdByTarget } = buildHandler();

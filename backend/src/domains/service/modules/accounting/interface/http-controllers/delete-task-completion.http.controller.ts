@@ -1,27 +1,21 @@
-import {
-    Controller,
-    Delete,
-    HttpCode,
-    HttpStatus,
-    Param,
-} from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
+import { Controller, Delete, GoneException } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
-import { DeleteTaskCompletionCommand } from '../../application/command/delete-task-completion.command';
 
+// Requirement "Вывод из эксплуатации воркфлоу TaskCompletion" (spec.md) и
+// design.md, Decision 10, шаг 1 — см. WHY в create-task-completion.http.controller.ts.
 @ApiTags('Бухгалтерия: выполнение задач')
 @Controller()
 export class DeleteTaskCompletionHttpController {
-    constructor(private readonly commandBus: CommandBus) {}
-
     @Delete(routesV1.service.accounting.taskCompletionById)
-    @HttpCode(HttpStatus.NO_CONTENT)
-    @ApiOperation({ summary: 'Удалить запись о выполнении задачи' })
-    async delete(@Param('id') id: string): Promise<void> {
-        const command = new DeleteTaskCompletionCommand({
-            taskCompletionId: id,
-        });
-        await this.commandBus.execute(command);
+    @ApiOperation({
+        summary:
+            'Отключено: воркфлоу TaskCompletion выведен из эксплуатации — правило TaskCompleted привязывается к задаче Bitrix24',
+    })
+    delete(): never {
+        throw new GoneException(
+            'Воркфлоу TaskCompletion выведен из эксплуатации: записи ' +
+                'больше нельзя удалить через этот эндпоинт',
+        );
     }
 }

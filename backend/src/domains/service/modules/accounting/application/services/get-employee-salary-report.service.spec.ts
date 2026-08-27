@@ -23,6 +23,7 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import type { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
 
 // Отчёт сотрудника направления service (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит ОДНО
@@ -193,6 +194,11 @@ describe('GetEmployeeSalaryReportService', () => {
             deleteByDirectionAndPeriod: jest.fn(),
         };
 
+        const ensureAll = jest.fn().mockResolvedValue(undefined);
+        const ensureTaskRules = {
+            ensureAll,
+        } as unknown as EnsureTaskRulesOnReadService;
+
         const service = new GetEmployeeSalaryReportService(
             periodRepo,
             snapshotRepo,
@@ -202,6 +208,7 @@ describe('GetEmployeeSalaryReportService', () => {
             salesPlanRepo,
             contextBuilder,
             salaryRulesResolver,
+            ensureTaskRules,
         );
 
         return {
@@ -214,6 +221,7 @@ describe('GetEmployeeSalaryReportService', () => {
             upsertCache,
             getLastSuccessfulSyncAt,
             findPlansByDirectionAndPeriod,
+            ensureAll,
         };
     };
 
@@ -253,6 +261,24 @@ describe('GetEmployeeSalaryReportService', () => {
 
         expect(report.direction).toBe('service');
         expect(report.total).toEqual({ fact: 2000, prognose: 2000 });
+    });
+
+    // Задача 7.2 change salary-rule-bitrix-task: ленивое достраивание
+    // задачи Bitrix24 регулярного правила-задачи на запрошенный период при
+    // каждом чтении открытого отчёта — @ProdCron первого числа не тикает в
+    // dev.
+    it('открытый период — лениво достраивает задачи правил-задач схемы', async () => {
+        const schema = buildSchema(42);
+        const { service, ensureAll } = buildService({ schema });
+
+        await service.execute(42, '2026-08');
+
+        expect(ensureAll).toHaveBeenCalledTimes(1);
+        expect(ensureAll).toHaveBeenCalledWith(
+            schema.getProps().rules,
+            42,
+            '2026-08',
+        );
     });
 
     describe('ленивый кэш открытого периода', () => {

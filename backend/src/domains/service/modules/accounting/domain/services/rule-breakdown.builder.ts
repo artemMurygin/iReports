@@ -6,6 +6,7 @@ import {
     SalaryRule,
     TargetRole,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import type { TaskRuleStatus } from 'ireports-contracts';
 
 // Строка разбивки зарплаты по правилу — CalculationLine (см.
 // shared/domain/calculation-line.ts), обогащённая атрибутами самого правила
@@ -23,6 +24,10 @@ export interface RuleBreakdownLine {
     rate?: number;
     amount: number;
     sources: CalculationSourceRef[];
+    // TaskCompleted-специфичные поля (change salary-rule-bitrix-task) —
+    // undefined у остальных типов правил, см. CalculationLine.
+    isUnavailable?: boolean;
+    taskStatus?: TaskRuleStatus | null;
 }
 
 // rules и lines собраны одним и тем же оркестратором за один проход (см.
@@ -44,6 +49,8 @@ export function buildRuleBreakdown(
             rate: line.rate,
             amount: line.amount,
             sources: line.sources,
+            isUnavailable: line.isUnavailable,
+            taskStatus: line.taskStatus,
         };
     });
 }

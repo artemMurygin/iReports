@@ -75,11 +75,19 @@ export class CreateMotivationSchemaHandler implements ICommandHandler<
                 motivationSchemaId = motivationSchema.id;
             }
 
+            // responsibleId — только для схемы на сотрудника (targetType ===
+            // 'Employee'): TaskCompleted нужен ответственный по Bitrix24, у
+            // схемы на отдел его нет (Requirement "Создание правила-задачи
+            // только в схеме на сотрудника", spec.md); для остальных типов
+            // правил CreateSalaryRuleHandler это поле просто не читает.
+            const responsibleId =
+                command.targetType === 'Employee' ? command.targetId : null;
             for (const rule of command.rules) {
                 await this.commandBus.execute(
                     new CreateSalaryRuleCommand({
                         motivationSchemaId,
                         rule,
+                        responsibleId,
                     }),
                 );
             }

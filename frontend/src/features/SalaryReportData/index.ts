@@ -10,6 +10,7 @@ export { useEmployeeSalaryReport } from './model/useEmployeeSalaryReport.ts'
 export type { UseEmployeeSalaryReportResult } from './model/useEmployeeSalaryReport.ts'
 export { useDepartmentSalaryReport } from './model/useDepartmentSalaryReport.ts'
 export type { UseDepartmentSalaryReportResult } from './model/useDepartmentSalaryReport.ts'
+export { useSetTaskRuleActualAmount } from './model/useSetTaskRuleActualAmount.ts'
 
 export {
     SALARY_DIRECTION_LABELS,
@@ -30,6 +31,12 @@ export type {
     DepartmentReportVM,
 } from './model/types.ts'
 
-export { ROLE_LABELS, getRoleLabel, RULE_TYPE_LABELS, getRuleTypeLabel } from './model/labels.ts'
+export {
+    ROLE_LABELS,
+    getRoleLabel,
+    RULE_TYPE_LABELS,
+    getRuleTypeLabel,
+    TASK_RULE_STATUS_LABELS,
+} from './model/labels.ts'
 export { formatFloatPercentRange } from './model/formatFloatPercentRange.ts'
 export { pluralizeEmployees } from './model/pluralizeEmployees.ts'

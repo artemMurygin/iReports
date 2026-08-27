@@ -178,10 +178,23 @@ export const routesV1 = {
         },
         accounting: {
             salaryRuleTypes: `${serviceAccountingRoot}/salary_role_types`,
+            // TaskCompletion (Фаза 8) — воркфлоу выведен из эксплуатации
+            // (change salary-rule-bitrix-task, design.md Decision 10, шаг 1):
+            // create/confirm/reject/delete отвечают 410 Gone, маршруты
+            // оставлены зарегистрированными только чтобы вернуть внятную
+            // ошибку клиентам старого UI, а не 404. list/get (без отдельных
+            // констант выше — оба используют taskCompletions/
+            // taskCompletionById) остаются рабочими до задачи 11.2.
             taskCompletions: `${serviceAccountingRoot}/task_completions`,
             taskCompletionById: `${serviceAccountingRoot}/task_completions/:id`,
             confirmTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/confirm`,
             rejectTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/reject`,
+            // Ручной ввод фактической суммы по закрытой задаче правила
+            // TaskCompleted (change salary-rule-bitrix-task, задача 8.2) —
+            // ruleId уже часть тела запроса
+            // (setTaskRuleActualAmountRequestSchema в contracts), путь без
+            // :id, в отличие от остальных byId-маршрутов этого блока.
+            taskRuleActualAmount: `${serviceAccountingRoot}/task_rules/actual_amount`,
             // Расчётный период направления service (Фаза 3) — раньше жил на
             // общем для service/shop пути /accounting/period/:direction/:period
             // с direction, читаемым из route-параметра (см.

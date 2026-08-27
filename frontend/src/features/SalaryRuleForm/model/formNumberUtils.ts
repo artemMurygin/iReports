@@ -25,10 +25,12 @@ export type RuleFieldErrors = Partial<
         | 'price'
         | 'percent'
         | 'basePercent'
-        | 'basePrice'
         | 'salaryBasis'
         | 'thresholds'
-        | 'category',
+        | 'category'
+        | 'description'
+        | 'period'
+        | 'dueDate',
         string
     >
 >

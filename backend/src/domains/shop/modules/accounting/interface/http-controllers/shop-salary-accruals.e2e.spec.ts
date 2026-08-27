@@ -138,6 +138,8 @@ describe('Документы начисления магазина: close → sa
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
         deleteAllByMotivationSchema: () => Promise.resolve(),
+        findById: () => Promise.resolve(null),
+        update: () => Promise.resolve(),
     };
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),

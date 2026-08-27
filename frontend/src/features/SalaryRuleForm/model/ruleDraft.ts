@@ -57,16 +57,15 @@ export type RuleDraft = {
     type: RuleType
     name: string
     targetRole: TargetRole | ''
-    /** `PayPerHour.config.price` and award `Fixed.price` share this field (only one is ever read,
-     * depending on `type`/`awardKind`). */
+    /** `PayPerHour.config.price`, award `Fixed.price` and `TaskCompleted.config.rewardAmount`
+     * (change salary-rule-bitrix-task) share this field (only one is ever read, depending on
+     * `type`/`awardKind`). */
     price: string
     awardKind: AwardKind | ''
     /** `ServicePercent.percent` / `FixedPercent.percent`. */
     percent: string
-    /** `FloatPercent.basePercent` (`OrderPayed` only). */
+    /** `FloatPercent.basePercent` (`OrderPayed`/`ProductSold` only). */
     basePercent: string
-    /** `FloatPercent.basePrice` (`TaskCompleted` only). */
-    basePrice: string
     salaryBasis: SalaryBasisValue | ''
     percentBorders: BorderDraft[]
     thresholdsExpanded: boolean
@@ -84,6 +83,31 @@ export type RuleDraft = {
      * поэтому черновик всегда несёт значение (never `undefined`), а не отдельное "не задано" состояние.
      * Read only for `OrderPayed`/`ServiceCompleted`; ignored otherwise. */
     orderTypeIds: number[]
+    /** `TaskCompleted.config.description` (change salary-rule-bitrix-task) — текст задачи Bitrix24,
+     * создаваемой при сохранении правила. Read only for `TaskCompleted`; ignored otherwise. */
+    description: string
+    /** `TaskCompleted.config.period` (`taskCompletedSalaryConfigSchema`) — расчётный месяц правила
+     * на момент создания/редактирования (`YYYY-MM`), в границах которого обязан лежать `dueDate`
+     * (design.md, Decision 9). НЕ то же самое, что текущий расчётный месяц, который задача
+     * обслуживает в моменте после переноса в Bitrix24 (design.md, Decision 1/7) — это поле только
+     * для формы создания/редактирования. Read only for `TaskCompleted`; ignored otherwise. */
+    period: string
+    /** `TaskCompleted.config.isRecurring` — разовое правило или регулярное (создаёт новую задачу
+     * каждый месяц, см. `TaskRuleAutoCreationCron`). Read only for `TaskCompleted`; ignored
+     * otherwise. */
+    isRecurring: boolean
+    /** `TaskCompleted.config.dueDate` (`YYYY-MM-DD`) — дедлайн задачи, обязан лежать в границах
+     * `period` (design.md, Decision 9, `taskCompletedDueDateBounds`). Read only for `TaskCompleted`;
+     * ignored otherwise. */
+    dueDate: string
+}
+
+/** Текущий месяц (`YYYY-MM`) — дефолтный расчётный период нового правила-задачи
+ * (`TaskCompleted.config.period`), тот же приём, что и `SalaryReportData`'s `getCurrentPeriod`
+ * (руководитель обычно заводит задачу на текущий месяц, а не оставляет период пустым). */
+function currentPeriod(): string {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
 /** Default 3 threshold rows — pre-filled with the mockup's own example values (`design/
@@ -108,12 +132,15 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         awardKind: '',
         percent: '',
         basePercent: '',
-        basePrice: '',
         salaryBasis: '',
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
+        description: '',
+        period: currentPeriod(),
+        isRecurring: false,
+        dueDate: '',
     }
 }
 
@@ -129,11 +156,14 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         price: '',
         percent: '',
         basePercent: '',
-        basePrice: '',
         salaryBasis: '',
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
+        description: '',
+        period: currentPeriod(),
+        isRecurring: false,
+        dueDate: '',
     }
 }

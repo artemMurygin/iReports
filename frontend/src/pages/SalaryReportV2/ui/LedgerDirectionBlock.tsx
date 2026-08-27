@@ -13,6 +13,7 @@ import { LedgerRuleRow } from './LedgerRuleRow.tsx'
 
 export type LedgerDirectionBlockProps = {
     report: DirectionReportVM
+    period: string
     isRuleExpanded: (key: string) => boolean
     onToggleRule: (key: string) => void
     /** Развёрнут ли блок направления целиком — дефолт задаётся вызывающей стороной (см.
@@ -58,6 +59,7 @@ const ICON_CLASS: Record<SalaryDirection, string> = {
  */
 export function LedgerDirectionBlock({
     report,
+    period,
     isRuleExpanded,
     onToggleRule,
     isExpanded,
@@ -134,6 +136,7 @@ export function LedgerDirectionBlock({
                                     key={rule.ruleId}
                                     rule={rule}
                                     direction={report.direction}
+                                    period={period}
                                     isClosed={report.isClosed}
                                     isExpanded={isRuleExpanded(key)}
                                     onToggle={() => onToggleRule(key)}

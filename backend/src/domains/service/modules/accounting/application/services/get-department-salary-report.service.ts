@@ -29,8 +29,16 @@ import { SALES_PERFORMANCE_READER } from '@/domains/service/modules/sales/applic
 import type { SalesPerformanceReaderPort } from '@/domains/service/modules/sales/application/ports/sales-performance.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
-import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type {
+    BitrixTaskRuleStatusItem,
+    ServiceCalculationErpData,
+} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
+import { BitrixTasksService } from '@/integrations/bitrix/bitrix-tasks.service';
+import { toTaskRuleStatus } from '@/domains/service/modules/accounting/application/mappers/to-task-rule-status';
+import type { TaskCompletedSalaryConfig } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import type { ResolvedEmployeeSalaryRules } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
+import { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
 
 interface EmployeeCalculationResult {
     factLines: CalculationLine[];
@@ -97,6 +105,8 @@ export class GetDepartmentSalaryReportService {
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
+        private readonly bitrixTasksService: BitrixTasksService,
+        private readonly ensureTaskRules: EnsureTaskRulesOnReadService,
     ) {}
 
     async execute(
@@ -250,6 +260,28 @@ export class GetDepartmentSalaryReportService {
             this.salesPlanRepo.findByDirectionAndPeriod('service', period),
         ]);
 
+        // Ленивое достраивание задач регулярных правил-задач отдела на
+        // запрошенный период (задача 7.2 change salary-rule-bitrix-task,
+        // design.md Decision 5) — до чтения статусов ниже, чтобы только что
+        // созданный bitrixTaskId сразу попал в bitrixTaskStatuses этого же
+        // расчёта, а не только со следующего чтения.
+        for (const [employeeId, resolved] of salaryRulesByEmployee) {
+            await this.ensureTaskRules.ensureAll(
+                resolved.rules,
+                employeeId,
+                period,
+            );
+        }
+
+        // Один пакетный запрос на ВЕСЬ отдел, а не по одному на сотрудника
+        // (spec.md, "Пакетный запрос статусов" — сценарий явно называет и
+        // отчёт отдела) — собирается по bitrixTaskIds всех правил
+        // TaskCompleted, попавших в расчёт любого сотрудника отдела, тем же
+        // приёмом, что и BuildServiceCalculationContextService.
+        const bitrixTaskStatuses = await this.fetchBitrixTaskStatuses(
+            salaryRulesByEmployee,
+        );
+
         const salesPlanAt = plans.reduce<Date | null>((latest, plan) => {
             const updatedAt = plan.getProps().updatedAt;
             return !latest || updatedAt > latest ? updatedAt : latest;
@@ -288,6 +320,7 @@ export class GetDepartmentSalaryReportService {
                         fact: 0,
                         prognose: 0,
                     },
+                    bitrixTaskStatuses,
                 } satisfies ServiceCalculationErpData,
             };
 
@@ -313,6 +346,40 @@ export class GetDepartmentSalaryReportService {
         }
 
         return contributions;
+    }
+
+    // Один batched-вызов на все bitrixTaskIds всех правил TaskCompleted
+    // отдела разом — зеркало fetchBitrixTaskStatuses/collectBitrixTaskIds
+    // BuildServiceCalculationContextService (задача 6.1 change
+    // salary-rule-bitrix-task), но по всем сотрудникам отдела сразу, а не
+    // по одному employeeId, т.к. этот сервис не проходит через
+    // BuildServiceCalculationContextService (контекст здесь собирается
+    // вручную, см. шапку файла).
+    private async fetchBitrixTaskStatuses(
+        salaryRulesByEmployee: Map<number, ResolvedEmployeeSalaryRules>,
+    ): Promise<BitrixTaskRuleStatusItem[]> {
+        const ids = new Set<number>();
+        for (const { rules } of salaryRulesByEmployee.values()) {
+            for (const rule of rules) {
+                if (rule.type !== 'TaskCompleted') {
+                    continue;
+                }
+                const config = rule.config as TaskCompletedSalaryConfig;
+                for (const id of config.bitrixTaskIds ?? []) {
+                    ids.add(id);
+                }
+            }
+        }
+        if (ids.size === 0) {
+            return [];
+        }
+        const batch = await this.bitrixTasksService.getTasksBatch([...ids]);
+        return batch.map((item) => ({
+            id: item.id,
+            isAvailable: item.isAvailable,
+            status: toTaskRuleStatus(item.status),
+            period: item.period,
+        }));
     }
 
     private async calculateEmployee(

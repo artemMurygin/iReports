@@ -1,4 +1,5 @@
 import {
+    restrictRuleFormConfigToTarget,
     useAllowedRolesByType,
     useOrderTypes,
     useSalaryRuleTypes,
@@ -25,7 +26,10 @@ export function useServiceSchemaEditPage(id: string) {
         schema: schemaQuery.data ?? null,
         isLoading: schemaQuery.isLoading,
         errorMessage: schemaQuery.error?.message ?? null,
-        config: SERVICE_RULE_FORM_CONFIG,
+        // TaskCompleted недоступен в схеме отдела (change salary-rule-bitrix-task, spec.md
+        // "Создание правила-задачи только в схеме на сотрудника") — та же фильтрация, что и на
+        // создании схемы (`useSalaryRulesPage.ts`), здесь по уже известной цели загруженной схемы.
+        config: restrictRuleFormConfigToTarget(SERVICE_RULE_FORM_CONFIG, schemaQuery.data?.target.type ?? null),
         allowedRolesByType,
         isRoleTypesLoading: ruleTypesQuery.isLoading,
         roleTypesError: ruleTypesQuery.error?.message ?? null,
