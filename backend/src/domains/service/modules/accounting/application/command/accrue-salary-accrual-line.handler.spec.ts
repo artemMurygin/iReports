@@ -106,6 +106,9 @@ describe('AccrueSalaryAccrualLineHandler', () => {
             lineId: line.id,
             ruleId: 'rule-1',
             createdBy: 7,
+            // Комментарий заполняется автоматически (правило · месяц) — по
+            // кнопке «Начислить» сотрудник ничего не вводит вручную (PRD 2).
+            comment: 'Почасовая ставка · июль 2026',
         });
 
         expect(response.status).toBe('PARTIALLY_ACCRUED');

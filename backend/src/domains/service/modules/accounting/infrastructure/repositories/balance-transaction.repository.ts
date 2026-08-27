@@ -3,8 +3,11 @@ import { Prisma } from '../../../../../../../prisma/generated/prisma/schema/clie
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
+import { DEFAULT_BALANCE_TRANSACTIONS_PAGE_LIMIT } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import type {
+    BalanceTransactionDateTypeFilter,
     BalanceTransactionFilter,
+    BalanceTransactionPage,
     BalanceTransactionRepositoryPort,
 } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
 import { SalaryAccrualLineAlreadyAccruedException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
@@ -77,31 +80,74 @@ export class BalanceTransactionRepository
         );
     }
 
+    // where общий для findByEmployee (страница) и sumFilteredByEmployee
+    // (сумма ВСЕЙ выборки, Фаза 7) — один и тот же фильтр from/to/types,
+    // чтобы selectionTotal в ответе баланса всегда отражал ровно ту же
+    // выборку, что показана в ленте, независимо от размера страницы.
+    private employeeLedgerWhere(
+        employeeId: number,
+        filter: BalanceTransactionDateTypeFilter,
+    ): Prisma.BalanceTransactionWhereInput {
+        return {
+            employeeId,
+            ...(filter.from || filter.to
+                ? {
+                      occurredAt: {
+                          ...(filter.from ? { gte: filter.from } : {}),
+                          ...(filter.to ? { lte: filter.to } : {}),
+                      },
+                  }
+                : {}),
+            ...(filter.types ? { type: { in: filter.types } } : {}),
+        };
+    }
+
     async findByEmployee(
         employeeId: number,
         filter: BalanceTransactionFilter,
-    ): Promise<BalanceTransaction[]> {
+    ): Promise<BalanceTransactionPage> {
+        const limit = filter.limit ?? DEFAULT_BALANCE_TRANSACTIONS_PAGE_LIMIT;
+        // occurredAt desc, createdAt desc, id desc — тройной ключ для
+        // полной детерминированности (см. WHY в
+        // domain/services/balance-transaction-ordering.ts). take: limit + 1
+        // — на одну запись больше, чтобы определить hasMore без отдельного
+        // count()-запроса (стандартный приём курсорной пагинации).
         const records = await this.client.balanceTransaction.findMany({
-            where: {
-                employeeId,
-                ...(filter.from || filter.to
-                    ? {
-                          occurredAt: {
-                              ...(filter.from ? { gte: filter.from } : {}),
-                              ...(filter.to ? { lte: filter.to } : {}),
-                          },
-                      }
-                    : {}),
-                ...(filter.types ? { type: { in: filter.types } } : {}),
-            },
-            orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
+            where: this.employeeLedgerWhere(employeeId, filter),
+            orderBy: [
+                { occurredAt: 'desc' },
+                { createdAt: 'desc' },
+                { id: 'desc' },
+            ],
+            take: limit + 1,
+            ...(filter.cursor
+                ? { cursor: { id: filter.cursor }, skip: 1 }
+                : {}),
         });
-        return records.map((record) => this.mapper.toDomain(record));
+        const hasMore = records.length > limit;
+        const page = hasMore ? records.slice(0, limit) : records;
+        const nextCursor = hasMore ? page[page.length - 1].id : null;
+        return {
+            items: page.map((record) => this.mapper.toDomain(record)),
+            nextCursor,
+            hasMore,
+        };
     }
 
     async sumByEmployee(employeeId: number): Promise<number> {
         const aggregate = await this.client.balanceTransaction.aggregate({
             where: { employeeId },
+            _sum: { amount: true },
+        });
+        return aggregate._sum.amount ?? 0;
+    }
+
+    async sumFilteredByEmployee(
+        employeeId: number,
+        filter: BalanceTransactionDateTypeFilter,
+    ): Promise<number> {
+        const aggregate = await this.client.balanceTransaction.aggregate({
+            where: this.employeeLedgerWhere(employeeId, filter),
             _sum: { amount: true },
         });
         return aggregate._sum.amount ?? 0;
@@ -118,6 +164,29 @@ export class BalanceTransactionRepository
         });
         return new Map(
             groups.map((group) => [group.employeeId, group._sum.amount ?? 0]),
+        );
+    }
+
+    async findLastMovementDateByEmployees(
+        employeeIds: number[],
+    ): Promise<Map<number, Date>> {
+        if (employeeIds.length === 0) {
+            return new Map();
+        }
+        const groups = await this.client.balanceTransaction.groupBy({
+            by: ['employeeId'],
+            where: { employeeId: { in: employeeIds } },
+            _max: { occurredAt: true },
+        });
+        return new Map(
+            groups
+                .filter(
+                    (
+                        group,
+                    ): group is typeof group & { _max: { occurredAt: Date } } =>
+                        group._max.occurredAt !== null,
+                )
+                .map((group) => [group.employeeId, group._max.occurredAt]),
         );
     }
 

@@ -193,4 +193,233 @@ describe('GetEmployeeBalanceService', () => {
         });
         expect(plainRow!.erp).toBeNull();
     });
+
+    // Фаза 7 (docs/employee-settlements-page-redesign/
+    // plan-employee-settlements-page-redesign.md): курсорная пагинация
+    // ленты «за всё время» (limit по умолчанию 20) + регресс сортировки
+    // (новое движение — первое).
+    describe('Фаза 7: курсорная пагинация «за всё время»', () => {
+        // occurredAt строго убывает с индексом — index 0 самый новый.
+        const dayOffset = (index: number) =>
+            new Date(
+                new Date('2026-08-01T12:00:00.000Z').getTime() -
+                    index * 24 * 60 * 60 * 1000,
+            );
+
+        it('первая страница — 20 последних движений по умолчанию, hasMore и nextCursor заданы', async () => {
+            const { service, transactionRepo } = build();
+            const seeded = Array.from({ length: 25 }, (_, index) =>
+                transaction({ amount: 10, occurredAt: dayOffset(index) }),
+            );
+            await transactionRepo.insertMany(seeded);
+
+            const response = await service.execute(42, {});
+
+            expect(response.transactions).toHaveLength(20);
+            expect(response.hasMore).toBe(true);
+            expect(response.nextCursor).not.toBeNull();
+            // Новые сверху: первая строка страницы — самое свежее движение.
+            expect(response.transactions[0].occurredAt.getTime()).toBe(
+                dayOffset(0).getTime(),
+            );
+            expect(response.transactions[19].occurredAt.getTime()).toBe(
+                dayOffset(19).getTime(),
+            );
+            // selectionTotal — сумма ВСЕЙ выборки (25 движений), а не
+            // только загруженной страницы (20) — иначе это была бы ошибка
+            // Фазы 7 (см. WHY в GetEmployeeBalanceService).
+            expect(response.selectionTotal).toBe(250);
+        });
+
+        it('вторая страница по nextCursor — оставшиеся более ранние движения, hasMore false на последней странице, без повторов', async () => {
+            const { service, transactionRepo } = build();
+            const seeded = Array.from({ length: 25 }, (_, index) =>
+                transaction({ amount: 10, occurredAt: dayOffset(index) }),
+            );
+            await transactionRepo.insertMany(seeded);
+
+            const first = await service.execute(42, {});
+            const second = await service.execute(42, {
+                cursor: first.nextCursor!,
+            });
+
+            expect(second.transactions).toHaveLength(5);
+            expect(second.hasMore).toBe(false);
+            expect(second.nextCursor).toBeNull();
+            expect(second.transactions[0].occurredAt.getTime()).toBe(
+                dayOffset(20).getTime(),
+            );
+            const firstPageIds = new Set(first.transactions.map((t) => t.id));
+            expect(
+                second.transactions.every((t) => !firstPageIds.has(t.id)),
+            ).toBe(true);
+        });
+
+        it('limit сужает страницу, но не влияет на остаток и selectionTotal', async () => {
+            const { service, transactionRepo } = build();
+            const seeded = Array.from({ length: 12 }, (_, index) =>
+                transaction({ amount: 10, occurredAt: dayOffset(index) }),
+            );
+            await transactionRepo.insertMany(seeded);
+
+            const paged = await service.execute(42, { limit: 5 });
+            const full = await service.execute(42, {});
+
+            expect(paged.transactions).toHaveLength(5);
+            expect(paged.hasMore).toBe(true);
+            expect(paged.balance).toBe(full.balance);
+            expect(paged.selectionTotal).toBe(full.selectionTotal);
+            expect(paged.selectionTotal).toBe(120);
+        });
+
+        it('без from/to выборка не режется по периоду («за всё время») — движение годовой давности попадает в ленту', async () => {
+            const { service, transactionRepo } = build();
+            await transactionRepo.insertMany([
+                transaction({
+                    amount: 100,
+                    occurredAt: new Date('2024-01-01'),
+                }),
+                transaction({
+                    amount: 200,
+                    occurredAt: new Date('2026-08-01'),
+                }),
+            ]);
+
+            const response = await service.execute(42, {});
+
+            expect(response.transactions).toHaveLength(2);
+            expect(response.selectionTotal).toBe(300);
+        });
+
+        // Регресс сортировки (Фаза 7, задача из плана): «сейчас при
+        // добавлении нового движения оно попадает в конец ленты вместо
+        // начала». Коллизия — два движения одного проведения строки
+        // (forAccruedLine) с ОДИНАКОВЫМ occurredAt (один вызов new Date()
+        // на оба движения в base) — именно такая коллизия обсуждается в
+        // плане Фазы 7 как повод для id-тайбрейкера.
+        it('регресс сортировки: новое движение (occurredAt по умолчанию — "сейчас") оказывается первым, несмотря на коллизии occurredAt у уже существующих движений', async () => {
+            jest.useFakeTimers();
+            try {
+                // Существующие движения проведены «в прошлом» (10 дней
+                // назад, к моменту закрытия месяца) — время заморожено
+                // ДО их создания, чтобы occurredAt/createdAt были строго
+                // раньше «сейчас» у fresh ниже, а не совпали с ним из-за
+                // общего fake-clock.
+                jest.setSystemTime(new Date('2026-08-10T09:00:00.000Z'));
+                const { service, transactionRepo } = build();
+                const accrual = withRequestContext(() =>
+                    SalaryAccrual.createFromSnapshot({
+                        direction: 'service',
+                        period: '2026-07',
+                        employeeId: 42,
+                        isDismissed: false,
+                        total: 2000,
+                        lines: [
+                            {
+                                ruleId: 'rule-1',
+                                type: 'PayPerHour',
+                                name: 'Почасовая ставка',
+                                targetRole: 'ENGINEER',
+                                quantity: 8,
+                                rate: 250,
+                                amount: 2000,
+                                sources: [{ type: 'order', id: 'order-1' }],
+                            },
+                        ],
+                    }),
+                );
+                const line = accrual.lines[0];
+                // Корректировка до проведения — при проведении создаст ДВА
+                // движения (SALARY_ACCRUAL + ACCRUAL_ADJUSTMENT) с общим
+                // occurredAt (один вызов new Date() на оба в
+                // forAccruedLine.base) — именно эта коллизия обсуждается в
+                // плане Фазы 7 как повод для id-тайбрейкера. Оба движения
+                // датированы «в прошлом» (см. выше), реальный репортед баг —
+                // про НОВОЕ движение, добавленное сегодня, а не про порядок
+                // внутри этой историчной пары (тот отдельно проверен тестом
+                // «id — детерминированный тайбрейкер» ниже).
+                withRequestContext(() => line.adjust(1800, 'Корректировка', 7));
+                const accruedTransactions = withRequestContext(() =>
+                    BalanceTransaction.forAccruedLine(accrual, line, 7),
+                );
+                await transactionRepo.insertMany(accruedTransactions);
+
+                // Новое ручное движение, добавленное «сейчас» — время
+                // сдвинуто вперёд относительно движений выше (без явного
+                // occurredAt — тот же путь, что и у
+                // CreateBalanceTransactionHandler).
+                jest.setSystemTime(new Date('2026-08-20T10:00:00.000Z'));
+                const fresh = withRequestContext(() =>
+                    BalanceTransaction.createManual({
+                        employeeId: 42,
+                        direction: 'service',
+                        type: 'ADVANCE',
+                        amount: 1000,
+                        createdBy: 7,
+                    }),
+                );
+                await transactionRepo.insertMany([fresh]);
+
+                const response = await service.execute(42, {});
+
+                expect(response.transactions[0].id).toBe(fresh.id);
+            } finally {
+                jest.useRealTimers();
+            }
+        });
+
+        // Тайбрейкер по id (задача Фазы 7: «добавить id как третий
+        // тайбрейкер... для полной детерминированности») — при полностью
+        // совпадающих occurredAt И createdAt порядок пары обязан быть
+        // одинаковым при каждом вызове, а не зависеть от порядка вставки/
+        // итерации Map.
+        it('id — детерминированный тайбрейкер при полностью совпадающих occurredAt и createdAt', async () => {
+            const { service, transactionRepo } = build();
+            const collisionTimestamp = new Date('2026-08-10T09:00:00.000Z');
+            const a = withRequestContext(
+                () =>
+                    new BalanceTransaction({
+                        id: 'aaaaaaaa-0000-0000-0000-000000000000',
+                        createdAt: collisionTimestamp,
+                        props: {
+                            employeeId: 42,
+                            direction: 'service',
+                            type: 'BONUS',
+                            amount: 100,
+                            occurredAt: collisionTimestamp,
+                            createdBy: 7,
+                            erpSyncRequired: false,
+                        },
+                    }),
+            );
+            const b = withRequestContext(
+                () =>
+                    new BalanceTransaction({
+                        id: 'bbbbbbbb-0000-0000-0000-000000000000',
+                        createdAt: collisionTimestamp,
+                        props: {
+                            employeeId: 42,
+                            direction: 'service',
+                            type: 'SICK_LEAVE',
+                            amount: 200,
+                            occurredAt: collisionTimestamp,
+                            createdBy: 7,
+                            erpSyncRequired: false,
+                        },
+                    }),
+            );
+            // Вставляем в порядке, обратном ожидаемому id-тайбрейкеру
+            // (a < b по строке, ожидаем b первым — id DESC), чтобы порядок
+            // вставки заведомо не мог случайно совпасть с ожидаемым
+            // результатом.
+            await transactionRepo.insertMany([a, b]);
+
+            const response = await service.execute(42, {});
+
+            expect(response.transactions.map((t) => t.id)).toEqual([
+                b.id,
+                a.id,
+            ]);
+        });
+    });
 });

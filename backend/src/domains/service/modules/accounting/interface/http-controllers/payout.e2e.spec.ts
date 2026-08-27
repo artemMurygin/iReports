@@ -9,7 +9,6 @@ import type {
     AccrueSalaryAccrualDocumentResponse,
     EmployeeBalanceResponse,
     PayoutConfirmationRequired,
-    PayoutPageResponse,
     PayoutResponse,
     SalaryAccrualListResponse,
     SalaryAccrualResponse,
@@ -72,6 +71,15 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // сущности AccountingModule, in-memory замена только границы БД и внешних
 // систем (ERP) — тот же приём, что balance-transactions.e2e.spec.ts и
 // salary-accrual-lines.e2e.spec.ts.
+//
+// Фаза 6 docs/employee-settlements-page-redesign: ассерты старой страницы-
+// отчёта GET .../payout/:period (шаги «страница выплаты видит сотрудника»
+// до/после выплаты) удалены вместе с самим эндпоинтом
+// (GetPayoutPageHttpController) — заменён сквозным
+// GET /v1/accounting/balance/summary/:period (Фаза 1 того же плана,
+// см. get-balance-summary.service.spec.ts). Сценарий создания/удаления
+// выплаты (шаги ниже) не тронут — это то самое действие «выплатить», не
+// переименованное и не удалённое (PRD, «Технические ограничения»).
 describe('Фаза 12 PRD 3: закрытие → начисление → выплата → удаление выплаты (e2e)', () => {
     let app: INestApplication<Server>;
     const schemas = new Map<number, MotivationSchema>();
@@ -100,6 +108,8 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
         deleteAllByMotivationSchema: () => Promise.resolve(),
+        findById: () => Promise.resolve(null),
+        update: () => Promise.resolve(),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: (direction, period) =>
@@ -309,23 +319,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const accruedAmount = balanceAfterAccrual.balance;
         expect(accruedAmount).toBeGreaterThan(0);
 
-        // 3) Страница выплаты видит сотрудника: остаток положительный,
-        // ещё не выплачено.
-        const payoutPageBefore = (
-            await request(app.getHttpServer())
-                .get(`/v1/service/accounting/payout/2026-07`)
-                .expect(200)
-        ).body as PayoutPageResponse;
-        const rowBefore = payoutPageBefore.employees.find(
-            (row) => row.employeeId === 42,
-        );
-        expect(rowBefore).toMatchObject({
-            balance: accruedAmount,
-            paid: 0,
-            payoutStatus: 'NOT_PAID',
-        });
-
-        // 4) Выплата на всю сумму остатка (PRD 3: «сначала ERP, затем
+        // 3) Выплата на всю сумму остатка (PRD 3: «сначала ERP, затем
         // транзакция БД») — движение PAYOUT + ErpCashDocument + документ
         // начисления → PAID, т.к. остаток после операции 0.
         const erpCreateCallsBefore = erpCreateCalls.length;
@@ -335,13 +329,6 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
                 .send({
                     employeeId: 42,
                     amount: accruedAmount,
-                    // Дата внутри периода 2026-07 — «paid» страницы выплаты
-                    // считает только движения PAYOUT с occurredAt внутри
-                    // месяца страницы (PAYOUT не несёт поле period, см. WHY
-                    // в get-payout-page.service.ts); выплата в реальности
-                    // может случиться и в следующем месяце — тогда «paid»
-                    // ЭТОЙ страницы её не увидит (см. заметку в отчёте
-                    // проверки фазы).
                     occurredAt: '2026-07-25T00:00:00.000Z',
                     createdBy: 7,
                 })
@@ -383,24 +370,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
             accrualAfterPayout.lines.every((line) => line.status === 'PAID'),
         ).toBe(true);
 
-        const payoutPageAfter = (
-            await request(app.getHttpServer())
-                .get(`/v1/service/accounting/payout/2026-07`)
-                .expect(200)
-        ).body as PayoutPageResponse;
-        const rowAfter = payoutPageAfter.employees.find(
-            (row) => row.employeeId === 42,
-        );
-        // paid — сырая сумма движений PAYOUT (знак как у BalanceTransaction,
-        // не «сколько выплачено» в бытовом смысле) — отрицательная, как и
-        // avances в этом же ответе (см. GetPayoutPageService.spec.ts).
-        expect(rowAfter).toMatchObject({
-            balance: 0,
-            paid: -accruedAmount,
-            payoutStatus: 'PAID',
-        });
-
-        // 5) Повторная выплата уже выплаченному сотруднику без подтверждения
+        // 4) Повторная выплата уже выплаченному сотруднику без подтверждения
         // отклоняется 409 с текущим (нулевым) остатком в ответе (PRD 3).
         const rejected = (
             await request(app.getHttpServer())
@@ -413,7 +383,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
             balance: 0,
         });
 
-        // 6) Удаление выплаты (PRD 3: «сначала ERP, затем в одной
+        // 5) Удаление выплаты (PRD 3: «сначала ERP, затем в одной
         // транзакции — движение с баланса и возврат документов начисления
         // из PAID в ACCRUED»): остаток возвращается, документ снова ACCRUED.
         const erpDeleteCallsBefore = erpDeleteCalls.length;
@@ -455,7 +425,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
             erpCashDocumentRepo.findByTransactionId(payout.transaction.id),
         ).resolves.toBeNull();
 
-        // 7) Документ ERP в ERP уже удалён — повторный DELETE payout не
+        // 6) Документ ERP в ERP уже удалён — повторный DELETE payout не
         // существующего движения PAYOUT это движение больше не найдёт (404).
         await request(app.getHttpServer())
             .delete(`/v1/service/accounting/payout/${payout.transaction.id}`)

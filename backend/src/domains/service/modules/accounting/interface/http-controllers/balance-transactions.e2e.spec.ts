@@ -103,6 +103,8 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
         deleteAllByMotivationSchema: () => Promise.resolve(),
+        findById: () => Promise.resolve(null),
+        update: () => Promise.resolve(),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: (direction, period) =>
@@ -686,5 +688,114 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         expect(card.lines.every((line) => line.status === 'ACCRUED')).toBe(
             true,
         );
+    });
+
+    // Фаза 7 (docs/employee-settlements-page-redesign): курсорная
+    // пагинация ленты «за всё время» — сотрудник 900 не задействован ни в
+    // одном из тестов выше (не в employees/schemas), чтобы страница
+    // считалась независимо от состояния, накопленного предыдущими тестами.
+    it('Фаза 7: курсорная пагинация ленты — 20 движений по умолчанию, вторая страница по nextCursor, hasMore/selectionTotal', async () => {
+        const employeeId = 900;
+        for (let index = 0; index < 23; index += 1) {
+            await request(app.getHttpServer())
+                .post(
+                    `/v1/accounting/balance/employee/${employeeId}/transactions`,
+                )
+                .send({
+                    direction: 'service',
+                    type: 'BONUS',
+                    amount: 10,
+                    createdBy: 7,
+                })
+                .expect(201);
+        }
+
+        const first = (
+            await request(app.getHttpServer())
+                .get(`/v1/accounting/balance/employee/${employeeId}`)
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(first.transactions).toHaveLength(20);
+        expect(first.hasMore).toBe(true);
+        expect(first.nextCursor).not.toBeNull();
+        // selectionTotal — сумма ВСЕХ 23 движений, а не только страницы (20).
+        expect(first.selectionTotal).toBe(230);
+        expect(first.balance).toBe(230);
+
+        const second = (
+            await request(app.getHttpServer())
+                .get(
+                    `/v1/accounting/balance/employee/${employeeId}?cursor=${first.nextCursor}`,
+                )
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(second.transactions).toHaveLength(3);
+        expect(second.hasMore).toBe(false);
+        expect(second.nextCursor).toBeNull();
+        expect(second.selectionTotal).toBe(230);
+
+        const firstPageIds = new Set(first.transactions.map((t) => t.id));
+        expect(second.transactions.every((t) => !firstPageIds.has(t.id))).toBe(
+            true,
+        );
+    });
+
+    it('Фаза 7: ?limit сужает страницу, но не влияет на selectionTotal/остаток', async () => {
+        const employeeId = 901;
+        for (let index = 0; index < 5; index += 1) {
+            await request(app.getHttpServer())
+                .post(
+                    `/v1/accounting/balance/employee/${employeeId}/transactions`,
+                )
+                .send({
+                    direction: 'service',
+                    type: 'BONUS',
+                    amount: 100,
+                    createdBy: 7,
+                })
+                .expect(201);
+        }
+
+        const limited = (
+            await request(app.getHttpServer())
+                .get(`/v1/accounting/balance/employee/${employeeId}?limit=2`)
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(limited.transactions).toHaveLength(2);
+        expect(limited.hasMore).toBe(true);
+        expect(limited.selectionTotal).toBe(500);
+
+        const full = (
+            await request(app.getHttpServer())
+                .get(`/v1/accounting/balance/employee/${employeeId}`)
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(full.hasMore).toBe(false);
+        expect(full.selectionTotal).toBe(500);
+        expect(full.balance).toBe(500);
+    });
+
+    // Без периода лента отдаётся «за всё время» (Фаза 7) — движение
+    // многолетней давности по-прежнему попадает в выборку и в остаток.
+    it('Фаза 7: без from/to лента не режется по периоду («за всё время»)', async () => {
+        const employeeId = 902;
+        await request(app.getHttpServer())
+            .post(`/v1/accounting/balance/employee/${employeeId}/transactions`)
+            .send({
+                direction: 'service',
+                type: 'BONUS',
+                amount: 500,
+                occurredAt: '2019-01-01T00:00:00.000Z',
+                createdBy: 7,
+            })
+            .expect(201);
+
+        const response = (
+            await request(app.getHttpServer())
+                .get(`/v1/accounting/balance/employee/${employeeId}`)
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(response.transactions).toHaveLength(1);
+        expect(response.balance).toBe(500);
     });
 });

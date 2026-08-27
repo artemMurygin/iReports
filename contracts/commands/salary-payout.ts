@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { periodSchema, salesDirectionSchema } from './sales-plan';
+import { salesDirectionSchema } from './sales-plan';
 import { balanceTransactionSchema, isoDateStringSchema } from './employee-balance';
 import { erpCashDocumentSchema } from './erp-cash';
 
@@ -26,49 +26,23 @@ import { erpCashDocumentSchema } from './erp-cash';
 const payoutStatusSchema = z.enum(['NOT_PAID', 'PARTIALLY_PAID', 'PAID']);
 export type PayoutStatus = z.infer<typeof payoutStatusSchema>;
 
-// ========================== Страница выплаты ========================== //
+// ========================== Страница выплаты (удалена) ========================== //
 
-// GET /v1/{direction}/accounting/payout/:period — строка сотрудника (PRD 3,
-// «Контракты»): accrued/advances/manual — те же срезы ленты баланса за
-// период, что и departmentEmployeeBalanceSchema (employee-balance.ts), но
-// здесь одного направления (страница выплаты — per-direction, в отличие от
-// сводки по отделу); balance — SUM всей ленты сотрудника (общий баланс,
-// PRD 2), не ограничен периодом; paid — сумма движений PAYOUT (этого
-// направления) за период. payoutStatus — производная от balance (см. WHY
-// выше), считается на сервере, не на клиенте.
-const payoutEmployeeRowSchema = z.object({
-    employeeId: z.number(),
-    name: z.string(),
-    accrued: z.number(),
-    advances: z.number(),
-    manual: z.number(),
-    balance: z.number(),
-    paid: z.number(),
-    payoutStatus: payoutStatusSchema,
-});
-export type PayoutEmployeeRow = z.infer<typeof payoutEmployeeRowSchema>;
-
-// Итог страницы — сумма строк сотрудников (тот же инвариант, что
-// departmentBalancesResponseSchema.totals).
-const payoutPageTotalsSchema = z.object({
-    accrued: z.number(),
-    advances: z.number(),
-    manual: z.number(),
-    balance: z.number(),
-    paid: z.number(),
-});
-export type PayoutPageTotals = z.infer<typeof payoutPageTotalsSchema>;
-
-// Форма ответа зафиксирована буквально по PRD 3, раздел «Контракты»:
-// «{ period, direction, totals, employees: [{ employeeId, name, accrued,
-// advances, manual, balance, paid, payoutStatus }] }».
-const payoutPageResponseSchema = z.object({
-    period: periodSchema,
-    direction: salesDirectionSchema,
-    totals: payoutPageTotalsSchema,
-    employees: z.array(payoutEmployeeRowSchema),
-});
-export type PayoutPageResponse = z.infer<typeof payoutPageResponseSchema>;
+// УДАЛЕНО (docs/employee-settlements-page-redesign/
+// plan-employee-settlements-page-redesign.md, Фаза 6): payoutPageResponseSchema/
+// payoutEmployeeRowSchema/payoutPageTotalsSchema обслуживали только старую
+// страницу-отчёт GET /v1/{direction}/accounting/payout/:period («Выплата»),
+// заменённую сквозным (без направления) списком «Взаиморасчёты» —
+// balanceSummary*Schema в employee-balance.ts (Фаза 1–2 того же плана).
+// Эндпоинт (GetPayoutPageHttpController/GetShopPayoutPageHttpController) и
+// фронтенд-страница `/payout`, читавшая эти схемы, удалены той же Фазой 6 —
+// payoutStatusSchema/PayoutStatus оставлены (использовались только этими
+// схемами, но явно не входят в список удаляемых по решению Фазы 6). Не
+// путать с createPayoutRequestSchema/payoutResponseSchema/payoutBatch*Schema
+// ниже — те описывают само действие «выплатить» (создание движения PAYOUT),
+// а не страницу-отчёт, и остаются в проекте как есть (PRD, «Технические
+// ограничения»: «не переименовывать сущности, отражающие реальное действие
+// «выплата»»).
 
 // ========================== Создание выплаты ========================== //
 
@@ -191,9 +165,6 @@ export type PayoutBatchResponse = z.infer<typeof payoutBatchResponseSchema>;
 
 export {
     payoutStatusSchema,
-    payoutEmployeeRowSchema,
-    payoutPageTotalsSchema,
-    payoutPageResponseSchema,
     createPayoutRequestSchema,
     payoutResponseSchema,
     payoutConfirmationRequiredSchema,

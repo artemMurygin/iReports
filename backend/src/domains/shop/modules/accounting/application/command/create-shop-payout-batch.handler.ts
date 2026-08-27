@@ -13,6 +13,12 @@ import { unknownEmployeeInfo } from '@/domains/service/modules/accounting/applic
 import { CreateShopPayoutCommand } from './create-shop-payout.command';
 import { CreateShopPayoutBatchCommand } from './create-shop-payout-batch.command';
 
+// РЕШЕНИЕ (docs/employee-settlements-page-redesign, Фаза 6) — зеркалит WHY в
+// CreatePayoutBatchHandler направления service: массовая выплата остаётся
+// без UI (макеты её не показывают), но эндпоинт (эта команда/хендлер,
+// POST .../payout/batch) не удалён и остаётся рабочим/тестируемым — решение
+// отложено, см. PRD «Технические ограничения».
+
 // Массовая выплата направления shop (PRD 3, «День выплаты» и «Критерии
 // готовности») — зеркалит CreatePayoutBatchHandler направления service (см.
 // domains/service/modules/accounting/application/command/create-payout-batch.handler.ts),

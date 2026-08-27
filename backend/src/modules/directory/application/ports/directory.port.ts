@@ -13,6 +13,14 @@ export interface EmployeeSummary {
     firstName: string;
     lastName: string;
     departmentId: number;
+    // Должность (BitrixEmployee.position) — опционально: нужна только
+    // сквозному списку взаиморасчётов (docs/employee-settlements-page-redesign,
+    // Фаза 1, GET /v1/accounting/balance/summary/:period), остальные
+    // потребители DirectoryRepositoryPort её не читают, поэтому поле
+    // необязательное — не ломает существующие фейки/реализации порта.
+    // undefined у фейков, где поле не заполняется, null — реальная запись
+    // Bitrix24 без подтянутой должности.
+    position?: string | null;
 }
 
 export interface DirectoryRepositoryPort {

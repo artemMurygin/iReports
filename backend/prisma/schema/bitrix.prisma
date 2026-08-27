@@ -50,6 +50,14 @@ model BitrixEmployee {
   /// начисления (PRD 1 docs/payroll-closing-and-accrual).
   isActive Boolean @default(true) @map("is_active")
 
+  /// Должность сотрудника (Bitrix24 WORK_POSITION) — для карточки сотрудника
+  /// в сквозном списке взаиморасчётов (docs/employee-settlements-page-redesign,
+  /// Фаза 1). NULL — должность ещё не подтянута синхронизацией.
+  /// TODO(employee-settlements-page-redesign): BitrixSyncService.uploadEmployees()
+  /// пока не читает WORK_POSITION из user.get — поле лежит незаполненным,
+  /// пока не появится отдельная задача на доработку синхронизации.
+  position String? @map("position")
+
   /// @deprecated Заменено на EmployeeIdentity(system: ROAPP, identifierType: EMPLOYEE_ID)
   /// — см. employee-identity.prisma и Фазу 2 docs/payroll/plan-payroll-calculation.md.
   /// Поле оставлено для истории/переходного периода, новые связи сюда не пишутся.

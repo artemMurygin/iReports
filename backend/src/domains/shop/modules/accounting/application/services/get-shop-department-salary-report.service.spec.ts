@@ -74,12 +74,13 @@ describe('GetShopDepartmentSalaryReportService', () => {
             .fn()
             .mockResolvedValue(
                 new Map(
-                    [...(overrides.shopHoursByEmployee ?? new Map())].map(
-                        ([employeeId, hours]) => [
-                            employeeId,
-                            { fact: hours, prognose: hours },
-                        ],
-                    ),
+                    [
+                        ...(overrides.shopHoursByEmployee ??
+                            new Map<number, number>()),
+                    ].map(([employeeId, hours]) => [
+                        employeeId,
+                        { fact: hours, prognose: hours },
+                    ]),
                 ),
             );
         const resolveCategoryDescendantFolderIds = jest

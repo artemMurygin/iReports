@@ -6,6 +6,7 @@ import type {
 import { AggregateRoot } from '@/shared/domain/aggregate-root.base';
 import { AggregateID } from '@/shared/domain/entity.base';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
+import { Period } from '@/shared/domain/period.value-object';
 import {
     ArgumentInvalidException,
     ArgumentNotProvidedException,
@@ -128,6 +129,12 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
             ruleId: line.ruleId,
             erpSyncRequired: false,
         };
+        // Комментарий SALARY_ACCRUAL заполняется автоматически названием
+        // правила и месяцем («Оплата по часам · июль 2026») — по кнопке
+        // «Начислить» сотрудник не вводит ничего вручную, но должен видеть
+        // в ленте баланса, за что и за какой период начислена сумма, не
+        // открывая документ (PRD 2).
+        const accrualComment = `${line.name} · ${Period.create(accrual.period).toRuLabel()}`;
         const transactions = [
             new BalanceTransaction({
                 id: randomUUID(),
@@ -135,6 +142,7 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
                     ...base,
                     type: 'SALARY_ACCRUAL',
                     amount: line.originalAmount,
+                    comment: accrualComment,
                 },
             }),
         ];

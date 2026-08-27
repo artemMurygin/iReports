@@ -60,6 +60,7 @@ describe('DirectoryRepository', () => {
                     firstName: true,
                     lastName: true,
                     departmentId: true,
+                    position: true,
                 },
                 orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
             });
@@ -87,6 +88,7 @@ describe('DirectoryRepository', () => {
                     firstName: true,
                     lastName: true,
                     departmentId: true,
+                    position: true,
                 },
                 orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
             });

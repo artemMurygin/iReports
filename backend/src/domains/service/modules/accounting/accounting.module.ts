@@ -13,9 +13,18 @@ import { MoyskladModule } from '@/domains/shop/integrations/moySklad/moysklad.mo
 import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySklad/moysklad-cash-document.adapter';
 import { EmployeeIdentityRepository } from '@/modules/employee-identity/infrastructure/repositories/employee-identity.repository';
 import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/employee-operation-lock.module';
+// BitrixModule — вход BitrixTasksService (change salary-rule-bitrix-task):
+// write-доступ к задачам Bitrix24, используемый правилом TaskCompleted —
+// создание/удаление задачи при сохранении/удалении правила (задачи 6.2/6.3),
+// пакетное чтение статусов при расчёте (задача 6.1) и в списке незакрытых
+// задач периода (задача 6.6), автосоздание задач регулярных правил (задача
+// 6.5). Тот же приём, что и у RoappModule/MoyskladModule выше — модуль
+// экспортирует нужный сервис отдельно от контроллера/остальной интеграции.
+import { BitrixModule } from '@/integrations/bitrix/bitrix.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
+import { SetTaskRuleActualAmountHandler } from '@/domains/service/modules/accounting/application/command/set-task-rule-actual-amount.handler';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
 import { ReopenAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.handler';
 import { AccrueSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-line.handler';
@@ -46,11 +55,15 @@ import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/ap
 import { GetEmployeeBalanceService } from '@/domains/service/modules/accounting/application/services/get-employee-balance.service';
 import { GetErpCashConfigService } from '@/domains/service/modules/accounting/application/services/get-erp-cash-config.service';
 import { GetDepartmentBalancesService } from '@/domains/service/modules/accounting/application/services/get-department-balances.service';
-import { GetPayoutPageService } from '@/domains/service/modules/accounting/application/services/get-payout-page.service';
+import { GetBalanceSummaryService } from '@/domains/service/modules/accounting/application/services/get-balance-summary.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
+import { EnsureBitrixTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/ensure-bitrix-task-for-period.service';
+import { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
+import { ListUnclosedTaskRulesForPeriodService } from '@/domains/service/modules/accounting/application/services/list-unclosed-task-rules-for-period.service';
+import { TaskRuleAutoCreationCron } from '@/domains/service/modules/accounting/infrastructure/cron/task-rule-auto-creation.cron';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-motivation-schema.http.controller';
@@ -80,11 +93,12 @@ import { CreateBalanceTransactionHttpController } from '@/domains/service/module
 import { DeleteBalanceTransactionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-balance-transaction.http.controller';
 import { CreatePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-payout.http.controller';
 import { CreatePayoutBatchHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-payout-batch.http.controller';
-import { GetPayoutPageHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-payout-page.http.controller';
 import { DeletePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-payout.http.controller';
 import { GetDepartmentBalancesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-balances.http.controller';
+import { GetBalanceSummaryHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-balance-summary.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { GetErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-erp-cash-config.http.controller';
+import { SetTaskRuleActualAmountHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/set-task-rule-actual-amount.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -208,6 +222,9 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         // на процесс, тот же приём, что DirectionSyncLockModule у
         // RoappSyncModule/MoySkladSyncModule.
         EmployeeOperationLockModule,
+        // BitrixTasksService (change salary-rule-bitrix-task) — см. WHY у
+        // импорта выше.
+        BitrixModule,
     ],
     controllers: [
         CreateMotivationSchemaHttpController,
@@ -224,6 +241,7 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         ConfirmTaskCompletionHttpController,
         DeleteTaskCompletionHttpController,
         ListTaskCompletionsHttpController,
+        SetTaskRuleActualAmountHttpController,
         ListSalaryRuleTypesHttpController,
         ListSalaryAccrualsHttpController,
         GetSalaryAccrualHttpController,
@@ -240,6 +258,11 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         CreateBalanceTransactionHttpController,
         DeleteBalanceTransactionHttpController,
         GetDepartmentBalancesHttpController,
+        // Сквозной список взаиморасчётов (docs/employee-settlements-page-redesign,
+        // Фаза 1) — все отделы либо один (departmentId — query, а не часть
+        // пути, в отличие от department выше), см. WHY у
+        // GetBalanceSummaryService.
+        GetBalanceSummaryHttpController,
         GetEmployeeBalanceHttpController,
         GetClosePeriodPreviewHttpController,
         // Конфигурация кассы ERP направления (PRD 3
@@ -255,10 +278,15 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         // выплаты своя касса ERP (SERVICE_ERP_CASH_DOCUMENT_PORT), поэтому
         // это отдельные хендлеры/контроллеры, а не диспатч общей команды
         // (тот же приём, что CloseAccountingPeriodHandler — 'service'
-        // литералом внутри, а не поле команды).
+        // литералом внутри, а не поле команды). GetPayoutPageHttpController
+        // (страница-отчёт GET .../payout/:period) удалён
+        // (docs/employee-settlements-page-redesign, Фаза 6) — заменён
+        // сквозным GetBalanceSummaryHttpController (Фаза 1 того же плана);
+        // create-payout-batch остаётся зарегистрированным (см. WHY в
+        // create-payout-batch.handler.ts) — единственное, что убрано здесь,
+        // это старая страница-отчёт.
         CreatePayoutHttpController,
         CreatePayoutBatchHttpController,
-        GetPayoutPageHttpController,
         DeletePayoutHttpController,
     ],
     providers: [
@@ -291,7 +319,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         CreatePayoutHandler,
         CreatePayoutBatchHandler,
         DeletePayoutHandler,
-        GetPayoutPageService,
         CreateTaskCompletionHandler,
         ConfirmTaskCompletionHandler,
         DeleteTaskCompletionHandler,
@@ -306,10 +333,28 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/domains/service/mod
         GetSalaryAccrualService,
         GetEmployeeBalanceService,
         GetDepartmentBalancesService,
+        GetBalanceSummaryService,
         GetClosePeriodPreviewService,
         CalculateServiceSnapshotRowsService,
         ErpPeriodSyncRunner,
         EnsurePeriodNotClosedService,
+        // change salary-rule-bitrix-task: ручной ввод фактической суммы
+        // (задача 6.4), автосоздание/ленивое достраивание задач регулярных
+        // правил (задача 6.5, потребители — Фаза 7, не эта), список
+        // незакрытых задач периода (задача 6.6, потребитель — HTTP-слой
+        // Фазы 8, не эта).
+        SetTaskRuleActualAmountHandler,
+        EnsureBitrixTaskForPeriodService,
+        // change salary-rule-bitrix-task, Фаза 7: EnsureTaskRulesOnReadService
+        // — ленивое достраивание задачи регулярного правила при GET схемы/
+        // отчёта (задача 7.2), потребители — GetMotivationSchemaService/
+        // GetEmployeeSalaryReportService/GetDepartmentSalaryReportService.
+        // TaskRuleAutoCreationCron — тот же ensure первого числа месяца
+        // (задача 7.1, @ProdCron, только направление service — см. WHY в
+        // самом файле крона).
+        EnsureTaskRulesOnReadService,
+        TaskRuleAutoCreationCron,
+        ListUnclosedTaskRulesForPeriodService,
         MotivationSchemaCreatedEventHandler,
         AccountingPeriodClosedEventHandler,
         SalaryAccrualDocumentsCreatedEventHandler,

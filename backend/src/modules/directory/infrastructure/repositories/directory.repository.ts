@@ -31,6 +31,10 @@ export class DirectoryRepository implements DirectoryRepositoryPort {
                 firstName: true,
                 lastName: true,
                 departmentId: true,
+                // Должность — только для сквозного списка взаиморасчётов
+                // (см. WHY в EmployeeSummary.position); остальные
+                // потребители читают тот же select и просто игнорируют поле.
+                position: true,
             },
             orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
         });

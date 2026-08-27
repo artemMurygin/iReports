@@ -16,10 +16,15 @@ import { toBalanceTransactionResponse } from '../mappers/to-balance-transaction-
 // атрибут происхождения.
 //
 // balance — SUM всей ленты сотрудника, не зависящая от фильтров: хранимого
-// поля «остаток» нет (PRD 2). transactions — движения по фильтрам,
-// selectionTotal — их сумма. Строка ленты не раскрывается: детализация
-// начисления живёт в документе, движение несёт ссылку accrualId.
-// Сотрудник без движений — это остаток 0 и пустая лента, не ошибка.
+// поля «остаток» нет (PRD 2). transactions — движения ТЕКУЩЕЙ СТРАНИЦЫ по
+// фильтрам (Фаза 7 docs/employee-settlements-page-redesign — курсорная
+// пагинация, «за всё время» без обязательного периода), selectionTotal —
+// сумма ВСЕЙ отфильтрованной выборки, не только страницы (см.
+// sumFilteredByEmployee — независимый от findByEmployee запрос с тем же
+// where, а не reduce() по уже пагинированному массиву, как было до Фазы 7).
+// Строка ленты не раскрывается: детализация начисления живёт в документе,
+// движение несёт ссылку accrualId. Сотрудник без движений — это остаток 0 и
+// пустая лента, не ошибка.
 @Injectable()
 export class GetEmployeeBalanceService {
     constructor(
@@ -33,10 +38,12 @@ export class GetEmployeeBalanceService {
         employeeId: number,
         filter: BalanceTransactionFilter,
     ): Promise<EmployeeBalanceResponse> {
-        const [balance, transactions] = await Promise.all([
+        const [balance, selectionTotal, page] = await Promise.all([
             this.transactionRepo.sumByEmployee(employeeId),
+            this.transactionRepo.sumFilteredByEmployee(employeeId, filter),
             this.transactionRepo.findByEmployee(employeeId, filter),
         ]);
+        const transactions = page.items;
 
         // Внешний ID документа ERP в ленте (PRD 3, «Критерии готовности») —
         // один батч-запрос по всем движениям выборки с erpSyncRequired,
@@ -56,10 +63,7 @@ export class GetEmployeeBalanceService {
         return {
             employeeId,
             balance,
-            selectionTotal: transactions.reduce(
-                (sum, transaction) => sum + transaction.amount,
-                0,
-            ),
+            selectionTotal,
             transactions: transactions.map((transaction) => {
                 const erpDocument = erpByTransactionId.get(transaction.id);
                 return toBalanceTransactionResponse(
@@ -72,6 +76,8 @@ export class GetEmployeeBalanceService {
                         : null,
                 );
             }),
+            nextCursor: page.nextCursor,
+            hasMore: page.hasMore,
         };
     }
 }

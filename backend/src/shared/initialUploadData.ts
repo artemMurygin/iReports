@@ -28,7 +28,6 @@ async function bootstrap() {
     try {
         if (erp.includes('B')) {
             await bitrix.uploadEmployees();
-            await bitrix;
             await bitrix.uploadStages();
             await bitrix.uploadDeviceTypes();
             await bitrix.uploadLeadSources();

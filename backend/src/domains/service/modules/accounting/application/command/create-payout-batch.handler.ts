@@ -13,6 +13,17 @@ import { unknownEmployeeInfo } from '../mappers/to-salary-accrual-response';
 import { CreatePayoutCommand } from './create-payout.command';
 import { CreatePayoutBatchCommand } from './create-payout-batch.command';
 
+// РЕШЕНИЕ (docs/employee-settlements-page-redesign, Фаза 6, PRD «Не в
+// скоупе»/«Технические ограничения»): макеты нового списка «Взаиморасчёты» и
+// страницы баланса сотрудника не показывают UI множественного выбора и
+// массовой выплаты — фронтенд-точки входа (`PayoutBatchConfirmDialog`,
+// чекбоксы `SelectionBar`, кнопка «Выплатить выбранным») удалены вместе со
+// старой страницей `/payout`. Сам эндпоинт (эта команда/хендлер,
+// POST .../payout/batch) НЕ удалён и остаётся рабочим и покрытым тестами —
+// решение отложено, а не «нет», см. PRD; при появлении макета массовой
+// выплаты для нового дизайна понадобится только новый UI поверх уже
+// существующего контракта (PayoutBatchRequest/PayoutBatchResponse).
+
 // Массовая выплата направления service (PRD 3, «День выплаты» и «Критерии
 // готовности»: «результат содержит перечень успешных и неудачных»):
 // по каждому сотруднику — свой остаток на МОМЕНТ операции (не из тела

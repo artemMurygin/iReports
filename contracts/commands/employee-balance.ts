@@ -109,10 +109,20 @@ const balanceTransactionTypesFilterSchema = z
     .transform((value) => (Array.isArray(value) ? value : [value]))
     .transform((value) => value.flatMap((item) => item.split(',')))
     .pipe(z.array(balanceTransactionTypeSchema));
+// cursor/limit — курсорная пагинация ленты «за всё время»
+// (docs/employee-settlements-page-redesign, Фаза 7): без периода лента не
+// ограничена по месяцу, отдаётся порциями. limit без .default() — тип
+// запроса описывает, что можно ОТПРАВИТЬ (клиент вправе не передавать поле
+// вовсе), значение по умолчанию (20) и потолок (100 — max() здесь только
+// граница валидации, 400 на превышении) применяет бэкенд
+// (DEFAULT_BALANCE_TRANSACTIONS_PAGE_LIMIT в balance-transaction.port.ts).
+// cursor — id последнего движения предыдущей страницы.
 const getEmployeeBalanceQuerySchema = z.object({
     from: isoDateStringSchema.optional(),
     to: isoDateStringSchema.optional(),
     types: balanceTransactionTypesFilterSchema.optional(),
+    cursor: z.string().min(1).optional(),
+    limit: z.coerce.number().int().positive().max(100).optional(),
 });
 export type GetEmployeeBalanceQuery = z.infer<
     typeof getEmployeeBalanceQuerySchema
@@ -120,12 +130,19 @@ export type GetEmployeeBalanceQuery = z.infer<
 
 // Ответ общего баланса сотрудника (Фаза 8b): balance — SUM всей ленты
 // сотрудника независимо от направления движений (без фильтров),
-// transactions — движения по фильтрам, selectionTotal — сумма выборки.
+// transactions — движения ТЕКУЩЕЙ СТРАНИЦЫ по фильтрам, selectionTotal —
+// сумма ВСЕЙ отфильтрованной выборки (не только текущей страницы, Фаза 7) —
+// значение не меняется при уменьшении/увеличении limit. nextCursor/hasMore
+// (Фаза 7 docs/employee-settlements-page-redesign) — курсорная пагинация:
+// nextCursor — id последнего движения страницы для следующего запроса
+// ?cursor=..., null — когда hasMore: false (страница последняя).
 const employeeBalanceResponseSchema = z.object({
     employeeId: z.number(),
     balance: z.number(),
     selectionTotal: z.number(),
     transactions: z.array(balanceTransactionSchema),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
 });
 export type EmployeeBalanceResponse = z.infer<
     typeof employeeBalanceResponseSchema
@@ -263,6 +280,67 @@ export type DepartmentBalancesResponse = z.infer<
     typeof departmentBalancesResponseSchema
 >;
 
+// ========================== Сводка взаиморасчётов (все отделы/один отдел) ========================== //
+
+// GET /v1/accounting/balance/summary/:period?departmentId&search — сквозной
+// (без направления сервис/магазин) список сотрудников с текущим общим
+// остатком (docs/employee-settlements-page-redesign, Фаза 1). В отличие от
+// departmentBalancesResponseSchema выше (один КОНКРЕТНЫЙ отдел, колонки
+// начислено/авансы/ручные ЗА ПЕРИОД) — departmentId необязателен (без него
+// сотрудники ВСЕХ отделов), нет колонок периода: balance — SUM всей ленты
+// сотрудника, от периода не зависит; :period в пути тем не менее
+// обязателен, тем же приёмом (валидация форматом Period), что и у
+// departmentBalancesResponseSchema — задел на будущие фазы, где к сводке
+// могут добавиться период-зависимые колонки, без изменения формы пути.
+// search — регистронезависимая подстрока по «Имя Фамилия».
+const balanceSummaryQuerySchema = z.object({
+    departmentId: z.coerce.number().int().positive().optional(),
+    search: z.string().trim().min(1).optional(),
+});
+export type BalanceSummaryQuery = z.infer<typeof balanceSummaryQuerySchema>;
+
+// position/isDismissed — карточка сотрудника (Bitrix24: WORK_POSITION/
+// ACTIVE); position — null, пока синхронизация должности не подтянута
+// (см. TODO у BitrixEmployee.position, prisma/schema/bitrix.prisma).
+// lastMovementAt — max(occurredAt) по сотруднику, null — движений ещё нет.
+const balanceSummaryEmployeeSchema = z.object({
+    employeeId: z.number(),
+    employeeName: z.string(),
+    departmentId: z.number(),
+    departmentName: z.string(),
+    position: z.string().nullable(),
+    isDismissed: z.boolean(),
+    lastMovementAt: z.coerce.date().nullable(),
+    balance: z.number(),
+});
+export type BalanceSummaryEmployee = z.infer<
+    typeof balanceSummaryEmployeeSchema
+>;
+
+// KPI-агрегаты по текущей выборке (все отделы либо один отдел, с учётом
+// search): balance — общий остаток (сумма строк); toPay — «к выплате
+// сотрудникам» (положительные остатки); debt — «долг сотрудников компании»
+// (отрицательные остатки, amount — со знаком, как в ленте, т.е. ≤ 0).
+const balanceSummaryTotalsSchema = z.object({
+    balance: z.number(),
+    toPay: z.object({ amount: z.number(), count: z.number() }),
+    debt: z.object({ amount: z.number(), count: z.number() }),
+});
+export type BalanceSummaryTotals = z.infer<typeof balanceSummaryTotalsSchema>;
+
+// departmentId в ответе — null в режиме «все отделы», иначе отражает
+// query-фильтр запроса (не привязан к пути, в отличие от
+// departmentBalancesResponseSchema.departmentId).
+const balanceSummaryResponseSchema = z.object({
+    period: periodSchema,
+    departmentId: z.number().nullable(),
+    employees: z.array(balanceSummaryEmployeeSchema),
+    totals: balanceSummaryTotalsSchema,
+});
+export type BalanceSummaryResponse = z.infer<
+    typeof balanceSummaryResponseSchema
+>;
+
 export {
     balanceTransactionTypeSchema,
     balanceTransactionSchema,
@@ -277,4 +355,8 @@ export {
     departmentEmployeeBalanceSchema,
     departmentBalancesTotalsSchema,
     departmentBalancesResponseSchema,
+    balanceSummaryQuerySchema,
+    balanceSummaryEmployeeSchema,
+    balanceSummaryTotalsSchema,
+    balanceSummaryResponseSchema,
 };

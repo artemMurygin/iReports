@@ -18,7 +18,6 @@ import { CreateShopSalaryRuleHandler } from '@/domains/shop/modules/accounting/a
 import { CreateShopPayoutHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-payout.handler';
 import { CreateShopPayoutBatchHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-payout-batch.handler';
 import { DeleteShopPayoutHandler } from '@/domains/shop/modules/accounting/application/command/delete-shop-payout.handler';
-import { GetShopPayoutPageService } from '@/domains/shop/modules/accounting/application/services/get-shop-payout-page.service';
 import { CreateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-motivation-schema.handler';
 import { UpdateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/update-shop-motivation-schema.handler';
 import { CreateShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/create-shop-task-completion.handler';
@@ -31,7 +30,6 @@ import { GetShopErpCashConfigHttpController } from '@/domains/shop/modules/accou
 import { CreateShopPayoutHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-payout.http.controller';
 import { CreateShopPayoutBatchHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-payout-batch.http.controller';
 import { DeleteShopPayoutHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/delete-shop-payout.http.controller';
-import { GetShopPayoutPageHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/get-shop-payout-page.http.controller';
 import { CloseShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/close-shop-accounting-period.handler';
 import { ListShopSalaryRuleTypesHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { CreateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/create-shop-motivation-schema.http.controller';
@@ -242,10 +240,14 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         // доменами, поэтому это не тот случай, что Reopen/RecalculateAccountingPeriod
         // выше (общий хендлер на оба направления). DELETE .../balance/transactions/:id
         // (ручные движения) по-прежнему обслуживается только AccountingModule
-        // сервиса — см. routesV1.accounting.balance.
+        // сервиса — см. routesV1.accounting.balance. GetShopPayoutPageHttpController
+        // (страница-отчёт GET .../payout/:period) удалён
+        // (docs/employee-settlements-page-redesign, Фаза 6) — заменена
+        // сквозным GetBalanceSummaryHttpController направления service (Фаза 1
+        // того же плана, без направления в пути); create-shop-payout-batch
+        // остаётся зарегистрированным (см. WHY в create-shop-payout-batch.handler.ts).
         CreateShopPayoutHttpController,
         CreateShopPayoutBatchHttpController,
-        GetShopPayoutPageHttpController,
         DeleteShopPayoutHttpController,
     ],
     providers: [
@@ -372,10 +374,7 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
             useClass: MoyskladCashDocumentAdapter,
         },
         // Выплата направления shop (PRD 3, Фаза 12) — собственные
-        // command-хендлеры (см. WHY у контроллеров выше) и собственный
-        // экземпляр GetShopPayoutPageService (не CQRS-хендлер — обычный
-        // provider, own instance под тем же приёмом, что
-        // GetShopEmployeeSalaryReportService и т.п.). Им всем нужен
+        // command-хендлеры (см. WHY у контроллеров выше). Им нужен
         // BALANCE_TRANSACTION_REPOSITORY — до этой фазы здесь не заводился
         // (с Фазы 8b мутации баланса живут только в AccountingModule
         // сервиса, эндпоинты /v1/accounting/balance/* без направления в
@@ -395,7 +394,6 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         CreateShopPayoutHandler,
         CreateShopPayoutBatchHandler,
         DeleteShopPayoutHandler,
-        GetShopPayoutPageService,
         {
             provide: EMPLOYEE_DISMISSAL,
             useClass: EmployeeDismissalRepository,

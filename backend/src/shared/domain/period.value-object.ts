@@ -8,6 +8,25 @@ export interface PeriodBounds {
     to: Date;
 }
 
+// Те же названия месяцев (именительный падеж), что и
+// frontend/src/shared/lib/format.ts::formatPeriodLabel — держим текст
+// в комментариях движений ленты баланса (toRuLabel) идентичным тому, что
+// фронтенд рисует сам для периода документа.
+const MONTHS_NOMINATIVE = [
+    'январь',
+    'февраль',
+    'март',
+    'апрель',
+    'май',
+    'июнь',
+    'июль',
+    'август',
+    'сентябрь',
+    'октябрь',
+    'ноябрь',
+    'декабрь',
+];
+
 // Период в формате 'YYYY-MM' — общий для accounting (расчёт зарплаты,
 // CalculationContext.period) и sales (SalesPlan.period, Фаза 3):
 // инкапсулирует формат и вычисление границ месяца, чтобы regexp и разбор
@@ -26,6 +45,15 @@ export class Period extends ValueObject<string> {
 
     getValue(): string {
         return this.props.value;
+    }
+
+    // 'июль 2026' — человекочитаемая подпись для автогенерируемых текстов
+    // (см. BalanceTransaction.forAccruedLine: комментарий движения
+    // «<правило> · <toRuLabel()>», чтобы сотрудник видел месяц начисления
+    // прямо в ленте баланса, не открывая документ).
+    toRuLabel(): string {
+        const [year, month] = this.props.value.split('-');
+        return `${MONTHS_NOMINATIVE[Number(month) - 1]} ${year}`;
     }
 
     // Границы месяца в UTC: 00:00:00.000 первого дня — 23:59:59.999

@@ -143,14 +143,19 @@ export const routesV1 = {
     // Общий баланс сотрудника (PRD 2, Фаза 8b, см. комментарий у
     // accountingBalanceRoot выше): остаток и лента по employeeId,
     // ручные движения (employeeTransactions), удаление ошибочного ручного
-    // движения (transactionById — DELETE; PATCH движения не существует)
-    // и сводка по отделу (department).
+    // движения (transactionById — DELETE; PATCH движения не существует),
+    // сводка по отделу (department) и сквозной (без department в пути —
+    // сам departmentId необязательный query-фильтр) список взаиморасчётов
+    // по всем сотрудникам компании (summary, docs/employee-settlements-page-redesign,
+    // Фаза 1) — :period в пути тем же приёмом, что у department выше, хотя
+    // сам остаток от периода не зависит (см. WHY в GetBalanceSummaryService).
     accounting: {
         balance: {
             employee: `${accountingBalanceRoot}/employee/:id`,
             employeeTransactions: `${accountingBalanceRoot}/employee/:id/transactions`,
             transactionById: `${accountingBalanceRoot}/transactions/:id`,
             department: `${accountingBalanceRoot}/department/:id/:period`,
+            summary: `${accountingBalanceRoot}/summary/:period`,
         },
     },
     // Маршруты этого блока были закрыты PortalAdminGuard (Фаза 2,
@@ -173,10 +178,23 @@ export const routesV1 = {
         },
         accounting: {
             salaryRuleTypes: `${serviceAccountingRoot}/salary_role_types`,
+            // TaskCompletion (Фаза 8) — воркфлоу выведен из эксплуатации
+            // (change salary-rule-bitrix-task, design.md Decision 10, шаг 1):
+            // create/confirm/reject/delete отвечают 410 Gone, маршруты
+            // оставлены зарегистрированными только чтобы вернуть внятную
+            // ошибку клиентам старого UI, а не 404. list/get (без отдельных
+            // констант выше — оба используют taskCompletions/
+            // taskCompletionById) остаются рабочими до задачи 11.2.
             taskCompletions: `${serviceAccountingRoot}/task_completions`,
             taskCompletionById: `${serviceAccountingRoot}/task_completions/:id`,
             confirmTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/confirm`,
             rejectTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/reject`,
+            // Ручной ввод фактической суммы по закрытой задаче правила
+            // TaskCompleted (change salary-rule-bitrix-task, задача 8.2) —
+            // ruleId уже часть тела запроса
+            // (setTaskRuleActualAmountRequestSchema в contracts), путь без
+            // :id, в отличие от остальных byId-маршрутов этого блока.
+            taskRuleActualAmount: `${serviceAccountingRoot}/task_rules/actual_amount`,
             // Расчётный период направления service (Фаза 3) — раньше жил на
             // общем для service/shop пути /accounting/period/:direction/:period
             // с direction, читаемым из route-параметра (см.
@@ -237,18 +255,21 @@ export const routesV1 = {
             // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
             // Фаза 12): root — POST создания на одного сотрудника (employeeId
             // в теле, не в пути — форма PRD 3, «Контракты»), batch —
-            // массовая выплата, byPeriod — GET таблицы сотрудников периода,
-            // byId — DELETE удаления выплаты (id — BalanceTransaction.id,
-            // не путать с общим routesV1.accounting.balance.transactionById,
-            // который для выплаты отклоняет запрос 409, см.
-            // BalanceTransactionNotPayoutException). Разные HTTP-методы на
-            // пересекающиеся сегменты пути (:period/:id/batch) не
-            // конфликтуют — Express/Nest резолвят маршрут по методу+пути
-            // независимо.
+            // массовая выплата (Фаза 6 docs/employee-settlements-page-redesign:
+            // эндпоинт остаётся рабочим, но без входа в UI — см. WHY в
+            // create-payout-batch.handler.ts), byId — DELETE удаления выплаты
+            // (id — BalanceTransaction.id, не путать с общим
+            // routesV1.accounting.balance.transactionById, который для
+            // выплаты отклоняет запрос 409, см.
+            // BalanceTransactionNotPayoutException). byPeriod (GET таблицы
+            // сотрудников периода — старая страница-отчёт «Выплата») удалён
+            // той же Фазой 6 — заменён сквозным
+            // routesV1.accounting.balance.summary. Разные HTTP-методы на
+            // пересекающиеся сегменты пути (:id/batch) не конфликтуют —
+            // Express/Nest резолвят маршрут по методу+пути независимо.
             payout: {
                 root: `${serviceAccountingRoot}/payout`,
                 batch: `${serviceAccountingRoot}/payout/batch`,
-                byPeriod: `${serviceAccountingRoot}/payout/:period`,
                 byId: `${serviceAccountingRoot}/payout/:id`,
             },
         },
@@ -399,11 +420,13 @@ export const routesV1 = {
             // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
             // Фаза 12) — зеркалит service.accounting.payout выше, в своём
             // namespace shopAccountingRoot (см. запрет на импорт между
-            // domains/service и domains/shop в backend/CLAUDE.md).
+            // domains/service и domains/shop в backend/CLAUDE.md). byPeriod
+            // (старая страница-отчёт «Выплата») удалён Фазой 6
+            // docs/employee-settlements-page-redesign — см. WHY у
+            // service.accounting.payout выше.
             payout: {
                 root: `${shopAccountingRoot}/payout`,
                 batch: `${shopAccountingRoot}/payout/batch`,
-                byPeriod: `${shopAccountingRoot}/payout/:period`,
                 byId: `${shopAccountingRoot}/payout/:id`,
             },
         },
