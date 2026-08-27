@@ -1,0 +1,3447 @@
+{
+  "version": "2.17",
+  "children": [
+    {
+      "type": "frame",
+      "id": "p1Z2B",
+      "x": 0,
+      "y": 0,
+      "name": "Component/Stamp",
+      "reusable": true,
+      "width": 64,
+      "height": 64,
+      "cornerRadius": 32,
+      "stroke": "$accent-diagnostic",
+      "strokeWidth": 2,
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "icon",
+          "id": "PbQMo",
+          "name": "Check",
+          "width": 28,
+          "height": 28,
+          "icon": "check",
+          "library": "lucide",
+          "fill": "$accent-diagnostic"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "eIMCF",
+      "x": 0,
+      "y": 0,
+      "name": "01 Титул",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$workshop-bg",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "c91w1A",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "GmXDJ",
+              "name": "Eyebrow",
+              "fill": "$text-muted-dark",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "fLgxt",
+              "name": "Meta Top",
+              "fill": "$text-muted-dark",
+              "content": "iReports",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "pCOIC",
+          "x": 120,
+          "y": 400,
+          "name": "Middle",
+          "layout": "vertical",
+          "gap": "$space-md",
+          "children": [
+            {
+              "type": "text",
+              "id": "zt9Ye",
+              "name": "Title",
+              "fill": "$text-on-dark",
+              "textGrowth": "fixed-width",
+              "width": 1320,
+              "content": "Почему это заняло так долго",
+              "lineHeight": 1.1,
+              "fontFamily": "$font-display",
+              "fontSize": 64,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "Y3WXn",
+              "name": "Subtitle",
+              "fill": "$text-muted-dark",
+              "textGrowth": "fixed-width",
+              "width": 920,
+              "content": "Я не считал зарплату за один месяц. Я строил систему, которая переживёт любое количество точек, отделов и новых идей с мотивацией — чтобы через год не переписывать всё заново, а просто добавить одно правило.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-body",
+              "fontSize": 26,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "qkU73",
+              "name": "Badge Row",
+              "height": 48,
+              "gap": "$space-xs",
+              "padding": [
+                8,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "C9RO2",
+                  "type": "ref",
+                  "ref": "p1Z2B",
+                  "name": "Stamp Mini",
+                  "width": 40,
+                  "height": 40,
+                  "descendants": {
+                    "PbQMo": {
+                      "width": 18,
+                      "height": 18
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "UHqcl",
+                  "name": "Badge Label",
+                  "fill": "$text-on-dark",
+                  "content": "Прозрачно",
+                  "fontFamily": "$font-body",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TZHYt",
+          "x": 120,
+          "y": 980,
+          "name": "Bottom Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "XRCwd",
+              "name": "Meta Bottom",
+              "fill": "$text-muted-dark",
+              "content": "Сервис · iReports · август 2026",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "peucP",
+              "name": "Page Number",
+              "fill": "$text-muted-dark",
+              "content": "01 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Fz77A",
+      "x": 2080,
+      "y": 0,
+      "name": "02 Проблема было",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "n3k3wq",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "akeBT",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "mQwJj",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "02 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "TZjVM",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "Что я решал",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "ek0M4",
+          "x": 120,
+          "y": 360,
+          "name": "Problem List",
+          "width": 1500,
+          "layout": "vertical",
+          "gap": "$space-xl",
+          "children": [
+            {
+              "type": "frame",
+              "id": "T6riqS",
+              "name": "Item",
+              "width": "fill_container",
+              "height": 36,
+              "gap": "$space-md",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "rsi0r",
+                  "name": "Marker",
+                  "fill": "$accent-problem",
+                  "width": 14,
+                  "height": 14
+                },
+                {
+                  "type": "text",
+                  "id": "TukrZ",
+                  "name": "Item Text",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 1430,
+                  "content": "Правила мотивации жили у меня в голове и в Excel — не в системе",
+                  "lineHeight": 1.3,
+                  "fontFamily": "$font-body",
+                  "fontSize": 28,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "x7yC4",
+              "name": "Item",
+              "width": "fill_container",
+              "height": 36,
+              "gap": "$space-md",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "fOogl",
+                  "name": "Marker",
+                  "fill": "$accent-problem",
+                  "width": 14,
+                  "height": 14
+                },
+                {
+                  "type": "text",
+                  "id": "O9jXSv",
+                  "name": "Item Text",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 1430,
+                  "content": "Любая новая идея с мотивацией — переписывать расчёт руками",
+                  "lineHeight": 1.3,
+                  "fontFamily": "$font-body",
+                  "fontSize": 28,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "irWMP",
+              "name": "Item",
+              "width": "fill_container",
+              "height": 36,
+              "gap": "$space-md",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "MNuwz",
+                  "name": "Marker",
+                  "fill": "$accent-problem",
+                  "width": 14,
+                  "height": 14
+                },
+                {
+                  "type": "text",
+                  "id": "iN872",
+                  "name": "Item Text",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 1430,
+                  "content": "Сотрудник видел только итог в конце месяца, без разбивки",
+                  "lineHeight": 1.3,
+                  "fontFamily": "$font-body",
+                  "fontSize": 28,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YxlBX",
+              "name": "Item",
+              "width": "fill_container",
+              "height": 36,
+              "gap": "$space-md",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "Yn5Vg",
+                  "name": "Marker",
+                  "fill": "$accent-problem",
+                  "width": 14,
+                  "height": 14
+                },
+                {
+                  "type": "text",
+                  "id": "g6fag",
+                  "name": "Item Text",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 1430,
+                  "content": "Ошибку находили постфактум — когда зарплата уже начислена",
+                  "lineHeight": 1.3,
+                  "fontFamily": "$font-body",
+                  "fontSize": 28,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ljB1m",
+      "x": 4160,
+      "y": 0,
+      "name": "03 Как считается",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "covLc",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "egm00",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "pZYDT",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "03 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "lWLMf",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "Как теперь считается зарплата",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "lcmac",
+          "x": 188,
+          "y": 400,
+          "name": "Chain Row",
+          "width": 1544,
+          "height": 300,
+          "gap": "$space-lg",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ywLO8",
+              "name": "Card RemOnline + Bitrix24",
+              "width": 440,
+              "height": 300,
+              "fill": "$card-paper",
+              "cornerRadius": "$radius-md",
+              "stroke": "$hairline",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": "$space-sm",
+              "padding": "$space-lg",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ndFZh",
+                  "name": "Card Eyebrow",
+                  "fill": "$accent-copper",
+                  "content": "ИСТОЧНИКИ",
+                  "fontFamily": "$font-display",
+                  "fontSize": 14,
+                  "fontWeight": "normal",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "lP3yv",
+                  "name": "Card Heading",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 360,
+                  "content": "RemOnline + Bitrix24",
+                  "lineHeight": 1.2,
+                  "fontFamily": "$font-display",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "EUZzL",
+                  "name": "Card Body",
+                  "fill": "$text-muted-light",
+                  "textGrowth": "fixed-width",
+                  "width": 360,
+                  "content": "Заказы, услуги, часы — из RemOnline. Задачи — из Bitrix24.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$font-body",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "icon",
+              "id": "o6E4n",
+              "name": "Arrow",
+              "width": 32,
+              "height": 32,
+              "icon": "arrow-right",
+              "library": "lucide",
+              "fill": "$accent-diagnostic"
+            },
+            {
+              "type": "frame",
+              "id": "tmB2B",
+              "name": "Card Зарплатное правило",
+              "width": 440,
+              "height": 300,
+              "fill": "$card-paper",
+              "cornerRadius": "$radius-md",
+              "stroke": "$hairline",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": "$space-sm",
+              "padding": "$space-lg",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H4fFT",
+                  "name": "Card Eyebrow",
+                  "fill": "$accent-copper",
+                  "content": "ПРАВИЛО",
+                  "fontFamily": "$font-display",
+                  "fontSize": 14,
+                  "fontWeight": "normal",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "veLdw",
+                  "name": "Card Heading",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 360,
+                  "content": "Зарплатное правило",
+                  "lineHeight": 1.2,
+                  "fontFamily": "$font-display",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "JP2LG",
+                  "name": "Card Body",
+                  "fill": "$text-muted-light",
+                  "textGrowth": "fixed-width",
+                  "width": 360,
+                  "content": "Само знает, какие данные взять и как посчитать сумму.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$font-body",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "icon",
+              "id": "Vt624",
+              "name": "Arrow",
+              "width": 32,
+              "height": 32,
+              "icon": "arrow-right",
+              "library": "lucide",
+              "fill": "$accent-diagnostic"
+            },
+            {
+              "type": "frame",
+              "id": "w1xG8",
+              "name": "Card Начисление",
+              "width": 440,
+              "height": 300,
+              "fill": "$card-paper",
+              "cornerRadius": "$radius-md",
+              "stroke": "$hairline",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": "$space-sm",
+              "padding": "$space-lg",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bpeWt",
+                  "name": "Card Eyebrow",
+                  "fill": "$accent-copper",
+                  "content": "РЕЗУЛЬТАТ",
+                  "fontFamily": "$font-display",
+                  "fontSize": 14,
+                  "fontWeight": "normal",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "sirFC",
+                  "name": "Card Heading",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 360,
+                  "content": "Начисление",
+                  "lineHeight": 1.2,
+                  "fontFamily": "$font-display",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "opJM4",
+                  "name": "Card Body",
+                  "fill": "$text-muted-light",
+                  "textGrowth": "fixed-width",
+                  "width": 360,
+                  "content": "Сумма по каждому правилу — в отчёте и в ленте баланса.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$font-body",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "d6F9Zw",
+          "x": 240,
+          "y": 760,
+          "name": "Caption",
+          "fill": "$text-muted-light",
+          "textGrowth": "fixed-width",
+          "width": 1440,
+          "content": "Руководитель не считает вручную — правило само забирает нужные данные и формирует сумму.",
+          "lineHeight": 1.4,
+          "fontFamily": "$font-body",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "UcyAU",
+      "x": 6240,
+      "y": 0,
+      "name": "04 Правила начисления",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "ALhri",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "G3ouPi",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "diusz",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "04 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "N4DpPv",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "8 типов расчёта → 16 готовых правил",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "vS8uf",
+          "x": 120,
+          "y": 256,
+          "name": "Subtitle",
+          "fill": "$text-muted-light",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "Новое правило — это один класс в реестре, а не переписанная система. Точек, отделов и направлений может стать сколько угодно.",
+          "lineHeight": 1.4,
+          "fontFamily": "$font-body",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "C1zthM",
+          "x": 180,
+          "y": 380,
+          "name": "Column Сервис",
+          "width": 760,
+          "fill": "$card-paper",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": "$space-md",
+          "padding": "$space-lg",
+          "children": [
+            {
+              "type": "frame",
+              "id": "sknx2",
+              "name": "Column Header",
+              "gap": "$space-xs",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HBemJ",
+                  "name": "Column Title",
+                  "fill": "$accent-diagnostic",
+                  "content": "Сервис",
+                  "fontFamily": "$font-display",
+                  "fontSize": 28,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "Juf9A",
+                  "name": "Column Count",
+                  "fill": "$text-muted-light",
+                  "content": "· 8 правил",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "ybejN",
+              "name": "Divider",
+              "fill": "$hairline",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "rFvme",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PynRE",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "Почасовая",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "lXBVX",
+                  "name": "Rule Variants",
+                  "fill": "$accent-diagnostic",
+                  "content": "1 вариант",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wfsjf",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "V83UH5",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "За услугу",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "d9izo",
+                  "name": "Rule Variants",
+                  "fill": "$accent-diagnostic",
+                  "content": "3 варианта",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kwKb6",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "f8xtdn",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "За заказ",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "sCVsV",
+                  "name": "Rule Variants",
+                  "fill": "$accent-diagnostic",
+                  "content": "3 варианта",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "AlmKK",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "K5qnAj",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "За задачу",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "Ar6IW",
+                  "name": "Rule Variants",
+                  "fill": "$accent-diagnostic",
+                  "content": "1 вариант",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LocYg",
+          "x": 980,
+          "y": 380,
+          "name": "Column Магазин",
+          "width": 760,
+          "fill": "$card-paper",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": "$space-md",
+          "padding": "$space-lg",
+          "children": [
+            {
+              "type": "frame",
+              "id": "S0NcK",
+              "name": "Column Header",
+              "gap": "$space-xs",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "osY8v",
+                  "name": "Column Title",
+                  "fill": "$accent-copper",
+                  "content": "Магазин",
+                  "fontFamily": "$font-display",
+                  "fontSize": 28,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "L2VTkG",
+                  "name": "Column Count",
+                  "fill": "$text-muted-light",
+                  "content": "· 8 правил",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "WzKEm",
+              "name": "Divider",
+              "fill": "$hairline",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "DxqTG",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "L80F11",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "Почасовая",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "N96BQ6",
+                  "name": "Rule Variants",
+                  "fill": "$accent-copper",
+                  "content": "1 вариант",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zb614",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "S0eGV2",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "Продажа товара",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "SuIof",
+                  "name": "Rule Variants",
+                  "fill": "$accent-copper",
+                  "content": "3 варианта",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "F5VJjT",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "I60QH",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "Продажа Б/У товара",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "UQn5n",
+                  "name": "Rule Variants",
+                  "fill": "$accent-copper",
+                  "content": "2 варианта",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sCpUl",
+              "name": "Rule Row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "c2wPcR",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "За задачу",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "Rtpd2",
+                  "name": "Rule Variants",
+                  "fill": "$accent-copper",
+                  "content": "2 варианта",
+                  "fontFamily": "$font-display",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "zhaoz",
+          "x": 180,
+          "y": 760,
+          "name": "Summary Line",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1560,
+          "content": "Итого — 16 правил на 8 типах. Растёт вместе с бизнесом: без ограничения на число точек, отделов и направлений.",
+          "lineHeight": 1.35,
+          "fontFamily": "$font-body",
+          "fontSize": 26,
+          "fontWeight": "600"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "s5HHk",
+      "x": 8320,
+      "y": 0,
+      "name": "05 От правила до выплаты",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "N9SDV",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "E69EsO",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "y13TUO",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "05 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "qcjcH",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "От правила до выплаты",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "utZnq",
+          "x": 180,
+          "y": 440,
+          "name": "Track",
+          "width": 1560,
+          "height": 180,
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "KFroT",
+              "x": 0,
+              "y": 27,
+              "name": "Line",
+              "fill": "$hairline",
+              "width": 1560,
+              "height": 2
+            },
+            {
+              "type": "frame",
+              "id": "nhhM2",
+              "x": 0,
+              "y": 0,
+              "name": "Nodes Row",
+              "width": 1560,
+              "height": 180,
+              "justifyContent": "space_between",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kyZnv",
+                  "name": "Step Правило",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": "$space-sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ej9xL",
+                      "name": "Node",
+                      "width": 56,
+                      "height": 56,
+                      "fill": "$paper",
+                      "cornerRadius": 28,
+                      "stroke": "$accent-diagnostic",
+                      "strokeWidth": 2,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xXMDG",
+                          "name": "Num",
+                          "fill": "$accent-diagnostic",
+                          "content": "1",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "N9Ue16",
+                      "name": "Label",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 220,
+                      "content": "Правило",
+                      "lineHeight": 1.3,
+                      "textAlign": "center",
+                      "fontFamily": "$font-body",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h13MJj",
+                  "name": "Step Начисление",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": "$space-sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "RRFhb",
+                      "name": "Node",
+                      "width": 56,
+                      "height": 56,
+                      "fill": "$paper",
+                      "cornerRadius": 28,
+                      "stroke": "$accent-diagnostic",
+                      "strokeWidth": 2,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xEapH",
+                          "name": "Num",
+                          "fill": "$accent-diagnostic",
+                          "content": "2",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "afRRD",
+                      "name": "Label",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 220,
+                      "content": "Начисление",
+                      "lineHeight": 1.3,
+                      "textAlign": "center",
+                      "fontFamily": "$font-body",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YXPKo",
+                  "name": "Step Баланс сотрудника",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": "$space-sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JPSPG",
+                      "name": "Node",
+                      "width": 56,
+                      "height": 56,
+                      "fill": "$paper",
+                      "cornerRadius": 28,
+                      "stroke": "$accent-diagnostic",
+                      "strokeWidth": 2,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bdIcT",
+                          "name": "Num",
+                          "fill": "$accent-diagnostic",
+                          "content": "3",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "XCRRZ",
+                      "name": "Label",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 220,
+                      "content": "Баланс сотрудника",
+                      "lineHeight": 1.3,
+                      "textAlign": "center",
+                      "fontFamily": "$font-body",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u6zA5Y",
+                  "name": "Step Выплата",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": "$space-sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "BIS2Q",
+                      "name": "Node",
+                      "width": 56,
+                      "height": 56,
+                      "fill": "$paper",
+                      "cornerRadius": 28,
+                      "stroke": "$accent-diagnostic",
+                      "strokeWidth": 2,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "w4c9GT",
+                          "name": "Num",
+                          "fill": "$accent-diagnostic",
+                          "content": "4",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "TGjjd",
+                      "name": "Label",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 220,
+                      "content": "Выплата",
+                      "lineHeight": 1.3,
+                      "textAlign": "center",
+                      "fontFamily": "$font-body",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MUbke",
+                  "name": "Step Касса ERP",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": "$space-sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "soopJ",
+                      "name": "Node",
+                      "width": 56,
+                      "height": 56,
+                      "fill": "$paper",
+                      "cornerRadius": 28,
+                      "stroke": "$accent-diagnostic",
+                      "strokeWidth": 2,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FMpov",
+                          "name": "Num",
+                          "fill": "$accent-diagnostic",
+                          "content": "5",
+                          "fontFamily": "$font-display",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "NKaxK",
+                      "name": "Label",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 220,
+                      "content": "Касса ERP",
+                      "lineHeight": 1.3,
+                      "textAlign": "center",
+                      "fontFamily": "$font-body",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "JscxR",
+          "x": 180,
+          "y": 680,
+          "name": "Caption",
+          "fill": "$text-muted-light",
+          "textGrowth": "fixed-width",
+          "width": 1400,
+          "content": "Каждое движение остаётся в ленте баланса сотрудника — ничего не считается «в уме».",
+          "lineHeight": 1.4,
+          "fontFamily": "$font-body",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "P2DOM",
+      "x": 10400,
+      "y": 0,
+      "name": "06 Кто что видит",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "SHnSK",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "n1vE49",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "s7Q7X",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "06 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "fRyKP",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "Кто что видит",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "LHHSv",
+          "x": 120,
+          "y": 360,
+          "name": "Panel Сотрудник",
+          "width": 800,
+          "height": 560,
+          "fill": "$card-paper",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": "$space-lg",
+          "padding": "$space-xl",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "wlwLv",
+              "name": "Accent Bar",
+              "fill": "$accent-diagnostic",
+              "width": 48,
+              "height": 4
+            },
+            {
+              "type": "text",
+              "id": "HIbt7",
+              "name": "Panel Heading",
+              "fill": "$ink",
+              "content": "Сотрудник",
+              "fontFamily": "$font-display",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "p3Vrg",
+              "name": "Points",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$space-md",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "c38Bv",
+                  "name": "Point",
+                  "width": "fill_container",
+                  "gap": "$space-sm",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "BkjMW",
+                      "name": "Marker",
+                      "fill": "$accent-diagnostic",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "eegdm",
+                      "name": "Point Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 600,
+                      "content": "Свой отчёт: факт и прогноз до конца месяца",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-body",
+                      "fontSize": 22,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "aCRAT",
+                  "name": "Point",
+                  "width": "fill_container",
+                  "gap": "$space-sm",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "T5S6RY",
+                      "name": "Marker",
+                      "fill": "$accent-diagnostic",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "NY3Bu",
+                      "name": "Point Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 600,
+                      "content": "Разбивка по каждому правилу мотивационной схемы",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-body",
+                      "fontSize": 22,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h7Hd4Q",
+                  "name": "Point",
+                  "width": "fill_container",
+                  "gap": "$space-sm",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "etZBp",
+                      "name": "Marker",
+                      "fill": "$accent-diagnostic",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "YuA71",
+                      "name": "Point Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 600,
+                      "content": "Лента баланса — видно каждое движение",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-body",
+                      "fontSize": 22,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "RQbzW",
+          "x": 1000,
+          "y": 360,
+          "name": "Panel Руководство / HR",
+          "width": 800,
+          "height": 560,
+          "fill": "$card-paper",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": "$space-lg",
+          "padding": "$space-xl",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "qhbUR",
+              "name": "Accent Bar",
+              "fill": "$accent-copper",
+              "width": 48,
+              "height": 4
+            },
+            {
+              "type": "text",
+              "id": "EehlB",
+              "name": "Panel Heading",
+              "fill": "$ink",
+              "content": "Руководство / HR",
+              "fontFamily": "$font-display",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "rbG7S",
+              "name": "Points",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$space-md",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nzC6U",
+                  "name": "Point",
+                  "width": "fill_container",
+                  "gap": "$space-sm",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "RuRh5",
+                      "name": "Marker",
+                      "fill": "$accent-copper",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "i8pqm",
+                      "name": "Point Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 600,
+                      "content": "Отчёт по отделу — сводные суммы к выплате",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-body",
+                      "fontSize": 22,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ElYnA",
+                  "name": "Point",
+                  "width": "fill_container",
+                  "gap": "$space-sm",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "s2qBEy",
+                      "name": "Marker",
+                      "fill": "$accent-copper",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "jjmhb",
+                      "name": "Point Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 600,
+                      "content": "Массовая выплата сотрудникам",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-body",
+                      "fontSize": 22,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e1Akc",
+                  "name": "Point",
+                  "width": "fill_container",
+                  "gap": "$space-sm",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "ohoq5",
+                      "name": "Marker",
+                      "fill": "$accent-copper",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "uzJHj",
+                      "name": "Point Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": 600,
+                      "content": "Контроль остатков и ручные корректировки",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-body",
+                      "fontSize": 22,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "PKCeO",
+      "x": 12480,
+      "y": 0,
+      "name": "07 Новый интерфейс",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Wpd84",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "J3yEmm",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "E6dGH",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "07 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "pcFSU",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "Новый интерфейс /salary-accruals",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "y6bjQa",
+          "x": 200,
+          "y": 380,
+          "name": "Mockup",
+          "clip": true,
+          "width": 480,
+          "height": 360,
+          "fill": "#FFFFFF",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 14,
+          "padding": 24,
+          "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": 4,
+              "id": "V0Oe7",
+              "name": "Header",
+              "fill": "$ink",
+              "width": "fill_container",
+              "height": 28
+            },
+            {
+              "type": "frame",
+              "id": "CGGqq",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 16,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "hvc0j",
+                  "name": "Label",
+                  "fill": "$hairline",
+                  "width": 130,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "WjHdL",
+                  "name": "Amount",
+                  "fill": "$accent-copper",
+                  "width": 56,
+                  "height": 8
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "MC1ne",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 16,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "iTlBV",
+                  "name": "Label",
+                  "fill": "$hairline",
+                  "width": 170,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "B5TxC",
+                  "name": "Amount",
+                  "fill": "$accent-copper",
+                  "width": 56,
+                  "height": 8
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "C0sP8",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 16,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "AMuXv",
+                  "name": "Label",
+                  "fill": "$hairline",
+                  "width": 130,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "kAYo4",
+                  "name": "Amount",
+                  "fill": "$accent-copper",
+                  "width": 56,
+                  "height": 8
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qGMsk",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 16,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "qxmIM",
+                  "name": "Label",
+                  "fill": "$hairline",
+                  "width": 170,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "JdnZk",
+                  "name": "Amount",
+                  "fill": "$accent-copper",
+                  "width": 56,
+                  "height": 8
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "f3Gsn",
+          "x": 720,
+          "y": 380,
+          "name": "Mockup",
+          "clip": true,
+          "width": 480,
+          "height": 360,
+          "fill": "#FFFFFF",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 14,
+          "padding": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "xB8bN",
+              "name": "Sum Row",
+              "width": "fill_container",
+              "height": 20,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "AINul",
+                  "name": "Label",
+                  "fill": "$ink",
+                  "width": 170,
+                  "height": 12
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "RREYk",
+                  "name": "Amount",
+                  "fill": "$accent-diagnostic",
+                  "width": 80,
+                  "height": 12
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "KPt2U",
+              "name": "Divider",
+              "fill": "$hairline",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "fdwyP",
+              "name": "Source Row",
+              "width": "fill_container",
+              "height": 14,
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 4,
+                  "id": "ZkyAe",
+                  "name": "Dot",
+                  "fill": "$accent-copper",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "t14Lo",
+                  "name": "Label",
+                  "fill": "$hairline",
+                  "width": 120,
+                  "height": 7
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LMox4",
+              "name": "Source Row",
+              "width": "fill_container",
+              "height": 14,
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 4,
+                  "id": "DETnN",
+                  "name": "Dot",
+                  "fill": "$accent-copper",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "IBHiC",
+                  "name": "Label",
+                  "fill": "$hairline",
+                  "width": 140,
+                  "height": 7
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "duJsI",
+              "name": "Source Row",
+              "width": "fill_container",
+              "height": 14,
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 4,
+                  "id": "iFL5u",
+                  "name": "Dot",
+                  "fill": "$accent-copper",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "w0bZR0",
+                  "name": "Label",
+                  "fill": "$hairline",
+                  "width": 160,
+                  "height": 7
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mJvrB",
+          "x": 1240,
+          "y": 380,
+          "name": "Mockup",
+          "clip": true,
+          "width": 480,
+          "height": 360,
+          "fill": "#FFFFFF",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 24,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": 4,
+              "id": "MYu1g",
+              "name": "Number",
+              "fill": "$ink",
+              "width": 150,
+              "height": 44
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "lBfMH",
+              "name": "Sub",
+              "fill": "$hairline",
+              "width": 110,
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "HsQlv",
+              "name": "Button",
+              "width": 180,
+              "height": 48,
+              "fill": "$accent-diagnostic",
+              "cornerRadius": "$radius-sm",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "piztT",
+                  "name": "Button Label",
+                  "fill": "$paper",
+                  "content": "Выплатить",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "IRRxQ",
+          "x": 200,
+          "y": 764,
+          "name": "Caption 0",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 480,
+          "content": "Список начислений",
+          "textAlign": "center",
+          "fontFamily": "$font-body",
+          "fontSize": 18,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "BsPbe",
+          "x": 720,
+          "y": 764,
+          "name": "Caption 1",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 480,
+          "content": "Детализация — источники",
+          "textAlign": "center",
+          "fontFamily": "$font-body",
+          "fontSize": 18,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "G7c2WE",
+          "x": 1240,
+          "y": 764,
+          "name": "Caption 2",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 480,
+          "content": "Выплата",
+          "textAlign": "center",
+          "fontFamily": "$font-body",
+          "fontSize": 18,
+          "fontWeight": "600"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ooMMz",
+      "x": 14560,
+      "y": 0,
+      "name": "08 До После",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "WTzsm",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "C9GWTZ",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "DRCHd",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "08 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "Rrvlw",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "До и после",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "Gdyvf",
+          "x": 220,
+          "y": 332,
+          "name": "Label Было",
+          "fill": "$accent-problem",
+          "content": "БЫЛО",
+          "fontFamily": "$font-display",
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "letterSpacing": 1
+        },
+        {
+          "type": "frame",
+          "id": "yJ9S5",
+          "x": 220,
+          "y": 380,
+          "name": "Было Panel",
+          "width": 700,
+          "height": 560,
+          "fill": "$card-paper",
+          "cornerRadius": "$radius-md",
+          "stroke": "$accent-problem",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 6,
+          "padding": "$space-xl",
+          "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "Vpfuz",
+              "name": "Header",
+              "fill": "$text-muted-light",
+              "width": "fill_container",
+              "height": 20
+            },
+            {
+              "type": "frame",
+              "id": "I9q8A",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "dJYr5",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 520,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "QtHDL",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "KDw6E",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 460,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sKchL",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "DoRiE",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 400,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ilQ5i",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "dNhrT",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 520,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Dxh64",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "q1CCA3",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 460,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FBTlI",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "yHAjC",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 400,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Feu0N",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "uHhF8",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 520,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ELeXV",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "v5BV8r",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 460,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tSI3k",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 10,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "mrOxY",
+                  "name": "Bar",
+                  "fill": "$hairline",
+                  "width": 400,
+                  "height": 6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "T3MU2",
+          "x": 960,
+          "y": 380,
+          "name": "Arrow Col",
+          "width": 80,
+          "height": 560,
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "sQVw5",
+              "name": "Arrow",
+              "width": 40,
+              "height": 40,
+              "icon": "arrow-right",
+              "library": "lucide",
+              "fill": "$accent-diagnostic"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "wTRCV",
+          "x": 1080,
+          "y": 332,
+          "name": "Label Стало",
+          "fill": "$accent-diagnostic",
+          "content": "СТАЛО",
+          "fontFamily": "$font-display",
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "letterSpacing": 1
+        },
+        {
+          "type": "frame",
+          "id": "LVWXi",
+          "x": 1080,
+          "y": 380,
+          "name": "Стало Panel",
+          "width": 700,
+          "height": 560,
+          "fill": "$card-paper",
+          "cornerRadius": "$radius-md",
+          "stroke": "$accent-diagnostic",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": "$space-lg",
+          "padding": "$space-xl",
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "c1SPG8",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 44,
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "NMNuk",
+                  "type": "ref",
+                  "ref": "p1Z2B",
+                  "name": "Stamp",
+                  "width": 32,
+                  "height": 32,
+                  "descendants": {
+                    "PbQMo": {
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "G1U0AR",
+                  "name": "Label",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 340,
+                  "content": "Оплата по часам",
+                  "fontFamily": "$font-body",
+                  "fontSize": 19,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "nk8NY",
+                  "name": "Amount",
+                  "fill": "$accent-diagnostic",
+                  "content": "18 400 ₽",
+                  "fontFamily": "$font-display",
+                  "fontSize": 20,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KKpI9",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 44,
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "MOnJF",
+                  "type": "ref",
+                  "ref": "p1Z2B",
+                  "name": "Stamp",
+                  "width": 32,
+                  "height": 32,
+                  "descendants": {
+                    "PbQMo": {
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "qpmdX",
+                  "name": "Label",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 340,
+                  "content": "За выполненную услугу",
+                  "fontFamily": "$font-body",
+                  "fontSize": 19,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "QIReq",
+                  "name": "Amount",
+                  "fill": "$accent-diagnostic",
+                  "content": "6 200 ₽",
+                  "fontFamily": "$font-display",
+                  "fontSize": 20,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WS2D9",
+              "name": "Row",
+              "width": "fill_container",
+              "height": 44,
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "IrA1Z",
+                  "type": "ref",
+                  "ref": "p1Z2B",
+                  "name": "Stamp",
+                  "width": 32,
+                  "height": 32,
+                  "descendants": {
+                    "PbQMo": {
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "GfW0N",
+                  "name": "Label",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": 340,
+                  "content": "За задачу Bitrix24",
+                  "fontFamily": "$font-body",
+                  "fontSize": 19,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "C981d",
+                  "name": "Amount",
+                  "fill": "$accent-diagnostic",
+                  "content": "12 000 ₽",
+                  "fontFamily": "$font-display",
+                  "fontSize": 20,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "JHK1j",
+      "x": 16640,
+      "y": 0,
+      "name": "09 Прозрачность",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$paper",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "HXCW9",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "OunN9",
+              "name": "Eyebrow",
+              "fill": "$text-muted-light",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "K8eJ8",
+              "name": "Page Number",
+              "fill": "$text-muted-light",
+              "content": "09 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "d2pcb",
+          "x": 120,
+          "y": 200,
+          "name": "Title",
+          "fill": "$ink",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "Прозрачность и доверие",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "MCuWH",
+          "x": 260,
+          "y": 400,
+          "name": "Accrual Row",
+          "width": 1400,
+          "height": 120,
+          "fill": "$card-paper",
+          "cornerRadius": "$radius-md",
+          "stroke": "$hairline",
+          "strokeWidth": 1,
+          "padding": "$space-xl",
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "fJAs2",
+              "name": "Left",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dA3DD",
+                  "name": "Rule Name",
+                  "fill": "$ink",
+                  "content": "За задачу Bitrix24",
+                  "fontFamily": "$font-display",
+                  "fontSize": 26,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "TRjYo",
+                  "name": "Period",
+                  "fill": "$text-muted-light",
+                  "content": "Июль 2026 · начислено 03.07",
+                  "fontFamily": "$font-body",
+                  "fontSize": 17,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "bTsJg",
+              "name": "Amount",
+              "fill": "$accent-copper",
+              "content": "12 000 ₽",
+              "fontFamily": "$font-display",
+              "fontSize": 36,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 2,
+          "id": "iGHnx",
+          "x": 1240,
+          "y": 534,
+          "name": "Dot",
+          "fill": "$hairline",
+          "width": 4,
+          "height": 4
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 2,
+          "id": "OzYpM",
+          "x": 1240,
+          "y": 550,
+          "name": "Dot",
+          "fill": "$hairline",
+          "width": 4,
+          "height": 4
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 2,
+          "id": "HeQzN",
+          "x": 1240,
+          "y": 566,
+          "name": "Dot",
+          "fill": "$hairline",
+          "width": 4,
+          "height": 4
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 2,
+          "id": "v9GFm",
+          "x": 1240,
+          "y": 582,
+          "name": "Dot",
+          "fill": "$hairline",
+          "width": 4,
+          "height": 4
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 2,
+          "id": "nCiNA",
+          "x": 1240,
+          "y": 598,
+          "name": "Dot",
+          "fill": "$hairline",
+          "width": 4,
+          "height": 4
+        },
+        {
+          "type": "frame",
+          "id": "LdTwp",
+          "x": 1060,
+          "y": 620,
+          "name": "Source Tag",
+          "width": 340,
+          "height": 56,
+          "fill": "$paper",
+          "cornerRadius": "$radius-sm",
+          "stroke": "$accent-copper",
+          "strokeWidth": 1,
+          "gap": "$space-xs",
+          "padding": [
+            0,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "kxPRM",
+              "name": "Link Icon",
+              "width": 18,
+              "height": 18,
+              "icon": "arrow-up-right",
+              "library": "lucide",
+              "fill": "$accent-copper"
+            },
+            {
+              "type": "text",
+              "id": "EcPnJ",
+              "name": "Tag Text",
+              "fill": "$ink",
+              "content": "Bitrix24 · Задача #4821",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "gKrJ3",
+          "x": 260,
+          "y": 760,
+          "name": "Caption",
+          "fill": "$text-muted-light",
+          "textGrowth": "fixed-width",
+          "width": 1400,
+          "content": "Каждая сумма ведёт к своему источнику — задаче, заказу или услуге.",
+          "lineHeight": 1.4,
+          "textAlign": "center",
+          "fontFamily": "$font-body",
+          "fontSize": 22,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "l5PQAx",
+      "x": 18720,
+      "y": 0,
+      "name": "10 Итоги",
+      "clip": true,
+      "width": 1920,
+      "height": 1080,
+      "fill": "$workshop-bg",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "h0tSmM",
+          "x": 120,
+          "y": 80,
+          "name": "Top Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "bJg7x",
+              "name": "Eyebrow",
+              "fill": "$text-muted-dark",
+              "content": "SERVICE · PAYROLL",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 2
+            },
+            {
+              "type": "text",
+              "id": "m7Cbr",
+              "name": "Page Number",
+              "fill": "$text-muted-dark",
+              "content": "10 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "p0FbuN",
+          "x": 120,
+          "y": 220,
+          "name": "Title",
+          "fill": "$text-on-dark",
+          "textGrowth": "fixed-width",
+          "width": 1500,
+          "content": "Что это даёт",
+          "lineHeight": 1.15,
+          "fontFamily": "$font-display",
+          "fontSize": 44,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "Dm6RK",
+          "x": 120,
+          "y": 340,
+          "name": "Tiles Row",
+          "height": 120,
+          "gap": "$space-2xl",
+          "children": [
+            {
+              "type": "frame",
+              "id": "HpPdM",
+              "name": "Tile Прозрачно",
+              "width": 220,
+              "layout": "vertical",
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "yFYuG",
+                  "name": "Node",
+                  "width": 64,
+                  "height": 64,
+                  "cornerRadius": 32,
+                  "stroke": "$accent-diagnostic",
+                  "strokeWidth": 2,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "B99Te6",
+                      "name": "Check",
+                      "width": 28,
+                      "height": 28,
+                      "icon": "check",
+                      "library": "lucide",
+                      "fill": "$accent-diagnostic"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "ceM8g",
+                  "name": "Label",
+                  "fill": "$text-on-dark",
+                  "textGrowth": "fixed-width",
+                  "width": 220,
+                  "content": "Прозрачно",
+                  "textAlign": "center",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LN9X1",
+              "name": "Tile Проверяемо",
+              "width": 220,
+              "layout": "vertical",
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "a7tqZ",
+                  "name": "Node",
+                  "width": 64,
+                  "height": 64,
+                  "cornerRadius": 32,
+                  "stroke": "$accent-diagnostic",
+                  "strokeWidth": 2,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "P2vgI",
+                      "name": "Check",
+                      "width": 28,
+                      "height": 28,
+                      "icon": "check",
+                      "library": "lucide",
+                      "fill": "$accent-diagnostic"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "C9rda",
+                  "name": "Label",
+                  "fill": "$text-on-dark",
+                  "textGrowth": "fixed-width",
+                  "width": 220,
+                  "content": "Проверяемо",
+                  "textAlign": "center",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "K0D32",
+              "name": "Tile Управляемо",
+              "width": 220,
+              "layout": "vertical",
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eeqGv",
+                  "name": "Node",
+                  "width": 64,
+                  "height": 64,
+                  "cornerRadius": 32,
+                  "stroke": "$accent-diagnostic",
+                  "strokeWidth": 2,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "jqrtD",
+                      "name": "Check",
+                      "width": 28,
+                      "height": 28,
+                      "icon": "check",
+                      "library": "lucide",
+                      "fill": "$accent-diagnostic"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "xGj8Y",
+                  "name": "Label",
+                  "fill": "$text-on-dark",
+                  "textGrowth": "fixed-width",
+                  "width": 220,
+                  "content": "Управляемо",
+                  "textAlign": "center",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "W22hr",
+          "x": 120,
+          "y": 560,
+          "name": "Next Eyebrow",
+          "fill": "$accent-copper",
+          "content": "ЧТО ДАЛЬШЕ",
+          "fontFamily": "$font-display",
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "letterSpacing": 2
+        },
+        {
+          "type": "frame",
+          "id": "QEoGE",
+          "x": 120,
+          "y": 610,
+          "name": "Next List",
+          "width": 1300,
+          "layout": "vertical",
+          "gap": "$space-md",
+          "children": [
+            {
+              "type": "frame",
+              "id": "T1enrD",
+              "name": "Next Item",
+              "width": "fill_container",
+              "height": 32,
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "q2fR1",
+                  "name": "Arrow",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$text-muted-dark"
+                },
+                {
+                  "type": "text",
+                  "id": "rBzuj",
+                  "name": "Text",
+                  "fill": "$text-on-dark",
+                  "textGrowth": "fixed-width",
+                  "width": 1250,
+                  "content": "Массовая выплата и кассовые документы ERP",
+                  "fontFamily": "$font-body",
+                  "fontSize": 22,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "J95Uv",
+              "name": "Next Item",
+              "width": "fill_container",
+              "height": 32,
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "Mb5bk",
+                  "name": "Arrow",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$text-muted-dark"
+                },
+                {
+                  "type": "text",
+                  "id": "TZysE",
+                  "name": "Text",
+                  "fill": "$text-on-dark",
+                  "textGrowth": "fixed-width",
+                  "width": 1250,
+                  "content": "Перенос CRUD правил зарплаты в новый модуль расчёта",
+                  "fontFamily": "$font-body",
+                  "fontSize": 22,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "d7jRP4",
+              "name": "Next Item",
+              "width": "fill_container",
+              "height": 32,
+              "gap": "$space-sm",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "HK5KU",
+                  "name": "Arrow",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$text-muted-dark"
+                },
+                {
+                  "type": "text",
+                  "id": "oF2qX",
+                  "name": "Text",
+                  "fill": "$text-on-dark",
+                  "textGrowth": "fixed-width",
+                  "width": 1250,
+                  "content": "Аналогичная схема начисления для магазина (shop)",
+                  "fontFamily": "$font-body",
+                  "fontSize": 22,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "OzIYt",
+          "x": 120,
+          "y": 980,
+          "name": "Bottom Row",
+          "width": 1680,
+          "height": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "JCx3h",
+              "name": "Meta Bottom",
+              "fill": "$text-muted-dark",
+              "content": "Сервис · iReports · август 2026",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "P68Uw8",
+              "name": "Page Number 2",
+              "fill": "$text-muted-dark",
+              "content": "10 / 10",
+              "fontFamily": "$font-display",
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "letterSpacing": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "paper": {
+      "type": "color",
+      "value": "#EEF0EE"
+    },
+    "ink": {
+      "type": "color",
+      "value": "#14181C"
+    },
+    "workshop-bg": {
+      "type": "color",
+      "value": "#171C1A"
+    },
+    "accent-diagnostic": {
+      "type": "color",
+      "value": "#2F7D5B"
+    },
+    "accent-copper": {
+      "type": "color",
+      "value": "#C97A2E"
+    },
+    "accent-problem": {
+      "type": "color",
+      "value": "#B23A34"
+    },
+    "hairline": {
+      "type": "color",
+      "value": "#A9AFAA"
+    },
+    "text-muted-light": {
+      "type": "color",
+      "value": "#4B524D"
+    },
+    "text-muted-dark": {
+      "type": "color",
+      "value": "#9FA69F"
+    },
+    "text-on-dark": {
+      "type": "color",
+      "value": "#EEF0EE"
+    },
+    "card-paper": {
+      "type": "color",
+      "value": "#E2E6E1"
+    },
+    "font-display": {
+      "type": "string",
+      "value": "IBM Plex Mono"
+    },
+    "font-body": {
+      "type": "string",
+      "value": "IBM Plex Sans"
+    },
+    "radius-sm": {
+      "type": "number",
+      "value": 4
+    },
+    "radius-md": {
+      "type": "number",
+      "value": 10
+    },
+    "space-xs": {
+      "type": "number",
+      "value": 8
+    },
+    "space-sm": {
+      "type": "number",
+      "value": 16
+    },
+    "space-md": {
+      "type": "number",
+      "value": 24
+    },
+    "space-lg": {
+      "type": "number",
+      "value": 40
+    },
+    "space-xl": {
+      "type": "number",
+      "value": 64
+    },
+    "space-2xl": {
+      "type": "number",
+      "value": 96
+    },
+    "margin": {
+      "type": "number",
+      "value": 120
+    }
+  },
+  "fileToken": "fb626475-8ec9-4ece-8b05-c5a3988b0cce"
+}
