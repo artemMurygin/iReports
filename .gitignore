@@ -31,3 +31,6 @@ backend/prisma/generated/
 
 # Playwright MCP debug artifacts
 .playwright-mcp/
+
+# graphify generated output
+graphify-out/
