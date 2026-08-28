@@ -52,19 +52,6 @@ export class PeriodNotExpiredException extends ConflictException {
     }
 }
 
-// Неявная синхронизация ERP перед расчётом закрытия не удалась (ошибка
-// интеграции или таймаут) — закрытие отклоняется целиком, период остаётся
-// открытым, снапшот и документы не создаются (PRD 1, "Финальный пересчёт").
-export class ErpSyncFailedException extends ConflictException {
-    constructor(direction: string, period: string, cause?: Error) {
-        super('Не удалось получить данные из ERP, повторите позже', cause, {
-            direction,
-            period,
-            reason: cause?.message ?? null,
-        });
-    }
-}
-
 // Запись в источники часов (EmployeeHoursEntry, в будущем — график работы)
 // за месяц, закрытый по направлению, отклоняется с указанием, кем и когда
 // месяц закрыт (PRD 1, "Блокировка графика работы и ручных часов"). Единая

@@ -7,11 +7,16 @@ import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/ent
 // направление не хранит (система — ExternalSystem на записи, direction —
 // атрибут того, через какой адаптер документ был создан, а не персистентности).
 //
-// Direction-агностичен, как BalanceTransactionRepositoryPort/
-// SalaryAccrualRepositoryPort: физически определён в domains/service,
-// domains/shop заводит собственный экземпляр реализации под тем же токеном
-// (см. domains/service/CLAUDE.md) — будущий обработчик выплаты каждого
-// направления (Фаза 12) пишет и читает через один и тот же класс.
+// Физически определён в domains/service. До Фазы 4
+// docs/service-shop-boundary-violations-fix domains/shop заводил
+// собственный экземпляр реализации под тем же токеном (тот же приём, что
+// BalanceTransactionRepositoryPort/SalaryAccrualRepositoryPort); с этой
+// фазы у shop собственный независимый порт
+// ShopErpCashDocumentRepositoryPort/SHOP_ERP_CASH_DOCUMENT_REPOSITORY (см.
+// domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port.ts).
+// Этот порт остаётся используемым RoappCashDocumentAdapter (service) и
+// сквозным src/modules/employee-balance/ (общая лента баланса, движения
+// обоих направлений вперемешку — см. WHY в erp-cash-document.entity.ts).
 export interface ErpCashDocumentRepositoryPort {
     // В одной транзакции UnitOfWork с движением баланса и переходом
     // документов начисления в PAID (PRD 3, «Технические ограничения») —

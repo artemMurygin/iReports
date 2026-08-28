@@ -1,5 +1,5 @@
 import { ErpPeriodSyncRunner } from './erp-period-sync-runner.service';
-import { ErpSyncFailedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
+import { ErpSyncFailedException } from '@/shared/application/exceptions/erp-sync-failed.exception';
 import { Period } from '@/shared/domain/period.value-object';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 

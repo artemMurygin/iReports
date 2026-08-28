@@ -28,11 +28,21 @@ export type CreateErpCashDocumentProps = ErpCashDocumentProps;
 //
 // Сущность физически определена в domains/service (тот же приём, что
 // AccountingPeriod/SalaryAccrual/BalanceTransaction, см.
-// domains/service/CLAUDE.md) — репозиторий, читающий/пишущий локальную
-// запись, direction-агностичен: и service, и shop сохраняют документ в одну
-// таблицу под своим ExternalSystem; направление на записи не хранится, его
-// определяет то, через какой адаптер (RoApp или МойСклад — порты уже НЕ
-// общие между доменами, см. ErpCashDocumentPort) документ был создан.
+// domains/service/CLAUDE.md). Направление на записи отдельным полем не
+// хранится (repository/mapper этого класса не различают direction на
+// уровне персистентности) — до Фазы 4
+// docs/service-shop-boundary-violations-fix этот же класс/репозиторий
+// переиспользовался ИЗ domains/shop напрямую (MoyskladCashDocumentAdapter,
+// create/delete-shop-payout.handler.ts, §2.2
+// docs/service-shop-boundary-violations.md); с этой фазы у shop собственная
+// независимая сущность ShopErpCashDocument
+// (domains/shop/modules/accounting/domain/entities/shop-erp-cash-document.entity.ts,
+// репозиторий которой фильтрует/подставляет direction = 'shop' поверх той
+// же таблицы). Этот класс остаётся действительно direction-агностичным
+// только там, где остался и раньше: RoappCashDocumentAdapter (service) и
+// сквозной src/modules/employee-balance/ (общая лента баланса — движения
+// ОБОИХ направлений вперемешку, вне доменной изоляции, см.
+// backend/CLAUDE.md, "BalanceTransaction — исключение").
 export class ErpCashDocument extends AggregateRoot<ErpCashDocumentProps> {
     declare protected readonly _id: AggregateID;
 

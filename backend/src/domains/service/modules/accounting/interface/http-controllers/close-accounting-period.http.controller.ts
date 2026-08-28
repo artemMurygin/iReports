@@ -4,7 +4,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
 import { CloseAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/close-accounting-period.command';
-import { CloseAccountingPeriodDto } from '../dto/close-accounting-period.dto';
+import { CloseAccountingPeriodDto } from '@/shared/interface/dto/close-accounting-period.dto';
 
 @ApiTags('Бухгалтерия: расчётный период')
 @Controller()

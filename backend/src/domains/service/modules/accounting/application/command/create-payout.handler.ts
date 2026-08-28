@@ -4,8 +4,8 @@ import type { PayoutResponse } from 'ireports-contracts';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employee-operation-lock';
-import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
-import type { BalanceTransactionRepositoryPort } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
+import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
@@ -14,15 +14,15 @@ import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accoun
 import type { ErpCashDocumentPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
-import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
+import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
-import { PayoutConfirmationRequiredException } from '@/domains/service/modules/accounting/domain/exceptions/salary-payout.exception';
+import { PayoutConfirmationRequiredException } from '@/modules/employee-balance/domain/exceptions/salary-payout.exception';
 import {
     buildErpCashDocumentPurpose,
     erpSystemForDirection,
     resolveEmployeeDisplayName,
-} from '../services/erp-cash-sync.helper';
-import { toBalanceTransactionResponse } from '../mappers/to-balance-transaction-response';
+} from '@/modules/employee-balance/application/services/erp-cash-sync.helper';
+import { toBalanceTransactionResponse } from '@/modules/employee-balance/application/mappers/to-balance-transaction-response';
 import { toErpCashDocumentResponse } from '../mappers/to-erp-cash-document-response';
 import { CreatePayoutCommand } from './create-payout.command';
 

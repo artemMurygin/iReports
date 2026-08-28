@@ -16,6 +16,7 @@ import type {
 import type { ApiErrorResponse } from '@/shared/exceptions/exeption.api';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
+import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balance.module';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
@@ -30,12 +31,12 @@ import type {
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
-import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
+import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
-import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
@@ -56,7 +57,7 @@ import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/en
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
 import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -231,6 +232,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
                 EventEmitterModule.forRoot(),
                 FakeInfrastructureModule,
                 AccountingModule,
+                EmployeeBalanceModule,
             ],
         })
             .overrideProvider(MOTIVATION_SCHEMA_REPOSITORY)

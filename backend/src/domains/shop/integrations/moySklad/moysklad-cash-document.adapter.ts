@@ -2,11 +2,10 @@ import { BadGatewayException, Inject, Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import type { AccountingDirection } from '@/shared/domain/calculation-context';
-import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import type { ErpCashConfigRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { SHOP_ERP_CASH_CONFIG_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-config.port';
+import type { ShopErpCashConfigRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-config.port';
+import { SHOP_ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
+import type { ShopErpCashDocumentRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
 import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import type { EmployeeIdentityRepositoryPort } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import type {
@@ -63,8 +62,7 @@ import { MoyskladHttpService } from './moysklad.instance';
 // CashIn НЕ отправляет ничего похожего на статью доходов — get_schema_fields
 // подтверждает, что такого поля в схеме CashIn нет вообще (см. WHY у
 // erpCashConfigSchema в contracts/commands/erp-cash.ts). create() для
-// kind: 'INCOME' поэтому НЕ читает ErpCashConfig.moySkladIncomeItemId.
-const SHOP_DIRECTION: AccountingDirection = 'shop';
+// kind: 'INCOME' поэтому НЕ читает ShopErpCashConfig.moySkladIncomeItemId.
 
 // Мутирующие операции (create/delete) — не постраничное чтение, где долгий
 // ответ можно просто повторить со следующим тиком крона: зависший запрос
@@ -96,10 +94,10 @@ function metaRef(type: string, id: string): MoyskladMetaRef {
 export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
     constructor(
         private readonly moysklad: MoyskladHttpService,
-        @Inject(ERP_CASH_CONFIG_REPOSITORY)
-        private readonly configRepo: ErpCashConfigRepositoryPort,
-        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly documentRepo: ErpCashDocumentRepositoryPort,
+        @Inject(SHOP_ERP_CASH_CONFIG_REPOSITORY)
+        private readonly configRepo: ShopErpCashConfigRepositoryPort,
+        @Inject(SHOP_ERP_CASH_DOCUMENT_REPOSITORY)
+        private readonly documentRepo: ShopErpCashDocumentRepositoryPort,
         @Inject(EMPLOYEE_IDENTITY_REPOSITORY)
         private readonly employeeIdentityRepo: EmployeeIdentityRepositoryPort,
     ) {}
@@ -107,7 +105,7 @@ export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
     async create(
         params: CreateErpCashDocumentParams,
     ): Promise<{ externalId: string }> {
-        const config = await this.configRepo.findByDirection(SHOP_DIRECTION);
+        const config = await this.configRepo.findConfig();
         if (!config?.organizationId) {
             throw new ShopErpCashConfigIncompleteException(
                 'юрлицо (organizationId)',
@@ -143,9 +141,9 @@ export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
             moment: this.formatMoment(params.occurredAt),
             // Ключ идемпотентности на стороне МойСклада (доп. защита поверх
             // уникального индекса transactionId в локальной БД, см.
-            // ErpCashDocumentRepositoryPort) — позиция для ручной сверки,
-            // если когда-нибудь понадобится сопоставить документы напрямую
-            // в МойСкладе.
+            // ShopErpCashDocumentRepositoryPort) — позиция для ручной
+            // сверки, если когда-нибудь понадобится сопоставить документы
+            // напрямую в МойСкладе.
             externalCode: params.transactionId,
         };
         if (params.kind === 'OUTCOME' && expenseItemId) {

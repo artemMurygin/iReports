@@ -1,5 +1,5 @@
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
-import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
+import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
 import { CloseAccountingPeriodHandler } from './close-accounting-period.handler';
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';
@@ -8,11 +8,18 @@ import { CloseShopAccountingPeriodCommand } from '@/domains/shop/modules/account
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import { PeriodClosure } from '@/domains/service/modules/accounting/domain/value-objects/period-closure.value-object';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import { ShopAccountingPeriod } from '@/domains/shop/modules/accounting/domain/entities/shop-accounting-period.entity';
+import { ShopPeriodClosure } from '@/domains/shop/modules/accounting/domain/value-objects/shop-period-closure.value-object';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
@@ -22,8 +29,9 @@ import { Period } from '@/shared/domain/period.value-object';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-salary-accrual.repository';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
@@ -42,45 +50,141 @@ import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/e
 // (domains/shop/modules/accounting/application/command/
 // close-shop-accounting-period.handler.ts), тоже без direction в команде.
 // Направление теперь не runtime-ветка, а факт на уровне типов: какой класс
-// вызван, то направление и закрывается. Тест здесь сохранён как
-// регрессионная защита ключа (direction, period) уже на уровне двух
-// независимых хендлеров, работающих с общим репозиторием периода: закрытие
-// через CloseAccountingPeriodHandler не должно затрагивать строку с тем же
-// period, но direction='shop', и наоборот — закрытие через
-// CloseShopAccountingPeriodHandler не должно трогать строку direction='service'.
+// вызван, то направление и закрывается. С Фазы 5 docs/service-shop-boundary-violations-fix
+// оба хендлера полностью независимы и на уровне ТИПОВ: CloseAccountingPeriodHandler
+// работает через ACCOUNTING_PERIOD_REPOSITORY/AccountingPeriod (сервис),
+// CloseShopAccountingPeriodHandler — через собственные
+// SHOP_ACCOUNTING_PERIOD_REPOSITORY/ShopAccountingPeriod (магазин). Тест
+// здесь сохранён как регрессионная защита ключа (direction, period) уже не
+// на уровне общего репозитория (его больше нет — см. WHY выше), а на уровне
+// общей физической таблицы: оба независимых fake-репозитория ниже читают/
+// пишут ОДИН и тот же сырой store (проекция общей Prisma-таблицы
+// accounting_periods, partitioned по direction), каждый мапит строку в свой
+// доменный тип — закрытие через CloseAccountingPeriodHandler не должно
+// затрагивать строку с тем же period, но direction='shop', и наоборот —
+// закрытие через CloseShopAccountingPeriodHandler не должно трогать строку
+// direction='service'.
 describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — не путают ключ (direction, period)', () => {
+    type PeriodRecord = {
+        id: string;
+        status: 'OPEN' | 'CLOSED';
+        closedBy: number | null;
+        closedAt: Date | null;
+    };
+    const toRecord = (entity: {
+        id: string;
+        status: 'OPEN' | 'CLOSED';
+        closedBy: number | null;
+        closedAt: Date | null;
+    }): PeriodRecord => ({
+        id: entity.id,
+        status: entity.status,
+        closedBy: entity.closedBy,
+        closedAt: entity.closedAt,
+    });
+
     // Один и тот же key-value store имитирует реальный уникальный ключ
-    // (direction, period) в Postgres — если бы один из хендлеров/общий
-    // репозиторий где-то перепутал направление, эта проверка бы это поймала.
-    const createSharedPeriodRepo = () => {
-        const store = new Map<string, AccountingPeriod>();
+    // (direction, period) в Postgres — если бы один из хендлеров где-то
+    // перепутал направление, эта проверка бы это поймала. serviceRepo/
+    // shopRepo — два независимых fake-класса (как настоящие
+    // AccountingPeriodRepository/ShopAccountingPeriodRepository), каждый
+    // мапит сырую запись в свой собственный доменный тип.
+    const createSharedPeriodStore = () => {
+        const store = new Map<string, PeriodRecord>();
         const key = (direction: string, period: string) =>
             `${direction}:${period}`;
 
-        const periodRepo: AccountingPeriodRepositoryPort = {
-            findByDirectionAndPeriod: (direction, period) =>
-                Promise.resolve(store.get(key(direction, period)) ?? null),
+        const serviceRepo: AccountingPeriodRepositoryPort = {
+            findByDirectionAndPeriod: (direction, period) => {
+                const rec = store.get(key(direction, period));
+                if (!rec) {
+                    return Promise.resolve(null);
+                }
+                return Promise.resolve(
+                    new AccountingPeriod({
+                        id: rec.id,
+                        props: {
+                            direction,
+                            period: Period.create(period),
+                            status: rec.status,
+                            closure:
+                                rec.closedBy !== null && rec.closedAt !== null
+                                    ? PeriodClosure.create(
+                                          rec.closedBy,
+                                          rec.closedAt,
+                                      )
+                                    : null,
+                        },
+                    }),
+                );
+            },
             save: (entity) => {
-                store.set(key(entity.direction, entity.period), entity);
+                store.set(
+                    key(entity.direction, entity.period),
+                    toRecord(entity),
+                );
                 return Promise.resolve();
             },
         };
 
-        return { store, key, periodRepo };
+        const shopRepo: ShopAccountingPeriodRepositoryPort = {
+            findByPeriod: (period) => {
+                const rec = store.get(key('shop', period));
+                if (!rec) {
+                    return Promise.resolve(null);
+                }
+                return Promise.resolve(
+                    new ShopAccountingPeriod({
+                        id: rec.id,
+                        props: {
+                            period: Period.create(period),
+                            status: rec.status,
+                            closure:
+                                rec.closedBy !== null && rec.closedAt !== null
+                                    ? ShopPeriodClosure.create(
+                                          rec.closedBy,
+                                          rec.closedAt,
+                                      )
+                                    : null,
+                        },
+                    }),
+                );
+            },
+            save: (entity) => {
+                store.set(key('shop', entity.period), toRecord(entity));
+                return Promise.resolve();
+            },
+        };
+
+        return { store, key, toRecord, serviceRepo, shopRepo };
     };
 
-    // Общие для обоих хендлеров зависимости PRD 1 (документы начисления):
-    // один in-memory репозиторий документов на оба направления — та же
-    // логика проверки ключа (direction, period), что и у periodRepo выше.
+    // Зависимости PRD 1 (документы начисления) обоих хендлеров — с Фазы 6
+    // docs/service-shop-boundary-violations-fix SalaryAccrual/ShopSalaryAccrual
+    // раздельно реализованы по доменам (собственный независимый
+    // Prisma-репозиторий и класс сущности на каждое направление, см.
+    // shop-salary-accrual.repository.ts), поэтому здесь уже не ОДИН общий
+    // in-memory репозиторий на оба направления (как до Фазы 6 — общая
+    // Prisma-таблица salary_accruals и тогда ещё общий класс/токен), а два
+    // независимых стора — так же, как и настоящие независимые классы:
+    // изоляция между направлениями теперь гарантирована на уровне ТИПОВ
+    // (разные классы, разные токены), а не только рантайм-дисциплиной
+    // фильтра по direction внутри одного класса.
     const createSharedAccrualDeps = () => {
-        const accrualRepo = new InMemorySalaryAccrualRepository();
+        const serviceAccrualRepo = new InMemorySalaryAccrualRepository();
+        const shopAccrualRepo = new InMemoryShopSalaryAccrualRepository();
         const employeeDismissal: EmployeeDismissalPort = {
             findDismissedEmployeeIds: () => Promise.resolve(new Set()),
         };
         const eventEmitter = {
             emitAsync: jest.fn().mockResolvedValue([]),
         } as unknown as EventEmitter2;
-        return { accrualRepo, employeeDismissal, eventEmitter };
+        return {
+            serviceAccrualRepo,
+            shopAccrualRepo,
+            employeeDismissal,
+            eventEmitter,
+        };
     };
     type SharedAccrualDeps = ReturnType<typeof createSharedAccrualDeps>;
 
@@ -188,7 +292,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             snapshotRepo,
             cacheRepo,
             salesPlanRepo,
-            accrualDeps.accrualRepo,
+            accrualDeps.serviceAccrualRepo,
             accrualDeps.employeeDismissal,
             unitOfWork,
             accrualDeps.eventEmitter,
@@ -203,20 +307,20 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
     };
 
     const buildShopHandler = (
-        periodRepo: AccountingPeriodRepositoryPort,
+        periodRepo: ShopAccountingPeriodRepositoryPort,
         accrualDeps: SharedAccrualDeps,
         schemas: ShopMotivationSchema[] = [],
     ) => {
-        const snapshotRepo: AccountingPeriodSnapshotPort = {
+        const snapshotRepo: ShopAccountingPeriodSnapshotPort = {
             saveAll: jest.fn().mockResolvedValue(undefined),
             findByKey: jest.fn(),
             findManyByKey: jest.fn().mockResolvedValue(new Map()),
-            deleteByDirectionAndPeriod: jest.fn(),
+            deleteByPeriod: jest.fn(),
         };
-        const cacheRepo: AccountingCalculationCachePort = {
+        const cacheRepo: ShopAccountingCalculationCachePort = {
             find: jest.fn(),
             upsert: jest.fn(),
-            deleteByDirectionAndPeriod: jest.fn().mockResolvedValue(undefined),
+            deleteByPeriod: jest.fn().mockResolvedValue(undefined),
         };
         const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
             insert: jest.fn(),
@@ -239,14 +343,14 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
                     findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
                 } as unknown as ShopCalculationDataPort,
             );
-        const salesPlanRepo: SalesPlanRepositoryPort = {
+        const salesPlanRepo: ShopSalesPlanRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
             delete: jest.fn(),
             findById: jest.fn(),
             findByIds: jest.fn(),
             findByScope: jest.fn(),
-            findByDirectionAndPeriod: jest.fn().mockResolvedValue([]),
+            findByPeriod: jest.fn().mockResolvedValue([]),
         };
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
         const shopContextBuilder = {
@@ -271,7 +375,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             snapshotRepo,
             cacheRepo,
             salesPlanRepo,
-            accrualDeps.accrualRepo,
+            accrualDeps.shopAccrualRepo,
             accrualDeps.employeeDismissal,
             unitOfWork,
             accrualDeps.eventEmitter,
@@ -286,9 +390,10 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
     };
 
     it('закрытие периода направления service не переводит в CLOSED period с тем же значением, но direction=shop', async () => {
-        const { store, key, periodRepo } = createSharedPeriodRepo();
+        const { store, key, toRecord, serviceRepo, shopRepo } =
+            createSharedPeriodStore();
         const handler = buildServiceHandler(
-            periodRepo,
+            serviceRepo,
             createSharedAccrualDeps(),
         );
 
@@ -297,7 +402,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         // direction, эта запись оказалась бы задета.
         store.set(
             key('shop', '2026-07'),
-            AccountingPeriod.openFor({ direction: 'shop', period: '2026-07' }),
+            toRecord(ShopAccountingPeriod.openFor('2026-07')),
         );
 
         await withRequestContext(() =>
@@ -309,31 +414,31 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             ),
         );
 
-        const servicePeriod = await periodRepo.findByDirectionAndPeriod(
+        const servicePeriod = await serviceRepo.findByDirectionAndPeriod(
             'service',
             '2026-07',
         );
         expect(servicePeriod?.status).toBe('CLOSED');
 
-        const shopPeriod = await periodRepo.findByDirectionAndPeriod(
-            'shop',
-            '2026-07',
-        );
+        const shopPeriod = await shopRepo.findByPeriod('2026-07');
         expect(shopPeriod?.status).toBe('OPEN');
     });
 
     it('закрытие периода направления shop не переводит в CLOSED period с тем же значением, но direction=service', async () => {
-        const { store, key, periodRepo } = createSharedPeriodRepo();
-        const handler = buildShopHandler(periodRepo, createSharedAccrualDeps());
+        const { store, key, toRecord, serviceRepo, shopRepo } =
+            createSharedPeriodStore();
+        const handler = buildShopHandler(shopRepo, createSharedAccrualDeps());
 
         // Симметричная проверка: заранее заводим "чужую" строку под тем же
         // period, но direction=service.
         store.set(
             key('service', '2026-07'),
-            AccountingPeriod.openFor({
-                direction: 'service',
-                period: '2026-07',
-            }),
+            toRecord(
+                AccountingPeriod.openFor({
+                    direction: 'service',
+                    period: '2026-07',
+                }),
+            ),
         );
 
         await withRequestContext(() =>
@@ -345,13 +450,10 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             ),
         );
 
-        const shopPeriod = await periodRepo.findByDirectionAndPeriod(
-            'shop',
-            '2026-07',
-        );
+        const shopPeriod = await shopRepo.findByPeriod('2026-07');
         expect(shopPeriod?.status).toBe('CLOSED');
 
-        const servicePeriod = await periodRepo.findByDirectionAndPeriod(
+        const servicePeriod = await serviceRepo.findByDirectionAndPeriod(
             'service',
             '2026-07',
         );
@@ -361,12 +463,12 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
     // PRD 1 docs/payroll-closing-and-accrual: "Закрытие service не создаёт
     // документов shop и не меняет статус периода shop" — и наоборот.
     it('закрытие service создаёт документы начисления только direction=service и не трогает документы shop', async () => {
-        const { periodRepo } = createSharedPeriodRepo();
+        const { serviceRepo, shopRepo } = createSharedPeriodStore();
         const accrualDeps = createSharedAccrualDeps();
-        const serviceHandler = buildServiceHandler(periodRepo, accrualDeps, [
+        const serviceHandler = buildServiceHandler(serviceRepo, accrualDeps, [
             buildServiceSchema(42),
         ]);
-        const shopHandler = buildShopHandler(periodRepo, accrualDeps, [
+        const shopHandler = buildShopHandler(shopRepo, accrualDeps, [
             buildShopSchema(42),
         ]);
 
@@ -380,10 +482,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
             ),
         );
         const shopBefore =
-            await accrualDeps.accrualRepo.findByDirectionAndPeriod(
-                'shop',
-                '2026-07',
-            );
+            await accrualDeps.shopAccrualRepo.findByPeriod('2026-07');
         expect(shopBefore).toHaveLength(1);
 
         await withRequestContext(() =>
@@ -396,20 +495,21 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         );
 
         const serviceAccruals =
-            await accrualDeps.accrualRepo.findByDirectionAndPeriod(
+            await accrualDeps.serviceAccrualRepo.findByDirectionAndPeriod(
                 'service',
                 '2026-07',
             );
         const shopAccruals =
-            await accrualDeps.accrualRepo.findByDirectionAndPeriod(
-                'shop',
-                '2026-07',
-            );
+            await accrualDeps.shopAccrualRepo.findByPeriod('2026-07');
         expect(serviceAccruals.map((a) => a.direction)).toEqual(['service']);
-        // Документ shop остался тем же самым (не пересоздан и не удалён).
+        // Документ shop остался тем же самым (не пересоздан и не удалён) —
+        // хендлер service физически не может его задеть: он пишет в
+        // отдельный независимый стор (serviceAccrualRepo), не тот, что читал
+        // shopHandler (shopAccrualRepo).
         expect(shopAccruals.map((a) => a.id)).toEqual(
             shopBefore.map((a) => a.id),
         );
-        expect(accrualDeps.accrualRepo.store.size).toBe(2);
+        expect(accrualDeps.serviceAccrualRepo.store.size).toBe(1);
+        expect(accrualDeps.shopAccrualRepo.store.size).toBe(1);
     });
 });

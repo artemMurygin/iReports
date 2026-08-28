@@ -1,7 +1,7 @@
 import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { GetClosePeriodPreviewService } from './get-close-period-preview.service';
 import { CalculateServiceSnapshotRowsService } from './calculate-service-snapshot-rows.service';
-import { ErpPeriodSyncRunner } from './erp-period-sync-runner.service';
+import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { ResolveEmployeeSalaryRulesService } from './resolve-employee-salary-rules.service';
 import type { BuildServiceCalculationContextService } from './build-service-calculation-context.service';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
@@ -11,7 +11,7 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';

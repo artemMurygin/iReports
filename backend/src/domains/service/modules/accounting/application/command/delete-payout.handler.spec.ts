@@ -5,15 +5,15 @@ import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
-import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
+import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import {
     BalanceTransactionNotFoundException,
     BalanceTransactionNotPayoutException,
-} from '@/domains/service/modules/accounting/domain/exceptions/balance-transaction.exception';
+} from '@/modules/employee-balance/domain/exceptions/balance-transaction.exception';
 import { ErpCashDocumentMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
 import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
 import { DeletePayoutHandler } from './delete-payout.handler';

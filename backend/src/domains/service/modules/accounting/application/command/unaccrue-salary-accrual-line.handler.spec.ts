@@ -11,7 +11,7 @@ import {
     SalaryAccrualPaidException,
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
 
 // Отмена начисления (PRD 2, Фаза 6): движения SALARY_ACCRUAL и
 // ACCRUAL_ADJUSTMENT строки удаляются с баланса без следа, строка

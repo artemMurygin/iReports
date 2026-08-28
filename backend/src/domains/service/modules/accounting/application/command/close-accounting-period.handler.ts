@@ -6,7 +6,7 @@ import { Period } from '@/shared/domain/period.value-object';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
-import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
+import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import {
     PeriodAlreadyClosedException,
@@ -26,10 +26,10 @@ import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/applicati
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/salary-accrual-documents-created.domain-event';
+import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events/salary-accrual-documents-created.domain-event';
 import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';
 

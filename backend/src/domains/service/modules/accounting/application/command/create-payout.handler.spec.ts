@@ -9,9 +9,9 @@ import type {
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
-import { PayoutConfirmationRequiredException } from '@/domains/service/modules/accounting/domain/exceptions/salary-payout.exception';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
+import { PayoutConfirmationRequiredException } from '@/modules/employee-balance/domain/exceptions/salary-payout.exception';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
 import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
 import { CreatePayoutHandler } from './create-payout.handler';

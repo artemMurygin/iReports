@@ -4,7 +4,7 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
 import { AccrueSalaryAccrualLineHandler } from './accrue-salary-accrual-line.handler';
 import { AccruePeriodSalaryAccrualsHandler } from './accrue-period-salary-accruals.handler';
 import { AccruePeriodSalaryAccrualsCommand } from './accrue-period-salary-accruals.command';

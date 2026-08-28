@@ -9,7 +9,7 @@ import type { BalanceSummaryResponse } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
 import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balance.module';
-import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';

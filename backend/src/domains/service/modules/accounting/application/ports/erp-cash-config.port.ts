@@ -1,11 +1,13 @@
 import { ErpCashConfig } from '@/domains/service/modules/accounting/domain/entities/erp-cash-config.entity';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 
-// Конфигурация кассы направления (PRD 3, Фаза 11) — direction-агностичный
-// порт, как AccountingPeriodRepositoryPort: физически определён в
-// domains/service, domains/shop заводит собственный экземпляр реализации
-// под тем же токеном (см. domains/service/CLAUDE.md, раздел про
-// ACCOUNTING_PERIOD_REPOSITORY/BALANCE_TRANSACTION_REPOSITORY).
+// Конфигурация кассы направления service (PRD 3, Фаза 11) — до Фазы 4
+// docs/service-shop-boundary-violations-fix был direction-агностичным
+// портом, как AccountingPeriodRepositoryPort (domains/shop заводил
+// собственный экземпляр реализации под тем же токеном). С этой фазы —
+// собственный, только service, порт: у shop независимый
+// ShopErpCashConfigRepositoryPort/SHOP_ERP_CASH_CONFIG_REPOSITORY (см.
+// domains/shop/modules/accounting/application/ports/shop-erp-cash-config.port.ts).
 //
 // Только чтение — начиная с правки пользователя от 2026-08-24 (см. заметку
 // в конце Фазы 11 плана) конфигурация читается из файлового конфига модуля

@@ -42,9 +42,15 @@ import { GetWorkScheduleShiftHttpController } from './interface/http-controllers
         // Блокировка записи графика за закрытый месяц (PRD 1
         // docs/payroll-closing-and-accrual, Фаза 2 — там же и обещание, что график
         // подключит этот сервис, а не задублирует проверку). Свой экземпляр
-        // ACCOUNTING_PERIOD_REPOSITORY под тем же токеном, что и в AccountingModule/
-        // ShopAccountingModule — тот же приём (см. domains/shop/CLAUDE.md), а не
-        // импорт всего AccountingModule сервиса ради одного токена.
+        // ACCOUNTING_PERIOD_REPOSITORY под тем же токеном, что и в AccountingModule
+        // сервиса — тот же приём (см. domains/service/CLAUDE.md), а не импорт
+        // всего AccountingModule ради одного токена. Это единственная связь
+        // work-schedule с расчётным периодом — сознательно только с
+        // направлением service (см. docs/service-shop-boundary-violations-fix/
+        // prd-service-shop-boundary-violations-fix.md, раздел "Не в скоупе"):
+        // WorkScheduleModule не знает о ShopAccountingModule/
+        // SHOP_ACCOUNTING_PERIOD_REPOSITORY и не будет знать в этой итерации —
+        // закрытие периода shop не должно затрагивать график работы.
         {
             provide: ACCOUNTING_PERIOD_REPOSITORY,
             useClass: AccountingPeriodRepository,

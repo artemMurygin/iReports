@@ -2,11 +2,11 @@ import { ConflictException, NotFoundException } from '@/shared/exceptions';
 
 // «Пустая конфигурация — понятная ошибка до обращения в ERP» (PRD 3
 // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
-// раздел «Технические ограничения») — ErpCashConfig физически один класс на
-// оба направления (см. application/ports/erp-cash-config.port.ts), поэтому
-// исключение тоже generic по direction: реализация МойСклада (Фаза 11/12,
-// domains/shop) переиспользует этот же класс, а не заводит свой — так же,
-// как переиспользует саму сущность ErpCashConfig.
+// раздел «Технические ограничения») — брошено только RoappCashDocumentAdapter
+// (direction всегда "service"); у shop собственный аналог,
+// ShopErpCashConfigIncompleteException
+// (domains/shop/modules/accounting/domain/exceptions/erp-cash-document.exception.ts),
+// брошенный MoyskladCashDocumentAdapter.
 export class ErpCashConfigMissingException extends ConflictException {
     constructor(direction: string) {
         super(
@@ -37,9 +37,13 @@ export class EmployeeErpIdentityMissingException extends ConflictException {
 // мапится в понятную ошибку тем же приёмом, что
 // SalaryAccrualLineAlreadyAccruedException у BalanceTransactionRepository
 // (P2002 → доменное исключение), а не остаётся сырым
-// Prisma.PrismaClientKnownRequestError. Generic по direction, как остальные
-// исключения этого файла — ErpCashDocumentRepository физически один класс на
-// оба направления (см. application/ports/erp-cash-document-repository.port.ts).
+// Prisma.PrismaClientKnownRequestError. Брошено ErpCashDocumentRepository
+// (service) — используется RoappCashDocumentAdapter и сквозным
+// src/modules/employee-balance/ (общая лента баланса, см. WHY на
+// erp-cash-document.entity.ts); у shop с Фазы 4
+// docs/service-shop-boundary-violations-fix собственный аналог,
+// ShopErpCashDocumentAlreadyExistsException
+// (domains/shop/modules/accounting/domain/exceptions/erp-cash-document.exception.ts).
 export class ErpCashDocumentAlreadyExistsException extends ConflictException {
     constructor(transactionId: string) {
         super(
@@ -55,7 +59,9 @@ export class ErpCashDocumentAlreadyExistsException extends ConflictException {
 // одна транзакция, см. CreateBalanceTransactionHandler), но удаление такого
 // движения не может молча продолжить без документа для erpPort.delete().
 // NotFoundException, а не ConflictException — сам факт отсутствия записи,
-// а не конфликт состояния.
+// а не конфликт состояния. У shop с Фазы 4
+// docs/service-shop-boundary-violations-fix собственный аналог,
+// ShopErpCashDocumentMissingForTransactionException.
 export class ErpCashDocumentMissingForTransactionException extends NotFoundException {
     constructor(transactionId: string) {
         super(

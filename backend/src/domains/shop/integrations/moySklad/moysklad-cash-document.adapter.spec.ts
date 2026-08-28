@@ -1,8 +1,8 @@
 import { BadGatewayException } from '@nestjs/common';
-import { ErpCashConfig } from '@/domains/service/modules/accounting/domain/entities/erp-cash-config.entity';
-import type { ErpCashConfigRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { ShopErpCashConfig } from '@/domains/shop/modules/accounting/domain/entities/shop-erp-cash-config.entity';
+import type { ShopErpCashConfigRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-config.port';
+import { ShopErpCashDocument } from '@/domains/shop/modules/accounting/domain/entities/shop-erp-cash-document.entity';
+import type { ShopErpCashDocumentRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
 import { EmployeeIdentity } from '@/modules/employee-identity/domain/entities/employee-identity.entity';
 import type { EmployeeIdentityRepositoryPort } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import type { CreateErpCashDocumentParams } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
@@ -32,8 +32,7 @@ interface MoyskladMetaRefLike {
     meta: { href: string; type: string; mediaType: string };
 }
 
-const SHOP_CONFIG = ErpCashConfig.create({
-    direction: 'shop',
+const SHOP_CONFIG = ShopErpCashConfig.create({
     organizationId: 'org-1',
     moySkladExpenseItemId: 'expense-1',
 });
@@ -57,10 +56,10 @@ const BASE_PARAMS: CreateErpCashDocumentParams = {
 describe('MoyskladCashDocumentAdapter', () => {
     let http: ReturnType<typeof createHttpMock>;
     let configRepo: jest.Mocked<
-        Pick<ErpCashConfigRepositoryPort, 'findByDirection'>
+        Pick<ShopErpCashConfigRepositoryPort, 'findConfig'>
     >;
     let documentRepo: jest.Mocked<
-        Pick<ErpCashDocumentRepositoryPort, 'findByTransactionId'>
+        Pick<ShopErpCashDocumentRepositoryPort, 'findByTransactionId'>
     >;
     let employeeIdentityRepo: jest.Mocked<
         Pick<EmployeeIdentityRepositoryPort, 'findByEmployee'>
@@ -69,21 +68,21 @@ describe('MoyskladCashDocumentAdapter', () => {
 
     beforeEach(() => {
         http = createHttpMock();
-        configRepo = { findByDirection: jest.fn() };
+        configRepo = { findConfig: jest.fn() };
         documentRepo = { findByTransactionId: jest.fn() };
         employeeIdentityRepo = { findByEmployee: jest.fn() };
 
         adapter = new MoyskladCashDocumentAdapter(
             { instance: http } as unknown as MoyskladHttpService,
             configRepo,
-            documentRepo as unknown as ErpCashDocumentRepositoryPort,
+            documentRepo as unknown as ShopErpCashDocumentRepositoryPort,
             employeeIdentityRepo as unknown as EmployeeIdentityRepositoryPort,
         );
     });
 
     describe('create', () => {
         it('собирает тело POST /entity/cashout для OUTCOME (сумма в копейках, статья расхода, agent = employee)', async () => {
-            configRepo.findByDirection.mockResolvedValue(SHOP_CONFIG);
+            configRepo.findConfig.mockResolvedValue(SHOP_CONFIG);
             employeeIdentityRepo.findByEmployee.mockResolvedValue([
                 MOY_SKLAD_IDENTITY,
             ]);
@@ -124,7 +123,7 @@ describe('MoyskladCashDocumentAdapter', () => {
         });
 
         it('собирает тело POST /entity/cashin для INCOME без expenseItem/moySkladIncomeItemId', async () => {
-            configRepo.findByDirection.mockResolvedValue(SHOP_CONFIG);
+            configRepo.findConfig.mockResolvedValue(SHOP_CONFIG);
             employeeIdentityRepo.findByEmployee.mockResolvedValue([
                 MOY_SKLAD_IDENTITY,
             ]);
@@ -148,7 +147,7 @@ describe('MoyskladCashDocumentAdapter', () => {
 
         it('бросает ShopErpCashConfigIncompleteException до HTTP-вызова, если конфигурация кассы не заполнена', async () => {
             await withRequestContext(async () => {
-                configRepo.findByDirection.mockResolvedValue(null);
+                configRepo.findConfig.mockResolvedValue(null);
 
                 await expect(
                     adapter.create(BASE_PARAMS),
@@ -159,9 +158,8 @@ describe('MoyskladCashDocumentAdapter', () => {
 
         it('бросает ShopErpCashConfigIncompleteException, если для OUTCOME не задана статья расхода', async () => {
             await withRequestContext(async () => {
-                configRepo.findByDirection.mockResolvedValue(
-                    ErpCashConfig.create({
-                        direction: 'shop',
+                configRepo.findConfig.mockResolvedValue(
+                    ShopErpCashConfig.create({
                         organizationId: 'org-1',
                         moySkladExpenseItemId: null,
                     }),
@@ -175,9 +173,8 @@ describe('MoyskladCashDocumentAdapter', () => {
         });
 
         it('не требует статьи расхода для INCOME', async () => {
-            configRepo.findByDirection.mockResolvedValue(
-                ErpCashConfig.create({
-                    direction: 'shop',
+            configRepo.findConfig.mockResolvedValue(
+                ShopErpCashConfig.create({
                     organizationId: 'org-1',
                     moySkladExpenseItemId: null,
                 }),
@@ -194,7 +191,7 @@ describe('MoyskladCashDocumentAdapter', () => {
 
         it('бросает ShopEmployeeMoySkladIdentityMissingException, если у сотрудника нет связи MOY_SKLAD/EMPLOYEE_ID', async () => {
             await withRequestContext(async () => {
-                configRepo.findByDirection.mockResolvedValue(SHOP_CONFIG);
+                configRepo.findConfig.mockResolvedValue(SHOP_CONFIG);
                 employeeIdentityRepo.findByEmployee.mockResolvedValue([]);
 
                 await expect(
@@ -208,7 +205,7 @@ describe('MoyskladCashDocumentAdapter', () => {
 
         it('игнорирует связи сотрудника в других системах/типах при резолве agent', async () => {
             await withRequestContext(async () => {
-                configRepo.findByDirection.mockResolvedValue(SHOP_CONFIG);
+                configRepo.findConfig.mockResolvedValue(SHOP_CONFIG);
                 employeeIdentityRepo.findByEmployee.mockResolvedValue([
                     EmployeeIdentity.create({
                         bitrixEmployeeId: 42,
@@ -227,7 +224,7 @@ describe('MoyskladCashDocumentAdapter', () => {
         });
 
         it('оборачивает ошибку HTTP в BadGatewayException', async () => {
-            configRepo.findByDirection.mockResolvedValue(SHOP_CONFIG);
+            configRepo.findConfig.mockResolvedValue(SHOP_CONFIG);
             employeeIdentityRepo.findByEmployee.mockResolvedValue([
                 MOY_SKLAD_IDENTITY,
             ]);
@@ -287,9 +284,9 @@ describe('MoyskladCashDocumentAdapter', () => {
     });
 
     describe('findByKey', () => {
-        it('делегирует в ErpCashDocumentRepositoryPort.findByTransactionId', async () => {
+        it('делегирует в ShopErpCashDocumentRepositoryPort.findByTransactionId', async () => {
             documentRepo.findByTransactionId.mockResolvedValue(
-                ErpCashDocument.create({
+                ShopErpCashDocument.create({
                     transactionId: 'tx-1',
                     system: 'MOY_SKLAD',
                     kind: 'OUTCOME',

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
-import { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 
 // Read-only доступ к BitrixEmployee.isActive (bitrix.prisma) — без записи,
 // поэтому не наследует PrismaRepository (тот же приём, что и

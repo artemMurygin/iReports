@@ -1,8 +1,4 @@
 import { DirectionSyncLock } from './direction-sync-lock';
-import { RoappSyncCron } from '@/domains/service/sync/roapp/roapp-sync.cron';
-import type { RoappSyncService } from '@/domains/service/sync/roapp/roapp-sync.service';
-import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
-import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { Period } from '@/shared/domain/period.value-object';
 
 // Блокировка по направлению (PRD 1 docs/payroll-closing-and-accrual, Фаза
@@ -76,33 +72,48 @@ describe('DirectionSyncLock', () => {
         await service;
     });
 
-    it('синк закрытия периода (RoappErpPeriodSyncAdapter) и тик RoappSyncCron по service не идут параллельно', async () => {
+    it('два независимых потребителя блокировки (крон-подобный тик и синк закрываемого периода) по одному направлению не идут параллельно', async () => {
+        // Фейки нарочно не завязаны ни на одну конкретную ERP-интеграцию —
+        // тест общего инфраструктурного примитива блокировки не должен
+        // знать про RoApp/service. Форма повторяет реальных потребителей
+        // (RoappSyncCron/RoappErpPeriodSyncAdapter, см.
+        // domains/service/sync/roapp): оба вызывают
+        // lock.runExclusive('service', ...) из независимых DI-компонентов.
         const lock = new DirectionSyncLock();
         const events: string[] = [];
         const cronGate = deferred();
 
-        const uploadOrdersClosedBetween = jest.fn(async () => {
+        class FakeSyncCron {
+            constructor(private readonly lock: DirectionSyncLock) {}
+
+            async run(): Promise<void> {
+                await this.lock.runExclusive('service', async () => {
+                    events.push('cron:start');
+                    await cronGate.promise;
+                    events.push('cron:end');
+                });
+            }
+        }
+
+        const uploadClosedBetween = jest.fn(async (_from: Date, _to: Date) => {
             events.push('close:start');
             await Promise.resolve();
             events.push('close:end');
-            return [];
         });
-        const syncService = {
-            uploadUpdatedOrders: jest.fn(async () => {
-                events.push('cron:start');
-                await cronGate.promise;
-                events.push('cron:end');
-                return [];
-            }),
-            uploadOrderItems: jest.fn().mockResolvedValue(undefined),
-            uploadOrdersClosedBetween,
-        } as unknown as RoappSyncService;
-        const domainSyncStatus: DomainSyncStatusPort = {
-            getLastSuccessfulSyncAt: jest.fn(),
-            markSuccessful: jest.fn().mockResolvedValue(undefined),
-        };
-        const cron = new RoappSyncCron(syncService, domainSyncStatus, lock);
-        const adapter = new RoappErpPeriodSyncAdapter(syncService, lock);
+
+        class FakePeriodSyncAdapter {
+            constructor(private readonly lock: DirectionSyncLock) {}
+
+            async syncPeriod(period: Period): Promise<void> {
+                const { from, to } = period.getBounds();
+                await this.lock.runExclusive('service', () =>
+                    uploadClosedBetween(from, to),
+                );
+            }
+        }
+
+        const cron = new FakeSyncCron(lock);
+        const adapter = new FakePeriodSyncAdapter(lock);
 
         const cronRun = cron.run();
         const closeRun = adapter.syncPeriod(Period.create('2026-07'));
@@ -120,6 +131,6 @@ describe('DirectionSyncLock', () => {
         ]);
         // Синк месяца — ровно границы закрываемого периода.
         const { from, to } = Period.create('2026-07').getBounds();
-        expect(uploadOrdersClosedBetween).toHaveBeenCalledWith(from, to);
+        expect(uploadClosedBetween).toHaveBeenCalledWith(from, to);
     });
 });

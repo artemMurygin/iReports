@@ -16,17 +16,17 @@ import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales
 import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
-import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
+import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import {
-    ErpSyncFailedException,
     PeriodAlreadyClosedException,
     PeriodNotExpiredException,
 } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
-import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/salary-accrual-documents-created.domain-event';
+import { ErpSyncFailedException } from '@/shared/application/exceptions/erp-sync-failed.exception';
+import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events/salary-accrual-documents-created.domain-event';
 
 describe('CloseAccountingPeriodHandler', () => {
     const buildHandler = (overrides?: {

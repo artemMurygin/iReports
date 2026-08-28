@@ -1,16 +1,19 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Period } from '@/shared/domain/period.value-object';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
-import { ErpSyncFailedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
-import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
-import type { ErpPeriodSyncPort } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { ErpSyncFailedException } from '@/shared/application/exceptions/erp-sync-failed.exception';
+import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
+import type { ErpPeriodSyncPort } from '@/shared/application/ports/erp-period-sync.port';
 
 // Таймаут неявной синхронизации внутри закрытия, после которого закрытие
 // считается неудавшимся (PRD 1, открытые вопросы: "предварительно 2 минуты").
 export const ERP_PERIOD_SYNC_TIMEOUT_MS = 2 * 60 * 1000;
 
 // Неявная синхронизация ERP за закрываемый месяц (PRD 1
-// docs/payroll-closing-and-accrual, Фаза 2) — обёртка над ErpPeriodSyncPort:
+// docs/payroll-closing-and-accrual, Фаза 2; вынесена в shared Фазой 9
+// docs/service-shop-boundary-violations-fix — direction-агностична, уже
+// использовалась обоими доменами через один порт) — обёртка над
+// ErpPeriodSyncPort:
 // ограничивает ожидание таймаутом и любую ошибку (интеграции или таймаут)
 // превращает в ErpSyncFailedException (409, "не удалось получить данные из
 // ERP"), чтобы хендлер закрытия отклонил операцию до расчёта. Синк

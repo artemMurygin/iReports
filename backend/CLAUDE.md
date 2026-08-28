@@ -144,6 +144,32 @@ Cross-cutting request context (`AsyncLocalStorage`-based) lives in
 - Path alias `@/*` → `src/*` (configured in `tsconfig.json` and mirrored in jest's
   `moduleNameMapper`).
 
+#### Общие таблицы между `service` и `shop`
+
+`service` и `shop` не переиспользуют код друг друга (см. `domains/service/CLAUDE.md`/
+`domains/shop/CLAUDE.md`), но на уровне **данных** несколько таблиц физически общие для обоих
+направлений с дискриминатором `direction` на каждой строке (`AccountingPeriod`,
+`AccountingPeriodSnapshot`, `AccountingCalculationCache`, `SalaryAccrual`/`SalaryAccrualLine`/
+`SalaryAccrualLineAdjustment`, `SalesPlan`/`SalesPlanTemplate`, `TaskCompletion`) — это осознанное
+решение, таблицы **не разбиваются** на отдельные per-domain таблицы/Prisma-модели и данные между
+ними не переносятся. Если таблице для различения `service`/`shop` ещё не хватает `direction`
+(например, `ErpCashDocument` пока различает домены только по `system`), добавляй `direction`
+простой аддитивной миграцией (`ALTER TABLE ADD COLUMN`), а не новой таблицей.
+
+Изоляция доменов при этом обеспечивается только на уровне **кода**: у `service` и `shop` — свои
+независимые Entity/Port/Repository-классы (в своих `domain/`/`application/`/`infrastructure/`
+папках), каждый обращается к той же самой таблице через свой Prisma Client делегат, но всегда
+фильтрует/подставляет свой фиксированный `direction`. Один класс/токен DI на оба домена, чужой
+Prisma-репозиторий, импортированный напрямую из другого домена, или общий `CommandBus`-диспатч в
+чужие CQRS-хендлеры — нарушение границы, даже если физическая таблица общая (см.
+`docs/service-shop-boundary-violations.md` и
+`docs/service-shop-boundary-violations-fix/prd-service-shop-boundary-violations-fix.md`).
+`BalanceTransaction` и признак увольнения сотрудника (`EmployeeDismissal`) — исключение из этого
+правила в обе стороны: они физически не привязаны к одному направлению (баланс — единый на
+сотрудника, увольнение — общекорпоративные данные Bitrix24), поэтому и код, и данные для них живут
+в сквозных модулях `src/modules/employee-balance/`/`src/modules/employee-dismissal/`, а не
+дублируются по доменам.
+
 ### Contracts
 
 Request/response shapes shared with the frontend come from the `ireports-contracts` workspace

@@ -23,6 +23,7 @@ import { ShopWarehouseModule } from './domains/shop/modules/warehouse/shop-wareh
 import { EmployeeIdentityModule } from './modules/employee-identity/employee-identity.module';
 import { DirectoryModule } from './modules/directory/directory.module';
 import { WorkScheduleModule } from './modules/work-schedule/work-schedule.module';
+import { EmployeeBalanceModule } from './modules/employee-balance/employee-balance.module';
 // Аналитика услуг и категории услуг (Фаза 5,
 // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
 // новый дом для src/TODO/reports, удалённого этой же фазой целиком.
@@ -48,6 +49,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         EmployeeIdentityModule,
         DirectoryModule,
         WorkScheduleModule,
+        EmployeeBalanceModule,
         ReportsModule,
         PricingModule,
         ShopPricingModule,

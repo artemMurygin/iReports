@@ -1,5 +1,5 @@
 import type { Server } from 'http';
-import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -28,8 +28,8 @@ import type {
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';

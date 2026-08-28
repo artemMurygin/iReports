@@ -1,5 +1,5 @@
 import type { Server } from 'http';
-import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EventEmitterModule } from '@nestjs/event-emitter';

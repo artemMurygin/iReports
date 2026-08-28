@@ -40,17 +40,20 @@ export type CreateErpCashConfigProps = {
 // больше не персистентная запись БД и не редактируется через API (update()
 // и PUT убраны вместе с этим).
 //
-// Сущность физически определена в domains/service и переиспользуется в
-// domains/shop той же реализацией провайдера под тем же DI-токеном (тот же
-// приём, что AccountingPeriod, см. domains/service/CLAUDE.md) — сама она не
-// содержит бизнес-логики, специфичной для направления, только форму
-// значений. Поля обоих направлений не бывают одновременно осмысленно
-// заполненными: строка direction=service использует только roappCashboxId,
-// строка direction=shop — остальные три; сущность это не запрещает (в
-// комбинации полей нет нарушенного инварианта, только неиспользуемые
-// значения) — проверку «заполнено ли то, что нужно ИМЕННО этому
-// направлению» перед обращением в ERP делает адаптер/хендлер выплаты
-// (Фаза 12), не эта сущность.
+// Сущность физически определена в domains/service — до Фазы 4
+// docs/service-shop-boundary-violations-fix переиспользовалась в domains/shop
+// той же реализацией провайдера под тем же DI-токеном (тот же приём, что
+// AccountingPeriod, см. domains/service/CLAUDE.md). С этой фазы у shop
+// собственная независимая сущность ShopErpCashConfig
+// (domains/shop/modules/accounting/domain/entities/shop-erp-cash-config.entity.ts,
+// только поля МойСклада) — эта сущность обслуживает только direction =
+// 'service' (см. ErpCashConfigProvider), поля moySkladExpenseItemId/
+// moySkladIncomeItemId/organizationId/direction оставлены в форме ради
+// обратной совместимости контракта ErpCashConfigResponse (один общий объект
+// с полями обоих направлений, см. WHY в contracts/commands/erp-cash.ts) —
+// у service-строки они всегда null, проверку «заполнено ли то, что нужно
+// ИМЕННО этому направлению» перед обращением в ERP делает адаптер/хендлер
+// выплаты (Фаза 12), не эта сущность.
 export class ErpCashConfig extends AggregateRoot<ErpCashConfigProps> {
     declare protected readonly _id: AggregateID;
 

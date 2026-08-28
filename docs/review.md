@@ -3,20 +3,50 @@
 Ветка: `feat/todo-modules-ddd-refactoring`. Проверялось текущее состояние `backend/src` целиком
 (не diff), после слияния треков deals/reports/pricing в DDD-структуру `src/domains/{service,shop}`.
 
+> **Актуализация 2026-08-27**: раздел «2. Кросс-импорты и нарушения границ» и связанные с ним
+> формулировки в «Резюме»/«Сильные стороны»/«4. Дублирование кода» ниже описывали состояние кода на
+> 13.08 и называли переиспользование `AccountingPeriod`/`accounting-cache-freshness.ts`/`SalesPlan`/
+> CRUD-диспатча плана продаж между `service` и `shop` «осознанным, задокументированным исключением».
+> Граф-аудит (`docs/service-shop-boundary-violations.md`, 2026-08-27) показал, что фактический
+> периметр связности был кратно шире задокументированного (624 прямых edge, включая необъявленные
+> ранее `SalaryAccrual`/`BalanceTransaction`/`ErpCashDocument`/`EmployeeDismissal` и обратные импорты
+> `service ← shop`) — то есть это было не устойчивое архитектурное решение, а неконтролируемый дрейф.
+> По итогам PRD/плана `docs/service-shop-boundary-violations-fix/` весь этот периметр устранён:
+> `service` и `shop` получили полностью независимые реализации `AccountingPeriod`/
+> `AccountingPeriodSnapshot`/`AccountingCalculationCache`/`SalaryAccrual`/`SalesPlan`/
+> `SalesPlanTemplate`/`ErpCashConfig`/`ErpCashDocument` (свой Entity/Port/Repository-класс на домен,
+> общая только физическая таблица через `direction`), CRUD плана продаж `shop` больше не диспатчит
+> команды `service` через общий `CommandBus` — это собственные CQRS-хендлеры. `EmployeeDismissal` и
+> `BalanceTransaction` перестали быть «одолженными у `service`» и переехали в сквозные модули вне
+> доменов (`src/modules/employee-dismissal/`, `src/modules/employee-balance/`) — оба домена обращаются
+> к ним оттуда. Раздел ниже оставлен как было для истории (не переписан целиком), но формулировки об
+> «осознанном»/«принятом» переиспользовании между `service` и `shop` **больше не действуют** — единственное
+> оставшееся сознательно сохранённое исключение такого рода в проекте — `WorkSchedule → Service.Accounting`
+> (сквозной модуль `work-schedule` зависит от `EnsurePeriodNotClosedService`/`ACCOUNTING_PERIOD_REPOSITORY`
+> домена `service`, `shop` с графиком работы не связан вовсе, см. PRD выше, раздел «Не в скоупе»). Полный
+> актуальный список остаточных находок (несколько узких мест — общий `ErpPeriodSyncRunner`, отдельные
+> доменные исключения/события/DTO, всё ещё не продублированные) — в отчёте финальной верификации Фазы 8
+> того же плана, не в этом файле.
+
 ## Резюме
 
 Рефакторинг в целом состоялся: `modules/accounting` и `modules/sales` в обоих доменах
 последовательно следуют заявленной слоистости `domain → application → infrastructure → interface`,
 `domain` нигде не подтягивает `application`/`infrastructure`, контроллеры нигде не инжектят
-Prisma или репозитории напрямую, CQRS для команд используется единообразно. Пересечение `shop` →
+Prisma или репозитории напрямую, CQRS для команд используется единообразно. ~~Пересечение `shop` →
 `service` (переиспользование `AccountingPeriod`/`SalesPlan`) — задокументированное, осознанное
-исключение, а не архитектурный дрейф. Проблемы кодовой базы лежат не в «нарушении границ модулей», а
+исключение, а не архитектурный дрейф.~~ **Устарело, см. актуализацию выше**: это пересечение было
+кратно шире, чем описано здесь, и с тех пор устранено рефакторингом границы `service`/`shop` —
+единственное осознанно сохранённое исключение подобного рода теперь — `work-schedule → service`.
+Проблемы кодовой базы лежат не в «нарушении границ модулей», а
 в трёх других плоскостях: (1) почти полное отсутствие авторизации на HTTP-уровне для всего API, кроме
 одного сквозного модуля; (2) несколько конкретных багов в синхронизации ERP и в расчёте зарплаты,
 один из которых (п. 5.1) означает, что зарплатные отчёты `service` тихо считаются по устаревшим
 исходным данным; (3) систематическое дублирование «чистой» расчётной логики (money/float-percent/
 orchestrator) между `service` и `shop`, вопреки декларируемому DRY-принципу для денежных расчётов —
-даже там, где сам код признаёт дублирование в комментариях. Дисциплина типов и Swagger-документации
+даже там, где сам код признаёт дублирование в комментариях (после рефакторинга границы `service`/`shop`
+это дублирование не устранено — вынос в `shared` не входил в скоуп этой работы, см. актуализацию выше).
+Дисциплина типов и Swagger-документации
 высокая, `any` почти не встречается, деньги хранятся как целые рубли в Prisma. Тестовое покрытie
 (134 spec-файла на 509 файлов кода, 13 e2e) сосредоточено в `accounting`/`sales` — синки и часть
 интеграций проверены слабее, что и объясняет, почему часть найденных багов не поймана тестами.
@@ -28,10 +58,15 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
   не дал ни одного совпадения.
 - Контроллеры нигде не инжектят `PrismaService`/`*_REPOSITORY`/`*_PORT` напрямую — везде тонкий слой
   поверх application-сервисов/`CommandBus`, как того требует `backend/CLAUDE.md`.
-- Пересечение доменов `shop`→`service` (`shop-accounting.module.ts`, `shop-sales.module.ts`) — не
+- ~~Пересечение доменов `shop`→`service` (`shop-accounting.module.ts`, `shop-sales.module.ts`) — не
   забытая связность, а осознанно задокументированное (обширные комментарии со ссылками на фазы/issue)
   повторное использование `AccountingPeriod`/`SalesPlan` как direction-агностичных классов;
-  обратных импортов `service`→`shop` не найдено вообще — связность однонаправленная.
+  обратных импортов `service`→`shop` не найдено вообще — связность однонаправленная.~~ **Устарело**:
+  граф-аудит `docs/service-shop-boundary-violations.md` (2026-08-27) показал обратные импорты
+  `service ← shop` (8 файлов) и периметр переиспользования кратно шире задекларированного здесь.
+  После рефакторинга границы `service`/`shop` `shop-accounting.module.ts`/`shop-sales.module.ts` не
+  подключают Prisma-репозитории `AccountingPeriod`/`SalaryAccrual`/`SalesPlan`/`ErpCashDocument`
+  домена `service` — у `shop` собственные независимые классы.
 - Денежные суммы согласованно хранятся как целые рубли (`Int` в Prisma, без копеек) и округляются
   единой функцией `roundRubles()` (`Math.round`) во всех процентных расчётах — решение осознанно
   задокументировано в `domain/services/money.ts` в обоих доменах.
@@ -76,7 +111,26 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
 
 ## 2. Кросс-импорты и нарушения границ
 
-- **[Важно]** `backend/src/domains/shop/modules/accounting/domain/services/` не существует как
+> **Устарело (актуализация 2026-08-27)**: все три пункта ниже описывают состояние на 13.08 и
+> называют находки «осознанными исключениями». Граф-аудит `docs/service-shop-boundary-violations.md`
+> показал, что реальный периметр был кратно шире (624 edge, включая необъявленные здесь
+> `SalaryAccrual`/`BalanceTransaction`/`ErpCashDocument`/`EmployeeDismissal`/обратные импорты
+> `service ← shop`), и это не было устойчивым осознанным решением. По плану
+> `docs/service-shop-boundary-violations-fix/` весь периметр ниже устранён: `accounting-cache-freshness.ts`
+> продублирован как собственный `domains/shop/modules/accounting/domain/services/shop-accounting-cache-freshness.ts`
+> (не вынесен в `shared` — решение пользователя: у каждого домена своя копия direction-специфичной
+> логики, не общий переиспользуемый класс); `ACCOUNTING_PERIOD_REPOSITORY`/`ACCOUNTING_PERIOD_SNAPSHOT`/
+> `ACCOUNTING_CALCULATION_CACHE` в `shop-accounting.module.ts` теперь резолвятся в собственные классы
+> `ShopAccountingPeriod`/`ShopAccountingPeriodSnapshot`/`ShopAccountingCalculationCache`, не в классы
+> `domains/service`; `shop-sales-performance.value-object.ts` больше не импортирует сущность `SalesPlan`
+> `service` — использует собственную `ShopSalesPlan`. Единственное сохранённое исключение такого рода в
+> проекте — `WorkSchedule → Service.Accounting` (см. PRD `docs/service-shop-boundary-violations-fix/`,
+> раздел «Не в скоупе»). Небольшой остаточный периметр (общий `ErpPeriodSyncRunner`/`ERP_PERIOD_SYNC`,
+> несколько доменных исключений/событий/DTO `service`, всё ещё импортируемых из `shop`) остался вне
+> исходного скоупа PRD и зафиксирован в отчёте финальной верификации Фазы 8 того же плана — не был
+> частью явного списка «В скоупе» и не переоткрывается здесь заново.
+
+- **[Важно, устарело]** `backend/src/domains/shop/modules/accounting/domain/services/` не существует как
   самостоятельная реализация для *freshness*-логики кэша: `accounting-cache-freshness.ts` физически
   лежит только в `domains/service/modules/accounting/domain/services/` и напрямую импортируется из
   `shop` в трёх местах — `get-shop-employee-salary-report.service.ts:14-18`,
@@ -92,7 +146,7 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
   домена. **Фикс**: перенести `accounting-cache-freshness.ts` и порты/Prisma-реализации периода/кэша/
   снапшота в `src/shared/domain` и `src/shared/infrastructure` соответственно, обновить импорты в
   обоих доменах.
-- **[Важно]** `backend/src/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object.ts:2`
+- **[Важно, устарело]** `backend/src/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object.ts:2`
   импортирует `SalesPlan` — доменную сущность `service` — напрямую в доменный слой `shop`
   (`import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity'`).
   Это осознанное и явно прокомментированное исключение (`SalesPlan`/`SalesPlanTemplate` общие на
@@ -101,13 +155,18 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
   прямой импорт доменной сущности одного домена в доменный слой другого — более сильная связность,
   чем декларируется. Риска на практике нет (исключение зафиксировано и стабильно), отмечается для
   полноты картины.
-- **Не найдено**: обратных импортов `service` ← `shop` нет ни одного (грепом
+- **Не найдено (устарело)**: ~~обратных импортов `service` ← `shop` нет ни одного (грепом
   `from ['"].*domains/shop` внутри `domains/service` — пусто) — связность между доменами строго
-  однонаправленная. Импортов `domains/*` внутрь `src/shared`/`src/infrustructure` (инвертированная
+  однонаправленная.~~ Это утверждение оказалось неверным уже на момент граф-аудита 2026-08-27 (8 файлов
+  с обратными импортами `service ← shop`, появившихся вместе с фичей `ErpCashDocument`) — см.
+  `docs/service-shop-boundary-violations.md`, раздел «⚠️ Главное расхождение с `docs/review.md`».
+  Импортов `domains/*` внутрь `src/shared`/`src/infrustructure` (инвертированная
   зависимость инфраструктуры от домена) не найдено, за одним легитимным исключением: скрипт
   `src/shared/initialUploadData.ts` (не часть runtime-приложения, CLI-утилита `npm run initial`)
   импортирует sync-сервисы обоих доменов — это ожидаемо для точки входа скрипта, а не архитектурная
-  утечка. Циклических зависимостей (`forwardRef`) не найдено.
+  утечка (скрипт с тех пор перенесён из `src/shared` в `src/scripts/`, см. PRD
+  `docs/service-shop-boundary-violations-fix/`, критерий готовности про CLI-скрипты). Циклических
+  зависимостей (`forwardRef`) не найдено.
 
 ## 3. God objects
 
@@ -135,9 +194,14 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
 ## 4. Дублирование кода
 
 Раздел построен на прямом сравнении `service`/`shop`-версий модулей `accounting`/`sales`.
-`backend/CLAUDE.md`/`domains/*/CLAUDE.md` декларируют политику «зеркальные, но независимые модули» с
-двумя явными исключениями (`SalesPlan`/`SalesPlanTemplate`/`TaskCompletion` через `direction` и CRUD
-плана продаж). Часть найденного ниже — сознательный выбор архитектуры, задокументированный в коде;
+`backend/CLAUDE.md`/`domains/*/CLAUDE.md` декларируют политику «зеркальные, но независимые модули».
+~~С двумя явными исключениями (`SalesPlan`/`SalesPlanTemplate`/`TaskCompletion` через `direction` и
+CRUD плана продаж).~~ **Устарело (актуализация 2026-08-27)**: после рефакторинга границы `service`/
+`shop` (`docs/service-shop-boundary-violations-fix/`) исключение сузилось — `SalesPlan`/
+`SalesPlanTemplate`/`TaskCompletion` остаются общими только на уровне физической Prisma-таблицы
+(дискриминатор `direction`, решение пользователя — таблицы не разбиваются по доменам), но CRUD плана
+продаж `shop` больше не диспатчит команды `service` через общий `CommandBus` — это собственные
+CQRS-хендлеры `domains/shop/modules/sales/application/command/*`. Часть найденного ниже — сознательный выбор архитектуры, задокументированный в коде;
 однако там, где дублируется **чистая расчётная математика без ERP-специфики**, это прямо противоречит
 DRY-принципу для денежных вычислений и создаёт риск расхождения логики при будущих правках.
 
@@ -182,9 +246,13 @@ DRY-принципу для денежных вычислений и созда�
   `moysklad-sync.service.ts`, но именно отсутствие общего вынесенного шаблона стало причиной
   критического бага в п. 5.2 ниже (одно из двух зеркальных мест «забыло» вызов при копипасте).
 - **Дублирования не найдено** (проверено целенаправленно, подтверждено как сознательно общий или
-  структурно разный код): CRUD плана продаж (`create/update/delete/approve-sales-plan`) — контроллеры
-  `shop` лишь диспатчат команды `service` через общий `CommandBus`, бизнес-логика физически не
-  скопирована; `marketing/pricing` — service- и shop-версии решают структурно разные задачи
+  структурно разный код): ~~CRUD плана продаж (`create/update/delete/approve-sales-plan`) —
+  контроллеры `shop` лишь диспатчат команды `service` через общий `CommandBus`, бизнес-логика
+  физически не скопирована~~ — **устарело**: с Фазы 7 `docs/service-shop-boundary-violations-fix/`
+  `shop` завёл собственные независимые CQRS-команды CRUD плана продаж
+  (`domains/shop/modules/sales/application/command/*`), бизнес-логика теперь и физически
+  продублирована (осознанно, вместе с остальным периметром `accounting`/`sales`), а не диспатчится в
+  `service`; `marketing/pricing` — service- и shop-версии решают структурно разные задачи
   (синхронный апдейт цен в RoApp vs асинхронная job с XLSX/AI-матчингом/Google Sheets), общего кода
   нет и делить нечего; zod-схемы валидации ответов внешних ERP (`roapp/schemas/*`,
   `moySklad/schemas/*`) намеренно не вынесены в `contracts/` — это backend↔ERP контракт, а не
@@ -418,9 +486,15 @@ DRY-принципу для денежных вычислений и созда�
    - Continue-on-error и `isRunning`-защита от overlap в трёх cron-синках, `timeout` на axios-клиентах
      (п. 5.1).
    - Сузить CORS (`origin: true` → явный список доменов) (п. 6).
-   - Вынести `accounting-cache-freshness.ts`, `money.ts`, `float-percent.ts`,
+   - ~~Вынести `accounting-cache-freshness.ts`, `money.ts`, `float-percent.ts`,
      `period-calculation.orchestrator.ts`, `scopeKey()`/`findForScope()` в `src/shared` — устранить
-     дублирование чистой расчётной логики между доменами (п. 2, 4).
+     дублирование чистой расчётной логики между доменами (п. 2, 4).~~ **Устарело (2026-08-27)**:
+     решение пользователя по итогам `docs/service-shop-boundary-violations-fix/` — не выносить в
+     `shared`, а завести у каждого домена собственную независимую копию (сделано для
+     `accounting-cache-freshness.ts`/`AccountingPeriod`/`SalesPlan`/`ErpCashDocument`/`SalaryAccrual`);
+     `money.ts`/`float-percent.ts`/`period-calculation.orchestrator.ts`/`scopeKey()`/`findForScope()`
+     остаются продублированными по тому же принципу — это больше не открытая рекомендация, а
+     подтверждённая архитектура.
 3. **Минор, по мере возможности**:
    - Общий шаблон постраничной синхронизации (`runPagedUpload`) в `src/shared/sync/` — устранит
      часть найденных в п. 5.1 проблем в одном месте и сократит размер sync-сервисов (п. 1, 3).
