@@ -1,59 +1,46 @@
 import type { Server } from 'http';
 import { Global, INestApplication, Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
-import { ZodValidationPipe } from 'nestjs-zod';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
 import type {
     SalesPlanResponse,
     SalesPlanTemplateResponse,
 } from 'ireports-contracts';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
-import type { SalesPlanTemplateRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
+import { DatabaseService } from '@/infrustructure/database/database.service';
+import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module';
+import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import { SHOP_SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan-template.port';
+import type { ShopSalesPlanTemplateRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan-template.port';
+import { SHOP_SALES_FACT_SOURCE } from '@/domains/shop/modules/sales/application/ports/shop-sales-fact-source.port';
+import type { ShopSalesFactSourcePort } from '@/domains/shop/modules/sales/application/ports/shop-sales-fact-source.port';
+import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/shop-sales-plan.entity';
+import { ShopSalesPlanTemplate } from '@/domains/shop/modules/sales/domain/entities/shop-sales-plan-template.entity';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
-import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
-import { SalesPlanTemplate } from '@/domains/service/modules/sales/domain/entities/sales-plan-template.entity';
-import { CreateSalesPlanHandler } from '@/domains/service/modules/sales/application/command/create-sales-plan.handler';
-import { UpdateSalesPlanHandler } from '@/domains/service/modules/sales/application/command/update-sales-plan.handler';
-import { DeleteSalesPlanHandler } from '@/domains/service/modules/sales/application/command/delete-sales-plan.handler';
-import { ApproveSalesPlanHandler } from '@/domains/service/modules/sales/application/command/approve-sales-plan.handler';
-import { PutSalesPlanTemplateHandler } from '@/domains/service/modules/sales/application/command/put-sales-plan-template.handler';
-import { EnsureSalesPlansForPeriodService } from '@/domains/service/modules/sales/application/services/ensure-sales-plans-for-period.service';
-import { ListSalesPlansService } from '@/domains/service/modules/sales/application/services/list-sales-plans.service';
-import { ListSalesPlanTemplatesService } from '@/domains/service/modules/sales/application/services/list-sales-plan-templates.service';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import { CreateShopSalesPlanHttpController } from './create-shop-sales-plan.http.controller';
-import { UpdateShopSalesPlanHttpController } from './update-shop-sales-plan.http.controller';
-import { DeleteShopSalesPlanHttpController } from './delete-shop-sales-plan.http.controller';
-import { ApproveShopSalesPlanHttpController } from './approve-shop-sales-plan.http.controller';
-import { ListShopSalesPlansHttpController } from './list-shop-sales-plans.http.controller';
-import { ListShopSalesPlanTemplatesHttpController } from './list-shop-sales-plan-templates.http.controller';
-import { PutShopSalesPlanTemplateHttpController } from './put-shop-sales-plan-template.http.controller';
 
-// Зеркало sales-plan.e2e.spec.ts (domains/service/modules/sales), но на
-// /v1/shop/sales/plan* — этот срез домена shop диспатчит те же классы
-// команд/хендлеров, что и service (CommandBus глобален на всё приложение,
-// см. задачу, создавшую этот модуль), поэтому здесь поднимается локальный
-// тестовый модуль с CqrsModule + новыми shop-контроллерами + теми же
-// хендлерами/сервисами, что и SalesModule — ShopSalesModule целиком не
-// импортируется: он ещё не регистрирует эти контроллеры/провайдеры (это
-// сделает отдельный шаг воркфлоу), а собственный ShopSalesModule тянет за
-// собой MoySklad-интеграцию и крон, не относящиеся к этому срезу.
+// Зеркало sales-plan.e2e.spec.ts направления service, но на
+// /v1/shop/sales/plan* — с Фазы 7 (docs/service-shop-boundary-violations-fix)
+// этот срез домена shop использует собственные, независимые от
+// domains/service/modules/sales классы команд/хендлеров/сущностей
+// (ShopSalesPlan/ShopSalesPlanTemplate), поэтому здесь поднимается реальный
+// ShopSalesModule целиком, с фейковыми репозиториями плана/шаблона вместо
+// Prisma. Изоляция от направления service больше не проверяется общим
+// фейковым хранилищем с полем direction (у ShopSalesPlan такого поля нет
+// вовсе, см. WHY в entity) — она теперь структурная: разные Entity/Port/
+// Repository-классы домена, разные CQRS-команды, поэтому и представить
+// "план направления service" в этом фейковом хранилище физически
+// невозможно.
 describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
     let app: INestApplication<Server>;
 
-    const plans = new Map<string, SalesPlan>();
-    const templates = new Map<
-        string,
-        Awaited<ReturnType<SalesPlanTemplateRepositoryPort['findAll']>>[number]
-    >();
+    const plans = new Map<string, ShopSalesPlan>();
+    const templates = new Map<string, ShopSalesPlanTemplate>();
 
-    const fakePlanRepo: SalesPlanRepositoryPort = {
+    const fakePlanRepo: ShopSalesPlanRepositoryPort = {
         insert: (entity) => {
             plans.set(entity.id, entity);
             return Promise.resolve();
@@ -71,25 +58,22 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
             Promise.resolve(
                 [...plans.values()].filter((p) => ids.includes(p.id)),
             ),
-        findByScope: (direction, department, category, period) =>
+        findByScope: (department, category, period) =>
             Promise.resolve(
                 [...plans.values()].find(
                     (p) =>
-                        p.direction === direction &&
                         p.department === department &&
                         p.category === category &&
                         p.period === period,
                 ) ?? null,
             ),
-        findByDirectionAndPeriod: (direction, period) =>
+        findByPeriod: (period) =>
             Promise.resolve(
-                [...plans.values()].filter(
-                    (p) => p.direction === direction && p.period === period,
-                ),
+                [...plans.values()].filter((p) => p.period === period),
             ),
     };
 
-    const fakeTemplateRepo: SalesPlanTemplateRepositoryPort = {
+    const fakeTemplateRepo: ShopSalesPlanTemplateRepositoryPort = {
         insert: (entity) => {
             templates.set(entity.id, entity);
             return Promise.resolve();
@@ -98,73 +82,57 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
             templates.set(entity.id, entity);
             return Promise.resolve();
         },
-        findByScope: (direction, department, category) =>
+        findByScope: (department, category) =>
             Promise.resolve(
                 [...templates.values()].find(
                     (t) =>
-                        t.direction === direction &&
-                        t.department === department &&
-                        t.category === category,
+                        t.department === department && t.category === category,
                 ) ?? null,
             ),
-        findAll: (direction) =>
-            Promise.resolve(
-                [...templates.values()].filter(
-                    (t) => !direction || t.direction === direction,
-                ),
-            ),
+        findAll: () => Promise.resolve([...templates.values()]),
     };
 
-    const fakeUnitOfWork: UnitOfWorkPort = {
-        run: (work) => work(),
+    const fakeFactSource: ShopSalesFactSourcePort = {
+        aggregate: () => Promise.resolve([]),
     };
+
+    // ShopSalesModule импортирует MoySkladSyncModule (Фаза 1,
+    // docs/shop-sales-performance-by-category), чьи провайдеры конструируют
+    // DatabaseService в конструкторе — тот же приём фейкового
+    // DatabaseService, что и в shop-sales-performance.e2e.spec.ts.
+    const fakeDatabaseService = {} as unknown as DatabaseService;
+
+    // CreateShopSalesPlanHandler (провайдер ShopSalesModule) требует
+    // UNIT_OF_WORK — фейковая реализация без реальной транзакции, тот же
+    // приём, что и в sales-plan.e2e.spec.ts направления service.
+    const fakeUnitOfWork: UnitOfWorkPort = { run: (work) => work() };
 
     @Global()
     @Module({
-        providers: [{ provide: UNIT_OF_WORK, useValue: fakeUnitOfWork }],
-        exports: [UNIT_OF_WORK],
+        providers: [
+            { provide: DatabaseService, useValue: fakeDatabaseService },
+            { provide: UNIT_OF_WORK, useValue: fakeUnitOfWork },
+        ],
+        exports: [DatabaseService, UNIT_OF_WORK],
     })
     class FakeInfrastructureModule {}
 
-    @Module({
-        imports: [CqrsModule, FakeInfrastructureModule],
-        controllers: [
-            CreateShopSalesPlanHttpController,
-            UpdateShopSalesPlanHttpController,
-            DeleteShopSalesPlanHttpController,
-            ApproveShopSalesPlanHttpController,
-            ListShopSalesPlansHttpController,
-            ListShopSalesPlanTemplatesHttpController,
-            PutShopSalesPlanTemplateHttpController,
-        ],
-        providers: [
-            { provide: SALES_PLAN_REPOSITORY, useValue: fakePlanRepo },
-            {
-                provide: SALES_PLAN_TEMPLATE_REPOSITORY,
-                useValue: fakeTemplateRepo,
-            },
-            CreateSalesPlanHandler,
-            UpdateSalesPlanHandler,
-            DeleteSalesPlanHandler,
-            ApproveSalesPlanHandler,
-            PutSalesPlanTemplateHandler,
-            EnsureSalesPlansForPeriodService,
-            ListSalesPlansService,
-            ListSalesPlanTemplatesService,
-        ],
-    })
-    class ShopSalesTestModule {}
-
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({
-            imports: [ShopSalesTestModule],
-        }).compile();
+            imports: [FakeInfrastructureModule, ShopSalesModule],
+        })
+            .overrideProvider(SHOP_SALES_PLAN_REPOSITORY)
+            .useValue(fakePlanRepo)
+            .overrideProvider(SHOP_SALES_PLAN_TEMPLATE_REPOSITORY)
+            .useValue(fakeTemplateRepo)
+            .overrideProvider(SHOP_SALES_FACT_SOURCE)
+            .useValue(fakeFactSource)
+            .compile();
 
         app = moduleRef.createNestApplication();
         app.use((req: unknown, res: unknown, next: () => void) =>
             new RequestContextMiddleware().use(req, res, next),
         );
-        app.useGlobalPipes(new ZodValidationPipe());
         app.useGlobalFilters(new DomainExceptionFilter());
         await app.init();
     });
@@ -243,63 +211,16 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
         expect(afterDelete.body).toHaveLength(0);
     });
 
-    it('батч-создание: план направления shop заводится независимо от одноимённой строки направления service', async () => {
-        const servicePlan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'service',
-                department: 5,
-                period: '2026-09',
-                turnover: 999,
-                margin: 111,
-                source: 'MANUAL',
-            }),
-        );
-        plans.set(servicePlan.id, servicePlan);
-
-        const createResponse = await request(app.getHttpServer())
-            .post('/v1/shop/sales/plan')
-            .send({
-                department: 5,
-                period: '2026-09',
-                turnover: 500_000,
-                margin: 100_000,
-            })
-            .expect(201);
-        expect(createResponse.body).toMatchObject({
-            direction: 'shop',
-            department: 5,
-        });
-
-        const shopList = await request(app.getHttpServer())
-            .get('/v1/shop/sales/plan')
-            .query({ period: '2026-09' })
-            .expect(200);
-        expect(shopList.body).toHaveLength(1);
-    });
-
-    it('PATCH на план направления service через путь shop отклоняется как 404', async () => {
-        const servicePlan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'service',
-                department: 1,
-                period: '2026-10',
-                turnover: 1_000_000,
-                margin: 200_000,
-                source: 'MANUAL',
-            }),
-        );
-        plans.set(servicePlan.id, servicePlan);
-
+    it('PATCH на неизвестный id отклоняется как 404', async () => {
         await request(app.getHttpServer())
-            .patch(`/v1/shop/sales/plan/${servicePlan.id}`)
+            .patch('/v1/shop/sales/plan/00000000-0000-0000-0000-000000000000')
             .send({ turnover: 1 })
             .expect(404);
     });
 
-    it('DELETE на план направления service через путь shop отклоняется как 404', async () => {
-        const servicePlan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'service',
+    it('DELETE на неизвестный id отклоняется как 404, ничего не удаляя', async () => {
+        const plan = withRequestContext(() =>
+            ShopSalesPlan.create({
                 department: 1,
                 period: '2026-10',
                 turnover: 1_000_000,
@@ -307,21 +228,20 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
                 source: 'MANUAL',
             }),
         );
-        plans.set(servicePlan.id, servicePlan);
+        plans.set(plan.id, plan);
 
         await request(app.getHttpServer())
-            .delete(`/v1/shop/sales/plan/${servicePlan.id}`)
+            .delete('/v1/shop/sales/plan/00000000-0000-0000-0000-000000000000')
             .expect(404);
 
-        // Строка не была удалена — 404 означает "не найдена для shop", а не
-        // фактическое удаление.
-        expect(plans.has(servicePlan.id)).toBe(true);
+        // Существующий план не был затронут — 404 означает "не найден
+        // именно этот id", а не что-то удалилось по ошибке.
+        expect(plans.has(plan.id)).toBe(true);
     });
 
-    it('approve по ids через путь shop отклоняет весь запрос целиком, если среди id есть план направления service', async () => {
-        const shopPlan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'shop',
+    it('approve по ids отклоняет весь запрос целиком, если хотя бы один id не найден', async () => {
+        const plan = withRequestContext(() =>
+            ShopSalesPlan.create({
                 department: 1,
                 period: '2026-11',
                 turnover: 1_000_000,
@@ -329,31 +249,21 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
                 source: 'MANUAL',
             }),
         );
-        plans.set(shopPlan.id, shopPlan);
-
-        const servicePlan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'service',
-                department: 2,
-                period: '2026-11',
-                turnover: 500_000,
-                margin: 100_000,
-                source: 'MANUAL',
-            }),
-        );
-        plans.set(servicePlan.id, servicePlan);
+        plans.set(plan.id, plan);
 
         await request(app.getHttpServer())
             .post('/v1/shop/sales/plan/approve')
-            .send({ ids: [shopPlan.id, servicePlan.id], approvedBy: 42 })
+            .send({
+                ids: [plan.id, '00000000-0000-0000-0000-000000000000'],
+                approvedBy: 42,
+            })
             .expect(404);
 
-        // Ни один план не утверждён — ни свой (shop), ни чужой (service).
-        expect(plans.get(shopPlan.id)?.status).toBe('CREATED');
-        expect(plans.get(servicePlan.id)?.status).toBe('CREATED');
+        // Ни один план не утверждён — запрос отклонён целиком.
+        expect(plans.get(plan.id)?.status).toBe('CREATED');
     });
 
-    it('утверждает весь месяц направления shop одним запросом, не трогая направление service', async () => {
+    it('утверждает весь месяц одним запросом', async () => {
         await request(app.getHttpServer())
             .post('/v1/shop/sales/plan')
             .send({
@@ -364,18 +274,6 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
             })
             .expect(201);
 
-        const servicePlan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'service',
-                department: 1,
-                period: '2026-12',
-                turnover: 200,
-                margin: 20,
-                source: 'MANUAL',
-            }),
-        );
-        plans.set(servicePlan.id, servicePlan);
-
         const approveResponse = await request(app.getHttpServer())
             .post('/v1/shop/sales/plan/approve')
             .send({ period: '2026-12', approvedBy: 1 })
@@ -384,13 +282,12 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
         const body = approveResponse.body as SalesPlanResponse[];
         expect(body).toHaveLength(1);
         expect(body[0].direction).toBe('shop');
-        expect(plans.get(servicePlan.id)?.status).toBe('CREATED');
+        expect(body[0].status).toBe('APPROVED');
     });
 
     it('ленивое достраивание: GET на пустой период заводит план направления shop из шаблона (Фаза 4)', async () => {
         const template = withRequestContext(() =>
-            SalesPlanTemplate.create({
-                direction: 'shop',
+            ShopSalesPlanTemplate.create({
                 department: 3,
                 turnover: 300_000,
                 margin: 50_000,

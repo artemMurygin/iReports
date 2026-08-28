@@ -3,11 +3,11 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalesPlanTemplateResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { SalesPlanTemplatePutDto } from '@/domains/service/modules/sales/interface/dto/sales-plan-template-put.dto';
-import { PutSalesPlanTemplateCommand } from '@/domains/service/modules/sales/application/command/put-sales-plan-template.command';
+import { ShopSalesPlanTemplatePutDto } from '../dto/shop-sales-plan-template-put.dto';
+import { PutShopSalesPlanTemplateCommand } from '../../application/command/put-shop-sales-plan-template.command';
 
-// direction: 'shop' подставляется здесь — putSalesPlanTemplateRequestSchema
-// больше не несёт direction в теле.
+// Диспатчит PutShopSalesPlanTemplateCommand — собственная команда/хендлер
+// направления shop (Фаза 7 docs/service-shop-boundary-violations-fix).
 @ApiTags('Продажи')
 @Controller()
 export class PutShopSalesPlanTemplateHttpController {
@@ -19,11 +19,10 @@ export class PutShopSalesPlanTemplateHttpController {
             'Создать или обновить строку шаблона плана по отделу и категории направления shop',
     })
     async put(
-        @Body() body: SalesPlanTemplatePutDto,
+        @Body() body: ShopSalesPlanTemplatePutDto,
     ): Promise<SalesPlanTemplateResponse> {
-        const command = new PutSalesPlanTemplateCommand({
+        const command = new PutShopSalesPlanTemplateCommand({
             ...body,
-            direction: 'shop',
         });
         return this.commandBus.execute(command);
     }

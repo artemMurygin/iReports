@@ -9,13 +9,14 @@ import type {
 import { approveSalesPlanRequestSchema } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
 import { zodSchemaToOpenApiBody } from '@/shared/utils/zod-schema-to-open-api-body';
-import { ApproveSalesPlanCommand } from '@/domains/service/modules/sales/application/command/approve-sales-plan.command';
+import { ApproveShopSalesPlanCommand } from '../../application/command/approve-shop-sales-plan.command';
 
-// direction: 'shop' подставляется здесь, а не читается из тела —
-// approveSalesPlanRequestSchema общий с направлением service. В ветке ids
-// хендлер (ApproveSalesPlanHandler.resolveTargets) отклоняет весь запрос
-// целиком, если среди id встретится план другого направления (см.
-// комментарий там) — не утверждает частично.
+// Диспатчит ApproveShopSalesPlanCommand — собственная команда/хендлер
+// направления shop (Фаза 7 docs/service-shop-boundary-violations-fix). В
+// ветке ids строка чужого направления никогда не резолвится (репозиторий
+// фильтрует по direction: 'shop' на уровне Prisma-запроса, см.
+// ApproveShopSalesPlanHandler) — весь запрос отклоняется, если среди id
+// встретится план другого направления.
 @ApiTags('Продажи')
 @Controller()
 export class ApproveShopSalesPlanHttpController {
@@ -35,9 +36,8 @@ export class ApproveShopSalesPlanHttpController {
         @Body(new ZodValidationPipe(approveSalesPlanRequestSchema))
         body: ApproveSalesPlanRequest,
     ): Promise<SalesPlanResponse[]> {
-        const command = new ApproveSalesPlanCommand({
+        const command = new ApproveShopSalesPlanCommand({
             ...body,
-            direction: 'shop',
         });
         return this.commandBus.execute(command);
     }

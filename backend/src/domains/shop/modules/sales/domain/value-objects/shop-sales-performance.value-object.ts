@@ -1,10 +1,10 @@
 import { ValueObject } from '@/shared/domain/value-object.base';
-import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
+import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/shop-sales-plan.entity';
 import { SalesPrognose } from '@/shared/domain/sales-prognose.value-object';
 import { ShopSalesFact } from './shop-sales-fact.value-object';
 
 export interface ShopSalesPerformanceProps {
-    plan: SalesPlan;
+    plan: ShopSalesPlan;
     fact: ShopSalesFact;
     prognose: SalesPrognose;
 }
@@ -13,18 +13,17 @@ export interface ShopSalesPerformanceProps {
 // period) для направления shop — зеркало SalesPerformance направления
 // service (Фаза 5), но с ShopSalesFact вместо SalesFact.
 //
-// SalesPlan (`plan`) — тот же класс, что использует направление service, а
-// не его копия: SalesPlan/SalesPlanTemplate и их CRUD (domains/service/
-// modules/sales) уже общие для обоих направлений на уровне Prisma-модели
-// (`direction` на каждой строке, см. sales.prisma) и не содержат ничего
-// ERP-специфичного — единственное намеренное исключение из правила "shop и
-// service не переиспользуют код" в этой фазе (см. docs/payroll/
-// plan-payroll-calculation.md, Фаза 11, и обоснование в отчёте фазы).
-// ShopSalesFact и весь ERP-специфичный код (MoySkladDemand) остаются
-// самостоятельными для shop.
+// ShopSalesPlan (`plan`) — с Фазы 7 (docs/service-shop-boundary-violations-fix)
+// собственная, независимая реализация домена shop (entity/port/repository/
+// мапперы в domains/shop/modules/sales), а не сущность SalesPlan
+// направления service: обе таблицы (sales_plans/sales_plan_templates)
+// остаются общими на уровне Prisma-схемы (дискриминатор direction), но
+// доменный код больше не переиспользуется между доменами — см. WHY в
+// ShopSalesPlan. ShopSalesFact и весь ERP-специфичный код (MoySkladDemand)
+// остаются самостоятельными для shop, как и раньше.
 export class ShopSalesPerformance extends ValueObject<ShopSalesPerformanceProps> {
     static create(
-        plan: SalesPlan,
+        plan: ShopSalesPlan,
         fact: ShopSalesFact,
         prognose: SalesPrognose,
     ): ShopSalesPerformance {
@@ -43,7 +42,7 @@ export class ShopSalesPerformance extends ValueObject<ShopSalesPerformanceProps>
         return this.props.plan.category;
     }
 
-    getPlan(): SalesPlan {
+    getPlan(): ShopSalesPlan {
         return this.props.plan;
     }
 

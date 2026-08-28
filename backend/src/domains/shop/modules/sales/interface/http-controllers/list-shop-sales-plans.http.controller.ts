@@ -2,23 +2,22 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalesPlanResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { SalesPlanListQueryDto } from '@/domains/service/modules/sales/interface/dto/sales-plan-list-query.dto';
-import { ListSalesPlansService } from '@/domains/service/modules/sales/application/services/list-sales-plans.service';
+import { ShopSalesPlanListQueryDto } from '../dto/shop-sales-plan-list-query.dto';
+import { ListShopSalesPlansService } from '../../application/services/list-shop-sales-plans.service';
 
-// direction: 'shop' подставляется здесь — ListSalesPlansService общий с
-// направлением service (генерик поверх SalesPlan/SalesPlanTemplate, см.
-// domains/shop/modules/sales/shop-sales.module.ts), направление больше не
-// приходит в query.
+// Собственный ListShopSalesPlansService направления shop (Фаза 7
+// docs/service-shop-boundary-violations-fix) — не переиспользует
+// ListSalesPlansService направления service.
 @ApiTags('Продажи')
 @Controller()
 export class ListShopSalesPlansHttpController {
-    constructor(private readonly listSalesPlans: ListSalesPlansService) {}
+    constructor(private readonly listSalesPlans: ListShopSalesPlansService) {}
 
     @Get(routesV1.shop.salesPlan.root)
     @ApiOperation({ summary: 'Получить план месяца направления shop' })
     async list(
-        @Query() query: SalesPlanListQueryDto,
+        @Query() query: ShopSalesPlanListQueryDto,
     ): Promise<SalesPlanResponse[]> {
-        return this.listSalesPlans.execute('shop', query.period);
+        return this.listSalesPlans.execute(query.period);
     }
 }

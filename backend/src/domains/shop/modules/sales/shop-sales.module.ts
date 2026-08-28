@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MoySkladSyncModule } from '@/domains/shop/sync/moySklad/moysklad-sync.module';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
-import { SalesPlanRepository } from '@/domains/service/modules/sales/infrastructure/repositories/sales-plan.repository';
-import { SalesPlanTemplateRepository } from '@/domains/service/modules/sales/infrastructure/repositories/sales-plan-template.repository';
-import { EnsureSalesPlansForPeriodService } from '@/domains/service/modules/sales/application/services/ensure-sales-plans-for-period.service';
-import { ListSalesPlansService } from '@/domains/service/modules/sales/application/services/list-sales-plans.service';
-import { ListSalesPlanTemplatesService } from '@/domains/service/modules/sales/application/services/list-sales-plan-templates.service';
+import { SHOP_SALES_PLAN_REPOSITORY } from './application/ports/shop-sales-plan.port';
+import { SHOP_SALES_PLAN_TEMPLATE_REPOSITORY } from './application/ports/shop-sales-plan-template.port';
+import { ShopSalesPlanRepository } from './infrastructure/repositories/shop-sales-plan.repository';
+import { ShopSalesPlanTemplateRepository } from './infrastructure/repositories/shop-sales-plan-template.repository';
+import { CreateShopSalesPlanHandler } from './application/command/create-shop-sales-plan.handler';
+import { UpdateShopSalesPlanHandler } from './application/command/update-shop-sales-plan.handler';
+import { DeleteShopSalesPlanHandler } from './application/command/delete-shop-sales-plan.handler';
+import { ApproveShopSalesPlanHandler } from './application/command/approve-shop-sales-plan.handler';
+import { PutShopSalesPlanTemplateHandler } from './application/command/put-shop-sales-plan-template.handler';
+import { EnsureShopSalesPlansForPeriodService } from './application/services/ensure-shop-sales-plans-for-period.service';
+import { ListShopSalesPlansService } from './application/services/list-shop-sales-plans.service';
+import { ListShopSalesPlanTemplatesService } from './application/services/list-shop-sales-plan-templates.service';
 import { SHOP_SALES_FACT_SOURCE } from './application/ports/shop-sales-fact-source.port';
 import { MoySkladSalesFactSourceRepository } from './infrastructure/repositories/moysklad-sales-fact-source.repository';
 import { SHOP_SALES_PERFORMANCE_READER } from './application/ports/shop-sales-performance.port';
@@ -22,31 +27,21 @@ import { ListShopSalesPlansHttpController } from './interface/http-controllers/l
 import { ListShopSalesPlanTemplatesHttpController } from './interface/http-controllers/list-shop-sales-plan-templates.http.controller';
 import { PutShopSalesPlanTemplateHttpController } from './interface/http-controllers/put-shop-sales-plan-template.http.controller';
 
-// План/шаблон плана продаж (SalesPlan/SalesPlanTemplate) для shop теперь
-// обслуживается собственным CRUD этого модуля (POST|GET|PATCH|DELETE
-// /v1/shop/sales/plan, GET|PUT /v1/shop/sales/plan_template, POST
-// /v1/shop/sales/plan/approve, см. interface/http-controllers/*-shop-sales-
-// plan*.http.controller.ts) — но не дублированием бизнес-логики, а тонким
-// HTTP-слоем поверх той же команды/сервиса, что и у направления service
-// (SalesPlan/SalesPlanTemplate — общие Prisma-модели с полем direction, см.
-// sales.prisma, без ERP-специфичной логики): контроллеры этого модуля
-// подставляют direction: 'shop' сами (не читают его из тела/query) и
-// диспатчат те же классы команд (CreateSalesPlanCommand и т.д.) из
-// domains/service/modules/sales/application/command/*, что и SalesModule.
-// Обработчики этих команд уже зарегистрированы SalesModule на общем
-// (шаренном между всеми модулями приложения, т.к. CqrsModule — тот же
-// класс, импортированный и там, и здесь) CommandBus — они генерик по
-// direction, поэтому регистрировать их здесь повторно не нужно; сюда
-// добавлены только ListSalesPlansService/ListSalesPlanTemplatesService
-// (обычные DI-провайдеры, не CQRS-хендлеры — SalesModule их не
-// экспортирует, поэтому нужны собственные экземпляры, как и у
-// SALES_PLAN_REPOSITORY/SALES_PLAN_TEMPLATE_REPOSITORY/
-// EnsureSalesPlansForPeriodService ниже).
+// План/шаблон плана продаж (ShopSalesPlan/ShopSalesPlanTemplate) для shop —
+// с Фазы 7 (docs/service-shop-boundary-violations-fix) собственная,
+// независимая от domains/service/modules/sales реализация (entity/port/
+// repository/мапперы/CQRS-команды в этом модуле), а не тонкий HTTP-слой
+// поверх команд направления service, как было до этой фазы. Таблицы БД
+// (sales_plans/sales_plan_templates) остаются общими — партиционированы
+// полем direction (см. sales.prisma) — но каждый домен обращается к ним
+// через свой собственный Prisma-репозиторий, всегда подставляющий/фильтрующий
+// свой фиксированный direction: 'shop'.
 //
-// Помимо этого — то, что для shop действительно самостоятельно: ERP-
-// специфичный факт по МойСклад (ShopSalesFact/MoySkladSalesFactSourceRepository),
-// сборка ShopSalesPerformance, собственный крон автосоздания плана и
-// собственный HTTP-эндпоинт SalesPerformance (см.
+// Помимо этого — то, что для shop действительно самостоятельно и было таким
+// уже до Фазы 7: ERP-специфичный факт по МойСклад
+// (ShopSalesFact/MoySkladSalesFactSourceRepository), сборка
+// ShopSalesPerformance, собственный крон автосоздания плана и собственный
+// HTTP-эндпоинт SalesPerformance (см.
 // interface/http-controllers/list-shop-sales-performance.http.controller.ts
 // и обоснование отдельного пути в config/app.routes.ts).
 //
@@ -56,13 +51,11 @@ import { PutShopSalesPlanTemplateHttpController } from './interface/http-control
 // корневые categoryIds до дочерних папок — тот же приём, что уже применён
 // в ShopAccountingModule для ShopCalculationDataRepository.
 //
-// SALES_PLAN_REPOSITORY/SALES_PLAN_TEMPLATE_REPOSITORY/
-// EnsureSalesPlansForPeriodService/ListSalesPlansService/
-// ListSalesPlanTemplatesService переиспользуются как классы направления
-// service (см. выше) — предоставлены здесь отдельными экземплярами (Nest DI
-// не разделяет провайдеров между модулями без явного экспорта/импорта
-// модуля), но это тот же генерик-код поверх общей Prisma-модели, не
-// дублирование ERP-логики.
+// SHOP_SALES_PLAN_REPOSITORY экспортируется — потребляется
+// ShopAccountingModule (CloseShopAccountingPeriodHandler/
+// GetShopDepartmentSalaryReportService/GetShopEmployeeSalaryReportService/
+// GetShopClosePeriodPreviewService), который уже импортирует ShopSalesModule
+// целиком ради SHOP_SALES_PERFORMANCE_READER — см. WHY там.
 @Module({
     imports: [CqrsModule, MoySkladSyncModule],
     controllers: [
@@ -76,14 +69,22 @@ import { PutShopSalesPlanTemplateHttpController } from './interface/http-control
         PutShopSalesPlanTemplateHttpController,
     ],
     providers: [
-        { provide: SALES_PLAN_REPOSITORY, useClass: SalesPlanRepository },
         {
-            provide: SALES_PLAN_TEMPLATE_REPOSITORY,
-            useClass: SalesPlanTemplateRepository,
+            provide: SHOP_SALES_PLAN_REPOSITORY,
+            useClass: ShopSalesPlanRepository,
         },
-        EnsureSalesPlansForPeriodService,
-        ListSalesPlansService,
-        ListSalesPlanTemplatesService,
+        {
+            provide: SHOP_SALES_PLAN_TEMPLATE_REPOSITORY,
+            useClass: ShopSalesPlanTemplateRepository,
+        },
+        CreateShopSalesPlanHandler,
+        UpdateShopSalesPlanHandler,
+        DeleteShopSalesPlanHandler,
+        ApproveShopSalesPlanHandler,
+        PutShopSalesPlanTemplateHandler,
+        EnsureShopSalesPlansForPeriodService,
+        ListShopSalesPlansService,
+        ListShopSalesPlanTemplatesService,
         {
             provide: SHOP_SALES_FACT_SOURCE,
             useClass: MoySkladSalesFactSourceRepository,
@@ -92,14 +93,14 @@ import { PutShopSalesPlanTemplateHttpController } from './interface/http-control
         // Алиас DI-токена на тот же провайдер — зеркало приёма из
         // SalesModule направления service (см. SALES_PERFORMANCE_READER
         // там): контроллер этого модуля инжектит GetShopSalesPerformanceService
-        // напрямую, а будущий domains/shop/modules/accounting (Фаза 12)
-        // будет инжектить абстракцию через SHOP_SALES_PERFORMANCE_READER.
+        // напрямую, а domains/shop/modules/accounting инжектирует абстракцию
+        // через SHOP_SALES_PERFORMANCE_READER.
         {
             provide: SHOP_SALES_PERFORMANCE_READER,
             useExisting: GetShopSalesPerformanceService,
         },
         ShopSalesPlanAutoCreationCron,
     ],
-    exports: [SHOP_SALES_PERFORMANCE_READER],
+    exports: [SHOP_SALES_PERFORMANCE_READER, SHOP_SALES_PLAN_REPOSITORY],
 })
 export class ShopSalesModule {}

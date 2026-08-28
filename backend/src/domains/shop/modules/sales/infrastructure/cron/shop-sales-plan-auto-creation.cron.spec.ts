@@ -5,14 +5,14 @@ jest.mock('@/shared/cron/cron-file-logger', () => ({
 }));
 
 import { ShopSalesPlanAutoCreationCron } from './shop-sales-plan-auto-creation.cron';
-import type { EnsureSalesPlansForPeriodService } from '@/domains/service/modules/sales/application/services/ensure-sales-plans-for-period.service';
+import type { EnsureShopSalesPlansForPeriodService } from '@/domains/shop/modules/sales/application/services/ensure-shop-sales-plans-for-period.service';
 import { logCronError } from '@/shared/cron/cron-file-logger';
 
 describe('ShopSalesPlanAutoCreationCron', () => {
     const buildCron = (ensure: jest.Mock) =>
         new ShopSalesPlanAutoCreationCron({
             ensure,
-        } as unknown as EnsureSalesPlansForPeriodService);
+        } as unknown as EnsureShopSalesPlansForPeriodService);
 
     afterEach(() => {
         jest.useRealTimers();
@@ -28,16 +28,17 @@ describe('ShopSalesPlanAutoCreationCron', () => {
 
         await cron.run();
 
-        expect(ensure).toHaveBeenCalledWith('shop', '2026-09');
+        expect(ensure).toHaveBeenCalledWith('2026-09');
     });
 
     // Идемпотентность самого достраивания (issue #56 — "автосоздание планов
-    // магазина идемпотентно") уже покрыта на уровне EnsureSalesPlansForPeriodService,
-    // общей для service и shop (см. ensure-sales-plans-for-period.service.spec.ts,
-    // "не создаёт дублей и не трогает APPROVED/MANUAL строки при повторном
-    // запуске") — здесь достаточно убедиться, что повторный запуск крона
-    // просто вызывает ту же идемпотентную операцию ещё раз, не дублируя
-    // побочных эффектов самого крона (логирование, обработка ошибок).
+    // магазина идемпотентно") уже покрыта на уровне
+    // EnsureShopSalesPlansForPeriodService (см.
+    // ensure-shop-sales-plans-for-period.service.spec.ts, "не создаёт
+    // дублей и не трогает APPROVED/MANUAL строки при повторном запуске") —
+    // здесь достаточно убедиться, что повторный запуск крона просто
+    // вызывает ту же идемпотентную операцию ещё раз, не дублируя побочных
+    // эффектов самого крона (логирование, обработка ошибок).
     it('повторный запуск идемпотентен — просто вызывает ensure ещё раз, без побочных эффектов крона', async () => {
         const ensure = jest.fn().mockResolvedValue([]);
         const cron = buildCron(ensure);
@@ -46,8 +47,8 @@ describe('ShopSalesPlanAutoCreationCron', () => {
         await cron.run();
 
         expect(ensure).toHaveBeenCalledTimes(2);
-        expect(ensure).toHaveBeenNthCalledWith(1, 'shop', expect.any(String));
-        expect(ensure).toHaveBeenNthCalledWith(2, 'shop', expect.any(String));
+        expect(ensure).toHaveBeenNthCalledWith(1, expect.any(String));
+        expect(ensure).toHaveBeenNthCalledWith(2, expect.any(String));
     });
 
     it('не выбрасывает исключение при ошибке достраивания — только логирует', async () => {

@@ -3,12 +3,13 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalesPlanResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { SalesPlanUpdateDto } from '@/domains/service/modules/sales/interface/dto/sales-plan-update.dto';
-import { UpdateSalesPlanCommand } from '@/domains/service/modules/sales/application/command/update-sales-plan.command';
+import { ShopSalesPlanUpdateDto } from '../dto/shop-sales-plan-update.dto';
+import { UpdateShopSalesPlanCommand } from '../../application/command/update-shop-sales-plan.command';
 
-// direction: 'shop' подставляется здесь, а не читается из тела — план
-// чужого направления (см. UpdateSalesPlanHandler) трактуется хендлером как
-// не найденный, поэтому строку service через этот путь не поправить.
+// Диспатчит UpdateShopSalesPlanCommand — собственная команда/хендлер
+// направления shop (Фаза 7 docs/service-shop-boundary-violations-fix).
+// Строка чужого направления никогда не резолвится (репозиторий фильтрует по
+// direction: 'shop' на уровне Prisma-запроса, см. UpdateShopSalesPlanHandler).
 @ApiTags('Продажи')
 @Controller()
 export class UpdateShopSalesPlanHttpController {
@@ -20,11 +21,10 @@ export class UpdateShopSalesPlanHttpController {
     })
     async update(
         @Param('id') id: string,
-        @Body() body: SalesPlanUpdateDto,
+        @Body() body: ShopSalesPlanUpdateDto,
     ): Promise<SalesPlanResponse> {
-        const command = new UpdateSalesPlanCommand({
+        const command = new UpdateShopSalesPlanCommand({
             planId: id,
-            direction: 'shop',
             ...body,
         });
         return this.commandBus.execute(command);

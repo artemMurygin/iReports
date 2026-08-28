@@ -1,18 +1,20 @@
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
-import { EnsureSalesPlansForPeriodService } from '@/domains/service/modules/sales/application/services/ensure-sales-plans-for-period.service';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanTemplateRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
+import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/shop-sales-plan.entity';
+import { EnsureShopSalesPlansForPeriodService } from '@/domains/shop/modules/sales/application/services/ensure-shop-sales-plans-for-period.service';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanTemplateRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan-template.port';
 import { GetShopSalesPerformanceService } from './get-shop-sales-performance.service';
 import type { ShopSalesFactSourcePort } from '../ports/shop-sales-fact-source.port';
 
 // Имитирует БД в памяти для плана (как в get-sales-performance.service.spec.ts
 // направления service) и подставляет фейковый источник ERP-факта магазина —
 // сам сценарий проверяет сборку ShopSalesPerformance, а не устройство
-// репозиториев.
+// репозиториев. С Фазы 7 (docs/service-shop-boundary-violations-fix) план
+// использует собственную, независимую от domains/service/modules/sales
+// реализацию ShopSalesPlan/EnsureShopSalesPlansForPeriodService.
 describe('GetShopSalesPerformanceService', () => {
     const buildService = (
-        plans: SalesPlan[],
+        plans: ShopSalesPlan[],
         facts: {
             department: number;
             category: string | null;
@@ -23,12 +25,12 @@ describe('GetShopSalesPerformanceService', () => {
         }[],
     ) => {
         const store = new Map(plans.map((plan) => [plan.id, plan]));
-        const planRepo: SalesPlanRepositoryPort = {
-            insert: jest.fn((entity: SalesPlan) => {
+        const planRepo: ShopSalesPlanRepositoryPort = {
+            insert: jest.fn((entity: ShopSalesPlan) => {
                 store.set(entity.id, entity);
                 return Promise.resolve();
             }),
-            update: jest.fn((entity: SalesPlan) => {
+            update: jest.fn((entity: ShopSalesPlan) => {
                 store.set(entity.id, entity);
                 return Promise.resolve();
             }),
@@ -39,16 +41,14 @@ describe('GetShopSalesPerformanceService', () => {
             findById: jest.fn(),
             findByIds: jest.fn(),
             findByScope: jest.fn(),
-            findByDirectionAndPeriod: (direction, period) =>
+            findByPeriod: (period) =>
                 Promise.resolve(
                     [...store.values()].filter(
-                        (plan) =>
-                            plan.direction === direction &&
-                            plan.period === period,
+                        (plan) => plan.period === period,
                     ),
                 ),
         };
-        const templateRepo: SalesPlanTemplateRepositoryPort = {
+        const templateRepo: ShopSalesPlanTemplateRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
             findByScope: jest.fn(),
@@ -56,7 +56,7 @@ describe('GetShopSalesPerformanceService', () => {
         };
         const aggregate = jest.fn().mockResolvedValue(facts);
         const factSource: ShopSalesFactSourcePort = { aggregate };
-        const ensureSalesPlans = new EnsureSalesPlansForPeriodService(
+        const ensureSalesPlans = new EnsureShopSalesPlansForPeriodService(
             planRepo,
             templateRepo,
         );
@@ -72,8 +72,7 @@ describe('GetShopSalesPerformanceService', () => {
     // (MoySkladDemandPosition.profit), а не пересчитанное.
     it('margin в SalesPerformance равен переданному ERP-агрегату, а не turnover - cost', async () => {
         await withRequestContext(async () => {
-            const plan = SalesPlan.create({
-                direction: 'shop',
+            const plan = ShopSalesPlan.create({
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,
@@ -107,8 +106,7 @@ describe('GetShopSalesPerformanceService', () => {
 
     it('изменение плана меняет percentCompletion при неизменном факте ERP', async () => {
         await withRequestContext(async () => {
-            const plan = SalesPlan.create({
-                direction: 'shop',
+            const plan = ShopSalesPlan.create({
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,
@@ -139,8 +137,7 @@ describe('GetShopSalesPerformanceService', () => {
 
     it('удаление плана удаляет факт и прогноз — строка пропадает из ShopSalesPerformance', async () => {
         await withRequestContext(async () => {
-            const plan = SalesPlan.create({
-                direction: 'shop',
+            const plan = ShopSalesPlan.create({
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,
@@ -161,8 +158,7 @@ describe('GetShopSalesPerformanceService', () => {
 
     it('план без ERP-факта за период получает нулевой факт, а не ошибку', async () => {
         await withRequestContext(async () => {
-            const plan = SalesPlan.create({
-                direction: 'shop',
+            const plan = ShopSalesPlan.create({
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,
@@ -188,8 +184,7 @@ describe('GetShopSalesPerformanceService', () => {
     // категории ERP-агрегата и не смешивается с планом без категории.
     it('план с category получает факт из ERP-агрегата с этой же category, передаёт categoryIds в aggregate', async () => {
         await withRequestContext(async () => {
-            const planWithCategory = SalesPlan.create({
-                direction: 'shop',
+            const planWithCategory = ShopSalesPlan.create({
                 department: 1,
                 category: 'folder-phones',
                 period: '2026-08',
@@ -197,8 +192,7 @@ describe('GetShopSalesPerformanceService', () => {
                 margin: 100_000,
                 source: 'MANUAL',
             });
-            const planWithoutCategory = SalesPlan.create({
-                direction: 'shop',
+            const planWithoutCategory = ShopSalesPlan.create({
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,
@@ -250,8 +244,7 @@ describe('GetShopSalesPerformanceService', () => {
 
     it('findForScope находит строку по отделу и категории', async () => {
         await withRequestContext(async () => {
-            const plan = SalesPlan.create({
-                direction: 'shop',
+            const plan = ShopSalesPlan.create({
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,

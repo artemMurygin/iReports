@@ -6,25 +6,30 @@ import request from 'supertest';
 import type { SalesPerformanceResponse } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { ShopSalesModule } from '@/domains/shop/modules/sales/shop-sales.module';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
-import type { SalesPlanTemplateRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan-template.port';
+import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import { SHOP_SALES_PLAN_TEMPLATE_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan-template.port';
+import type { ShopSalesPlanTemplateRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan-template.port';
 import { SHOP_SALES_FACT_SOURCE } from '@/domains/shop/modules/sales/application/ports/shop-sales-fact-source.port';
 import type { ShopSalesFactSourcePort } from '@/domains/shop/modules/sales/application/ports/shop-sales-fact-source.port';
-import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
-import { SalesPlanTemplate } from '@/domains/service/modules/sales/domain/entities/sales-plan-template.entity';
+import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/shop-sales-plan.entity';
+import { ShopSalesPlanTemplate } from '@/domains/shop/modules/sales/domain/entities/shop-sales-plan-template.entity';
+import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
+import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Зеркало sales-plan.e2e.spec.ts направления service (сценарий
 // SalesPerformance), но для отдельного эндпоинта магазина — см.
-// обоснование отдельного пути в config/app.routes.ts.
+// обоснование отдельного пути в config/app.routes.ts. С Фазы 7
+// (docs/service-shop-boundary-violations-fix) план использует собственную,
+// независимую от domains/service/modules/sales реализацию ShopSalesPlan/
+// ShopSalesPlanTemplate.
 describe('Shop SalesPerformance HTTP (e2e)', () => {
     let app: INestApplication<Server>;
 
-    const plans = new Map<string, SalesPlan>();
-    const templates = new Map<string, SalesPlanTemplate>();
+    const plans = new Map<string, ShopSalesPlan>();
+    const templates = new Map<string, ShopSalesPlanTemplate>();
     let erpFacts: Awaited<ReturnType<ShopSalesFactSourcePort['aggregate']>> =
         [];
 
@@ -32,7 +37,7 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
         aggregate: () => Promise.resolve(erpFacts),
     };
 
-    const fakePlanRepo: SalesPlanRepositoryPort = {
+    const fakePlanRepo: ShopSalesPlanRepositoryPort = {
         insert: (entity) => {
             plans.set(entity.id, entity);
             return Promise.resolve();
@@ -50,25 +55,22 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
             Promise.resolve(
                 [...plans.values()].filter((p) => ids.includes(p.id)),
             ),
-        findByScope: (direction, department, category, period) =>
+        findByScope: (department, category, period) =>
             Promise.resolve(
                 [...plans.values()].find(
                     (p) =>
-                        p.direction === direction &&
                         p.department === department &&
                         p.category === category &&
                         p.period === period,
                 ) ?? null,
             ),
-        findByDirectionAndPeriod: (direction, period) =>
+        findByPeriod: (period) =>
             Promise.resolve(
-                [...plans.values()].filter(
-                    (p) => p.direction === direction && p.period === period,
-                ),
+                [...plans.values()].filter((p) => p.period === period),
             ),
     };
 
-    const fakeTemplateRepo: SalesPlanTemplateRepositoryPort = {
+    const fakeTemplateRepo: ShopSalesPlanTemplateRepositoryPort = {
         insert: (entity) => {
             templates.set(entity.id, entity);
             return Promise.resolve();
@@ -77,21 +79,14 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
             templates.set(entity.id, entity);
             return Promise.resolve();
         },
-        findByScope: (direction, department, category) =>
+        findByScope: (department, category) =>
             Promise.resolve(
                 [...templates.values()].find(
                     (t) =>
-                        t.direction === direction &&
-                        t.department === department &&
-                        t.category === category,
+                        t.department === department && t.category === category,
                 ) ?? null,
             ),
-        findAll: (direction) =>
-            Promise.resolve(
-                [...templates.values()].filter(
-                    (t) => !direction || t.direction === direction,
-                ),
-            ),
+        findAll: () => Promise.resolve([...templates.values()]),
     };
 
     // ShopSalesModule теперь импортирует MoySkladSyncModule (Фаза 1,
@@ -104,12 +99,19 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
     // get-shop-employee-salary-report.e2e.spec.ts.
     const fakeDatabaseService = {} as unknown as DatabaseService;
 
+    // CreateShopSalesPlanHandler (провайдер ShopSalesModule, Фаза 7
+    // docs/service-shop-boundary-violations-fix) требует UNIT_OF_WORK, даже
+    // когда этот e2e не вызывает POST /plan напрямую — провайдер
+    // инстанцируется на старте модуля.
+    const fakeUnitOfWork: UnitOfWorkPort = { run: (work) => work() };
+
     @Global()
     @Module({
         providers: [
             { provide: DatabaseService, useValue: fakeDatabaseService },
+            { provide: UNIT_OF_WORK, useValue: fakeUnitOfWork },
         ],
-        exports: [DatabaseService],
+        exports: [DatabaseService, UNIT_OF_WORK],
     })
     class FakeInfrastructureModule {}
 
@@ -117,9 +119,9 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
         const moduleRef = await Test.createTestingModule({
             imports: [FakeInfrastructureModule, ShopSalesModule],
         })
-            .overrideProvider(SALES_PLAN_REPOSITORY)
+            .overrideProvider(SHOP_SALES_PLAN_REPOSITORY)
             .useValue(fakePlanRepo)
-            .overrideProvider(SALES_PLAN_TEMPLATE_REPOSITORY)
+            .overrideProvider(SHOP_SALES_PLAN_TEMPLATE_REPOSITORY)
             .useValue(fakeTemplateRepo)
             .overrideProvider(SHOP_SALES_FACT_SOURCE)
             .useValue(fakeFactSource)
@@ -145,8 +147,7 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
 
     it('план, факт и прогноз одним запросом; margin равен ERP-агрегату, а не turnover - cost', async () => {
         const plan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'shop',
+            ShopSalesPlan.create({
                 department: 1,
                 period: '2026-08',
                 turnover: 1_000_000,
@@ -196,8 +197,7 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
     // categoryIds/факт по категории до ответа).
     it('план с category: fact.turnover/percentCompletion не равны нулю при наличии продаж по этой категории', async () => {
         const plan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'shop',
+            ShopSalesPlan.create({
                 department: 1,
                 category: 'folder-phones',
                 period: '2026-09',
@@ -238,8 +238,7 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
     });
 
     it('ленивое достраивание: GET на пустой период магазина заводит план из шаблона', async () => {
-        const template = SalesPlanTemplate.create({
-            direction: 'shop',
+        const template = ShopSalesPlanTemplate.create({
             department: 5,
             turnover: 300_000,
             margin: 50_000,

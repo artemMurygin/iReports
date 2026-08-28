@@ -9,13 +9,13 @@ import type {
 import { createSalesPlanRequestSchema } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
 import { zodSchemaToOpenApiBody } from '@/shared/utils/zod-schema-to-open-api-body';
-import { CreateSalesPlanCommand } from '@/domains/service/modules/sales/application/command/create-sales-plan.command';
+import { CreateShopSalesPlanCommand } from '../../application/command/create-shop-sales-plan.command';
 
-// Диспатчит CreateSalesPlanCommand — тот же класс команды, что и у
-// направления service (SalesPlan общая Prisma-модель с полем direction, см.
-// domains/service/CLAUDE.md), но с direction: 'shop', подставляемым здесь,
-// а не читаемым из тела: единственный CommandBus на всё приложение, у
-// команды один хендлер, универсальный по direction.
+// Диспатчит CreateShopSalesPlanCommand — собственная команда/хендлер
+// направления shop (Фаза 7 docs/service-shop-boundary-violations-fix), не
+// переиспользует CreateSalesPlanCommand направления service: SalesPlan —
+// общая Prisma-модель (см. domains/service/CLAUDE.md), но CQRS-вход
+// каждого домена свой.
 @ApiTags('Продажи')
 @Controller()
 export class CreateShopSalesPlanHttpController {
@@ -42,12 +42,11 @@ export class CreateShopSalesPlanHttpController {
     ): Promise<SalesPlanResponse | SalesPlanResponse[]> {
         const isBatch = 'items' in body;
         const items = isBatch ? body.items : [body];
-        const command = new CreateSalesPlanCommand({
-            direction: 'shop',
+        const command = new CreateShopSalesPlanCommand({
             plans: items,
         });
         const created = await this.commandBus.execute<
-            CreateSalesPlanCommand,
+            CreateShopSalesPlanCommand,
             SalesPlanResponse[]
         >(command);
         return isBatch ? created : created[0];
