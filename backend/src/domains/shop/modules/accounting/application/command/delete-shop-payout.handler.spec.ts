@@ -5,17 +5,17 @@ import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
 } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
-import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
+import { ShopErpCashDocument } from '@/domains/shop/modules/accounting/domain/entities/shop-erp-cash-document.entity';
+import { ShopSalaryAccrual } from '@/domains/shop/modules/accounting/domain/entities/shop-salary-accrual.entity';
 import {
     BalanceTransactionNotFoundException,
     BalanceTransactionNotPayoutException,
-} from '@/domains/service/modules/accounting/domain/exceptions/balance-transaction.exception';
-import { ErpCashDocumentMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+} from '@/modules/employee-balance/domain/exceptions/balance-transaction.exception';
+import { ShopErpCashDocumentMissingForTransactionException } from '@/domains/shop/modules/accounting/domain/exceptions/erp-cash-document.exception';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
+import { InMemoryShopErpCashDocumentRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-erp-cash-document.repository';
+import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-salary-accrual.repository';
 import { DeleteShopPayoutHandler } from './delete-shop-payout.handler';
 import { DeleteShopPayoutCommand } from './delete-shop-payout.command';
 
@@ -26,8 +26,7 @@ import { DeleteShopPayoutCommand } from './delete-shop-payout.command';
 describe('DeleteShopPayoutHandler', () => {
     const buildAccrual = () =>
         withRequestContext(() =>
-            SalaryAccrual.createFromSnapshot({
-                direction: 'shop',
+            ShopSalaryAccrual.createFromSnapshot({
                 period: '2026-07',
                 employeeId: 42,
                 isDismissed: false,
@@ -48,12 +47,12 @@ describe('DeleteShopPayoutHandler', () => {
     const build = (overrides?: {
         erpPort?: ErpCashDocumentPort;
         unitOfWork?: UnitOfWorkPort;
-        accrualRepo?: InMemorySalaryAccrualRepository;
+        accrualRepo?: InMemoryShopSalaryAccrualRepository;
     }) => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const accrualRepo =
-            overrides?.accrualRepo ?? new InMemorySalaryAccrualRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+            overrides?.accrualRepo ?? new InMemoryShopSalaryAccrualRepository();
+        const erpCashDocumentRepo = new InMemoryShopErpCashDocumentRepository();
         const fakeErpPort: ErpCashDocumentPort = overrides?.erpPort ?? {
             create: () => Promise.reject(new Error('not used')),
             delete: (_p: DeleteErpCashDocumentParams) => Promise.resolve(),
@@ -75,7 +74,7 @@ describe('DeleteShopPayoutHandler', () => {
 
     const seedPayout = async (
         transactionRepo: InMemoryBalanceTransactionRepository,
-        erpCashDocumentRepo: InMemoryErpCashDocumentRepository,
+        erpCashDocumentRepo: InMemoryShopErpCashDocumentRepository,
     ) => {
         const payout = withRequestContext(() =>
             BalanceTransaction.forPayout({
@@ -87,7 +86,7 @@ describe('DeleteShopPayoutHandler', () => {
         );
         await transactionRepo.insertMany([payout]);
         const document = withRequestContext(() =>
-            ErpCashDocument.create({
+            ShopErpCashDocument.create({
                 transactionId: payout.id,
                 system: 'MOY_SKLAD',
                 kind: 'OUTCOME',
@@ -131,7 +130,7 @@ describe('DeleteShopPayoutHandler', () => {
     });
 
     it('возвращает PAID-документы сотрудника направления shop в ACCRUED', async () => {
-        const accrualRepo = new InMemorySalaryAccrualRepository();
+        const accrualRepo = new InMemoryShopSalaryAccrualRepository();
         const accrual = buildAccrual();
         withRequestContext(() => accrual.accrueLine(accrual.lines[0].id));
         accrual.markPaid();
@@ -241,7 +240,7 @@ describe('DeleteShopPayoutHandler', () => {
                     new DeleteShopPayoutCommand({ payoutId: payout.id }),
                 ),
             ),
-        ).rejects.toThrow(ErpCashDocumentMissingForTransactionException);
+        ).rejects.toThrow(ShopErpCashDocumentMissingForTransactionException);
         expect(deleteCalls).toHaveLength(0);
         expect(transactionRepo.store.size).toBe(1);
     });

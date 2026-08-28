@@ -2,17 +2,17 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ClosePeriodPreviewResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
+import { GetShopClosePeriodPreviewService } from '@/domains/shop/modules/accounting/application/services/get-shop-close-period-preview.service';
 
-// Сводка закрытия направления shop — тонкий HTTP-слой поверх generic-по-
-// direction GetClosePeriodPreviewService (тот же приём, что и
-// GetShopAccountingPeriodHttpController); калькулятор строк под
-// SNAPSHOT_ROWS_CALCULATOR — свой, shop-овский (см. ShopAccountingModule).
+// Сводка закрытия направления shop — тонкий HTTP-слой поверх собственного,
+// независимого GetShopClosePeriodPreviewService (Фаза 5
+// docs/service-shop-boundary-violations-fix); калькулятор строк под
+// SHOP_SNAPSHOT_ROWS_CALCULATOR — свой, shop-овский (см. ShopAccountingModule).
 @ApiTags('Бухгалтерия: расчётный период магазина')
 @Controller()
 export class GetShopClosePeriodPreviewHttpController {
     constructor(
-        private readonly getClosePeriodPreview: GetClosePeriodPreviewService,
+        private readonly getClosePeriodPreview: GetShopClosePeriodPreviewService,
     ) {}
 
     @Get(routesV1.shop.accounting.period.closePreview)
@@ -23,6 +23,6 @@ export class GetShopClosePeriodPreviewHttpController {
     async get(
         @Param('period') period: string,
     ): Promise<ClosePeriodPreviewResponse> {
-        return this.getClosePeriodPreview.execute('shop', period);
+        return this.getClosePeriodPreview.execute(period);
     }
 }

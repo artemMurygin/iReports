@@ -8,19 +8,19 @@ import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/d
 import { Period } from '@/shared/domain/period.value-object';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import { SHOP_ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import { SHOP_ACCOUNTING_CALCULATION_CACHE } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
 import {
     buildFreshnessStamp,
     stampOf,
-} from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+} from '@/domains/shop/modules/accounting/domain/services/shop-accounting-cache-freshness';
 import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
@@ -73,10 +73,10 @@ const EMPTY_CONTRIBUTION: ShopContribution = {
 // комбинированного отчёта) — единственный источник, уместный для отчёта,
 // который не касается направления service вообще.
 //
-// Ленивый кэш — тот же ACCOUNTING_CALCULATION_CACHE, тот же ключ
-// ('shop', period, employeeId), что и у GetDepartmentSalaryReportService/
-// GetEmployeeSalaryReportService — расчёт по сотруднику через этот отчёт и
-// через любой другой вход используют одну и ту же кэш-строку.
+// Ленивый кэш — тот же SHOP_ACCOUNTING_CALCULATION_CACHE, тот же ключ
+// (period, employeeId), что и у GetShopEmployeeSalaryReportService — расчёт
+// по сотруднику через этот отчёт и через любой другой вход используют одну
+// и ту же кэш-строку.
 @Injectable()
 export class GetShopDepartmentSalaryReportService {
     constructor(
@@ -84,16 +84,16 @@ export class GetShopDepartmentSalaryReportService {
         private readonly shopDataSource: ShopCalculationDataPort,
         @Inject(SHOP_SALES_PERFORMANCE_READER)
         private readonly shopSalesPerformanceReader: ShopSalesPerformanceReaderPort,
-        @Inject(ACCOUNTING_PERIOD_REPOSITORY)
-        private readonly periodRepo: AccountingPeriodRepositoryPort,
-        @Inject(ACCOUNTING_PERIOD_SNAPSHOT)
-        private readonly snapshotRepo: AccountingPeriodSnapshotPort,
-        @Inject(ACCOUNTING_CALCULATION_CACHE)
-        private readonly cacheRepo: AccountingCalculationCachePort,
+        @Inject(SHOP_ACCOUNTING_PERIOD_REPOSITORY)
+        private readonly periodRepo: ShopAccountingPeriodRepositoryPort,
+        @Inject(SHOP_ACCOUNTING_PERIOD_SNAPSHOT)
+        private readonly snapshotRepo: ShopAccountingPeriodSnapshotPort,
+        @Inject(SHOP_ACCOUNTING_CALCULATION_CACHE)
+        private readonly cacheRepo: ShopAccountingCalculationCachePort,
         @Inject(DOMAIN_SYNC_STATUS)
         private readonly domainSyncStatus: DomainSyncStatusPort,
-        @Inject(SALES_PLAN_REPOSITORY)
-        private readonly salesPlanRepo: SalesPlanRepositoryPort,
+        @Inject(SHOP_SALES_PLAN_REPOSITORY)
+        private readonly salesPlanRepo: ShopSalesPlanRepositoryPort,
         private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
     ) {}
 
@@ -105,12 +105,12 @@ export class GetShopDepartmentSalaryReportService {
         const periodValue = validatedPeriod.getValue();
 
         const [shopAccountingPeriod, employees] = await Promise.all([
-            this.periodRepo.findByDirectionAndPeriod('shop', periodValue),
+            this.periodRepo.findByPeriod(periodValue),
             this.shopDataSource.findEmployeesInDepartment(departmentId),
         ]);
 
         // Период без записи в БД трактуется как OPEN (см.
-        // AccountingPeriodRepositoryPort).
+        // ShopAccountingPeriodRepositoryPort).
         const isClosed = shopAccountingPeriod?.isClosed() ?? false;
 
         const contributions = isClosed
@@ -171,7 +171,6 @@ export class GetShopDepartmentSalaryReportService {
         employees: { id: number; name: string }[],
     ): Promise<Map<number, ShopContribution>> {
         const snapshots = await this.snapshotRepo.findManyByKey(
-            'shop',
             period,
             employees.map((employee) => employee.id),
         );
@@ -242,7 +241,7 @@ export class GetShopDepartmentSalaryReportService {
             // считались нулями.
             this.salaryRulesResolver.forDepartment(departmentId, employeeIds),
             this.domainSyncStatus.getLastSuccessfulSyncAt('shop'),
-            this.salesPlanRepo.findByDirectionAndPeriod('shop', period),
+            this.salesPlanRepo.findByPeriod(period),
         ]);
 
         const salesPerformanceDetail =
@@ -437,7 +436,7 @@ export class GetShopDepartmentSalaryReportService {
         baseContext: Omit<ShopCalculationContext, 'mode' | 'salesPerformance'>,
         salesPerformanceByCategory: Map<string | null, ShopSalesPerformance>,
     ): Promise<EmployeeCalculationResult> {
-        const cached = await this.cacheRepo.find('shop', period, employeeId);
+        const cached = await this.cacheRepo.find(period, employeeId);
         if (cached && cached.freshnessStamp === freshnessStamp) {
             return {
                 factLines: cached.factLines,
@@ -464,7 +463,7 @@ export class GetShopDepartmentSalaryReportService {
             }),
         ]);
 
-        await this.cacheRepo.upsert('shop', period, employeeId, {
+        await this.cacheRepo.upsert(period, employeeId, {
             freshnessStamp,
             factLines,
             prognoseLines,

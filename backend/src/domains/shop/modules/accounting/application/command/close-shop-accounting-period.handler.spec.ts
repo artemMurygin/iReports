@@ -1,15 +1,16 @@
 import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
+import { ErpSyncFailedException } from '@/shared/application/exceptions/erp-sync-failed.exception';
 import {
-    ErpSyncFailedException,
-    PeriodNotExpiredException,
-} from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
-import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
+    ShopPeriodNotExpiredException,
+    ShopUnapprovedSalesPlanRowsException,
+} from '@/domains/shop/modules/accounting/domain/exceptions/shop-accounting-period.exception';
+import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { CloseShopAccountingPeriodHandler } from './close-shop-accounting-period.handler';
 import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period.command';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
@@ -18,13 +19,12 @@ import type { BuildShopCalculationContextService } from '@/domains/shop/modules/
 import { Period } from '@/shared/domain/period.value-object';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
-import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
+import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/shop-sales-plan.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
-import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/salary-accrual-documents-created.domain-event';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
+import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-salary-accrual.repository';
+import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events/salary-accrual-documents-created.domain-event';
 
 // Зеркало domains/service/modules/accounting/application/command/
 // close-accounting-period.handler.spec.ts (только shop-кейсы) — независимый
@@ -32,7 +32,7 @@ import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modu
 // 13.5, issue #57).
 describe('CloseShopAccountingPeriodHandler', () => {
     const buildHandler = (overrides?: {
-        plans?: SalesPlan[];
+        plans?: ShopSalesPlan[];
         shopSchemas?: ShopMotivationSchema[];
         dismissedEmployeeIds?: number[];
         failSnapshotSave?: boolean;
@@ -45,9 +45,9 @@ describe('CloseShopAccountingPeriodHandler', () => {
         syncPeriod?: jest.Mock;
     }) => {
         const save = jest.fn().mockResolvedValue(undefined);
-        const findByDirectionAndPeriod = jest.fn().mockResolvedValue(null);
-        const periodRepo: AccountingPeriodRepositoryPort = {
-            findByDirectionAndPeriod,
+        const findByPeriod = jest.fn().mockResolvedValue(null);
+        const periodRepo: ShopAccountingPeriodRepositoryPort = {
+            findByPeriod,
             save,
         };
 
@@ -58,11 +58,11 @@ describe('CloseShopAccountingPeriodHandler', () => {
                     ? Promise.reject(new Error('БД недоступна'))
                     : Promise.resolve(undefined),
             );
-        const snapshotRepo: AccountingPeriodSnapshotPort = {
+        const snapshotRepo: ShopAccountingPeriodSnapshotPort = {
             saveAll,
             findByKey: jest.fn(),
             findManyByKey: jest.fn().mockResolvedValue(new Map()),
-            deleteByDirectionAndPeriod: jest.fn(),
+            deleteByPeriod: jest.fn(),
         };
 
         const deleteCacheByPeriod = jest
@@ -73,10 +73,10 @@ describe('CloseShopAccountingPeriodHandler', () => {
                     ? Promise.reject(new Error('БД недоступна после записи'))
                     : Promise.resolve(undefined),
             );
-        const cacheRepo: AccountingCalculationCachePort = {
+        const cacheRepo: ShopAccountingCalculationCachePort = {
             find: jest.fn(),
             upsert: jest.fn(),
-            deleteByDirectionAndPeriod: deleteCacheByPeriod,
+            deleteByPeriod: deleteCacheByPeriod,
         };
 
         const shopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
@@ -107,20 +107,18 @@ describe('CloseShopAccountingPeriodHandler', () => {
             } as unknown as ShopCalculationDataPort,
         );
 
-        const salesPlanRepo: SalesPlanRepositoryPort = {
+        const salesPlanRepo: ShopSalesPlanRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
             delete: jest.fn(),
             findById: jest.fn(),
             findByIds: jest.fn(),
             findByScope: jest.fn(),
-            findByDirectionAndPeriod: jest
-                .fn()
-                .mockResolvedValue(overrides?.plans ?? []),
+            findByPeriod: jest.fn().mockResolvedValue(overrides?.plans ?? []),
         };
 
         // Фейковый UnitOfWork с откатом (см. одноимённый спек сервиса).
-        const accrualRepo = new InMemorySalaryAccrualRepository();
+        const accrualRepo = new InMemoryShopSalaryAccrualRepository();
         const unitOfWork: UnitOfWorkPort = {
             run: async (work) => {
                 const before = new Map(accrualRepo.store);
@@ -232,8 +230,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
 
     const buildApprovedPlan = () =>
         withRequestContext(() => {
-            const plan = SalesPlan.create({
-                direction: 'shop',
+            const plan = ShopSalesPlan.create({
                 department: 1,
                 category: null,
                 period: '2026-07',
@@ -247,8 +244,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
 
     it('отклоняется со списком неутверждённых строк плана', async () => {
         const unapprovedPlan = withRequestContext(() =>
-            SalesPlan.create({
-                direction: 'shop',
+            ShopSalesPlan.create({
                 department: 1,
                 category: null,
                 period: '2026-07',
@@ -268,7 +264,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                     }),
                 ),
             ),
-        ).rejects.toThrow(UnapprovedSalesPlanRowsException);
+        ).rejects.toThrow(ShopUnapprovedSalesPlanRowsException);
         expect(save).not.toHaveBeenCalled();
     });
 
@@ -305,8 +301,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
         expect(response.closedBy).toBe(7);
         expect(save).toHaveBeenCalledTimes(1);
         expect(saveAll).toHaveBeenCalledTimes(1);
-        const [, , , rows] = saveAll.mock.calls[0] as [
-            string,
+        const [, , rows] = saveAll.mock.calls[0] as [
             string,
             string,
             { employeeId: number; total: number }[],
@@ -314,7 +309,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
         expect(rows).toEqual([
             expect.objectContaining({ employeeId: 42, total: 2000 }),
         ]);
-        expect(deleteCacheByPeriod).toHaveBeenCalledWith('shop', '2026-07');
+        expect(deleteCacheByPeriod).toHaveBeenCalledWith('2026-07');
     });
 
     it('пустой список планов (плана вообще нет) не блокирует закрытие', async () => {
@@ -357,8 +352,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 ),
             );
 
-            const [, , , rows] = saveAll.mock.calls[0] as [
-                string,
+            const [, , rows] = saveAll.mock.calls[0] as [
                 string,
                 string,
                 {
@@ -367,10 +361,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                     lines: { ruleId: string; amount: number }[];
                 }[],
             ];
-            const accruals = await accrualRepo.findByDirectionAndPeriod(
-                'shop',
-                '2026-07',
-            );
+            const accruals = await accrualRepo.findByPeriod('2026-07');
             expect(accruals).toHaveLength(3);
             expect(accruals).toHaveLength(rows.length);
             for (const row of rows) {
@@ -452,10 +443,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 deleteCacheByPeriod.mock.invocationCallOrder[0];
             const buildOrder = build.mock.invocationCallOrder[0];
             expect(cacheResetOrder).toBeLessThan(buildOrder);
-            const [accrual] = await accrualRepo.findByDirectionAndPeriod(
-                'shop',
-                '2026-07',
-            );
+            const [accrual] = await accrualRepo.findByPeriod('2026-07');
             expect(accrual.total).toBe(2500);
         });
 
@@ -535,10 +523,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
             expect(syncPeriod.mock.invocationCallOrder[0]).toBeLessThan(
                 build.mock.invocationCallOrder[0],
             );
-            const [accrual] = await accrualRepo.findByDirectionAndPeriod(
-                'shop',
-                '2026-07',
-            );
+            const [accrual] = await accrualRepo.findByPeriod('2026-07');
             expect(accrual.total).toBe(2500);
         });
 
@@ -585,7 +570,7 @@ describe('CloseShopAccountingPeriodHandler', () => {
                         }),
                     ),
                 ),
-            ).rejects.toBeInstanceOf(PeriodNotExpiredException);
+            ).rejects.toBeInstanceOf(ShopPeriodNotExpiredException);
 
             expect(syncPeriod).not.toHaveBeenCalled();
         });

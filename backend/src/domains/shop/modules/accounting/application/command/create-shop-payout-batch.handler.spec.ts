@@ -2,9 +2,9 @@ import { CqrsModule, CommandBus } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
-import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
+import { SHOP_SALARY_ACCRUAL_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
+import { SHOP_ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
 import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
 import type {
     CreateErpCashDocumentParams,
@@ -15,10 +15,10 @@ import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employee-operation-lock';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
+import { InMemoryShopErpCashDocumentRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-erp-cash-document.repository';
+import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-salary-accrual.repository';
 import { CreateShopPayoutHandler } from './create-shop-payout.handler';
 import { CreateShopPayoutBatchHandler } from './create-shop-payout-batch.handler';
 import { CreateShopPayoutBatchCommand } from './create-shop-payout-batch.command';
@@ -57,8 +57,8 @@ describe('CreateShopPayoutBatchHandler', () => {
 
     const build = async (erpPort: ErpCashDocumentPort) => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
-        const accrualRepo = new InMemorySalaryAccrualRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const accrualRepo = new InMemoryShopSalaryAccrualRepository();
+        const erpCashDocumentRepo = new InMemoryShopErpCashDocumentRepository();
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
 
         const moduleRef = await Test.createTestingModule({
@@ -70,10 +70,13 @@ describe('CreateShopPayoutBatchHandler', () => {
                     provide: BALANCE_TRANSACTION_REPOSITORY,
                     useValue: transactionRepo,
                 },
-                { provide: SALARY_ACCRUAL_REPOSITORY, useValue: accrualRepo },
+                {
+                    provide: SHOP_SALARY_ACCRUAL_REPOSITORY,
+                    useValue: accrualRepo,
+                },
                 { provide: SHOP_ERP_CASH_DOCUMENT_PORT, useValue: erpPort },
                 {
-                    provide: ERP_CASH_DOCUMENT_REPOSITORY,
+                    provide: SHOP_ERP_CASH_DOCUMENT_REPOSITORY,
                     useValue: erpCashDocumentRepo,
                 },
                 { provide: DIRECTORY_REPOSITORY, useValue: fakeDirectoryRepo },

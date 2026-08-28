@@ -3,7 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { CloseAccountingPeriodDto } from '@/domains/service/modules/accounting/interface/dto/close-accounting-period.dto';
+import { CloseAccountingPeriodDto } from '@/shared/interface/dto/close-accounting-period.dto';
 import { CloseShopAccountingPeriodCommand } from '@/domains/shop/modules/accounting/application/command/close-shop-accounting-period.command';
 
 // Зеркало CloseAccountingPeriodHttpController (domains/service) — DTO тела

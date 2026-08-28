@@ -3,13 +3,14 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccruePeriodSalaryAccrualsResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { AccruePeriodSalaryAccrualsCommand } from '@/domains/service/modules/accounting/application/command/accrue-period-salary-accruals.command';
-import { AccrueSalaryAccrualLineDto } from '@/domains/service/modules/accounting/interface/dto/accrue-salary-accrual-line.dto';
+import { AccruePeriodShopSalaryAccrualsCommand } from '@/domains/shop/modules/accounting/application/command/accrue-period-shop-salary-accruals.command';
+import { AccrueShopSalaryAccrualLineDto } from '../dto/accrue-shop-salary-accrual-line.dto';
 import { ListShopSalaryAccrualsQueryDto } from '../dto/list-shop-salary-accruals-query.dto';
 
 // «Начислить все документы месяца» магазина — тонкий HTTP-слой поверх
-// generic по direction AccruePeriodSalaryAccrualsCommand (общий CommandBus,
-// хендлер зарегистрирован в AccountingModule сервиса).
+// собственной, независимой AccruePeriodShopSalaryAccrualsCommand (Фаза 6
+// docs/service-shop-boundary-violations-fix) вместо generic по direction
+// команды сервиса.
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
 @Controller()
 export class AccruePeriodShopSalaryAccrualsHttpController {
@@ -22,10 +23,9 @@ export class AccruePeriodShopSalaryAccrualsHttpController {
     })
     async accrue(
         @Query() query: ListShopSalaryAccrualsQueryDto,
-        @Body() body: AccrueSalaryAccrualLineDto,
+        @Body() body: AccrueShopSalaryAccrualLineDto,
     ): Promise<AccruePeriodSalaryAccrualsResponse> {
-        const command = new AccruePeriodSalaryAccrualsCommand({
-            direction: 'shop',
+        const command = new AccruePeriodShopSalaryAccrualsCommand({
             period: query.period,
             accruedBy: body.accruedBy,
         });

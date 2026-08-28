@@ -3,12 +3,12 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { AdjustSalaryAccrualLineCommand } from '@/domains/service/modules/accounting/application/command/adjust-salary-accrual-line.command';
-import { AdjustSalaryAccrualLineDto } from '@/domains/service/modules/accounting/interface/dto/adjust-salary-accrual-line.dto';
+import { AdjustShopSalaryAccrualLineCommand } from '@/domains/shop/modules/accounting/application/command/adjust-shop-salary-accrual-line.command';
+import { AdjustShopSalaryAccrualLineDto } from '../dto/adjust-shop-salary-accrual-line.dto';
 
 // Корректировка строки документа начисления магазина — тонкий HTTP-слой
-// поверх generic по direction команды (см.
-// AccrueShopSalaryAccrualLineHttpController).
+// поверх собственной, независимой AdjustShopSalaryAccrualLineCommand
+// (Фаза 6 docs/service-shop-boundary-violations-fix).
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
 @Controller()
 export class AdjustShopSalaryAccrualLineHttpController {
@@ -22,10 +22,9 @@ export class AdjustShopSalaryAccrualLineHttpController {
     async adjust(
         @Param('id') id: string,
         @Param('lineId') lineId: string,
-        @Body() body: AdjustSalaryAccrualLineDto,
+        @Body() body: AdjustShopSalaryAccrualLineDto,
     ): Promise<SalaryAccrualResponse> {
-        const command = new AdjustSalaryAccrualLineCommand({
-            direction: 'shop',
+        const command = new AdjustShopSalaryAccrualLineCommand({
             accrualId: id,
             lineId,
             amount: body.amount,

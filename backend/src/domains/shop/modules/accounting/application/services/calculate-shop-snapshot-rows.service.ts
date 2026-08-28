@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Period } from '@/shared/domain/period.value-object';
-import type { AccountingPeriodSnapshotRow } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type { SnapshotRowsCalculatorPort } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
+import type { ShopAccountingPeriodSnapshotRow } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopSnapshotRowsCalculatorPort } from '@/domains/shop/modules/accounting/application/ports/shop-snapshot-rows-calculator.port';
 import { PeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
 import { buildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
 import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/to-shop-sales-performance-context';
@@ -12,20 +12,22 @@ import { ResolveShopEmployeeSalaryRulesService } from './resolve-shop-employee-s
 // (личная схема и/или схема отдела). Вынесен из
 // CloseShopAccountingPeriodHandler (Фаза 2 PRD 1
 // docs/payroll-closing-and-accrual), чтобы close-preview считался тем же
-// кодом, что и закрытие. Порт SnapshotRowsCalculatorPort физически лежит в
-// domains/service/modules/accounting, но direction-агностичен (как
-// AccountingPeriod/снапшот — см. шапку CloseShopAccountingPeriodHandler).
+// кодом, что и закрытие. Порт ShopSnapshotRowsCalculatorPort — собственный,
+// независимый от одноимённого порта domains/service (Фаза 5
+// docs/service-shop-boundary-violations-fix).
 @Injectable()
-export class CalculateShopSnapshotRowsService implements SnapshotRowsCalculatorPort {
+export class CalculateShopSnapshotRowsService implements ShopSnapshotRowsCalculatorPort {
     constructor(
         private readonly shopContextBuilder: BuildShopCalculationContextService,
         private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
     ) {}
 
-    async calculate(period: Period): Promise<AccountingPeriodSnapshotRow[]> {
+    async calculate(
+        period: Period,
+    ): Promise<ShopAccountingPeriodSnapshotRow[]> {
         const salaryRulesByEmployee =
             await this.salaryRulesResolver.forAllTargets();
-        const rows: AccountingPeriodSnapshotRow[] = [];
+        const rows: ShopAccountingPeriodSnapshotRow[] = [];
         for (const [employeeId, { rules }] of salaryRulesByEmployee) {
             // Сотрудник отдела со схемой, у которого после фильтра по
             // direction='shop' не осталось ни одного правила (вся схема

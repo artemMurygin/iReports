@@ -3,14 +3,14 @@ import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { ShopAccountingPeriod } from '@/domains/shop/modules/accounting/domain/entities/shop-accounting-period.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Отчёт по отделу, ограниченный ОДНИМ направлением shop — в отличие от
@@ -41,10 +41,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
 
     const buildClosedShopPeriod = () =>
         withRequestContext(() => {
-            const period = AccountingPeriod.openFor({
-                direction: 'shop',
-                period: '2026-07',
-            });
+            const period = ShopAccountingPeriod.openFor('2026-07');
             period.close(1, 1);
             return period;
         });
@@ -53,7 +50,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
         employees: { id: number; name: string }[];
         shopSchemas?: ShopMotivationSchema[];
         shopHoursByEmployee?: Map<number, number>;
-        shopAccountingPeriod?: AccountingPeriod | null;
+        shopAccountingPeriod?: ShopAccountingPeriod | null;
         shopSnapshots?: Map<
             number,
             { employeeId: number; total: number; lines: never[] }
@@ -135,30 +132,30 @@ describe('GetShopDepartmentSalaryReportService', () => {
             } as unknown as ShopCalculationDataPort,
         );
 
-        const findByDirectionAndPeriod = jest
+        const findByPeriod = jest
             .fn()
             .mockResolvedValue(overrides.shopAccountingPeriod ?? null);
-        const periodRepo: AccountingPeriodRepositoryPort = {
-            findByDirectionAndPeriod,
+        const periodRepo: ShopAccountingPeriodRepositoryPort = {
+            findByPeriod,
             save: jest.fn(),
         };
 
         const findManyByKey = jest
             .fn()
             .mockResolvedValue(overrides.shopSnapshots ?? new Map());
-        const snapshotRepo: AccountingPeriodSnapshotPort = {
+        const snapshotRepo: ShopAccountingPeriodSnapshotPort = {
             saveAll: jest.fn(),
             findByKey: jest.fn(),
             findManyByKey,
-            deleteByDirectionAndPeriod: jest.fn(),
+            deleteByPeriod: jest.fn(),
         };
 
         const findCache = jest.fn().mockResolvedValue(null);
         const upsertCache = jest.fn().mockResolvedValue(undefined);
-        const cacheRepo: AccountingCalculationCachePort = {
+        const cacheRepo: ShopAccountingCalculationCachePort = {
             find: findCache,
             upsert: upsertCache,
-            deleteByDirectionAndPeriod: jest.fn(),
+            deleteByPeriod: jest.fn(),
         };
 
         const domainSyncStatus: DomainSyncStatusPort = {
@@ -166,14 +163,14 @@ describe('GetShopDepartmentSalaryReportService', () => {
             markSuccessful: jest.fn(),
         };
 
-        const salesPlanRepo: SalesPlanRepositoryPort = {
+        const salesPlanRepo: ShopSalesPlanRepositoryPort = {
             insert: jest.fn(),
             update: jest.fn(),
             delete: jest.fn(),
             findById: jest.fn(),
             findByIds: jest.fn(),
             findByScope: jest.fn(),
-            findByDirectionAndPeriod: jest.fn().mockResolvedValue([]),
+            findByPeriod: jest.fn().mockResolvedValue([]),
         };
 
         const service = new GetShopDepartmentSalaryReportService(
@@ -197,7 +194,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
             resolveCategoryDescendantFolderIds,
             findForScope,
             findByEmployees,
-            findByDirectionAndPeriod,
+            findByPeriod,
             findManyByKey,
         };
     };
@@ -324,17 +321,14 @@ describe('GetShopDepartmentSalaryReportService', () => {
     it('период без записи в БД трактуется как открытый', async () => {
         const employees = [{ id: 1, name: 'Продавец' }];
 
-        const { service, findByDirectionAndPeriod } = buildService({
+        const { service, findByPeriod } = buildService({
             employees,
             shopAccountingPeriod: null,
         });
 
         const report = await service.execute(1, '2026-08');
 
-        expect(findByDirectionAndPeriod).toHaveBeenCalledWith(
-            'shop',
-            '2026-08',
-        );
+        expect(findByPeriod).toHaveBeenCalledWith('2026-08');
         expect(report.isClosed).toBe(false);
     });
 

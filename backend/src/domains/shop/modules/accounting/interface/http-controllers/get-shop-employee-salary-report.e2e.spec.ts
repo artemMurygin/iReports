@@ -16,16 +16,16 @@ import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounti
 import type { ShopTaskCompletionRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-task-completion.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import { SHOP_ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import { SHOP_ACCOUNTING_CALCULATION_CACHE } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
 import { SHOP_SALES_PERFORMANCE_READER } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
 import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
 import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object';
@@ -123,33 +123,34 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         findByPeriod: () => Promise.resolve([]),
         findConfirmedByPeriod: () => Promise.resolve([]),
     };
-    const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
-        findByDirectionAndPeriod: () => Promise.resolve(null),
+    const fakeShopAccountingPeriodRepo: ShopAccountingPeriodRepositoryPort = {
+        findByPeriod: () => Promise.resolve(null),
         save: () => Promise.resolve(),
     };
-    const fakeAccountingPeriodSnapshot: AccountingPeriodSnapshotPort = {
+    const fakeShopAccountingPeriodSnapshot: ShopAccountingPeriodSnapshotPort = {
         saveAll: () => Promise.resolve(),
         findByKey: () => Promise.resolve(null),
         findManyByKey: () => Promise.resolve(new Map()),
-        deleteByDirectionAndPeriod: () => Promise.resolve(),
+        deleteByPeriod: () => Promise.resolve(),
     };
-    const fakeAccountingCalculationCache: AccountingCalculationCachePort = {
-        find: () => Promise.resolve(null),
-        upsert: () => Promise.resolve(),
-        deleteByDirectionAndPeriod: () => Promise.resolve(),
-    };
+    const fakeShopAccountingCalculationCache: ShopAccountingCalculationCachePort =
+        {
+            find: () => Promise.resolve(null),
+            upsert: () => Promise.resolve(),
+            deleteByPeriod: () => Promise.resolve(),
+        };
     const fakeDomainSyncStatus: DomainSyncStatusPort = {
         getLastSuccessfulSyncAt: () => Promise.resolve(null),
         markSuccessful: () => Promise.resolve(),
     };
-    const fakeSalesPlanRepo: SalesPlanRepositoryPort = {
+    const fakeSalesPlanRepo: ShopSalesPlanRepositoryPort = {
         insert: () => Promise.resolve(),
         update: () => Promise.resolve(),
         delete: () => Promise.resolve(),
         findById: () => Promise.resolve(null),
         findByIds: () => Promise.resolve([]),
         findByScope: () => Promise.resolve(null),
-        findByDirectionAndPeriod: () => Promise.resolve([]),
+        findByPeriod: () => Promise.resolve([]),
     };
     // hoursWorked: 5 — вместе с price 300 у схемы ниже даёт total 1500,
     // намеренно отличное от 2000 (8ч × 250) сервисного e2e-зеркала: числа
@@ -373,15 +374,15 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             .useValue(fakeShopTaskCompletionRepo)
             .overrideProvider(SHOP_CALCULATION_DATA)
             .useValue(fakeShopCalculationData)
-            .overrideProvider(ACCOUNTING_PERIOD_REPOSITORY)
-            .useValue(fakeAccountingPeriodRepo)
-            .overrideProvider(ACCOUNTING_PERIOD_SNAPSHOT)
-            .useValue(fakeAccountingPeriodSnapshot)
-            .overrideProvider(ACCOUNTING_CALCULATION_CACHE)
-            .useValue(fakeAccountingCalculationCache)
+            .overrideProvider(SHOP_ACCOUNTING_PERIOD_REPOSITORY)
+            .useValue(fakeShopAccountingPeriodRepo)
+            .overrideProvider(SHOP_ACCOUNTING_PERIOD_SNAPSHOT)
+            .useValue(fakeShopAccountingPeriodSnapshot)
+            .overrideProvider(SHOP_ACCOUNTING_CALCULATION_CACHE)
+            .useValue(fakeShopAccountingCalculationCache)
             .overrideProvider(DOMAIN_SYNC_STATUS)
             .useValue(fakeDomainSyncStatus)
-            .overrideProvider(SALES_PLAN_REPOSITORY)
+            .overrideProvider(SHOP_SALES_PLAN_REPOSITORY)
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(SHOP_SALES_PERFORMANCE_READER)
             .useValue(fakeShopSalesPerformanceReader)

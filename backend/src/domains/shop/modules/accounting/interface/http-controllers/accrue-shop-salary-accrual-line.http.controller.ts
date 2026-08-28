@@ -3,13 +3,12 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { AccrueSalaryAccrualLineCommand } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-line.command';
-import { AccrueSalaryAccrualLineDto } from '@/domains/service/modules/accounting/interface/dto/accrue-salary-accrual-line.dto';
+import { AccrueShopSalaryAccrualLineCommand } from '@/domains/shop/modules/accounting/application/command/accrue-shop-salary-accrual-line.command';
+import { AccrueShopSalaryAccrualLineDto } from '../dto/accrue-shop-salary-accrual-line.dto';
 
 // Проведение строки документа начисления магазина — тонкий HTTP-слой поверх
-// generic по direction AccrueSalaryAccrualLineCommand модуля accounting
-// сервиса (тот же приём, что у ReopenShopAccountingPeriodHttpController):
-// хендлер зарегистрирован один раз, направление — данные команды.
+// собственной, независимой AccrueShopSalaryAccrualLineCommand (Фаза 6
+// docs/service-shop-boundary-violations-fix).
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
 @Controller()
 export class AccrueShopSalaryAccrualLineHttpController {
@@ -23,10 +22,9 @@ export class AccrueShopSalaryAccrualLineHttpController {
     async accrue(
         @Param('id') id: string,
         @Param('lineId') lineId: string,
-        @Body() body: AccrueSalaryAccrualLineDto,
+        @Body() body: AccrueShopSalaryAccrualLineDto,
     ): Promise<SalaryAccrualResponse> {
-        const command = new AccrueSalaryAccrualLineCommand({
-            direction: 'shop',
+        const command = new AccrueShopSalaryAccrualLineCommand({
             accrualId: id,
             lineId,
             accruedBy: body.accruedBy,

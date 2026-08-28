@@ -95,9 +95,11 @@ export interface ErpCashDocumentPort {
     // предварительной разметки через externalCode (см. WHY выше), а
     // собственный уникальный индекс transactionId (см. erp-cash.prisma) уже
     // гарантирует, что документ для одного движения не будет создан дважды.
-    // Реализация делегирует в ERP_CASH_DOCUMENT_REPOSITORY (см.
-    // domains/service/modules/accounting/application/ports/erp-cash-document-repository.port.ts,
-    // переиспользуется как direction-агностичный класс) — этот метод
+    // Реализация делегирует в SHOP_ERP_CASH_DOCUMENT_REPOSITORY (см.
+    // application/ports/shop-erp-cash-document-repository.port.ts —
+    // собственный независимый класс shop с Фазы 4
+    // docs/service-shop-boundary-violations-fix, до этой фазы делегировала
+    // в ERP_CASH_DOCUMENT_REPOSITORY domains/service) — этот метод
     // существует на порте отдельно от него только затем, чтобы будущий
     // обработчик выплаты зависел от одного абстрактного ErpCashDocumentPort
     // («создать/удалить/проверить, что уже сделано»), а не от двух разных

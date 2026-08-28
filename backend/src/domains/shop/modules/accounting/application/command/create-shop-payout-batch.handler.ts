@@ -4,12 +4,12 @@ import type {
     PayoutBatchOutcome,
     PayoutBatchResponse,
 } from 'ireports-contracts';
-import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
-import type { BalanceTransactionRepositoryPort } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
+import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
-import { resolveEmployees } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
-import { unknownEmployeeInfo } from '@/domains/service/modules/accounting/application/mappers/to-salary-accrual-response';
+import { resolveShopEmployees } from '@/domains/shop/modules/accounting/application/services/list-shop-salary-accruals.service';
+import { unknownShopEmployeeInfo } from '@/domains/shop/modules/accounting/application/mappers/to-shop-salary-accrual-response';
 import { CreateShopPayoutCommand } from './create-shop-payout.command';
 import { CreateShopPayoutBatchCommand } from './create-shop-payout-batch.command';
 
@@ -28,10 +28,11 @@ import { CreateShopPayoutBatchCommand } from './create-shop-payout-batch.command
 // упавший сотрудник не останавливает остальных — ошибка попадает в outcomes
 // как FAILED.
 //
-// resolveEmployees/unknownEmployeeInfo — переиспользованы из domains/service
-// напрямую: это справочник Bitrix (DIRECTORY_REPOSITORY), общий на компанию,
-// а не бизнес-правило зарплаты магазина (тот же приём, что erp-cash-sync.helper
-// в CreateShopPayoutHandler).
+// resolveShopEmployees/unknownShopEmployeeInfo — собственные независимые
+// копии domains/shop (Фаза 6 docs/service-shop-boundary-violations-fix), а
+// не переиспользование domains/service (справочник Bitrix сам по себе общий
+// на компанию, но обёртки над ним теперь раздельные по доменам, как и
+// SalaryAccrual).
 //
 // РЕШЕНИЕ по нулевому/отрицательному остатку в батче — см. WHY в
 // CreatePayoutBatchHandler направления service: такой сотрудник ВСЕГДА
@@ -54,14 +55,14 @@ export class CreateShopPayoutBatchHandler implements ICommandHandler<
     async execute(
         command: CreateShopPayoutBatchCommand,
     ): Promise<PayoutBatchResponse> {
-        const employees = await resolveEmployees(this.directoryRepo);
+        const employees = await resolveShopEmployees(this.directoryRepo);
         const outcomes: PayoutBatchOutcome[] = [];
         let paidCount = 0;
         let totalPaidAmount = 0;
 
         for (const employeeId of command.employeeIds) {
             const employeeName = (
-                employees.get(employeeId) ?? unknownEmployeeInfo(employeeId)
+                employees.get(employeeId) ?? unknownShopEmployeeInfo(employeeId)
             ).name;
             const balance =
                 await this.transactionRepo.sumByEmployee(employeeId);

@@ -3,10 +3,11 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { UnaccrueSalaryAccrualLineCommand } from '@/domains/service/modules/accounting/application/command/unaccrue-salary-accrual-line.command';
+import { UnaccrueShopSalaryAccrualLineCommand } from '@/domains/shop/modules/accounting/application/command/unaccrue-shop-salary-accrual-line.command';
 
 // Отмена начисления строки документа магазина — тонкий HTTP-слой поверх
-// generic по direction команды (см. AccrueShopSalaryAccrualLineHttpController).
+// собственной, независимой UnaccrueShopSalaryAccrualLineCommand (Фаза 6
+// docs/service-shop-boundary-violations-fix).
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
 @Controller()
 export class UnaccrueShopSalaryAccrualLineHttpController {
@@ -21,8 +22,7 @@ export class UnaccrueShopSalaryAccrualLineHttpController {
         @Param('id') id: string,
         @Param('lineId') lineId: string,
     ): Promise<SalaryAccrualResponse> {
-        const command = new UnaccrueSalaryAccrualLineCommand({
-            direction: 'shop',
+        const command = new UnaccrueShopSalaryAccrualLineCommand({
             accrualId: id,
             lineId,
         });

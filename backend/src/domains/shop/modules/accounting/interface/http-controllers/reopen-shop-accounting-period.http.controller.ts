@@ -3,13 +3,13 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { ReopenAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.command';
-import { ReopenAccountingPeriodDto } from '@/domains/service/modules/accounting/interface/dto/reopen-accounting-period.dto';
+import { ReopenShopAccountingPeriodCommand } from '@/domains/shop/modules/accounting/application/command/reopen-shop-accounting-period.command';
+import { ReopenShopAccountingPeriodDto } from '../dto/reopen-shop-accounting-period.dto';
 
-// Повторное открытие закрытого расчётного периода направления shop —
-// тонкий HTTP-слой поверх generic по direction ReopenAccountingPeriodCommand
-// модуля accounting сервиса (см. domains/service/CLAUDE.md), с собственным
-// путём под /v1/shop (см. routesV1.shop.accounting.period.reopen).
+// Повторное открытие закрытого расчётного периода направления shop — тонкий
+// HTTP-слой поверх собственной, независимой ReopenShopAccountingPeriodCommand
+// (Фаза 6 docs/service-shop-boundary-violations-fix) вместо generic по
+// direction команды сервиса, переиспользовавшейся раньше (см. Фазу 5).
 @ApiTags('Бухгалтерия: расчётный период магазина')
 @Controller()
 export class ReopenShopAccountingPeriodHttpController {
@@ -25,12 +25,9 @@ export class ReopenShopAccountingPeriodHttpController {
     })
     async reopen(
         @Param('period') period: string,
-        @Body() _body: ReopenAccountingPeriodDto,
+        @Body() _body: ReopenShopAccountingPeriodDto,
     ): Promise<AccountingPeriodResponse> {
-        const command = new ReopenAccountingPeriodCommand({
-            direction: 'shop',
-            period,
-        });
+        const command = new ReopenShopAccountingPeriodCommand({ period });
         return this.commandBus.execute(command);
     }
 }

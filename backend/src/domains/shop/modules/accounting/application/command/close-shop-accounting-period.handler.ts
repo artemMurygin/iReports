@@ -5,31 +5,37 @@ import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { Period } from '@/shared/domain/period.value-object';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { ShopAccountingPeriod } from '@/domains/shop/modules/accounting/domain/entities/shop-accounting-period.entity';
 import {
-    PeriodAlreadyClosedException,
-    PeriodNotExpiredException,
-    UnapprovedSalesPlanRowsException,
-} from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
-import { ErpPeriodSyncRunner } from '@/domains/service/modules/accounting/application/services/erp-period-sync-runner.service';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+    ShopPeriodAlreadyClosedException,
+    ShopPeriodNotExpiredException,
+    ShopUnapprovedSalesPlanRowsException,
+} from '@/domains/shop/modules/accounting/domain/exceptions/shop-accounting-period.exception';
+import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
+import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import { SHOP_ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
 import type {
-    AccountingPeriodSnapshotPort,
-    AccountingPeriodSnapshotRow,
-} from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { toAccountingPeriodResponse } from '@/domains/service/modules/accounting/application/mappers/to-accounting-period-response';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/domains/service/modules/accounting/domain/events/salary-accrual-documents-created.domain-event';
+    ShopAccountingPeriodSnapshotPort,
+    ShopAccountingPeriodSnapshotRow,
+} from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import { SHOP_ACCOUNTING_CALCULATION_CACHE } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import { toShopAccountingPeriodResponse } from '@/domains/shop/modules/accounting/application/mappers/to-shop-accounting-period-response';
+import { SHOP_SALARY_ACCRUAL_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
+import type { ShopSalaryAccrualRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
+import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
+import { ShopSalaryAccrual } from '@/domains/shop/modules/accounting/domain/entities/shop-salary-accrual.entity';
+// SalaryAccrualDocumentsCreatedDomainEvent остаётся общим,
+// direction-агностичным событием (Фаза 6 docs/service-shop-boundary-violations-fix
+// не дублирует его — см. WHY в самом файле события и в
+// SalaryAccrualDocumentsCreatedEventHandler): у события уже есть поле
+// direction, единственный текущий подписчик — временный лог-хендлер,
+// подтверждающий публикацию для обоих направлений.
+import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events/salary-accrual-documents-created.domain-event';
 import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculate-shop-snapshot-rows.service';
 import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period.command';
 
@@ -41,13 +47,14 @@ import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period
 // расположением класса в домене shop (см. также
 // CloseAccountingPeriodHandler — зеркальный независимый вход для service).
 //
-// Зависимости порта периода/снапшота/кэша/плана продаж и сама сущность
-// AccountingPeriod физически лежат в domains/service/modules/accounting, но
-// это общие направление-агностичные абстракции (direction — часть их
-// естественного ключа, см. AccountingPeriod, шапка комментария), а не
-// service-специфичная бизнес-логика — поэтому их переиспользование здесь не
-// нарушает запрет на импорт между доменами service/shop (см.
-// backend/CLAUDE.md).
+// Порт/сущность периода, снапшота и кэша расчёта — собственные независимые
+// классы/токены domains/shop (Фаза 5 docs/service-shop-boundary-violations-fix),
+// без переиспользования кода domains/service/modules/accounting; таблицы в
+// БД при этом остаются общими (partitioned по direction, см. WHY в
+// shop-accounting-period.repository.ts). Порт плана продаж
+// (SHOP_SALES_PLAN_REPOSITORY) — с Фазы 7 (docs/service-shop-boundary-violations-fix)
+// тоже собственный, независимый от domains/service/modules/sales
+// порт/репозиторий направления shop (закрывает §2.3/§4 аудита).
 //
 // Логика:
 // 1) отклоняется, если есть хоть одна неутверждённая строка плана продаж
@@ -55,7 +62,7 @@ import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period
 // 2) иначе снимает FACT-срез по каждому сотруднику с личной shop-
 //    мотивационной схемой (тем же оркестратором, что и открытый расчёт) и
 //    фиксирует его неизменяемым снапшотом;
-// 3) переводит период в CLOSED и порождает AccountingPeriodClosedDomainEvent.
+// 3) переводит период в CLOSED и порождает ShopAccountingPeriodClosedDomainEvent.
 //
 // PRD 1 docs/payroll-closing-and-accrual (Фаза 1) — документы начисления,
 // зеркально CloseAccountingPeriodHandler сервиса, но своим кодом (общего
@@ -63,8 +70,11 @@ import { CloseShopAccountingPeriodCommand } from './close-shop-accounting-period
 // каждую строку снапшота, включая нулевые и уволенных (isDismissed по
 // активности BitrixEmployee), в той же транзакции UnitOfWork, что снапшот и
 // CLOSED; после коммита — SalaryAccrualDocumentsCreatedDomainEvent.
-// SalaryAccrual/порты документа физически лежат в domains/service/modules/
-// accounting, но direction-агностичны (см. шапку выше про AccountingPeriod).
+// ShopSalaryAccrual/порты документа — с Фазы 6
+// docs/service-shop-boundary-violations-fix собственные независимые классы/
+// токены domains/shop (не переиспользуют domains/service): общая таблица
+// salary_accruals остаётся физически одной (partitioned по direction),
+// изоляция — на уровне кода (см. WHY в shop-salary-accrual.repository.ts).
 //
 // Фаза 2 PRD 1 — зеркально сервису: только истёкший и ещё не закрытый
 // месяц (409 иначе), неявная синхронизация отгрузок МойСклада за месяц
@@ -78,16 +88,16 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
     AccountingPeriodResponse
 > {
     constructor(
-        @Inject(ACCOUNTING_PERIOD_REPOSITORY)
-        private readonly periodRepo: AccountingPeriodRepositoryPort,
-        @Inject(ACCOUNTING_PERIOD_SNAPSHOT)
-        private readonly snapshotRepo: AccountingPeriodSnapshotPort,
-        @Inject(ACCOUNTING_CALCULATION_CACHE)
-        private readonly cacheRepo: AccountingCalculationCachePort,
-        @Inject(SALES_PLAN_REPOSITORY)
-        private readonly salesPlanRepo: SalesPlanRepositoryPort,
-        @Inject(SALARY_ACCRUAL_REPOSITORY)
-        private readonly accrualRepo: SalaryAccrualRepositoryPort,
+        @Inject(SHOP_ACCOUNTING_PERIOD_REPOSITORY)
+        private readonly periodRepo: ShopAccountingPeriodRepositoryPort,
+        @Inject(SHOP_ACCOUNTING_PERIOD_SNAPSHOT)
+        private readonly snapshotRepo: ShopAccountingPeriodSnapshotPort,
+        @Inject(SHOP_ACCOUNTING_CALCULATION_CACHE)
+        private readonly cacheRepo: ShopAccountingCalculationCachePort,
+        @Inject(SHOP_SALES_PLAN_REPOSITORY)
+        private readonly salesPlanRepo: ShopSalesPlanRepositoryPort,
+        @Inject(SHOP_SALARY_ACCRUAL_REPOSITORY)
+        private readonly accrualRepo: ShopSalaryAccrualRepositoryPort,
         @Inject(EMPLOYEE_DISMISSAL)
         private readonly employeeDismissal: EmployeeDismissalPort,
         @Inject(UNIT_OF_WORK)
@@ -104,17 +114,13 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
         const period = Period.create(command.period);
 
         if (!period.isExpired()) {
-            throw new PeriodNotExpiredException(direction, period.getValue());
+            throw new ShopPeriodNotExpiredException(period.getValue());
         }
 
-        const plans = await this.salesPlanRepo.findByDirectionAndPeriod(
-            direction,
-            period.getValue(),
-        );
+        const plans = await this.salesPlanRepo.findByPeriod(period.getValue());
         const unapproved = plans.filter((plan) => plan.status !== 'APPROVED');
         if (unapproved.length > 0) {
-            throw new UnapprovedSalesPlanRowsException(
-                direction,
+            throw new ShopUnapprovedSalesPlanRowsException(
                 period.getValue(),
                 unapproved.map((plan) => ({
                     id: plan.id,
@@ -124,22 +130,12 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
             );
         }
 
-        const existing = await this.periodRepo.findByDirectionAndPeriod(
-            direction,
-            period.getValue(),
-        );
+        const existing = await this.periodRepo.findByPeriod(period.getValue());
         if (existing?.isClosed()) {
-            throw new PeriodAlreadyClosedException(
-                direction,
-                period.getValue(),
-            );
+            throw new ShopPeriodAlreadyClosedException(period.getValue());
         }
         const periodEntity =
-            existing ??
-            AccountingPeriod.openFor({
-                direction,
-                period: period.getValue(),
-            });
+            existing ?? ShopAccountingPeriod.openFor(period.getValue());
 
         // Неявная синхронизация ERP за месяц — до транзакции закрытия и до
         // сброса кэша; её результат остаётся в БД даже при отклонении ниже.
@@ -148,10 +144,7 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
         // Сброс кэша ДО расчёта (PRD 1: "закрытие никогда не фиксирует
         // устаревший кэш"); повторное удаление внутри транзакции — чтобы не
         // оставить строки, записанные отчётом между сбросом и коммитом.
-        await this.cacheRepo.deleteByDirectionAndPeriod(
-            direction,
-            period.getValue(),
-        );
+        await this.cacheRepo.deleteByPeriod(period.getValue());
 
         // Снапшот — все сотрудники, у которых есть зарплатные правила: с
         // личной схемой и/или со схемой на их отдел (см.
@@ -165,19 +158,11 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
             await this.periodRepo.save(periodEntity);
             await this.snapshotRepo.saveAll(
                 periodEntity.id,
-                direction,
                 period.getValue(),
                 rows,
             );
-            await this.accrualRepo.saveAll(
-                direction,
-                period.getValue(),
-                accruals,
-            );
-            await this.cacheRepo.deleteByDirectionAndPeriod(
-                direction,
-                period.getValue(),
-            );
+            await this.accrualRepo.saveAll(period.getValue(), accruals);
+            await this.cacheRepo.deleteByPeriod(period.getValue());
         });
 
         // unitOfWork.run резолвится только после коммита (см.
@@ -192,25 +177,20 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
             }),
         );
 
-        return toAccountingPeriodResponse(
-            periodEntity,
-            direction,
-            period.getValue(),
-        );
+        return toShopAccountingPeriodResponse(periodEntity, period.getValue());
     }
 
     // Документ на КАЖДУЮ строку снапшота, включая нулевые суммы и уволенных
     // (isDismissed) — см. PRD 1, "Документы начисления".
     private async buildAccrualDocuments(
         period: Period,
-        rows: AccountingPeriodSnapshotRow[],
-    ): Promise<SalaryAccrual[]> {
+        rows: ShopAccountingPeriodSnapshotRow[],
+    ): Promise<ShopSalaryAccrual[]> {
         const dismissed = await this.employeeDismissal.findDismissedEmployeeIds(
             rows.map((row) => row.employeeId),
         );
         return rows.map((row) =>
-            SalaryAccrual.createFromSnapshot({
-                direction: 'shop',
+            ShopSalaryAccrual.createFromSnapshot({
                 period: period.getValue(),
                 employeeId: row.employeeId,
                 isDismissed: dismissed.has(row.employeeId),

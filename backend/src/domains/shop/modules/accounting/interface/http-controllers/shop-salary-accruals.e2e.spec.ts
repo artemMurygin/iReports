@@ -1,5 +1,5 @@
 import type { Server } from 'http';
-import { ERP_PERIOD_SYNC } from '@/domains/service/modules/accounting/application/ports/erp-period-sync.port';
+import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -13,10 +13,6 @@ import type {
 } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { ShopAccountingModule } from '@/domains/shop/modules/accounting/shop-accounting.module';
-// ReopenAccountingPeriodHandler зарегистрирован в AccountingModule сервиса
-// (generic по direction, см. shop-accounting.module.ts) — для сквозного
-// reopen поднимаем и его, как это делает реальное приложение.
-import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-rule.port';
@@ -25,57 +21,54 @@ import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounti
 import type { ShopTaskCompletionRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-task-completion.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
-import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
-import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
-import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
-import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
-import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
-import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type {
-    AccountingPeriodSnapshotPort,
-    AccountingPeriodSnapshotRow,
-} from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { EMPLOYEE_DISMISSAL } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
-import type { EmployeeDismissalPort } from '@/domains/service/modules/accounting/application/ports/employee-dismissal.port';
+import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import { SHOP_ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import { SHOP_ACCOUNTING_CALCULATION_CACHE } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import { ShopAccountingPeriod } from '@/domains/shop/modules/accounting/domain/entities/shop-accounting-period.entity';
+import { ShopPeriodClosure } from '@/domains/shop/modules/accounting/domain/value-objects/shop-period-closure.value-object';
+import { SHOP_SALARY_ACCRUAL_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
+import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
+import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
 import { SHOP_SALES_PERFORMANCE_READER } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
 import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-performance.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-salary-accrual.repository';
+import { Period } from '@/shared/domain/period.value-object';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Зеркало salary-accruals.e2e.spec.ts сервиса для направления shop (PRD 1
 // docs/payroll-closing-and-accrual): close → list → get → reopen через
-// /v1/shop/accounting/*. Поднимаются оба accounting-модуля, как в реальном
-// приложении: close/list/get обслуживает ShopAccountingModule, reopen —
-// generic ReopenAccountingPeriodHandler из AccountingModule сервиса через
-// общий CommandBus. Все in-memory фейки общие (один AccountingPeriod/снапшот/
-// документ на оба модуля) — у них один ключ (direction, period), и тест
-// заодно проверяет, что закрытие shop не порождает документов service.
+// /v1/shop/accounting/*. С Фазы 6 docs/service-shop-boundary-violations-fix
+// весь этот путь (включая reopen) обслуживается собственными, независимыми
+// классами/токенами ShopAccountingModule — сервисный AccountingModule
+// поднимать больше не нужно (до этой фазы reopen диспатчился как generic по
+// direction команда, обслуживаемая хендлером, зарегистрированным в
+// AccountingModule сервиса, поэтому тест поднимал оба модуля).
 describe('Документы начисления магазина: close → salary_accruals → reopen (e2e)', () => {
     let app: INestApplication<Server>;
     const shopSchemas = new Map<number, ShopMotivationSchema>();
-    const periods = new Map<string, AccountingPeriod>();
-    const snapshots = new Map<string, AccountingPeriodSnapshotRow[]>();
-    const accrualRepo = new InMemorySalaryAccrualRepository();
-    const periodKey = (direction: string, period: string) =>
-        `${direction}:${period}`;
+    type PeriodRecord = {
+        id: string;
+        status: 'OPEN' | 'CLOSED';
+        closedBy: number | null;
+        closedAt: Date | null;
+    };
+    const periods = new Map<string, PeriodRecord>();
+    const snapshots = new Map<string, unknown[]>();
+    const accrualRepo = new InMemoryShopSalaryAccrualRepository();
 
     const fakeShopMotivationSchemaRepo: ShopMotivationSchemaRepositoryPort = {
         insert: () => Promise.resolve(),
@@ -120,61 +113,57 @@ describe('Документы начисления магазина: close → sa
         findForScope: () => Promise.resolve(null),
         listForDepartment: () => Promise.resolve([]),
     };
-    // Сервисный AccountingModule поднят только ради ReopenAccountingPeriodHandler
-    // — его источники данных пустые.
-    const fakeMotivationSchemaRepo: MotivationSchemaRepositoryPort = {
-        insert: () => Promise.resolve(),
-        findByEmployee: () => Promise.resolve(null),
-        findByEmployees: () => Promise.resolve([]),
-        findAllEmployeeTargets: () => Promise.resolve([]),
-        findByDepartment: () => Promise.resolve(null),
-        findAllDepartmentTargets: () => Promise.resolve([]),
-        findIdByTarget: () => Promise.resolve(null),
-        findById: () => Promise.resolve(null),
-        findAll: () => Promise.resolve([]),
-        update: () => Promise.resolve(),
-        initializeName: () => Promise.resolve(),
-    };
-    const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
-        insert: () => Promise.resolve(),
-        deleteAllByMotivationSchema: () => Promise.resolve(),
-    };
-    const fakeServiceCalculationData: ServiceCalculationDataPort = {
-        findEmployeeIdentities: () => Promise.resolve([]),
-        findServiceCompletedItems: () => Promise.resolve([]),
-        findHoursWorked: () => Promise.resolve({ fact: 0, prognose: 0 }),
-        findOrderPayedItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
-        findEmployeeDepartmentId: () => Promise.resolve(null),
-        findEmployeesInDepartment: () => Promise.resolve([]),
-        findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
-        findHoursWorkedForEmployees: () => Promise.resolve(new Map()),
-    };
-    const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
-        findByDirectionAndPeriod: (direction, period) =>
-            Promise.resolve(periods.get(periodKey(direction, period)) ?? null),
+    const fakeShopAccountingPeriodRepo: ShopAccountingPeriodRepositoryPort = {
+        findByPeriod: (period) => {
+            const rec = periods.get(period);
+            if (!rec) {
+                return Promise.resolve(null);
+            }
+            return Promise.resolve(
+                new ShopAccountingPeriod({
+                    id: rec.id,
+                    props: {
+                        period: Period.create(period),
+                        status: rec.status,
+                        closure:
+                            rec.closedBy !== null && rec.closedAt !== null
+                                ? ShopPeriodClosure.create(
+                                      rec.closedBy,
+                                      rec.closedAt,
+                                  )
+                                : null,
+                    },
+                }),
+            );
+        },
         save: (entity) => {
-            periods.set(periodKey(entity.direction, entity.period), entity);
+            periods.set(entity.period, {
+                id: entity.id,
+                status: entity.status,
+                closedBy: entity.closedBy,
+                closedAt: entity.closedAt,
+            });
             return Promise.resolve();
         },
     };
-    const fakeAccountingPeriodSnapshot: AccountingPeriodSnapshotPort = {
-        saveAll: (_periodId, direction, period, rows) => {
-            snapshots.set(periodKey(direction, period), rows);
+    const fakeShopAccountingPeriodSnapshot: ShopAccountingPeriodSnapshotPort = {
+        saveAll: (_periodId, period, rows) => {
+            snapshots.set(period, rows);
             return Promise.resolve();
         },
         findByKey: () => Promise.resolve(null),
         findManyByKey: () => Promise.resolve(new Map()),
-        deleteByDirectionAndPeriod: (direction, period) => {
-            snapshots.delete(periodKey(direction, period));
+        deleteByPeriod: (period) => {
+            snapshots.delete(period);
             return Promise.resolve();
         },
     };
-    const fakeAccountingCalculationCache: AccountingCalculationCachePort = {
-        find: () => Promise.resolve(null),
-        upsert: () => Promise.resolve(),
-        deleteByDirectionAndPeriod: () => Promise.resolve(),
-    };
+    const fakeShopAccountingCalculationCache: ShopAccountingCalculationCachePort =
+        {
+            find: () => Promise.resolve(null),
+            upsert: () => Promise.resolve(),
+            deleteByPeriod: () => Promise.resolve(),
+        };
     const fakeEmployeeDismissal: EmployeeDismissalPort = {
         findDismissedEmployeeIds: () => Promise.resolve(new Set()),
     };
@@ -182,14 +171,14 @@ describe('Документы начисления магазина: close → sa
         getLastSuccessfulSyncAt: () => Promise.resolve(null),
         markSuccessful: () => Promise.resolve(),
     };
-    const fakeSalesPlanRepo: SalesPlanRepositoryPort = {
+    const fakeSalesPlanRepo: ShopSalesPlanRepositoryPort = {
         insert: () => Promise.resolve(),
         update: () => Promise.resolve(),
         delete: () => Promise.resolve(),
         findById: () => Promise.resolve(null),
         findByIds: () => Promise.resolve([]),
         findByScope: () => Promise.resolve(null),
-        findByDirectionAndPeriod: () => Promise.resolve([]),
+        findByPeriod: () => Promise.resolve([]),
     };
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
@@ -241,7 +230,6 @@ describe('Документы начисления магазина: close → sa
                 EventEmitterModule.forRoot(),
                 FakeInfrastructureModule,
                 ShopAccountingModule,
-                AccountingModule,
             ],
         })
             .overrideProvider(SHOP_MOTIVATION_SCHEMA_REPOSITORY)
@@ -254,19 +242,13 @@ describe('Документы начисления магазина: close → sa
             .useValue(fakeShopCalculationData)
             .overrideProvider(SHOP_SALES_PERFORMANCE_READER)
             .useValue(fakeShopSalesPerformanceReader)
-            .overrideProvider(MOTIVATION_SCHEMA_REPOSITORY)
-            .useValue(fakeMotivationSchemaRepo)
-            .overrideProvider(SALARY_RULE_REPOSITORY)
-            .useValue(fakeSalaryRuleRepo)
-            .overrideProvider(SERVICE_CALCULATION_DATA)
-            .useValue(fakeServiceCalculationData)
-            .overrideProvider(ACCOUNTING_PERIOD_REPOSITORY)
-            .useValue(fakeAccountingPeriodRepo)
-            .overrideProvider(ACCOUNTING_PERIOD_SNAPSHOT)
-            .useValue(fakeAccountingPeriodSnapshot)
-            .overrideProvider(ACCOUNTING_CALCULATION_CACHE)
-            .useValue(fakeAccountingCalculationCache)
-            .overrideProvider(SALARY_ACCRUAL_REPOSITORY)
+            .overrideProvider(SHOP_ACCOUNTING_PERIOD_REPOSITORY)
+            .useValue(fakeShopAccountingPeriodRepo)
+            .overrideProvider(SHOP_ACCOUNTING_PERIOD_SNAPSHOT)
+            .useValue(fakeShopAccountingPeriodSnapshot)
+            .overrideProvider(SHOP_ACCOUNTING_CALCULATION_CACHE)
+            .useValue(fakeShopAccountingCalculationCache)
+            .overrideProvider(SHOP_SALARY_ACCRUAL_REPOSITORY)
             .useValue(accrualRepo)
             // Неявная синхронизация ERP внутри закрытия (Фаза 2 PRD 1) —
             // в e2e заменена no-op: реальная ERP недоступна.
@@ -276,7 +258,7 @@ describe('Документы начисления магазина: close → sa
             .useValue(fakeEmployeeDismissal)
             .overrideProvider(DOMAIN_SYNC_STATUS)
             .useValue(fakeDomainSyncStatus)
-            .overrideProvider(SALES_PLAN_REPOSITORY)
+            .overrideProvider(SHOP_SALES_PLAN_REPOSITORY)
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(DIRECTORY_REPOSITORY)
             .useValue(fakeDirectoryRepo)
@@ -303,14 +285,10 @@ describe('Документы начисления магазина: close → sa
         expect((closeResponse.body as AccountingPeriodResponse).status).toBe(
             'CLOSED',
         );
-        // Период service того же месяца не тронут, документов service нет.
-        expect(periods.has(periodKey('service', '2026-07'))).toBe(false);
-        const serviceList = await request(app.getHttpServer())
-            .get('/v1/service/accounting/salary_accruals?period=2026-07')
-            .expect(200);
-        expect((serviceList.body as SalaryAccrualListResponse).items).toEqual(
-            [],
-        );
+        // Период service того же месяца не тронут вовсе — этот тест больше
+        // не поднимает AccountingModule сервиса (см. WHY в шапке файла),
+        // проверка "документов service нет" избыточна: они физически не
+        // могли появиться — сервис в этом процессе не участвует.
 
         const listResponse = await request(app.getHttpServer())
             .get('/v1/shop/accounting/salary_accruals?period=2026-07')
@@ -349,10 +327,6 @@ describe('Документы начисления магазина: close → sa
                 status: 'DRAFT',
             }),
         ]);
-        // Документ shop под путём service не отдаётся.
-        await request(app.getHttpServer())
-            .get(`/v1/service/accounting/salary_accruals/${list.items[0].id}`)
-            .expect(404);
 
         await request(app.getHttpServer())
             .post('/v1/shop/accounting/period/2026-07/reopen')
@@ -364,6 +338,6 @@ describe('Документы начисления магазина: close → sa
         expect((afterReopen.body as SalaryAccrualListResponse).items).toEqual(
             [],
         );
-        expect(snapshots.has(periodKey('shop', '2026-07'))).toBe(false);
+        expect(snapshots.has('2026-07')).toBe(false);
     });
 });

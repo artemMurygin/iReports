@@ -15,21 +15,21 @@ import { buildShopSalaryReportRules } from '@/domains/shop/modules/accounting/ap
 import {
     buildFreshnessStamp,
     stampOf,
-} from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+} from '@/domains/shop/modules/accounting/domain/services/shop-accounting-cache-freshness';
 import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/resolve-shop-employee-salary-rules.service';
 import { Period } from '@/shared/domain/period.value-object';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period.port';
+import { SHOP_ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-period-snapshot.port';
+import { SHOP_ACCOUNTING_CALCULATION_CACHE } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import type { ShopAccountingCalculationCachePort } from '@/domains/shop/modules/accounting/application/ports/shop-accounting-calculation-cache.port';
+import { SHOP_SALARY_ACCRUAL_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
+import type { ShopSalaryAccrualRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
-import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
+import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/shop-sales-plan.port';
 
 // Отчёт по зарплате сотрудника магазина (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — зеркало
@@ -62,28 +62,26 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 // erpData/identities, но разный percentCompletion (см.
 // to-shop-sales-performance-context.ts).
 //
-// ACCOUNTING_PERIOD_REPOSITORY/ACCOUNTING_PERIOD_SNAPSHOT/
-// ACCOUNTING_CALCULATION_CACHE физически объявлены в
-// domains/service/modules/accounting, но сами реализации (Prisma-
-// репозитории) не содержат service-специфичной логики — ключ
-// direction+period, тот же приём, что уже применён в
-// ShopAccountingModule для GetAccountingPeriodService (см.
-// shop-accounting.module.ts).
+// SHOP_ACCOUNTING_PERIOD_REPOSITORY/SHOP_ACCOUNTING_PERIOD_SNAPSHOT/
+// SHOP_ACCOUNTING_CALCULATION_CACHE — с Фазы 5
+// docs/service-shop-boundary-violations-fix собственные независимые
+// классы/токены направления shop, без параметра direction: он зафиксирован
+// самой реализацией (см. shop-accounting.module.ts).
 @Injectable()
 export class GetShopEmployeeSalaryReportService {
     constructor(
-        @Inject(ACCOUNTING_PERIOD_REPOSITORY)
-        private readonly periodRepo: AccountingPeriodRepositoryPort,
-        @Inject(ACCOUNTING_PERIOD_SNAPSHOT)
-        private readonly snapshotRepo: AccountingPeriodSnapshotPort,
-        @Inject(ACCOUNTING_CALCULATION_CACHE)
-        private readonly cacheRepo: AccountingCalculationCachePort,
-        @Inject(SALARY_ACCRUAL_REPOSITORY)
-        private readonly accrualRepo: SalaryAccrualRepositoryPort,
+        @Inject(SHOP_ACCOUNTING_PERIOD_REPOSITORY)
+        private readonly periodRepo: ShopAccountingPeriodRepositoryPort,
+        @Inject(SHOP_ACCOUNTING_PERIOD_SNAPSHOT)
+        private readonly snapshotRepo: ShopAccountingPeriodSnapshotPort,
+        @Inject(SHOP_ACCOUNTING_CALCULATION_CACHE)
+        private readonly cacheRepo: ShopAccountingCalculationCachePort,
+        @Inject(SHOP_SALARY_ACCRUAL_REPOSITORY)
+        private readonly accrualRepo: ShopSalaryAccrualRepositoryPort,
         @Inject(DOMAIN_SYNC_STATUS)
         private readonly domainSyncStatus: DomainSyncStatusPort,
-        @Inject(SALES_PLAN_REPOSITORY)
-        private readonly salesPlanRepo: SalesPlanRepositoryPort,
+        @Inject(SHOP_SALES_PLAN_REPOSITORY)
+        private readonly salesPlanRepo: ShopSalesPlanRepositoryPort,
         private readonly shopContextBuilder: BuildShopCalculationContextService,
         private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
     ) {}
@@ -95,10 +93,8 @@ export class GetShopEmployeeSalaryReportService {
         const validatedPeriod = Period.create(period);
         const periodValue = validatedPeriod.getValue();
 
-        const accountingPeriod = await this.periodRepo.findByDirectionAndPeriod(
-            'shop',
-            periodValue,
-        );
+        const accountingPeriod =
+            await this.periodRepo.findByPeriod(periodValue);
 
         const direction = accountingPeriod?.isClosed()
             ? await this.buildClosedDirection(periodValue, employeeId)
@@ -116,8 +112,8 @@ export class GetShopEmployeeSalaryReportService {
         // выплачено") — вместе со снапшотом, одним Promise.all; null — в
         // снапшот сотрудник не попал и документа у него нет.
         const [snapshot, accrualStatus] = await Promise.all([
-            this.snapshotRepo.findByKey('shop', period, employeeId),
-            this.accrualRepo.findStatusByKey('shop', period, employeeId),
+            this.snapshotRepo.findByKey(period, employeeId),
+            this.accrualRepo.findStatusByKey(period, employeeId),
         ]);
         const total = snapshot?.total ?? 0;
         // Закрытый месяц прогноза не хранит (см. шапку файла) — amount.prognose
@@ -181,7 +177,7 @@ export class GetShopEmployeeSalaryReportService {
             period,
         );
 
-        const cached = await this.cacheRepo.find('shop', period, employeeId);
+        const cached = await this.cacheRepo.find(period, employeeId);
         if (cached && cached.freshnessStamp === freshnessStamp) {
             const [salesPerformanceDetail, salesPerformanceByDepartment] =
                 await Promise.all([
@@ -236,7 +232,7 @@ export class GetShopEmployeeSalaryReportService {
         const prognoseTotal =
             ShopPeriodCalculationOrchestrator.total(prognoseLines);
 
-        await this.cacheRepo.upsert('shop', period, employeeId, {
+        await this.cacheRepo.upsert(period, employeeId, {
             freshnessStamp,
             factLines,
             prognoseLines,
@@ -328,7 +324,7 @@ export class GetShopEmployeeSalaryReportService {
     ): Promise<string> {
         const [domainSyncAt, plans] = await Promise.all([
             this.domainSyncStatus.getLastSuccessfulSyncAt('shop'),
-            this.salesPlanRepo.findByDirectionAndPeriod('shop', period),
+            this.salesPlanRepo.findByPeriod(period),
         ]);
 
         const salesPlanAt = plans.reduce<Date | null>((latest, plan) => {

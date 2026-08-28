@@ -1,4 +1,4 @@
-import { ConflictException } from '@/shared/exceptions';
+import { ConflictException, NotFoundException } from '@/shared/exceptions';
 
 // Отказы MoyskladCashDocumentAdapter (ErpCashDocumentPort, Фаза 11) ДО
 // обращения в МойСклад — PRD 3
@@ -28,6 +28,38 @@ export class ShopEmployeeMoySkladIdentityMissingException extends ConflictExcept
         super(
             `У сотрудника Bitrix #${employeeId} нет связи EmployeeIdentity с сотрудником МойСклада ` +
                 '(EMPLOYEE_ID) — кассовый документ не может быть создан',
+        );
+    }
+}
+
+// Защита от задвоения (см. ShopErpCashDocumentRepositoryPort.insert) на
+// уровне БД — уникальный индекс transactionId (общий на всю таблицу
+// erp_cash_documents, не по direction, см. erp-cash.prisma) мапится в
+// понятную ошибку — собственный класс direction shop (Фаза 4
+// docs/service-shop-boundary-violations-fix), не переиспользующий
+// ErpCashDocumentAlreadyExistsException domains/service.
+export class ShopErpCashDocumentAlreadyExistsException extends ConflictException {
+    constructor(transactionId: string) {
+        super(
+            `Кассовый документ ERP для движения ${transactionId} уже создан — ` +
+                'повторное создание отклонено уникальным индексом transactionId',
+        );
+    }
+}
+
+// Инвариант «либо есть оба, либо нет ни одного» нарушен: движение с
+// erpSyncRequired = true направления shop, для которого нет связки
+// ShopErpCashDocument — не должно встречаться при штатной работе (создание
+// движения и связки — одна транзакция), но удаление такого движения не
+// может молча продолжить без документа для erpPort.delete(). Собственный
+// класс direction shop (Фаза 4), не переиспользующий
+// ErpCashDocumentMissingForTransactionException domains/service.
+export class ShopErpCashDocumentMissingForTransactionException extends NotFoundException {
+    constructor(transactionId: string) {
+        super(
+            `Движение ${transactionId} помечено erpSyncRequired, но связка ` +
+                'с документом ERP направления shop не найдена — данные ' +
+                'рассинхронизированы, удаление отклонено до ручной проверки',
         );
     }
 }

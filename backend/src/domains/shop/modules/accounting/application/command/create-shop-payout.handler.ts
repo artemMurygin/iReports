@@ -4,26 +4,26 @@ import type { PayoutResponse } from 'ireports-contracts';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employee-operation-lock';
-import { BALANCE_TRANSACTION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
-import type { BalanceTransactionRepositoryPort } from '@/domains/service/modules/accounting/application/ports/balance-transaction.port';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
+import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
+import { SHOP_SALARY_ACCRUAL_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
+import type { ShopSalaryAccrualRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-salary-accrual.port';
+import { SHOP_ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
+import type { ShopErpCashDocumentRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
 import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
 import type { ErpCashDocumentPort } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
-import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
-import { PayoutConfirmationRequiredException } from '@/domains/service/modules/accounting/domain/exceptions/salary-payout.exception';
+import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
+import { ShopErpCashDocument } from '@/domains/shop/modules/accounting/domain/entities/shop-erp-cash-document.entity';
+import { PayoutConfirmationRequiredException } from '@/modules/employee-balance/domain/exceptions/salary-payout.exception';
 import {
     buildErpCashDocumentPurpose,
     erpSystemForDirection,
     resolveEmployeeDisplayName,
-} from '@/domains/service/modules/accounting/application/services/erp-cash-sync.helper';
-import { toBalanceTransactionResponse } from '@/domains/service/modules/accounting/application/mappers/to-balance-transaction-response';
-import { toErpCashDocumentResponse } from '@/domains/service/modules/accounting/application/mappers/to-erp-cash-document-response';
+} from '@/modules/employee-balance/application/services/erp-cash-sync.helper';
+import { toBalanceTransactionResponse } from '@/modules/employee-balance/application/mappers/to-balance-transaction-response';
+import { toShopErpCashDocumentResponse } from '@/domains/shop/modules/accounting/application/mappers/to-shop-erp-cash-document-response';
 import { CreateShopPayoutCommand } from './create-shop-payout.command';
 
 // Выплата направления shop (PRD 3
@@ -32,17 +32,20 @@ import { CreateShopPayoutCommand } from './create-shop-payout.command';
 // domains/service/modules/accounting/application/command/create-payout.handler.ts),
 // но собственный класс: SHOP_ERP_CASH_DOCUMENT_PORT/МойСклад вместо
 // SERVICE_ERP_CASH_DOCUMENT_PORT/RemOnline (модули не переиспользуют
-// бизнес-код друг друга, backend/CLAUDE.md, domains/shop/CLAUDE.md). Порты
-// BALANCE_TRANSACTION_REPOSITORY/SALARY_ACCRUAL_REPOSITORY/
-// ERP_CASH_DOCUMENT_REPOSITORY/BalanceTransaction/ErpCashDocument/
-// PayoutConfirmationRequiredException/erp-cash-sync.helper — импортированы
-// напрямую из domains/service: это НЕ бизнес-логика конкретного направления,
-// а общая, direction-агностичная инфраструктура учёта (баланс общий по
-// сотруднику — PRD 2; сама PayoutConfirmationRequiredException/помощники
-// назначения документа завязаны на форму BalanceTransaction/остаток, а не на
-// конкретную ERP) — тот же приём, что уже применяет
-// close-shop-accounting-period.handler.ts, реиспользуя исключения
-// AccountingPeriod из domains/service напрямую.
+// бизнес-код друг друга, backend/CLAUDE.md, domains/shop/CLAUDE.md).
+// SHOP_ERP_CASH_DOCUMENT_REPOSITORY/ShopErpCashDocument/toShopErpCashDocumentResponse
+// — собственные независимые классы shop (Фаза 4
+// docs/service-shop-boundary-violations-fix — до этой фазы переиспользовали
+// ERP_CASH_DOCUMENT_REPOSITORY/ErpCashDocument/toErpCashDocumentResponse
+// domains/service напрямую, см. §2.1 docs/service-shop-boundary-violations.md).
+// BALANCE_TRANSACTION_REPOSITORY — сквозной employee-balance (баланс общий
+// по сотруднику — PRD 2). SHOP_SALARY_ACCRUAL_REPOSITORY — с Фазы 6
+// docs/service-shop-boundary-violations-fix собственный независимый
+// токен/класс domains/shop (не переиспользует SALARY_ACCRUAL_REPOSITORY
+// сервиса). PayoutConfirmationRequiredException/erp-cash-sync.helper —
+// по-прежнему импортированы напрямую из domains/service: они завязаны на
+// форму BalanceTransaction/остаток, а не на конкретную ERP или SalaryAccrual
+// одного направления — не бизнес-логика, требующая раздельной реализации.
 //
 // Блокировка по сотруднику — см. WHY в CreatePayoutHandler (обёрнута вокруг
 // ВСЕЙ операции, включая чтение остатка, чтобы два параллельных запроса не
@@ -57,12 +60,12 @@ export class CreateShopPayoutHandler implements ICommandHandler<
     constructor(
         @Inject(BALANCE_TRANSACTION_REPOSITORY)
         private readonly transactionRepo: BalanceTransactionRepositoryPort,
-        @Inject(SALARY_ACCRUAL_REPOSITORY)
-        private readonly accrualRepo: SalaryAccrualRepositoryPort,
+        @Inject(SHOP_SALARY_ACCRUAL_REPOSITORY)
+        private readonly accrualRepo: ShopSalaryAccrualRepositoryPort,
         @Inject(SHOP_ERP_CASH_DOCUMENT_PORT)
         private readonly erpPort: ErpCashDocumentPort,
-        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly erpCashDocumentRepo: ErpCashDocumentRepositoryPort,
+        @Inject(SHOP_ERP_CASH_DOCUMENT_REPOSITORY)
+        private readonly erpCashDocumentRepo: ShopErpCashDocumentRepositoryPort,
         @Inject(DIRECTORY_REPOSITORY)
         private readonly directoryRepo: DirectoryRepositoryPort,
         @Inject(UNIT_OF_WORK)
@@ -125,7 +128,7 @@ export class CreateShopPayoutHandler implements ICommandHandler<
             occurredAt: transaction.occurredAt,
         });
 
-        const erpCashDocumentEntity = ErpCashDocument.create({
+        const erpCashDocumentEntity = ShopErpCashDocument.create({
             transactionId: transaction.id,
             system: erpSystemForDirection('shop'),
             kind: 'OUTCOME',
@@ -146,7 +149,6 @@ export class CreateShopPayoutHandler implements ICommandHandler<
                 if (balanceAfter <= 0) {
                     const accruals =
                         await this.accrualRepo.findAccruedByEmployee(
-                            'shop',
                             command.employeeId,
                         );
                     for (const accrual of accruals) {
@@ -186,7 +188,7 @@ export class CreateShopPayoutHandler implements ICommandHandler<
                 system: erpCashDocumentEntity.system,
                 externalId: erpCashDocumentEntity.externalId,
             }),
-            erpDocument: toErpCashDocumentResponse(erpCashDocumentEntity),
+            erpDocument: toShopErpCashDocumentResponse(erpCashDocumentEntity),
         };
     }
 }

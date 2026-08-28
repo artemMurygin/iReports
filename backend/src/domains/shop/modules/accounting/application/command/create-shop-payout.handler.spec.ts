@@ -8,11 +8,13 @@ import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
 } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { BalanceTransaction } from '@/domains/service/modules/accounting/domain/entities/balance-transaction.entity';
-import { PayoutConfirmationRequiredException } from '@/domains/service/modules/accounting/domain/exceptions/salary-payout.exception';
-import { InMemoryBalanceTransactionRepository } from '@/domains/service/modules/accounting/testing/in-memory-balance-transaction.repository';
+import { ShopSalaryAccrual } from '@/domains/shop/modules/accounting/domain/entities/shop-salary-accrual.entity';
+import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
+import { PayoutConfirmationRequiredException } from '@/modules/employee-balance/domain/exceptions/salary-payout.exception';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
+import { InMemoryShopErpCashDocumentRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-erp-cash-document.repository';
 import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
+import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/testing/in-memory-shop-salary-accrual.repository';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
 import type { ErpCashDocumentPort as ServiceErpCashDocumentPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import { CreatePayoutHandler } from '@/domains/service/modules/accounting/application/command/create-payout.handler';
@@ -42,8 +44,7 @@ describe('CreateShopPayoutHandler', () => {
 
     const buildAccrual = (employeeId = 42) =>
         withRequestContext(() =>
-            SalaryAccrual.createFromSnapshot({
-                direction: 'shop',
+            ShopSalaryAccrual.createFromSnapshot({
                 period: '2026-07',
                 employeeId,
                 isDismissed: false,
@@ -64,12 +65,12 @@ describe('CreateShopPayoutHandler', () => {
     const build = (overrides?: {
         erpPort?: ErpCashDocumentPort;
         unitOfWork?: UnitOfWorkPort;
-        accrualRepo?: InMemorySalaryAccrualRepository;
+        accrualRepo?: InMemoryShopSalaryAccrualRepository;
     }) => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const accrualRepo =
-            overrides?.accrualRepo ?? new InMemorySalaryAccrualRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+            overrides?.accrualRepo ?? new InMemoryShopSalaryAccrualRepository();
+        const erpCashDocumentRepo = new InMemoryShopErpCashDocumentRepository();
         const fakeErpPort: ErpCashDocumentPort = overrides?.erpPort ?? {
             create: (params: CreateErpCashDocumentParams) =>
                 Promise.resolve({ externalId: `erp-${params.transactionId}` }),
@@ -271,7 +272,7 @@ describe('CreateShopPayoutHandler', () => {
     });
 
     it('остаток после операции ≤ 0 переводит ACCRUED-документы сотрудника направления shop в PAID', async () => {
-        const accrualRepo = new InMemorySalaryAccrualRepository();
+        const accrualRepo = new InMemoryShopSalaryAccrualRepository();
         const accrual = buildAccrual();
         accrualRepo.store.set(accrual.id, accrual);
         withRequestContext(() => accrual.accrueLine(accrual.lines[0].id));
@@ -297,7 +298,7 @@ describe('CreateShopPayoutHandler', () => {
     });
 
     it('остаток после операции > 0 НЕ переводит ACCRUED-документы в PAID', async () => {
-        const accrualRepo = new InMemorySalaryAccrualRepository();
+        const accrualRepo = new InMemoryShopSalaryAccrualRepository();
         const accrual = buildAccrual();
         accrualRepo.store.set(accrual.id, accrual);
         withRequestContext(() => accrual.accrueLine(accrual.lines[0].id));
@@ -321,25 +322,28 @@ describe('CreateShopPayoutHandler', () => {
     });
 
     it('выплата направления service того же сотрудника НЕ переводит ACCRUED-документ shop в PAID (изоляция per direction)', async () => {
-        // Регресс на решённый архитектурный вопрос Фазы 12: markPaid() трогает
-        // только документы СВОЕГО направления (см. WHY на SalaryAccrual.markPaid
-        // и CreateShopPayoutHandler/CreatePayoutHandler) — операция выплаты
-        // направления service не может обращаться к SalaryAccrualRepositoryPort
-        // за документами shop, поэтому shop-документ остаётся ACCRUED, даже
-        // когда операция ДРУГОГО направления уводит общий остаток сотрудника
-        // ≤ 0. CreatePayoutHandler (service) используется напрямую — те же
-        // BALANCE_TRANSACTION_REPOSITORY/SALARY_ACCRUAL_REPOSITORY, что и у
-        // CreateShopPayoutHandler (общий, direction-агностичный слой), только
-        // порт ERP — фейк service.
-        const accrualRepo = new InMemorySalaryAccrualRepository();
+        // Регресс на решённый архитектурный вопрос Фазы 12, теперь
+        // структурно гарантированный Фазой 6 docs/service-shop-boundary-violations-fix:
+        // markPaid() трогает только документы СВОЕГО направления (см. WHY на
+        // ShopSalaryAccrual.markPaid и CreateShopPayoutHandler/
+        // CreatePayoutHandler) — с Фазы 6 у каждого направления собственный
+        // независимый репозиторий/хранилище документов начисления
+        // (SHOP_SALARY_ACCRUAL_REPOSITORY у shop, SALARY_ACCRUAL_REPOSITORY у
+        // service), поэтому операция выплаты направления service физически
+        // не может задеть документ shop — они больше не в одном сторе.
+        // CreatePayoutHandler (service) используется напрямую со СВОИМ,
+        // отдельным (пустым) accrualRepo — та же BALANCE_TRANSACTION_REPOSITORY
+        // (общий баланс, employee-balance), но порт ERP — фейк service.
+        const shopAccrualRepo = new InMemoryShopSalaryAccrualRepository();
         const shopAccrual = buildAccrual();
-        accrualRepo.store.set(shopAccrual.id, shopAccrual);
+        shopAccrualRepo.store.set(shopAccrual.id, shopAccrual);
         withRequestContext(() =>
             shopAccrual.accrueLine(shopAccrual.lines[0].id),
         );
         expect(shopAccrual.status).toBe('ACCRUED');
 
-        const { transactionRepo } = build({ accrualRepo });
+        const { transactionRepo } = build({ accrualRepo: shopAccrualRepo });
+        const serviceAccrualRepo = new InMemorySalaryAccrualRepository();
         const serviceErpPort: ServiceErpCashDocumentPort = {
             create: (params) =>
                 Promise.resolve({ externalId: `erp-${params.transactionId}` }),
@@ -348,7 +352,7 @@ describe('CreateShopPayoutHandler', () => {
         };
         const serviceHandler = new CreatePayoutHandler(
             transactionRepo,
-            accrualRepo,
+            serviceAccrualRepo,
             serviceErpPort,
             new InMemoryErpCashDocumentRepository(),
             fakeDirectoryRepo,
@@ -368,7 +372,7 @@ describe('CreateShopPayoutHandler', () => {
         );
         await expect(transactionRepo.sumByEmployee(42)).resolves.toBe(-1000);
 
-        const saved = await accrualRepo.findById(shopAccrual.id);
+        const saved = await shopAccrualRepo.findById(shopAccrual.id);
         expect(saved?.status).toBe('ACCRUED');
     });
 

@@ -1,5 +1,21 @@
 import { listShopSalaryRuleTypes } from './salary-rule-role-catalog';
-import { listSalaryRuleTypes } from '@/domains/service/modules/accounting/domain/services/salary-rule-role-catalog';
+
+// Снапшот типов правил зарплаты service (Фаза 9
+// docs/service-shop-boundary-violations-fix) — раньше тест напрямую
+// импортировал `listSalaryRuleTypes` из `domains/service/modules/accounting`
+// для сравнения множеств; такой импорт сам по себе — нарушение границы
+// shop → service (тест общей проверки не должен тянуть живой реестр
+// соседнего домена). Значения захардкожены по актуальному состоянию
+// `domains/service/modules/accounting/domain/salary-rule-registry.ts` — при
+// изменении набора типов правил service этот снапшот нужно обновить вручную
+// (намеренный trade-off: проверка независимости множеств важнее live-связи
+// с service).
+const SERVICE_SALARY_RULE_TYPES = [
+    'PayPerHour',
+    'ServiceCompleted',
+    'OrderPayed',
+    'TaskCompleted',
+];
 
 describe('listShopSalaryRuleTypes', () => {
     it('отдаёт только зарегистрированные типы правил магазина (Фаза 12/13)', () => {
@@ -33,9 +49,7 @@ describe('listShopSalaryRuleTypes', () => {
         const shopTypes = new Set(
             listShopSalaryRuleTypes().map((entry) => entry.type),
         );
-        const serviceTypes = new Set(
-            listSalaryRuleTypes().map((entry) => entry.type),
-        );
+        const serviceTypes = new Set(SERVICE_SALARY_RULE_TYPES);
 
         expect(shopTypes).not.toEqual(serviceTypes);
         // 'ServiceCompleted'/'OrderPayed' — только у сервиса.

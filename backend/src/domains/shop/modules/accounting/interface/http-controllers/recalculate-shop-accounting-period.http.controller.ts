@@ -2,15 +2,15 @@ import { Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
-import { RecalculateAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.command';
+import { RecalculateShopAccountingPeriodCommand } from '@/domains/shop/modules/accounting/application/command/recalculate-shop-accounting-period.command';
 
-// Ручной сброс кэша открытого расчётного периода направления shop —
-// тонкий HTTP-слой поверх generic по direction
-// RecalculateAccountingPeriodCommand модуля accounting сервиса (см.
-// domains/service/CLAUDE.md), с собственным путём под /v1/shop (см.
-// routesV1.shop.accounting.period.recalculate). Сам пересчёт ленивый (см.
-// следующий запрос отчёта — GetEmployeeSalaryReportService/
-// GetDepartmentSalaryReportService).
+// Ручной сброс кэша открытого расчётного периода направления shop — тонкий
+// HTTP-слой поверх собственной, независимой
+// RecalculateShopAccountingPeriodCommand (Фаза 6
+// docs/service-shop-boundary-violations-fix) вместо generic по direction
+// команды сервиса, переиспользовавшейся раньше (см. Фазу 5). Сам пересчёт
+// ленивый (см. следующий запрос отчёта —
+// GetShopEmployeeSalaryReportService/GetShopDepartmentSalaryReportService).
 @ApiTags('Бухгалтерия: расчётный период магазина')
 @Controller()
 export class RecalculateShopAccountingPeriodHttpController {
@@ -22,8 +22,7 @@ export class RecalculateShopAccountingPeriodHttpController {
         summary: 'Сбросить кэш открытого расчётного периода магазина',
     })
     async recalculate(@Param('period') period: string): Promise<void> {
-        const command = new RecalculateAccountingPeriodCommand({
-            direction: 'shop',
+        const command = new RecalculateShopAccountingPeriodCommand({
             period,
         });
         await this.commandBus.execute(command);

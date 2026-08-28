@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/shop-motivation-schema.entity';
-import { mergeEmployeeSalaryRules } from '@/domains/service/modules/accounting/domain/services/employee-salary-rules';
-import { motivationSchemasVersion } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+import { mergeEmployeeSalaryRules } from '@/shared/domain/employee-salary-rules';
+import { motivationSchemasVersion } from '@/domains/shop/modules/accounting/domain/services/shop-accounting-cache-freshness';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-motivation-schema.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/shop-calculation-data.port';
@@ -33,14 +33,13 @@ const EMPTY: ResolvedShopEmployeeSalaryRules = {
 // заводится на отдел один раз, а не на каждого), получал пустой набор
 // правил и нули во всём отчёте.
 //
-// mergeEmployeeSalaryRules/motivationSchemasVersion берутся из
-// domains/service: обе функции структурно типизированы (RulesHolder /
-// MotivationSchemaLike) именно ради переиспользования обоими доменами — тем
-// же путём, каким shop уже пользуется accounting-cache-freshness.ts,
-// AccountingPeriod и ACCOUNTING_CALCULATION_CACHE (см. shop-accounting.
-// module.ts). Доменная логика shop при этом не переезжает в service:
-// склейка двух списков правил и штамп версии схем — не бизнес-правила
-// направления, а общий механизм расчётного модуля.
+// mergeEmployeeSalaryRules переиспользуется из domains/service: функция
+// структурно типизирована (RulesHolder) именно ради переиспользования обоими
+// доменами — склейка двух списков правил не бизнес-правило направления, а
+// общий механизм расчётного модуля. motivationSchemasVersion — с Фазы 5
+// docs/service-shop-boundary-violations-fix собственная независимая копия
+// shop (см. domain/services/shop-accounting-cache-freshness.ts), а не
+// импорт из domains/service.
 @Injectable()
 export class ResolveShopEmployeeSalaryRulesService {
     constructor(

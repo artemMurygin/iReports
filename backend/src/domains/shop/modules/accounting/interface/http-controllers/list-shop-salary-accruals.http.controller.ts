@@ -2,19 +2,18 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualListResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
+import { ListShopSalaryAccrualsService } from '@/domains/shop/modules/accounting/application/services/list-shop-salary-accruals.service';
 import { ListShopSalaryAccrualsQueryDto } from '../dto/list-shop-salary-accruals-query.dto';
 
 // Список документов начисления магазина (PRD 1 docs/payroll-closing-and-accrual)
-// — собственный путь под /v1/shop, direction подставляется контроллером;
-// ListSalaryAccrualsService переиспользован как generic-по-direction класс
-// (собственный экземпляр в ShopAccountingModule), тем же приёмом, что и
-// GetAccountingPeriodService.
+// — собственный путь под /v1/shop, обслуживается собственным, независимым
+// ListShopSalaryAccrualsService (Фаза 6 docs/service-shop-boundary-violations-fix)
+// вместо generic-по-direction сервиса сервиса.
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
 @Controller()
 export class ListShopSalaryAccrualsHttpController {
     constructor(
-        private readonly listSalaryAccruals: ListSalaryAccrualsService,
+        private readonly listShopSalaryAccruals: ListShopSalaryAccrualsService,
     ) {}
 
     @Get(routesV1.shop.accounting.salaryAccruals.root)
@@ -24,6 +23,6 @@ export class ListShopSalaryAccrualsHttpController {
     async list(
         @Query() query: ListShopSalaryAccrualsQueryDto,
     ): Promise<SalaryAccrualListResponse> {
-        return this.listSalaryAccruals.execute('shop', query.period);
+        return this.listShopSalaryAccruals.execute(query.period);
     }
 }
