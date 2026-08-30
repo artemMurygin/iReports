@@ -5,14 +5,14 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employee-operation-lock';
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import type { ErpCashDocumentPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
-import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
-import type { ErpCashDocumentPort as ShopErpCashDocumentPort } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
+import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
+import type { ErpCashDocumentPort as ShopErpCashDocumentPort } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
 import { BalanceTransactionNotFoundException } from '@/modules/employee-balance/domain/exceptions/balance-transaction.exception';
-import { ErpCashDocumentMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
+import { PayoutCashboxRecordMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { DeleteBalanceTransactionCommand } from './delete-balance-transaction.command';
 
@@ -46,8 +46,8 @@ export class DeleteBalanceTransactionHandler implements ICommandHandler<
         private readonly serviceErpCashPort: ErpCashDocumentPort,
         @Inject(SHOP_ERP_CASH_DOCUMENT_PORT)
         private readonly shopErpCashPort: ShopErpCashDocumentPort,
-        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly erpCashDocumentRepo: ErpCashDocumentRepositoryPort,
+        @Inject(PAYOUT_CASHBOX_RECORD_REPOSITORY)
+        private readonly payoutCashboxRecordRepo: PayoutCashboxRecordRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
         private readonly employeeLock: EmployeeOperationLock,
@@ -79,13 +79,15 @@ export class DeleteBalanceTransactionHandler implements ICommandHandler<
         transactionId: string,
         direction: AccountingDirection,
     ): Promise<void> {
-        const erpCashDocument =
-            await this.erpCashDocumentRepo.findByTransactionId(transactionId);
-        if (!erpCashDocument) {
+        const payoutCashboxRecord =
+            await this.payoutCashboxRecordRepo.findByTransactionId(
+                transactionId,
+            );
+        if (!payoutCashboxRecord) {
             // «Либо есть оба, либо нет ни одного» (PRD 3, «Цель») — раз
             // движение erpSyncRequired существует без связки, это
             // рассинхронизация, а не штатный путь; см. WHY на исключении.
-            throw new ErpCashDocumentMissingForTransactionException(
+            throw new PayoutCashboxRecordMissingForTransactionException(
                 transactionId,
             );
         }
@@ -95,15 +97,17 @@ export class DeleteBalanceTransactionHandler implements ICommandHandler<
         // ERP, затем удаление движения; отказ ERP → ничего не удалено»).
         // BadGatewayException адаптера пробрасывается как есть.
         await erpPort.delete({
-            externalId: erpCashDocument.externalId,
-            kind: erpCashDocument.kind,
-            amount: erpCashDocument.amount,
+            externalId: payoutCashboxRecord.externalId,
+            kind: payoutCashboxRecord.kind,
+            amount: payoutCashboxRecord.amount,
         });
 
         try {
             await this.unitOfWork.run(async () => {
                 await this.transactionRepo.deleteById(transactionId);
-                await this.erpCashDocumentRepo.deleteById(erpCashDocument.id);
+                await this.payoutCashboxRecordRepo.deleteById(
+                    payoutCashboxRecord.id,
+                );
             });
         } catch (dbError) {
             // ERP уже удалила документ, но наша БД не подтвердила это —
@@ -112,7 +116,7 @@ export class DeleteBalanceTransactionHandler implements ICommandHandler<
             // НОВЫЙ externalId, а не восстановил старый): состояние логируется
             // для ручной сверки, исходная ошибка пробрасывается как есть.
             this.logger.error(
-                `Документ ERP ${erpCashDocument.externalId} (направление ` +
+                `Документ ERP ${payoutCashboxRecord.externalId} (направление ` +
                     `"${direction}", движение ${transactionId}) удалён в ERP, ` +
                     'но запись об удалении в нашей БД не удалась — требуется ручная сверка',
                 dbError instanceof Error ? dbError.stack : String(dbError),

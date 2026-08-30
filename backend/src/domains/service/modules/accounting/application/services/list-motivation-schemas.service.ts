@@ -8,7 +8,7 @@ import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/a
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import type { MotivationTargetType } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
-import { toMotivationSchemaListItem } from '@/domains/service/modules/accounting/application/mappers/to-motivation-schema-list-item';
+import { MotivationSchemaMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/motivation-schema/motivation-schema.mapper';
 
 // Список мотивационных схем направления service (GET
 // /v1/service/motivation-schema, Фаза "Редактирование зарплатных схем").
@@ -16,6 +16,8 @@ import { toMotivationSchemaListItem } from '@/domains/service/modules/accounting
 // ListTaskCompletionsService у остальных read-эндпоинтов модуля.
 @Injectable()
 export class ListMotivationSchemasService {
+    private readonly mapper = new MotivationSchemaMapper();
+
     constructor(
         @Inject(MOTIVATION_SCHEMA_REPOSITORY)
         private readonly motivationSchemaRepo: MotivationSchemaRepositoryPort,
@@ -68,7 +70,7 @@ export class ListMotivationSchemasService {
                 departmentNames,
                 employeeNames,
             );
-            return toMotivationSchemaListItem(schema, targetName);
+            return this.mapper.toListItemResponse(schema, targetName);
         });
     }
 }

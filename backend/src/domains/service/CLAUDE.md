@@ -7,6 +7,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 [backend/CLAUDE.md](../../../CLAUDE.md) для общей картины и слоистого DDD-паттерна модулей, на
 который тут ссылаемся). ERP-система направления — **REM Online**, в проекте везде называется **RoApp**.
 
+## Именование файлов
+
+Внутри `domains/service/*` не добавляй слово `service` в имя файла (`service-role-source.ts`,
+`service-completed.entity.ts` и т.п.) — путь уже однозначно задаёт домен
+(`domains/service/modules/accounting/...`), повторение слова в каждом файле только засоряет кодовую
+базу и усложняет чтение. Называй файл нейтрально: `role-source.ts`, `completed.entity.ts` (там, где
+без уточнения название конфликтовало бы с чем-то в той же папке — уточняй смыслом, а не словом
+`service`). Правило касается только имени файла — класс/интерфейс/DI-токен внутри по-прежнему называй с
+явным префиксом, где домен не следует из контекста использования. См. симметричное правило и уже
+проведённое переименование в `domains/shop/CLAUDE.md`; в `domains/service` часть файлов ещё не
+приведена к этому правилу (например, `service-role-source.ts`, `service-completed.entity.ts`,
+`service-calculation-data.repository.ts`) — не копируй этот старый паттерн в новых файлах, а при
+следующем удобном рефакторинге приводи такие файлы в соответствие.
+
 ## Структура
 
 ```
@@ -193,9 +207,9 @@ domains/service/
   общем `CommandBus` (`CqrsModule` — тот же класс, импортированный в обоих модулях);
   `SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY`/`ListSalesPlansService`/
   `ListSalesPlanTemplatesService` — обычные DI-провайдеры (не CQRS-хендлеры), поэтому
-  `shop-sales.module.ts` заводит для них собственные экземпляры тех же классов (Nest DI не делит
+  `sales.module.ts` заводит для них собственные экземпляры тех же классов (Nest DI не делит
   провайдеров между модулями без явного экспорта) — подробности и обоснование в комментарии в начале
-  `shop-sales.module.ts`.
+  `sales.module.ts`.
 
 **Сделки/лиды** — гораздо более ранняя стадия, чем остальной модуль, сейчас это фактически только
 read-side:

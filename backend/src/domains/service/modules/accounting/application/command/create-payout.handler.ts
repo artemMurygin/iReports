@@ -8,14 +8,14 @@ import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/appli
 import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import type { ErpCashDocumentPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
 import { PayoutConfirmationRequiredException } from '@/modules/employee-balance/domain/exceptions/salary-payout.exception';
 import {
     buildErpCashDocumentPurpose,
@@ -23,13 +23,13 @@ import {
     resolveEmployeeDisplayName,
 } from '@/modules/employee-balance/application/services/erp-cash-sync.helper';
 import { toBalanceTransactionResponse } from '@/modules/employee-balance/application/mappers/to-balance-transaction-response';
-import { toErpCashDocumentResponse } from '../mappers/to-erp-cash-document-response';
+import { PayoutCashboxRecordMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/erp-cash/payout-cashbox-record.mapper';
 import { CreatePayoutCommand } from './create-payout.command';
 
 // Выплата направления service (PRD 3
 // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
 // Фаза 12) — движение баланса типа PAYOUT (всегда расход, направление кассы
-// — service/RemOnline) плюс связанный ErpCashDocument, порядок «сначала ERP,
+// — service/RemOnline) плюс связанный Cashbox, порядок «сначала ERP,
 // затем БД» — тот же приём, что CreateBalanceTransactionHandler.createWithErpSync
 // (erpSyncRequired: true), только без выбора между двумя портами: этот
 // хендлер обслуживает ровно одно направление (SERVICE_ERP_CASH_DOCUMENT_PORT),
@@ -48,6 +48,8 @@ export class CreatePayoutHandler implements ICommandHandler<
     PayoutResponse
 > {
     private readonly logger = new Logger(CreatePayoutHandler.name);
+    private readonly payoutCashboxRecordMapper =
+        new PayoutCashboxRecordMapper();
 
     constructor(
         @Inject(BALANCE_TRANSACTION_REPOSITORY)
@@ -56,8 +58,8 @@ export class CreatePayoutHandler implements ICommandHandler<
         private readonly accrualRepo: SalaryAccrualRepositoryPort,
         @Inject(SERVICE_ERP_CASH_DOCUMENT_PORT)
         private readonly erpPort: ErpCashDocumentPort,
-        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly erpCashDocumentRepo: ErpCashDocumentRepositoryPort,
+        @Inject(PAYOUT_CASHBOX_RECORD_REPOSITORY)
+        private readonly payoutCashboxRecordRepo: PayoutCashboxRecordRepositoryPort,
         @Inject(DIRECTORY_REPOSITORY)
         private readonly directoryRepo: DirectoryRepositoryPort,
         @Inject(UNIT_OF_WORK)
@@ -121,7 +123,7 @@ export class CreatePayoutHandler implements ICommandHandler<
             occurredAt: transaction.occurredAt,
         });
 
-        const erpCashDocumentEntity = ErpCashDocument.create({
+        const payoutCashboxRecordEntity = Cashbox.createPayout({
             transactionId: transaction.id,
             system: erpSystemForDirection('service'),
             kind: 'OUTCOME',
@@ -132,7 +134,9 @@ export class CreatePayoutHandler implements ICommandHandler<
         try {
             await this.unitOfWork.run(async () => {
                 await this.transactionRepo.insertMany([transaction]);
-                await this.erpCashDocumentRepo.insert(erpCashDocumentEntity);
+                await this.payoutCashboxRecordRepo.insert(
+                    payoutCashboxRecordEntity,
+                );
                 // «Документы... в статусе ACCRUED переходят в PAID, когда
                 // остаток баланса после операции ≤ 0» (PRD 3) — только
                 // документы СВОЕГО направления (см. WHY на
@@ -178,10 +182,12 @@ export class CreatePayoutHandler implements ICommandHandler<
 
         return {
             transaction: toBalanceTransactionResponse(transaction, {
-                system: erpCashDocumentEntity.system,
-                externalId: erpCashDocumentEntity.externalId,
+                system: payoutCashboxRecordEntity.system,
+                externalId: payoutCashboxRecordEntity.externalId,
             }),
-            erpDocument: toErpCashDocumentResponse(erpCashDocumentEntity),
+            erpDocument: this.payoutCashboxRecordMapper.toResponse(
+                payoutCashboxRecordEntity,
+            ),
         };
     }
 }

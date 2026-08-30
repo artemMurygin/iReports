@@ -3,7 +3,7 @@ import { Global, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { CatalogCategoryResponse } from 'ireports-contracts';
-import { ShopWarehouseModule } from '@/domains/shop/modules/warehouse/shop-warehouse.module';
+import { ShopWarehouseModule } from '@/domains/shop/modules/warehouse/warehouse.module';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 
 // Настоящей инфраструктуры для test:e2e (jest-e2e.json + отдельная БД) в

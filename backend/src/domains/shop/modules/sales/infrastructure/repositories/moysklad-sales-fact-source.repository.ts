@@ -5,7 +5,7 @@ import { Period } from '@/shared/domain/period.value-object';
 import {
     ShopSalesFactErpAggregate,
     ShopSalesFactSourcePort,
-} from '@/domains/shop/modules/sales/application/ports/shop-sales-fact-source.port';
+} from '@/domains/shop/modules/sales/application/ports/sales-fact-source.port';
 import { ProductFolderTreeService } from '@/domains/shop/sync/moySklad/product-folder-tree.service';
 
 // Решение по открытому вопросу Фазы 11 (частично отходит от зеркала

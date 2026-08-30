@@ -31,19 +31,19 @@ salary rules, salary accruals, task completions, accounting periods, erp-cash д
 
 ### Entities vs Value Objects
 Разделение в целом корректное. VO выделены там, где нужно: `ShopMotivationTarget`
-(`domain/value-objects/shop-motivation-target.value-object.ts:31`) и `ShopPeriodClosure`
-(`domain/value-objects/shop-period-closure.value-object.ts:16`) — обе неизменяемые группы полей
+(`domain/value-objects/motivation-target.value-object.ts:31`) и `ShopPeriodClosure`
+(`domain/value-objects/period-closure.value-object.ts:16`) — обе неизменяемые группы полей
 с собственной валидацией.
 
 Пограничный случай: `ShopSalaryAccrualLineAdjustment`
-(`domain/entities/shop-salary-accrual-line-adjustment.entity.ts:21`) — сущность с `randomUUID`, но по
+(`domain/entities/salary-accrual-line-adjustment.entity.ts:21`) — сущность с `randomUUID`, но по
 сути неизменяемый факт корректировки (`previousAmount`/`newAmount`/`comment`/`adjustedBy`), больше
 похожий на VO/append-only событие в составе строки, чем на Entity с жизненным циклом.
 
 ### Aggregate boundaries
 Корни явные и небольшие: `ShopAccountingPeriod`, `ShopSalaryAccrual` (root; `ShopSalaryAccrualLine`/
 `ShopSalaryAccrualLineAdjustment` — внутренний кластер, доступ только через `getLine()`,
-`domain/entities/shop-salary-accrual.entity.ts:128`), `ShopMotivationSchema` (root; `rules:
+`domain/entities/salary-accrual.entity.ts:128`), `ShopMotivationSchema` (root; `rules:
 ShopSalaryRule[]` — кластер правил), `ShopTaskCompletion`, `ShopErpCashConfig`, `ShopErpCashDocument`.
 Ссылки между агрегатами — по id (`employeeId: number`, `ruleId: string`, `transactionId: string`), не
 по объекту — граница соблюдена.
@@ -51,8 +51,8 @@ ShopSalaryRule[]` — кластер правил), `ShopTaskCompletion`, `ShopE
 ### Anemic vs rich model
 Модель богатая, не data bag. `ShopSalaryAccrual` несёт бизнес-переходы
 (`accrueLine/unaccrueLine/adjustLine/markPaid/revertToAccrued/recalculateStatus`,
-`domain/entities/shop-salary-accrual.entity.ts:136-203`), `ShopTaskCompletion.confirm/reject` с
-guard-переходом (`domain/entities/shop-task-completion.entity.ts:94-115`). Расчётные сущности правил
+`domain/entities/salary-accrual.entity.ts:136-203`), `ShopTaskCompletion.confirm/reject` с
+guard-переходом (`domain/entities/task-completion.entity.ts:94-115`). Расчётные сущности правил
 (`ProductSoldEntity.calculate`, `UsedProductSoldEntity.calculate`) содержат нетривиальную доменную
 логику — matching по роли, категории, дедупликацию, fail-closed по неполному контексту — не вынесены
 в сервис-«процессор». `PeriodCalculationOrchestrator`
@@ -61,10 +61,10 @@ guard-переходом (`domain/entities/shop-task-completion.entity.ts:94-115
 
 ### Инварианты
 В основном внутри агрегатов: `ShopSalaryAccrual.validate()` проверяет
-`total === sum(lines.originalAmount)` (`domain/entities/shop-salary-accrual.entity.ts:219-227`),
+`total === sum(lines.originalAmount)` (`domain/entities/salary-accrual.entity.ts:219-227`),
 `ShopSalaryAccrualLine.adjust()` запрещает корректировку не-DRAFT строки. Явно задокументированные
 исключения из этого правила — проверка «все строки плана продаж утверждены» и подсчёт `employeeCount`
-оставлены application-слою (комментарии в `domain/entities/shop-accounting-period.entity.ts:32-33,
+оставлены application-слою (комментарии в `domain/entities/accounting-period.entity.ts:32-33,
 72-74`) — осознанный, а не случайный вынос. Отдельно от этого — реальная утечка бизнес-правила в
 `CreateShopPayoutHandler` (см. находку №1 ниже), уже не задокументированная как осознанное решение.
 
@@ -100,14 +100,14 @@ DI-фреймворка внутри, изолированный от однои
 ### Толщина command handlers
 В основном — тонкие оркестраторы: load repo → вызвать метод агрегата → save → map response. Пример
 эталона: `AccrueShopSalaryAccrualLineHandler`
-(`application/command/accrue-shop-salary-accrual-line.handler.ts:50-65`) — находит агрегат, зовёт
+(`application/command/accrue-salary-accrual-line.handler.ts:50-65`) — находит агрегат, зовёт
 `accrual.accrueLine(lineId)` (домен), сохраняет в транзакции. `AdjustShopSalaryAccrualLineHandler`
-(`application/command/adjust-shop-salary-accrual-line.handler.ts:39-46`) аналогично — вся валидация
+(`application/command/adjust-salary-accrual-line.handler.ts:39-46`) аналогично — вся валидация
 переходов внутри `accrual.adjustLine()`. Переходы состояния (`accrueLine`, `unaccrueLine`,
 `adjustLine`, `markPaid`, `close`) подтверждённо живут в сущностях.
 
 `CloseShopAccountingPeriodHandler`
-(`application/command/close-shop-accounting-period.handler.ts:110-201`) — здесь оркестрируются 6+
+(`application/command/close-accounting-period.handler.ts:110-201`) — здесь оркестрируются 6+
 шагов (проверка плана продаж, поиск периода, ERP-синк, сброс кэша дважды, расчёт снапшота,
 `buildAccrualDocuments`, событие), объём и число ветвлений заметно превышает «тонкий оркестратор».
 Часть последовательности (порядок сброса кэша, повторное удаление внутри транзакции, правило
@@ -123,13 +123,13 @@ DI-фреймворка внутри, изолированный от однои
 
 ### Application services vs domain services
 Смешение минимально, но есть. `BuildShopCalculationContextService`
-(`application/services/build-shop-calculation-context.service.ts`) — правильная оркестрация (сбор
+(`application/services/build-calculation-context.service.ts`) — правильная оркестрация (сбор
 данных из нескольких портов, батчинг, без бизнес-калькуляций суммы); сама калькуляция вынесена в
 `PeriodCalculationOrchestrator`/`rule.calculate()` (domain). Однако
 `GetShopEmployeeSalaryReportService.buildClosedDirection`
-(`application/services/get-shop-employee-salary-report.service.ts:106-161`) и зеркальный кусок в
+(`application/services/get-employee-salary-report.service.ts:106-161`) и зеркальный кусок в
 `GetShopDepartmentSalaryReportService.buildClosedContributions`
-(`application/services/get-shop-department-salary-report.service.ts:169-203`) — почти идентичный код,
+(`application/services/get-department-salary-report.service.ts:169-203`) — почти идентичный код,
 реализующий эвристику «`appliedPercent` восстанавливается по наличию `salaryBasis`» (комментарий
 строки 125-128) прямо в application, а не через доменный маппер/метод сущности снапшота — это
 доменное правило интерпретации данных, продублированное в двух сервисах.
@@ -137,7 +137,7 @@ DI-фреймворка внутри, изолированный от однои
 ### CQRS-дисциплина
 В целом соблюдается: команды меняют состояние и возвращают response DTO агрегата. Настоящее
 смешение — `CreateShopPayoutBatchHandler`
-(`application/command/create-shop-payout-batch.handler.ts:55-124`): один «handler» читает балансы
+(`application/command/create-payout-batch.handler.ts:55-124`): один «handler» читает балансы
 (`sumByEmployee`), диспатчит `CreateShopPayoutCommand` через `CommandBus` в цикле и одновременно
 строит агрегированный отчёт `outcomes[]` — команда, которая одновременно оркестрирует другие команды
 и формирует объёмный отчётный DTO с бизнес-классификацией статусов
@@ -150,9 +150,9 @@ DI-фреймворка внутри, изолированный от однои
 
 ### Factory usage
 `ShopSalaryRuleFactory.create()` используется корректно в `CreateShopMotivationSchemaHandler`
-(`application/command/create-shop-motivation-schema.handler.ts:66-73`) для сборки правил внутри
+(`application/command/create-motivation-schema.handler.ts:66-73`) для сборки правил внутри
 `ShopMotivationSchema.create()`. `ShopSalaryAccrual.createFromSnapshot()` (вызывается в
-`close-shop-accounting-period.handler.ts:192-199`) — фабричный статический метод самой сущности, а не
+`close-accounting-period.handler.ts:192-199`) — фабричный статический метод самой сущности, а не
 ручная сборка полей в handler. Других мест ручной сборки сложных агрегатов в обход фабрики не найдено.
 
 ### Наибольшая утечка бизнес-логики
@@ -164,17 +164,17 @@ DI-фреймворка внутри, изолированный от однои
 ## 3. Infrastructure/Interface-слои и границы bounded context
 
 ### Repositories
-Все проверенные (`infrastructure/repositories/shop-salary-accrual.repository.ts`,
-`shop-motivation-schema.repository.ts` и др.) корректно реализуют соответствующие
+Все проверенные (`infrastructure/repositories/salary-accrual.repository.ts`,
+`motivation-schema.repository.ts` и др.) корректно реализуют соответствующие
 `application/ports/*` (сигнатуры совпадают 1:1). Prisma-специфика (`where`, `include`,
 `direction: 'shop'` фильтрация) полностью инкапсулирована внутри репозитория — наружу возвращаются
 только доменные сущности через маппер. Пример дисциплины:
-`infrastructure/repositories/shop-motivation-schema.repository.ts:39-51` — каждый метод сопровождён
+`infrastructure/repositories/motivation-schema.repository.ts:39-51` — каждый метод сопровождён
 комментарием, почему нужен `include: { rules: { where: { direction: 'shop' } } }`.
 
 ### Mappers
-Чистое разделение persistence/domain-model. `shop-salary-accrual.mapper.ts` и
-`shop-erp-cash-document.mapper.ts` берут Prisma record-типы только как входной тип `toDomain()`,
+Чистое разделение persistence/domain-model. `salary-accrual.mapper.ts` и
+`erp-cash-document.mapper.ts` берут Prisma record-типы только как входной тип `toDomain()`,
 наружу — доменные Entity/VO. `direction: 'shop'` жёстко проставляется в `toPersistence()`, а не
 читается из записи — задокументированное решение.
 
@@ -193,7 +193,7 @@ DI-фреймворка внутри, изолированный от однои
 Все проверенные контроллеры (`close-shop-accounting-period`, `create-shop-payout`,
 `get-shop-employee-salary-report`, `create-shop-motivation-schema`, `accrue-shop-salary-accrual-line`)
 — тонкие: `@Body()`/`@Param()` → `Command`/`CommandBus`/сервис, без бизнес-логики. Пограничное место —
-`interface/http-controllers/get-shop-employee-salary-report.http.controller.ts:29-34` — парсинг `id`
+`interface/http-controllers/get-employee-salary-report.http.controller.ts:29-34` — парсинг `id`
 в `Number` + `ArgumentInvalidException` при не-integer — тривиальная валидация типа параметра роута,
 не бизнес-правило. DTO — обёртки `createZodDto()` над схемами из `ireports-contracts`, дублирования
 доменных типов не найдено.
@@ -202,10 +202,10 @@ DI-фреймворка внутри, изолированный от однои
 `grep -rn "domains/service" .` в модуле дал ~150 совпадений, но все production-совпадения —
 комментарии («Зеркало domains/service/…», WHY-объяснения независимости). Единственные реальные
 `import`-строки из `domains/service` найдены только в тестовых файлах:
-- `application/command/create-shop-payout.handler.spec.ts:16-21` — импортирует
+- `application/command/create-payout.handler.spec.ts:16-21` — импортирует
   `InMemoryErpCashDocumentRepository`, `CreatePayoutHandler` и т.п. из `domains/service` (для
   сравнительного/изолирующего теста).
-- `interface/http-controllers/close-shop-accounting-period.work-schedule-independence.e2e.spec.ts:16`
+- `interface/http-controllers/close-accounting-period.work-schedule-independence.e2e.spec.ts:16`
   — импортирует `EnsurePeriodNotClosedService` из `domains/service` (тест на независимость расписаний
   между направлениями).
 - `domain/salary-rule-registry.spec.ts:6` — импортирует `salaryRuleRegistry` из `domains/service`
@@ -214,7 +214,7 @@ DI-фреймворка внутри, изолированный от однои
 `grep -rn "domains/opt"` — 0 совпадений. `grep -rn "from '@prisma" domain/"` — 0 совпадений
 (domain-слой не знает о Prisma). Production-код полностью изолирован от `domains/service` и
 `domains/opt`; связь есть только в тестах, и все три случая выглядят намеренными
-(сравнительные/independence-тесты). `shop-accounting.module.ts` не импортирует ни `AccountingModule`
+(сравнительные/independence-тесты). `accounting.module.ts` не импортирует ни `AccountingModule`
 из `service`, ни его классы — заводит собственные DI-токены под теми же именами
 (`SHOP_ACCOUNTING_PERIOD_REPOSITORY` и т.д.).
 
@@ -223,15 +223,15 @@ DI-фреймворка внутри, изолированный от однои
 domain 38/37, interface 40/40). Расхождения:
 - **`application/events/` отсутствует в shop** — у `service` есть
   `AccountingPeriodClosedEventHandler`/`MotivationSchemaCreatedEventHandler`; в `shop` их нет.
-  Проверено — это намеренно (комментарий в `shop-accounting-period-closed.domain-event.ts`: «без
+  Проверено — это намеренно (комментарий в `accounting-period-closed.domain-event.ts`: «без
   временного лог-хендлера… задача формирования salaryReport по этому событию вне скоупа»), не
   регрессия.
 - **Отсутствие unit-тестов для 7 command-хендлеров shop**, у которых есть тесты в `service`:
-  `accrue-period-shop-salary-accruals.handler.ts`, `accrue-shop-salary-accrual-document.handler.ts`,
-  `accrue-shop-salary-accrual-line.handler.ts`, `adjust-shop-salary-accrual-line.handler.ts`,
-  `recalculate-shop-accounting-period.handler.ts`, `reopen-shop-accounting-period.handler.ts`,
-  `unaccrue-shop-salary-accrual-line.handler.ts` — все соответствующие `service`-хендлеры покрыты
-  `.spec.ts`. Частично компенсируется e2e (`shop-salary-accruals.e2e.spec.ts` покрывает
+  `accrue-period-salary-accruals.handler.ts`, `accrue-salary-accrual-document.handler.ts`,
+  `accrue-salary-accrual-line.handler.ts`, `adjust-salary-accrual-line.handler.ts`,
+  `recalculate-accounting-period.handler.ts`, `reopen-accounting-period.handler.ts`,
+  `unaccrue-salary-accrual-line.handler.ts` — все соответствующие `service`-хендлеры покрыты
+  `.spec.ts`. Частично компенсируется e2e (`salary-accruals.e2e.spec.ts` покрывает
   close→accruals→reopen), но точечные unit-тесты (edge-cases, исключения) для этих хендлеров в `shop`
   отсутствуют — реальный пробел тестового покрытия, а не архитектурная проблема слоёв.
 - В `service` есть дублирующая опечатка-директория `domain/exceptions` и `domain/exeptions` (реальный
@@ -258,7 +258,7 @@ domain 38/37, interface 40/40). Расхождения:
 ## Находки, требующие внимания (по убыванию значимости)
 
 1. **Бизнес-правило + saga-логика в handler вместо домена.**
-   `application/command/create-shop-payout.handler.ts:82-193` — вычисление `balanceAfter`, условие
+   `application/command/create-payout.handler.ts:82-193` — вычисление `balanceAfter`, условие
    `needsConfirmation` и компенсирующий откат ERP-документа при сбое БД зашиты прямо в CQRS-хендлере.
    Это доменное правило («выплата требует подтверждения при недостаточном остатке»), место которому —
    в агрегате или доменном сервисе.
@@ -268,19 +268,19 @@ domain 38/37, interface 40/40). Расхождения:
    Пока это мёртвый паттерн, а не работающий механизм декаплинга.
 
 3. **Дублированная доменная эвристика в двух application-сервисах.**
-   `application/services/get-shop-employee-salary-report.service.ts:106-161` и
-   `application/services/get-shop-department-salary-report.service.ts:169-203` содержат почти
+   `application/services/get-employee-salary-report.service.ts:106-161` и
+   `application/services/get-department-salary-report.service.ts:169-203` содержат почти
    идентичный код восстановления `appliedPercent` по наличию `salaryBasis` — правило интерпретации
    данных, продублированное вместо вынесения в доменный маппер/метод.
 
 4. **`CloseShopAccountingPeriodHandler` перегружен оркестрацией**
-   (`application/command/close-shop-accounting-period.handler.ts:110-201`, ~90 строк, 6+ шагов).
+   (`application/command/close-accounting-period.handler.ts:110-201`, ~90 строк, 6+ шагов).
    Формально не нарушает границы домена (все мутации — через методы сущностей), но инварианты
    процесса закрытия периода (порядок сброса кэша, «документ на каждую строку, включая нулевые»)
    зафиксированы только в комментариях хендлера.
 
 5. **Минорное:** `ShopSalaryAccrualLineAdjustment`
-   (`domain/entities/shop-salary-accrual-line-adjustment.entity.ts:21`) смоделирован как Entity, хотя
+   (`domain/entities/salary-accrual-line-adjustment.entity.ts:21`) смоделирован как Entity, хотя
    по сути immutable-факт корректировки — ближе к Value Object.
 
 6. **Минорное:** `domain/services/moysklad-demand-link.ts:12` строит URL под конкретный веб-интерфейс

@@ -2,7 +2,7 @@ import type { DirectoryRepositoryPort } from '@/modules/directory/application/po
 import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { GetBalanceSummaryService } from './get-balance-summary.service';
 
 // Сквозной список взаиморасчётов (docs/employee-settlements-page-redesign,

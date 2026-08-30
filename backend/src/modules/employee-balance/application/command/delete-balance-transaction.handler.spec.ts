@@ -3,18 +3,18 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employee-operation-lock';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
 import {
     BalanceTransactionNotDeletableException,
     BalanceTransactionNotFoundException,
 } from '@/modules/employee-balance/domain/exceptions/balance-transaction.exception';
-import { ErpCashDocumentMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
+import { PayoutCashboxRecordMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
 import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { DeleteBalanceTransactionHandler } from './delete-balance-transaction.handler';
 import { DeleteBalanceTransactionCommand } from './delete-balance-transaction.command';
 
@@ -31,7 +31,8 @@ describe('DeleteBalanceTransactionHandler', () => {
         unitOfWork?: UnitOfWorkPort;
     }) => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const payoutCashboxRecordRepo =
+            new InMemoryPayoutCashboxRecordRepository();
         const fakeErpPort: ErpCashDocumentPort = overrides?.erpPort ?? {
             create: () => Promise.reject(new Error('не используется')),
             delete: () => Promise.resolve(),
@@ -46,14 +47,14 @@ describe('DeleteBalanceTransactionHandler', () => {
             transactionRepo,
             fakeErpPort,
             shopErpPort,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
             unitOfWork,
             new EmployeeOperationLock(),
         );
         return {
             handler,
             transactionRepo,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
             fakeErpPort,
             shopErpPort,
         };
@@ -176,13 +177,13 @@ describe('DeleteBalanceTransactionHandler', () => {
             },
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
         const erpAdvance = manual({ erpSyncRequired: true });
         await transactionRepo.insertMany([erpAdvance]);
-        await erpCashDocumentRepo.insert(
-            ErpCashDocument.create({
+        await payoutCashboxRecordRepo.insert(
+            Cashbox.createPayout({
                 transactionId: erpAdvance.id,
                 system: 'ROAPP',
                 kind: 'OUTCOME',
@@ -204,7 +205,7 @@ describe('DeleteBalanceTransactionHandler', () => {
         ]);
         expect(transactionRepo.store.has(erpAdvance.id)).toBe(false);
         await expect(
-            erpCashDocumentRepo.findByTransactionId(erpAdvance.id),
+            payoutCashboxRecordRepo.findByTransactionId(erpAdvance.id),
         ).resolves.toBeNull();
     });
 
@@ -214,13 +215,13 @@ describe('DeleteBalanceTransactionHandler', () => {
             delete: () => Promise.reject(new Error('RemOnline недоступен')),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
         const erpAdvance = manual({ erpSyncRequired: true });
         await transactionRepo.insertMany([erpAdvance]);
-        await erpCashDocumentRepo.insert(
-            ErpCashDocument.create({
+        await payoutCashboxRecordRepo.insert(
+            Cashbox.createPayout({
                 transactionId: erpAdvance.id,
                 system: 'ROAPP',
                 kind: 'OUTCOME',
@@ -241,7 +242,7 @@ describe('DeleteBalanceTransactionHandler', () => {
 
         expect(transactionRepo.store.has(erpAdvance.id)).toBe(true);
         await expect(
-            erpCashDocumentRepo.findByTransactionId(erpAdvance.id),
+            payoutCashboxRecordRepo.findByTransactionId(erpAdvance.id),
         ).resolves.not.toBeNull();
     });
 
@@ -264,7 +265,7 @@ describe('DeleteBalanceTransactionHandler', () => {
             },
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort: serviceErpPort,
             shopErpPort,
         });
@@ -273,8 +274,8 @@ describe('DeleteBalanceTransactionHandler', () => {
             erpSyncRequired: true,
         });
         await transactionRepo.insertMany([shopAdvance]);
-        await erpCashDocumentRepo.insert(
-            ErpCashDocument.create({
+        await payoutCashboxRecordRepo.insert(
+            Cashbox.createPayout({
                 transactionId: shopAdvance.id,
                 system: 'MOY_SKLAD',
                 kind: 'OUTCOME',
@@ -298,7 +299,7 @@ describe('DeleteBalanceTransactionHandler', () => {
         expect(transactionRepo.store.has(shopAdvance.id)).toBe(false);
     });
 
-    it('движение erpSyncRequired без связки ErpCashDocument (рассинхронизация) — отклонено', async () => {
+    it('движение erpSyncRequired без связки Cashbox (рассинхронизация) — отклонено', async () => {
         const { handler, transactionRepo } = build();
         const erpAdvance = manual({ erpSyncRequired: true });
         await transactionRepo.insertMany([erpAdvance]);
@@ -311,7 +312,7 @@ describe('DeleteBalanceTransactionHandler', () => {
                     }),
                 ),
             ),
-        ).rejects.toThrow(ErpCashDocumentMissingForTransactionException);
+        ).rejects.toThrow(PayoutCashboxRecordMissingForTransactionException);
         expect(transactionRepo.store.has(erpAdvance.id)).toBe(true);
     });
 

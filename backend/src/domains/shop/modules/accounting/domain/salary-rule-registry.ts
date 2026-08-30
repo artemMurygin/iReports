@@ -5,7 +5,7 @@ import { TaskCompletedShopEntity } from '@/domains/shop/modules/accounting/domai
 import {
     ShopSalaryRuleClass,
     ShopSalaryRuleTypes,
-} from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
+} from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 
 // Собственный реестр типов правил магазина (Фаза 12/13, issue #57/#64) —
 // независимый от salaryRuleRegistry сервиса (domains/service/modules/

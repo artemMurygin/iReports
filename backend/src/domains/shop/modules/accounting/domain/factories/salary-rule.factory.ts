@@ -3,7 +3,7 @@ import { shopSalaryRuleRegistry } from '../salary-rule-registry';
 import {
     CreateShopSalaryRuleProps,
     ShopSalaryRule,
-} from '../types/shop-salary-rule.types';
+} from '../types/salary-rule.types';
 
 // Зеркало SalaryRuleFactory сервиса (Фаза 12, issue #57) — независимая
 // фабрика магазина поверх shopSalaryRuleRegistry.

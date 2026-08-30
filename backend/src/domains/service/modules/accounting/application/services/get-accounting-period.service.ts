@@ -4,10 +4,12 @@ import { Period } from '@/shared/domain/period.value-object';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
-import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
+import { AccountingPeriodMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/accounting-period/accounting-period.mapper';
 
 @Injectable()
 export class GetAccountingPeriodService {
+    private readonly mapper = new AccountingPeriodMapper();
+
     constructor(
         @Inject(ACCOUNTING_PERIOD_REPOSITORY)
         private readonly periodRepo: AccountingPeriodRepositoryPort,
@@ -22,7 +24,7 @@ export class GetAccountingPeriodService {
             direction,
             validatedPeriod.getValue(),
         );
-        return toAccountingPeriodResponse(
+        return this.mapper.toResponse(
             entity,
             direction,
             validatedPeriod.getValue(),

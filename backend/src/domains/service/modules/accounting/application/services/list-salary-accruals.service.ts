@@ -8,9 +8,8 @@ import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/dire
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import {
     SalaryAccrualEmployeeInfo,
-    toSalaryAccrualListItem,
-    unknownEmployeeInfo,
-} from '../mappers/to-salary-accrual-response';
+    SalaryAccrualMapper,
+} from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 
 // Список документов начисления за период (PRD 1
 // docs/payroll-closing-and-accrual, GET .../salary_accruals?period) —
@@ -21,6 +20,8 @@ import {
 // закрыт».
 @Injectable()
 export class ListSalaryAccrualsService {
+    private readonly mapper = new SalaryAccrualMapper();
+
     constructor(
         @Inject(SALARY_ACCRUAL_REPOSITORY)
         private readonly accrualRepo: SalaryAccrualRepositoryPort,
@@ -39,10 +40,10 @@ export class ListSalaryAccrualsService {
         );
         const employees = await resolveEmployees(this.directoryRepo);
         const items = accruals.map((accrual) =>
-            toSalaryAccrualListItem(
+            this.mapper.toListItemResponse(
                 accrual,
                 employees.get(accrual.employeeId) ??
-                    unknownEmployeeInfo(accrual.employeeId),
+                    SalaryAccrualMapper.unknownEmployeeInfo(accrual.employeeId),
             ),
         );
         return {

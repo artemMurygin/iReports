@@ -1,6 +1,6 @@
 import { TaskCompletedShopEntity } from './task-completed.entity';
-import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
-import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
+import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
+import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 import { ShopSalesPerformanceRequiredException } from '@/domains/shop/modules/accounting/domain/exceptions/float-percent.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 

@@ -5,13 +5,15 @@ import { ConfirmTaskCompletionCommand } from './confirm-task-completion.command'
 import { TaskCompletionNotFoundException } from '@/domains/service/modules/accounting/domain/exceptions/task-completion.exception';
 import { TASK_COMPLETION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/task-completion.port';
 import type { TaskCompletionRepositoryPort } from '@/domains/service/modules/accounting/application/ports/task-completion.port';
-import { toTaskCompletionResponse } from '@/domains/service/modules/accounting/application/mappers/to-task-completion-response';
+import { TaskCompletionMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/task-completion/task-completion.mapper';
 
 @CommandHandler(ConfirmTaskCompletionCommand)
 export class ConfirmTaskCompletionHandler implements ICommandHandler<
     ConfirmTaskCompletionCommand,
     TaskCompletionResponse
 > {
+    private readonly mapper = new TaskCompletionMapper();
+
     constructor(
         @Inject(TASK_COMPLETION_REPOSITORY)
         private readonly repo: TaskCompletionRepositoryPort,
@@ -33,6 +35,6 @@ export class ConfirmTaskCompletionHandler implements ICommandHandler<
 
         await this.repo.update(completion);
 
-        return toTaskCompletionResponse(completion);
+        return this.mapper.toResponse(completion);
     }
 }

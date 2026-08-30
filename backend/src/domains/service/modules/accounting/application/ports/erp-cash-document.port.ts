@@ -30,7 +30,7 @@ export interface CreateErpCashDocumentParams {
     // здесь это BalanceTransaction.id, которое ещё не существует в ERP ни в
     // каком виде: адаптер не обязан отправлять его в RemOnline (там негде),
     // но может использовать как повод свериться с локальным
-    // ErpCashDocumentRepositoryPort.findByTransactionId перед повторной
+    // PayoutCashboxRecordRepositoryPort.findByTransactionId перед повторной
     // попыткой после таймаута.
     transactionId: string;
     // Целые рубли — конвертация в рубли с копейками (формат amount у
@@ -56,7 +56,7 @@ export interface DeleteErpCashDocumentParams {
 }
 
 // Найденный документ — форма, которой достаточно вызывающей стороне, чтобы
-// решить «пропустить create» или «вызвать delete»; не полный ErpCashDocument
+// решить «пропустить create» или «вызвать delete»; не полный Cashbox
 // (id/createdAt — внутренние детали локальной записи, недоступны отсюда).
 export interface FoundErpCashDocument {
     externalId: string;
@@ -77,7 +77,7 @@ export interface ErpCashDocumentPort {
     // внешнего ключа), а собственный уникальный индекс transactionId (см.
     // erp-cash.prisma) уже гарантирует, что документ для одного движения
     // не будет создан дважды. Реализация делегирует в
-    // ERP_CASH_DOCUMENT_REPOSITORY (см. erp-cash-document-repository.port.ts) —
+    // PAYOUT_CASHBOX_RECORD_REPOSITORY (см. payout-cashbox-record-repository.port.ts) —
     // этот метод существует на порте отдельно от него только затем, чтобы
     // будущий обработчик выплаты зависел от одного абстрактного
     // ErpCashDocumentPort («создать/удалить/проверить, что уже сделано»), а

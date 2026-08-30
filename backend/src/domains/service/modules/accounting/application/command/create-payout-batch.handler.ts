@@ -9,7 +9,7 @@ import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balanc
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { resolveEmployees } from '../services/list-salary-accruals.service';
-import { unknownEmployeeInfo } from '../mappers/to-salary-accrual-response';
+import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { CreatePayoutCommand } from './create-payout.command';
 import { CreatePayoutBatchCommand } from './create-payout-batch.command';
 
@@ -71,7 +71,8 @@ export class CreatePayoutBatchHandler implements ICommandHandler<
 
         for (const employeeId of command.employeeIds) {
             const employeeName = (
-                employees.get(employeeId) ?? unknownEmployeeInfo(employeeId)
+                employees.get(employeeId) ??
+                SalaryAccrualMapper.unknownEmployeeInfo(employeeId)
             ).name;
             const balance =
                 await this.transactionRepo.sumByEmployee(employeeId);

@@ -33,7 +33,7 @@
 
 Это подтверждается уже сделанным в Фазах 12–13 выбором: `domains/shop/modules/accounting/domain/`
 уже сегодня содержит **свои независимые** `money.ts`/`float-percent.ts`/
-`salary-rule-role-catalog.ts`/`shop-role-source.ts` — притом что они структурно почти идентичны
+`salary-rule-role-catalog.ts`/`role-source.ts` — притом что они структурно почти идентичны
 сервисным аналогам. Значит:
 
 - **Общее** между `service` и `shop`: Prisma-таблицы (`MotivationSchema`/`SalaryRule` с
@@ -90,22 +90,22 @@
 domains/shop/modules/accounting/
 ├── domain/
 │   ├── entities/
-│   │   ├── shop-motivation-schema.entity.ts
-│   │   └── shop-task-completion.entity.ts
+│   │   ├── motivation-schema.entity.ts
+│   │   └── task-completion.entity.ts
 │   ├── services/
 │   │   ├── period-calculation.orchestrator.ts
 │   │   └── rule-breakdown.builder.ts
 │   ├── entities/salary-rules/*                       (уже есть, не трогаем)
 │   ├── salary-rule-registry.ts, factories/*           (уже есть, не трогаем)
-│   └── types/shop-calculation-data.types.ts            (уже есть, не трогаем)
+│   └── types/calculation-data.types.ts            (уже есть, не трогаем)
 ├── application/
 │   ├── command/ (create/confirm/reject/delete task-completion, create motivation-schema/salary-rule)
 │   ├── ports/ (shop-motivation-schema, shop-salary-rule, shop-task-completion, shop-calculation-data)
-│   ├── mappers/to-shop-salary-report-rules.ts
+│   ├── mappers/to-salary-report-rules.ts
 │   └── services/ (build-shop-calculation-context, get-employee-shop-salary-report, list-shop-task-completions)
 ├── infrastructure/
 │   ├── mappers/ (shop-salary-rule, shop-motivation-schema, shop-task-completion)
-│   ├── schemas/shop-salary-rule.schema.ts
+│   ├── schemas/salary-rule.schema.ts
 │   └── repositories/ (shop-motivation-schema, shop-salary-rule, shop-task-completion, shop-calculation-data)
 └── interface/
     ├── dto/
@@ -186,7 +186,7 @@ domains/shop/modules/accounting/
 |---|---|---|
 | 1 | Contracts: `isClosed` в `directions[]`, `grandTotal.prognose` не `nullable`, новый `shop-motivation-schema.ts` | ✅ |
 | 2 | `ShopCalculationDataPort` + `ShopCalculationDataRepository` | ✅ |
-| 3 | Независимые `PeriodCalculationOrchestrator`/`rule-breakdown.builder`/`to-shop-salary-report-rules` для shop | ✅ |
+| 3 | Независимые `PeriodCalculationOrchestrator`/`rule-breakdown.builder`/`to-salary-report-rules` для shop | ✅ |
 | 4 | `ShopSalaryRule` mapper/schema/repository | ✅ |
 | 5 | `ShopMotivationSchema` сущность + mapper/repository + `findIdByTarget` | ✅ |
 | 6 | `ShopTaskCompletion` сущность + mapper/repository | ✅ |
@@ -210,19 +210,19 @@ domains/shop/modules/accounting/
   собирается (`npm run build`) без ошибок.
 - `contracts/commands/shop-motivation-schema.ts` — новый файл, `ShopMotivationRequestSchema`.
 - `contracts/commands/index.ts` — добавлен экспорт нового файла.
-- `backend/src/domains/shop/modules/accounting/application/ports/shop-calculation-data.port.ts` —
+- `backend/src/domains/shop/modules/accounting/application/ports/calculation-data.port.ts` —
   новый порт `ShopCalculationDataPort` + токен `SHOP_CALCULATION_DATA`.
 - `backend/src/domains/shop/modules/accounting/infrastructure/repositories/
-  shop-calculation-data.repository.ts` — реализация порта (Prisma-запросы к
+  calculation-data.repository.ts` — реализация порта (Prisma-запросы к
   `EmployeeIdentity`/`MoySkladDemandPosition`/`TaskCompletion`/`EmployeeHoursEntry`/
   `BitrixEmployee`, `resolveCategoryDescendantFolderIds` через `ProductFolderTreeService`).
 - `backend/src/domains/shop/modules/accounting/domain/services/float-percent.ts` — дополнен
   `resolveFloatPercentThresholds`/`buildFloatPercentThresholdInfo` (зеркало сервисных, нужны для
-  будущего `to-shop-salary-report-rules.ts`).
+  будущего `to-salary-report-rules.ts`).
 - Реализация доведена до конца всеми оставшимися пунктами (4–17) многоагентным workflow: независимые
   `ShopSalaryRule`/`ShopMotivationSchema`/`ShopTaskCompletion` domain+infrastructure+application+
-  interface слои, `BuildShopCalculationContextService` (+ `to-shop-sales-performance-context.ts`/
-  `to-shop-sales-performance-summary.ts`), CQRS-запись мотивации/правил/задач магазина с HTTP-входом
+  interface слои, `BuildShopCalculationContextService` (+ `to-sales-performance-context.ts`/
+  `to-sales-performance-summary.ts`), CQRS-запись мотивации/правил/задач магазина с HTTP-входом
   (`POST /shop/accounting/motivation-schema`, `POST|GET /shop/accounting/task_completions`,
   `POST /shop/accounting/task_completions/:id/{confirm,reject}`,
   `DELETE /shop/accounting/task_completions/:id`), `ShopAccountingModule` (импортирует
@@ -260,9 +260,9 @@ domains/shop/modules/accounting/
 ### Critical files
 
 - `backend/src/domains/shop/modules/accounting/application/services/
-  build-shop-calculation-context.service.ts` (новый)
-- `backend/src/domains/shop/modules/accounting/application/ports/shop-calculation-data.port.ts` +
-  `infrastructure/repositories/shop-calculation-data.repository.ts` (новые, готовы)
+  build-calculation-context.service.ts` (новый)
+- `backend/src/domains/shop/modules/accounting/application/ports/calculation-data.port.ts` +
+  `infrastructure/repositories/calculation-data.repository.ts` (новые, готовы)
 - `backend/src/domains/shop/modules/accounting/domain/entities/
   {shop-motivation-schema,shop-task-completion}.entity.ts` (новые)
 - `backend/src/domains/service/modules/accounting/application/services/
@@ -271,6 +271,6 @@ domains/shop/modules/accounting/
   close-accounting-period.handler.ts` — direction-aware правка
 - `backend/src/domains/service/modules/accounting/application/command/
   create-motivation-schema.handler.ts` — find-or-create по target
-- `backend/src/domains/shop/modules/accounting/shop-accounting.module.ts` — точка входа DI
+- `backend/src/domains/shop/modules/accounting/accounting.module.ts` — точка входа DI
 - `contracts/commands/shop-motivation-schema.ts` (новый, готов), `contracts/commands/salary-rule.ts`
   (правка `isClosed`, готова)

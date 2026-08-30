@@ -1,16 +1,16 @@
 import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import { roundRubles } from '../../services/money';
-import type { ShopCalculationErpData } from '../../types/shop-calculation-data.types';
-import type { ShopCalculationContext } from '../../types/shop-calculation-context.types';
+import { Money } from '../../value-objects/money.value-object';
+import type { ShopCalculationErpData } from '../../types/calculation-data.types';
+import type { ShopCalculationContext } from '../../types/calculation-context.types';
 import {
     CreateShopSalaryRuleProps,
     PayPerHourShopSalaryConfig,
     PayPerHourShopSalaryRule,
     ShopSalaryRule,
     TargetRole,
-} from '../../types/shop-salary-rule.types';
+} from '../../types/salary-rule.types';
 
 // Зеркало domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity.ts
 // (Фаза 12, issue #59) — независимая реализация в домене shop. Формула та
@@ -22,6 +22,22 @@ export class PayPerHourShopEntity
     implements ShopSalaryRule
 {
     declare protected _id: AggregateID;
+
+    // Роли графика, чьи рабочие смены засчитываются в часы PayPerHour —
+    // «Оффлайн менеджер»/«Онлайн менеджер» (в shop нет SOLO_MANAGER — тот
+    // существует только у service, см. ELIGIBLE_SCHEDULE_ROLES сервисного
+    // PayPerHoursEntity). Факт уровня ТИПА правила, не конкретного
+    // экземпляра — не связан с targetRole экземпляра (см. calculate()
+    // ниже) — поэтому static, а не поле props. Читается напрямую отсюда
+    // инфраструктурным ShopCalculationDataRepository.findHoursWorked при
+    // построении Prisma-запроса к WorkScheduleEntry — правило PayPerHour
+    // единственное место в домене, которому известно, какие роли графика
+    // оно считает часами, поэтому эта политика — часть самой сущности
+    // правила, а не отдельного domain-сервиса.
+    static readonly ELIGIBLE_SCHEDULE_ROLES: readonly TargetRole[] = [
+        'ONLINE_MANAGER',
+        'OFFLINE_MANAGER',
+    ];
 
     get name(): string {
         return this.props.name;
@@ -53,9 +69,8 @@ export class PayPerHourShopEntity
 
     // erpData.hoursWorked несёт ОБА значения (fact/prognose) сразу — режим
     // (FACT/PROGNOSE) выбирает нужное, дата "сегодня" и фильтр по роли дня
-    // (ONLINE_MANAGER/OFFLINE_MANAGER, см. domain/services/
-    // pay-per-hour-roles.ts) уже учтены на стороне, собравшей контекст (см.
-    // ShopCalculationDataRepository.findHoursWorked). Часов нет в
+    // (см. ELIGIBLE_SCHEDULE_ROLES выше) уже учтены на стороне, собравшей
+    // контекст (см. ShopCalculationDataRepository.findHoursWorked). Часов нет в
     // контексте — 0, а не ошибка: правило не обязано быть настроено для
     // каждого сотрудника с этой ролью (то же решение, что и у сервиса).
     calculate(context: ShopCalculationContext): CalculationLine {
@@ -70,7 +85,7 @@ export class PayPerHourShopEntity
             ruleId: this.id,
             quantity: hours,
             rate,
-            amount: roundRubles(hours * rate),
+            amount: Money.roundRubles(hours * rate).getValue(),
             sources: [],
         };
     }

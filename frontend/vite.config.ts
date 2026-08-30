@@ -26,10 +26,6 @@ export default defineConfig({
         include: ['ireports-contracts'],
     },
     server: {
-        allowedHosts: [
-            'c7d3-2a0c-16c1-1-1500-225-c0ff-fe00-f.ngrok-free.app',
-            '474e-94-183-255-240.ngrok-free.app',
-        ],
         proxy: {
             '/api': {
                 target: 'http://localhost:3000',

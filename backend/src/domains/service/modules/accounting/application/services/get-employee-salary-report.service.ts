@@ -7,16 +7,13 @@ import type { SalesPerformance } from '@/domains/service/modules/sales/domain/va
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
-import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-context';
+import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
 import {
     isSalesPerformancePlanApproved,
     toSalesPerformanceSummary,
-} from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-summary';
-import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/to-salary-report-rules';
-import {
-    buildFreshnessStamp,
-    stampOf,
-} from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+} from '@/domains/service/modules/accounting/application/mappers/salary-report/to-sales-performance-summary';
+import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-salary-report-rules';
+import { AccountingCacheFreshness } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
 import { Period } from '@/shared/domain/period.value-object';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -302,10 +299,10 @@ export class GetEmployeeSalaryReportService {
             return !latest || updatedAt > latest ? updatedAt : latest;
         }, null);
 
-        return buildFreshnessStamp({
-            motivationSchemaVersion: schemasVersion,
-            domainSyncStamp: stampOf(domainSyncAt),
-            salesPlanStamp: stampOf(salesPlanAt),
+        return AccountingCacheFreshness.buildStamp({
+            schemaVersion: schemasVersion,
+            domainSyncStamp: AccountingCacheFreshness.dateStamp(domainSyncAt),
+            salesPlanStamp: AccountingCacheFreshness.dateStamp(salesPlanAt),
         });
     }
 }

@@ -17,7 +17,7 @@
 ## В скоупе
 
 - **Backend, направление service**: прокинуть название услуги (`RoappService.name`) от источника данных (`ServiceCalculationDataRepository.findServiceCompletedItems`) через `ServiceCompletedErpItem` → `CalculationSourceRef` (`ServiceCompletedEntity.buildSources`) → `EmployeeSalaryReportSource` (маппер `to-salary-report-rules.ts`) → контракт.
-- **Backend, направление shop**: прокинуть название товара (или конкретного Б/У устройства) в источник начисления для правил `ProductSold` и `UsedProductSold` — от данных позиции отгрузки МойСклад (`ShopProductSoldErpItem`) до итогового ответа отчёта (`to-shop-salary-report-rules.ts`).
+- **Backend, направление shop**: прокинуть название товара (или конкретного Б/У устройства) в источник начисления для правил `ProductSold` и `UsedProductSold` — от данных позиции отгрузки МойСклад (`ShopProductSoldErpItem`) до итогового ответа отчёта (`to-salary-report-rules.ts`).
 - **Backend, направление shop**: добавить ссылку на исходный документ ERP (отгрузка МойСклад) в источник начисления для `ProductSold` и `UsedProductSold`, по аналогии с уже существующей ссылкой на заказ RemOnline (`buildRoappOrderLink`) у направления service.
 - **Контракт (`ireports-contracts`)**: добавить в `calculationSourceRefSchema`/`employeeSalaryReportSourceSchema` опциональное поле названия проданного товара/услуги, общее для обоих направлений.
 - **Frontend**: в детализации по правилу (компонент, отвечающий за раскрывающийся список источников начисления на странице `/salaries`) выводить название товара/услуги там, где оно доступно, сохранив текущую ссылку на документ и уже отображаемые данные устройства (для service).
@@ -45,5 +45,5 @@
 - [ ] В детализации правил `ProductSold` и `UsedProductSold` (shop) по каждому источнику начисления есть кликабельная ссылка на исходный документ отгрузки в МойСклад.
 - [ ] В детализации правила "Оплата за услугу" (service) ссылка на заказ RemOnline продолжает работать без изменений.
 - [ ] Поведение правил `OrderPayed`, `PayPerHour`, `TaskCompleted` (оба направления) не изменилось — существующие юнит- и e2e-тесты проходят без модификации ожидаемого поведения (кроме добавления новых опциональных полей).
-- [ ] Новое поле названия товара/услуги добавлено в `ireports-contracts` как опциональное и покрыто тестами маппера (`to-salary-report-rules.ts`, `to-shop-salary-report-rules.ts`).
+- [ ] Новое поле названия товара/услуги добавлено в `ireports-contracts` как опциональное и покрыто тестами маппера (`to-salary-report-rules.ts`, `to-salary-report-rules.ts`).
 - [ ] Ручная проверка на тестовых данных: для сотрудника с начислениями и по service, и по shop открыт отчёт зарплаты — детализация каждого затронутого правила показывает корректное название и рабочую ссылку на документ.

@@ -4,11 +4,13 @@ import { RoappHttpService } from './roapp.instace';
 import { toRoappIsoDate } from './roapp.service';
 import { FinanceTransactionSchema } from './schemas/financeTransaction.schema';
 import { DatabaseService } from '@/infrustructure/database/database.service';
-import type { ErpCashConfig } from '@/domains/service/modules/accounting/domain/entities/erp-cash-config.entity';
 import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import type { ErpCashConfigRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import type {
+    ErpCashConfig,
+    ErpCashConfigRepositoryPort,
+} from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import type {
     CreateErpCashDocumentParams,
     DeleteErpCashDocumentParams,
@@ -58,8 +60,8 @@ export class RoappCashDocumentAdapter implements ErpCashDocumentPort {
         private readonly db: DatabaseService,
         @Inject(ERP_CASH_CONFIG_REPOSITORY)
         private readonly configRepo: ErpCashConfigRepositoryPort,
-        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly documentRepo: ErpCashDocumentRepositoryPort,
+        @Inject(PAYOUT_CASHBOX_RECORD_REPOSITORY)
+        private readonly documentRepo: PayoutCashboxRecordRepositoryPort,
     ) {}
 
     async create(
@@ -82,7 +84,7 @@ export class RoappCashDocumentAdapter implements ErpCashDocumentPort {
                     // целые рубли из домена приводим к десятичной строке с
                     // копейками ("1500.00"), это общепринятый формат денежных
                     // сумм в REST API и не требует округления (amount уже
-                    // Int, см. валидацию BalanceTransaction/ErpCashDocument).
+                    // Int, см. валидацию BalanceTransaction/Cashbox).
                     amount: params.amount.toFixed(2),
                     // У RemOnline POST принимает direction: "income"|"expense"
                     // — тем же вокабуляром назван erpCashDocumentKindSchema в

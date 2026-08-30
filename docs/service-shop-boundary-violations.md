@@ -69,12 +69,12 @@ Prisma-реализации) и `accounting-cache-freshness.ts`. По графу
 
 | Цель в `Service.Accounting` | Edges | Что именно | Откуда (Shop) |
 |---|---:|---|---|
-| `salary-accrual.port.ts` + `.entity.ts` + `.repository.ts` (impl!) | 30+8+2=40 | Порт, сущность **и Prisma-репозиторий** `SalaryAccrual` | `close-shop-accounting-period.handler.ts`, `create/delete-shop-payout*.handler.ts`, `shop-accounting.module.ts` |
-| `balance-transaction.port.ts` + `.entity.ts` + `.repository.ts` (impl!) | 21+10+2=33 | Порт, сущность **и Prisma-репозиторий** `BalanceTransaction` | `create/delete-shop-payout*.handler.ts`, `shop-accounting.module.ts` |
-| `erp-cash-document-repository.port.ts` + `.entity.ts` + `.repository.ts` (impl!) | 15+5+2=22 | ERP-кассовый документ целиком (порт+сущность+репозиторий) | `create/delete-shop-payout*.handler.ts`, `shop-accounting.module.ts` |
-| `employee-dismissal.port.ts` + `.repository.ts` (impl!) | 12+2=14 | Порт+репозиторий увольнения сотрудника | `close-shop-accounting-period.handler.ts`, `shop-accounting.module.ts` |
-| `erp-period-sync.port.ts` + `erp-period-sync-runner.service.ts` | 7+8=15 | Общий раннер синхронизации периода с ERP | `moysklad-erp-period-sync.adapter.ts` **implements** сервисный порт, `shop-accounting.module.ts` |
-| `erp-cash-sync.helper.ts` | 7 | Хелпер-функции построения кассового документа | `create-shop-payout.handler.ts` (`calls`) |
+| `salary-accrual.port.ts` + `.entity.ts` + `.repository.ts` (impl!) | 30+8+2=40 | Порт, сущность **и Prisma-репозиторий** `SalaryAccrual` | `close-accounting-period.handler.ts`, `create/delete-shop-payout*.handler.ts`, `accounting.module.ts` |
+| `balance-transaction.port.ts` + `.entity.ts` + `.repository.ts` (impl!) | 21+10+2=33 | Порт, сущность **и Prisma-репозиторий** `BalanceTransaction` | `create/delete-shop-payout*.handler.ts`, `accounting.module.ts` |
+| `erp-cash-document-repository.port.ts` + `.entity.ts` + `.repository.ts` (impl!) | 15+5+2=22 | ERP-кассовый документ целиком (порт+сущность+репозиторий) | `create/delete-shop-payout*.handler.ts`, `accounting.module.ts` |
+| `employee-dismissal.port.ts` + `.repository.ts` (impl!) | 12+2=14 | Порт+репозиторий увольнения сотрудника | `close-accounting-period.handler.ts`, `accounting.module.ts` |
+| `erp-period-sync.port.ts` + `erp-period-sync-runner.service.ts` | 7+8=15 | Общий раннер синхронизации периода с ERP | `moysklad-erp-period-sync.adapter.ts` **implements** сервисный порт, `accounting.module.ts` |
+| `erp-cash-sync.helper.ts` | 7 | Хелпер-функции построения кассового документа | `create-payout.handler.ts` (`calls`) |
 | `get-accounting-period.service.ts`, `get-close-period-preview.service.ts`, `get-erp-cash-config.service.ts`, `get-salary-accrual.service.ts` | 6 каждый (24) | Application-сервисы **без shop-версии вообще** — единый сервис на оба направления | Собственные HTTP-контроллеры Shop (`get-shop-*.http.controller.ts`) вызывают их напрямую |
 | Мапперы (`to-accounting-period-response.ts`, `to-salary-accrual-response.ts`, `to-balance-transaction-response.ts`, `to-erp-cash-document-response.ts`) | 3 каждый (12) | Presentation-слой Service используется для ответов Shop-эндпоинтов | `close/create/delete-shop-*.handler.ts` |
 | Command-классы accrual (`accrue-period-salary-accruals`, `accrue-salary-accrual-document/line`, `adjust-salary-accrual-line`, `recalculate/reopen-accounting-period`, `unaccrue-salary-accrual-line`) | 2 каждая (14) | Shop-контроллеры диспатчат **сервисные** CQRS-команды напрямую, без своих shop-команд | `accrue/adjust/recalculate/reopen/unaccrue-shop-*.http.controller.ts` |
@@ -85,7 +85,7 @@ Prisma-реализации) и `accounting-cache-freshness.ts`. По графу
 ~4 раза шире, чем зафиксировано в `review.md` — это не только `AccountingPeriod`/кэш-freshness, а
 почти весь стек зарплатных выплат (`SalaryAccrual`, `BalanceTransaction`, `ErpCashDocument`,
 `EmployeeDismissal`, синхронизация периода с ERP, мапперы ответов, CQRS-команды accrual). При этом
-**в `shop-accounting.module.ts` напрямую wire'ится 8 конкретных Prisma-репозиториев Service**
+**в `accounting.module.ts` напрямую wire'ится 8 конкретных Prisma-репозиториев Service**
 (`salary-accrual.repository.ts`, `balance-transaction.repository.ts`,
 `employee-dismissal.repository.ts`, `accounting-period.repository.ts`,
 `accounting-period-snapshot.repository.ts`, `accounting-calculation-cache.repository.ts`,
@@ -125,12 +125,12 @@ Prisma-запросами. Это самая сильная форма связ�
 явные исключения `AccountingPeriod`/`SalesPlan`. Граф уточняет масштаб:
 
 - **39 edges** — `sales-plan.port.ts`/`sales-plan-template.port.ts` (порты) + `SalesPlan(Template)
-  Repository` (Prisma-реализации, импортируются в `shop-sales.module.ts` напрямую).
-- **11 edges** — сущность `SalesPlan` напрямую в `shop-sales-performance.value-object.ts` (доменный
+  Repository` (Prisma-реализации, импортируются в `sales.module.ts` напрямую).
+- **11 edges** — сущность `SalesPlan` напрямую в `sales-performance.value-object.ts` (доменный
   слой Shop!) — это именно то место, которое `review.md:95-103` уже разобрал и назвал осознанным
   исключением. Подтверждено графом, не новое.
 - **16 edges** — `ensure-sales-plans-for-period.service.ts` — сервис Service, вызываемый из
-  `get-shop-sales-performance.service.ts` и `shop-sales-plan-auto-creation.cron.ts` — **не упомянут
+  `get-sales-performance.service.ts` и `sales-plan-auto-creation.cron.ts` — **не упомянут
   в review.md**, отдельный сквозной сервис создания планов продаж на период.
 - **~30 edges** — команды CRUD (`create/update/delete/approve-sales-plan`,
   `put-sales-plan-template`) и их handler'ы — это ровно тот CRUD-паттерн, что уже описан в
@@ -170,11 +170,11 @@ direction-agnostic блокировки было бы чище использо�
 
 ## 3. Уже задокументировано в `docs/review.md` — граф подтверждает, без новых деталей
 
-- `shop-accounting.module.ts:93-108` переиспользует `ACCOUNTING_PERIOD_*`/кэш-порты Service — граф
+- `accounting.module.ts:93-108` переиспользует `ACCOUNTING_PERIOD_*`/кэш-порты Service — граф
   подтверждает 97 edges (35+32+30) в эти три порта — см. `review.md:87-94`.
 - `accounting-cache-freshness.ts` импортируется из Shop напрямую — граф подтверждает 13 edges — см.
   `review.md:79-86`.
-- `shop-sales-performance.value-object.ts` импортирует доменную сущность `SalesPlan` — граф
+- `sales-performance.value-object.ts` импортирует доменную сущность `SalesPlan` — граф
   подтверждает 11 edges — см. `review.md:95-103`.
 - CRUD плана продаж (`create/update/delete/approve-sales-plan`) диспатчится из Shop через общий
   CommandBus без копирования бизнес-логики — см. `review.md:184-187`.
@@ -186,8 +186,8 @@ direction-agnostic блокировки было бы чище использо�
 Отдельная от §2.3 пара: не Shop.Sales, а именно **Shop.Accounting** обращается к Service.Sales.
 Единственная цель — `SalesPlanRepositoryPort`/`SALES_PLAN_REPOSITORY`
 (`sales-plan.port.ts`) + метод `.findByDirectionAndPeriod()`, из:
-`close-shop-accounting-period.handler.ts`, `get-shop-department/employee-salary-report.service.ts`,
-`shop-accounting.module.ts` (+ их тесты). Бизнес-причина ясна: расчёт зарплаты в Shop должен
+`close-accounting-period.handler.ts`, `get-shop-department/employee-salary-report.service.ts`,
+`accounting.module.ts` (+ их тесты). Бизнес-причина ясна: расчёт зарплаты в Shop должен
 учитывать план продаж, который физически хранится и управляется в Service-домене. Способ
 реализации, однако, не самый чистый — Shop зависит от порта, определённого внутри
 `domains/service/...`, а не от нейтрального контракта. См. также разбор этой же пары в переписке
@@ -215,7 +215,7 @@ direction-agnostic блокировки было бы чище использо�
 1. Физически перенести весь периметр §2.1 (`SalaryAccrual`, `BalanceTransaction`, `ErpCashDocument`,
    `EmployeeDismissal` — порты, сущности и особенно **Prisma-репозитории**) в `src/shared`, если они
    действительно direction-агностичны — по той же логике, что `review.md` уже предложил для
-   `AccountingPeriod`/кэша. Сейчас `shop-accounting.module.ts` напрямую подключает 8 чужих
+   `AccountingPeriod`/кэша. Сейчас `accounting.module.ts` напрямую подключает 8 чужих
    Prisma-репозиториев — самый рискованный вид связности в этом аудите.
 2. Разобраться с двунаправленной связью ERP Cash Document (§2.2) — либо явно задокументировать её
    как общую подсистему (как сделано для `AccountingPeriod`) и вынести в `shared`, либо это

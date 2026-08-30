@@ -32,7 +32,7 @@
 | Направление | Метод | Путь | Контроллер |
 |---|---|---|---|
 | Сервис | `POST` | `/v1/service/motivation-schema` | `create-motivation-schema.http.controller.ts` |
-| Магазин | `POST` | `/v1/shop/accounting/motivation-schema` | `create-shop-motivation-schema.http.controller.ts` |
+| Магазин | `POST` | `/v1/shop/accounting/motivation-schema` | `create-motivation-schema.http.controller.ts` |
 
 **Тело запроса** — `MotivationRequestSchema` (сервис) / `ShopMotivationRequestSchema` (магазин), обе формы идентичны по структуре, различается только discriminated union `rules`:
 

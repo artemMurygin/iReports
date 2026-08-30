@@ -6,10 +6,7 @@ import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/acco
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { SalaryAccrualNotFoundException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
-import {
-    toSalaryAccrualResponse,
-    unknownEmployeeInfo,
-} from '../mappers/to-salary-accrual-response';
+import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { resolveEmployees } from './list-salary-accruals.service';
 
 // Карточка документа начисления (GET .../salary_accruals/:id) — generic по
@@ -19,6 +16,8 @@ import { resolveEmployees } from './list-salary-accruals.service';
 // эндпоинтов accounting.
 @Injectable()
 export class GetSalaryAccrualService {
+    private readonly mapper = new SalaryAccrualMapper();
+
     constructor(
         @Inject(SALARY_ACCRUAL_REPOSITORY)
         private readonly accrualRepo: SalaryAccrualRepositoryPort,
@@ -35,10 +34,10 @@ export class GetSalaryAccrualService {
             throw new SalaryAccrualNotFoundException(direction, id);
         }
         const employees = await resolveEmployees(this.directoryRepo);
-        return toSalaryAccrualResponse(
+        return this.mapper.toDetailResponse(
             accrual,
             employees.get(accrual.employeeId) ??
-                unknownEmployeeInfo(accrual.employeeId),
+                SalaryAccrualMapper.unknownEmployeeInfo(accrual.employeeId),
         );
     }
 }

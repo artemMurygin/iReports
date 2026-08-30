@@ -8,7 +8,7 @@ import {
     SalaryAccrualNotFoundException,
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { ArgumentNotProvidedException } from '@/shared/exceptions';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 
 // Корректировка строки (PRD 2, Фаза 6): только DRAFT, обязательный
 // комментарий, originalAmount не меняется, история корректировок хранится.

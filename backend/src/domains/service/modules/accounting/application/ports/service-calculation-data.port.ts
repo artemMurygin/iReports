@@ -35,9 +35,9 @@ export interface ServiceCalculationDataPort {
     ): Promise<ServiceCompletedErpItem[]>;
 
     // Отработанные часы сотрудника за период (только дни графика с ролью
-    // ONLINE_MANAGER/OFFLINE_MANAGER, см. domain/services/
-    // pay-per-hour-roles.ts) — пара факт (по сегодняшний день включительно)
-    // / прогноз (весь период). now — необязательный параметр с дефолтом
+    // из PayPerHoursEntity.ELIGIBLE_SCHEDULE_ROLES) — пара факт (по
+    // сегодняшний день включительно) / прогноз (весь период). now —
+    // необязательный параметр с дефолтом
     // new Date() (та же идиома, что у Period), точка инъекции "сегодня" в
     // тестах. 0 по обоим полям, если подходящих рабочих смен нет.
     findHoursWorked(

@@ -1,14 +1,16 @@
 import { BadGatewayException } from '@nestjs/common';
 import { RoappCashDocumentAdapter } from './roapp-cash-document.adapter';
-import { ErpCashConfig } from '@/domains/service/modules/accounting/domain/entities/erp-cash-config.entity';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
 import {
     EmployeeErpIdentityMissingException,
     ErpCashConfigMissingException,
 } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import type { ErpCashConfigRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import type {
+    ErpCashConfig,
+    ErpCashConfigRepositoryPort,
+} from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import type { DatabaseService } from '@/infrustructure/database/database.service';
 import type { RoappHttpService } from './roapp.instace';
 
@@ -16,11 +18,20 @@ import type { RoappHttpService } from './roapp.instace';
 // jest.fn()), см. ограничение задачи «никаких мутирующих вызовов к
 // продовым RoApp/МойСклад».
 describe('RoappCashDocumentAdapter', () => {
-    const okConfig = ErpCashConfig.create({
+    const DEFAULT_CONFIG: ErpCashConfig = {
         direction: 'service',
+        roappCashboxId: null,
+        roappCategoryId: null,
+        moySkladExpenseItemId: null,
+        moySkladIncomeItemId: null,
+        organizationId: null,
+    };
+
+    const okConfig: ErpCashConfig = {
+        ...DEFAULT_CONFIG,
         roappCashboxId: 777,
         roappCategoryId: 42,
-    });
+    };
 
     let post: jest.Mock;
     let del: jest.Mock;
@@ -50,7 +61,7 @@ describe('RoappCashDocumentAdapter', () => {
             findByTransactionId,
             insert: jest.fn(),
             deleteById: jest.fn(),
-        } as unknown as ErpCashDocumentRepositoryPort;
+        } as unknown as PayoutCashboxRecordRepositoryPort;
 
         adapter = new RoappCashDocumentAdapter(
             roappHttp,
@@ -127,9 +138,7 @@ describe('RoappCashDocumentAdapter', () => {
         });
 
         it('конфигурация без roappCashboxId — отказ до HTTP-вызова', async () => {
-            findByDirection.mockResolvedValueOnce(
-                ErpCashConfig.create({ direction: 'service' }),
-            );
+            findByDirection.mockResolvedValueOnce(DEFAULT_CONFIG);
 
             const error = await withRequestContext(() =>
                 adapter.create(baseParams).catch((e: unknown) => e),
@@ -140,12 +149,10 @@ describe('RoappCashDocumentAdapter', () => {
         });
 
         it('конфигурация без roappCategoryId — отказ до HTTP-вызова', async () => {
-            findByDirection.mockResolvedValueOnce(
-                ErpCashConfig.create({
-                    direction: 'service',
-                    roappCashboxId: 777,
-                }),
-            );
+            findByDirection.mockResolvedValueOnce({
+                ...DEFAULT_CONFIG,
+                roappCashboxId: 777,
+            });
 
             const error = await withRequestContext(() =>
                 adapter.create(baseParams).catch((e: unknown) => e),
@@ -241,9 +248,9 @@ describe('RoappCashDocumentAdapter', () => {
     });
 
     describe('findByKey', () => {
-        it('делегирует в ErpCashDocumentRepositoryPort.findByTransactionId и мапит форму', async () => {
+        it('делегирует в PayoutCashboxRecordRepositoryPort.findByTransactionId и мапит форму', async () => {
             findByTransactionId.mockResolvedValueOnce(
-                ErpCashDocument.create({
+                Cashbox.createPayout({
                     transactionId: 'balance-tx-1',
                     system: 'ROAPP',
                     kind: 'INCOME',

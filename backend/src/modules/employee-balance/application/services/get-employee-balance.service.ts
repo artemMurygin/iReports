@@ -5,8 +5,8 @@ import type {
     BalanceTransactionFilter,
     BalanceTransactionRepositoryPort,
 } from '@/modules/employee-balance/application/ports/balance-transaction.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { toBalanceTransactionResponse } from '../mappers/to-balance-transaction-response';
 
 // Общий баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual, Фаза 8b,
@@ -30,8 +30,8 @@ export class GetEmployeeBalanceService {
     constructor(
         @Inject(BALANCE_TRANSACTION_REPOSITORY)
         private readonly transactionRepo: BalanceTransactionRepositoryPort,
-        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly erpCashDocumentRepo: ErpCashDocumentRepositoryPort,
+        @Inject(PAYOUT_CASHBOX_RECORD_REPOSITORY)
+        private readonly payoutCashboxRecordRepo: PayoutCashboxRecordRepositoryPort,
     ) {}
 
     async execute(
@@ -48,12 +48,12 @@ export class GetEmployeeBalanceService {
         // Внешний ID документа ERP в ленте (PRD 3, «Критерии готовности») —
         // один батч-запрос по всем движениям выборки с erpSyncRequired,
         // а не N+1 по одному на движение (см. WHY на
-        // ErpCashDocumentRepositoryPort.findByTransactionIds).
+        // PayoutCashboxRecordRepositoryPort.findByTransactionIds).
         const erpTransactionIds = transactions
             .filter((transaction) => transaction.erpSyncRequired)
             .map((transaction) => transaction.id);
         const erpDocuments =
-            await this.erpCashDocumentRepo.findByTransactionIds(
+            await this.payoutCashboxRecordRepo.findByTransactionIds(
                 erpTransactionIds,
             );
         const erpByTransactionId = new Map(

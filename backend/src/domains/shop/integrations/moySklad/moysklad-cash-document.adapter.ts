@@ -2,10 +2,10 @@ import { BadGatewayException, Inject, Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { SHOP_ERP_CASH_CONFIG_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-config.port';
-import type { ShopErpCashConfigRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-config.port';
-import { SHOP_ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
-import type { ShopErpCashDocumentRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
+import { SHOP_ERP_CASH_CONFIG_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-config.port';
+import type { ShopErpCashConfigRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-config.port';
+import { SHOP_PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/cashbox/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/cashbox/payout-cashbox-record-repository.port';
 import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import type { EmployeeIdentityRepositoryPort } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import type {
@@ -13,11 +13,11 @@ import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
     FoundErpCashDocument,
-} from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
+} from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
 import {
     ShopEmployeeMoySkladIdentityMissingException,
     ShopErpCashConfigIncompleteException,
-} from '@/domains/shop/modules/accounting/domain/exceptions/erp-cash-document.exception';
+} from '@/domains/shop/modules/accounting/domain/exceptions/cashbox.exception';
 import { MoyskladHttpService } from './moysklad.instance';
 
 // Кассовые документы МойСклада (PRD 3
@@ -96,8 +96,8 @@ export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
         private readonly moysklad: MoyskladHttpService,
         @Inject(SHOP_ERP_CASH_CONFIG_REPOSITORY)
         private readonly configRepo: ShopErpCashConfigRepositoryPort,
-        @Inject(SHOP_ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly documentRepo: ShopErpCashDocumentRepositoryPort,
+        @Inject(SHOP_PAYOUT_CASHBOX_RECORD_REPOSITORY)
+        private readonly documentRepo: PayoutCashboxRecordRepositoryPort,
         @Inject(EMPLOYEE_IDENTITY_REPOSITORY)
         private readonly employeeIdentityRepo: EmployeeIdentityRepositoryPort,
     ) {}
@@ -141,7 +141,7 @@ export class MoyskladCashDocumentAdapter implements ErpCashDocumentPort {
             moment: this.formatMoment(params.occurredAt),
             // Ключ идемпотентности на стороне МойСклада (доп. защита поверх
             // уникального индекса transactionId в локальной БД, см.
-            // ShopErpCashDocumentRepositoryPort) — позиция для ручной
+            // PayoutCashboxRecordRepositoryPort) — позиция для ручной
             // сверки, если когда-нибудь понадобится сопоставить документы
             // напрямую в МойСкладе.
             externalCode: params.transactionId,

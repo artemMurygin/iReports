@@ -49,7 +49,7 @@ export function resolveServiceRoleSource(role: TargetRole): ServiceRoleSource {
             // contracts/commands/salary-rule.ts) для переиспользования
             // одного enum'а обоими направлениями. Правило сервиса их
             // получить не должно — это ошибка конфигурации правила, а не
-            // данных (то же решение, что у shop-role-source.ts).
+            // данных (то же решение, что у role-source.ts).
             throw new ArgumentInvalidException(
                 `Роль "${role}" не относится к направлению service`,
             );

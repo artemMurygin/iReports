@@ -6,7 +6,7 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PeriodNotClosedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { SalaryAccrualsNotDraftException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 

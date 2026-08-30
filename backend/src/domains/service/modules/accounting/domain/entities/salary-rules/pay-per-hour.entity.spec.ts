@@ -5,8 +5,7 @@ import type { ServiceCalculationErpData } from '@/domains/service/modules/accoun
 // Юнит-тест на подготовленном объекте контекста — без поднятия БД и без
 // моков репозиториев (см. docs/payroll/prd-payroll-calculation.md, Фаза 1).
 // Источник часов — context.erpData.hoursWorked (сумма часов рабочих смен
-// графика с ролью дня ONLINE_MANAGER/OFFLINE_MANAGER, см.
-// domain/services/pay-per-hour-roles.ts и
+// графика с ролью дня из PayPerHoursEntity.ELIGIBLE_SCHEDULE_ROLES, см.
 // ServiceCalculationDataRepository.findHoursWorked) — правило само не знает,
 // откуда пришли числа и как разделены по ролям/датам, только выбирает
 // fact/prognose по context.mode.

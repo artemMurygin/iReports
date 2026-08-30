@@ -4,9 +4,9 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import type { BalanceTransactionProps } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
 
 // Общий баланс сотрудника (PRD 2, Фаза 8b): остаток = SUM ВСЕЙ ленты
 // сотрудника независимо от направления движений — проверяется на смешанной
@@ -35,12 +35,13 @@ describe('GetEmployeeBalanceService', () => {
 
     const build = () => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const payoutCashboxRecordRepo =
+            new InMemoryPayoutCashboxRecordRepository();
         const service = new GetEmployeeBalanceService(
             transactionRepo,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
         );
-        return { service, transactionRepo, erpCashDocumentRepo };
+        return { service, transactionRepo, payoutCashboxRecordRepo };
     };
 
     it('остаток = SUM всей ленты сотрудника независимо от направления движений; чужой сотрудник не учитывается', async () => {
@@ -163,7 +164,7 @@ describe('GetEmployeeBalanceService', () => {
     // «Критерии готовности»: «Внешний ID документа ERP сохраняется и
     // показывается в ленте баланса».
     it('движение с документом ERP несёт system/externalId в поле erp; движение без документа — erp: null', async () => {
-        const { service, transactionRepo, erpCashDocumentRepo } = build();
+        const { service, transactionRepo, payoutCashboxRecordRepo } = build();
         const withErp = transaction({
             amount: -1000,
             type: 'ADVANCE',
@@ -171,8 +172,8 @@ describe('GetEmployeeBalanceService', () => {
         });
         const withoutErp = transaction({ amount: 500, type: 'BONUS' });
         await transactionRepo.insertMany([withErp, withoutErp]);
-        await erpCashDocumentRepo.insert(
-            ErpCashDocument.create({
+        await payoutCashboxRecordRepo.insert(
+            Cashbox.createPayout({
                 transactionId: withErp.id,
                 system: 'ROAPP',
                 kind: 'OUTCOME',

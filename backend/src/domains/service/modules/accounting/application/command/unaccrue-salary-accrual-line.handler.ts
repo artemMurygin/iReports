@@ -10,10 +10,7 @@ import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balanc
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { SalaryAccrualNotFoundException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
-import {
-    toSalaryAccrualResponse,
-    unknownEmployeeInfo,
-} from '../mappers/to-salary-accrual-response';
+import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { resolveEmployees } from '../services/list-salary-accruals.service';
 import { UnaccrueSalaryAccrualLineCommand } from './unaccrue-salary-accrual-line.command';
 
@@ -33,6 +30,8 @@ export class UnaccrueSalaryAccrualLineHandler implements ICommandHandler<
     UnaccrueSalaryAccrualLineCommand,
     SalaryAccrualResponse
 > {
+    private readonly mapper = new SalaryAccrualMapper();
+
     constructor(
         @Inject(SALARY_ACCRUAL_REPOSITORY)
         private readonly accrualRepo: SalaryAccrualRepositoryPort,
@@ -65,10 +64,10 @@ export class UnaccrueSalaryAccrualLineHandler implements ICommandHandler<
         });
 
         const employees = await resolveEmployees(this.directoryRepo);
-        return toSalaryAccrualResponse(
+        return this.mapper.toDetailResponse(
             accrual,
             employees.get(accrual.employeeId) ??
-                unknownEmployeeInfo(accrual.employeeId),
+                SalaryAccrualMapper.unknownEmployeeInfo(accrual.employeeId),
         );
     }
 }

@@ -15,7 +15,7 @@ export interface SalesPrognoseProps {
 // для shop), а SalesFact/ShopSalesFact — разные классы с разной логикой
 // расчёта margin (service считает margin = turnover - cost, shop берёт
 // margin из MoySkladDemandPosition.profit как есть, см.
-// domains/shop/modules/sales/domain/value-objects/shop-sales-fact.value-object.ts).
+// domains/shop/modules/sales/domain/value-objects/sales-fact.value-object.ts).
 // Общий VO не должен зависеть ни от одного из них — только от чисел,
 // которые оба факта одинаково умеют отдавать через геттеры.
 export interface SalesPrognoseFactInput {

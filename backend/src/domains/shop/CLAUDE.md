@@ -20,6 +20,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 (Фазы 10–13, см. `docs/payroll/plan-payroll-calculation.md` в корне репозитория), но не «планировались
 на будущее» полностью — часть слоёв всё ещё сознательно отсутствует, см. ниже.
 
+## Именование файлов
+
+Внутри `domains/shop/*` не добавляй слово `shop` в имя файла (`shop-accounting-period.repository.ts`,
+`to-shop-motivation-schema-response.ts`, `in-memory-shop-salary-accrual.repository.ts` и т.п.) — путь
+уже однозначно задаёт домен (`domains/shop/modules/accounting/...`), повторение слова в каждом файле
+только засоряет кодовую базу и усложняет чтение. Называй файл нейтрально:
+`accounting-period.repository.ts`, `to-motivation-schema-response.ts`,
+`in-memory-salary-accrual.repository.ts`. Правило касается только имени файла — класс/интерфейс/
+DI-токен внутри по-прежнему называй с префиксом `Shop`/`SHOP_` (`ShopAccountingPeriodRepository`,
+`SHOP_ERP_CASH_CONFIG_REPOSITORY`): при импорте символа в другом месте (например,
+`src/modules/employee-balance`) виден только он, а не путь к файлу, поэтому там домен должен быть
+явным в самом имени. См. симметричное правило в `domains/service/CLAUDE.md`.
+
 ## Структура
 
 ```
@@ -116,7 +129,7 @@ ERP-специфичной логики, поэтому контроллеры `
 `SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY`/`EnsureSalesPlansForPeriodService` — те же
 классы направления `service`, но предоставлены `ShopSalesModule` отдельными экземплярами (Nest DI не
 разделяет провайдеров между модулями без явного экспорта/импорта) — см. `ShopSalesModule`, комментарий
-в `shop-sales.module.ts`.
+в `sales.module.ts`.
 
 Что у `shop` действительно самостоятельное:
 
@@ -143,7 +156,7 @@ ERP-специфичной логики, поэтому контроллеры `
 
 Собственный реестр (`shopSalaryRuleRegistry`) и фабрика (`ShopSalaryRuleFactory`) правил, независимые
 от одноимённого модуля `domains/service/modules/accounting` — ни один класс сервисного `accounting`
-здесь не импортируется (в т.ч. `domain/services/shop-role-source.ts`, `money.ts`, `float-percent.ts`
+здесь не импортируется (в т.ч. `domain/services/role-source.ts`, `money.ts`, `float-percent.ts`
 — зеркала, но отдельные файлы). Четыре типа правил:
 
 - **`PayPerHourEntity`** — почасовая оплата, тот же источник часов, что у `service` (Фаза 5,
@@ -204,7 +217,7 @@ ERP-специфичной логики, поэтому контроллеры `
 `BuildServiceCalculationContextService` — но `build(period, employeeId, rules)` берёт третьим
 параметром правила схемы, так как `categoryDescendantFolderIds` зависит от `category` конкретных
 правил `ProductSold`/`UsedProductSold`), собственный `PeriodCalculationOrchestrator`/
-`rule-breakdown.builder`/`to-shop-salary-report-rules.ts`. HTTP-запись: `POST
+`rule-breakdown.builder`/`to-salary-report-rules.ts`. HTTP-запись: `POST
 /v1/shop/accounting/motivation-schema` (find-or-create по `findIdByTarget`), `POST|GET
 /v1/shop/accounting/task_completions`,
 `POST /v1/shop/accounting/task_completions/:id/{confirm,reject}`,
@@ -269,12 +282,12 @@ generic-по-`direction` `GetAccountingPeriodService`/`ReopenAccountingPeriodCom
   покрыт частично (`moysklad-sync.mappers.spec.ts`, `product-folder-tree.service.spec.ts`,
   `resolve-purchaser-identity.spec.ts`); сам `MoySkladSyncService` — нет. `modules/sales`
   (`GetShopSalesPerformanceService`) и весь `modules/accounting` (domain-слой правил,
-  `shop-role-source`, `money`, `float-percent`, `salary-rule-registry`, фабрика; и с Фазы 13.5 —
+  `role-source`, `money`, `float-percent`, `salary-rule-registry`, фабрика; и с Фазы 13.5 —
   persistence/application/interface слой: мапперы, репозитории, CQRS-хендлеры,
   `BuildShopCalculationContextService`) покрыты юнит-тестами. Отчёт по зарплате сотрудника
   (`GetShopEmployeeSalaryReportService`) — строго однонаправленный, ответ не объединяет `service` и
   `shop` (см. "Отчёты по зарплате" выше); e2e-покрытие —
-  `interface/http-controllers/get-shop-employee-salary-report.e2e.spec.ts` в этом же модуле,
+  `interface/http-controllers/get-employee-salary-report.e2e.spec.ts` в этом же модуле,
   зеркало одноимённого файла в `domains/service/modules/accounting/interface/http-controllers/`.
   Оба файла используют один и тот же `employeeId`, но независимые in-memory фейки — тем самым
   проверяют инвариант "сотрудник существует в обеих ERP одновременно, каждый эндпоинт видит только

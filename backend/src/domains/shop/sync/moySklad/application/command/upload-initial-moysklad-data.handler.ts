@@ -3,9 +3,10 @@ import { MoySkladSyncService } from '../../moysklad-sync.service';
 import { UploadInitialMoySkladDataCommand } from './upload-initial-moysklad-data.command';
 
 @CommandHandler(UploadInitialMoySkladDataCommand)
-export class UploadInitialMoySkladDataHandler
-    implements ICommandHandler<UploadInitialMoySkladDataCommand, void>
-{
+export class UploadInitialMoySkladDataHandler implements ICommandHandler<
+    UploadInitialMoySkladDataCommand,
+    void
+> {
     constructor(private readonly syncService: MoySkladSyncService) {}
 
     async execute(command: UploadInitialMoySkladDataCommand): Promise<void> {

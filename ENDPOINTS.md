@@ -174,7 +174,7 @@ query у сервисного пути `/v1/service/sales/salesPerformance/:peri
 С Фазы 2 (`docs/service-shop-route-split`) у `shop` есть и собственный независимый CRUD плана/шаблона
 плана продаж — тонкий HTTP-слой поверх тех же классов команд, что и у `domains/service/modules/sales`
 (общий `CommandBus`, `direction: 'shop'` подставляет контроллер, не тело/query запроса; см. пояснение
-в секции `domains/service/modules/sales` выше и комментарий в `shop-sales.module.ts`). Автосоздание
+в секции `domains/service/modules/sales` выше и комментарий в `sales.module.ts`). Автосоздание
 плана — свой крон первого числа (`ShopSalesPlanAutoCreationCron`, `@ProdCron`) поверх общего
 `EnsureSalesPlansForPeriodService`, плюс ленивое достраивание при первом обращении к периоду (тот же
 механизм, что и у `service`).

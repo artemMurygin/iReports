@@ -1,8 +1,8 @@
 import type { CommandBus } from '@nestjs/cqrs';
 import type { SalaryAccrualLineFailure } from 'ireports-contracts';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import type { SalaryAccrualEmployeeInfo } from '../mappers/to-salary-accrual-response';
-import { unknownEmployeeInfo } from '../mappers/to-salary-accrual-response';
+import type { SalaryAccrualEmployeeInfo } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
+import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { AccrueSalaryAccrualLineCommand } from './accrue-salary-accrual-line.command';
 
 export interface AccrueDraftLinesResult {
@@ -30,7 +30,7 @@ export async function accrueDraftLines(
 ): Promise<AccrueDraftLinesResult> {
     const employeeName = (
         employees.get(accrual.employeeId) ??
-        unknownEmployeeInfo(accrual.employeeId)
+        SalaryAccrualMapper.unknownEmployeeInfo(accrual.employeeId)
     ).name;
     const result: AccrueDraftLinesResult = {
         accruedLinesCount: 0,

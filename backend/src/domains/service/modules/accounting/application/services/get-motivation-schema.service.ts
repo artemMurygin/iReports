@@ -6,12 +6,14 @@ import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/a
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import type { MotivationTargetType } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
-import { toMotivationSchemaResponse } from '@/domains/service/modules/accounting/application/mappers/to-motivation-schema-response';
+import { MotivationSchemaMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/motivation-schema/motivation-schema.mapper';
 
 // Деталь мотивационной схемы направления service (GET
 // /v1/service/motivation-schema/:id) — предзаполнение формы редактирования.
 @Injectable()
 export class GetMotivationSchemaService {
+    private readonly mapper = new MotivationSchemaMapper();
+
     constructor(
         @Inject(MOTIVATION_SCHEMA_REPOSITORY)
         private readonly motivationSchemaRepo: MotivationSchemaRepositoryPort,
@@ -35,7 +37,7 @@ export class GetMotivationSchemaService {
             target.getId(),
         );
 
-        return toMotivationSchemaResponse(schema, targetName);
+        return this.mapper.toDetailResponse(schema, targetName);
     }
 
     private async resolveTargetName(

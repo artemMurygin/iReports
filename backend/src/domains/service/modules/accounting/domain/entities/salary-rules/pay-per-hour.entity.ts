@@ -18,6 +18,25 @@ export class PayPerHoursEntity
 {
     declare protected _id: AggregateID;
 
+    // Роли графика, чьи рабочие смены засчитываются в часы PayPerHour —
+    // «Оффлайн менеджер»/«Онлайн менеджер»/«Соло-менеджер» (совмещает обе
+    // роли в одиночку). Любая другая роль дня графика (в т.ч. ENGINEER/
+    // OFFICE — инженеры офиса) в часы не входит, отдельной ветки под "офис"
+    // не нужно. Факт уровня ТИПА правила, не конкретного экземпляра — не
+    // связан с targetRole экземпляра (см. calculate() ниже) — поэтому
+    // static, а не поле props. Читается напрямую отсюда инфраструктурным
+    // ServiceCalculationDataRepository.findHoursWorked при построении
+    // Prisma-запроса к WorkScheduleEntry — правило PayPerHour единственное
+    // место в домене, которому известно, какие роли графика оно считает
+    // часами, поэтому эта политика — часть самой сущности правила, а не
+    // отдельного domain-сервиса (domain service — для операций, не
+    // принадлежащих ни одной сущности; здесь принадлежность однозначна).
+    static readonly ELIGIBLE_SCHEDULE_ROLES: readonly TargetRole[] = [
+        'ONLINE_MANAGER',
+        'OFFLINE_MANAGER',
+        'SOLO_MANAGER',
+    ];
+
     // Восстановление уже существующего в БД правила — не через create(), а
     // прямым `new` (см. SalaryRuleMapper.toDomain), поэтому здесь только
 
@@ -51,9 +70,10 @@ export class PayPerHoursEntity
     }
 
     // Источник часов — сумма часов рабочих смен графика сотрудника с ролью
-    // дня ONLINE_MANAGER/OFFLINE_MANAGER (Фаза 5, docs/employee-work-schedule,
-    // см. domain/services/pay-per-hour-roles.ts), приходящая в контексте
-    // расчёта, а не захардкоженное значение в config. erpData.hoursWorked
+    // дня ONLINE_MANAGER/OFFLINE_MANAGER/SOLO_MANAGER (Фаза 5,
+    // docs/employee-work-schedule, см. ELIGIBLE_SCHEDULE_ROLES выше),
+    // приходящая в контексте расчёта, а не захардкоженное значение в
+    // config. erpData.hoursWorked
     // несёт ОБА значения (fact/prognose) сразу — режим (FACT/PROGNOSE)
     // выбирает нужное, дата "сегодня" уже учтена на стороне, собравшей
     // контекст (см. ServiceCalculationDataRepository.findHoursWorked).

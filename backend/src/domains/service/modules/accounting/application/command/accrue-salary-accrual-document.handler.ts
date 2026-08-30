@@ -9,10 +9,7 @@ import {
     SalaryAccrualNotFoundException,
     SalaryAccrualPaidException,
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
-import {
-    toSalaryAccrualResponse,
-    unknownEmployeeInfo,
-} from '../mappers/to-salary-accrual-response';
+import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { resolveEmployees } from '../services/list-salary-accruals.service';
 import { accrueDraftLines } from './accrue-draft-lines.helper';
 import { AccrueSalaryAccrualDocumentCommand } from './accrue-salary-accrual-document.command';
@@ -30,6 +27,8 @@ export class AccrueSalaryAccrualDocumentHandler implements ICommandHandler<
     AccrueSalaryAccrualDocumentCommand,
     AccrueSalaryAccrualDocumentResponse
 > {
+    private readonly mapper = new SalaryAccrualMapper();
+
     constructor(
         @Inject(SALARY_ACCRUAL_REPOSITORY)
         private readonly accrualRepo: SalaryAccrualRepositoryPort,
@@ -65,10 +64,10 @@ export class AccrueSalaryAccrualDocumentHandler implements ICommandHandler<
         // актуального состояния не знает.
         const updated = await this.accrualRepo.findById(command.accrualId);
         return {
-            accrual: toSalaryAccrualResponse(
+            accrual: this.mapper.toDetailResponse(
                 updated ?? accrual,
                 employees.get(accrual.employeeId) ??
-                    unknownEmployeeInfo(accrual.employeeId),
+                    SalaryAccrualMapper.unknownEmployeeInfo(accrual.employeeId),
             ),
             failures,
         };

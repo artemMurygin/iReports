@@ -58,13 +58,13 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
   не дал ни одного совпадения.
 - Контроллеры нигде не инжектят `PrismaService`/`*_REPOSITORY`/`*_PORT` напрямую — везде тонкий слой
   поверх application-сервисов/`CommandBus`, как того требует `backend/CLAUDE.md`.
-- ~~Пересечение доменов `shop`→`service` (`shop-accounting.module.ts`, `shop-sales.module.ts`) — не
+- ~~Пересечение доменов `shop`→`service` (`accounting.module.ts`, `sales.module.ts`) — не
   забытая связность, а осознанно задокументированное (обширные комментарии со ссылками на фазы/issue)
   повторное использование `AccountingPeriod`/`SalesPlan` как direction-агностичных классов;
   обратных импортов `service`→`shop` не найдено вообще — связность однонаправленная.~~ **Устарело**:
   граф-аудит `docs/service-shop-boundary-violations.md` (2026-08-27) показал обратные импорты
   `service ← shop` (8 файлов) и периметр переиспользования кратно шире задекларированного здесь.
-  После рефакторинга границы `service`/`shop` `shop-accounting.module.ts`/`shop-sales.module.ts` не
+  После рефакторинга границы `service`/`shop` `accounting.module.ts`/`sales.module.ts` не
   подключают Prisma-репозитории `AccountingPeriod`/`SalaryAccrual`/`SalesPlan`/`ErpCashDocument`
   домена `service` — у `shop` собственные независимые классы.
 - Денежные суммы согласованно хранятся как целые рубли (`Int` в Prisma, без копеек) и округляются
@@ -117,12 +117,12 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
 > `SalaryAccrual`/`BalanceTransaction`/`ErpCashDocument`/`EmployeeDismissal`/обратные импорты
 > `service ← shop`), и это не было устойчивым осознанным решением. По плану
 > `docs/service-shop-boundary-violations-fix/` весь периметр ниже устранён: `accounting-cache-freshness.ts`
-> продублирован как собственный `domains/shop/modules/accounting/domain/services/shop-accounting-cache-freshness.ts`
+> продублирован как собственный `domains/shop/modules/accounting/domain/services/accounting-cache-freshness.ts`
 > (не вынесен в `shared` — решение пользователя: у каждого домена своя копия direction-специфичной
 > логики, не общий переиспользуемый класс); `ACCOUNTING_PERIOD_REPOSITORY`/`ACCOUNTING_PERIOD_SNAPSHOT`/
-> `ACCOUNTING_CALCULATION_CACHE` в `shop-accounting.module.ts` теперь резолвятся в собственные классы
+> `ACCOUNTING_CALCULATION_CACHE` в `accounting.module.ts` теперь резолвятся в собственные классы
 > `ShopAccountingPeriod`/`ShopAccountingPeriodSnapshot`/`ShopAccountingCalculationCache`, не в классы
-> `domains/service`; `shop-sales-performance.value-object.ts` больше не импортирует сущность `SalesPlan`
+> `domains/service`; `sales-performance.value-object.ts` больше не импортирует сущность `SalesPlan`
 > `service` — использует собственную `ShopSalesPlan`. Единственное сохранённое исключение такого рода в
 > проекте — `WorkSchedule → Service.Accounting` (см. PRD `docs/service-shop-boundary-violations-fix/`,
 > раздел «Не в скоупе»). Небольшой остаточный периметр (общий `ErpPeriodSyncRunner`/`ERP_PERIOD_SYNC`,
@@ -133,20 +133,20 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
 - **[Важно, устарело]** `backend/src/domains/shop/modules/accounting/domain/services/` не существует как
   самостоятельная реализация для *freshness*-логики кэша: `accounting-cache-freshness.ts` физически
   лежит только в `domains/service/modules/accounting/domain/services/` и напрямую импортируется из
-  `shop` в трёх местах — `get-shop-employee-salary-report.service.ts:14-18`,
-  `get-shop-department-salary-report.service.ts:12-16`,
-  `close-shop-accounting-period.handler.ts:20`. Это чистая доменная логика (сборка строки свежести
+  `shop` в трёх местах — `get-employee-salary-report.service.ts:14-18`,
+  `get-department-salary-report.service.ts:12-16`,
+  `close-accounting-period.handler.ts:20`. Это чистая доменная логика (сборка строки свежести
   из трёх штампов инвалидации) без ERP-специфики — по собственному правилу проекта («домен не
   зависит от чужого домена») ей место в `src/shared/domain/`, а не физически внутри `domains/service`.
   Аналогично `ACCOUNTING_PERIOD_REPOSITORY`/`ACCOUNTING_PERIOD_SNAPSHOT`/`ACCOUNTING_CALCULATION_CACHE`
   порты и их Prisma-реализации объявлены в `domains/service/modules/accounting/{application/ports,
-  infrastructure/repositories}` и переиспользуются `shop-accounting.module.ts:93-108` как generic
+  infrastructure/repositories}` и переиспользуются `accounting.module.ts:93-108` как generic
   инфраструктура — решение задокументировано и обосновано в комментариях модуля, но с архитектурной
   точки зрения корректнее физически вынести в `src/shared`, а не оставлять «одолженным» из чужого
   домена. **Фикс**: перенести `accounting-cache-freshness.ts` и порты/Prisma-реализации периода/кэша/
   снапшота в `src/shared/domain` и `src/shared/infrastructure` соответственно, обновить импорты в
   обоих доменах.
-- **[Важно, устарело]** `backend/src/domains/shop/modules/sales/domain/value-objects/shop-sales-performance.value-object.ts:2`
+- **[Важно, устарело]** `backend/src/domains/shop/modules/sales/domain/value-objects/sales-performance.value-object.ts:2`
   импортирует `SalesPlan` — доменную сущность `service` — напрямую в доменный слой `shop`
   (`import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity'`).
   Это осознанное и явно прокомментированное исключение (`SalesPlan`/`SalesPlanTemplate` общие на
@@ -177,7 +177,7 @@ orchestrator) между `service` и `shop`, вопреки деклариру�
 - **[Минор]** `GetDepartmentSalaryReportService`
   (`backend/src/domains/service/modules/accounting/application/services/get-department-salary-report.service.ts`,
   348 строк) и зеркальный `GetShopDepartmentSalaryReportService`
-  (`backend/src/domains/shop/modules/accounting/application/services/get-shop-department-salary-report.service.ts`,
+  (`backend/src/domains/shop/modules/accounting/application/services/get-department-salary-report.service.ts`,
   461 строк) — по 8 внедрённых зависимостей через `@Inject` каждый (`*_CALCULATION_DATA`,
   `*_MOTIVATION_SCHEMA_REPOSITORY`, `*_SALES_PERFORMANCE_READER`, `ACCOUNTING_PERIOD_REPOSITORY`,
   `ACCOUNTING_PERIOD_SNAPSHOT`, `ACCOUNTING_CALCULATION_CACHE`, `DOMAIN_SYNC_STATUS`,
@@ -218,21 +218,21 @@ DRY-принципу для денежных вычислений и созда�
     отличается только тип `SalaryRule`/`ShopSalaryRule` в сигнатуре — обобщается дженериком
     (`PeriodCalculationOrchestrator<TContext, TRule>`) без потери направленной независимости.
   - `get-sales-performance.service.ts:16-18,86-100` (service) vs
-    `get-shop-sales-performance.service.ts:14-16,87-101` — функция `scopeKey()` и метод
+    `get-sales-performance.service.ts:14-16,87-101` — функция `scopeKey()` и метод
     `findForScope()` совпадают дословно.
   - **Фикс**: перенести money/float-percent/orchestrator/scopeKey в `src/shared/domain/` как
     обобщённые (дженерик по типу правила/контекста) утилиты — они не содержат ERP-специфики и не
     нарушают декларируемую независимость бизнес-правил каждого домена.
 - **[Важно]** Application-сервисы отчётов по зарплате почти дословно продублированы:
   `get-employee-salary-report.service.ts:108-279` (service) и
-  `get-shop-employee-salary-report.service.ts:108-282` (shop) — методы построения FACT/PROGNOSE веток
+  `get-employee-salary-report.service.ts:108-282` (shop) — методы построения FACT/PROGNOSE веток
   закрытого и открытого периода и сборки ответа совпадают вплоть до идентичных фрагментов кода
   (различаются только литералы `direction`). Аналогично `get-department-salary-report.service.ts:128-197,303-347`
-  и `get-shop-department-salary-report.service.ts:128-199,415-460`. Риск: правка бага в одной ветке
+  и `get-department-salary-report.service.ts:128-199,415-460`. Риск: правка бага в одной ветке
   (например, в трактовке closed-периода) не гарантированно попадёт в зеркальную.
-- **[Минор]** Мапперы Prisma↔Entity (`salary-rule.mapper.ts`/`shop-salary-rule.mapper.ts`,
-  `task-completion.mapper.ts`/`shop-task-completion.mapper.ts`,
-  `motivation-schema.mapper.ts`/`shop-motivation-schema.mapper.ts`) — типовой `toDomain`/`toPersistence`
+- **[Минор]** Мапперы Prisma↔Entity (`salary-rule.mapper.ts`/`salary-rule.mapper.ts`,
+  `task-completion.mapper.ts`/`task-completion.mapper.ts`,
+  `motivation-schema.mapper.ts`/`motivation-schema.mapper.ts`) — типовой `toDomain`/`toPersistence`
   boilerplate, ожидаемый для DDD-мапперов поверх общего интерфейса `Mapper<T,R>`; риск низкий,
   дальнейшее обобщение не обязательно.
 - **[Минор]** `contracts/commands/shop-salary-rule.ts:43-46` (`payPerHourShopSalaryConfigSchema`)
@@ -370,10 +370,10 @@ DRY-принципу для денежных вычислений и созда�
   contracts) бонус не должен зависеть от того, посчиталась ли база. Сотрудник теряет персональную
   надбавку просто из-за отсутствия плана/факта продаж по его категории в конкретном периоде — состояние,
   не связанное с наличием у него бонуса. **Фикс**: `amount: bonus` вместо `amount: 0` в этой ветке.
-- **[Важно]** `to-shop-salary-report-rules.ts:64-77` (`buildThresholdInfo`) получает один общий
+- **[Важно]** `to-salary-report-rules.ts:64-77` (`buildThresholdInfo`) получает один общий
   `performance: ShopSalesPerformance` (department-level, `category: null`) на все правила отчёта
-  (вызовы — `get-shop-employee-salary-report.service.ts:219`,
-  `get-shop-department-salary-report.service.ts:322`), тогда как реальная сумма правила `ProductSold`
+  (вызовы — `get-employee-salary-report.service.ts:219`,
+  `get-department-salary-report.service.ts:322`), тогда как реальная сумма правила `ProductSold`
   с непустой `config.category` считается по `percentCompletion` именно этой категории
   (`product-sold.entity.ts:140-152`, карта `salesPerformanceByCategory`). В результате показанные в
   ответе `currentThreshold`/`nextThreshold`/`diffToNext` («до следующего порога осталось N ₽»)
@@ -389,7 +389,7 @@ DRY-принципу для денежных вычислений и созда�
   ошибкой, часть — тихо заниженной зарплатой. **Фикс**: унифицировать стратегию на весь модуль (либо
   везде fail-loud с понятным доменным исключением, либо везде явный признак «строка не рассчитана» в
   ответе).
-- **[Минор]** `close-accounting-period.handler.ts:81-90` / `close-shop-accounting-period.handler.ts:96-105` —
+- **[Минор]** `close-accounting-period.handler.ts:81-90` / `close-accounting-period.handler.ts:96-105` —
   при отсутствии строки `AccountingPeriod` в БД каждый параллельный запрос на закрытие создаёт
   новую сущность со своим `randomUUID()`; `accounting-period.repository.ts` пишет через `upsert` по
   `id`, поэтому при гонке двух запросов второй `create` упадёт на составном уникальном индексе
@@ -400,7 +400,7 @@ DRY-принципу для денежных вычислений и созда�
   непредсказуемо. **Фикс**: транзакционная проверка/захват периода перед тяжёлым расчётом (advisory
   lock по `(direction, period)` или условный `UPDATE ... WHERE status = 'OPEN'`), оборачивание P2002
   в доменное исключение.
-- **[Минор]** `close-accounting-period.handler.ts:120-148` / `close-shop-accounting-period.handler.ts:135-167` —
+- **[Минор]** `close-accounting-period.handler.ts:120-148` / `close-accounting-period.handler.ts:135-167` —
   контекст расчёта (ERP-данные, идентичности, часы) собирается последовательно на каждого сотрудника
   внутри `for`-цикла, хотя сам проект формулирует принцип «контекст собирается один раз на отдел,
   чтобы не было N+1» именно для отчёта отдела (`domains/service/CLAUDE.md`) — закрытие периода эту

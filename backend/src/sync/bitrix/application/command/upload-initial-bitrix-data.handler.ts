@@ -3,9 +3,10 @@ import { BitrixSyncService } from '../../bitrix-sync.service';
 import { UploadInitialBitrixDataCommand } from './upload-initial-bitrix-data.command';
 
 @CommandHandler(UploadInitialBitrixDataCommand)
-export class UploadInitialBitrixDataHandler
-    implements ICommandHandler<UploadInitialBitrixDataCommand, void>
-{
+export class UploadInitialBitrixDataHandler implements ICommandHandler<
+    UploadInitialBitrixDataCommand,
+    void
+> {
     constructor(private readonly syncService: BitrixSyncService) {}
 
     async execute(command: UploadInitialBitrixDataCommand): Promise<void> {

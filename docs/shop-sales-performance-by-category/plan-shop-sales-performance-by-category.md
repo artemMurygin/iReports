@@ -31,7 +31,7 @@ PRD, переданный в задачу, состоял из одной стр
 **Задачи:**
 - [ ] Расширить `ShopSalesFactSourcePort.aggregate` дополнительным параметром — списком корневых
       `categoryId` (folderId), встречающихся среди планов запрошенного периода
-      (`application/ports/shop-sales-fact-source.port.ts`).
+      (`application/ports/sales-fact-source.port.ts`).
 - [ ] В `GetShopSalesPerformanceService.listForPeriod()` собрать уникальные непустые `plan.category` из
       уже полученных планов и передать их в `factSource.aggregate(period, categories)` — логика
       сопоставления факта с планом по `scopeKey(department, category)` уже корректна и изменений не
@@ -50,8 +50,8 @@ PRD, переданный в задачу, состоял из одной стр
 - [ ] Тесты: написать unit-тест для `MoySkladSalesFactSourceRepository.aggregate()` (сейчас тестов нет
       вообще) — кейсы «факт по category-плану учитывает продажи дочерней папки», «факт по
       department-плану без категории не меняется», «сумма корректно разносится между несколькими
-      категориями одного отдела»; обновить `get-shop-sales-performance.service.spec.ts` под новую
-      сигнатуру `aggregate`; обновить `shop-sales-performance.e2e.spec.ts` сценарием с планом по
+      категориями одного отдела»; обновить `get-sales-performance.service.spec.ts` под новую
+      сигнатуру `aggregate`; обновить `sales-performance.e2e.spec.ts` сценарием с планом по
       категории.
 
 **Когда готово** Для плана с `category != null` в ответе `GET /v1/shop/sales/salesPerformance/:period`
@@ -84,8 +84,8 @@ PRD, переданный в задачу, состоял из одной стр
 - [ ] Обновить `docs/payroll/*` и `domains/shop/CLAUDE.md` в части, описывающей текущее ограничение
       «`FloatPercent` берёт `salesPerformance` по отделу целиком» — заменить на актуальное поведение.
 - [ ] Тесты: обновить `product-sold.entity.spec.ts` (мок `context.salesPerformance` как карты),
-      `build-shop-calculation-context.service.spec.ts` (проверка резолва по категориям правил),
-      `get-shop-employee-salary-report.e2e.spec.ts` (сценарий с `FloatPercent` по конкретной
+      `build-calculation-context.service.spec.ts` (проверка резолва по категориям правил),
+      `get-employee-salary-report.e2e.spec.ts` (сценарий с `FloatPercent` по конкретной
       категории, отличным от результата «по всему отделу»).
 
 **Когда готово** Сотрудник с правилом `ProductSold`/`FloatPercent`, привязанным к конкретной категории,

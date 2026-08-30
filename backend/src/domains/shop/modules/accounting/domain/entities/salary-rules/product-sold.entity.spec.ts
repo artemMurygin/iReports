@@ -3,12 +3,12 @@ import type { CalculationContext } from '@/shared/domain/calculation-context';
 import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
-} from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
+} from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 import type {
     ShopCalculationContext,
     ShopSalesPerformanceByCategory,
-} from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
-import { buildMoySkladDemandLink } from '@/domains/shop/modules/accounting/domain/services/moysklad-demand-link';
+} from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
+import { buildErpDemandLink } from '@/domains/shop/modules/accounting/domain/services/erp-demand-link-builder';
 
 // Юнит-тесты на подготовленном объекте контекста — без БД и без моков
 // репозиториев (issue #61, "Тесты правил ProductSold и PayPerHour
@@ -16,7 +16,7 @@ import { buildMoySkladDemandLink } from '@/domains/shop/modules/accounting/domai
 // context.salesPerformance — карта category → percentCompletion
 // (ShopSalesPerformanceByCategory, ключ null = «весь отдел»), а не
 // единственное значение общего CalculationContext — см.
-// shop-calculation-context.types.ts.
+// calculation-context.types.ts.
 
 const buildItem = (
     overrides: Partial<ShopProductSoldErpItem> = {},
@@ -116,7 +116,7 @@ describe('ProductSoldEntity', () => {
                         type: 'demandPosition',
                         id: 'p1',
                         label: 'А000001',
-                        link: buildMoySkladDemandLink('demand-1'),
+                        link: buildErpDemandLink('demand-1'),
                         itemName: 'iPhone 15 Pro 256GB',
                         amount: 100,
                     },
@@ -124,7 +124,7 @@ describe('ProductSoldEntity', () => {
                         type: 'demandPosition',
                         id: 'p2',
                         label: 'А000001',
-                        link: buildMoySkladDemandLink('demand-1'),
+                        link: buildErpDemandLink('demand-1'),
                         itemName: 'iPhone 15 Pro 256GB',
                         amount: 100,
                     },
@@ -509,7 +509,7 @@ describe('ProductSoldEntity', () => {
                     type: 'demandPosition',
                     id: 'p-root',
                     label: 'А000001',
-                    link: buildMoySkladDemandLink('demand-1'),
+                    link: buildErpDemandLink('demand-1'),
                     itemName: 'iPhone 15 Pro 256GB',
                     amount: 10,
                 },
@@ -517,7 +517,7 @@ describe('ProductSoldEntity', () => {
                     type: 'demandPosition',
                     id: 'p-child',
                     label: 'А000001',
-                    link: buildMoySkladDemandLink('demand-1'),
+                    link: buildErpDemandLink('demand-1'),
                     itemName: 'iPhone 15 Pro 256GB',
                     amount: 10,
                 },
@@ -563,7 +563,7 @@ describe('ProductSoldEntity', () => {
                     type: 'demandPosition',
                     id: 'p-in',
                     label: 'А000001',
-                    link: buildMoySkladDemandLink('demand-1'),
+                    link: buildErpDemandLink('demand-1'),
                     itemName: 'iPhone 15 Pro 256GB',
                     amount: 10,
                 },

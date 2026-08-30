@@ -1,7 +1,7 @@
 import { PeriodCalculationOrchestrator } from './period-calculation.orchestrator';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
-import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
+import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 
 // Часы сотрудника за период — одно значение, сумма часов рабочих смен
 // графика (общий для service/shop WorkScheduleEntry, Фаза 5), общее для

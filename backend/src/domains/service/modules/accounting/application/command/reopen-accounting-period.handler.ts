@@ -12,7 +12,7 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { SalaryAccrualsNotDraftException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
-import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
+import { AccountingPeriodMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/accounting-period/accounting-period.mapper';
 import { ReopenAccountingPeriodCommand } from './reopen-accounting-period.command';
 
 // Повторное открытие закрытого периода — только с явным подтверждением
@@ -25,12 +25,14 @@ import { ReopenAccountingPeriodCommand } from './reopen-accounting-period.comman
 // все они в DRAFT; документ, уже проведённый на баланс (PRD 2), делает
 // переоткрытие невозможным — 409 с перечнем таких документов, ничего не
 // удаляется. Проверка идёт через порт SalaryAccrualRepositoryPort — хендлер
-// generic по direction и обслуживает оба домена (см. shop-accounting.module.ts).
+// generic по direction и обслуживает оба домена (см. accounting.module.ts).
 @CommandHandler(ReopenAccountingPeriodCommand)
 export class ReopenAccountingPeriodHandler implements ICommandHandler<
     ReopenAccountingPeriodCommand,
     AccountingPeriodResponse
 > {
+    private readonly mapper = new AccountingPeriodMapper();
+
     constructor(
         @Inject(ACCOUNTING_PERIOD_REPOSITORY)
         private readonly periodRepo: AccountingPeriodRepositoryPort,
@@ -89,7 +91,7 @@ export class ReopenAccountingPeriodHandler implements ICommandHandler<
             );
         });
 
-        return toAccountingPeriodResponse(
+        return this.mapper.toResponse(
             periodEntity,
             command.direction,
             period.getValue(),

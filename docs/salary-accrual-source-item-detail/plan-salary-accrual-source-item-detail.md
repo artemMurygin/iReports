@@ -36,8 +36,8 @@
 - [ ] Добавить поля названия товара/устройства и id документа отгрузки в `ShopProductSoldErpItem` (`domain/types`).
 - [ ] Прокинуть эти поля из источника данных shop-калькуляции (название товара/варианта из МойСклад, `demandId`).
 - [ ] Создать builder ссылки на документ отгрузки МойСклад (аналог `buildRoappOrderLink` у service), уточнив формат URL карточки отгрузки.
-- [ ] Обновить `ProductSoldEntity.buildSources` и `UsedProductSoldEntity.buildSources` — включить название и ссылку в `CalculationSourceRef`; обновить маппер `to-shop-salary-report-rules.ts`.
-- [ ] Тесты: `product-sold.entity.spec.ts`, `used-product-sold.entity.spec.ts`, тест маппера `to-shop-salary-report-rules.ts`, regression `get-shop-employee-salary-report.service.spec.ts`.
+- [ ] Обновить `ProductSoldEntity.buildSources` и `UsedProductSoldEntity.buildSources` — включить название и ссылку в `CalculationSourceRef`; обновить маппер `to-salary-report-rules.ts`.
+- [ ] Тесты: `product-sold.entity.spec.ts`, `used-product-sold.entity.spec.ts`, тест маппера `to-salary-report-rules.ts`, regression `get-employee-salary-report.service.spec.ts`.
 
 **Когда готово**: `GET /v1/shop/accounting/salary_report/employee/:id/:period` возвращает название товара и рабочую ссылку на документ отгрузки в `source` для правил `ProductSold` и `UsedProductSold`; все существующие тесты проходят, новые тесты — зелёные.
 

@@ -51,14 +51,14 @@ import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
-import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
@@ -70,11 +70,11 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // документов, сводка общих балансов по отделу. С Фазы 12 PRD 3
 // (docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md)
 // сюда же добавлена касса ERP у ручных движений (erpSyncRequired: true) —
-// SERVICE_/SHOP_ERP_CASH_DOCUMENT_PORT и ERP_CASH_DOCUMENT_REPOSITORY
+// SERVICE_/SHOP_ERP_CASH_DOCUMENT_PORT и PAYOUT_CASHBOX_RECORD_REPOSITORY
 // подменены in-memory фейками (см. ограничение безопасности PRD 3 — реальные
 // RemOnline/МойСклад в тестах не вызываются), сам факт вызова ERP и
 // создания/удаления локальной связки проверяется через erpCreateCalls/
-// erpDeleteCalls/erpCashDocumentRepo. Реальные контроллеры, CommandBus и
+// erpDeleteCalls/payoutCashboxRecordRepo. Реальные контроллеры, CommandBus и
 // сущности AccountingModule, in-memory замена только границы БД и внешних
 // систем — тот же приём, что salary-accrual-lines.e2e.spec.ts.
 describe('Фазы 7/8b: массовое проведение, ручные движения, удаление, сводка отдела (e2e)', () => {
@@ -183,7 +183,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
     };
     const fakeUnitOfWork: UnitOfWorkPort = { run: (work) => work() };
     const fakeDatabaseService = {} as unknown as DatabaseService;
-    const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+    const payoutCashboxRecordRepo = new InMemoryPayoutCashboxRecordRepository();
     // Фаза 12 PRD 3: erpSyncRequired: true теперь реально ходит в
     // ErpCashDocumentPort — на границе e2e (без реальных RemOnline/МойСклад,
     // см. ограничение безопасности PRD 3) оба направления подменены одним и
@@ -272,8 +272,8 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             .useValue(fakeErpCashDocumentPort)
             .overrideProvider(SHOP_ERP_CASH_DOCUMENT_PORT)
             .useValue(fakeErpCashDocumentPort)
-            .overrideProvider(ERP_CASH_DOCUMENT_REPOSITORY)
-            .useValue(erpCashDocumentRepo)
+            .overrideProvider(PAYOUT_CASHBOX_RECORD_REPOSITORY)
+            .useValue(payoutCashboxRecordRepo)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -459,14 +459,14 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         expect(backdated.occurredAt).toBe('2026-07-15T00:00:00.000Z');
         // erpSyncRequired: true (PRD 3, Фаза 12) — движение записано только
         // после успешного запроса в ERP (здесь — фейк порта), и вместе с ним
-        // создана локальная связка ErpCashDocument.
+        // создана локальная связка Cashbox.
         expect(backdated.erpSyncRequired).toBe(true);
         expect(
             erpCreateCalls.some((call) => call.transactionId === backdated.id),
         ).toBe(true);
         expect(
-            erpCashDocumentRepo.store.size > 0 &&
-                [...erpCashDocumentRepo.store.values()].some(
+            payoutCashboxRecordRepo.store.size > 0 &&
+                [...payoutCashboxRecordRepo.store.values()].some(
                     (document) => document.transactionId === backdated.id,
                 ),
         ).toBe(true);
@@ -604,7 +604,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             externalId: `erp-${erpAdvance.id}`,
         });
         await expect(
-            erpCashDocumentRepo.findByTransactionId(erpAdvance.id),
+            payoutCashboxRecordRepo.findByTransactionId(erpAdvance.id),
         ).resolves.toBeNull();
     });
 

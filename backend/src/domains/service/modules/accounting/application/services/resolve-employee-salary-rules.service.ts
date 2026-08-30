@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { mergeEmployeeSalaryRules } from '@/shared/domain/employee-salary-rules';
-import { motivationSchemasVersion } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+import { AccountingCacheFreshness } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
@@ -10,7 +10,7 @@ import type { ServiceCalculationDataPort } from '@/domains/service/modules/accou
 
 // Набор правил сотрудника вместе с версией схем, из которых он собран, —
 // версия нужна вызывающему для freshnessStamp ленивого кэша и обязана
-// учитывать ОБЕ схемы (см. motivationSchemasVersion).
+// учитывать ОБЕ схемы (см. AccountingCacheFreshness.schemaPairVersion).
 export interface ResolvedEmployeeSalaryRules {
     rules: SalaryRule[];
     schemasVersion: string;
@@ -144,7 +144,7 @@ function combine(
         // вызывающих — иначе один и тот же сотрудник получил бы разные
         // freshnessStamp из отчёта сотрудника и из отчёта отдела и
         // пересчитывался бы на каждом чтении, попеременно затирая кэш.
-        schemasVersion: motivationSchemasVersion([
+        schemasVersion: AccountingCacheFreshness.schemaPairVersion([
             personalSchema,
             departmentSchema,
         ]),

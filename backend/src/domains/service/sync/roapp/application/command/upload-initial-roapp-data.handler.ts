@@ -3,9 +3,10 @@ import { RoappSyncService } from '../../roapp-sync.service';
 import { UploadInitialRoappDataCommand } from './upload-initial-roapp-data.command';
 
 @CommandHandler(UploadInitialRoappDataCommand)
-export class UploadInitialRoappDataHandler
-    implements ICommandHandler<UploadInitialRoappDataCommand, void>
-{
+export class UploadInitialRoappDataHandler implements ICommandHandler<
+    UploadInitialRoappDataCommand,
+    void
+> {
     constructor(private readonly syncService: RoappSyncService) {}
 
     async execute(command: UploadInitialRoappDataCommand): Promise<void> {

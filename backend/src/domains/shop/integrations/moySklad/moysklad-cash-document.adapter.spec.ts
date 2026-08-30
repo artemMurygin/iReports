@@ -1,15 +1,17 @@
 import { BadGatewayException } from '@nestjs/common';
-import { ShopErpCashConfig } from '@/domains/shop/modules/accounting/domain/entities/shop-erp-cash-config.entity';
-import type { ShopErpCashConfigRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-config.port';
-import { ShopErpCashDocument } from '@/domains/shop/modules/accounting/domain/entities/shop-erp-cash-document.entity';
-import type { ShopErpCashDocumentRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/shop-erp-cash-document-repository.port';
+import type {
+    ShopErpCashConfig,
+    ShopErpCashConfigRepositoryPort,
+} from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-config.port';
+import { Cashbox } from '@/domains/shop/modules/accounting/domain/entities/cashbox/payout-cashbox-record.entity';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/cashbox/payout-cashbox-record-repository.port';
 import { EmployeeIdentity } from '@/modules/employee-identity/domain/entities/employee-identity.entity';
 import type { EmployeeIdentityRepositoryPort } from '@/modules/employee-identity/application/ports/employee-identity.port';
-import type { CreateErpCashDocumentParams } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
+import type { CreateErpCashDocumentParams } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
 import {
     ShopEmployeeMoySkladIdentityMissingException,
     ShopErpCashConfigIncompleteException,
-} from '@/domains/shop/modules/accounting/domain/exceptions/erp-cash-document.exception';
+} from '@/domains/shop/modules/accounting/domain/exceptions/cashbox.exception';
 import { MoyskladCashDocumentAdapter } from './moysklad-cash-document.adapter';
 import type { MoyskladHttpService } from './moysklad.instance';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -32,10 +34,17 @@ interface MoyskladMetaRefLike {
     meta: { href: string; type: string; mediaType: string };
 }
 
-const SHOP_CONFIG = ShopErpCashConfig.create({
+const DEFAULT_SHOP_CONFIG: ShopErpCashConfig = {
+    moySkladExpenseItemId: null,
+    moySkladIncomeItemId: null,
+    organizationId: null,
+};
+
+const SHOP_CONFIG: ShopErpCashConfig = {
+    ...DEFAULT_SHOP_CONFIG,
     organizationId: 'org-1',
     moySkladExpenseItemId: 'expense-1',
-});
+};
 
 const MOY_SKLAD_IDENTITY = EmployeeIdentity.create({
     bitrixEmployeeId: 42,
@@ -59,7 +68,7 @@ describe('MoyskladCashDocumentAdapter', () => {
         Pick<ShopErpCashConfigRepositoryPort, 'findConfig'>
     >;
     let documentRepo: jest.Mocked<
-        Pick<ShopErpCashDocumentRepositoryPort, 'findByTransactionId'>
+        Pick<PayoutCashboxRecordRepositoryPort, 'findByTransactionId'>
     >;
     let employeeIdentityRepo: jest.Mocked<
         Pick<EmployeeIdentityRepositoryPort, 'findByEmployee'>
@@ -75,7 +84,7 @@ describe('MoyskladCashDocumentAdapter', () => {
         adapter = new MoyskladCashDocumentAdapter(
             { instance: http } as unknown as MoyskladHttpService,
             configRepo,
-            documentRepo as unknown as ShopErpCashDocumentRepositoryPort,
+            documentRepo as unknown as PayoutCashboxRecordRepositoryPort,
             employeeIdentityRepo as unknown as EmployeeIdentityRepositoryPort,
         );
     });
@@ -158,12 +167,11 @@ describe('MoyskladCashDocumentAdapter', () => {
 
         it('бросает ShopErpCashConfigIncompleteException, если для OUTCOME не задана статья расхода', async () => {
             await withRequestContext(async () => {
-                configRepo.findConfig.mockResolvedValue(
-                    ShopErpCashConfig.create({
-                        organizationId: 'org-1',
-                        moySkladExpenseItemId: null,
-                    }),
-                );
+                configRepo.findConfig.mockResolvedValue({
+                    ...DEFAULT_SHOP_CONFIG,
+                    organizationId: 'org-1',
+                    moySkladExpenseItemId: null,
+                });
 
                 await expect(
                     adapter.create(BASE_PARAMS),
@@ -173,12 +181,11 @@ describe('MoyskladCashDocumentAdapter', () => {
         });
 
         it('не требует статьи расхода для INCOME', async () => {
-            configRepo.findConfig.mockResolvedValue(
-                ShopErpCashConfig.create({
-                    organizationId: 'org-1',
-                    moySkladExpenseItemId: null,
-                }),
-            );
+            configRepo.findConfig.mockResolvedValue({
+                ...DEFAULT_SHOP_CONFIG,
+                organizationId: 'org-1',
+                moySkladExpenseItemId: null,
+            });
             employeeIdentityRepo.findByEmployee.mockResolvedValue([
                 MOY_SKLAD_IDENTITY,
             ]);
@@ -284,9 +291,9 @@ describe('MoyskladCashDocumentAdapter', () => {
     });
 
     describe('findByKey', () => {
-        it('делегирует в ShopErpCashDocumentRepositoryPort.findByTransactionId', async () => {
+        it('делегирует в PayoutCashboxRecordRepositoryPort.findByTransactionId', async () => {
             documentRepo.findByTransactionId.mockResolvedValue(
-                ShopErpCashDocument.create({
+                Cashbox.createPayout({
                     transactionId: 'tx-1',
                     system: 'MOY_SKLAD',
                     kind: 'OUTCOME',

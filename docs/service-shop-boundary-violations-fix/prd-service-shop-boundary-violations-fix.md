@@ -44,7 +44,7 @@
    также ранее «принятые» порты `ACCOUNTING_PERIOD_REPOSITORY` / `ACCOUNTING_PERIOD_SNAPSHOT` /
    `ACCOUNTING_CALCULATION_CACHE`, `accounting-cache-freshness.ts`): `shop` получает собственные
    сущность/порт/Prisma-репозиторий периода, снапшота закрытия и кэша расчёта, не переиспользуя код
-   `domains/service/modules/accounting`. `shop-accounting.module.ts` не подключает ни один
+   `domains/service/modules/accounting`. `accounting.module.ts` не подключает ни один
    Prisma-репозиторий `service`.
 2. **Начисление зарплаты (`SalaryAccrual`) — раздельная реализация по доменам** (часть §2.1): порт,
    сущность, Prisma-репозиторий, application-сервисы (`get-accounting-period.service.ts`,
@@ -75,7 +75,7 @@
    `ensure-sales-plans-for-period.service.ts`), не общую с `shop` ни через Prisma-дискриминатор
    `direction` на одной модели, ни через общий `CommandBus`/хендлеры. `shop` перестаёт использовать
    `SalesPlanRepositoryPort`/`SALES_PLAN_REPOSITORY` и сущность `SalesPlan` из `service`;
-   `shop-sales-performance.value-object.ts` и расчёт зарплаты `shop` (§4) используют только
+   `sales-performance.value-object.ts` и расчёт зарплаты `shop` (§4) используют только
    собственные типы `shop`.
 6. **Тест shared-инфраструктуры, завязанный на `service`** (§2.5): `direction-sync-lock.spec.ts` не
    импортирует `RoappSyncCron`/`RoappSyncService`/`RoappErpPeriodSyncAdapter` из `domains/service`.
@@ -133,10 +133,10 @@ service-реестра») и **не может** быть переведён в 
   3. `salary-rule-registry.spec.ts` (третий тест, сравнение ссылочной идентичности `Map`/классов
      реестров) — защищает инвариант «shop не стал реэкспортом service», не переводится в snapshot без
      потери смысла.
-  4. `close-shop-accounting-period.work-schedule-independence.e2e.spec.ts` — регрессионный тест
+  4. `close-accounting-period.work-schedule-independence.e2e.spec.ts` — регрессионный тест
      Фазы 5, подтверждающий сохранённое исключение `work-schedule → service` (закрытие периода
      `shop` не задевает `work-schedule`); по своей природе спаивает оба домена в одном тесте.
-  5. `create-shop-payout.handler.spec.ts` — регрессионный тест на изоляцию per-direction хранилищ
+  5. `create-payout.handler.spec.ts` — регрессионный тест на изоляцию per-direction хранилищ
      начислений/кассовых документов, конструирует `service`-хендлер напрямую внутри `shop`-спека для
      сравнения поведения.
   Все пять остаются как есть — попытка убрать любой из них уменьшила бы, а не увеличила защиту от
@@ -180,7 +180,7 @@ service-реестра») и **не может** быть переведён в 
   фиксированный `direction`. Для `ErpCashDocument`, у которой различающего поля пока нет (только
   `system`), допускается аддитивная миграция — добавить `direction` (`ALTER TABLE ADD COLUMN`), без
   создания новой таблицы и без переноса данных.
-- Изменения в `shop-accounting.module.ts`, `shop-sales.module.ts`,
+- Изменения в `accounting.module.ts`, `sales.module.ts`,
   `service/modules/accounting/accounting.module.ts`, `service/modules/sales/*` затрагивают
   DI-контейнер — критично не сломать сборку модулей на старте приложения.
 - 47 `.sql`-файлов не покрыты графовым анализом (нет зависимости `tree_sitter_sql`) — вне текущей
@@ -198,12 +198,12 @@ service-реестра») и **не может** быть переведён в 
       (кроме путей через `src/shared`/`src/infrustructure`/`src/integrations`). Проверено 2026-08-27:
       0 совпадений в продакшн-коде; остаются только 3 тестовых файла из документированного списка
       «5 тестовых кросс-доменных импортов» выше (`work-schedule-independence.e2e.spec.ts`,
-      `create-shop-payout.handler.spec.ts`, `salary-rule-registry.spec.ts`).
+      `create-payout.handler.spec.ts`, `salary-rule-registry.spec.ts`).
 - [x] `grep -rl "from ['\"].*domains/shop" backend/src/domains/service/` не находит совпадений
       (кроме путей через `src/shared`/`src/infrustructure`/`src/integrations`). Проверено 2026-08-27:
       0 совпадений в продакшн-коде; остаются только 2 тестовых файла из того же списка
       (`payout.e2e.spec.ts`, `close-accounting-period.direction-independence.spec.ts`).
-- [x] `shop-accounting.module.ts` и `shop-sales.module.ts` не импортируют ни одного файла из
+- [x] `accounting.module.ts` и `sales.module.ts` не импортируют ни одного файла из
       `domains/service/**` напрямую.
 - [x] `domains/service/modules/accounting/accounting.module.ts` не импортирует ничего из
       `domains/shop/**`, и `domains/shop/integrations/moySklad/moysklad-cash-document.adapter.ts` не
@@ -216,14 +216,14 @@ service-реестра») и **не может** быть переведён в 
       `domains/service/modules/accounting/**`; баланс сотрудника по-прежнему единый на `employeeId`
       (не разделён по `direction`), эндпоинты продолжают возвращать тот же результат, что до
       переноса.
-- [x] `shop-sales-performance.value-object.ts` и расчёт зарплаты `shop` не импортируют сущность/порт
+- [x] `sales-performance.value-object.ts` и расчёт зарплаты `shop` не импортируют сущность/порт
       `SalesPlan` из `domains/service` — используют собственную реализацию `shop`.
 - [x] `domains/service/modules/sales/**` (план продаж) не используется из `domains/shop` ни через
       прямой импорт, ни через общий `CommandBus`-диспатч CRUD-команд плана продаж.
 - [x] `work-schedule.module.ts` продолжает зависеть от `EnsurePeriodNotClosedService`/
       `ACCOUNTING_PERIOD_REPOSITORY` домена `service` (сохранённое исключение); тестом подтверждено,
       что закрытие учётного периода `shop` не вызывает никаких проверок/побочных эффектов в
-      `work-schedule` (`close-shop-accounting-period.work-schedule-independence.e2e.spec.ts`, Фаза 5).
+      `work-schedule` (`close-accounting-period.work-schedule-independence.e2e.spec.ts`, Фаза 5).
 - [x] `backend/src/shared` не содержит файлов `migrateEmployeeIdentities.ts`,
       `migrateWorkScheduleHours.ts`, `migrateTaskCompletedRuleConfigs.ts`, `exportRoappOrders.ts`,
       `initialUploadData.ts`; соответствующие npm-скрипты работают по новым путям. Выполнено

@@ -11,9 +11,9 @@ import type {
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { PayoutConfirmationRequiredException } from '@/modules/employee-balance/domain/exceptions/salary-payout.exception';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { CreatePayoutHandler } from './create-payout.handler';
 import { CreatePayoutCommand } from './create-payout.command';
 
@@ -65,7 +65,8 @@ describe('CreatePayoutHandler', () => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const accrualRepo =
             overrides?.accrualRepo ?? new InMemorySalaryAccrualRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const payoutCashboxRecordRepo =
+            new InMemoryPayoutCashboxRecordRepository();
         const fakeErpPort: ErpCashDocumentPort = overrides?.erpPort ?? {
             create: (params: CreateErpCashDocumentParams) =>
                 Promise.resolve({ externalId: `erp-${params.transactionId}` }),
@@ -80,7 +81,7 @@ describe('CreatePayoutHandler', () => {
             transactionRepo,
             accrualRepo,
             fakeErpPort,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
             fakeDirectoryRepo,
             unitOfWork,
             employeeLock,
@@ -89,7 +90,7 @@ describe('CreatePayoutHandler', () => {
             handler,
             transactionRepo,
             accrualRepo,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
             employeeLock,
         };
     };
@@ -118,7 +119,7 @@ describe('CreatePayoutHandler', () => {
             delete: () => Promise.resolve(),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
         await transactionRepo.insertMany([
@@ -145,7 +146,7 @@ describe('CreatePayoutHandler', () => {
         expect(createCalls[0].purpose).toContain('Выплата');
         expect(createCalls[0].purpose).toContain('Петров');
 
-        const document = await erpCashDocumentRepo.findByTransactionId(
+        const document = await payoutCashboxRecordRepo.findByTransactionId(
             response.transaction.id,
         );
         expect(document).toMatchObject({
@@ -213,7 +214,7 @@ describe('CreatePayoutHandler', () => {
             delete: () => Promise.resolve(),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
         await transactionRepo.insertMany([
@@ -227,7 +228,7 @@ describe('CreatePayoutHandler', () => {
         ).rejects.toThrow('RemOnline недоступен');
 
         expect(transactionRepo.store.size).toBe(1);
-        expect(erpCashDocumentRepo.store.size).toBe(0);
+        expect(payoutCashboxRecordRepo.store.size).toBe(0);
     });
 
     it('успех ERP + сбой БД → компенсация: документ ERP удаляется, исходная ошибка пробрасывается, ничего не сохранено', async () => {
@@ -244,7 +245,7 @@ describe('CreatePayoutHandler', () => {
         const unitOfWork: UnitOfWorkPort = {
             run: () => Promise.reject(dbError),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
             unitOfWork,
         });
@@ -259,7 +260,7 @@ describe('CreatePayoutHandler', () => {
         ).rejects.toThrow(dbError);
 
         expect(transactionRepo.store.size).toBe(1);
-        expect(erpCashDocumentRepo.store.size).toBe(0);
+        expect(payoutCashboxRecordRepo.store.size).toBe(0);
         expect(deleteCalls).toEqual([
             { externalId: 'erp-comp', kind: 'OUTCOME', amount: 1000 },
         ]);

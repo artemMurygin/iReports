@@ -53,7 +53,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // ради этого эндпоинта — подменять их здесь не нужно. Аналогичный отчёт
 // направления shop — отдельный тест
 // domains/shop/modules/accounting/interface/http-controllers/
-// get-shop-employee-salary-report.e2e.spec.ts, поднимающий ShopAccountingModule.
+// get-employee-salary-report.e2e.spec.ts, поднимающий ShopAccountingModule.
 // Инвариант "сотрудник существует в обеих ERP одновременно, каждый эндпоинт
 // видит только свой срез" проверяется двумя независимыми e2e-тестами (этим
 // и его shop-зеркалом), а не одним объединённым — сравни идентичные

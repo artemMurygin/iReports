@@ -1,5 +1,5 @@
 import { shopSalaryRuleRegistry } from '@/domains/shop/modules/accounting/domain/salary-rule-registry';
-import type { TargetRole } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
+import type { TargetRole } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 
 // Допустимые роли по типу правила магазина — вход GET
 // /shop/accounting/salary_role_types (Фаза 12, issue #61: "GET списка

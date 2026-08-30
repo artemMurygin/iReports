@@ -30,7 +30,7 @@ import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/por
 import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events/salary-accrual-documents-created.domain-event';
-import { toAccountingPeriodResponse } from '../mappers/to-accounting-period-response';
+import { AccountingPeriodMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/accounting-period/accounting-period.mapper';
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';
 
 // Закрытие расчётного периода (Фаза 6, см.
@@ -71,6 +71,8 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
     CloseAccountingPeriodCommand,
     AccountingPeriodResponse
 > {
+    private readonly mapper = new AccountingPeriodMapper();
+
     constructor(
         @Inject(ACCOUNTING_PERIOD_REPOSITORY)
         private readonly periodRepo: AccountingPeriodRepositoryPort,
@@ -188,7 +190,7 @@ export class CloseAccountingPeriodHandler implements ICommandHandler<
             }),
         );
 
-        return toAccountingPeriodResponse(
+        return this.mapper.toResponse(
             periodEntity,
             'service',
             period.getValue(),

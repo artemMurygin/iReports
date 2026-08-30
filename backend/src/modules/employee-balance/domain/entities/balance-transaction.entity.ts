@@ -234,7 +234,7 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
     // Выплата (PRD 3, Фаза 12): движение PAYOUT, всегда расход (amount
     // хранится отрицательным — та же конвенция, что у ручных outflow-типов),
     // erpSyncRequired всегда true — выплата обязана иметь связанный
-    // ErpCashDocument («Создаётся для каждой выплаты», PRD 3). Обработчик
+    // Cashbox («Создаётся для каждой выплаты», PRD 3). Обработчик
     // выплаты (следующие агенты Фазы 12) вызывает эту фабрику ПОСЛЕ
     // успешного ErpCashDocumentPort.create() — сама сущность не обращается
     // в ERP и не проверяет остаток (PRD 3: «Ограничений по остатку нет...
@@ -277,7 +277,7 @@ export class BalanceTransaction extends AggregateRoot<BalanceTransactionProps> {
     // сам по себе больше не блокирует удаление здесь (Фаза 11 отклоняла
     // erpSyncRequired: true с 409 как временную заглушку, пока не было
     // адаптера) — с Фазы 12 DeleteBalanceTransactionHandler умеет удалить
-    // связанный ErpCashDocument перед удалением движения (PRD 3, «Уточнение
+    // связанный Cashbox перед удалением движения (PRD 3, «Уточнение
     // к PRD 2»: «Ручное движение с erpSyncRequired = true удаляется вместе
     // с документом ERP»), поэтому наличие erpSyncRequired само по себе
     // больше не 409.

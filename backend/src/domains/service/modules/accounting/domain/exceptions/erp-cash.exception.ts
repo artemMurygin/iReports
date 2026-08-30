@@ -5,7 +5,7 @@ import { ConflictException, NotFoundException } from '@/shared/exceptions';
 // раздел «Технические ограничения») — брошено только RoappCashDocumentAdapter
 // (direction всегда "service"); у shop собственный аналог,
 // ShopErpCashConfigIncompleteException
-// (domains/shop/modules/accounting/domain/exceptions/erp-cash-document.exception.ts),
+// (domains/shop/modules/accounting/domain/exceptions/cashbox.exception.ts),
 // брошенный MoyskladCashDocumentAdapter.
 export class ErpCashConfigMissingException extends ConflictException {
     constructor(direction: string) {
@@ -37,14 +37,14 @@ export class EmployeeErpIdentityMissingException extends ConflictException {
 // мапится в понятную ошибку тем же приёмом, что
 // SalaryAccrualLineAlreadyAccruedException у BalanceTransactionRepository
 // (P2002 → доменное исключение), а не остаётся сырым
-// Prisma.PrismaClientKnownRequestError. Брошено ErpCashDocumentRepository
+// Prisma.PrismaClientKnownRequestError. Брошено PayoutCashboxRecordRepository
 // (service) — используется RoappCashDocumentAdapter и сквозным
 // src/modules/employee-balance/ (общая лента баланса, см. WHY на
-// erp-cash-document.entity.ts); у shop с Фазы 4
+// payout-cashbox-record.entity.ts); у shop с Фазы 4
 // docs/service-shop-boundary-violations-fix собственный аналог,
-// ShopErpCashDocumentAlreadyExistsException
-// (domains/shop/modules/accounting/domain/exceptions/erp-cash-document.exception.ts).
-export class ErpCashDocumentAlreadyExistsException extends ConflictException {
+// PayoutCashboxRecordAlreadyExistsException
+// (domains/shop/modules/accounting/domain/exceptions/cashbox.exception.ts).
+export class PayoutCashboxRecordAlreadyExistsException extends ConflictException {
     constructor(transactionId: string) {
         super(
             `Кассовый документ ERP для движения ${transactionId} уже создан — ` +
@@ -54,15 +54,15 @@ export class ErpCashDocumentAlreadyExistsException extends ConflictException {
 }
 
 // Инвариант «либо есть оба, либо нет ни одного» (PRD 3, «Цель») нарушен:
-// движение с erpSyncRequired = true, для которого нет связки ErpCashDocument
+// движение с erpSyncRequired = true, для которого нет связки Cashbox
 // — не должен встречаться при штатной работе (создание движения и связки —
 // одна транзакция, см. CreateBalanceTransactionHandler), но удаление такого
 // движения не может молча продолжить без документа для erpPort.delete().
 // NotFoundException, а не ConflictException — сам факт отсутствия записи,
 // а не конфликт состояния. У shop с Фазы 4
 // docs/service-shop-boundary-violations-fix собственный аналог,
-// ShopErpCashDocumentMissingForTransactionException.
-export class ErpCashDocumentMissingForTransactionException extends NotFoundException {
+// PayoutCashboxRecordMissingForTransactionException.
+export class PayoutCashboxRecordMissingForTransactionException extends NotFoundException {
     constructor(transactionId: string) {
         super(
             `Движение ${transactionId} помечено erpSyncRequired, но связка ` +

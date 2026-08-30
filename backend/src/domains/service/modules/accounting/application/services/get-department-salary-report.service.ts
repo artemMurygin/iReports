@@ -7,12 +7,9 @@ import type { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
-import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/to-sales-performance-context';
-import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/to-salary-report-rules';
-import {
-    buildFreshnessStamp,
-    stampOf,
-} from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
+import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
+import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-salary-report-rules';
+import { AccountingCacheFreshness } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -254,16 +251,17 @@ export class GetDepartmentSalaryReportService {
             const updatedAt = plan.getProps().updatedAt;
             return !latest || updatedAt > latest ? updatedAt : latest;
         }, null);
-        const domainSyncStamp = stampOf(domainSyncAt);
-        const salesPlanStamp = stampOf(salesPlanAt);
+        const domainSyncStamp =
+            AccountingCacheFreshness.dateStamp(domainSyncAt);
+        const salesPlanStamp = AccountingCacheFreshness.dateStamp(salesPlanAt);
 
         const contributions = new Map<number, DirectionContribution>();
 
         for (const employee of employees) {
             const resolved = salaryRulesByEmployee.get(employee.id);
             const rules = resolved?.rules ?? [];
-            const freshnessStamp = buildFreshnessStamp({
-                motivationSchemaVersion: resolved?.schemasVersion ?? 'none',
+            const freshnessStamp = AccountingCacheFreshness.buildStamp({
+                schemaVersion: resolved?.schemasVersion ?? 'none',
                 domainSyncStamp,
                 salesPlanStamp,
             });

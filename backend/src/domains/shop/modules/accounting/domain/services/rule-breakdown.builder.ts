@@ -5,7 +5,7 @@ import {
 import {
     ShopSalaryRule,
     TargetRole,
-} from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
+} from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 
 // Зеркало domains/service/modules/accounting/domain/services/rule-breakdown.builder.ts
 // (Фаза 13.5, issue #57) — независимая реализация в домене shop. Строка

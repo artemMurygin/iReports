@@ -1,6 +1,6 @@
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/shop-salary-rule.types';
-import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-context.types';
+import { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
+import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
 
 // Зеркало domains/service/modules/accounting/domain/services/period-calculation.orchestrator.ts
 // (Фаза 13.5, issue #57) — независимая реализация в домене shop. Контекст

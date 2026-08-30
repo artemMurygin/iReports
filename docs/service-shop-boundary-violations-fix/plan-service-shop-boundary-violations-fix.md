@@ -35,7 +35,7 @@
       и перенести туда `EmployeeDismissalPort` (`application/ports/employee-dismissal.port.ts`) и
       `EmployeeDismissalRepository` (`infrastructure/repositories/employee-dismissal.repository.ts`)
       из `domains/service/modules/accounting`, сохранив сигнатуру `findDismissedEmployeeIds`
-- [ ] Обновить `accounting.module.ts` (service) и `shop-accounting.module.ts` — импорт токена
+- [ ] Обновить `accounting.module.ts` (service) и `accounting.module.ts` — импорт токена
       `EMPLOYEE_DISMISSAL` из нового расположения вместо `domains/service`
 - [ ] Обновить все точки использования (`close-accounting-period.handler.ts`,
       `get-close-period-preview.service.ts`, `get-balance-summary.service.ts`,
@@ -67,7 +67,7 @@
 - [ ] Обновить `domains/service/modules/accounting/accounting.module.ts` — убрать импорт
       `MoyskladModule`/`MoyskladCashDocumentAdapter`/`SHOP_ERP_CASH_DOCUMENT_PORT` из `domains/shop`
       (wiring теперь в `src/modules/employee-balance/`); убрать провайдер `BALANCE_TRANSACTION_REPOSITORY` из
-      `shop-accounting.module.ts`
+      `accounting.module.ts`
 - [ ] Обновить e2e-тесты `balance-transactions`, `balance-summary`, `payout` на новые пути импорта
 - [ ] Прогнать полный `npm test`/`npm run test:e2e` и проверить старт приложения
       (`npm run start:dev` до `Nest application successfully started`)
@@ -93,7 +93,7 @@ balance-summary/payout зелёные.
       импорты `ERP_CASH_CONFIG_REPOSITORY`/`ErpCashConfigRepositoryPort`/
       `ERP_CASH_DOCUMENT_REPOSITORY`/`ErpCashDocumentRepositoryPort` из `domains/service` на новые
       токены из `domains/shop`
-- [ ] Обновить `shop-accounting.module.ts` — заменить провайдеры `ErpCashConfigProvider`/
+- [ ] Обновить `accounting.module.ts` — заменить провайдеры `ErpCashConfigProvider`/
       `ErpCashDocumentRepository` из `domains/service` на собственные из `domains/shop`
 - [ ] Обновить общий модуль баланса (из Фазы 3) — резолвить конфиг/дедуп-репозиторий по каждому
       ERP-адаптеру отдельно (service-репозиторий для `SERVICE_ERP_CASH_DOCUMENT_PORT`,
@@ -106,7 +106,7 @@ ERP; тесты зелёные.
 
 ### Фаза 5: Раздельная реализация AccountingPeriod/Snapshot/CalculationCache
 **Цель** Крупнейший источник связности (414 edges в §2.1 аудита) — расчётный период, снапшот
-закрытия и кэш расчёта дублируются по доменам; `shop-accounting.module.ts` перестаёт подключать
+закрытия и кэш расчёта дублируются по доменам; `accounting.module.ts` перестаёт подключать
 Prisma-репозитории `service`.
 **Что затрагивает?** backend, database
 **Задачи:**
@@ -117,7 +117,7 @@ Prisma-репозитории `service`.
       остаются общими (без разбивки по доменам) — они уже партиционированы полем `direction`,
       миграция схемы не требуется, оба новых класса обращаются к тем же таблицам через тот же
       Prisma-делегат с разным фиксированным `direction`
-- [ ] Обновить `shop-accounting.module.ts` — заменить провайдеры `ACCOUNTING_PERIOD_REPOSITORY`/
+- [ ] Обновить `accounting.module.ts` — заменить провайдеры `ACCOUNTING_PERIOD_REPOSITORY`/
       `ACCOUNTING_PERIOD_SNAPSHOT`/`ACCOUNTING_CALCULATION_CACHE` и сервисы
       `GetAccountingPeriodService`/`GetClosePeriodPreviewService`/`CalculateShopSnapshotRowsService`
       на собственные независимые классы `domains/shop` вместо переиспользуемых из `domains/service`
@@ -126,7 +126,7 @@ Prisma-репозитории `service`.
       `EnsurePeriodNotClosedService`/`ACCOUNTING_PERIOD_REPOSITORY` модуля `work-schedule`
       (подтверждает сохранённое исключение «work-schedule привязан только к `service`»)
 - [ ] Прогнать Prisma-миграции и полный `npm test`/`npm run test:e2e`
-**Когда готово** `shop-accounting.module.ts` не импортирует ни одного класса из
+**Когда готово** `accounting.module.ts` не импортирует ни одного класса из
 `domains/service/modules/accounting` для периода/снапшота/кэша; `work-schedule` по-прежнему зависит
 только от `service`-реализации периода и не завязан на `shop`; тесты зелёные.
 
@@ -149,7 +149,7 @@ accrual.
       shop-хендлеры; обновить HTTP-контроллеры `accrue/adjust/recalculate/reopen/unaccrue-shop-*` на
       диспатч новых shop-команд вместо команд `service` через общий `CommandBus`
 - [ ] Обновить `close-accounting-period.handler.ts` (service) и
-      `close-shop-accounting-period.handler.ts` — каждый работает только со своими
+      `close-accounting-period.handler.ts` — каждый работает только со своими
       `SalaryAccrual`/`AccountingPeriod` классами
 - [ ] Прогнать Prisma-миграции и полный `npm test`/`npm run test:e2e` (включая e2e
       salary-accruals/salary-accrual-lines)
@@ -159,7 +159,7 @@ accrual.
 ### Фаза 7: Раздельная реализация SalesPlan/SalesPlanTemplate
 **Цель** Закрывает §2.3 и §4 аудита: `service` получает собственную отдельную реализацию плана
 продаж, `shop` перестаёт использовать сущность/CommandBus `service`;
-`shop-sales-performance.value-object.ts` и расчёт зарплаты `shop` используют только свои типы.
+`sales-performance.value-object.ts` и расчёт зарплаты `shop` используют только свои типы.
 **Что затрагивает?** backend, database
 **Задачи:**
 - [ ] Выделить `SalesPlan`/`SalesPlanTemplate` (entity/port/репозиторий/мапперы) в
@@ -171,16 +171,16 @@ accrual.
       `put-sales-plan-template`) и `EnsureSalesPlansForPeriodService` — собственные для `shop`,
       зарегистрированные в `ShopSalesModule`; обновить HTTP-контроллеры `shop` на диспатч новых
       команд вместо команд `service` через общий `CommandBus`
-- [ ] Обновить `shop-sales-performance.value-object.ts` и расчёт зарплаты `shop`
-      (`build-shop-calculation-context.service.ts`, `close-shop-accounting-period.handler.ts`,
+- [ ] Обновить `sales-performance.value-object.ts` и расчёт зарплаты `shop`
+      (`build-calculation-context.service.ts`, `close-accounting-period.handler.ts`,
       `get-shop-department/employee-salary-report.service.ts`) — использовать собственный `SalesPlan`
       `shop` вместо `SalesPlanRepositoryPort`/`SALES_PLAN_REPOSITORY` из `service`
-- [ ] Обновить `shop-sales.module.ts` и `shop-accounting.module.ts` — убрать провайдеры
+- [ ] Обновить `sales.module.ts` и `accounting.module.ts` — убрать провайдеры
       `SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY` из `domains/service`
 - [ ] Прогнать Prisma-миграции и полный `npm test`/`npm run test:e2e` (включая e2e
       shop-sales-plan/shop-sales-performance)
 **Когда готово** `domains/shop` не импортирует сущность/порты/команды `SalesPlan` из
-`domains/service`; `shop-sales-performance.value-object.ts` и расчёт зарплаты `shop` проходят тесты
+`domains/service`; `sales-performance.value-object.ts` и расчёт зарплаты `shop` проходят тесты
 на собственных данных; тесты зелёные.
 
 ### Фаза 8: Финальная верификация и актуализация документации
@@ -209,18 +209,18 @@ accrual.
 - [ ] Перенести `ErpPeriodSyncRunner`+`ERP_PERIOD_SYNC`/`ErpPeriodSyncPort` (сейчас
       `domains/service/modules/accounting/application/{services/erp-period-sync-runner.service.ts,
       ports/erp-period-sync.port.ts}`) в `src/shared`; обновить `accounting.module.ts` (service) и
-      `shop-accounting.module.ts` на импорт из нового расположения
+      `accounting.module.ts` на импорт из нового расположения
 - [ ] Перенести `PayoutConfirmationRequiredException`
       (`domains/service/modules/accounting/domain/exceptions/salary-payout.exception.ts`) в
       `src/modules/employee-balance/domain/exceptions/`; обновить все точки использования в обоих
       доменах
 - [ ] Перенести `SalaryAccrualDocumentsCreatedDomainEvent` (+ лог-обработчик) и
       `CloseAccountingPeriodDto` в `src/shared`; обновить `close-accounting-period.handler.ts`
-      (service), `close-shop-accounting-period.handler.ts`,
-      `close-shop-accounting-period.http.controller.ts` и все зависимые тесты
+      (service), `close-accounting-period.handler.ts`,
+      `close-accounting-period.http.controller.ts` и все зависимые тесты
 - [ ] Перенести `mergeEmployeeSalaryRules`
       (`domains/service/modules/accounting/domain/services/employee-salary-rules.ts`) в `src/shared`;
-      обновить `resolve-shop-employee-salary-rules.service.ts` и service-аналог
+      обновить `resolve-employee-salary-rules.service.ts` и service-аналог
 - [ ] Перевести `salary-rule-role-catalog.spec.ts` на hardcoded snapshot вместо живого импорта
       service-каталога (сохранив проверку "shop-типы не пересекаются с service-типами");
       `salary-rule-registry.spec.ts` оставить как задокументированное исключение (см. PRD). Прогнать

@@ -6,16 +6,16 @@ import type {
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import {
     BalanceTransactionNotFoundException,
     BalanceTransactionNotPayoutException,
 } from '@/modules/employee-balance/domain/exceptions/balance-transaction.exception';
-import { ErpCashDocumentMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { PayoutCashboxRecordMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { DeletePayoutHandler } from './delete-payout.handler';
 import { DeletePayoutCommand } from './delete-payout.command';
 
@@ -52,7 +52,8 @@ describe('DeletePayoutHandler', () => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const accrualRepo =
             overrides?.accrualRepo ?? new InMemorySalaryAccrualRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const payoutCashboxRecordRepo =
+            new InMemoryPayoutCashboxRecordRepository();
         const fakeErpPort: ErpCashDocumentPort = overrides?.erpPort ?? {
             create: () => Promise.reject(new Error('not used')),
             delete: (_p: DeleteErpCashDocumentParams) => Promise.resolve(),
@@ -65,16 +66,21 @@ describe('DeletePayoutHandler', () => {
             transactionRepo,
             accrualRepo,
             fakeErpPort,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
             unitOfWork,
             new EmployeeOperationLock(),
         );
-        return { handler, transactionRepo, accrualRepo, erpCashDocumentRepo };
+        return {
+            handler,
+            transactionRepo,
+            accrualRepo,
+            payoutCashboxRecordRepo,
+        };
     };
 
     const seedPayout = async (
         transactionRepo: InMemoryBalanceTransactionRepository,
-        erpCashDocumentRepo: InMemoryErpCashDocumentRepository,
+        payoutCashboxRecordRepo: InMemoryPayoutCashboxRecordRepository,
     ) => {
         const payout = withRequestContext(() =>
             BalanceTransaction.forPayout({
@@ -86,7 +92,7 @@ describe('DeletePayoutHandler', () => {
         );
         await transactionRepo.insertMany([payout]);
         const document = withRequestContext(() =>
-            ErpCashDocument.create({
+            Cashbox.createPayout({
                 transactionId: payout.id,
                 system: 'ROAPP',
                 kind: 'OUTCOME',
@@ -94,7 +100,7 @@ describe('DeletePayoutHandler', () => {
                 externalId: 'erp-ext-1',
             }),
         );
-        await erpCashDocumentRepo.insert(document);
+        await payoutCashboxRecordRepo.insert(document);
         return { payout, document };
     };
 
@@ -108,12 +114,12 @@ describe('DeletePayoutHandler', () => {
             },
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
         const { payout } = await seedPayout(
             transactionRepo,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
         );
 
         await withRequestContext(() =>
@@ -124,7 +130,7 @@ describe('DeletePayoutHandler', () => {
             { externalId: 'erp-ext-1', kind: 'OUTCOME', amount: 1000 },
         ]);
         expect(transactionRepo.store.size).toBe(0);
-        expect(erpCashDocumentRepo.store.size).toBe(0);
+        expect(payoutCashboxRecordRepo.store.size).toBe(0);
     });
 
     it('возвращает PAID-документы сотрудника направления service в ACCRUED', async () => {
@@ -134,12 +140,12 @@ describe('DeletePayoutHandler', () => {
         accrual.markPaid();
         accrualRepo.store.set(accrual.id, accrual);
 
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             accrualRepo,
         });
         const { payout } = await seedPayout(
             transactionRepo,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
         );
 
         await withRequestContext(() =>
@@ -236,7 +242,7 @@ describe('DeletePayoutHandler', () => {
                     new DeletePayoutCommand({ payoutId: payout.id }),
                 ),
             ),
-        ).rejects.toThrow(ErpCashDocumentMissingForTransactionException);
+        ).rejects.toThrow(PayoutCashboxRecordMissingForTransactionException);
         expect(deleteCalls).toHaveLength(0);
         expect(transactionRepo.store.size).toBe(1);
     });
@@ -247,12 +253,12 @@ describe('DeletePayoutHandler', () => {
             delete: () => Promise.reject(new Error('RemOnline недоступен')),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
         const { payout } = await seedPayout(
             transactionRepo,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
         );
 
         await expect(
@@ -264,6 +270,6 @@ describe('DeletePayoutHandler', () => {
         ).rejects.toThrow('RemOnline недоступен');
 
         expect(transactionRepo.store.size).toBe(1);
-        expect(erpCashDocumentRepo.store.size).toBe(1);
+        expect(payoutCashboxRecordRepo.store.size).toBe(1);
     });
 });

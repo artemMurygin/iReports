@@ -2,8 +2,8 @@ import type { DirectoryRepositoryPort } from '@/modules/directory/application/po
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { GetDepartmentBalancesService } from './get-department-balances.service';
 
 // Сводка общих балансов по отделу (PRD 2, Фаза 7; общий баланс — Фаза 8b):

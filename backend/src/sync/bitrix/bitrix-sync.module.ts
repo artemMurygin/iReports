@@ -7,6 +7,10 @@ import { UploadInitialBitrixDataHandler } from './application/command/upload-ini
 
 @Module({
     imports: [BitrixModule, CqrsModule],
-    providers: [BitrixSyncService, BitrixSyncCron, UploadInitialBitrixDataHandler],
+    providers: [
+        BitrixSyncService,
+        BitrixSyncCron,
+        UploadInitialBitrixDataHandler,
+    ],
 })
 export class BitrixSyncModule {}

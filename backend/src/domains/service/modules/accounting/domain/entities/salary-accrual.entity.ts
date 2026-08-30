@@ -48,7 +48,7 @@ export type SalaryAccrualCreateProps = {
 // независимых хендлера закрытия (CloseAccountingPeriodHandler и
 // CloseShopAccountingPeriodHandler) — общая абстракция, а не
 // service-специфичная бизнес-логика (см. шапку
-// close-shop-accounting-period.handler.ts).
+// close-accounting-period.handler.ts).
 //
 // Статус документа — производная от статусов строк (PRD 2, Фаза 6):
 // DRAFT — ни одна строка не проведена, PARTIALLY_ACCRUED — часть,

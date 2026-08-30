@@ -8,15 +8,15 @@ import {
     TargetRole,
     UsedProductSoldSalaryConfig,
     UsedProductSoldSalaryRule,
-} from '../../types/shop-salary-rule.types';
-import type { ShopCalculationContext } from '../../types/shop-calculation-context.types';
+} from '../../types/salary-rule.types';
+import type { ShopCalculationContext } from '../../types/calculation-context.types';
 import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
-} from '../../types/shop-calculation-data.types';
-import { employeeMatchesShopPurchaserRole } from '../../services/shop-role-source';
-import { roundRubles } from '../../services/money';
-import { buildMoySkladDemandLink } from '../../services/moysklad-demand-link';
+} from '../../types/calculation-data.types';
+import { employeeMatchesShopPurchaserRole } from '../../services/role-source';
+import { Money } from '../../value-objects/money.value-object';
+import { buildErpDemandLink } from '../../services/erp-demand-link-builder';
 
 // Правило "вознаграждение закупщику за продажу выкупленной им БУ техники"
 // (Фаза 13, issue #62/#63, см. docs/payroll/plan-payroll-calculation.md и
@@ -101,20 +101,26 @@ export class UsedProductSoldEntity
 
         switch (award.type) {
             case 'Fixed': {
-                const amount = roundRubles(award.price * totalQuantity);
+                const amount = Money.roundRubles(
+                    award.price * totalQuantity,
+                ).getValue();
                 return {
                     ruleId: this.id,
                     quantity: totalQuantity,
                     rate: award.price,
                     amount,
                     sources: this.buildSources(matched, (item) =>
-                        roundRubles(award.price * item.quantity),
+                        Money.roundRubles(
+                            award.price * item.quantity,
+                        ).getValue(),
                     ),
                 };
             }
             case 'FixedPercent': {
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount = roundRubles((base * award.percent) / 100);
+                const amount = Money.roundRubles(
+                    (base * award.percent) / 100,
+                ).getValue();
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,
@@ -122,11 +128,11 @@ export class UsedProductSoldEntity
                     rate: award.percent,
                     amount,
                     sources: this.buildSources(matched, (item) =>
-                        roundRubles(
+                        Money.roundRubles(
                             (this.basisAmount(item, award.salaryBasis) *
                                 award.percent) /
                                 100,
-                        ),
+                        ).getValue(),
                     ),
                 };
             }
@@ -143,7 +149,7 @@ export class UsedProductSoldEntity
             type: 'demandPosition',
             id: item.positionId,
             label: item.demandLabel,
-            link: buildMoySkladDemandLink(item.demandId),
+            link: buildErpDemandLink(item.demandId),
             itemName: item.itemName,
             amount: amountFor(item),
         }));

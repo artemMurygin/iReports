@@ -8,16 +8,16 @@ import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/appli
 import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
-import type { ErpCashDocumentRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import type { ErpCashDocumentPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
-import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
-import type { ErpCashDocumentPort as ShopErpCashDocumentPort } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
+import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
+import type { ErpCashDocumentPort as ShopErpCashDocumentPort } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { ErpCashDocument } from '@/domains/service/modules/accounting/domain/entities/erp-cash-document.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import {
     buildErpCashDocumentPurpose,
@@ -41,7 +41,7 @@ import { CreateBalanceTransactionCommand } from './create-balance-transaction.co
 // erpSyncRequired = false — как в Фазе 7/8b: просто запись, ни один из
 // портов ERP ниже не вызывается. erpSyncRequired = true (PRD 3, «Уточнение
 // к PRD 2»): порядок «сначала запрос в ERP, успех → запись движения и
-// связки ErpCashDocument в одной транзакции; ошибка ERP → ничего не
+// связки Cashbox в одной транзакции; ошибка ERP → ничего не
 // записано; успех ERP + сбой БД → компенсация (удаление документа ERP),
 // потом исходная ошибка» — тот же порядок, что и у обработчика выплаты
 // (CreatePayoutHandler), здесь применён к ручному движению.
@@ -88,8 +88,8 @@ export class CreateBalanceTransactionHandler implements ICommandHandler<
         private readonly serviceErpCashPort: ErpCashDocumentPort,
         @Inject(SHOP_ERP_CASH_DOCUMENT_PORT)
         private readonly shopErpCashPort: ShopErpCashDocumentPort,
-        @Inject(ERP_CASH_DOCUMENT_REPOSITORY)
-        private readonly erpCashDocumentRepo: ErpCashDocumentRepositoryPort,
+        @Inject(PAYOUT_CASHBOX_RECORD_REPOSITORY)
+        private readonly payoutCashboxRecordRepo: PayoutCashboxRecordRepositoryPort,
         @Inject(DIRECTORY_REPOSITORY)
         private readonly directoryRepo: DirectoryRepositoryPort,
         @Inject(UNIT_OF_WORK)
@@ -191,7 +191,7 @@ export class CreateBalanceTransactionHandler implements ICommandHandler<
             occurredAt: transaction.occurredAt,
         });
 
-        const erpCashDocumentEntity = ErpCashDocument.create({
+        const payoutCashboxRecordEntity = Cashbox.createPayout({
             transactionId: transaction.id,
             system: erpSystemForDirection(command.direction),
             kind,
@@ -202,7 +202,9 @@ export class CreateBalanceTransactionHandler implements ICommandHandler<
         try {
             await this.unitOfWork.run(async () => {
                 await this.transactionRepo.insertMany([transaction]);
-                await this.erpCashDocumentRepo.insert(erpCashDocumentEntity);
+                await this.payoutCashboxRecordRepo.insert(
+                    payoutCashboxRecordEntity,
+                );
                 await this.markAccrualsPaidIfSettled(
                     command.direction,
                     command.employeeId,
@@ -237,8 +239,8 @@ export class CreateBalanceTransactionHandler implements ICommandHandler<
         }
 
         return toBalanceTransactionResponse(transaction, {
-            system: erpCashDocumentEntity.system,
-            externalId: erpCashDocumentEntity.externalId,
+            system: payoutCashboxRecordEntity.system,
+            externalId: payoutCashboxRecordEntity.externalId,
         });
     }
 

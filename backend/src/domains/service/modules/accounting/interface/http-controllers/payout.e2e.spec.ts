@@ -51,14 +51,14 @@ import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
-import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/erp-cash-document.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
@@ -88,7 +88,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
     const snapshots = new Map<string, AccountingPeriodSnapshotRow[]>();
     const accrualRepo = new InMemorySalaryAccrualRepository();
     const transactionRepo = new InMemoryBalanceTransactionRepository();
-    const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+    const payoutCashboxRecordRepo = new InMemoryPayoutCashboxRecordRepository();
     const periodKey = (direction: string, period: string) =>
         `${direction}:${period}`;
 
@@ -265,8 +265,8 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
             .useValue(fakeErpCashDocumentPort)
             .overrideProvider(SHOP_ERP_CASH_DOCUMENT_PORT)
             .useValue(fakeErpCashDocumentPort)
-            .overrideProvider(ERP_CASH_DOCUMENT_REPOSITORY)
-            .useValue(erpCashDocumentRepo)
+            .overrideProvider(PAYOUT_CASHBOX_RECORD_REPOSITORY)
+            .useValue(payoutCashboxRecordRepo)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -320,7 +320,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         expect(accruedAmount).toBeGreaterThan(0);
 
         // 3) Выплата на всю сумму остатка (PRD 3: «сначала ERP, затем
-        // транзакция БД») — движение PAYOUT + ErpCashDocument + документ
+        // транзакция БД») — движение PAYOUT + Cashbox + документ
         // начисления → PAID, т.к. остаток после операции 0.
         const erpCreateCallsBefore = erpCreateCalls.length;
         const payout = (
@@ -422,7 +422,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         // Локальная связка удалена вместе с движением — «либо есть оба,
         // либо нет ни одного» (PRD 3, «Цель»).
         await expect(
-            erpCashDocumentRepo.findByTransactionId(payout.transaction.id),
+            payoutCashboxRecordRepo.findByTransactionId(payout.transaction.id),
         ).resolves.toBeNull();
 
         // 6) Документ ERP в ERP уже удалён — повторный DELETE payout не

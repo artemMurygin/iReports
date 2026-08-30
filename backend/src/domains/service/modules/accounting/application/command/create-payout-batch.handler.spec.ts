@@ -4,7 +4,7 @@ import type { DirectoryRepositoryPort } from '@/modules/directory/application/po
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import type {
     CreateErpCashDocumentParams,
@@ -16,9 +16,9 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employee-operation-lock';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { CreatePayoutHandler } from './create-payout.handler';
 import { CreatePayoutBatchHandler } from './create-payout-batch.handler';
 import { CreatePayoutBatchCommand } from './create-payout-batch.command';
@@ -56,7 +56,8 @@ describe('CreatePayoutBatchHandler', () => {
     const build = async (erpPort: ErpCashDocumentPort) => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const accrualRepo = new InMemorySalaryAccrualRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const payoutCashboxRecordRepo =
+            new InMemoryPayoutCashboxRecordRepository();
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
 
         const moduleRef = await Test.createTestingModule({
@@ -71,8 +72,8 @@ describe('CreatePayoutBatchHandler', () => {
                 { provide: SALARY_ACCRUAL_REPOSITORY, useValue: accrualRepo },
                 { provide: SERVICE_ERP_CASH_DOCUMENT_PORT, useValue: erpPort },
                 {
-                    provide: ERP_CASH_DOCUMENT_REPOSITORY,
-                    useValue: erpCashDocumentRepo,
+                    provide: PAYOUT_CASHBOX_RECORD_REPOSITORY,
+                    useValue: payoutCashboxRecordRepo,
                 },
                 { provide: DIRECTORY_REPOSITORY, useValue: fakeDirectoryRepo },
                 { provide: UNIT_OF_WORK, useValue: unitOfWork },

@@ -1,17 +1,17 @@
 import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import type { ShopCalculationContext } from '../../types/shop-calculation-context.types';
+import type { ShopCalculationContext } from '../../types/calculation-context.types';
 import {
     CreateShopSalaryRuleProps,
     ShopSalaryRule,
     TargetRole,
     TaskCompletedShopSalaryConfig,
     TaskCompletedShopSalaryRule,
-} from '../../types/shop-salary-rule.types';
-import type { ShopCalculationErpData } from '../../types/shop-calculation-data.types';
-import { roundRubles } from '../../services/money';
-import { resolveFloatPercentMultiplier } from '../../services/float-percent';
+} from '../../types/salary-rule.types';
+import type { ShopCalculationErpData } from '../../types/calculation-data.types';
+import { Money } from '../../value-objects/money.value-object';
+import { FloatPercentSchedule } from '../../value-objects/float-percent-schedule.value-object';
 import { ShopSalesPerformanceRequiredException } from '../../exceptions/float-percent.exception';
 
 // Правило "вознаграждение за выполненную задачу" магазина (Фаза 13, issue
@@ -22,7 +22,7 @@ import { ShopSalesPerformanceRequiredException } from '../../exceptions/float-pe
 // employeeId), но независимая реализация (issue #57).
 //
 // Источник данных — erpData.taskCompletions (ShopTaskCompletionErpItem, см.
-// shop-calculation-data.types.ts): что считается "задачей" для
+// calculation-data.types.ts): что считается "задачей" для
 // TaskCompleted в магазине — открытый вопрос PRD, НЕ решённый ни для
 // сервиса, ни для магазина. Решение по умолчанию (то же, что и у сервиса в
 // Фазе 8): тот же временный внутренний источник — TaskCompletion
@@ -57,6 +57,9 @@ export class TaskCompletedShopEntity
         return this.props.config;
     }
 
+    // Entity.constructor вызывает validate() сам (см. entity.base.ts) —
+    // невалидный FloatPercent (см. validate() ниже) бросает исключение уже
+    // здесь, при создании.
     static create(rule: CreateShopSalaryRuleProps): TaskCompletedShopEntity {
         return new TaskCompletedShopEntity({
             id: randomUUID(),
@@ -102,7 +105,7 @@ export class TaskCompletedShopEntity
                 // поля category, см. TaskCompletedShopSalaryConfig) —
                 // всегда читает запись "весь отдел" карты
                 // context.salesPerformance (ключ null, см.
-                // shop-calculation-context.types.ts). Поведение не
+                // calculation-context.types.ts). Поведение не
                 // изменилось Фазой 2 плана
                 // shop-sales-performance-by-category — та переключала
                 // только ProductSold (см. product-sold.entity.ts).
@@ -112,14 +115,15 @@ export class TaskCompletedShopEntity
                         context.period.period,
                     );
                 }
-                const multiplier = resolveFloatPercentMultiplier(
+                const multiplier = FloatPercentSchedule.create(
                     award.percentBorders,
-                    percentCompletion,
-                );
-                const amount = roundRubles(
+                ).resolveMultiplier(percentCompletion);
+                const amount = Money.roundRubles(
                     award.basePrice * quantity * multiplier,
-                );
-                const perTaskAmount = roundRubles(award.basePrice * multiplier);
+                ).getValue();
+                const perTaskAmount = Money.roundRubles(
+                    award.basePrice * multiplier,
+                ).getValue();
                 return {
                     ruleId: this.id,
                     quantity,
@@ -135,5 +139,17 @@ export class TaskCompletedShopEntity
         }
     }
 
-    validate(): void {}
+    // Fixed не имеет собственных инвариантов сверх формы, уже проверенной
+    // zod-схемой на границе — только FloatPercent несёт percentBorders с
+    // семантическими инвариантами (порядок/уникальность/диапазон), см.
+    // FloatPercentSchedule.create(). Вызывается автоматически конструктором
+    // Entity (entity.base.ts) — и при create() (создание через API), и при
+    // конструировании в ShopSalaryRuleMapper.toDomain() (fail closed при
+    // чтении из БД) — отдельно вызывать не нужно.
+    validate(): void {
+        const award = this.props.config.award;
+        if (award.type === 'FloatPercent') {
+            FloatPercentSchedule.create(award.percentBorders);
+        }
+    }
 }

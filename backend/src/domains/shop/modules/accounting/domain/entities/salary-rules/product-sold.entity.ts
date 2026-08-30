@@ -8,16 +8,16 @@ import {
     ShopSalaryBasis,
     ShopSalaryRule,
     TargetRole,
-} from '../../types/shop-salary-rule.types';
-import type { ShopCalculationContext } from '../../types/shop-calculation-context.types';
+} from '../../types/salary-rule.types';
+import type { ShopCalculationContext } from '../../types/calculation-context.types';
 import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
-} from '../../types/shop-calculation-data.types';
-import { employeeMatchesShopDemandRole } from '../../services/shop-role-source';
-import { roundRubles } from '../../services/money';
-import { resolveFloatPercentMultiplier } from '../../services/float-percent';
-import { buildMoySkladDemandLink } from '../../services/moysklad-demand-link';
+} from '../../types/calculation-data.types';
+import { employeeMatchesShopDemandRole } from '../../services/role-source';
+import { Money } from '../../value-objects/money.value-object';
+import { FloatPercentSchedule } from '../../value-objects/float-percent-schedule.value-object';
+import { buildErpDemandLink } from '../../services/erp-demand-link-builder';
 
 // Правило "вознаграждение за проданный товар в категории" (Фаза 12, issue
 // #59/#60, см. docs/payroll/plan-payroll-calculation.md и
@@ -58,6 +58,9 @@ export class ProductSoldEntity
         return this.props.config;
     }
 
+    // Entity.constructor вызывает validate() сам (см. entity.base.ts) —
+    // невалидный FloatPercent (см. validate() ниже) бросает исключение уже
+    // здесь, при создании.
     static create(rule: CreateShopSalaryRuleProps): ProductSoldEntity {
         return new ProductSoldEntity({
             id: randomUUID(),
@@ -94,20 +97,26 @@ export class ProductSoldEntity
 
         switch (award.type) {
             case 'Fixed': {
-                const amount = roundRubles(award.price * totalQuantity);
+                const amount = Money.roundRubles(
+                    award.price * totalQuantity,
+                ).getValue();
                 return {
                     ruleId: this.id,
                     quantity: totalQuantity,
                     rate: award.price,
                     amount,
                     sources: this.buildSources(matched, (item) =>
-                        roundRubles(award.price * item.quantity),
+                        Money.roundRubles(
+                            award.price * item.quantity,
+                        ).getValue(),
                     ),
                 };
             }
             case 'FixedPercent': {
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount = roundRubles((base * award.percent) / 100);
+                const amount = Money.roundRubles(
+                    (base * award.percent) / 100,
+                ).getValue();
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,
@@ -115,11 +124,11 @@ export class ProductSoldEntity
                     rate: award.percent,
                     amount,
                     sources: this.buildSources(matched, (item) =>
-                        roundRubles(
+                        Money.roundRubles(
                             (this.basisAmount(item, award.salaryBasis) *
                                 award.percent) /
                                 100,
-                        ),
+                        ).getValue(),
                     ),
                 };
             }
@@ -133,7 +142,7 @@ export class ProductSoldEntity
                 // ShopSalesPerformanceReaderPort.findForScope(period,
                 // department, category) и складывает результат в карту
                 // context.salesPerformance (category → percentCompletion,
-                // ключ null — «весь отдел», см. shop-calculation-context.types.ts).
+                // ключ null — «весь отдел», см. calculation-context.types.ts).
                 // Fail closed — тот же принцип, что и у matchesCategory
                 // ниже для categoryDescendantFolderIds: если для
                 // this.props.config.category в карте нет расчёта (нет
@@ -153,14 +162,13 @@ export class ProductSoldEntity
                         sources: [],
                     };
                 }
-                const multiplier = resolveFloatPercentMultiplier(
+                const multiplier = FloatPercentSchedule.create(
                     award.percentBorders,
-                    percentCompletion,
-                );
+                ).resolveMultiplier(percentCompletion);
                 const base = this.sumBasis(matched, award.salaryBasis);
-                const amount = roundRubles(
+                const amount = Money.roundRubles(
                     (base * award.basePercent * multiplier) / 100,
-                );
+                ).getValue();
                 return {
                     ruleId: this.id,
                     salaryBasis: award.salaryBasis,
@@ -168,19 +176,32 @@ export class ProductSoldEntity
                     rate: award.basePercent * multiplier,
                     amount,
                     sources: this.buildSources(matched, (item) =>
-                        roundRubles(
+                        Money.roundRubles(
                             (this.basisAmount(item, award.salaryBasis) *
                                 award.basePercent *
                                 multiplier) /
                                 100,
-                        ),
+                        ).getValue(),
                     ),
                 };
             }
         }
     }
 
-    validate(): void {}
+    // Fixed/FixedPercent не имеют собственных инвариантов сверх формы,
+    // уже проверенной zod-схемой на границе — только FloatPercent несёт
+    // percentBorders с семантическими инвариантами (порядок/уникальность/
+    // диапазон), которые форма выразить не может, см.
+    // FloatPercentSchedule.create(). Вызывается автоматически конструктором
+    // Entity (entity.base.ts) — и при create() (создание через API), и при
+    // конструировании в ShopSalaryRuleMapper.toDomain() (fail closed при
+    // чтении из БД) — отдельно вызывать не нужно.
+    validate(): void {
+        const award = this.props.config.award;
+        if (award.type === 'FloatPercent') {
+            FloatPercentSchedule.create(award.percentBorders);
+        }
+    }
 
     private buildSources(
         items: ShopProductSoldErpItem[],
@@ -190,7 +211,7 @@ export class ProductSoldEntity
             type: 'demandPosition',
             id: item.positionId,
             label: item.demandLabel,
-            link: buildMoySkladDemandLink(item.demandId),
+            link: buildErpDemandLink(item.demandId),
             itemName: item.itemName,
             amount: amountFor(item),
         }));
@@ -213,7 +234,7 @@ export class ProductSoldEntity
     // Категория — обязательная часть правила (пара «категория × награда»,
     // issue #60); null означает "все товары". Раскрытие до потомков дерева
     // уже сделано application-слоем в erpData.categoryDescendantFolderIds
-    // (см. shop-calculation-data.types.ts) — правило лишь сверяет
+    // (см. calculation-data.types.ts) — правило лишь сверяет
     // собственный folderId позиции со списком по ключу категории.
     private matchesCategory(
         item: ShopProductSoldErpItem,

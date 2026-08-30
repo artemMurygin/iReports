@@ -80,22 +80,22 @@ import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import { ERP_CASH_DOCUMENT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-document-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
 import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
-import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema.repository';
-import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-rule.repository';
-import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period.repository';
-import { AccountingPeriodSnapshotRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period-snapshot.repository';
-import { AccountingCalculationCacheRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-calculation-cache.repository';
-import { ServiceCalculationDataRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/service-calculation-data.repository';
-import { TaskCompletionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/task-completion.repository';
-import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual.repository';
+import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/motivation-schema.repository';
+import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/salary-rule.repository';
+import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period.repository';
+import { AccountingPeriodSnapshotRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period-snapshot.repository';
+import { AccountingCalculationCacheRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/calculation/accounting-calculation-cache.repository';
+import { ServiceCalculationDataRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/calculation/service-calculation-data.repository';
+import { TaskCompletionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/task-completion/task-completion.repository';
+import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/salary-accrual.repository';
 import { BalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infrastructure/repositories/employee-dismissal.repository';
 import { ErpCashConfigProvider } from '@/domains/service/modules/accounting/infrastructure/config/erp-cash-config.provider';
-import { ErpCashDocumentRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash-document.repository';
+import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period-closed.event-handler';
@@ -342,14 +342,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
             useClass: ErpCashConfigProvider,
         },
         {
-            provide: ERP_CASH_DOCUMENT_REPOSITORY,
-            useClass: ErpCashDocumentRepository,
+            provide: PAYOUT_CASHBOX_RECORD_REPOSITORY,
+            useClass: PayoutCashboxRecordRepository,
         },
         // Адаптер записи в кассу RemOnline (PRD 3, Фаза 11) — НЕ
         // direction-агностичен, в отличие от ERP_CASH_CONFIG_REPOSITORY/
-        // ERP_CASH_DOCUMENT_REPOSITORY выше: у shop свой токен
+        // PAYOUT_CASHBOX_RECORD_REPOSITORY выше: у shop свой токен
         // (SHOP_ERP_CASH_DOCUMENT_PORT) и своя реализация под МойСклад (см.
-        // domains/shop/modules/accounting/application/ports/erp-cash-document.port.ts) —
+        // domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port.ts) —
         // порты уже объявлены разными файлами/типами специально для этого.
         {
             provide: SERVICE_ERP_CASH_DOCUMENT_PORT,

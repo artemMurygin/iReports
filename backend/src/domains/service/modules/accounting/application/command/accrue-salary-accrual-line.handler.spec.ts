@@ -11,8 +11,8 @@ import {
     SalaryAccrualNotFoundException,
     SalaryAccrualPaidException,
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 
 // Проведение строки документа начисления (PRD 2, Фаза 6): ровно одно
 // движение SALARY_ACCRUAL на нескорректированную строку, два движения на

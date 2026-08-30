@@ -110,11 +110,11 @@ export interface PayPerHourHours {
 export interface ServiceCalculationErpData {
     serviceCompletedItems: ServiceCompletedErpItem[];
     // Часы сотрудника за период — сумма часов рабочих смен графика
-    // (WorkScheduleEntry.status = WORKING, роль дня — ONLINE_MANAGER/
-    // OFFLINE_MANAGER, см. domain/services/pay-per-hour-roles.ts) — не
-    // ERP-данные в строгом смысле, но тот же принцип "правило не ходит в
-    // БД само" требует, чтобы значение пришло из контекста. 0 по обоим
-    // полям, если подходящих рабочих смен нет.
+    // (WorkScheduleEntry.status = WORKING, роль дня — см.
+    // PayPerHoursEntity.ELIGIBLE_SCHEDULE_ROLES) — не ERP-данные в строгом
+    // смысле, но тот же принцип "правило не ходит в БД само" требует, чтобы
+    // значение пришло из контекста. 0 по обоим полям, если подходящих
+    // рабочих смен нет.
     hoursWorked: PayPerHourHours;
     // Фаза 8 — заказы, оплаченные в периоде (источник OrderPayedEntity), и
     // подтверждённые выполнения задач (источник TaskCompletedEntity).

@@ -1,17 +1,13 @@
-import {
-    buildFreshnessStamp,
-    motivationSchemaVersion,
-    stampOf,
-} from './accounting-cache-freshness';
+import { AccountingCacheFreshness } from './accounting-cache-freshness';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { MotivationTarget } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
-describe('accounting-cache-freshness', () => {
-    describe('motivationSchemaVersion', () => {
+describe('AccountingCacheFreshness', () => {
+    describe('schemaVersion', () => {
         it("возвращает 'none' для отсутствующей схемы", () => {
-            expect(motivationSchemaVersion(null)).toBe('none');
+            expect(AccountingCacheFreshness.schemaVersion(null)).toBe('none');
         });
 
         it('возвращает updatedAt схемы, если он позже правил', () => {
@@ -19,7 +15,7 @@ describe('accounting-cache-freshness', () => {
             const ruleUpdatedAt = new Date('2026-08-01T00:00:00.000Z');
             const schema = buildSchema(schemaUpdatedAt, ruleUpdatedAt);
 
-            expect(motivationSchemaVersion(schema)).toBe(
+            expect(AccountingCacheFreshness.schemaVersion(schema)).toBe(
                 schemaUpdatedAt.toISOString(),
             );
         });
@@ -29,48 +25,50 @@ describe('accounting-cache-freshness', () => {
             const ruleUpdatedAt = new Date('2026-08-05T00:00:00.000Z');
             const schema = buildSchema(schemaUpdatedAt, ruleUpdatedAt);
 
-            expect(motivationSchemaVersion(schema)).toBe(
+            expect(AccountingCacheFreshness.schemaVersion(schema)).toBe(
                 ruleUpdatedAt.toISOString(),
             );
         });
     });
 
-    describe('stampOf', () => {
+    describe('dateStamp', () => {
         it("возвращает 'never' для null", () => {
-            expect(stampOf(null)).toBe('never');
+            expect(AccountingCacheFreshness.dateStamp(null)).toBe('never');
         });
 
         it('возвращает ISO-строку даты', () => {
             const at = new Date('2026-08-05T00:00:00.000Z');
-            expect(stampOf(at)).toBe(at.toISOString());
+            expect(AccountingCacheFreshness.dateStamp(at)).toBe(
+                at.toISOString(),
+            );
         });
     });
 
-    describe('buildFreshnessStamp', () => {
+    describe('buildStamp', () => {
         it('меняется при изменении любой из трёх составляющих', () => {
-            const base = buildFreshnessStamp({
-                motivationSchemaVersion: 'v1',
+            const base = AccountingCacheFreshness.buildStamp({
+                schemaVersion: 'v1',
                 domainSyncStamp: 's1',
                 salesPlanStamp: 'p1',
             });
 
             expect(
-                buildFreshnessStamp({
-                    motivationSchemaVersion: 'v2',
+                AccountingCacheFreshness.buildStamp({
+                    schemaVersion: 'v2',
                     domainSyncStamp: 's1',
                     salesPlanStamp: 'p1',
                 }),
             ).not.toBe(base);
             expect(
-                buildFreshnessStamp({
-                    motivationSchemaVersion: 'v1',
+                AccountingCacheFreshness.buildStamp({
+                    schemaVersion: 'v1',
                     domainSyncStamp: 's2',
                     salesPlanStamp: 'p1',
                 }),
             ).not.toBe(base);
             expect(
-                buildFreshnessStamp({
-                    motivationSchemaVersion: 'v1',
+                AccountingCacheFreshness.buildStamp({
+                    schemaVersion: 'v1',
                     domainSyncStamp: 's1',
                     salesPlanStamp: 'p2',
                 }),
@@ -79,11 +77,13 @@ describe('accounting-cache-freshness', () => {
 
         it('совпадает при одинаковых составляющих', () => {
             const parts = {
-                motivationSchemaVersion: 'v1',
+                schemaVersion: 'v1',
                 domainSyncStamp: 's1',
                 salesPlanStamp: 'p1',
             };
-            expect(buildFreshnessStamp(parts)).toBe(buildFreshnessStamp(parts));
+            expect(AccountingCacheFreshness.buildStamp(parts)).toBe(
+                AccountingCacheFreshness.buildStamp(parts),
+            );
         });
     });
 });

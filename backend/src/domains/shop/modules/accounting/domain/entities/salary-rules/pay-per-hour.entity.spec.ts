@@ -1,11 +1,11 @@
 import { PayPerHourShopEntity } from './pay-per-hour.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
-import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
+import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 
 // Юнит-тест на подготовленном объекте контекста — без БД и без моков
 // репозиториев (issue #61). hoursWorked несёт пару факт/прогноз — правило
 // само не знает, откуда пришли числа, только выбирает нужное по
-// context.mode (см. domain/services/pay-per-hour-roles.ts,
+// context.mode (см. PayPerHourShopEntity.ELIGIBLE_SCHEDULE_ROLES,
 // ShopCalculationDataRepository.findHoursWorked).
 const buildContext = (
     hoursWorked: ShopCalculationErpData['hoursWorked'],

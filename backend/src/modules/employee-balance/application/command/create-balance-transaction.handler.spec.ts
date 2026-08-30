@@ -15,9 +15,9 @@ import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
-import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/testing/in-memory-balance-transaction.repository';
-import { InMemoryErpCashDocumentRepository } from '@/domains/service/modules/accounting/testing/in-memory-erp-cash-document.repository';
-import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/testing/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
+import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { CreateBalanceTransactionHandler } from './create-balance-transaction.handler';
 import { CreateBalanceTransactionCommand } from './create-balance-transaction.command';
@@ -48,7 +48,8 @@ describe('CreateBalanceTransactionHandler', () => {
         accrualRepo?: InMemorySalaryAccrualRepository;
     }) => {
         const transactionRepo = new InMemoryBalanceTransactionRepository();
-        const erpCashDocumentRepo = new InMemoryErpCashDocumentRepository();
+        const payoutCashboxRecordRepo =
+            new InMemoryPayoutCashboxRecordRepository();
         const accrualRepo =
             overrides?.accrualRepo ?? new InMemorySalaryAccrualRepository();
         const fakeErpPort: ErpCashDocumentPort = overrides?.erpPort ?? {
@@ -67,7 +68,7 @@ describe('CreateBalanceTransactionHandler', () => {
             accrualRepo,
             fakeErpPort,
             shopErpPort,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
             fakeDirectoryRepo,
             unitOfWork,
             new EmployeeOperationLock(),
@@ -75,7 +76,7 @@ describe('CreateBalanceTransactionHandler', () => {
         return {
             handler,
             transactionRepo,
-            erpCashDocumentRepo,
+            payoutCashboxRecordRepo,
             accrualRepo,
             fakeErpPort,
             shopErpPort,
@@ -238,7 +239,7 @@ describe('CreateBalanceTransactionHandler', () => {
 
     // ========================== erpSyncRequired: true (PRD 3, Фаза 12) ========================== //
 
-    it('erpSyncRequired: true — сначала запрос в ERP, затем движение и связка ErpCashDocument в одной транзакции', async () => {
+    it('erpSyncRequired: true — сначала запрос в ERP, затем движение и связка Cashbox в одной транзакции', async () => {
         const createCalls: CreateErpCashDocumentParams[] = [];
         const erpPort: ErpCashDocumentPort = {
             create: (params) => {
@@ -248,7 +249,7 @@ describe('CreateBalanceTransactionHandler', () => {
             delete: () => Promise.resolve(),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
 
@@ -279,7 +280,7 @@ describe('CreateBalanceTransactionHandler', () => {
         expect(createCalls[0].purpose).toContain('2026-07');
         expect(createCalls[0].purpose).toContain('Петров');
 
-        const document = await erpCashDocumentRepo.findByTransactionId(
+        const document = await payoutCashboxRecordRepo.findByTransactionId(
             response.id,
         );
         expect(document).toMatchObject({
@@ -319,7 +320,7 @@ describe('CreateBalanceTransactionHandler', () => {
             delete: () => Promise.resolve(),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
         });
 
@@ -336,7 +337,7 @@ describe('CreateBalanceTransactionHandler', () => {
         ).rejects.toThrow('RemOnline недоступен');
 
         expect(transactionRepo.store.size).toBe(0);
-        expect(erpCashDocumentRepo.store.size).toBe(0);
+        expect(payoutCashboxRecordRepo.store.size).toBe(0);
     });
 
     it('успех ERP + сбой записи в БД → компенсация: документ ERP удаляется, исходная ошибка пробрасывается', async () => {
@@ -353,7 +354,7 @@ describe('CreateBalanceTransactionHandler', () => {
         const unitOfWork: UnitOfWorkPort = {
             run: () => Promise.reject(dbError),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort,
             unitOfWork,
         });
@@ -371,7 +372,7 @@ describe('CreateBalanceTransactionHandler', () => {
         ).rejects.toThrow(dbError);
 
         expect(transactionRepo.store.size).toBe(0);
-        expect(erpCashDocumentRepo.store.size).toBe(0);
+        expect(payoutCashboxRecordRepo.store.size).toBe(0);
         expect(deleteCalls).toEqual([
             { externalId: 'erp-ext-3', kind: 'OUTCOME', amount: 1000 },
         ]);
@@ -403,7 +404,7 @@ describe('CreateBalanceTransactionHandler', () => {
             delete: () => Promise.resolve(),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort: serviceErpPort,
             shopErpPort,
         });
@@ -423,7 +424,7 @@ describe('CreateBalanceTransactionHandler', () => {
         expect(shopCalls).toHaveLength(1);
         expect(response.direction).toBe('shop');
 
-        const document = await erpCashDocumentRepo.findByTransactionId(
+        const document = await payoutCashboxRecordRepo.findByTransactionId(
             response.id,
         );
         expect(document).toMatchObject({
@@ -450,7 +451,7 @@ describe('CreateBalanceTransactionHandler', () => {
             delete: () => Promise.resolve(),
             findByKey: () => Promise.resolve(null),
         };
-        const { handler, transactionRepo, erpCashDocumentRepo } = build({
+        const { handler, transactionRepo, payoutCashboxRecordRepo } = build({
             erpPort: serviceErpPort,
             shopErpPort,
         });
@@ -470,7 +471,7 @@ describe('CreateBalanceTransactionHandler', () => {
 
         expect(serviceCalls).toHaveLength(0);
         expect(transactionRepo.store.size).toBe(0);
-        expect(erpCashDocumentRepo.store.size).toBe(0);
+        expect(payoutCashboxRecordRepo.store.size).toBe(0);
     });
 
     // ====== PAID по остатку — «ручной приход» как способ закрытия (PRD 3) ====== //

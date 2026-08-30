@@ -30,7 +30,7 @@ describe('WorkScheduleEntryRepository', () => {
             getClient: () => client,
             // write() делегирует в db.withTransaction — здесь без реальной
             // Prisma-транзакции, просто выполняет колбэк (тот же приём, что
-            // и в erp-cash-document.repository.spec.ts).
+            // и в payout-cashbox-record.repository.spec.ts).
             withTransaction: (callback: () => Promise<unknown>) => callback(),
         } as unknown as DatabaseService;
 

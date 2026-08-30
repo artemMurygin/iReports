@@ -4,8 +4,8 @@ import { CalculationContext } from '@/shared/domain/calculation-context';
 import type {
     ShopCalculationErpData,
     ShopProductSoldErpItem,
-} from '@/domains/shop/modules/accounting/domain/types/shop-calculation-data.types';
-import { buildMoySkladDemandLink } from '@/domains/shop/modules/accounting/domain/services/moysklad-demand-link';
+} from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
+import { buildErpDemandLink } from '@/domains/shop/modules/accounting/domain/services/erp-demand-link-builder';
 
 // Юнит-тесты на подготовленном объекте контекста — без БД и без моков
 // репозиториев (issue #66, "Тесты UsedProductSold").
@@ -113,7 +113,7 @@ describe('UsedProductSoldEntity', () => {
                         type: 'demandPosition',
                         id: 'p1',
                         label: 'А000002',
-                        link: buildMoySkladDemandLink('demand-1'),
+                        link: buildErpDemandLink('demand-1'),
                         itemName: 'iPhone 12 БУ 64GB',
                         amount: 500,
                     },
@@ -121,7 +121,7 @@ describe('UsedProductSoldEntity', () => {
                         type: 'demandPosition',
                         id: 'p2',
                         label: 'А000002',
-                        link: buildMoySkladDemandLink('demand-1'),
+                        link: buildErpDemandLink('demand-1'),
                         itemName: 'iPhone 12 БУ 64GB',
                         amount: 500,
                     },
@@ -265,7 +265,7 @@ describe('UsedProductSoldEntity', () => {
                     type: 'demandPosition',
                     id: 'p-iphone',
                     label: 'А000002',
-                    link: buildMoySkladDemandLink('demand-1'),
+                    link: buildErpDemandLink('demand-1'),
                     itemName: 'iPhone 12 БУ 64GB',
                     amount: 10,
                 },
@@ -324,7 +324,7 @@ describe('UsedProductSoldEntity', () => {
                     type: 'demandPosition',
                     id: 'p1',
                     label: 'А000002',
-                    link: buildMoySkladDemandLink('demand-1'),
+                    link: buildErpDemandLink('demand-1'),
                     itemName: 'iPhone 12 БУ 64GB',
                     amount: 100,
                 },
@@ -335,7 +335,7 @@ describe('UsedProductSoldEntity', () => {
                     type: 'demandPosition',
                     id: 'p2',
                     label: 'А000002',
-                    link: buildMoySkladDemandLink('demand-1'),
+                    link: buildErpDemandLink('demand-1'),
                     itemName: 'iPhone 12 БУ 64GB',
                     amount: 100,
                 },
