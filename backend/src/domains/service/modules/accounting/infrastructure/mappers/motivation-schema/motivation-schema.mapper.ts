@@ -11,6 +11,8 @@ import {
 import { Mapper } from '@/shared/domain/mapper.interface';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { MotivationTarget } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
+import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
+import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix.config';
 import { SalaryRuleMapper } from './salary-rule.mapper';
 
 // Правила больше не хранятся в самой строке motivation_schemas (см.
@@ -140,6 +142,19 @@ export class MotivationSchemaMapper implements Mapper<
                         name: rule.name,
                         targetRole: rule.targetRole,
                         config: rule.config,
+                        // bitrixTaskUrl — только TaskCompleted, только когда у
+                        // правила уже есть накопленная задача (see
+                        // taskCompletedSalaryRuleResponseSchema).
+                        ...(rule instanceof TaskCompletedEntity &&
+                        rule.bitrixTaskIds.length > 0
+                            ? {
+                                  bitrixTaskUrl: buildBitrixTaskLink(
+                                      rule.bitrixTaskIds[
+                                          rule.bitrixTaskIds.length - 1
+                                      ],
+                                  ),
+                              }
+                            : {}),
                     }) as SalaryRuleResponse,
             ),
             updatedAt: this.computeUpdatedAt(entity).toISOString(),
