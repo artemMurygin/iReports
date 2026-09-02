@@ -502,13 +502,8 @@ export class RoappSyncService {
     }
 
     private async getOrdersToUpdateItems(orderIds?: number[]) {
-        if (orderIds) {
-            return this.db.roappOrder.findMany({
-                where: { id: { in: orderIds }, managerSalary: null },
-                select: { id: true, payed: true },
-            });
-        }
         return this.db.roappOrder.findMany({
+            where: orderIds ? { id: { in: orderIds } } : undefined,
             select: { id: true, payed: true },
         });
     }

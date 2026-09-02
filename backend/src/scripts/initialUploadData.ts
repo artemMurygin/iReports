@@ -16,6 +16,11 @@ async function bootstrap() {
         process.exit(1);
     }
 
+    if (!erp) {
+        console.error('Необходимо передавать erp систему вторым аргументом, что бы начать выгрузку данных');
+        process.exit(1);
+    }
+
     const fromDate = new Date(dateArg);
     if (isNaN(fromDate.getTime())) {
         console.error(`Invalid date: "${dateArg}". Use format YYYY-MM-DD`);
