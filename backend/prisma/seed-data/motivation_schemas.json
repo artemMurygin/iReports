@@ -1,0 +1,32 @@
+[
+  {
+    "id": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "targetType": "Department",
+    "targetId": 160,
+    "name": "Мотивация отдела №160",
+    "serviceName": "Мотивация отдела №160",
+    "shopName": "Мотивация отдела №160",
+    "createdAt": "2026-08-18T10:11:39.150Z",
+    "updatedAt": "2026-08-24T17:37:01.865Z"
+  },
+  {
+    "id": "d7b003c9-c075-48f7-84d0-5776589daf20",
+    "targetType": "Employee",
+    "targetId": 14,
+    "name": "Персональная мотивация №14",
+    "serviceName": "Персональная мотивация №14",
+    "shopName": null,
+    "createdAt": "2026-08-20T12:01:34.746Z",
+    "updatedAt": "2026-08-26T08:29:18.316Z"
+  },
+  {
+    "id": "39443e4c-eb39-4f4e-8fb8-2ee09eb29cd1",
+    "targetType": "Employee",
+    "targetId": 12,
+    "name": "Персональная мотивация №12",
+    "serviceName": "Персональная мотивация №12",
+    "shopName": null,
+    "createdAt": "2026-08-26T08:58:10.689Z",
+    "updatedAt": "2026-08-26T08:58:10.689Z"
+  }
+]

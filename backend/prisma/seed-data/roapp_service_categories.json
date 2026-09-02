@@ -1,0 +1,1730 @@
+[
+  {
+    "id": 1860227,
+    "name": "7 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860226,
+    "name": "8 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860225,
+    "name": "9 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860222,
+    "name": "Watch SE",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860221,
+    "name": "Watch Ultra",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 909019,
+    "name": "01 | iPhone",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 1860395,
+    "name": "10 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860386,
+    "name": "11 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860387,
+    "name": "12 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860388,
+    "name": "13 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860389,
+    "name": "14 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860390,
+    "name": "15 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860239,
+    "name": "16 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860238,
+    "name": "17 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860394,
+    "name": "5 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860391,
+    "name": "6 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860392,
+    "name": "7 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 1860393,
+    "name": "8 серия",
+    "parentId": 918473,
+    "depth": 0
+  },
+  {
+    "id": 909095,
+    "name": "06 | AirPods",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 1860170,
+    "name": "Прочее",
+    "parentId": 909095,
+    "depth": 0
+  },
+  {
+    "id": 909051,
+    "name": "Ремонт Face iD",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860398,
+    "name": "10 серия",
+    "parentId": 909051,
+    "depth": 0
+  },
+  {
+    "id": 1860396,
+    "name": "11 серия",
+    "parentId": 909051,
+    "depth": 0
+  },
+  {
+    "id": 1860397,
+    "name": "12 серия",
+    "parentId": 909051,
+    "depth": 0
+  },
+  {
+    "id": 909020,
+    "name": "02 | Macbook",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 909049,
+    "name": "Замена тачпада",
+    "parentId": 909020,
+    "depth": 0
+  },
+  {
+    "id": 1860381,
+    "name": "Macbook Air 11 - 13\"",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860382,
+    "name": "Macbook Air 13\" M1-M4",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860235,
+    "name": "Macbook Air 15\" M2-M4",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860383,
+    "name": "Macbook Pro 13\"",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860236,
+    "name": "Macbook Pro 14\" M1 - M5",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860384,
+    "name": "Macbook Pro 15\"",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860385,
+    "name": "Macbook Pro 16\" Intel",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860237,
+    "name": "Macbook Pro 16\" M1 - M4",
+    "parentId": 909049,
+    "depth": 0
+  },
+  {
+    "id": 1860378,
+    "name": "Macbook Pro 13",
+    "parentId": 909048,
+    "depth": 0
+  },
+  {
+    "id": 1860379,
+    "name": "Macbook Pro 15",
+    "parentId": 909048,
+    "depth": 0
+  },
+  {
+    "id": 1860380,
+    "name": "Macbook Pro 16",
+    "parentId": 909048,
+    "depth": 0
+  },
+  {
+    "id": 909047,
+    "name": "Замена стекла",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860377,
+    "name": "10 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860366,
+    "name": "11 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860367,
+    "name": "12 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860368,
+    "name": "13 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860369,
+    "name": "14 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860370,
+    "name": "15 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860371,
+    "name": "16 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860372,
+    "name": "17 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860373,
+    "name": "5 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860374,
+    "name": "6 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860375,
+    "name": "7 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 1860376,
+    "name": "8 серия",
+    "parentId": 909047,
+    "depth": 0
+  },
+  {
+    "id": 909018,
+    "name": "03 | iPad",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 1860363,
+    "name": "iPad",
+    "parentId": 909046,
+    "depth": 0
+  },
+  {
+    "id": 1860231,
+    "name": "iPad Air",
+    "parentId": 909046,
+    "depth": 0
+  },
+  {
+    "id": 1860232,
+    "name": "iPad mini",
+    "parentId": 909046,
+    "depth": 0
+  },
+  {
+    "id": 1860364,
+    "name": "iPad Pro 10,5",
+    "parentId": 909046,
+    "depth": 0
+  },
+  {
+    "id": 1860233,
+    "name": "iPad Pro 11",
+    "parentId": 909046,
+    "depth": 0
+  },
+  {
+    "id": 1860234,
+    "name": "iPad Pro 12,9 / 13",
+    "parentId": 909046,
+    "depth": 0
+  },
+  {
+    "id": 1860365,
+    "name": "iPad Pro 9,7",
+    "parentId": 909046,
+    "depth": 0
+  },
+  {
+    "id": 909045,
+    "name": "Замена стекла",
+    "parentId": 909022,
+    "depth": 0
+  },
+  {
+    "id": 1860214,
+    "name": "10 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860213,
+    "name": "11 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860359,
+    "name": "2 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860360,
+    "name": "3 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860220,
+    "name": "4 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860219,
+    "name": "5 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860218,
+    "name": "6 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860217,
+    "name": "7 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860216,
+    "name": "8 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860361,
+    "name": "Watch SE",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860362,
+    "name": "Watch Ultra",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 909043,
+    "name": "Замена разъема зарядки",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860358,
+    "name": "10 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860347,
+    "name": "11 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860348,
+    "name": "12 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860349,
+    "name": "13 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860350,
+    "name": "14 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860351,
+    "name": "15 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860352,
+    "name": "16 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860353,
+    "name": "17 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860354,
+    "name": "5 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860355,
+    "name": "6 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 1860356,
+    "name": "7 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 909042,
+    "name": "Замена разъема зарядки",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 1860208,
+    "name": "iPad",
+    "parentId": 909042,
+    "depth": 0
+  },
+  {
+    "id": 1860212,
+    "name": "iPad Air",
+    "parentId": 909042,
+    "depth": 0
+  },
+  {
+    "id": 1860209,
+    "name": "iPad mini",
+    "parentId": 909042,
+    "depth": 0
+  },
+  {
+    "id": 1860345,
+    "name": "iPad Pro 10,5",
+    "parentId": 909042,
+    "depth": 0
+  },
+  {
+    "id": 1860211,
+    "name": "iPad Pro 11",
+    "parentId": 909042,
+    "depth": 0
+  },
+  {
+    "id": 1860210,
+    "name": "iPad Pro 12,9 / 13",
+    "parentId": 909042,
+    "depth": 0
+  },
+  {
+    "id": 1860346,
+    "name": "iPad Pro 9,7",
+    "parentId": 909042,
+    "depth": 0
+  },
+  {
+    "id": 1860344,
+    "name": "10 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860333,
+    "name": "11 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860334,
+    "name": "12 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860335,
+    "name": "13 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860336,
+    "name": "14 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860337,
+    "name": "15 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860338,
+    "name": "16 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860339,
+    "name": "17 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860340,
+    "name": "5 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860341,
+    "name": "6 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860342,
+    "name": "7 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 1860343,
+    "name": "8 серия",
+    "parentId": 909041,
+    "depth": 0
+  },
+  {
+    "id": 909040,
+    "name": "Замена корпуса",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860332,
+    "name": "10 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860324,
+    "name": "11 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860325,
+    "name": "12 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860326,
+    "name": "13 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860207,
+    "name": "14 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860327,
+    "name": "15 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860206,
+    "name": "16 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860205,
+    "name": "17 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860328,
+    "name": "5 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860329,
+    "name": "6 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860330,
+    "name": "7 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 1860331,
+    "name": "8 серия",
+    "parentId": 909040,
+    "depth": 0
+  },
+  {
+    "id": 936927,
+    "name": "02 | Курьерские выезды",
+    "parentId": null,
+    "depth": 0
+  },
+  {
+    "id": 909016,
+    "name": "01 | Apple",
+    "parentId": 909015,
+    "depth": 0
+  },
+  {
+    "id": 909022,
+    "name": "04 | Watch",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 1860169,
+    "name": "Замена аккумулятора",
+    "parentId": 909022,
+    "depth": 0
+  },
+  {
+    "id": 1860224,
+    "name": "10 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860223,
+    "name": "11 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860230,
+    "name": "4 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860229,
+    "name": "5 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860228,
+    "name": "6 серия",
+    "parentId": 1860169,
+    "depth": 0
+  },
+  {
+    "id": 1860319,
+    "name": "10 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860311,
+    "name": "11 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860312,
+    "name": "12 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860313,
+    "name": "13 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860314,
+    "name": "14 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860315,
+    "name": "15 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860199,
+    "name": "16 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860198,
+    "name": "17 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860316,
+    "name": "5 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860317,
+    "name": "6 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860200,
+    "name": "8 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 909036,
+    "name": "Замена заднего стекла",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860310,
+    "name": "10 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860302,
+    "name": "11 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860303,
+    "name": "12 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860304,
+    "name": "13 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860305,
+    "name": "14 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860306,
+    "name": "15 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860307,
+    "name": "16 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860308,
+    "name": "17 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 1860309,
+    "name": "8 серия",
+    "parentId": 909036,
+    "depth": 0
+  },
+  {
+    "id": 909035,
+    "name": "Замена дисплея",
+    "parentId": 909020,
+    "depth": 0
+  },
+  {
+    "id": 1860297,
+    "name": "Macbook 12\"",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860194,
+    "name": "Macbook Air 13\" M1-M4",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860195,
+    "name": "Macbook Air 15\" M2-M4",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860299,
+    "name": "Macbook Pro 13\"",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860196,
+    "name": "Macbook Pro 14\" M1 - M5",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860300,
+    "name": "Macbook Pro 15\"",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860301,
+    "name": "Macbook Pro 16\" Intel",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860197,
+    "name": "Macbook Pro 16\" M1 - M4",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 909034,
+    "name": "Замена дисплея",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860296,
+    "name": "10 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860286,
+    "name": "11 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860287,
+    "name": "12 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860288,
+    "name": "13 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860289,
+    "name": "14 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860290,
+    "name": "15 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860291,
+    "name": "16 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860292,
+    "name": "17 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860293,
+    "name": "6 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860295,
+    "name": "8 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 909033,
+    "name": "Замена дисплея",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 1860189,
+    "name": "iPad",
+    "parentId": 909033,
+    "depth": 0
+  },
+  {
+    "id": 1860190,
+    "name": "iPad Air",
+    "parentId": 909033,
+    "depth": 0
+  },
+  {
+    "id": 1860191,
+    "name": "iPad mini",
+    "parentId": 909033,
+    "depth": 0
+  },
+  {
+    "id": 1860284,
+    "name": "iPad Pro 10,5",
+    "parentId": 909033,
+    "depth": 0
+  },
+  {
+    "id": 1860192,
+    "name": "iPad Pro 11",
+    "parentId": 909033,
+    "depth": 0
+  },
+  {
+    "id": 1860193,
+    "name": "iPad Pro 12,9 / 13",
+    "parentId": 909033,
+    "depth": 0
+  },
+  {
+    "id": 1860285,
+    "name": "iPad Pro 9,7",
+    "parentId": 909033,
+    "depth": 0
+  },
+  {
+    "id": 909032,
+    "name": "Замена дисплея",
+    "parentId": 909022,
+    "depth": 0
+  },
+  {
+    "id": 1860188,
+    "name": "10 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860187,
+    "name": "11 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860275,
+    "name": "2 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860276,
+    "name": "3 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860278,
+    "name": "5 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860279,
+    "name": "6 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860280,
+    "name": "7 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860281,
+    "name": "8 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860282,
+    "name": "9 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860283,
+    "name": "Watch SE",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860186,
+    "name": "Watch Ultra",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 909031,
+    "name": "Замена динамика",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860274,
+    "name": "10 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860266,
+    "name": "11 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860267,
+    "name": "12 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860268,
+    "name": "13 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860269,
+    "name": "14 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860270,
+    "name": "15 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860183,
+    "name": "17 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860271,
+    "name": "5 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860272,
+    "name": "6 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860185,
+    "name": "7 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860273,
+    "name": "8 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 909030,
+    "name": "Замена глазка камеры",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 1860265,
+    "name": "10 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860256,
+    "name": "11 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860257,
+    "name": "12 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860258,
+    "name": "13 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860259,
+    "name": "14 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860260,
+    "name": "15 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860181,
+    "name": "16 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860182,
+    "name": "17 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860262,
+    "name": "6 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860263,
+    "name": "7 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 1860264,
+    "name": "8 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 909029,
+    "name": "Замена аккумулятора",
+    "parentId": 909020,
+    "depth": 0
+  },
+  {
+    "id": 1860253,
+    "name": "Macbook Air 11 - 13\"",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860176,
+    "name": "Macbook Air 13\" M1-M4",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860177,
+    "name": "Macbook Air 15\" M2-M4",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860178,
+    "name": "Macbook Pro 13\"",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860179,
+    "name": "Macbook Pro 14\" M1 - M5",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860254,
+    "name": "Macbook Pro 15\"",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860255,
+    "name": "Macbook Pro 16\" Intel",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860180,
+    "name": "Macbook Pro 16\" M1 - M4",
+    "parentId": 909029,
+    "depth": 0
+  },
+  {
+    "id": 1860252,
+    "name": "10 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860242,
+    "name": "11 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860243,
+    "name": "12 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860244,
+    "name": "13 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860245,
+    "name": "14 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860246,
+    "name": "15 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860247,
+    "name": "16 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860248,
+    "name": "17 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860249,
+    "name": "6 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860250,
+    "name": "7 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 1860251,
+    "name": "8 серия",
+    "parentId": 909028,
+    "depth": 0
+  },
+  {
+    "id": 909027,
+    "name": "Замена аккумулятора",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 1860171,
+    "name": "iPad",
+    "parentId": 909027,
+    "depth": 0
+  },
+  {
+    "id": 1860172,
+    "name": "iPad Air",
+    "parentId": 909027,
+    "depth": 0
+  },
+  {
+    "id": 1860173,
+    "name": "iPad mini",
+    "parentId": 909027,
+    "depth": 0
+  },
+  {
+    "id": 1860240,
+    "name": "iPad Pro 10,5",
+    "parentId": 909027,
+    "depth": 0
+  },
+  {
+    "id": 1860174,
+    "name": "iPad Pro 11",
+    "parentId": 909027,
+    "depth": 0
+  },
+  {
+    "id": 1860175,
+    "name": "iPad Pro 12,9 / 13",
+    "parentId": 909027,
+    "depth": 0
+  },
+  {
+    "id": 1860241,
+    "name": "iPad Pro 9,7",
+    "parentId": 909027,
+    "depth": 0
+  },
+  {
+    "id": 909097,
+    "name": "Услуги",
+    "parentId": 909022,
+    "depth": 0
+  },
+  {
+    "id": 1860201,
+    "name": "Macbook Air 13\" M1-M4",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 1860202,
+    "name": "Macbook Air 15\" M2-M4",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 1860321,
+    "name": "Macbook Pro 13\"",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 1860203,
+    "name": "Macbook Pro 14\" M1 - M5",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 1860322,
+    "name": "Macbook Pro 15\"",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 1860323,
+    "name": "Macbook Pro 16\" Intel",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 1860204,
+    "name": "Macbook Pro 16\" M1 - M4",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 909037,
+    "name": "Замена камеры",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 909044,
+    "name": "Замена разъема зарядки",
+    "parentId": 909020,
+    "depth": 0
+  },
+  {
+    "id": 909025,
+    "name": "Восстановление материнской платы",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 939609,
+    "name": "Замена вибромотора",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 946530,
+    "name": "Замена кнопки Home",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 909039,
+    "name": "Замена контроллера питания",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 934632,
+    "name": "Замена шлейфа верхнего динамика",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 909052,
+    "name": "Прочее",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 909024,
+    "name": "Замена кнопки Home \\ Шлейфов включения \\ громкости",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 927567,
+    "name": "Замена корпуса",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 1648024,
+    "name": "Замена Ремонт материнской платы",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 942131,
+    "name": "Переклейка дисплея iPad",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 909023,
+    "name": "Прочее",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 909050,
+    "name": "Ремонт Face iD",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 909017,
+    "name": "02 | Android",
+    "parentId": 909015,
+    "depth": 0
+  },
+  {
+    "id": 909015,
+    "name": "01 | Работы мастеров",
+    "parentId": null,
+    "depth": 0
+  },
+  {
+    "id": 928519,
+    "name": "03 | Услуги прайслиста",
+    "parentId": null,
+    "depth": 0
+  },
+  {
+    "id": 918473,
+    "name": "Замена шлейфа кнопок громкости / включения",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 909048,
+    "name": "Замена тачбара",
+    "parentId": 909020,
+    "depth": 0
+  },
+  {
+    "id": 909046,
+    "name": "Замена стекла",
+    "parentId": 909018,
+    "depth": 0
+  },
+  {
+    "id": 1860215,
+    "name": "9 серия",
+    "parentId": 909045,
+    "depth": 0
+  },
+  {
+    "id": 1860357,
+    "name": "8 серия",
+    "parentId": 909043,
+    "depth": 0
+  },
+  {
+    "id": 909041,
+    "name": "Замена разговорного микрофона",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 909038,
+    "name": "Замена клавиатуры",
+    "parentId": 909020,
+    "depth": 0
+  },
+  {
+    "id": 1860320,
+    "name": "Macbook Air 11 - 13\"",
+    "parentId": 909038,
+    "depth": 0
+  },
+  {
+    "id": 1860318,
+    "name": "7 серия",
+    "parentId": 909037,
+    "depth": 0
+  },
+  {
+    "id": 1860298,
+    "name": "Macbook Air 11 - 13\"",
+    "parentId": 909035,
+    "depth": 0
+  },
+  {
+    "id": 1860294,
+    "name": "7 серия",
+    "parentId": 909034,
+    "depth": 0
+  },
+  {
+    "id": 1860277,
+    "name": "4 серия",
+    "parentId": 909032,
+    "depth": 0
+  },
+  {
+    "id": 1860184,
+    "name": "16 серия",
+    "parentId": 909031,
+    "depth": 0
+  },
+  {
+    "id": 1860261,
+    "name": "5 серия",
+    "parentId": 909030,
+    "depth": 0
+  },
+  {
+    "id": 909028,
+    "name": "Замена аккумулятора",
+    "parentId": 909019,
+    "depth": 0
+  },
+  {
+    "id": 909021,
+    "name": "Замена аккумулятора",
+    "parentId": 909017,
+    "depth": 0
+  },
+  {
+    "id": 919083,
+    "name": "Замена дисплея",
+    "parentId": 909017,
+    "depth": 0
+  },
+  {
+    "id": 1739653,
+    "name": "Замена заднего стекла",
+    "parentId": 909017,
+    "depth": 0
+  },
+  {
+    "id": 1706059,
+    "name": "Замена шлейфа",
+    "parentId": 909017,
+    "depth": 0
+  },
+  {
+    "id": 909081,
+    "name": "05 | iMac",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 1674569,
+    "name": "07 | Apple Studio Display",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 1674570,
+    "name": "08 | Apple Time Capsule",
+    "parentId": 909016,
+    "depth": 0
+  },
+  {
+    "id": 930043,
+    "name": "03 | ПК",
+    "parentId": 909015,
+    "depth": 0
+  },
+  {
+    "id": 1201310,
+    "name": "04 | Игровые приставки",
+    "parentId": 909015,
+    "depth": 0
+  },
+  {
+    "id": 909026,
+    "name": "Macbook услуги",
+    "parentId": 909020,
+    "depth": 0
+  },
+  {
+    "id": 918475,
+    "name": "Замена динамика",
+    "parentId": 909020,
+    "depth": 0
+  }
+]

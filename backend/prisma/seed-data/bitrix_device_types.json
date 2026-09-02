@@ -1,0 +1,46 @@
+[
+  {
+    "id": 52,
+    "name": "iMac"
+  },
+  {
+    "id": 498,
+    "name": "MacPro"
+  },
+  {
+    "id": 44,
+    "name": "iPhone"
+  },
+  {
+    "id": 50,
+    "name": "Watch"
+  },
+  {
+    "id": 0,
+    "name": "Не заполнено"
+  },
+  {
+    "id": 496,
+    "name": "Macmini"
+  },
+  {
+    "id": 46,
+    "name": "iPad"
+  },
+  {
+    "id": 48,
+    "name": "Macbook"
+  },
+  {
+    "id": 54,
+    "name": "iPod"
+  },
+  {
+    "id": 56,
+    "name": "AirPods"
+  },
+  {
+    "id": 58,
+    "name": "Прочее"
+  }
+]

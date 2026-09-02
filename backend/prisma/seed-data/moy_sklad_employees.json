@@ -1,0 +1,68 @@
+[
+  {
+    "id": "80e0b37a-9cdf-11ee-0a80-0edb00116d5d",
+    "name": "Кузнецов Дмитрий",
+    "firstName": "Дмитрий",
+    "lastName": "Кузнецов",
+    "middleName": null,
+    "email": "user.0410@example.com",
+    "phone": "+79008847274",
+    "position": null,
+    "archived": false
+  },
+  {
+    "id": "c19dfb22-69d0-11ef-0a80-186e000a9859",
+    "name": "Козлов Екатерина",
+    "firstName": "Екатерина",
+    "lastName": "Козлов",
+    "middleName": null,
+    "email": "user.6536@example.com",
+    "phone": "+79007186559",
+    "position": "Менеджер",
+    "archived": false
+  },
+  {
+    "id": "e326ad6c-9cde-11ee-0a80-10c700117afb",
+    "name": "Иванов Юлия",
+    "firstName": "Юлия",
+    "lastName": "Иванов",
+    "middleName": null,
+    "email": "user.6580@example.com",
+    "phone": "+79008575495",
+    "position": null,
+    "archived": false
+  },
+  {
+    "id": "abe789b0-9ce1-11ee-0a80-084c00115ab2",
+    "name": "Воробьёв Екатерина",
+    "firstName": "Екатерина",
+    "lastName": "Воробьёв",
+    "middleName": null,
+    "email": "user.8390@example.com",
+    "phone": "+79000588244",
+    "position": "Закупщик",
+    "archived": false
+  },
+  {
+    "id": "d52f24ce-9cdd-11ee-0a80-078800119260",
+    "name": "Богданов Кирилл",
+    "firstName": "Кирилл",
+    "lastName": "Богданов",
+    "middleName": null,
+    "email": "user.8697@example.com",
+    "phone": "+79004723665",
+    "position": null,
+    "archived": false
+  },
+  {
+    "id": "83e7463a-7c96-11ee-0a80-14d30012e4bf",
+    "name": "Соловьёв Дмитрий",
+    "firstName": "Дмитрий",
+    "lastName": "Соловьёв",
+    "middleName": null,
+    "email": "user.7185@example.com",
+    "phone": "+79001795163",
+    "position": null,
+    "archived": false
+  }
+]

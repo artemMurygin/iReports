@@ -1,0 +1,169 @@
+{
+  "exportedAt": "2026-09-02T14:12:37.916Z",
+  "models": {
+    "bitrix_departments": {
+      "file": "bitrix_departments.json",
+      "rows": 5
+    },
+    "bitrix_enum_values": {
+      "file": "bitrix_enum_values.json",
+      "rows": 138
+    },
+    "bitrix_stages": {
+      "file": "bitrix_stages.json",
+      "rows": 186
+    },
+    "bitrix_point_of_contacts": {
+      "file": "bitrix_point_of_contacts.json",
+      "rows": 28
+    },
+    "bitrix_device_types": {
+      "file": "bitrix_device_types.json",
+      "rows": 11
+    },
+    "bitrix_lead_sources": {
+      "file": "bitrix_lead_sources.json",
+      "rows": 17
+    },
+    "roapp_order_types": {
+      "file": "roapp_order_types.json",
+      "rows": 8
+    },
+    "roapp_marketing_sources": {
+      "file": "roapp_marketing_sources.json",
+      "rows": 16
+    },
+    "roapp_order_statuses": {
+      "file": "roapp_order_statuses.json",
+      "rows": 68
+    },
+    "roapp_employees": {
+      "file": "roapp_employees.json",
+      "rows": 7
+    },
+    "moy_sklad_employees": {
+      "file": "moy_sklad_employees.json",
+      "rows": 6
+    },
+    "bitrix_employees": {
+      "file": "bitrix_employees.json",
+      "rows": 42
+    },
+    "bitrix_deals": {
+      "file": "bitrix_deals.json",
+      "rows": 7077
+    },
+    "employee_identities": {
+      "file": "employee_identities.json",
+      "rows": 8
+    },
+    "roapp_product_categories": {
+      "file": "roapp_product_categories.json",
+      "rows": 444
+    },
+    "roapp_products": {
+      "file": "roapp_products.json",
+      "rows": 3108
+    },
+    "roapp_service_categories": {
+      "file": "roapp_service_categories.json",
+      "rows": 288
+    },
+    "roapp_service": {
+      "file": "roapp_service.json",
+      "rows": 1576
+    },
+    "roapp_orders": {
+      "file": "roapp_orders.json",
+      "rows": 1828
+    },
+    "roapp_products_orders": {
+      "file": "roapp_products_orders.json",
+      "rows": 2656
+    },
+    "roapp_service_orders": {
+      "file": "roapp_service_orders.json",
+      "rows": 1841
+    },
+    "moy_sklad_product_folders": {
+      "file": "moy_sklad_product_folders.json",
+      "rows": 220
+    },
+    "moy_sklad_products": {
+      "file": "moy_sklad_products.json",
+      "rows": 3015
+    },
+    "moy_sklad_services": {
+      "file": "moy_sklad_services.json",
+      "rows": 36
+    },
+    "moy_sklad_demands": {
+      "file": "moy_sklad_demands.json",
+      "rows": 2185
+    },
+    "moy_sklad_demand_positions": {
+      "file": "moy_sklad_demand_positions.json",
+      "rows": 3202
+    },
+    "domain_sync_status": {
+      "file": "domain_sync_status.json",
+      "rows": 1
+    },
+    "accounting_periods": {
+      "file": "accounting_periods.json",
+      "rows": 3
+    },
+    "accounting_period_snapshots": {
+      "file": "accounting_period_snapshots.json",
+      "rows": 24
+    },
+    "accounting_calculation_cache": {
+      "file": "accounting_calculation_cache.json",
+      "rows": 149
+    },
+    "balance_transactions": {
+      "file": "balance_transactions.json",
+      "rows": 17
+    },
+    "erp_cash_documents": {
+      "file": "erp_cash_documents.json",
+      "rows": 1
+    },
+    "salary_accruals": {
+      "file": "salary_accruals.json",
+      "rows": 24
+    },
+    "salary_accrual_lines": {
+      "file": "salary_accrual_lines.json",
+      "rows": 180
+    },
+    "salary_accrual_line_adjustments": {
+      "file": "salary_accrual_line_adjustments.json",
+      "rows": 2
+    },
+    "motivation_schemas": {
+      "file": "motivation_schemas.json",
+      "rows": 3
+    },
+    "salary_rules": {
+      "file": "salary_rules.json",
+      "rows": 19
+    },
+    "task_completions": {
+      "file": "task_completions.json",
+      "rows": 0
+    },
+    "work_schedule_entries": {
+      "file": "work_schedule_entries.json",
+      "rows": 136
+    },
+    "sales_plan_templates": {
+      "file": "sales_plan_templates.json",
+      "rows": 0
+    },
+    "sales_plans": {
+      "file": "sales_plans.json",
+      "rows": 46
+    }
+  }
+}

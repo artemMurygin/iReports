@@ -13,6 +13,10 @@ product/architecture picture. This file covers backend-specific commands and con
 (см. «Architecture» ниже) — не копируй паттерн только потому, что он уже где-то использован;
 ориентируйся на то, что написано здесь, даже если это расходится с наблюдаемым кодом.
 
+## Граф знаний (`/graphify`)
+
+Для вопросов об архитектуре, связях между доменами/модулями или «что от чего зависит» сначала проверяй `graphify-out/graph.json` в корне репозитория и используй `/graphify query "<вопрос>"` — это быстрее и точнее, чем ручной grep по `src/domains`. Граф локальный (в `.gitignore`), после крупных переносов/переименований файлов между доменами перестраивай его через `/graphify --update`, иначе ответы будут по устаревшей структуре. Подробнее — в [корневом CLAUDE.md](../CLAUDE.md#knowledge-graph-graphify).
+
 ## Commands
 
 Run from `backend/`.
@@ -51,6 +55,8 @@ One-off scripts (build first, they run from `dist/`):
 ```bash
 npm run initial                  # nest build -c nest-cli.json && node dist/src/scripts/initialUploadData.js
 npm run price:monitoring         # nest build -c nest-cli.json && node dist/src/utils/runPriceMonitoring.js
+npm run seed:export              # анонимизированный экспорт локальной БД в prisma/seed-data/ (src/scripts/seed/)
+npm run db:seed                  # накатывает prisma/seed-data/ в ТЕКУЩУЮ DATABASE_URL — ДЕСТРУКТИВНО, TRUNCATE, только для чистой/demo-БД
 ```
 
 To run a single test file directly with ts-jest, `cd backend` and use the `test` script with a path/name

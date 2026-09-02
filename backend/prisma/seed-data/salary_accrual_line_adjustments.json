@@ -1,0 +1,20 @@
+[
+  {
+    "id": "0b312b49-31a3-41a0-b829-f52077aa99e5",
+    "lineId": "b1159b07-80b3-4f4b-a22d-88ade1030268",
+    "previousAmount": 0,
+    "newAmount": 10640,
+    "comment": "См. вложения к заказу",
+    "adjustedBy": 1,
+    "createdAt": "2026-08-25T16:29:27.814Z"
+  },
+  {
+    "id": "24b87d38-769c-45b0-a4cf-7e8fd3a7397d",
+    "lineId": "b1159b07-80b3-4f4b-a22d-88ade1030268",
+    "previousAmount": 10640,
+    "newAmount": 0,
+    "comment": "Уточнить детали у клиента",
+    "adjustedBy": 1,
+    "createdAt": "2026-08-25T16:41:37.955Z"
+  }
+]

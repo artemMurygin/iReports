@@ -7,6 +7,13 @@ export default defineConfig({
     schema: 'prisma/schema',
     migrations: {
         path: 'prisma/migrations',
+        // Анонимизированные demo-фикстуры (prisma/seed-data/, генерируются
+        // src/scripts/seed/export-from-live-db.ts, npm run seed:export) —
+        // см. `npx prisma db seed --config prisma.config.ts` / npm run db:seed.
+        // Собирает src через nest build (как npm run initial) — сид-скрипт
+        // импортирует сгенерированный Prisma Client теми же относительными
+        // путями, что и остальной backend.
+        seed: 'nest build -c nest-cli.json && node dist/src/scripts/seed/seed.js',
     },
     datasource: {
         url: process.env['DATABASE_URL'],

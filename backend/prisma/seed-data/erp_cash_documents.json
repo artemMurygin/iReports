@@ -1,0 +1,12 @@
+[
+  {
+    "id": "82be30dd-c7a6-46ce-be0c-f9caa761039f",
+    "transactionId": "3f161f09-2d60-4c8d-8f8c-26f3e391972d",
+    "system": "ROAPP",
+    "kind": "OUTCOME",
+    "amount": 18490,
+    "externalId": "99439963",
+    "direction": "service",
+    "createdAt": "2026-08-25T09:01:31.989Z"
+  }
+]

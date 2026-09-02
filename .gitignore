@@ -11,6 +11,8 @@ node_modules/
 # Build output
 dist/
 
+.ua
+
 # OS
 .DS_Store
 

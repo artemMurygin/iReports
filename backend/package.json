@@ -21,7 +21,9 @@
         "initial": "nest build -c nest-cli.json && node dist/src/scripts/initialUploadData.js",
         "initialProd": "node dist/src/scripts/initialUploadData.js",
         "price:monitoring": "nest build -c nest-cli.json && node dist/src/utils/runPriceMonitoring.js",
-        "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js"
+        "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js",
+        "seed:export": "nest build -c nest-cli.json && node dist/src/scripts/seed/export-from-live-db.js",
+        "db:seed": "prisma db seed --config prisma.config.ts"
     },
     "dependencies": {
         "@nestjs/common": "^11.0.1",
