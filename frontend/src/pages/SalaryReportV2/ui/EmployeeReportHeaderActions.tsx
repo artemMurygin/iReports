@@ -1,14 +1,18 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Download } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { PeriodPicker } from '@/features/SalesPlan'
-import type { SalaryReportScope } from '@/features/SalaryReportData'
+import type { EmployeeReportVM, SalaryReportScope } from '@/features/SalaryReportData'
 import { Button } from '@/shared/ui-kit/atoms/Button'
+
+import { downloadEmployeeReportCsv } from '../model/exportEmployeeReportCsv.ts'
 
 export type EmployeeReportHeaderActionsProps = {
     scope: SalaryReportScope
     period: string
     onPeriodChange: (period: string) => void
+    report: EmployeeReportVM | null
+    employeeName: string | null
 }
 
 /**
@@ -27,8 +31,18 @@ export type EmployeeReportHeaderActionsProps = {
  * `<Link>` на статичный `/salaries` (роут по умолчанию — отчёт отдела): сотрудник может попасть на
  * `/salaries/employee/:id` напрямую по ссылке, без `/salaries` в истории браузера, поэтому переход
  * должен явно вести на маршрут, а не полагаться на `navigate(-1)`.
+ *
+ * Кнопка «Выгрузить CSV» симметрична `DepartmentReportHeaderActions`'s — CSV строится на клиенте из
+ * уже загруженного `report` (`model/exportEmployeeReportCsv.ts`), недоступна, пока отчёт не
+ * загружен (`report === null`).
  */
-export function EmployeeReportHeaderActions({ scope, period, onPeriodChange }: EmployeeReportHeaderActionsProps) {
+export function EmployeeReportHeaderActions({
+    scope,
+    period,
+    onPeriodChange,
+    report,
+    employeeName,
+}: EmployeeReportHeaderActionsProps) {
     if (scope !== 'employee') {
         return null
     }
@@ -36,6 +50,15 @@ export function EmployeeReportHeaderActions({ scope, period, onPeriodChange }: E
     return (
         <div className="flex flex-wrap items-center gap-2">
             <PeriodPicker period={period} onPeriodChange={onPeriodChange} />
+
+            <Button
+                variant="secondary"
+                disabled={!report}
+                onClick={() => report && downloadEmployeeReportCsv(report, employeeName)}
+            >
+                <Download />
+                Выгрузить CSV
+            </Button>
 
             <Button asChild variant="secondary">
                 <Link to="/salaries">

@@ -73,7 +73,13 @@ export function SalaryReportV2Page() {
                         }
                         actions={
                             <>
-                                <EmployeeReportHeaderActions scope={scope} period={period} onPeriodChange={setPeriod} />
+                                <EmployeeReportHeaderActions
+                                    scope={scope}
+                                    period={period}
+                                    onPeriodChange={setPeriod}
+                                    report={employeeReport}
+                                    employeeName={employeeName}
+                                />
                                 <DepartmentReportHeaderActions scope={scope} report={departmentReport} />
                             </>
                         }
