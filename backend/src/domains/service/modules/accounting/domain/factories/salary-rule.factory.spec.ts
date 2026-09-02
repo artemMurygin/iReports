@@ -45,7 +45,13 @@ describe('SalaryRuleFactory', () => {
             type: 'TaskCompleted',
             name: 'За выполненную задачу',
             targetRole: 'ENGINEER',
-            config: { award: { type: 'Fixed', price: 100 } },
+            config: {
+                description: 'Сделать что-то важное',
+                period: '2026-08',
+                isRecurring: false,
+                dueDate: '2026-08-15',
+                rewardAmount: 100,
+            },
         });
 
         expect(rule).toBeInstanceOf(TaskCompletedEntity);

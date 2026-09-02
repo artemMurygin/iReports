@@ -17,6 +17,7 @@ const PREVIEW_READY: ClosePeriodPreviewResponse = {
     totalAmount: 3_214_800,
     unapprovedPlanRows: [],
     employeesWithoutHours: 3,
+    unclosedTaskRules: [],
 }
 
 const UNAPPROVED_ROW = { id: 'p1', department: 160, category: 'Ремонт Apple' }

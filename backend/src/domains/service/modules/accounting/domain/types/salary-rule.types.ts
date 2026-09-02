@@ -78,21 +78,49 @@ export type OrderPayedSalaryRule = {
     config: OrderPayedSalaryConfig;
 };
 
-// За выполненную задачу (Фаза 8) — "задача" в этой итерации это внутренний
-// ручной ввод (TaskCompletionEntity), не интеграция с Bitrix24 Tasks (см.
-// domain/entities/task-completion.entity.ts). FloatPercent для задач не
-// описан в PRD подробно — решение по этому открытому вопросу: тот же
-// трёхпороговый механизм percentBorders, что и у OrderPayed, но база —
-// фиксированная ставка за подтверждённую задачу (basePrice), а не сумма
-// заказа (см. contracts/commands/salary-rule.ts).
+// За выполненную задачу (change salary-rule-bitrix-task) — "задача" здесь
+// реальная задача Bitrix24, привязанная к правилу; постановка, обсуждение и
+// приёмка идут в Bitrix24, а iReports читает статус и расчётный месяц задачи
+// пакетным запросом при расчёте (см. task-completed.entity.ts,
+// design.md Decision 1). Единственный вид вознаграждения — фиксированная
+// сумма (Decision 2; BREAKING — вариант award/FloatPercent, использовавшийся
+// прежним временным воркфлоу TaskCompletion, удалён вместе с ним).
+// Фактическая сумма к выплате по закрытой задаче за конкретный расчётный
+// период — ручной ввод руководителя (spec.md, "Ручной ввод фактической
+// суммы по закрытой задаче"), хранится в props правила, без отдельной
+// Prisma-модели (Decision 2).
+export type TaskCompletedActualAmountEntry = {
+    period: string;
+    amount: number;
+};
+
 export type TaskCompletedSalaryConfig = {
-    award:
-        | { type: 'Fixed'; price: number }
-        | {
-              type: 'FloatPercent';
-              basePrice: number;
-              percentBorders: [PercentBorder, PercentBorder, PercentBorder];
-          };
+    description: string;
+    // Расчётный месяц правила на момент создания/редактирования — границы,
+    // в которых обязан лежать dueDate (Decision 9). НЕ текущий расчётный
+    // месяц, который правило обслуживает в моменте расчёта — тот
+    // определяется живым тегом периода задачи Bitrix24 (Decision 1 и 7).
+    period: string;
+    isRecurring: boolean;
+    // 'YYYY-MM-DD', см. contracts/commands/salary-rule.ts —
+    // taskCompletedDueDateSchema.
+    dueDate: string;
+    // Сумма вознаграждения за полное выполнение — единственный вид награды
+    // (Decision 2). Оборачивается value object'ом TaskRewardAmount на
+    // доменном уровне (см. task-completed.entity.ts), сырое число — только
+    // форма хранения в props: Json.
+    rewardAmount: number;
+    // ID задач Bitrix24, накопленные за всё время правила: один элемент
+    // для разового правила, по одному новому элементу на каждый
+    // регенерированный месяц для регулярного (design.md change
+    // salary-rule-bitrix-task, Decision 1). Расчётный месяц задачи не
+    // дублируется здесь — при расчёте он читается из Bitrix24 (тег
+    // периода) пакетным запросом по этим ID.
+    bitrixTaskIds?: number[];
+    // По одной записи на период, где руководитель вводил фактическую
+    // сумму (Decision 2 выше) — upsert по period, см.
+    // TaskCompletedEntity.upsertActualAmount.
+    actualAmounts?: TaskCompletedActualAmountEntry[];
 };
 
 export type TaskCompletedSalaryRule = {

@@ -10,8 +10,11 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import type { BitrixTasksService } from '@/integrations/bitrix/bitrix-tasks.service';
+import type { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
 
 // Отчёт по отделу (Фаза 9) — тот же расчёт, что и у отчёта сотрудника,
 // агрегированный по отделу без N+1. Отчёт строго однонаправленный (только
@@ -72,12 +75,13 @@ describe('GetDepartmentSalaryReportService', () => {
             .fn()
             .mockResolvedValue(
                 new Map(
-                    [...(overrides.hoursByEmployee ?? new Map())].map(
-                        ([employeeId, hours]) => [
-                            employeeId,
-                            { fact: hours, prognose: hours },
-                        ],
-                    ),
+                    [
+                        ...(overrides.hoursByEmployee ??
+                            new Map<number, number>()),
+                    ].map(([employeeId, hours]) => [
+                        employeeId,
+                        { fact: hours, prognose: hours },
+                    ]),
                 ),
             );
         const dataSource: ServiceCalculationDataPort = {
@@ -167,6 +171,20 @@ describe('GetDepartmentSalaryReportService', () => {
             findByDirectionAndPeriod: jest.fn().mockResolvedValue([]),
         };
 
+        // Ни одна фикстура этого файла не заводит правил TaskCompleted —
+        // getTasksBatch не должен вызываться вовсе (ids пуст, см.
+        // fetchBitrixTaskStatuses), поэтому достаточно голого мока без
+        // ожиданий на вызовы (используется отдельным юнит-тестом ниже).
+        const getTasksBatch = jest.fn().mockResolvedValue([]);
+        const bitrixTasksService = {
+            getTasksBatch,
+        } as unknown as BitrixTasksService;
+
+        const ensureAll = jest.fn().mockResolvedValue(undefined);
+        const ensureTaskRules = {
+            ensureAll,
+        } as unknown as EnsureTaskRulesOnReadService;
+
         const service = new GetDepartmentSalaryReportService(
             dataSource,
             salesPerformanceReader,
@@ -176,6 +194,8 @@ describe('GetDepartmentSalaryReportService', () => {
             domainSyncStatus,
             salesPlanRepo,
             salaryRulesResolver,
+            bitrixTasksService,
+            ensureTaskRules,
         );
 
         return {
@@ -188,6 +208,8 @@ describe('GetDepartmentSalaryReportService', () => {
             findByEmployees,
             findForScope,
             findManyByKey,
+            getTasksBatch,
+            ensureAll,
         };
     };
 
@@ -313,6 +335,75 @@ describe('GetDepartmentSalaryReportService', () => {
         expect(withSchema?.rules).toHaveLength(1);
         expect(withoutSchema?.total).toEqual({ fact: 0, prognose: 0 });
         expect(withoutSchema?.rules).toHaveLength(0);
+    });
+
+    // spec.md, "Пакетный запрос статусов при большом числе правил-задач" —
+    // сценарий явно называет и отчёт отдела: до 30 правил-задач, не более
+    // одного пакетного запроса статусов задач в Bitrix24.
+    it('несколько правил TaskCompleted у разных сотрудников отдела — ровно один вызов getTasksBatch на весь отдел', async () => {
+        const employees = [
+            { id: 1, name: 'Первый' },
+            { id: 2, name: 'Второй' },
+        ];
+        const buildTaskSchema = (employeeId: number, taskId: number) =>
+            withRequestContext(() => {
+                const rule = TaskCompletedEntity.create({
+                    type: 'TaskCompleted',
+                    name: 'Задача',
+                    targetRole: 'ENGINEER',
+                    config: {
+                        description: 'Описание',
+                        period: '2026-08',
+                        isRecurring: false,
+                        dueDate: '2026-08-20',
+                        rewardAmount: 1000,
+                        bitrixTaskIds: [taskId],
+                    },
+                });
+                return MotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: employeeId,
+                    name: 'Схема с задачей',
+                    rules: [rule],
+                });
+            });
+        const schemas = [buildTaskSchema(1, 101), buildTaskSchema(2, 102)];
+
+        const { service, getTasksBatch } = buildService({
+            employees,
+            schemas,
+        });
+        getTasksBatch.mockResolvedValue([
+            { id: 101, isAvailable: true, status: '5', period: '2026-08' },
+            { id: 102, isAvailable: true, status: '2', period: '2026-08' },
+        ]);
+
+        await service.execute(1, '2026-08');
+
+        expect(getTasksBatch).toHaveBeenCalledTimes(1);
+        expect(getTasksBatch).toHaveBeenCalledWith([101, 102]);
+    });
+
+    // Задача 7.2 change salary-rule-bitrix-task: ленивое достраивание
+    // задач регулярных правил-задач — по одному вызову ensureAll на
+    // сотрудника отдела, до чтения статусов у Bitrix24.
+    it('открытый период — лениво достраивает задачи правил-задач для каждого сотрудника отдела', async () => {
+        const employees = [
+            { id: 1, name: 'Первый' },
+            { id: 2, name: 'Второй' },
+        ];
+        const schemas = [
+            buildServiceSchema(1, 250),
+            buildServiceSchema(2, 250),
+        ];
+
+        const { service, ensureAll } = buildService({ employees, schemas });
+
+        await service.execute(1, '2026-08');
+
+        expect(ensureAll).toHaveBeenCalledTimes(2);
+        expect(ensureAll).toHaveBeenCalledWith(expect.any(Array), 1, '2026-08');
+        expect(ensureAll).toHaveBeenCalledWith(expect.any(Array), 2, '2026-08');
     });
 
     it('отдел без сотрудников отдаёт пустой список и нулевой итог', async () => {

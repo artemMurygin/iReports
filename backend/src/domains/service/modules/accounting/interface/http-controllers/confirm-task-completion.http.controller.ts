@@ -1,42 +1,35 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
+import { Controller, GoneException, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { TaskCompletionResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { TaskCompletionConfirmDto } from '../dto/task-completion-confirm.dto';
-import { TaskCompletionRejectDto } from '../dto/task-completion-reject.dto';
-import { ConfirmTaskCompletionCommand } from '../../application/command/confirm-task-completion.command';
 
+// Requirement "Вывод из эксплуатации воркфлоу TaskCompletion" (spec.md) и
+// design.md, Decision 10, шаг 1 — см. WHY в create-task-completion.http.controller.ts.
+// confirm/reject отключены вместе: оба меняют статус записи TaskCompletion,
+// которая больше не участвует в расчёте TaskCompleted.
 @ApiTags('Бухгалтерия: выполнение задач')
 @Controller()
 export class ConfirmTaskCompletionHttpController {
-    constructor(private readonly commandBus: CommandBus) {}
-
     @Post(routesV1.service.accounting.confirmTaskCompletion)
-    @ApiOperation({ summary: 'Подтвердить выполнение задачи сотрудником' })
-    async confirm(
-        @Param('id') id: string,
-        @Body() body: TaskCompletionConfirmDto,
-    ): Promise<TaskCompletionResponse> {
-        const command = new ConfirmTaskCompletionCommand({
-            taskCompletionId: id,
-            confirmedBy: body.confirmedBy,
-            approve: true,
-        });
-        return this.commandBus.execute(command);
+    @ApiOperation({
+        summary:
+            'Отключено: воркфлоу TaskCompletion выведен из эксплуатации — правило TaskCompleted привязывается к задаче Bitrix24',
+    })
+    confirm(): never {
+        throw new GoneException(
+            'Воркфлоу TaskCompletion выведен из эксплуатации: подтверждение ' +
+                'задачи теперь выполняется в самой задаче Bitrix24',
+        );
     }
 
     @Post(routesV1.service.accounting.rejectTaskCompletion)
-    @ApiOperation({ summary: 'Отклонить выполнение задачи сотрудником' })
-    async reject(
-        @Param('id') id: string,
-        @Body() body: TaskCompletionRejectDto,
-    ): Promise<TaskCompletionResponse> {
-        const command = new ConfirmTaskCompletionCommand({
-            taskCompletionId: id,
-            confirmedBy: body.confirmedBy,
-            approve: false,
-        });
-        return this.commandBus.execute(command);
+    @ApiOperation({
+        summary:
+            'Отключено: воркфлоу TaskCompletion выведен из эксплуатации — правило TaskCompleted привязывается к задаче Bitrix24',
+    })
+    reject(): never {
+        throw new GoneException(
+            'Воркфлоу TaskCompletion выведен из эксплуатации: отклонение ' +
+                'задачи теперь выполняется в самой задаче Bitrix24',
+        );
     }
 }

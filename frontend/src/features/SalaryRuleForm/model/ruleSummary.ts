@@ -34,9 +34,7 @@ function summarizeAward(draft: RuleDraft): string {
         case 'FixedPercent':
             return `${formatNumber(draft.percent)}% от базы «${draft.salaryBasis ? SALARY_BASIS_LABELS[draft.salaryBasis] : '—'}»`
         case 'FloatPercent':
-            return draft.type === 'TaskCompleted'
-                ? `Плавающий процент от ставки ${formatNumber(draft.basePrice)} ₽`
-                : `Плавающий процент, база ${formatNumber(draft.basePercent)}%`
+            return `Плавающий процент, база ${formatNumber(draft.basePercent)}%`
         default:
             return 'Вариант награды не выбран'
     }
@@ -55,6 +53,14 @@ function summarizeAward(draft: RuleDraft): string {
 export function summarizeRuleDraft(draft: RuleDraft, categories: CatalogCategoryResponse[] = []): string {
     if (draft.type === 'PayPerHour') {
         return `${formatNumber(draft.price)} ₽ за час · без варианта награды`
+    }
+
+    // TaskCompleted (change salary-rule-bitrix-task) — задача Bitrix24, а не award-union
+    // (design.md, Decision 2): своя сводка вместо `summarizeAward`, тот же приём, что и у
+    // `PayPerHour` выше.
+    if (draft.type === 'TaskCompleted') {
+        const recurrence = draft.isRecurring ? 'регулярная' : 'разовая'
+        return `${formatNumber(draft.price)} ₽ за задачу · ${recurrence}`
     }
 
     const parts = [summarizeAward(draft)]

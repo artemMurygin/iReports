@@ -36,8 +36,11 @@ export const SHOP_SALARY_BASIS_OPTIONS: SegmentedControlOption<'REVENUE' | 'MARG
 /** Mirrors `contracts/commands/shop-salary-rule.ts`'s per-type award unions exactly:
  * `ProductSold` — `Fixed`/`FixedPercent`/`FloatPercent` (`productSoldSalaryConfigSchema`);
  * `UsedProductSold` — `Fixed`/`FixedPercent` only, no `FloatPercent` (`usedProductSoldSalaryConfigSchema`
- * — the purchaser's reward isn't tied to plan completion); `TaskCompleted` — `Fixed`/`FloatPercent`,
- * same as service's `TaskCompleted` (`taskCompletedShopSalaryConfigSchema`). */
+ * — the purchaser's reward isn't tied to plan completion); `TaskCompleted` — no award at all any
+ * more (change salary-rule-bitrix-task, design.md Decision 2 — `award`-union removed, единственный
+ * вид вознаграждения фиксированная сумма, `taskCompletedShopSalaryConfigSchema.rewardAmount`), same
+ * empty-array convention as `PayPerHour` — its own field set is rendered unconditionally by
+ * `TaskCompletedFields`, not through `AwardSection`. */
 export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
     ProductSold: [
@@ -49,10 +52,7 @@ export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за проданное Б/У устройство' },
         { kind: 'FixedPercent', title: 'Фиксированный процент', description: 'Процент от выбранной базы' },
     ],
-    TaskCompleted: [
-        { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за выполненную задачу' },
-        { kind: 'FloatPercent', title: 'Плавающий процент', description: 'Базовая ставка и 3 порога плана' },
-    ],
+    TaskCompleted: [],
 }
 
 /** The shop rule types whose `config` has a `category` field (`productSoldSalaryConfigSchema`/

@@ -1,6 +1,10 @@
 import { queryOptions } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
-import type { DepartmentSalaryReportResponse, EmployeeSalaryReportResponse } from 'ireports-contracts'
+import type {
+    DepartmentSalaryReportResponse,
+    EmployeeSalaryReportResponse,
+    SetTaskRuleActualAmountRequest,
+} from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
@@ -62,4 +66,17 @@ export const api = {
                         throw new ApiError('Не удалось загрузить отчёт по зарплатам отдела ' + error)
                     }),
         }),
+
+    /**
+     * Ручной ввод фактической суммы по закрытой задаче правила `TaskCompleted` (change
+     * salary-rule-bitrix-task, spec.md "Ручной ввод фактической суммы по закрытой задаче") —
+     * `PUT /v1/service/accounting/task_rules/actual_amount` (`ENDPOINTS.md`). Направление всегда
+     * `service` — маршрут существует только там (`app.routes.ts`, `TaskCompleted` направления `shop`
+     * ещё не подключён к Bitrix24, см. `backend/CLAUDE.md`), в отличие от остальных методов этого
+     * файла `direction` здесь не параметр. Ошибка НЕ оборачивается в `ApiError` (тот же приём, что
+     * `features/SalaryAccruals`'s `adjustLine`) — вызывающий код сам читает `AxiosError` (400/403/409
+     * с текстом причины отказа: не «Закрыта»/период закрыт/сумма вне диапазона).
+     */
+    setTaskRuleActualAmount: (body: SetTaskRuleActualAmountRequest): Promise<void> =>
+        apiInstance.put('/v1/service/accounting/task_rules/actual_amount', body).then(() => undefined),
 }

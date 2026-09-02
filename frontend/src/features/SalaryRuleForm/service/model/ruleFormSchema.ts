@@ -1,7 +1,7 @@
 import { salaryRuleRequestSchema, type SalaryRuleRequest, type SalaryRuleResponse } from 'ireports-contracts'
 
 import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
-import { buildOrderPayedAward, buildServiceCompletedAward, buildTaskCompletedAward } from '../../model/ruleAwards.ts'
+import { buildOrderPayedAward, buildServiceCompletedAward, buildTaskCompletedConfig } from '../../model/ruleAwards.ts'
 import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ruleDraft.ts'
 
 // Re-exported so existing imports (`core/ui/RuleFormCard`, `core/ui/RuleList`,
@@ -43,7 +43,7 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             config = { award: buildOrderPayedAward(draft, errors), orderTypeIds: draft.orderTypeIds }
             break
         case 'TaskCompleted':
-            config = { award: buildTaskCompletedAward(draft, errors) }
+            config = buildTaskCompletedConfig(draft, errors)
             break
         default:
             // `draft.type` is the shared `RuleType` union (Фаза 4, `core/model/ruleDraft.ts`) — the shop-only
@@ -106,12 +106,15 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         awardKind: '',
         percent: '',
         basePercent: '',
-        basePrice: '',
         salaryBasis: '',
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
+        description: '',
+        period: '',
+        isRecurring: false,
+        dueDate: '',
     }
 
     switch (rule.type) {
@@ -151,21 +154,15 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
             break
         }
 
-        case 'TaskCompleted': {
-            const award = rule.config.award
-            const withAward: RuleDraft = { ...base, awardKind: award.type }
-            switch (award.type) {
-                case 'Fixed':
-                    return { ...withAward, price: String(award.price) }
-                case 'FloatPercent':
-                    return {
-                        ...withAward,
-                        basePrice: String(award.basePrice),
-                        percentBorders: bordersFromResponse(award.percentBorders),
-                    }
+        case 'TaskCompleted':
+            return {
+                ...base,
+                description: rule.config.description,
+                period: rule.config.period,
+                isRecurring: rule.config.isRecurring,
+                dueDate: rule.config.dueDate,
+                price: String(rule.config.rewardAmount),
             }
-            break
-        }
     }
 
     return base

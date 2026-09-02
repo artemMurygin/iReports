@@ -5,6 +5,8 @@ import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/a
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
+import { EnsureTaskRulesOnReadService } from './ensure-task-rules-on-read.service';
 
 describe('GetMotivationSchemaService', () => {
     const buildSchema = (
@@ -62,12 +64,18 @@ describe('GetMotivationSchemaService', () => {
             findEmployees,
         };
 
+        const ensureAll = jest.fn().mockResolvedValue(undefined);
+        const ensureTaskRules = {
+            ensureAll,
+        } as unknown as EnsureTaskRulesOnReadService;
+
         const service = new GetMotivationSchemaService(
             motivationSchemaRepo,
             directoryRepo,
+            ensureTaskRules,
         );
 
-        return { service, findById, findDepartments, findEmployees };
+        return { service, findById, findDepartments, findEmployees, ensureAll };
     };
 
     it('выбрасывает NotFoundException, если схема не найдена', async () => {
@@ -112,6 +120,51 @@ describe('GetMotivationSchemaService', () => {
                 targetRole: 'ENGINEER',
                 config: { price: 100 },
             });
+        });
+    });
+
+    it('лениво достраивает задачи Bitrix24 правил-задач схемы сотрудника (задача 7.2)', async () => {
+        await withRequestContext(async () => {
+            const taskRule = TaskCompletedEntity.create({
+                type: 'TaskCompleted',
+                name: 'Ежемесячный отчёт',
+                targetRole: 'ENGINEER',
+                config: {
+                    description: 'Описание',
+                    period: '2026-08',
+                    isRecurring: true,
+                    dueDate: '2026-08-20',
+                    rewardAmount: 1000,
+                    bitrixTaskIds: [1],
+                },
+            });
+            const schema = MotivationSchema.create({
+                targetType: 'Employee',
+                targetId: 42,
+                name: 'Оклад',
+                rules: [taskRule],
+            });
+            const { service, ensureAll } = buildService(schema);
+
+            await service.execute(schema.id);
+
+            expect(ensureAll).toHaveBeenCalledTimes(1);
+            expect(ensureAll).toHaveBeenCalledWith(
+                schema.getProps().rules,
+                42,
+                expect.any(String),
+            );
+        });
+    });
+
+    it('не достраивает задачи для схемы отдела', async () => {
+        await withRequestContext(async () => {
+            const schema = buildSchema('Department', 1, 1);
+            const { service, ensureAll } = buildService(schema);
+
+            await service.execute(schema.id);
+
+            expect(ensureAll).not.toHaveBeenCalled();
         });
     });
 

@@ -124,31 +124,32 @@ describe('resolveShopRuleDraft — UsedProductSold has no FloatPercent', () => {
     })
 })
 
-describe('resolveShopRuleDraft — TaskCompleted (no category, no salaryBasis)', () => {
-    it('Fixed succeeds with just a price', () => {
-        const result = resolveShopRuleDraft(baseDraft({ type: 'TaskCompleted', awardKind: 'Fixed', price: '300' }))
+describe('resolveShopRuleDraft — TaskCompleted (change salary-rule-bitrix-task, no category, no award-union)', () => {
+    function taskDraft(overrides: Partial<RuleDraft> = {}): RuleDraft {
+        return baseDraft({
+            type: 'TaskCompleted',
+            description: 'Провести инвентаризацию склада',
+            period: '2026-08',
+            isRecurring: false,
+            dueDate: '2026-08-15',
+            price: '10000',
+            ...overrides,
+        })
+    }
+
+    it('succeeds with all required fields, no category and no award-union in the payload', () => {
+        const result = resolveShopRuleDraft(taskDraft())
         expect(result.success).toBe(true)
         if (result.success && result.data.type === 'TaskCompleted') {
             expect('category' in result.data.config).toBe(false)
+            expect('award' in result.data.config).toBe(false)
+            expect(result.data.config.rewardAmount).toBe(10000)
         }
     })
 
-    it('FloatPercent requires basePrice and exactly 3 percentBorders', () => {
-        const result = resolveShopRuleDraft(
-            baseDraft({
-                type: 'TaskCompleted',
-                awardKind: 'FloatPercent',
-                basePrice: '300',
-                percentBorders: defaultBorders(),
-            }),
-        )
-        expect(result.success).toBe(true)
-        if (
-            result.success &&
-            result.data.type === 'TaskCompleted' &&
-            result.data.config.award.type === 'FloatPercent'
-        ) {
-            expect(result.data.config.award.percentBorders).toHaveLength(3)
-        }
+    it('rejects a due date outside the selected period', () => {
+        const result = resolveShopRuleDraft(taskDraft({ period: '2026-08', dueDate: '2026-09-01' }))
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.dueDate).toBeTruthy()
     })
 })

@@ -5,7 +5,7 @@ import {
 } from 'ireports-contracts'
 
 import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
-import { buildOrderPayedAward, buildTaskCompletedAward } from '../../model/ruleAwards.ts'
+import { buildOrderPayedAward, buildTaskCompletedConfig } from '../../model/ruleAwards.ts'
 import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ruleDraft.ts'
 
 /**
@@ -14,10 +14,11 @@ import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ru
  * against `shopSalaryRuleRequestSchema` (`contracts/commands/shop-salary-rule.ts`), a distinct
  * `discriminatedUnion` from the service's `salaryRuleRequestSchema` (see that file's header comment
  * — "issue #57: направления технически не связаны одним объектом"). It reuses two of the core's
- * award builders (`core/model/ruleAwards.ts` — `buildOrderPayedAward` for `ProductSold`,
- * `buildTaskCompletedAward` for `TaskCompleted`) because those two award shapes are byte-for-byte
- * identical between the two contracts (see the reuse comment on each) — that is UI-logic reuse, not
- * contract mixing, since the two `safeParse` calls stay fully separate.
+ * builders (`core/model/ruleAwards.ts` — `buildOrderPayedAward` for `ProductSold`'s award,
+ * `buildTaskCompletedConfig` for `TaskCompleted`'s whole `config`, no award-union any more since
+ * change salary-rule-bitrix-task) because those two shapes are byte-for-byte identical between the
+ * two contracts (see the reuse comment on each) — that is UI-logic reuse, not contract mixing,
+ * since the two `safeParse` calls stay fully separate.
  */
 export type ResolveShopRuleDraftResult =
     { success: true; data: ShopSalaryRuleRequest } | { success: false; errors: RuleFieldErrors }
@@ -68,7 +69,7 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
             config = { category: draft.category, award: buildUsedProductSoldAward(draft, errors) }
             break
         case 'TaskCompleted':
-            config = { award: buildTaskCompletedAward(draft, errors) }
+            config = buildTaskCompletedConfig(draft, errors)
             break
         default:
             // `draft.type` is the shared `RuleType` union (`core/model/ruleDraft.ts`) — the service-only
@@ -127,7 +128,6 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         awardKind: '',
         percent: '',
         basePercent: '',
-        basePrice: '',
         salaryBasis: '',
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
@@ -135,6 +135,10 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         // orderTypeIds — сервисное поле (`OrderPayed`/`ServiceCompleted`, Фаза 5,
         // docs/service-plan-salary-rule-order-category-filter), ни один shop-тип его не имеет.
         orderTypeIds: [],
+        description: '',
+        period: '',
+        isRecurring: false,
+        dueDate: '',
     }
 
     switch (rule.type) {
@@ -172,21 +176,15 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
             break
         }
 
-        case 'TaskCompleted': {
-            const award = rule.config.award
-            const withAward: RuleDraft = { ...base, awardKind: award.type }
-            switch (award.type) {
-                case 'Fixed':
-                    return { ...withAward, price: String(award.price) }
-                case 'FloatPercent':
-                    return {
-                        ...withAward,
-                        basePrice: String(award.basePrice),
-                        percentBorders: bordersFromResponse(award.percentBorders),
-                    }
+        case 'TaskCompleted':
+            return {
+                ...base,
+                description: rule.config.description,
+                period: rule.config.period,
+                isRecurring: rule.config.isRecurring,
+                dueDate: rule.config.dueDate,
+                price: String(rule.config.rewardAmount),
             }
-            break
-        }
     }
 
     return base
