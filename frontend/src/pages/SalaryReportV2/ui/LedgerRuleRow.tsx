@@ -63,14 +63,12 @@ export function LedgerRuleRow({ rule, direction, isClosed, isExpanded, onToggle,
 
                 <span className={cn(LEDGER_VALUE_COL, 'flex flex-col gap-0.5')}>
                     <span className="font-ui text-sm font-bold text-ink tabular-nums">{formatCurrency(rule.amount.fact)}</span>
-                    {rate && <span className="font-ui text-[11px] text-ink-muted tabular-nums">{rate.fact}</span>}
                 </span>
 
                 <span className={cn(LEDGER_VALUE_COL, 'flex flex-col gap-0.5')}>
                     <span className="font-ui text-sm font-bold text-ink-muted tabular-nums">
                         {rule.amount.prognose === null ? '—' : formatCurrency(rule.amount.prognose)}
                     </span>
-                    {rate?.prognose && <span className="font-ui text-[11px] text-ink-muted tabular-nums">{rate.prognose}</span>}
                 </span>
 
                 <span className={LEDGER_CHEVRON_COL}>
