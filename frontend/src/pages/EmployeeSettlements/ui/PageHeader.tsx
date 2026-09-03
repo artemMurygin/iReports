@@ -1,15 +1,10 @@
-import { Clock, Download, Search, Users } from 'lucide-react'
+import { Building2, Clock, Download, Search } from 'lucide-react'
 import type { TargetOption } from '@/features/TargetDirectory'
-import { pluralizeEmployees } from '@/features/SalaryReportData'
-import {
-    buildDepartmentSelectOptions,
-    resolveDepartmentLabel,
-    ALL_DEPARTMENTS_VALUE,
-} from '../model/departmentOptions.ts'
+import { buildDepartmentSelectOptions, ALL_DEPARTMENTS_VALUE } from '../model/departmentOptions.ts'
 import { cn } from '@/shared/lib/tw'
 import { Button } from '@/shared/ui-kit/atoms/Button'
 import { Input } from '@/shared/ui-kit/atoms/Input'
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/shared/ui-kit/atoms/Select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui-kit/atoms/Select'
 
 export type PageHeaderProps = {
     departments: TargetOption[]
@@ -29,17 +24,16 @@ export type PageHeaderProps = {
 /**
  * Pencil `IFJW2` (десктоп) / `wZnzC` (мобайл) — `Взаиморасчёты с сотрудниками`: заголовок +
  * подпись + «Выгрузить таблицу» на одном уровне (десктоп: рядом, мобайл: под заголовком —
- * `flex-wrap`), затем `Select` отдела (с числом сотрудников текущей выборки под названием, как
- * в мокапе: «Все отделы · 8 сотрудников»), поиск по сотруднику, и отметка свежести данных
+ * `flex-wrap`), затем `Select` отдела, поиск по сотруднику, и отметка свежести данных
  * («Данные на 25 авг 2026, 14:30»). На десктопе это один ряд с отметкой, прижатой к правому
  * краю (`md:ml-auto`); на мобайле (Фаза 4) — три отдельные строки (`flex-col`), как на `wZnzC`,
  * отметка свежести данных не прижата вправо, а идёт своей строкой слева (`self-start`).
  *
- * Собственный (не переиспользующий `atoms/Select`'s обычный `SelectValue`) двухстрочный
- * триггер: мокап показывает лейбл «Отдел» 11px над выбранным значением, а не одну строку —
- * `SelectValue` рассчитан на одну строку текста, поэтому здесь composed `div` передаётся
- * прямо в `SelectTrigger` (`children`, не завязанные на `SelectValue`, см. `atoms/Select.tsx`
- * — триггер просто рендерит любых `children` перед шевроном).
+ * Select «Отдел» — тот же простой `SelectTrigger`/`SelectValue` + иконка `Building2`, что и на
+ * `/salary-accruals` (`pages/SalaryAccruals/ui/PageHeader.tsx`), а не собственный composed
+ * двухстрочный триггер с числом сотрудников (число уже видно в KPI-карточке «Общий остаток»
+ * ниже, дублировать его здесь не нужно) — вид виджета выбора отдела унифицирован между
+ * страницами.
  */
 function PageHeader({
     departments,
@@ -54,7 +48,6 @@ function PageHeader({
     className,
 }: PageHeaderProps) {
     const options = buildDepartmentSelectOptions(departments)
-    const selectedLabel = resolveDepartmentLabel(options, departmentId)
 
     return (
         <div data-slot="employee-settlements-page-header" className={cn('flex flex-col gap-4', className)}>
@@ -85,14 +78,9 @@ function PageHeader({
                     }
                     disabled={isDepartmentsLoading}
                 >
-                    <SelectTrigger className="h-auto w-full items-start justify-start gap-2 px-3 py-2 md:w-72">
-                        <Users className="mt-0.5 size-4 shrink-0 text-ink-muted" />
-                        <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
-                            <span className="font-ui text-[11px] text-ink-muted">Отдел</span>
-                            <span className="truncate font-ui text-sm font-semibold text-ink">
-                                {selectedLabel} · {pluralizeEmployees(employeesCount)}
-                            </span>
-                        </span>
+                    <SelectTrigger className="h-10 w-full gap-2 md:w-[250px]">
+                        <Building2 className="size-[15px] shrink-0 text-ink-muted" />
+                        <SelectValue placeholder="Отдел" />
                     </SelectTrigger>
                     <SelectContent>
                         {options.map((option) => (
