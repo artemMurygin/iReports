@@ -6,7 +6,6 @@ import { cn } from '@/shared/lib/tw'
 import { isFloatPercentRule, type SalaryDirection, type SalaryReportRule } from '@/features/SalaryReportData'
 
 import { LEDGER_CHEVRON_COL, LEDGER_VALUE_COL } from '../model/ledgerColumns.ts'
-import { getRuleRate } from '../model/ruleRate.ts'
 
 import { RuleSourcesRail } from './RuleSourcesRail.tsx'
 import { TaskRulePanel } from './TaskRulePanel.tsx'
@@ -34,7 +33,7 @@ const DOT_CLASS: Record<SalaryDirection, string> = {
  * Одна строка правила в карточке-гроссбухе (Pencil: `H7Mz74`'s `cyS5Q`/`Ko5rz`/`d3FgSn` —
  * десктоп 140px колонки, `b63e8p`'s `rNHXS`/`AkdPv` — мобайл 80px, см. `LEDGER_VALUE_COL`):
  * точка направления + название + мета ("Плавающий процент · KPI"/"Фиксированная ставка", как в
- * старом `RulesTable`) слева, Факт/Прогноз с подписью ставки (`getRuleRate`) справа. Разворот
+ * старом `RulesTable`) слева, Факт/Прогноз справа (подпись ставки под суммой убрана). Разворот
  * (`isExpanded`/`onToggle`, ключ — тот же `${direction}:${rule.ruleId}`, собирается вызывающей
  * стороной) показывает `RuleSourcesRail`.
  *
@@ -44,7 +43,6 @@ const DOT_CLASS: Record<SalaryDirection, string> = {
  * очевидна пользователю.
  */
 export function LedgerRuleRow({ rule, direction, period, isClosed, isExpanded, onToggle, className }: LedgerRuleRowProps) {
-    const rate = getRuleRate(rule, isClosed)
     const metaLabel = isFloatPercentRule(rule) ? 'Плавающий процент · KPI' : 'Фиксированная ставка'
     const isUnavailableTask = rule.type === 'TaskCompleted' && rule.isTaskUnavailable === true
 
