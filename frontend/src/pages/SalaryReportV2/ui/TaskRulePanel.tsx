@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { Check, Loader2, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react'
+import { Check, Loader2, TriangleAlert } from 'lucide-react'
 
 import { formatCurrency } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
+import { BitrixTaskLink } from '@/shared/ui-kit/atoms/BitrixTaskLink'
 import { Button } from '@/shared/ui-kit/atoms/Button'
 import { Input } from '@/shared/ui-kit/atoms/Input'
 
@@ -69,17 +70,7 @@ export function TaskRulePanel({ rule, period, isClosed, className }: TaskRulePan
                     )
                 )}
 
-                {rule.bitrixTaskUrl && (
-                    <a
-                        href={rule.bitrixTaskUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-ui text-xs font-semibold text-info-ink hover:underline"
-                    >
-                        Задача в Bitrix24
-                        <SquareArrowOutUpRight className="size-3" />
-                    </a>
-                )}
+                {rule.bitrixTaskUrl && <BitrixTaskLink href={rule.bitrixTaskUrl} />}
             </div>
 
             {canEditActualAmount && (
