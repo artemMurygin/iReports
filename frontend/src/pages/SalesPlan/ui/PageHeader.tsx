@@ -68,8 +68,8 @@ function PageHeader({
     className,
 }: PageHeaderProps) {
     const subtitle = isPeriodClosed
-        ? 'Месяц закрыт: снапшот зафиксирован, документы начисления созданы, часы недоступны для правки'
-        : 'Закрытие месяца фиксирует снапшот и создаёт документы начисления по каждому сотруднику'
+        ? 'Месяц закрыт: отчет по зарплате сформирован, график работы закрыт для редактирования'
+        : ''
 
     return (
         <div data-slot="sales-plan-page-header" className={cn('flex flex-col gap-4', className)}>

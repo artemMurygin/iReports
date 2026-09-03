@@ -114,6 +114,7 @@ function EditPlanCellInput({
             onChange={(e) => onChange(e.target.value)}
             className={cn(
                 'h-8 w-full min-w-0 rounded-[6px] border px-2.5 text-right font-ui text-[13px] font-medium text-ink outline-none tabular-nums focus-visible:ring-2 focus-visible:ring-brand/40',
+                '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                 isDirty ? 'border-brand-border bg-brand-soft' : 'border-hairline bg-surface',
             )}
         />

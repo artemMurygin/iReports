@@ -114,9 +114,6 @@ function SalesPlanTableRow({
                         title={row.orderTypeNames.length > 0 ? `Типы заказов: ${row.orderTypeNames.join(', ')}` : undefined}
                     >
                         {row.categoryName}
-                        {row.orderTypeNames.length > 0 && (
-                            <span className="ml-1.5 font-normal text-ink-muted">· {row.orderTypeNames.join(', ')}</span>
-                        )}
                     </span>
                     <span className={cn('shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink', COLUMN_WIDTH.plan)}>
                         {formatCurrency(row.plan.turnover)}

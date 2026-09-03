@@ -70,7 +70,7 @@ function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlan
         <Modal
             open={open}
             onOpenChange={onOpenChange}
-            className="sm:max-w-[860px]"
+            className="sm:max-w-[960px]"
             title="Редактирование плана продаж"
             subtitle={`Направление «${DIRECTION_LABEL[direction]}» · ${formatPeriodLabel(period)} · период открыт`}
             footer={(

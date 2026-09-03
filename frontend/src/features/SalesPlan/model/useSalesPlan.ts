@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import type { CatalogResponse, SalesDirection, SalesPerformanceResponse } from 'ireports-contracts'
 import { api } from '@/features/SalesPlan/model/api.ts'
 
 // Начальное значение периода на странице (pages/SalesPlan/ui/SalesPlanPage.tsx владеет
-// самим состоянием — см. PeriodPicker) — тестовые данные SalesPerformance гарантированно
-// есть только за этот месяц (для любого другого периода бэкенд отдаёт пустой список,
-// который уже корректно рендерится как SalesPlanEmptyState, а не падает).
-export const DEFAULT_PERIOD = '2026-06'
+// самим состоянием — см. PeriodPicker) — текущий календарный месяц; для периода без
+// данных SalesPerformance бэкенд отдаёт пустой список, который уже корректно рендерится
+// как SalesPlanEmptyState, а не падает.
+export const DEFAULT_PERIOD = format(new Date(), 'yyyy-MM')
 
 // Дизайн (design/sallary-first-iteration.pen) не показывает отдел вовсе, а
 // SalesPerformance реально возвращает строки по нескольким отделам на одно
@@ -42,7 +43,7 @@ export type SalesPlanTotals = {
     factMargin: number
 }
 
-const NO_CATEGORY_LABEL = 'Без категории'
+const NO_CATEGORY_LABEL = 'Все направление'
 
 const EMPTY_TOTALS: SalesPlanTotals = {
     categoriesCount: 0,
