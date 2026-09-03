@@ -84,7 +84,6 @@ export function SalaryAccrualsPage() {
                         isDepartmentsLoading={isDepartmentsLoading}
                         departmentId={departmentId}
                         onDepartmentIdChange={setDepartmentId}
-                        departmentName={departmentName}
                         period={period}
                         onPeriodChange={setPeriod}
                         isPeriodClosed={isClosed}

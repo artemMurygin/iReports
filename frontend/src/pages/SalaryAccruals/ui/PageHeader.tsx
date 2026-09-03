@@ -24,9 +24,6 @@ export type PageHeaderProps = {
     isDepartmentsLoading: boolean
     departmentId: number | null
     onDepartmentIdChange: (id: number | null) => void
-    /** Название выбранного отдела для Dept Row — `null` и при выбранном «Все отделы», и пока
-     * справочник ещё не загрузился; обе ветки в Dept Row показывают запасной текст «Все отделы». */
-    departmentName: string | null
     period: string
     onPeriodChange: (period: string) => void
     isPeriodClosed: boolean
@@ -38,22 +35,16 @@ export type PageHeaderProps = {
 }
 
 /**
- * Pencil `LvW0I`/`Ed0FF` (десктоп) и `DtPgO` (мобильный) — редизайн шапки списка начислений:
- * Icon Box (`Wallet`, `brand-soft`) слева от заголовка «Начисление зарплаты» (в ед. числе —
- * было «Начисления»); статус-пилюля периода из старой версии (`cfNlL`) на десктопе убрана
- * полностью (нигде текстом не дублируется), но на мобильном (`DtPgO`) остаётся — в новой
- * «Period Row» рядом с Period Chip.
+ * Заголовок списка начислений — та же title/subtitle-размерность, что и на соседних страницах
+ * (`pages/EmployeeSettlements/ui/PageHeader.tsx`, `shared/ui-kit/organisms/PageHeader.tsx`):
+ * `<h1>` `text-[26px]`, без icon-бокса, подпись `text-sm`. Раньше здесь была отдельная Dept
+ * Row (иконка `building-2` + название отдела/«Все отделы») под заголовком — убрана: имя отдела
+ * и так видно в самом Select «Отдел» ниже, а под заголовком остаётся только одна строка —
+ * `subtitle`.
  *
  * Direction Tabs старой версии стали «Scope Controls»: добавлен Select «Отдел» (иконка
  * `building-2`, пункт «Все отделы» первым — фильтр по отделу, которого не было в исходном
  * макете списка, но есть на `/salaries`, см. `SalaryReportFiltersV2`).
- *
- * Dept Row под заголовком показывает название отдела (иконка + `font-display` полужирным,
- * «Все отделы» при `departmentId === null`) только пока месяц НЕ закрыт (`Ed0FF`'s `AGGZs`) —
- * там нет таблицы ниже, которая бы иначе дала этот контекст; на закрытом месяце (`LvW0I`'s
- * `nQBE9`) Dept Row — просто подпись, имя отдела уже видно в самом Select. На мобильном
- * (`DtPgO`) название отдела в Dept Row есть всегда, а подпись — отдельной строкой ниже,
- * независимо от статуса периода.
  */
 function PageHeader({
     direction,
@@ -62,7 +53,6 @@ function PageHeader({
     isDepartmentsLoading,
     departmentId,
     onDepartmentIdChange,
-    departmentName,
     period,
     onPeriodChange,
     isPeriodClosed,
@@ -142,39 +132,9 @@ function PageHeader({
 
     return (
         <div data-slot="salary-accruals-page-header" className={cn('flex flex-col gap-3.5 md:gap-4', className)}>
-            <div className="flex flex-col gap-[7px]">
-                <div className="flex items-center gap-2.5">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-soft md:size-8 md:rounded-[9px]">
-                        <Wallet className="size-4 text-brand-strong md:size-[18px]" />
-                    </span>
-                    <h1 className="font-display text-[22px] font-bold tracking-[-0.4px] text-ink md:text-[28px] md:tracking-[-0.5px]">
-                        Начисление зарплаты
-                    </h1>
-                </div>
-
-                {/* Мобильный: имя отдела всегда в Dept Row, подпись — отдельной строкой (DtPgO). */}
-                <div className="flex items-center gap-1.5 md:hidden">
-                    <Building2 className="size-[15px] shrink-0 text-brand-strong" />
-                    <span className="font-display text-[17px] font-bold tracking-[-0.2px] text-ink">
-                        {departmentName ?? 'Все отделы'}
-                    </span>
-                </div>
-                <p className="font-ui text-[12.5px] leading-[1.35] text-ink-muted md:hidden">{subtitle}</p>
-
-                {/* Десктоп: имя отдела в Dept Row только пока месяц не закрыт (Ed0FF); на
-                 * закрытом месяце — просто подпись (LvW0I), имя отдела уже видно в Select. */}
-                <div className="hidden items-center gap-2 md:flex">
-                    {!isPeriodClosed && (
-                        <>
-                            <Building2 className="size-4 shrink-0 text-brand-strong" />
-                            <span className="font-display text-lg font-bold tracking-[-0.2px] text-ink">
-                                {departmentName ?? 'Все отделы'}
-                            </span>
-                            <span className="font-display text-base font-bold text-ink-faint">·</span>
-                        </>
-                    )}
-                    <span className="font-ui text-[13px] text-ink-muted">{subtitle}</span>
-                </div>
+            <div className="flex flex-col gap-1">
+                <h1 className="font-display text-[26px] font-bold tracking-[-0.4px] text-ink">Начисление зарплаты</h1>
+                <p className="font-ui text-sm text-ink-muted">{subtitle}</p>
             </div>
 
             {/* Десктоп: Scope Controls (табы + Select) слева, Period Chip + кнопка справа. */}
