@@ -2,11 +2,11 @@ import * as React from 'react'
 
 import { cn } from '@/shared/lib/tw'
 
-import { HeaderDesktop, type HeaderDesktopUser, type HeaderNavItem } from './HeaderDesktop'
+import { HeaderDesktop, type HeaderDesktopUser } from './HeaderDesktop'
 import { HeaderMobile, type HeaderMobileAction } from './HeaderMobile'
 import { NavDrawer, type NavDrawerSection } from './NavDrawer'
 import { Scrim } from './Scrim'
-import type { SubnavTab } from './Subnav'
+import type { NavItem } from './types'
 
 /**
  * Single public entry point for the header: renders `HeaderDesktop` on `md:` and up and
@@ -27,9 +27,9 @@ import type { SubnavTab } from './Subnav'
  */
 export type HeaderProps = {
     /** Desktop Nav Bar's main navigation links. Not hardcoded — always supplied by the caller. */
-    navItems: HeaderNavItem[]
+    navItems: NavItem[]
     /** Desktop Subnav tabs, forwarded to `HeaderDesktop`. Omit to skip the Subnav row. */
-    subnavTabs?: SubnavTab[]
+    subnavTabs?: NavItem[]
     /** Shared between the desktop user block, the mobile profile avatar, and the drawer footer. Omit while there's no real signed-in user data — hides all three rather than showing a placeholder identity. */
     user?: HeaderDesktopUser
     /** Mobile-only breadcrumb + action buttons (the desktop bar has no equivalent of these). */

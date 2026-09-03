@@ -60,7 +60,6 @@ export function EmployeeIdentityPage() {
     const header = (
         <>
             <PageHeader
-                breadcrumbs={[{ label: 'Настройки' }, { label: 'Связи сотрудников' }]}
                 title="Связи сотрудников"
                 subtitle="Кто есть кто в RemOnline и МойСкладе. Пока сотрудник не связан, его зарплата не считается."
                 actions={

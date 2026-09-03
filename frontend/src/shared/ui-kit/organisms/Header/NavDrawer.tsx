@@ -5,6 +5,8 @@ import { NavLink } from 'react-router-dom'
 import { cn } from '@/shared/lib/tw'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui-kit/atoms/Avatar'
 
+import type { NavItem } from './types'
+
 /**
  * Pencil: design/sallary-first-iteration.pen, node `UiFMw` (`Drawer`, 320x844, white fill,
  * positioned at the same anchor as the `Scrim` (`C19pWf`) so it slides in above it) -> children
@@ -12,28 +14,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui-kit/atoms/Avata
  *
  * This is the mobile navigation drawer opened by the hamburger button in `HeaderMobile`. It is
  * rendered by `Header.tsx` above `Scrim`, sharing the same `open`/`onClose` state.
+ *
+ * Items share the header-wide `NavItem` type (`./types.ts`). Active state works the same way as
+ * `HeaderDesktop`'s nav pills and `Subnav`'s tabs: the caller (`app/Header.tsx`) computes each
+ * item's `active` flag via `findMostSpecificNavMatch` (`shared/lib/nav.ts`) against the full leaf
+ * list and passes it down, rather than this component deriving it from `NavLink`'s own
+ * path-prefix matching.
  */
-export type NavDrawerItem = {
-    /** Item label, e.g. "План продаж". */
-    label: string
-    /** Route passed to `NavLink`. */
-    to: string
-    /** Leading icon, typically a `lucide-react` icon element (20px, from node `RS903`/`QjUrg`/...). */
-    icon: React.ReactNode
-    /** Forwarded to `NavLink`'s `end` prop for exact-match active state. */
-    end?: boolean
-    /** Called in addition to navigating — typically used to close the drawer. */
-    onClick?: () => void
-    /** Renders a non-interactive, muted placeholder instead of a link — for pages not shipped yet. */
-    disabled?: boolean
-}
-
 export type NavDrawerSection = {
     /** Section label, e.g. "Продажи". Omit for an ungrouped trailing section (matches node `R1skpA`). */
     label?: string
     /** Renders a hairline divider above this section instead of a label (matches node `FqZtX`). */
     divider?: boolean
-    items: NavDrawerItem[]
+    items: NavItem[]
 }
 
 export type NavDrawerUser = {
@@ -107,7 +100,7 @@ function NavDrawer({ open, onClose, sections, user, onLogout, className }: NavDr
                                 {section.label}
                             </span>
                         ) : null}
-                        {section.items.map(({ label, to, icon, end, onClick, disabled }) =>
+                        {section.items.map(({ label, to, icon, end, onClick, disabled, active }) =>
                             disabled ? (
                                 <span
                                     key={to}
@@ -122,29 +115,25 @@ function NavDrawer({ open, onClose, sections, user, onLogout, className }: NavDr
                                     to={to}
                                     end={end}
                                     onClick={onClick}
-                                    className={({ isActive }) =>
-                                        cn(
-                                            "flex items-center justify-between gap-2 rounded-[10px] px-2.5 py-[11px] text-[15px] text-ink transition-colors select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
-                                            isActive
-                                                ? 'bg-brand-soft font-medium text-ok-ink [&_svg]:text-ok-ink'
-                                                : 'hover:bg-canvas [&_svg]:text-ink-muted',
-                                        )
-                                    }
-                                >
-                                    {({ isActive }) => (
-                                        <>
-                                            <span className="flex min-w-0 items-center gap-2">
-                                                {icon}
-                                                <span className="truncate">{label}</span>
-                                            </span>
-                                            <ChevronRight
-                                                className={cn(
-                                                    'size-[18px] shrink-0',
-                                                    isActive ? 'text-ok-ink' : 'text-ink-faint',
-                                                )}
-                                            />
-                                        </>
+                                    // Explicit 'false' (not `undefined`) when inactive: `NavLink` falls back to
+                                    // its own `isActive` (path-prefix) match to fill in a default
+                                    // `aria-current="page"` whenever the prop it's given is `undefined` —
+                                    // same trap documented in `Subnav.tsx` for the same reason.
+                                    aria-current={active ? 'page' : 'false'}
+                                    className={cn(
+                                        "flex items-center justify-between gap-2 rounded-[10px] px-2.5 py-[11px] text-[15px] text-ink transition-colors select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
+                                        active
+                                            ? 'bg-brand-soft font-medium text-ok-ink [&_svg]:text-ok-ink'
+                                            : 'hover:bg-canvas [&_svg]:text-ink-muted',
                                     )}
+                                >
+                                    <span className="flex min-w-0 items-center gap-2">
+                                        {icon}
+                                        <span className="truncate">{label}</span>
+                                    </span>
+                                    <ChevronRight
+                                        className={cn('size-[18px] shrink-0', active ? 'text-ok-ink' : 'text-ink-faint')}
+                                    />
                                 </NavLink>
                             ),
                         )}

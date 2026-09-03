@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui-kit/atoms/Avata
 import { BellBadge } from '@/shared/ui-kit/atoms/BellBadge'
 import { Divider } from '@/shared/ui-kit/atoms/Divider'
 
-import { Subnav, type SubnavTab } from './Subnav'
+import { Subnav } from './Subnav'
+import type { NavItem } from './types'
 
 /**
  * Pencil: design/sallary-first-iteration.pen, node `dRfe8` (`ERP/Organism/Topnav`, 1440x104,
@@ -19,13 +20,12 @@ import { Subnav, type SubnavTab } from './Subnav'
  *   wrench icon + "iRepair" Montserrat 16/700 wordmark) + `T0p7tl` Divider + `e1eFSf` Sections
  *   (gap 2, each item `eM1Bp` "ERP/Topnav Item": rounded-8, gap 8, padding [8,12], 16px icon,
  *   14px/500 Roboto label; active item gets `brand-soft` background and `ok-ink` icon/text).
- *   Every item is a **plain, direct link** — there is no dropdown/menu anywhere on this node.
- *   Three of the four instances (`d9ICsG` "Section Продажи", `J11aeS` "Section Аналитика",
- *   `z2bzF` "Section Зарплата") carry a trailing `chevron-down` glyph purely decoratively — it
- *   does not open anything, it just signals "this section has sub-pages, see the Subnav row
- *   below". `US5To` ("Section График работы") has no chevron since it has no sub-pages. The
- *   actual second level of navigation is the separate `SHMkH` Subnav row underneath (see
- *   `Subnav.tsx`), not a popover attached to these items.
+ *   Every item is a **plain, direct link** — there is no dropdown/menu anywhere on this node. The
+ *   Pencil mockup shows a trailing `chevron-down` glyph on three of the four section instances
+ *   (`d9ICsG`/`J11aeS`/`z2bzF`), but this build renders **no** chevron on any Nav Bar item instead:
+ *   it would read as "this opens a menu" even though nothing does (see `navigation.tsx`'s
+ *   `TOP_LEVEL_NAV_ITEMS` comment). The actual second level of navigation is the separate `SHMkH`
+ *   Subnav row underneath (see `Subnav.tsx`), not a popover attached to these items.
  * - `X8G3zd` Nav Right (gap 10): `l5W7O9` Bell + `f4tNY` Divider + `WNVaX` User (rounded-8,
  *   gap 9, padding [3,6,3,4]: `Avatar` + name/role text block + `chevron-down` "more" icon).
  *
@@ -33,21 +33,6 @@ import { Subnav, type SubnavTab } from './Subnav'
  * open/closed visual state (`aria-expanded` + a `canvas` highlight); no dropdown menu content
  * is implemented here (out of scope per the rollout plan, a later phase).
  */
-export type HeaderNavItem = {
-    /** Nav item label, e.g. "Продажи". */
-    label: string
-    /** Route passed to `NavLink`. */
-    to: string
-    /** Leading icon, typically a `lucide-react` icon element (16px, from node `eM1Bp`). */
-    icon: React.ReactNode
-    /** Forwarded to `NavLink`'s `end` prop for exact-match active state. */
-    end?: boolean
-    /** Renders a non-interactive, muted placeholder instead of a link — for pages not shipped yet. */
-    disabled?: boolean
-    /** Purely decorative trailing chevron (node `eM1Bp`'s chevron override) — signals "has sub-pages in the Subnav row", not a dropdown. */
-    chevron?: boolean
-}
-
 export type HeaderDesktopUser = {
     /** Full name, e.g. "Артём Мурыгин". */
     name: string
@@ -61,9 +46,9 @@ export type HeaderDesktopUser = {
 
 export type HeaderDesktopProps = {
     /** Nav Bar's main navigation links (Nav Left "Sections"). Not hardcoded — always supplied by the caller. */
-    navItems: HeaderNavItem[]
+    navItems: NavItem[]
     /** Subnav tabs rendered below the Nav Bar — forwarded as-is to `Subnav`. Omit (or pass an empty array) to skip the Subnav row entirely, for pages with no sub-navigation. */
-    subnavTabs?: SubnavTab[]
+    subnavTabs?: NavItem[]
     /** Omit while there's no real signed-in user data to show — hides the avatar/name/role trigger entirely rather than displaying a placeholder identity. */
     user?: HeaderDesktopUser
     /** Shows/hides the bell's unread-indicator dot. Defaults to `false`. */
@@ -107,7 +92,7 @@ function HeaderDesktop({
                     <Divider />
 
                     <nav className="flex items-center gap-0.5">
-                        {navItems.map(({ label, to, icon, end, disabled, chevron }) =>
+                        {navItems.map(({ label, to, icon, end, disabled, active }) =>
                             disabled ? (
                                 <span
                                     key={to}
@@ -115,24 +100,19 @@ function HeaderDesktop({
                                 >
                                     {icon}
                                     {label}
-                                    {chevron ? <ChevronDown className="size-3.5 shrink-0" /> : null}
                                 </span>
                             ) : (
                                 <NavLink
                                     key={to}
                                     to={to}
                                     end={end}
-                                    className={({ isActive }) =>
-                                        cn(
-                                            "flex items-center gap-2 rounded-lg px-3 py-2 font-ui text-sm whitespace-nowrap text-ink transition-colors select-none hover:bg-canvas [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:text-ink-muted [&_svg:not([class*='size-'])]:size-4",
-                                            isActive &&
-                                                'bg-brand-soft text-ok-ink hover:bg-brand-soft [&_svg]:text-ok-ink',
-                                        )
-                                    }
+                                    className={cn(
+                                        "flex items-center gap-2 rounded-lg px-3 py-2 font-ui text-sm whitespace-nowrap text-ink transition-colors select-none hover:bg-canvas [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:text-ink-muted [&_svg:not([class*='size-'])]:size-4",
+                                        active && 'bg-brand-soft text-ok-ink hover:bg-brand-soft [&_svg]:text-ok-ink',
+                                    )}
                                 >
                                     {icon}
                                     {label}
-                                    {chevron ? <ChevronDown className="size-3.5 shrink-0" /> : null}
                                 </NavLink>
                             ),
                         )}

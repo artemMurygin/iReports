@@ -9,8 +9,6 @@ import { SalaryReportBodyV2 } from './SalaryReportBodyV2.tsx'
 import { SalaryReportFiltersV2 } from './SalaryReportFiltersV2.tsx'
 import { SalaryReportHeading } from './SalaryReportHeading.tsx'
 
-const NO_BREADCRUMBS: never[] = []
-
 /**
  * `/salaries` — отчёт по зарплате сотрудника/отдела (Pencil: `design/sallary-first-iteration.pen`,
  * `wLtzp`/`b63e8p` "Зарплата сотрудника" + `wVa5g`/`z5BwMk` "Зарплата отдела"). Единственная

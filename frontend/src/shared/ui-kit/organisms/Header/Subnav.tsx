@@ -1,7 +1,9 @@
-import * as React from 'react'
+import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { cn } from '@/shared/lib/tw'
+
+import type { NavItem } from './types'
 
 /**
  * Pencil: design/sallary-first-iteration.pen, node `SHMkH`
@@ -16,28 +18,21 @@ import { cn } from '@/shared/lib/tw'
  * full Topnav comes from the Nav Bar's own bottom border, not from Subnav.
  *
  * Slot component: the tab list is entirely prop-driven (no hardcoded labels)
- * so any page can wire up its own tabs. Active state is derived by
- * `react-router-dom`'s `NavLink` from the current route, same as the nav
- * links row in `HeaderDesktop`.
+ * so any page can wire up its own tabs. Active state is NOT derived by
+ * `react-router-dom`'s `NavLink` (its per-tab `isActive` has no notion of
+ * "the other tabs" — with prefix matching, e.g. `/salaries` and
+ * `/salaries/rules` would both light up on `/salaries/rules`). Instead the
+ * caller (`app/Header.tsx`) computes the single most specific match via
+ * `findMostSpecificNavMatch` and passes it down as this `active` flag, same
+ * approach as the nav links row in `HeaderDesktop`. Tabs share the header-wide `NavItem` type
+ * (`./types.ts`) — `icon`/`end`/`disabled`/`active` all mean the same thing here as they do for
+ * `HeaderDesktop`'s nav pills and `NavDrawer`'s drawer items.
  */
-export type SubnavTab = {
-    /** Tab label text. */
-    label: string
-    /** Route passed to `NavLink`. */
-    to: string
-    /** Optional leading icon, typically a `lucide-react` icon element. */
-    icon?: React.ReactNode
-    /** Forwarded to `NavLink`'s `end` prop for exact-match active state. */
-    end?: boolean
-    /** Renders a non-interactive, muted placeholder instead of a link — for pages not shipped yet. */
-    disabled?: boolean
-}
-
 type SubnavProps = {
     /** Ordered list of tabs to render — not hardcoded, always supplied by the caller. */
-    tabs: SubnavTab[]
+    tabs: NavItem[]
     /** Optional right-aligned content (the design's `space_between` layout leaves room for this). */
-    actions?: React.ReactNode
+    actions?: ReactNode
     className?: string
 }
 
@@ -48,7 +43,7 @@ function Subnav({ tabs, actions, className }: SubnavProps) {
             className={cn('flex h-12 w-full shrink-0 items-center justify-between gap-4 bg-surface px-7', className)}
         >
             <div className="flex items-center gap-[22px]">
-                {tabs.map(({ label, to, icon, end, disabled }) =>
+                {tabs.map(({ label, to, icon, end, disabled, active }) =>
                     disabled ? (
                         <span
                             key={to}
@@ -65,13 +60,17 @@ function Subnav({ tabs, actions, className }: SubnavProps) {
                             key={to}
                             to={to}
                             end={end}
-                            className={({ isActive }) =>
-                                cn(
-                                    'flex items-center gap-2 border-b-2 border-transparent py-3.5 font-ui text-sm text-ink-muted transition-colors select-none',
-                                    "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[15px] [&_svg]:text-ink-muted",
-                                    isActive && 'border-brand-strong font-medium text-ink [&_svg]:text-ok-ink',
-                                )
-                            }
+                            // Explicit 'false' (not `undefined`) when inactive: `NavLink` falls back to its
+                            // own `isActive` (path-prefix) match to fill in a default `aria-current="page"`
+                            // whenever the prop it's given is `undefined` — passing `undefined` here would
+                            // silently resurrect exactly the "two tabs active" bug this `active` prop fixes
+                            // (e.g. "Отчёт по зарплате"'s own prefix match on `/salaries/rules`).
+                            aria-current={active ? 'page' : 'false'}
+                            className={cn(
+                                'flex items-center gap-2 border-b-2 border-transparent py-3.5 font-ui text-sm text-ink-muted transition-colors select-none',
+                                "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[15px] [&_svg]:text-ink-muted",
+                                active && 'border-brand-strong font-medium text-ink [&_svg]:text-ok-ink',
+                            )}
                         >
                             {icon}
                             {label}

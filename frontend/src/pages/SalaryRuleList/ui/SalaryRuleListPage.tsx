@@ -11,8 +11,6 @@ import { SchemaListBody } from './SchemaListBody.tsx'
 import { SchemaListFilters } from './SchemaListFilters.tsx'
 import { SchemaListFiltersMobile } from './SchemaListFiltersMobile.tsx'
 
-const BREADCRUMBS = [{ label: 'Зарплата' }, { label: 'Правила начисления' }]
-
 /**
  * Pencil: design/sallary-first-iteration.pen, nodes `zXpmh` (`Правила начисления · Список
  * (Десктоп)`) + `qJ0qx` (`... (Мобильный)`) — the list-of-schemas screen at `/salaries/rules`
@@ -53,7 +51,6 @@ export function SalaryRuleListPage() {
         <main className="flex flex-1 flex-col bg-canvas">
             <div className="flex flex-col gap-4 px-4 py-5 md:px-7 md:py-6">
                 <PageHeader
-                    breadcrumbs={BREADCRUMBS}
                     title="Правила начисления"
                     subtitle="Мотивационные схемы начисления — по отделам и сотрудникам направлений Сервис и Магазин"
                     actions={primaryAction}
