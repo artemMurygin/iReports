@@ -53,17 +53,25 @@ export type UnapprovedSalesPlanRow = z.infer<
 // Правило-задача периода, чья связанная задача Bitrix24 ещё не в статусе
 // "Закрыта" (change salary-rule-bitrix-task, spec.md "Список незакрытых
 // задач перед закрытием периода") — включая недоступные (задача не может
-// быть закрыта, если её вообще не видно). bitrixTaskId/status отсутствуют
-// именно у недоступного правила (isUnavailable: true) — та же форма, что и
-// bitrixTaskUrl/taskStatus в employeeSalaryReportRuleSchema ниже по файлу.
-// Направление — всегда 'service' (единственное направление, где правило
-// TaskCompleted сегодня читает Bitrix24, см. design.md/tasks.md раздел 7) —
-// поэтому поля direction здесь нет, в отличие от остального closePeriodPreviewSchema.
+// быть закрыта, если её вообще не видно). bitrixTaskId/status/bitrixTaskUrl
+// отсутствуют именно у недоступного правила (isUnavailable: true) — та же
+// форма, что и bitrixTaskUrl/taskStatus в employeeSalaryReportRuleSchema
+// ниже по файлу. Направление — всегда 'service' (единственное направление,
+// где правило TaskCompleted сегодня читает Bitrix24, см. design.md/tasks.md
+// раздел 7) — поэтому поля direction здесь нет, в отличие от остального
+// closePeriodPreviewSchema.
+//
+// bitrixTaskUrl (docs/task-rule-archiving-and-links, Фаза 3) — кликабельная
+// ссылка на задачу, построенная сервером через buildBitrixTaskLink(); может
+// отсутствовать даже при заданном bitrixTaskId, если BITRIX24_WEBHOOK_URL
+// не настроен (тот же паттерн опциональности, что и у остальных
+// bitrixTaskUrl в контрактах).
 const unclosedTaskRuleSchema = z.object({
     ruleId: z.string(),
     employeeId: z.number(),
     ruleName: z.string(),
     bitrixTaskId: z.number().optional(),
+    bitrixTaskUrl: z.string().optional(),
     status: taskRuleStatusSchema.optional(),
     isUnavailable: z.boolean(),
 });
