@@ -68,6 +68,10 @@ export class GetShopClosePeriodPreviewService {
             totalAmount: rows.reduce((sum, row) => sum + row.total, 0),
             unapprovedPlanRows,
             employeesWithoutHours,
+            // TaskCompleted не читает Bitrix24 для shop (см. class-level
+            // комментарий выше и closePeriodPreviewSchema в contracts) —
+            // список всегда пуст, без обращения к Bitrix24.
+            unclosedTaskRules: [],
         };
     }
 
