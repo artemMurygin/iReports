@@ -17,6 +17,10 @@ export function toShopSalesPlanTemplateResponse(
         margin: template.margin,
         orderTypeIds: template.orderTypeIds,
         growthPercent: template.growthPercent,
+        // Фаза 4 (docs/sales-plan-row-drag-and-drop-reorder): shop теперь
+        // читает/пишет sortOrder так же, как service — см.
+        // ShopSalesPlanTemplate.reorder()/mapper/repository.
+        sortOrder: template.sortOrder,
         createdAt: template.createdAt,
         updatedAt: template.updatedAt,
     };

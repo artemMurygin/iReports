@@ -10,6 +10,10 @@ import {
     SalesPlanTemplate,
 } from '../../domain/entities/sales-plan-template.entity';
 import type { SalesDirection } from '../../domain/types/sales-plan.types';
+import {
+    orderSalesPlansByTemplate,
+    type OrderedSalesPlan,
+} from '../../domain/services/order-sales-plans';
 
 function scopeKey(department: number, category: string | null): string {
     return `${department}:${category ?? 'null'}`;
@@ -110,6 +114,24 @@ export class EnsureSalesPlansForPeriodService {
         // и гарантирует тот же порядок (department, category), что и без
         // достраивания.
         return this.planRepo.findByDirectionAndPeriod(direction, period);
+    }
+
+    // Тот же набор строк, что и ensure(), но отсортированный по
+    // сохранённому глобальному порядку (SalesPlanTemplate.sortOrder, см.
+    // domain/services/order-sales-plans.ts) — используется потребителями,
+    // отдающими список строк наружу (ListSalesPlansService,
+    // GetSalesPerformanceService). Отдельный от ensure() метод — крону
+    // (SalesPlanAutoCreationCron) и уже существующим тестам порядок не
+    // нужен, а лишний findAll() шаблонов на каждый его тик ни к чему.
+    async ensureOrdered(
+        direction: SalesDirection,
+        period: string,
+    ): Promise<OrderedSalesPlan[]> {
+        const [plans, templates] = await Promise.all([
+            this.ensure(direction, period),
+            this.templateRepo.findAll(direction),
+        ]);
+        return orderSalesPlansByTemplate(plans, templates);
     }
 
     private fromPreviousMonth(

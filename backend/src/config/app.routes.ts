@@ -284,6 +284,11 @@ export const routesV1 = {
             root: serviceSalesPlanRoot,
             byId: `${serviceSalesPlanRoot}/:id`,
             approve: `${serviceSalesPlanRoot}/approve`,
+            // Батч-обновление глобального порядка строк-категорий плана
+            // (Фаза 1, docs/sales-plan-row-drag-and-drop-reorder) — PATCH,
+            // как и byId (тоже частичное изменение уже существующих
+            // строк), но на уровне отдела, а не одной строки плана.
+            order: `${serviceSalesPlanRoot}/order`,
         },
         salesPlanTemplate: {
             root: serviceSalesPlanTemplateRoot,
@@ -449,6 +454,10 @@ export const routesV1 = {
             root: shopSalesPlanRoot,
             byId: `${shopSalesPlanRoot}/:id`,
             approve: `${shopSalesPlanRoot}/approve`,
+            // Батч-обновление глобального порядка строк-категорий плана
+            // (Фаза 4, docs/sales-plan-row-drag-and-drop-reorder) — зеркало
+            // service.salesPlan.order выше.
+            order: `${shopSalesPlanRoot}/order`,
         },
         salesPlanTemplate: {
             root: shopSalesPlanTemplateRoot,

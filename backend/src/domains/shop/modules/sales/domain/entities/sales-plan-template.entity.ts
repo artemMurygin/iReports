@@ -10,7 +10,8 @@ import {
 
 // Зеркало domains/service/modules/sales/domain/entities/
 // sales-plan-template.entity.ts (Фаза 7
-// docs/service-shop-boundary-violations-fix) — независимая копия для
+// docs/service-shop-boundary-violations-fix, sortOrder/reorder() — Фаза 4
+// docs/sales-plan-row-drag-and-drop-reorder) — независимая копия для
 // направления shop. growthPercent по умолчанию — та же договорённость, что
 // у направления service (10%, см. docs/payroll/prd-payroll-calculation.md).
 export const DEFAULT_GROWTH_PERCENT = 10;
@@ -38,6 +39,7 @@ export class ShopSalesPlanTemplate extends Entity<ShopSalesPlanTemplateProps> {
                 margin: create.margin,
                 orderTypeIds: create.orderTypeIds ?? [],
                 growthPercent: create.growthPercent ?? DEFAULT_GROWTH_PERCENT,
+                sortOrder: create.sortOrder ?? 0,
             },
         });
     }
@@ -64,6 +66,19 @@ export class ShopSalesPlanTemplate extends Entity<ShopSalesPlanTemplateProps> {
 
     get orderTypeIds(): number[] {
         return this.props.orderTypeIds;
+    }
+
+    get sortOrder(): number {
+        return this.props.sortOrder;
+    }
+
+    // Отдельный от update() метод — намеренно, зеркалит SalesPlanTemplate.
+    // reorder() направления service: батч-эндпоинт переупорядочивания строк
+    // плана (см. UpdateShopSalesPlanOrderHandler) обязан трогать только
+    // sortOrder, никогда turnover/margin/orderTypeIds/growthPercent.
+    reorder(sortOrder: number): void {
+        this.props.sortOrder = sortOrder;
+        this.validate();
     }
 
     update(patch: ShopSalesPlanTemplateEditProps): void {
@@ -96,6 +111,11 @@ export class ShopSalesPlanTemplate extends Entity<ShopSalesPlanTemplateProps> {
         if (this.props.growthPercent < 0) {
             throw new ArgumentInvalidException(
                 'Процент роста шаблона не может быть отрицательным',
+            );
+        }
+        if (!Number.isInteger(this.props.sortOrder)) {
+            throw new ArgumentInvalidException(
+                'Порядок строки шаблона должен быть целым числом',
             );
         }
     }

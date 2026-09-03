@@ -26,6 +26,7 @@ export class SalesPlanTemplateMapper implements Mapper<
                 margin: record.margin,
                 orderTypeIds: record.orderTypeIds,
                 growthPercent: record.growthPercent,
+                sortOrder: record.sortOrder,
             },
         });
     }
@@ -43,6 +44,7 @@ export class SalesPlanTemplateMapper implements Mapper<
             margin: entity.margin,
             orderTypeIds: entity.orderTypeIds,
             growthPercent: entity.growthPercent,
+            sortOrder: entity.sortOrder,
             createdAt: props.createdAt,
             updatedAt: props.updatedAt,
         };

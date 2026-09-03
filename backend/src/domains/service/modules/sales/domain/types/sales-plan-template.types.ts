@@ -9,6 +9,11 @@ export interface SalesPlanTemplateProps {
     // построенный из этого шаблона; [] = "все типы" (см. sales.prisma).
     orderTypeIds: number[];
     growthPercent: number;
+    // Глобальный порядок строки-категории в таблице плана продаж (см.
+    // комментарий у sortOrder в sales.prisma) — меняется отдельно от
+    // остальных полей, через SalesPlanTemplate.reorder(), а не через
+    // update().
+    sortOrder: number;
 }
 
 export interface SalesPlanTemplateCreateProps {
@@ -19,6 +24,7 @@ export interface SalesPlanTemplateCreateProps {
     margin: number;
     orderTypeIds?: number[];
     growthPercent?: number;
+    sortOrder?: number;
 }
 
 export interface SalesPlanTemplateEditProps {

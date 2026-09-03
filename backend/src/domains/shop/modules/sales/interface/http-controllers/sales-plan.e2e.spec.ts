@@ -344,4 +344,172 @@ describe('Shop SalesPlan/SalesPlanTemplate HTTP (e2e)', () => {
             .expect(200);
         expect(listResponse.body).toHaveLength(1);
     });
+
+    // Зеркало одноимённого теста sales-plan.e2e.spec.ts направления service
+    // (Фаза 1) — здесь проверяет паритет Фазы 4
+    // (docs/sales-plan-row-drag-and-drop-reorder): собственный, независимый
+    // от service батч-эндпоинт направления shop.
+    it('порядок строк: батч PATCH .../plan/order сортирует строки GET .../plan по сохранённому sortOrder (Фаза 4)', async () => {
+        await request(app.getHttpServer())
+            .post('/v1/shop/sales/plan')
+            .send({
+                department: 1,
+                category: 'A',
+                period: '2026-05',
+                turnover: 100,
+                margin: 10,
+            })
+            .expect(201);
+        await request(app.getHttpServer())
+            .post('/v1/shop/sales/plan')
+            .send({
+                department: 1,
+                category: 'B',
+                period: '2026-05',
+                turnover: 200,
+                margin: 20,
+            })
+            .expect(201);
+        await request(app.getHttpServer())
+            .post('/v1/shop/sales/plan')
+            .send({
+                department: 1,
+                category: 'C',
+                period: '2026-05',
+                turnover: 300,
+                margin: 30,
+            })
+            .expect(201);
+
+        // По умолчанию (без сохранённого порядка) строки идут по
+        // categoryId — A, B, C.
+        const beforeOrder = await request(app.getHttpServer())
+            .get('/v1/shop/sales/plan')
+            .query({ period: '2026-05' })
+            .expect(200);
+        expect(
+            (beforeOrder.body as SalesPlanResponse[]).map((p) => p.category),
+        ).toEqual(['A', 'B', 'C']);
+        expect(
+            (beforeOrder.body as SalesPlanResponse[]).every(
+                (p) => p.sortOrder === null,
+            ),
+        ).toBe(true);
+
+        // Задаём порядок C, A — категория B в запрос не входит, поэтому
+        // остаётся без сохранённого шаблона/порядка и должна уйти в конец.
+        const orderResponse = await request(app.getHttpServer())
+            .patch('/v1/shop/sales/plan/order')
+            .send({
+                department: 1,
+                items: [
+                    { category: 'C', sortOrder: 0 },
+                    { category: 'A', sortOrder: 1 },
+                ],
+            })
+            .expect(200);
+        const orderBody = orderResponse.body as SalesPlanTemplateResponse[];
+        expect(orderBody).toHaveLength(2);
+        expect(orderBody.every((t) => t.direction === 'shop')).toBe(true);
+        // Новые строки шаблона, заведённые только ради sortOrder, не
+        // получают ненулевой оборот/маржу — это не полноценный шаблон
+        // плана, только хранилище порядка (см. UpdateShopSalesPlanOrderHandler).
+        expect(orderBody.every((t) => t.turnover === 0 && t.margin === 0)).toBe(
+            true,
+        );
+
+        const afterOrder = await request(app.getHttpServer())
+            .get('/v1/shop/sales/plan')
+            .query({ period: '2026-05' })
+            .expect(200);
+        const afterBody = afterOrder.body as SalesPlanResponse[];
+        expect(afterBody.map((p) => p.category)).toEqual(['C', 'A', 'B']);
+        expect(afterBody.map((p) => p.sortOrder)).toEqual([0, 1, null]);
+        // Переупорядочивание не трогает turnover/margin/status самих строк
+        // плана — только связанный шаблон.
+        expect(afterBody.map((p) => p.turnover)).toEqual([300, 100, 200]);
+        expect(afterBody.every((p) => p.status === 'CREATED')).toBe(true);
+    });
+
+    it('порядок строк: повторный PATCH .../plan/order на ту же категорию правит sortOrder у уже существующей строки шаблона, не создавая новую', async () => {
+        const firstPatch = await request(app.getHttpServer())
+            .patch('/v1/shop/sales/plan/order')
+            .send({
+                department: 6,
+                items: [{ category: '20', sortOrder: 0 }],
+            })
+            .expect(200);
+        const firstId = (firstPatch.body as SalesPlanTemplateResponse[])[0].id;
+
+        const secondPatch = await request(app.getHttpServer())
+            .patch('/v1/shop/sales/plan/order')
+            .send({
+                department: 6,
+                items: [{ category: '20', sortOrder: 4 }],
+            })
+            .expect(200);
+        const second = (secondPatch.body as SalesPlanTemplateResponse[])[0];
+        expect(second.id).toBe(firstId);
+        expect(second.sortOrder).toBe(4);
+
+        const templatesList = await request(app.getHttpServer())
+            .get('/v1/shop/sales/plan_template')
+            .expect(200);
+        expect(
+            (templatesList.body as SalesPlanTemplateResponse[]).filter(
+                (t) => t.department === 6,
+            ),
+        ).toHaveLength(1);
+    });
+
+    // Закрытый расчётный период не блокирует переупорядочивание (осознанное
+    // решение Фазы 4, см. подробное обоснование в комментарии у
+    // UpdateShopSalesPlanOrderHandler.execute()). Плановый план утверждён
+    // (APPROVED) — то состояние, при котором соответствующий период обычно
+    // закрывают — переупорядочивание всё равно проходит и не трогает его
+    // статус/поля. ShopSalesModule, поднятый в этом файле, вообще не
+    // регистрирует ни одного AccountingPeriod-провайдера — если бы хендлер
+    // зависел от него, тест не скомпилировался/не поднялся бы вообще
+    // (Nest бросил бы ошибку разрешения зависимости при app.init()); то,
+    // что PATCH ниже успешно проходит, — прямое доказательство отсутствия
+    // такой зависимости.
+    it('порядок строк: переупорядочивание не блокируется закрытым/утверждённым состоянием плана (Фаза 4, сознательное решение)', async () => {
+        const createResponse = await request(app.getHttpServer())
+            .post('/v1/shop/sales/plan')
+            .send({
+                department: 9,
+                category: 'X',
+                period: '2026-06',
+                turnover: 100,
+                margin: 10,
+            })
+            .expect(201);
+        const created = createResponse.body as SalesPlanResponse;
+
+        await request(app.getHttpServer())
+            .post('/v1/shop/sales/plan/approve')
+            .send({ ids: [created.id], approvedBy: 1 })
+            .expect(201);
+
+        const orderResponse = await request(app.getHttpServer())
+            .patch('/v1/shop/sales/plan/order')
+            .send({
+                department: 9,
+                items: [{ category: 'X', sortOrder: 0 }],
+            })
+            .expect(200);
+        expect(
+            (orderResponse.body as SalesPlanTemplateResponse[])[0].sortOrder,
+        ).toBe(0);
+
+        const afterOrder = await request(app.getHttpServer())
+            .get('/v1/shop/sales/plan')
+            .query({ period: '2026-06' })
+            .expect(200);
+        const plan = (afterOrder.body as SalesPlanResponse[])[0];
+        // Утверждённый статус и сумма плана не пострадали.
+        expect(plan.status).toBe('APPROVED');
+        expect(plan.turnover).toBe(100);
+        expect(plan.sortOrder).toBe(0);
+    });
 });

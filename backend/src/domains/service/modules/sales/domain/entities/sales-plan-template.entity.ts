@@ -34,6 +34,7 @@ export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
                 margin: create.margin,
                 orderTypeIds: create.orderTypeIds ?? [],
                 growthPercent: create.growthPercent ?? DEFAULT_GROWTH_PERCENT,
+                sortOrder: create.sortOrder ?? 0,
             },
         });
     }
@@ -69,6 +70,21 @@ export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
         return this.props.orderTypeIds;
     }
 
+    get sortOrder(): number {
+        return this.props.sortOrder;
+    }
+
+    // Отдельный от update() метод — намеренно: батч-эндпоинт
+    // переупорядочивания строк плана (см. UpdateSalesPlanOrderHandler)
+    // обязан трогать только sortOrder, никогда turnover/margin/
+    // orderTypeIds/growthPercent (см. docs/sales-plan-row-drag-and-drop-
+    // reorder, "Не в скоупе"/технические ограничения) — общий update()
+    // с необязательными полями делал бы эту гарантию менее явной.
+    reorder(sortOrder: number): void {
+        this.props.sortOrder = sortOrder;
+        this.validate();
+    }
+
     update(patch: SalesPlanTemplateEditProps): void {
         if (patch.turnover !== undefined) {
             this.props.turnover = patch.turnover;
@@ -99,6 +115,11 @@ export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
         if (this.props.growthPercent < 0) {
             throw new ArgumentInvalidException(
                 'Процент роста шаблона не может быть отрицательным',
+            );
+        }
+        if (!Number.isInteger(this.props.sortOrder)) {
+            throw new ArgumentInvalidException(
+                'Порядок строки шаблона должен быть целым числом',
             );
         }
     }

@@ -48,7 +48,7 @@ model SalesPlanTemplate {
   // domains/shop/CLAUDE.md), домен и контракты работают с
   // category: string | null — сентинел не протекает дальше пары функций в
   // мапперах этого модуля.
-  categoryId String @map("category_id")
+  categoryId   String         @map("category_id")
 
   turnover      Int
   margin        Int
@@ -58,6 +58,16 @@ model SalesPlanTemplate {
   // однозначно отличим от заполненного).
   orderTypeIds  Int[]    @default([]) @map("order_type_ids")
   growthPercent Int      @default(10) @map("growth_percent")
+  // Глобальный (общий для всех пользователей) порядок строки в таблице
+  // плана продаж — задаётся drag-and-drop в модалке редактирования плана
+  // (см. docs/sales-plan-row-drag-and-drop-reorder). Хранится здесь, а не
+  // на SalesPlan, намеренно: SalesPlanTemplate — период-независимая
+  // сущность на естественном ключе (direction, departmentId, categoryId),
+  // тогда как id строки SalesPlan меняется каждый месяц — порядок обязан
+  // пережить смену расчётного периода. Категории без строки шаблона (и
+  // тем самым без сохранённого sortOrder) сортируются последними — см.
+  // domain/services/order-sales-plans.ts.
+  sortOrder     Int      @default(0) @map("sort_order")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

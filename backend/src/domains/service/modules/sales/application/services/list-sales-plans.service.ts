@@ -24,7 +24,16 @@ export class ListSalesPlansService {
         direction: SalesDirection,
         period: string,
     ): Promise<SalesPlanResponse[]> {
-        const plans = await this.ensureSalesPlans.ensure(direction, period);
-        return plans.map(toSalesPlanResponse);
+        // ensureOrdered — те же строки, что и ensure(), но уже
+        // отсортированные по сохранённому глобальному порядку строк (см.
+        // EnsureSalesPlansForPeriodService.ensureOrdered), с sortOrder на
+        // каждой строке для ответа.
+        const ordered = await this.ensureSalesPlans.ensureOrdered(
+            direction,
+            period,
+        );
+        return ordered.map(({ plan, sortOrder }) =>
+            toSalesPlanResponse(plan, sortOrder),
+        );
     }
 }

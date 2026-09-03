@@ -19,7 +19,10 @@ export function toShopSalesPerformanceResponse(
         period: performance.getPeriod(),
         department: performance.getDepartment(),
         category: performance.getCategory(),
-        plan: toShopSalesPlanResponse(performance.getPlan()),
+        plan: toShopSalesPlanResponse(
+            performance.getPlan(),
+            performance.getSortOrder(),
+        ),
         fact: {
             turnover: fact.getTurnover(),
             margin: fact.getMargin(),

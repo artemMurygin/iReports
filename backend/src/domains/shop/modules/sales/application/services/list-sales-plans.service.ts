@@ -15,7 +15,14 @@ export class ListShopSalesPlansService {
     ) {}
 
     async execute(period: string): Promise<SalesPlanResponse[]> {
-        const plans = await this.ensureSalesPlans.ensure(period);
-        return plans.map(toShopSalesPlanResponse);
+        // ensureOrdered — те же строки, что и ensure(), но уже
+        // отсортированные по сохранённому глобальному порядку строк (см.
+        // EnsureShopSalesPlansForPeriodService.ensureOrdered, Фаза 4
+        // docs/sales-plan-row-drag-and-drop-reorder), с sortOrder на каждой
+        // строке для ответа.
+        const ordered = await this.ensureSalesPlans.ensureOrdered(period);
+        return ordered.map(({ plan, sortOrder }) =>
+            toShopSalesPlanResponse(plan, sortOrder),
+        );
     }
 }

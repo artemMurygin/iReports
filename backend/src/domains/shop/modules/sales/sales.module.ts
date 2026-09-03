@@ -10,6 +10,7 @@ import { UpdateShopSalesPlanHandler } from './application/command/update-sales-p
 import { DeleteShopSalesPlanHandler } from './application/command/delete-sales-plan.handler';
 import { ApproveShopSalesPlanHandler } from './application/command/approve-sales-plan.handler';
 import { PutShopSalesPlanTemplateHandler } from './application/command/put-sales-plan-template.handler';
+import { UpdateShopSalesPlanOrderHandler } from './application/command/update-sales-plan-order.handler';
 import { EnsureShopSalesPlansForPeriodService } from './application/services/ensure-sales-plans-for-period.service';
 import { ListShopSalesPlansService } from './application/services/list-sales-plans.service';
 import { ListShopSalesPlanTemplatesService } from './application/services/list-sales-plan-templates.service';
@@ -20,6 +21,7 @@ import { GetShopSalesPerformanceService } from './application/services/get-sales
 import { ShopSalesPlanAutoCreationCron } from './infrastructure/cron/sales-plan-auto-creation.cron';
 import { ListShopSalesPerformanceHttpController } from './interface/http-controllers/list-sales-performance.http.controller';
 import { CreateShopSalesPlanHttpController } from './interface/http-controllers/create-sales-plan.http.controller';
+import { UpdateShopSalesPlanOrderHttpController } from './interface/http-controllers/update-sales-plan-order.http.controller';
 import { UpdateShopSalesPlanHttpController } from './interface/http-controllers/update-sales-plan.http.controller';
 import { DeleteShopSalesPlanHttpController } from './interface/http-controllers/delete-sales-plan.http.controller';
 import { ApproveShopSalesPlanHttpController } from './interface/http-controllers/approve-sales-plan.http.controller';
@@ -61,6 +63,11 @@ import { PutShopSalesPlanTemplateHttpController } from './interface/http-control
     controllers: [
         ListShopSalesPerformanceHttpController,
         CreateShopSalesPlanHttpController,
+        // Регистрация ДО UpdateShopSalesPlanHttpController — оба слушают
+        // PATCH, а .../plan/order (литеральный сегмент) должен резолвиться
+        // раньше .../plan/:id (см. комментарий в
+        // UpdateShopSalesPlanOrderHttpController).
+        UpdateShopSalesPlanOrderHttpController,
         UpdateShopSalesPlanHttpController,
         DeleteShopSalesPlanHttpController,
         ApproveShopSalesPlanHttpController,
@@ -82,6 +89,7 @@ import { PutShopSalesPlanTemplateHttpController } from './interface/http-control
         DeleteShopSalesPlanHandler,
         ApproveShopSalesPlanHandler,
         PutShopSalesPlanTemplateHandler,
+        UpdateShopSalesPlanOrderHandler,
         EnsureShopSalesPlansForPeriodService,
         ListShopSalesPlansService,
         ListShopSalesPlanTemplatesService,

@@ -45,6 +45,12 @@ export type EditPlanModalProps = {
  * multiselect column is `service`-only (RoApp; `shop`/МойСклад has no such concept, see the
  * PRD's "не в скоупе"), so the dictionary (`GET .../reports/order-type`) is only fetched for
  * `direction === 'service'`; `showOrderTypes` gates the column everywhere downstream.
+ *
+ * Drag-and-drop row reordering (Фаза 2, docs/sales-plan-row-drag-and-drop-reorder) lives entirely
+ * inside `EditPlanTable`/`EditPlanTableRow` (`@dnd-kit`'s first real usage in this repo) — this
+ * component only forwards `canReorder`/`onReorder` from `useEditPlanForm` down to
+ * `EditPlanModalBody`, same as every other piece of derived state/handler here. `canReorder` is
+ * `true` for both directions (Фаза 4 added the batch order-save endpoint for `shop` too).
  */
 function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlanModalProps) {
     const {
@@ -59,6 +65,8 @@ function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlan
         showOrderTypes,
         orderTypes,
         isOrderTypesFetching,
+        canReorder,
+        onReorder,
     } = useEditPlanForm({
         open,
         onOpenChange,
@@ -73,13 +81,14 @@ function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlan
             className="sm:max-w-[960px]"
             title="Редактирование плана продаж"
             subtitle={`Направление «${DIRECTION_LABEL[direction]}» · ${formatPeriodLabel(period)} · период открыт`}
-            footer={(
+            footer={
                 <EditPlanModalFooter
                     onCancel={handleCancel}
                     onSave={handleSave}
                     canSave={canSave}
                     isSaving={isSaving}
-                />)}
+                />
+            }
         >
             <EditPlanModalBody
                 rowViews={rowViews}
@@ -89,6 +98,8 @@ function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlan
                 orderTypes={orderTypes}
                 isOrderTypesLoading={isOrderTypesFetching}
                 onOrderTypeIdsChange={setOrderTypeIds}
+                canReorder={canReorder}
+                onReorder={onReorder}
             />
         </Modal>
     )

@@ -36,6 +36,14 @@ export class SalesPlanTemplateRepository
                     margin: entity.margin,
                     orderTypeIds: entity.orderTypeIds,
                     growthPercent: entity.growthPercent,
+                    // sortOrder переписывается тем же значением, что уже
+                    // было на entity, если менялись только turnover/margin/
+                    // orderTypeIds/growthPercent (см. update() на entity —
+                    // sortOrder не входит в SalesPlanTemplateEditProps), и
+                    // новым значением после entity.reorder() (см.
+                    // UpdateSalesPlanOrderHandler) — единый метод записи на
+                    // оба случая, а не два разных.
+                    sortOrder: entity.sortOrder,
                     updatedAt: props.updatedAt,
                 },
             }),

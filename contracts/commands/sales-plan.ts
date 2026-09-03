@@ -42,6 +42,13 @@ const salesPlanTemplateSchema = z.object({
     margin: z.number(),
     orderTypeIds: z.array(z.number()),
     growthPercent: z.number(),
+    // Глобальный (общий для всех пользователей) порядок строки-категории в
+    // таблице плана продаж — задаётся drag-and-drop в модалке
+    // редактирования плана (см.
+    // docs/sales-plan-row-drag-and-drop-reorder). Хранится на шаблоне, а
+    // не на самой строке SalesPlan, потому что переживает смену
+    // расчётного периода (см. комментарий у sortOrder в sales.prisma).
+    sortOrder: z.number().int(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
 });
@@ -103,6 +110,15 @@ const salesPlanSchema = z.object({
     status: salesPlanStatusSchema,
     approvedBy: z.number().nullable(),
     approvedAt: z.coerce.date().nullable(),
+    // Порядок строки, разрешённый по связанному SalesPlanTemplate
+    // (direction, department, category) — не собственное поле строки
+    // плана (у SalesPlan такого столбца нет, см. sales.prisma), а
+    // денормализованное значение, которое сервер подставляет при сборке
+    // ответа (см. GetSalesPerformanceService/ListSalesPlansService).
+    // null — для категории нет сохранённого шаблона/порядка, такая строка
+    // отображается последней в списке (см. docs/sales-plan-row-drag-and-
+    // drop-reorder). Помечено optional для обратной совместимости.
+    sortOrder: z.number().int().nullable().optional(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
 });
@@ -165,6 +181,32 @@ export type UpdateSalesPlanRequest = z.infer<
     typeof updateSalesPlanRequestSchema
 >;
 
+// Батч-обновление глобального (общего для всех пользователей) порядка
+// строк-категорий плана — PATCH .../plan/order (см.
+// docs/sales-plan-row-drag-and-drop-reorder). department — одно на весь
+// запрос (переупорядочивание всегда происходит в рамках одной таблицы
+// модалки/страницы плана, т.е. одного отдела); category = null — строка
+// "без категории" (шаблон на отдел целиком, тот же сентинел-принцип, что и
+// в остальных схемах этого файла). Эндпоинт трогает только
+// SalesPlanTemplate.sortOrder — turnover/margin/orderTypeIds/growthPercent
+// существующих строк шаблона не меняются (см.
+// UpdateSalesPlanOrderHandler).
+const updateSalesPlanOrderItemSchema = z.object({
+    category: z.string().nullable().optional(),
+    sortOrder: z.number().int(),
+});
+export type UpdateSalesPlanOrderItem = z.infer<
+    typeof updateSalesPlanOrderItemSchema
+>;
+
+const updateSalesPlanOrderRequestSchema = z.object({
+    department: z.number(),
+    items: z.array(updateSalesPlanOrderItemSchema).min(1),
+});
+export type UpdateSalesPlanOrderRequest = z.infer<
+    typeof updateSalesPlanOrderRequestSchema
+>;
+
 // Утверждение построчно (ids) или массово по месяцу (period, в рамках
 // направления эндпоинта из пути — все строки CREATED переходят в APPROVED,
 // уже утверждённые строки не трогаются). approvedBy — Bitrix ID руководителя,
@@ -199,6 +241,8 @@ export {
     createSalesPlanItemSchema,
     createSalesPlanRequestSchema,
     updateSalesPlanRequestSchema,
+    updateSalesPlanOrderItemSchema,
+    updateSalesPlanOrderRequestSchema,
     approveSalesPlanRequestSchema,
     listSalesPlansQuerySchema,
 };

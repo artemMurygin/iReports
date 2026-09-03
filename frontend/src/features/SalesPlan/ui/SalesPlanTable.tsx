@@ -47,7 +47,15 @@ export type SalesPlanTableProps = {
  * leading 44px column) are implemented; the "Действия" column (edit/delete icons) and row
  * deletion are not — neither was requested (see the task this phase was built from).
  */
-function SalesPlanTable({ rows, className, selectedIds, onToggleRow, onToggleAll, isAllSelected, isIndeterminate }: SalesPlanTableProps) {
+function SalesPlanTable({
+    rows,
+    className,
+    selectedIds,
+    onToggleRow,
+    onToggleAll,
+    isAllSelected,
+    isIndeterminate,
+}: SalesPlanTableProps) {
     return (
         <div
             data-slot="sales-plan-table"
@@ -101,33 +109,58 @@ function SalesPlanTableRow({
     return (
         <div
             data-slot="sales-plan-table-row"
-            className={cn('flex items-center border-b border-hairline last:border-b-0', zebra ? 'bg-row-selected' : 'bg-surface')}
+            className={cn(
+                'flex items-center border-b border-hairline last:border-b-0',
+                zebra ? 'bg-row-selected' : 'bg-surface',
+            )}
         >
             <div className="flex w-11 shrink-0 items-center justify-center self-stretch">
-                <Checkbox checked={selected} onCheckedChange={onToggle} aria-label={`Выбрать категорию ${row.categoryName}`} />
+                <Checkbox
+                    checked={selected}
+                    onCheckedChange={onToggle}
+                    aria-label={`Выбрать категорию ${row.categoryName}`}
+                />
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-[3px] py-2">
                 <div className="flex items-center">
                     <span
                         className="min-w-[200px] flex-1 truncate px-3 font-ui text-sm font-medium text-ink"
-                        title={row.orderTypeNames.length > 0 ? `Типы заказов: ${row.orderTypeNames.join(', ')}` : undefined}
+                        title={
+                            row.orderTypeNames.length > 0 ? `Типы заказов: ${row.orderTypeNames.join(', ')}` : undefined
+                        }
                     >
                         {row.categoryName}
                     </span>
-                    <span className={cn('shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink', COLUMN_WIDTH.plan)}>
+                    <span
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink',
+                            COLUMN_WIDTH.plan,
+                        )}
+                    >
                         {formatCurrency(row.plan.turnover)}
                     </span>
-                    <span className={cn('shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink', COLUMN_WIDTH.fact)}>
+                    <span
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink',
+                            COLUMN_WIDTH.fact,
+                        )}
+                    >
                         {formatCurrency(row.fact.turnover)}
                     </span>
                     <span
-                        className={cn('shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink', COLUMN_WIDTH.forecast)}
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink',
+                            COLUMN_WIDTH.forecast,
+                        )}
                     >
                         {formatCurrency(row.prognose.turnover)}
                     </span>
                     <span
-                        className={cn('shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink', COLUMN_WIDTH.remaining)}
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-sm font-medium text-ink',
+                            COLUMN_WIDTH.remaining,
+                        )}
                     >
                         {formatCurrency(row.remaining)}
                     </span>
@@ -141,16 +174,36 @@ function SalesPlanTableRow({
                         <CornerDownRight className="size-3 shrink-0 text-ink-faint" />
                         Маржа
                     </span>
-                    <span className={cn('shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted', COLUMN_WIDTH.plan)}>
+                    <span
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted',
+                            COLUMN_WIDTH.plan,
+                        )}
+                    >
                         {formatCurrency(row.plan.margin)}
                     </span>
-                    <span className={cn('shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted', COLUMN_WIDTH.fact)}>
+                    <span
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted',
+                            COLUMN_WIDTH.fact,
+                        )}
+                    >
                         {formatCurrency(row.fact.margin)}
                     </span>
-                    <span className={cn('shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted', COLUMN_WIDTH.forecast)}>
+                    <span
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted',
+                            COLUMN_WIDTH.forecast,
+                        )}
+                    >
                         {formatCurrency(row.prognose.margin)}
                     </span>
-                    <span className={cn('shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted', COLUMN_WIDTH.remaining)}>
+                    <span
+                        className={cn(
+                            'shrink-0 truncate px-3 text-right font-ui text-xs text-ink-muted',
+                            COLUMN_WIDTH.remaining,
+                        )}
+                    >
                         {formatCurrency(row.remainingMargin)}
                     </span>
                     <div className={cn('shrink-0 px-3', COLUMN_WIDTH.progress)}>

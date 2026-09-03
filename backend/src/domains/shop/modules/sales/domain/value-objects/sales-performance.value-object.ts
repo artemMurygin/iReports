@@ -7,6 +7,13 @@ export interface ShopSalesPerformanceProps {
     plan: ShopSalesPlan;
     fact: ShopSalesFact;
     prognose: SalesPrognose;
+    // Унаследованный от связанного ShopSalesPlanTemplate.sortOrder порядок
+    // строки (см. domain/services/order-sales-plans.ts) — null, если для
+    // строки нет сохранённого шаблона/порядка. Присутствует здесь только
+    // ради переноса в ответ (toShopSalesPerformanceResponse), на
+    // fact/prognose не влияет. Зеркало SalesPerformance направления service
+    // (Фаза 4, docs/sales-plan-row-drag-and-drop-reorder).
+    sortOrder: number | null;
 }
 
 // Агрегат "план + факт + прогноз" на одну строку (department, category,
@@ -26,8 +33,9 @@ export class ShopSalesPerformance extends ValueObject<ShopSalesPerformanceProps>
         plan: ShopSalesPlan,
         fact: ShopSalesFact,
         prognose: SalesPrognose,
+        sortOrder: number | null = null,
     ): ShopSalesPerformance {
-        return new ShopSalesPerformance({ plan, fact, prognose });
+        return new ShopSalesPerformance({ plan, fact, prognose, sortOrder });
     }
 
     getPeriod(): string {
@@ -52,5 +60,9 @@ export class ShopSalesPerformance extends ValueObject<ShopSalesPerformanceProps>
 
     getPrognose(): SalesPrognose {
         return this.props.prognose;
+    }
+
+    getSortOrder(): number | null {
+        return this.props.sortOrder;
     }
 }

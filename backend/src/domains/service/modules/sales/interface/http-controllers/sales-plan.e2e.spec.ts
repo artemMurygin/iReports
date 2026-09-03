@@ -603,6 +603,116 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
         expect(listResponse.body).toMatchObject([{ direction: 'service' }]);
     });
 
+    it('порядок строк: батч PATCH .../plan/order сортирует строки GET .../plan по сохранённому sortOrder (Фаза 1)', async () => {
+        await request(app.getHttpServer())
+            .post('/v1/service/sales/plan')
+            .send({
+                items: [
+                    {
+                        department: 1,
+                        category: 'A',
+                        period: '2026-05',
+                        turnover: 100,
+                        margin: 10,
+                    },
+                    {
+                        department: 1,
+                        category: 'B',
+                        period: '2026-05',
+                        turnover: 200,
+                        margin: 20,
+                    },
+                    {
+                        department: 1,
+                        category: 'C',
+                        period: '2026-05',
+                        turnover: 300,
+                        margin: 30,
+                    },
+                ],
+            })
+            .expect(201);
+
+        // По умолчанию (без сохранённого порядка) строки идут по
+        // categoryId — A, B, C.
+        const beforeOrder = await request(app.getHttpServer())
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-05' })
+            .expect(200);
+        expect(
+            (beforeOrder.body as SalesPlanResponse[]).map((p) => p.category),
+        ).toEqual(['A', 'B', 'C']);
+        expect(
+            (beforeOrder.body as SalesPlanResponse[]).every(
+                (p) => p.sortOrder === null,
+            ),
+        ).toBe(true);
+
+        // Задаём порядок C, A — категория B в запрос не входит, поэтому
+        // остаётся без сохранённого шаблона/порядка и должна уйти в конец.
+        const orderResponse = await request(app.getHttpServer())
+            .patch('/v1/service/sales/plan/order')
+            .send({
+                department: 1,
+                items: [
+                    { category: 'C', sortOrder: 0 },
+                    { category: 'A', sortOrder: 1 },
+                ],
+            })
+            .expect(200);
+        const orderBody = orderResponse.body as SalesPlanTemplateResponse[];
+        expect(orderBody).toHaveLength(2);
+        // Новые строки шаблона, заведённые только ради sortOrder, не
+        // получают ненулевой оборот/маржу — это не полноценный шаблон
+        // плана, только хранилище порядка (см. UpdateSalesPlanOrderHandler).
+        expect(orderBody.every((t) => t.turnover === 0 && t.margin === 0)).toBe(
+            true,
+        );
+
+        const afterOrder = await request(app.getHttpServer())
+            .get('/v1/service/sales/plan')
+            .query({ period: '2026-05' })
+            .expect(200);
+        const afterBody = afterOrder.body as SalesPlanResponse[];
+        expect(afterBody.map((p) => p.category)).toEqual(['C', 'A', 'B']);
+        expect(afterBody.map((p) => p.sortOrder)).toEqual([0, 1, null]);
+        // Переупорядочивание не трогает turnover/margin/status самих строк
+        // плана — только связанный шаблон.
+        expect(afterBody.map((p) => p.turnover)).toEqual([300, 100, 200]);
+        expect(afterBody.every((p) => p.status === 'CREATED')).toBe(true);
+    });
+
+    it('порядок строк: повторный PATCH .../plan/order на ту же категорию правит sortOrder у уже существующей строки шаблона, не создавая новую', async () => {
+        const firstPatch = await request(app.getHttpServer())
+            .patch('/v1/service/sales/plan/order')
+            .send({
+                department: 6,
+                items: [{ category: '20', sortOrder: 0 }],
+            })
+            .expect(200);
+        const firstId = (firstPatch.body as SalesPlanTemplateResponse[])[0].id;
+
+        const secondPatch = await request(app.getHttpServer())
+            .patch('/v1/service/sales/plan/order')
+            .send({
+                department: 6,
+                items: [{ category: '20', sortOrder: 4 }],
+            })
+            .expect(200);
+        const second = (secondPatch.body as SalesPlanTemplateResponse[])[0];
+        expect(second.id).toBe(firstId);
+        expect(second.sortOrder).toBe(4);
+
+        const templatesList = await request(app.getHttpServer())
+            .get('/v1/service/sales/plan_template')
+            .expect(200);
+        expect(
+            (templatesList.body as SalesPlanTemplateResponse[]).filter(
+                (t) => t.department === 6,
+            ),
+        ).toHaveLength(1);
+    });
+
     it('эндпоинт шаблона плана игнорирует direction, переданный в теле, и всегда пишет service', async () => {
         const templatePut = await request(app.getHttpServer())
             .put('/v1/service/sales/plan_template')

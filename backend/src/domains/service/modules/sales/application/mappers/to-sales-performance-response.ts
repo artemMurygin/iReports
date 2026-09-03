@@ -13,7 +13,10 @@ export function toSalesPerformanceResponse(
         period: performance.getPeriod(),
         department: performance.getDepartment(),
         category: performance.getCategory(),
-        plan: toSalesPlanResponse(performance.getPlan()),
+        plan: toSalesPlanResponse(
+            performance.getPlan(),
+            performance.getSortOrder(),
+        ),
         fact: {
             turnover: fact.getTurnover(),
             margin: fact.getMargin(),

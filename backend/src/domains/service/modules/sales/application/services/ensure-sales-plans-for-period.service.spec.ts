@@ -248,4 +248,41 @@ describe('EnsureSalesPlansForPeriodService', () => {
             expect(sources).toEqual(['PREVIOUS_MONTH', 'TEMPLATE']);
         });
     });
+
+    it('ensureOrdered() сортирует по sortOrder шаблона, строку без шаблона — в конец', async () => {
+        await withRequestContext(async () => {
+            const planA = SalesPlan.create({
+                direction: 'service',
+                department: 1,
+                category: 'A',
+                period: '2026-08',
+                turnover: 1,
+                margin: 1,
+                source: 'MANUAL',
+            });
+            const planB = SalesPlan.create({
+                direction: 'service',
+                department: 1,
+                category: 'B',
+                period: '2026-08',
+                turnover: 1,
+                margin: 1,
+                source: 'MANUAL',
+            });
+            const templateA = SalesPlanTemplate.create({
+                direction: 'service',
+                department: 1,
+                category: 'A',
+                turnover: 0,
+                margin: 0,
+                sortOrder: 5,
+            });
+            const { service } = buildService([planA, planB], [templateA]);
+
+            const result = await service.ensureOrdered('service', '2026-08');
+
+            expect(result.map((r) => r.plan.category)).toEqual(['A', 'B']);
+            expect(result.map((r) => r.sortOrder)).toEqual([5, null]);
+        });
+    });
 });

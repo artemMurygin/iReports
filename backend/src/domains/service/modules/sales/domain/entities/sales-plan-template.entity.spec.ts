@@ -70,4 +70,30 @@ describe('SalesPlanTemplate', () => {
 
         expect(template.orderTypeIds).toEqual([7, 8]);
     });
+
+    it('sortOrder по умолчанию 0, но может быть задан явно при создании', () => {
+        const template = withRequestContext(() =>
+            SalesPlanTemplate.create(baseProps),
+        );
+        expect(template.sortOrder).toBe(0);
+
+        const withOrder = withRequestContext(() =>
+            SalesPlanTemplate.create({ ...baseProps, sortOrder: 5 }),
+        );
+        expect(withOrder.sortOrder).toBe(5);
+    });
+
+    it('reorder() меняет только sortOrder, не затрагивая остальные поля', () => {
+        const template = withRequestContext(() =>
+            SalesPlanTemplate.create({ ...baseProps, orderTypeIds: [1] }),
+        );
+
+        withRequestContext(() => template.reorder(3));
+
+        expect(template.sortOrder).toBe(3);
+        expect(template.turnover).toBe(baseProps.turnover);
+        expect(template.margin).toBe(baseProps.margin);
+        expect(template.growthPercent).toBe(10);
+        expect(template.orderTypeIds).toEqual([1]);
+    });
 });

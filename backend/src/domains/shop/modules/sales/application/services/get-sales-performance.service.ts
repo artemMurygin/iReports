@@ -39,7 +39,13 @@ export class GetShopSalesPerformanceService implements ShopSalesPerformanceReade
         const periodVo = Period.create(period);
         const now = new Date();
 
-        const plans = await this.ensureSalesPlans.ensure(period);
+        // ensureOrdered — те же строки плана, что и ensure(), но уже
+        // отсортированные по сохранённому глобальному порядку строк (см.
+        // EnsureShopSalesPlansForPeriodService.ensureOrdered, Фаза 4
+        // docs/sales-plan-row-drag-and-drop-reorder) — .map() ниже
+        // сохраняет этот порядок в результирующем массиве.
+        const orderedPlans = await this.ensureSalesPlans.ensureOrdered(period);
+        const plans = orderedPlans.map(({ plan }) => plan);
 
         const categories = [
             ...new Set(
@@ -60,7 +66,7 @@ export class GetShopSalesPerformanceService implements ShopSalesPerformanceReade
             ]),
         );
 
-        return plans.map((plan) => {
+        return orderedPlans.map(({ plan, sortOrder }) => {
             const erp = factsByScope.get(
                 scopeKey(plan.department, plan.category),
             );
@@ -81,7 +87,7 @@ export class GetShopSalesPerformanceService implements ShopSalesPerformanceReade
                 plan.turnover,
                 now,
             );
-            return ShopSalesPerformance.create(plan, fact, prognose);
+            return ShopSalesPerformance.create(plan, fact, prognose, sortOrder);
         });
     }
 

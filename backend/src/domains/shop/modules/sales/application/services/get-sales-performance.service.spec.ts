@@ -1,5 +1,6 @@
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/sales-plan.entity';
+import { ShopSalesPlanTemplate } from '@/domains/shop/modules/sales/domain/entities/sales-plan-template.entity';
 import { EnsureShopSalesPlansForPeriodService } from '@/domains/shop/modules/sales/application/services/ensure-sales-plans-for-period.service';
 import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/sales-plan.port';
 import type { ShopSalesPlanTemplateRepositoryPort } from '@/domains/shop/modules/sales/application/ports/sales-plan-template.port';
@@ -23,6 +24,7 @@ describe('GetShopSalesPerformanceService', () => {
             cost: number;
             quantity: number;
         }[],
+        templates: ShopSalesPlanTemplate[] = [],
     ) => {
         const store = new Map(plans.map((plan) => [plan.id, plan]));
         const planRepo: ShopSalesPlanRepositoryPort = {
@@ -52,7 +54,7 @@ describe('GetShopSalesPerformanceService', () => {
             insert: jest.fn(),
             update: jest.fn(),
             findByScope: jest.fn(),
-            findAll: jest.fn().mockResolvedValue([]),
+            findAll: jest.fn().mockResolvedValue(templates),
         };
         const aggregate = jest.fn().mockResolvedValue(facts);
         const factSource: ShopSalesFactSourcePort = { aggregate };
@@ -258,6 +260,73 @@ describe('GetShopSalesPerformanceService', () => {
 
             expect(found?.getPlan().id).toBe(plan.id);
             expect(notFound).toBeNull();
+        });
+    });
+
+    // Task item 3 Фазы 4 (docs/sales-plan-row-drag-and-drop-reorder):
+    // подтверждает, что GetShopSalesPerformanceService — единственная
+    // реализация ShopSalesPerformanceReaderPort, потребитель
+    // GET /v1/shop/sales/salesPerformance/:period — отдаёт строки в
+    // сохранённом порядке и для direction: 'shop', а не только для
+    // domains/service.
+    it('listForPeriod сортирует строки по сохранённому sortOrder шаблона, строку без шаблона — в конец', async () => {
+        await withRequestContext(async () => {
+            const planA = ShopSalesPlan.create({
+                department: 1,
+                category: 'A',
+                period: '2026-08',
+                turnover: 100,
+                margin: 10,
+                source: 'MANUAL',
+            });
+            const planB = ShopSalesPlan.create({
+                department: 1,
+                category: 'B',
+                period: '2026-08',
+                turnover: 200,
+                margin: 20,
+                source: 'MANUAL',
+            });
+            const templateB = ShopSalesPlanTemplate.create({
+                department: 1,
+                category: 'B',
+                turnover: 0,
+                margin: 0,
+                sortOrder: 0,
+            });
+            const { service } = buildService(
+                [planA, planB],
+                [
+                    {
+                        department: 1,
+                        category: 'A',
+                        turnover: 0,
+                        margin: 0,
+                        cost: 0,
+                        quantity: 0,
+                    },
+                    {
+                        department: 1,
+                        category: 'B',
+                        turnover: 0,
+                        margin: 0,
+                        cost: 0,
+                        quantity: 0,
+                    },
+                ],
+                [templateB],
+            );
+
+            const performances = await service.listForPeriod('2026-08');
+
+            expect(performances.map((p) => p.getCategory())).toEqual([
+                'B',
+                'A',
+            ]);
+            expect(performances.map((p) => p.getSortOrder())).toEqual([
+                0,
+                null,
+            ]);
         });
     });
 });

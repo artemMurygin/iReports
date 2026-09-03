@@ -152,13 +152,12 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, peri
             .filter((row) => row.department === HARDCODED_DEPARTMENT_ID)
             .map((row) => ({
                 ...row,
-                categoryName: row.category === null ? NO_CATEGORY_LABEL : (categoryNameById.get(row.category) ?? row.category),
+                categoryName:
+                    row.category === null ? NO_CATEGORY_LABEL : (categoryNameById.get(row.category) ?? row.category),
                 remaining: row.plan.turnover - row.fact.turnover,
                 remainingMargin: row.plan.margin - row.fact.margin,
                 marginPercent: row.plan.margin !== 0 ? (row.fact.margin / row.plan.margin) * 100 : 0,
-                orderTypeNames: row.plan.orderTypeIds.map(
-                    (id) => orderTypeNameById.get(id) ?? String(id),
-                ),
+                orderTypeNames: row.plan.orderTypeIds.map((id) => orderTypeNameById.get(id) ?? String(id)),
             }))
     }, [performance, categoryNameById, orderTypeNameById])
 

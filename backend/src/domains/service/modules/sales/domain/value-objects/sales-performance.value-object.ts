@@ -8,6 +8,12 @@ export interface SalesPerformanceProps {
     plan: SalesPlan;
     fact: SalesFact;
     prognose: SalesPrognose;
+    // Унаследованный от связанного SalesPlanTemplate.sortOrder порядок
+    // строки (см. domain/services/order-sales-plans.ts) — null, если для
+    // строки нет сохранённого шаблона/порядка. Присутствует здесь только
+    // ради переноса в ответ (toSalesPerformanceResponse), на fact/prognose
+    // не влияет.
+    sortOrder: number | null;
 }
 
 // Агрегат "план + факт + прогноз" на одну строку (direction, department,
@@ -23,8 +29,9 @@ export class SalesPerformance extends ValueObject<SalesPerformanceProps> {
         plan: SalesPlan,
         fact: SalesFact,
         prognose: SalesPrognose,
+        sortOrder: number | null = null,
     ): SalesPerformance {
-        return new SalesPerformance({ plan, fact, prognose });
+        return new SalesPerformance({ plan, fact, prognose, sortOrder });
     }
 
     getDirection(): SalesDirection {
@@ -53,5 +60,9 @@ export class SalesPerformance extends ValueObject<SalesPerformanceProps> {
 
     getPrognose(): SalesPrognose {
         return this.props.prognose;
+    }
+
+    getSortOrder(): number | null {
+        return this.props.sortOrder;
     }
 }

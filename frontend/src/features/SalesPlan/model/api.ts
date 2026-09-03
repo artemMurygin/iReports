@@ -4,7 +4,9 @@ import type {
     OrderTypeResponse,
     SalesPerformanceResponse,
     SalesPlanResponse,
+    SalesPlanTemplateResponse,
     ServiceCategoryResponse,
+    UpdateSalesPlanOrderRequest,
     UpdateSalesPlanRequest,
 } from 'ireports-contracts'
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
@@ -108,5 +110,27 @@ export const api = {
             .then((r) => r.data)
             .catch((error) => {
                 throw new ApiError('Не удалось обновить план продаж ' + error)
+            }),
+
+    // PATCH /v1/service/sales/plan/order и PATCH /v1/shop/sales/plan/order — батч-обновление
+    // глобального (общего для всех пользователей) порядка строк-категорий плана отдела (Фаза 1
+    // + Фаза 4, docs/sales-plan-row-drag-and-drop-reorder), вызывается из EditPlanModal при
+    // drag-and-drop переупорядочивании (см. model/useEditPlanForm.ts / useUpdateSalesPlanOrder.ts).
+    // Симметрично updateSalesPlan/updateShopSalesPlan выше — direction выбирает URL, а не тело
+    // запроса (payload направление-независим, см. updateSalesPlanOrderRequestSchema).
+    updateSalesPlanOrder: (payload: UpdateSalesPlanOrderRequest): Promise<SalesPlanTemplateResponse[]> =>
+        apiInstance
+            .patch<SalesPlanTemplateResponse[]>('/v1/service/sales/plan/order', payload)
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError('Не удалось сохранить порядок категорий плана ' + error)
+            }),
+
+    updateShopSalesPlanOrder: (payload: UpdateSalesPlanOrderRequest): Promise<SalesPlanTemplateResponse[]> =>
+        apiInstance
+            .patch<SalesPlanTemplateResponse[]>('/v1/shop/sales/plan/order', payload)
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError('Не удалось сохранить порядок категорий плана ' + error)
             }),
 }

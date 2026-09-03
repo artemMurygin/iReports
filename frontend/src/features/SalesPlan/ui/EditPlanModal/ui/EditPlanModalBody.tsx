@@ -1,6 +1,9 @@
 import type { OrderTypeResponse } from 'ireports-contracts'
 
-import type { EditPlanSummary as EditPlanSummaryData, EditRowView } from '@/features/SalesPlan/ui/EditPlanModal/model/useEditPlanForm.ts'
+import type {
+    EditPlanSummary as EditPlanSummaryData,
+    EditRowView,
+} from '@/features/SalesPlan/ui/EditPlanModal/model/useEditPlanForm.ts'
 import { EditPlanSummary } from '@/features/SalesPlan/ui/EditPlanModal/ui/EditPlanSummary.tsx'
 import { EditPlanTable } from '@/features/SalesPlan/ui/EditPlanModal/ui/EditPlanTable.tsx'
 
@@ -12,6 +15,9 @@ type Props = {
     orderTypes: OrderTypeResponse[]
     isOrderTypesLoading?: boolean
     onOrderTypeIdsChange: (planId: string, orderTypeIds: number[]) => void
+    /** Фаза 2, docs/sales-plan-row-drag-and-drop-reorder — см. `EditPlanTable`. */
+    canReorder: boolean
+    onReorder: (activeId: string, overId: string) => void
 }
 
 /** `EditPlanModal`'s body slot: the plan summary card + editor table, or the "нет категорий"
@@ -24,6 +30,8 @@ export function EditPlanModalBody({
     orderTypes,
     isOrderTypesLoading,
     onOrderTypeIdsChange,
+    canReorder,
+    onReorder,
 }: Props) {
     if (rowViews.length === 0) {
         return <p className="font-ui text-sm text-ink-muted">Нет категорий для редактирования.</p>
@@ -40,6 +48,8 @@ export function EditPlanModalBody({
                 orderTypes={orderTypes}
                 isOrderTypesLoading={isOrderTypesLoading}
                 onOrderTypeIdsChange={onOrderTypeIdsChange}
+                canReorder={canReorder}
+                onReorder={onReorder}
             />
         </div>
     )

@@ -13,6 +13,7 @@ export function toSalesPlanTemplateResponse(
         margin: template.margin,
         orderTypeIds: template.orderTypeIds,
         growthPercent: template.growthPercent,
+        sortOrder: template.sortOrder,
         createdAt: template.createdAt,
         updatedAt: template.updatedAt,
     };

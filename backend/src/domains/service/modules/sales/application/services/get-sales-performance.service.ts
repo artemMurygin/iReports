@@ -43,8 +43,12 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
         const periodVo = Period.create(period);
         const now = new Date();
 
-        const [plans, facts] = await Promise.all([
-            this.ensureSalesPlans.ensure(direction, period),
+        // ensureOrdered — те же строки плана, что и ensure(), но уже
+        // отсортированные по сохранённому глобальному порядку строк (см.
+        // EnsureSalesPlansForPeriodService.ensureOrdered) — .map() ниже
+        // сохраняет этот порядок в результирующем массиве.
+        const [orderedPlans, facts] = await Promise.all([
+            this.ensureSalesPlans.ensureOrdered(direction, period),
             this.factSource.aggregate(period),
         ]);
 
@@ -63,7 +67,7 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
             factsByDepartment.set(fact.department, bucket);
         }
 
-        return plans.map((plan) => {
+        return orderedPlans.map(({ plan, sortOrder }) => {
             const departmentFacts =
                 factsByDepartment.get(plan.department) ?? [];
             // [] у плана = "все типы заказов" — тогда в расчёт идут все
@@ -98,7 +102,7 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
                 plan.turnover,
                 now,
             );
-            return SalesPerformance.create(plan, fact, prognose);
+            return SalesPerformance.create(plan, fact, prognose, sortOrder);
         });
     }
 

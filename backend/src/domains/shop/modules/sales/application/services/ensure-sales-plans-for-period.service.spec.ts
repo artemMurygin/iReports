@@ -236,4 +236,43 @@ describe('EnsureShopSalesPlansForPeriodService', () => {
             expect(sources).toEqual(['PREVIOUS_MONTH', 'TEMPLATE']);
         });
     });
+
+    // Зеркало одноимённого теста ensure-sales-plans-for-period.service.spec.ts
+    // направления service — подтверждает task item 3 Фазы 4
+    // (docs/sales-plan-row-drag-and-drop-reorder): GetShopSalesPerformanceService/
+    // ListShopSalesPlansService (оба потребителя ensureOrdered()) отдают
+    // строки в правильном, сохранённом порядке и для direction: 'shop'.
+    it('ensureOrdered() сортирует по sortOrder шаблона, строку без шаблона — в конец', async () => {
+        await withRequestContext(async () => {
+            const planA = ShopSalesPlan.create({
+                department: 1,
+                category: 'A',
+                period: '2026-08',
+                turnover: 1,
+                margin: 1,
+                source: 'MANUAL',
+            });
+            const planB = ShopSalesPlan.create({
+                department: 1,
+                category: 'B',
+                period: '2026-08',
+                turnover: 1,
+                margin: 1,
+                source: 'MANUAL',
+            });
+            const templateA = ShopSalesPlanTemplate.create({
+                department: 1,
+                category: 'A',
+                turnover: 0,
+                margin: 0,
+                sortOrder: 5,
+            });
+            const { service } = buildService([planA, planB], [templateA]);
+
+            const result = await service.ensureOrdered('2026-08');
+
+            expect(result.map((r) => r.plan.category)).toEqual(['A', 'B']);
+            expect(result.map((r) => r.sortOrder)).toEqual([5, null]);
+        });
+    });
 });

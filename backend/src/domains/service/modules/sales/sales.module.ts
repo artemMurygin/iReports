@@ -11,11 +11,13 @@ import { UpdateSalesPlanHandler } from './application/command/update-sales-plan.
 import { DeleteSalesPlanHandler } from './application/command/delete-sales-plan.handler';
 import { ApproveSalesPlanHandler } from './application/command/approve-sales-plan.handler';
 import { PutSalesPlanTemplateHandler } from './application/command/put-sales-plan-template.handler';
+import { UpdateSalesPlanOrderHandler } from './application/command/update-sales-plan-order.handler';
 import { EnsureSalesPlansForPeriodService } from './application/services/ensure-sales-plans-for-period.service';
 import { ListSalesPlansService } from './application/services/list-sales-plans.service';
 import { ListSalesPlanTemplatesService } from './application/services/list-sales-plan-templates.service';
 import { SalesPlanAutoCreationCron } from './infrastructure/cron/sales-plan-auto-creation.cron';
 import { CreateSalesPlanHttpController } from './interface/http-controllers/create-sales-plan.http.controller';
+import { UpdateSalesPlanOrderHttpController } from './interface/http-controllers/update-sales-plan-order.http.controller';
 import { UpdateSalesPlanHttpController } from './interface/http-controllers/update-sales-plan.http.controller';
 import { DeleteSalesPlanHttpController } from './interface/http-controllers/delete-sales-plan.http.controller';
 import { ApproveSalesPlanHttpController } from './interface/http-controllers/approve-sales-plan.http.controller';
@@ -58,6 +60,14 @@ import { GetServiceFunnelReportHttpController } from './interface/http-controlle
     imports: [CqrsModule],
     controllers: [
         CreateSalesPlanHttpController,
+        // UpdateSalesPlanOrderHttpController (PATCH .../plan/order)
+        // ОБЯЗАН быть зарегистрирован раньше UpdateSalesPlanHttpController
+        // (PATCH .../plan/:id) — оба на одном HTTP-методе, поэтому
+        // Express/Nest резолвят их в порядке регистрации, а не по
+        // специфичности пути: если поменять местами, "order" будет
+        // перехвачен как :id первым же контроллером и до
+        // UpdateSalesPlanOrderHttpController запрос не дойдёт.
+        UpdateSalesPlanOrderHttpController,
         UpdateSalesPlanHttpController,
         DeleteSalesPlanHttpController,
         ApproveSalesPlanHttpController,
@@ -93,6 +103,7 @@ import { GetServiceFunnelReportHttpController } from './interface/http-controlle
         DeleteSalesPlanHandler,
         ApproveSalesPlanHandler,
         PutSalesPlanTemplateHandler,
+        UpdateSalesPlanOrderHandler,
         EnsureSalesPlansForPeriodService,
         ListSalesPlansService,
         ListSalesPlanTemplatesService,

@@ -9,6 +9,10 @@ import {
     DEFAULT_GROWTH_PERCENT,
     ShopSalesPlanTemplate,
 } from '../../domain/entities/sales-plan-template.entity';
+import {
+    orderShopSalesPlansByTemplate,
+    type OrderedShopSalesPlan,
+} from '../../domain/services/order-sales-plans';
 
 function scopeKey(department: number, category: string | null): string {
     return `${department}:${category ?? 'null'}`;
@@ -106,6 +110,23 @@ export class EnsureShopSalesPlansForPeriodService {
         // и гарантирует тот же порядок (department, category), что и без
         // достраивания.
         return this.planRepo.findByPeriod(period);
+    }
+
+    // Тот же набор строк, что и ensure(), но отсортированный по
+    // сохранённому глобальному порядку (ShopSalesPlanTemplate.sortOrder,
+    // см. domain/services/order-sales-plans.ts) — используется
+    // потребителями, отдающими список строк наружу
+    // (ListShopSalesPlansService, GetShopSalesPerformanceService). Зеркало
+    // EnsureSalesPlansForPeriodService.ensureOrdered() направления service
+    // (Фаза 4, docs/sales-plan-row-drag-and-drop-reorder). Отдельный от
+    // ensure() метод — крону (ShopSalesPlanAutoCreationCron) порядок не
+    // нужен, а лишний findAll() шаблонов на каждый его тик ни к чему.
+    async ensureOrdered(period: string): Promise<OrderedShopSalesPlan[]> {
+        const [plans, templates] = await Promise.all([
+            this.ensure(period),
+            this.templateRepo.findAll(),
+        ]);
+        return orderShopSalesPlansByTemplate(plans, templates);
     }
 
     private fromPreviousMonth(
