@@ -2,6 +2,7 @@ import { CircleAlert, TriangleAlert } from 'lucide-react'
 import type { UnclosedTaskRule } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
+import { BitrixTaskLink } from '@/shared/ui-kit/atoms/BitrixTaskLink'
 
 import { TASK_RULE_STATUS_LABEL } from '../../../model/labels.ts'
 
@@ -17,9 +18,14 @@ export type UnclosedTaskRulesListProps = {
  * Перечень правил-задач месяца, чьи задачи ещё не «Закрыта» (spec.md change salary-rule-bitrix-task,
  * "Список незакрытых задач перед закрытием периода" — задача 10.4). В отличие от
  * `UnapprovedRowsList` НЕ блокирует закрытие месяца (спека не требует этого — только "руководитель
- * SHALL увидеть список"), поэтому рендерится информационным блоком без влияния на `canSubmit` и без
- * действия у строки. Задача в статусе "Закрыта" в список не попадает вовсе (её отдаёт бэкенд,
+ * SHALL увидеть список"), поэтому рендерится информационным блоком без влияния на `canSubmit`.
+ * Задача в статусе "Закрыта" в список не попадает вовсе (её отдаёт бэкенд,
  * `ListUnclosedTaskRulesForPeriodService`) — только "Ждёт выполнения"/"Выполняется"/недоступные.
+ *
+ * `bitrixTaskUrl` (docs/task-rule-archiving-and-links, Фаза 5) — кликабельная ссылка на задачу,
+ * тот же `BitrixTaskLink` (`shared/ui-kit/atoms`), что и открытый/закрытый отчёт по зарплате
+ * (`TaskRulePanel`); отсутствует у недоступного правила (`isUnavailable: true`) — строить ссылку
+ * не из чего, см. `ListUnclosedTaskRulesForPeriodService`.
  */
 function UnclosedTaskRulesList({ rules, employeeNameById }: UnclosedTaskRulesListProps) {
     if (rules.length === 0) return null
@@ -53,6 +59,9 @@ function UnclosedTaskRulesList({ rules, employeeNameById }: UnclosedTaskRulesLis
                                 <span className="mt-0.5 block truncate font-ui text-[11px] text-ink-muted sm:hidden">
                                     {employeeName}
                                 </span>
+                                {rule.bitrixTaskUrl && (
+                                    <BitrixTaskLink href={rule.bitrixTaskUrl} className="mt-1" />
+                                )}
                             </div>
                             {statusLabel && (
                                 <span

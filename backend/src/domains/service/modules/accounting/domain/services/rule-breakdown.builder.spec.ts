@@ -35,4 +35,27 @@ describe('buildRuleBreakdown', () => {
     it('для пустого набора правил возвращает пустой список', () => {
         expect(buildRuleBreakdown([], [])).toEqual([]);
     });
+
+    // docs/task-rule-archiving-and-links, Фаза 4 — bitrixTaskId
+    // CalculationLine (TaskCompleted.calculate()) должен доехать до строки
+    // разбивки без потерь: именно это значение персистится в
+    // AccountingPeriodSnapshot.lines[] при закрытии периода.
+    it('прокидывает bitrixTaskId строки расчёта в строку разбивки', () => {
+        const rule = PayPerHoursEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
+            config: { price: 250 },
+        });
+        const line = {
+            ruleId: rule.id,
+            amount: 10000,
+            sources: [],
+            bitrixTaskId: 555,
+        };
+
+        const [breakdown] = buildRuleBreakdown([rule], [line]);
+
+        expect(breakdown.bitrixTaskId).toBe(555);
+    });
 });

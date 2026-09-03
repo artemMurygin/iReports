@@ -61,3 +61,17 @@ export class TaskRuleNotCompletedException extends ConflictException {
         );
     }
 }
+
+// Архив разового правила необратим (docs/task-rule-archiving-and-links,
+// "Архив необратим") — повторный TaskCompletedEntity.archive() на уже
+// ARCHIVED правиле, тем же паттерном, что PeriodAlreadyClosedException/
+// TaskCompletionInvalidStatusTransitionException у соседних сущностей
+// (см. backend/CLAUDE.md — enum-статус с методом-переходом вместо мягкого
+// удаления). В нормальном потоке недостижимо: событие закрытия периода
+// отбирает только ACTIVE-правила перед вызовом archive() (см.
+// ArchiveOneTimeTaskRulesOnPeriodClosedEventHandler).
+export class TaskRuleAlreadyArchivedException extends ConflictException {
+    constructor(ruleId: string) {
+        super(`Правило-задача ${ruleId} уже заархивировано`);
+    }
+}

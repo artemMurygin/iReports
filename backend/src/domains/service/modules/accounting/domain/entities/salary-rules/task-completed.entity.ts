@@ -7,6 +7,7 @@ import {
     SalaryRule,
     TargetRole,
     TaskCompletedActualAmountEntry,
+    TaskCompletedRuleStatus,
     TaskCompletedSalaryConfig,
     TaskCompletedSalaryRule,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
@@ -15,6 +16,7 @@ import type {
     ServiceCalculationErpData,
 } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { TaskRewardAmount } from '@/domains/service/modules/accounting/domain/value-objects/task-reward-amount.value-object';
+import { TaskRuleAlreadyArchivedException } from '@/domains/service/modules/accounting/domain/exceptions/task-rule.exception';
 
 // Правило "вознаграждение за выполненную задачу" (change
 // salary-rule-bitrix-task, см. docs/salary-rule-bitrix-task/
@@ -76,6 +78,16 @@ export class TaskCompletedEntity
         return this.props.config.actualAmounts ?? [];
     }
 
+    // См. WHY у TaskCompletedRuleStatus (salary-rule.types.ts) — имеет
+    // смысл только при isRecurring: false. Дефолт 'ACTIVE' в геттере, а не
+    // только в zod-схеме контракта — правила, восстановленные из БД до этой
+    // фичи (props без поля status), не должны падать/трактоваться как
+    // заархивированные (docs/task-rule-archiving-and-links, "Технические
+    // ограничения").
+    get status(): TaskCompletedRuleStatus {
+        return this.props.config.status ?? 'ACTIVE';
+    }
+
     static create(rule: CreateSalaryRuleProps): TaskCompletedEntity {
         return new TaskCompletedEntity({
             id: randomUUID(),
@@ -132,6 +144,12 @@ export class TaskCompletedEntity
                     ? [{ type: 'bitrixTask', id: matched.id, amount }]
                     : [],
             taskStatus: matched.status,
+            // Задача, сматчившаяся ИМЕННО на этот период — заполняется
+            // независимо от amount/статуса (docs/task-rule-archiving-and-links,
+            // Фаза 4), в отличие от sources[] выше: снапшоту при закрытии
+            // периода нужна ссылка на задачу для аудита даже когда начисления
+            // ещё нет (задача в работе на момент закрытия).
+            bitrixTaskId: matched.id,
         };
     }
 
@@ -237,6 +255,34 @@ export class TaskCompletedEntity
         }
         this.props.config.actualAmounts = next;
         this.validate();
+    }
+
+    // Разовое (isRecurring: false) правило-задача архивируется
+    // автоматически, как только закрывается расчётный период, к которому
+    // относится dueDate — независимо от того, была задача выполнена в
+    // Bitrix24 или дедлайн прошёл без выполнения (docs/task-rule-archiving-and-links,
+    // Фаза 1; см. ArchiveOneTimeTaskRulesOnPeriodClosedEventHandler). Архив
+    // необратим — повторный вызов на уже ARCHIVED правиле бросает
+    // исключение, тем же паттерном enum-статуса с методом-переходом, что
+    // AccountingPeriod.close()/TaskCompletion.confirm()/reject() (см.
+    // backend/CLAUDE.md, "Value objects"/раздел про мягкое удаление): в
+    // проекте переход из терминального состояния — ошибка, а не
+    // идемпотентный no-op.
+    archive(): void {
+        if (this.status === 'ARCHIVED') {
+            throw new TaskRuleAlreadyArchivedException(this.id);
+        }
+        this.props.config.status = 'ARCHIVED';
+        this.validate();
+    }
+
+    // Совпадает ли месяц dueDate ('YYYY-MM-DD') с расчётным периодом
+    // ('YYYY-MM') — используется ArchiveOneTimeTaskRulesOnPeriodClosedEventHandler
+    // для отбора правил, относящихся к закрываемому периоду (PRD: "чей
+    // dueDate относится к закрываемому периоду"), без завязки на текущий
+    // (живой, потенциально перенесённый в Bitrix24) расчётный месяц задачи.
+    isDueInPeriod(period: string): boolean {
+        return this.props.config.dueDate.startsWith(period);
     }
 
     validate(): void {

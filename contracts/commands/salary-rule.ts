@@ -211,6 +211,20 @@ function lastDayOfPeriod(period: string): number {
     return new Date(year, month, 0).getDate();
 }
 
+// Жизненный цикл разового правила-задачи
+// (docs/task-rule-archiving-and-links, Фаза 1) — имеет смысл только при
+// isRecurring: false; для регулярных правил не используется и не
+// проверяется. ACTIVE — правило ещё часть мотивационной схемы; ARCHIVED —
+// необратимый терминал, правило переводится сюда автоматически при
+// закрытии расчётного периода, к которому относится dueDate (backend:
+// TaskCompletedEntity.archive()). Не заполняется клиентом — сервер
+// проставляет ACTIVE по умолчанию и ARCHIVED только сам, см. дефолт ниже.
+const taskCompletedRuleStatusSchema = z.enum(['ACTIVE', 'ARCHIVED']);
+
+export type TaskCompletedRuleStatus = z.infer<
+    typeof taskCompletedRuleStatusSchema
+>;
+
 const taskCompletedSalaryConfigSchema = z
     .object({
         description: z.string().min(1),
@@ -231,6 +245,7 @@ const taskCompletedSalaryConfigSchema = z
         // создании/редактировании правила — пишется отдельным контрактом
         // (см. setTaskRuleActualAmountRequestSchema).
         actualAmounts: z.array(taskCompletedActualAmountEntrySchema).optional(),
+        status: taskCompletedRuleStatusSchema.default('ACTIVE'),
     })
     .superRefine((config, ctx) => {
         const minDate = `${config.period}-01`;
@@ -585,6 +600,7 @@ export {
     orderPayedSalaryConfigSchema,
     taskCompletedSalaryConfigSchema,
     taskCompletedActualAmountEntrySchema,
+    taskCompletedRuleStatusSchema,
     taskRuleStatusSchema,
     setTaskRuleActualAmountRequestSchema,
     percentBorderSchema,

@@ -94,6 +94,16 @@ export type TaskCompletedActualAmountEntry = {
     amount: number;
 };
 
+// Жизненный цикл разового правила-задачи (docs/task-rule-archiving-and-links,
+// Фаза 1) — имеет смысл ТОЛЬКО при isRecurring: false. Для регулярных
+// правил статус не присваивается и нигде не проверяется (PRD, "В скоупе":
+// "Регулярные правила ... не затрагиваются этой фичей вообще"). ACTIVE —
+// правило ещё часть мотивационной схемы; ARCHIVED — необратимый терминал,
+// правило автоматически переводится сюда при закрытии расчётного периода,
+// к которому относится dueDate (см. TaskCompletedEntity.archive() и
+// application/events/archive-one-time-task-rules-on-period-closed.event-handler.ts).
+export type TaskCompletedRuleStatus = 'ACTIVE' | 'ARCHIVED';
+
 export type TaskCompletedSalaryConfig = {
     description: string;
     // Расчётный месяц правила на момент создания/редактирования — границы,
@@ -121,6 +131,11 @@ export type TaskCompletedSalaryConfig = {
     // сумму (Decision 2 выше) — upsert по period, см.
     // TaskCompletedEntity.upsertActualAmount.
     actualAmounts?: TaskCompletedActualAmountEntry[];
+    // См. WHY у TaskCompletedRuleStatus. Опционально с дефолтом 'ACTIVE'
+    // (и на уровне zod-схемы contracts, и в геттере TaskCompletedEntity.status)
+    // — уже существующие в БД правила, созданные до этой фичи, читаются как
+    // ACTIVE без миграции данных.
+    status?: TaskCompletedRuleStatus;
 };
 
 export type TaskCompletedSalaryRule = {

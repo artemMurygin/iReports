@@ -177,4 +177,71 @@ describe('ListUnclosedTaskRulesForPeriodService', () => {
             expect(result).toEqual([]);
         });
     });
+
+    // docs/task-rule-archiving-and-links, Фаза 3 — bitrixTaskUrl должен
+    // присутствовать для каждой доступной задачи списка (BITRIX24_WEBHOOK_URL
+    // отсутствует в остальных тестах файла, поэтому buildBitrixTaskLink()
+    // там молча возвращает undefined и toEqual его не замечает — здесь
+    // проверяем явно настроенный webhook).
+    describe('bitrixTaskUrl', () => {
+        const ORIGINAL_WEBHOOK_URL = process.env.BITRIX24_WEBHOOK_URL;
+
+        beforeEach(() => {
+            process.env.BITRIX24_WEBHOOK_URL =
+                'https://portal.bitrix24.ru/rest/1/xxx/';
+        });
+
+        afterEach(() => {
+            if (ORIGINAL_WEBHOOK_URL === undefined) {
+                delete process.env.BITRIX24_WEBHOOK_URL;
+            } else {
+                process.env.BITRIX24_WEBHOOK_URL = ORIGINAL_WEBHOOK_URL;
+            }
+        });
+
+        it('присутствует для доступной задачи, попавшей в список', async () => {
+            await withRequestContext(async () => {
+                const schemas = [buildTaskSchema(1, [101], 'Задача в работе')];
+                const { service } = buildService(schemas, [
+                    {
+                        id: 101,
+                        isAvailable: true,
+                        status: '3',
+                        period: '2026-08',
+                    },
+                ]);
+
+                const result = await service.execute('2026-08');
+
+                expect(result).toEqual([
+                    expect.objectContaining({
+                        bitrixTaskId: 101,
+                        bitrixTaskUrl:
+                            'https://portal.bitrix24.ru/company/personal/user/0/tasks/task/view/101/',
+                    }),
+                ]);
+            });
+        });
+
+        it('отсутствует при isUnavailable: true — недоступной задаче ссылку строить не из чего', async () => {
+            await withRequestContext(async () => {
+                const schemas = [buildTaskSchema(1, [101], 'Недоступная')];
+                const { service } = buildService(schemas, [
+                    { id: 101, isAvailable: false, status: null, period: null },
+                ]);
+
+                const result = await service.execute('2026-08');
+
+                expect(result).toEqual([
+                    {
+                        ruleId: schemas[0].getProps().rules[0].id,
+                        employeeId: 1,
+                        ruleName: 'Недоступная',
+                        isUnavailable: true,
+                    },
+                ]);
+                expect(result[0].bitrixTaskUrl).toBeUndefined();
+            });
+        });
+    });
 });

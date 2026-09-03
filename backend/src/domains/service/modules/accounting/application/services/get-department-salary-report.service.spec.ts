@@ -312,6 +312,99 @@ describe('GetDepartmentSalaryReportService', () => {
         ).toBe(true);
     });
 
+    // docs/task-rule-archiving-and-links, Фаза 4 — та же логика, что и в
+    // GetEmployeeSalaryReportService: bitrixTaskUrl строится из
+    // line.bitrixTaskId, сохранённого в снапшоте на момент закрытия.
+    describe('bitrixTaskUrl из снапшота закрытого периода (TaskCompleted)', () => {
+        const ORIGINAL_WEBHOOK_URL = process.env.BITRIX24_WEBHOOK_URL;
+
+        beforeEach(() => {
+            process.env.BITRIX24_WEBHOOK_URL =
+                'https://portal.bitrix24.ru/rest/1/xxx/';
+        });
+
+        afterEach(() => {
+            if (ORIGINAL_WEBHOOK_URL === undefined) {
+                delete process.env.BITRIX24_WEBHOOK_URL;
+            } else {
+                process.env.BITRIX24_WEBHOOK_URL = ORIGINAL_WEBHOOK_URL;
+            }
+        });
+
+        it('строку с bitrixTaskId в снапшоте — отдаёт рабочую bitrixTaskUrl', async () => {
+            const employees = [{ id: 1, name: 'Иван Иванов' }];
+            const serviceAccountingPeriod = buildClosedPeriod();
+            const serviceSnapshots = new Map([
+                [
+                    1,
+                    {
+                        employeeId: 1,
+                        total: 10000,
+                        lines: [
+                            {
+                                ruleId: 'r1',
+                                type: 'TaskCompleted',
+                                name: 'За задачу',
+                                targetRole: 'ENGINEER' as const,
+                                amount: 10000,
+                                sources: [],
+                                bitrixTaskId: 555,
+                            },
+                        ],
+                    },
+                ],
+            ]);
+
+            const { service } = buildService({
+                employees,
+                serviceAccountingPeriod,
+                serviceSnapshots: serviceSnapshots as never,
+            });
+
+            const report = await service.execute(1, '2026-07');
+
+            expect(report.employees[0].rules[0]).toMatchObject({
+                ruleId: 'r1',
+                bitrixTaskUrl:
+                    'https://portal.bitrix24.ru/company/personal/user/0/tasks/task/view/555/',
+            });
+        });
+
+        it('legacy-строку без bitrixTaskId в снапшоте — отдаёт отчёт без ссылки, без ошибок', async () => {
+            const employees = [{ id: 1, name: 'Иван Иванов' }];
+            const serviceAccountingPeriod = buildClosedPeriod();
+            const serviceSnapshots = new Map([
+                [
+                    1,
+                    {
+                        employeeId: 1,
+                        total: 10000,
+                        lines: [
+                            {
+                                ruleId: 'r1',
+                                type: 'TaskCompleted',
+                                name: 'За задачу',
+                                targetRole: 'ENGINEER' as const,
+                                amount: 10000,
+                                sources: [],
+                            },
+                        ],
+                    },
+                ],
+            ]);
+
+            const { service } = buildService({
+                employees,
+                serviceAccountingPeriod,
+                serviceSnapshots: serviceSnapshots as never,
+            });
+
+            const report = await service.execute(1, '2026-07');
+
+            expect(report.employees[0].rules[0].bitrixTaskUrl).toBeUndefined();
+        });
+    });
+
     it('сотрудник без личной схемы получает нулевой вклад, не ломая расчёт остальных', async () => {
         const employees = [
             { id: 1, name: 'С личной схемой' },

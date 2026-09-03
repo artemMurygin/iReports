@@ -36,6 +36,7 @@ import { toTaskRuleStatus } from '@/domains/service/modules/accounting/applicati
 import type { TaskCompletedSalaryConfig } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { ResolvedEmployeeSalaryRules } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
 import { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
+import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix.config';
 
 interface EmployeeCalculationResult {
     factLines: CalculationLine[];
@@ -208,6 +209,15 @@ export class GetDepartmentSalaryReportService {
                     deviceColor: source.deviceColor,
                     malfunction: source.malfunction,
                 })),
+                // Ссылка на задачу закрытого периода (docs/task-rule-archiving-and-links,
+                // Фаза 4) — та же логика, что и в
+                // GetEmployeeSalaryReportService.buildClosedServiceDirection:
+                // строится из line.bitrixTaskId, сохранённого в снапшоте на
+                // момент закрытия, undefined у снапшотов без этого поля.
+                bitrixTaskUrl:
+                    line.bitrixTaskId !== undefined
+                        ? buildBitrixTaskLink(line.bitrixTaskId)
+                        : undefined,
             }));
             contributions.set(employee.id, { lines, fact, prognose: 0 });
         }

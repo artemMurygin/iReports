@@ -6,20 +6,26 @@ import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain
 import type { BitrixTaskRuleStatusItem } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { toTaskRuleStatus } from '@/domains/service/modules/accounting/application/mappers/to-task-rule-status';
 import { BitrixTasksService } from '@/integrations/bitrix/bitrix-tasks.service';
+import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix.config';
 
 // Requirement "Список незакрытых задач перед закрытием периода" (spec.md):
 // правила-задачи месяца, чьи задачи НЕ в статусе "Закрыта" — включая
 // недоступные (задача не может быть закрыта, если её вообще не видно).
-// bitrixTaskId/status — undefined у недоступного правила (isUnavailable:
-// true), тем же приёмом, что и bitrixTaskUrl/taskStatus в
+// bitrixTaskId/status/bitrixTaskUrl — undefined у недоступного правила
+// (isUnavailable: true), тем же приёмом, что и bitrixTaskUrl/taskStatus в
 // employeeSalaryReportRuleSchema (contracts) — "недоступна" не то же самое,
-// что "не найдена ни для одного статуса", поэтому оба поля описаны как
+// что "не найдена ни для одного статуса", поэтому все три поля описаны как
 // опциональные, а не как unavailable-only ветка union.
+//
+// bitrixTaskUrl (docs/task-rule-archiving-and-links, Фаза 3) — руководитель
+// должен провалиться в задачу прямо со списка незакрытых задач перед
+// закрытием периода, а не только видеть числовой bitrixTaskId.
 export interface UnclosedTaskRule {
     ruleId: string;
     employeeId: number;
     ruleName: string;
     bitrixTaskId?: number;
+    bitrixTaskUrl?: string;
     status?: TaskRuleStatus;
     isUnavailable: boolean;
 }
@@ -72,6 +78,7 @@ export class ListUnclosedTaskRulesForPeriodService {
                     employeeId,
                     ruleName: rule.name,
                     bitrixTaskId: matched.id,
+                    bitrixTaskUrl: buildBitrixTaskLink(matched.id),
                     status: matched.status ?? undefined,
                     isUnavailable: false,
                 });

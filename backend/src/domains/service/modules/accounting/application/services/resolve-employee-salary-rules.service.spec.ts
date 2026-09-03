@@ -3,6 +3,7 @@ import type { ServiceCalculationDataPort } from '@/domains/service/modules/accou
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ServiceCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/service-completed.entity';
+import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Регрессия на баг «расчёт зарплаты по нулям»: у сотрудника мотивация
@@ -171,6 +172,52 @@ describe('ResolveEmployeeSalaryRulesService', () => {
             }).service.forEmployee(EMPLOYEE_ID);
 
             expect(both.schemasVersion).not.toBe(onlyPersonal.schemasVersion);
+        });
+    });
+
+    // Регрессия Фазы 1 docs/task-rule-archiving-and-links: фильтрация по
+    // статусу ACTIVE/ARCHIVED — ответственность Фазы 2 (мотивационная
+    // схема для отображения/редактирования), НЕ этого сервиса. Расчёт
+    // зарплаты (в т.ч. открытого периода) обязан по-прежнему видеть
+    // ARCHIVED-правило — иначе только что подтверждённая сумма пропала бы
+    // из отчёта сразу после архивации (PRD, "Технические ограничения").
+    describe('регрессия: статус правила (ACTIVE/ARCHIVED) не фильтруется', () => {
+        it('forEmployee отдаёт ARCHIVED правило-задачу наравне с ACTIVE', async () => {
+            const archivedRule = withRequestContext(() => {
+                const rule = TaskCompletedEntity.create({
+                    type: 'TaskCompleted',
+                    name: 'За задачу',
+                    targetRole: 'ENGINEER',
+                    config: {
+                        description: 'Сделать что-то важное',
+                        period: '2026-08',
+                        isRecurring: false,
+                        dueDate: '2026-08-15',
+                        rewardAmount: 10000,
+                    },
+                });
+                rule.archive();
+                return rule;
+            });
+            const schemaWithArchivedRule = withRequestContext(() =>
+                MotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: EMPLOYEE_ID,
+                    name: 'Личная мотивация',
+                    rules: [archivedRule],
+                }),
+            );
+
+            const { service } = buildService({
+                personal: schemaWithArchivedRule,
+                department: null,
+            });
+
+            const { rules } = await service.forEmployee(EMPLOYEE_ID);
+
+            expect(rules).toHaveLength(1);
+            expect(rules[0].type).toBe('TaskCompleted');
+            expect((rules[0] as TaskCompletedEntity).status).toBe('ARCHIVED');
         });
     });
 
