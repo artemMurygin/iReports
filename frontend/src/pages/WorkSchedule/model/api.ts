@@ -6,7 +6,7 @@ import type {
 } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
-import { ApiError } from '@/shared/errors/apiError.ts'
+import { ApiError, extractApiErrorMessage } from '@/shared/errors/apiError.ts'
 
 // Общий префикс queryKey всех запросов страницы графика — единственный источник true и для
 // `getMonthlySchedule` ниже, и для инвалидации после сохранения дня (`useSaveWorkScheduleEntry.ts`,
@@ -33,7 +33,7 @@ export const api = {
                     })
                     .then((r) => r.data)
                     .catch((error) => {
-                        throw new ApiError('Не удалось загрузить график работы ' + error)
+                        throw new ApiError(extractApiErrorMessage(error, 'Не удалось загрузить график работы'))
                     }),
         }),
 
@@ -46,6 +46,6 @@ export const api = {
             .put<WorkScheduleEntryResponse>('/v1/work-schedule/entries', payload)
             .then((r) => r.data)
             .catch((error) => {
-                throw new ApiError('Не удалось сохранить день графика ' + error)
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить день графика'))
             }),
 }
