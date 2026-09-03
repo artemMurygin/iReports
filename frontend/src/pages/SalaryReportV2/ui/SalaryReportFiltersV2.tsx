@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { Building2, Search } from 'lucide-react'
 import type { TargetOption } from '@/features/TargetDirectory'
 import { PeriodPicker } from '@/features/SalesPlan'
 import { SALARY_DIRECTION_LABELS, type SalaryReportScope } from '@/features/SalaryReportData'
@@ -52,10 +52,17 @@ export type SalaryReportFiltersV2Props = {
  * `SalaryDirection`: добавлена вкладка «Все» — сведение обоих направлений отчёта отдела на фронте
  * (см. `useDepartmentSalaryReportAll`), только на этой странице.
  *
- * Порядок слева направо — Direction Tabs → Select «Отдел» (300px) → Search «Поиск по сотруднику»
+ * Порядок слева направо — Direction Tabs → Select «Отдел» → Search «Поиск по сотруднику»
  * (220px, `employeeSearch`/`onEmployeeSearchChange`) — клиентский текстовый фильтр по уже
  * загруженному `departmentReport.employees[].name` (см. `model/filterEmployeesBySearch.ts`,
  * применяется внутри `DepartmentLedgerV2`), контракт отчёта серверного поиска не отдаёт.
+ *
+ * Select «Отдел» — тот же `SelectTrigger`/`SelectValue` + иконка `Building2`, что и на
+ * `/salary-accruals` и `/balance` (`pages/SalaryAccruals/ui/PageHeader.tsx`,
+ * `pages/EmployeeSettlements/ui/PageHeader.tsx`) — единый вид виджета выбора отдела по всем
+ * страницам зарплаты. В отличие от них здесь нет сентинела «Все отделы»: на этой странице
+ * `departmentId` всегда резолвится в конкретный отдел (дефолт «Розница» — см.
+ * `useSalaryReportPage.ts`), выбора "все отделы сразу" отчёт отдела не поддерживает.
  */
 export function SalaryReportFiltersV2({
     scope,
@@ -93,8 +100,9 @@ export function SalaryReportFiltersV2({
                     onValueChange={(value) => onDepartmentIdChange(Number(value))}
                     disabled={isDepartmentsLoading}
                 >
-                    <SelectTrigger className="w-full md:w-[300px]">
-                        <SelectValue placeholder="Выберите отдел" />
+                    <SelectTrigger className="h-10 w-full gap-2 md:w-[250px]">
+                        <Building2 className="size-[15px] shrink-0 text-ink-muted" />
+                        <SelectValue placeholder="Отдел" />
                     </SelectTrigger>
                     <SelectContent>
                         {departments.map((department) => (
