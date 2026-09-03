@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { SalesDirection } from 'ireports-contracts'
 
@@ -41,8 +41,9 @@ export function useSalaryAccrualsPage() {
     const period = rawPeriod !== null && isValidPeriod(rawPeriod) ? rawPeriod : DEFAULT_PERIOD
 
     // Select «Отдел» в Scope Controls (`LvW0I`'s `wQY20`/`DtPgO`'s `U50So`) — новый фильтр,
-    // которого не было в исходном списке; `null` — «Все отделы», тот же query-параметр
-    // convention, что `direction`/`period`, отсутствует в URL по умолчанию (без фильтра).
+    // которого не было в исходном списке; `null` — «Все отделы». Тот же query-параметр
+    // convention, что `direction`/`period`; по умолчанию (пока пользователь явно не выбрал
+    // отдел) параметр в URL отсутствует и дефолт «Розница» подставляется эффектом ниже.
     const rawDepartment = searchParams.get('department')
     const departmentId =
         rawDepartment !== null && rawDepartment !== '' && !Number.isNaN(Number(rawDepartment))
@@ -71,21 +72,45 @@ export function useSalaryAccrualsPage() {
         )
     }
 
-    function setDepartmentId(next: number | null) {
-        setSearchParams(
-            (prev) => {
-                const params = new URLSearchParams(prev)
-                if (next === null) params.delete('department')
-                else params.set('department', String(next))
-                return params
-            },
-            { replace: true },
-        )
-    }
+    // useCallback (не обычная функция) — стабильная identity нужна, чтобы её можно было
+    // безопасно включить в deps эффекта дефолта «Розница» ниже, не вызывая его на каждый рендер
+    // (см. тот же приём в `useEmployeeSettlementsPage.ts`).
+    const setDepartmentId = useCallback(
+        (next: number | null) => {
+            setSearchParams(
+                (prev) => {
+                    const params = new URLSearchParams(prev)
+                    if (next === null) params.delete('department')
+                    else params.set('department', String(next))
+                    return params
+                },
+                { replace: true },
+            )
+        },
+        [setSearchParams],
+    )
 
     const accruals = useSalaryAccruals(direction, period)
     const { periodStatus, isClosed } = useAccountingPeriod(direction, period)
     const departments = useDepartments()
+
+    // Дефолт «Розница» — тот же паттерн, что и `useEmployeeSettlementsPage.ts`: пока ссылка не
+    // задаёт `?department=` явно, ждём загрузки справочника отделов и подставляем «Розницу» по
+    // имени (в проекте нет отдельной константы её id). `defaultAppliedRef` — только один раз за
+    // жизнь страницы, иначе явный выбор «Все отделы» (тоже убирает параметр из URL) был бы
+    // неотличим от «дефолт ещё не применён» и откатывался бы обратно.
+    const defaultAppliedRef = useRef(false)
+    useEffect(() => {
+        if (defaultAppliedRef.current) return
+        if (rawDepartment !== null) {
+            defaultAppliedRef.current = true
+            return
+        }
+        if (!departments.data) return
+        defaultAppliedRef.current = true
+        const retail = departments.data.find((department) => department.name === 'Розница')
+        if (retail) setDepartmentId(retail.id)
+    }, [rawDepartment, departments.data, setDepartmentId])
 
     const [statusFilter, setStatusFilter] = useState<AccrualStatusFilter>('ALL')
     const [search, setSearch] = useState('')
