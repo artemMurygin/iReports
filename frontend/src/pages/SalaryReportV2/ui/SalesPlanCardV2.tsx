@@ -83,22 +83,28 @@ function SalesPlanCategoryRow({ categoryName, summary, className }: CategoryRowP
  * мобильном стеке): шапка (иконка · "План продаж · {label}" · статус-чип "Утверждён"/"Не
  * утверждён" · нота с числом прошедших дней месяца, `formatSalesPlanNote`) над строками категорий
  * (`SalesPlanCategoryRow`, разделены hairline-границей). Функциональный аналог старого
- * `pages/SalaryReport/ui/SalesPlanCard.tsx` (тот же источник данных, та же сортировка категорий по
- * имени через `useShopCategoryNames`), переверстанный под новую раскладку.
+ * `pages/SalaryReport/ui/SalesPlanCard.tsx` (тот же источник данных), переверстанный под новую
+ * раскладку.
+ *
+ * Порядок строк — как пришло в `salesPerformance` (без пересортировки на клиенте): для `shop`
+ * бэкенд уже отдаёт категории в сохранённом drag-and-drop порядке (`sortOrder` на
+ * `SalesPlanTemplate`, см. `docs/sales-plan-row-drag-and-drop-reorder` — `GetShopSalesPerformanceService`
+ * применяет тот же `ensureOrdered()`, что и страница `/sales-plan`), тем же путём, что и
+ * `SalesPlanTable`/`SalesPlanCardList` этой фичи. Раньше здесь была своя сортировка по алфавиту
+ * (`categoryName.localeCompare`) — убрана, чтобы порядок совпадал с тем, что задал пользователь на
+ * `/sales-plan`, а не расходился с ним.
  */
 export function SalesPlanCardV2({ label, period, isPlanApproved, salesPerformance, className }: SalesPlanCardV2Props) {
     const categoryNameById = useShopCategoryNames()
 
     const rows = useMemo(() => {
-        return salesPerformance
-            .map((summary) => ({
-                summary,
-                categoryName:
-                    summary.category === null
-                        ? ALL_CATEGORIES_LABEL
-                        : (categoryNameById.get(summary.category) ?? summary.category),
-            }))
-            .sort((a, b) => a.categoryName.localeCompare(b.categoryName, 'ru'))
+        return salesPerformance.map((summary) => ({
+            summary,
+            categoryName:
+                summary.category === null
+                    ? ALL_CATEGORIES_LABEL
+                    : (categoryNameById.get(summary.category) ?? summary.category),
+        }))
     }, [salesPerformance, categoryNameById])
 
     return (
