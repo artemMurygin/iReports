@@ -65,6 +65,12 @@ describe('TaskCompletedEntity', () => {
 
             expect(fact.amount).toBe(0);
             expect(prognose.amount).toBe(10000);
+            // docs/task-rule-archiving-and-links, Фаза 4 — bitrixTaskId
+            // строки заполняется независимо от суммы/статуса, как только
+            // задача сматчилась на период (нужно снапшоту для ссылки в
+            // закрытом отчёте даже когда начисления ещё нет).
+            expect(fact.bitrixTaskId).toBe(101);
+            expect(prognose.bitrixTaskId).toBe(101);
         });
 
         it('задача в работе (Реализована) учитывается только в прогнозе', () => {

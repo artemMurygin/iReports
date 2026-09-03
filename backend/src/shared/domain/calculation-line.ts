@@ -68,4 +68,15 @@ export interface CalculationLine {
     // фактической суммы (только при 'COMPLETED', spec.md "Ручной ввод
     // фактической суммы"). У остальных типов правил — всегда undefined.
     taskStatus?: TaskRuleStatus | null;
+    // ID задачи Bitrix24, сматчившейся ИМЕННО на период этой строки
+    // (TaskCompletedEntity.findTaskForPeriod) — заполняется параллельно с
+    // taskStatus, тем же условием "период найден" (docs/task-rule-archiving-
+    // and-links, Фаза 4). В отличие от bitrixTaskUrl открытого отчёта
+    // (to-salary-report-rules.ts, строится от ПОСЛЕДНЕЙ добавленной задачи
+    // правила), это поле — конкретная задача ЭТОГО периода: именно оно
+    // сохраняется в снапшот при закрытии (см. rule-breakdown.builder.ts) и
+    // остаётся стабильным, даже если у регулярного правила позже появится
+    // более новая "текущая" задача. У остальных типов правил — всегда
+    // undefined.
+    bitrixTaskId?: number;
 }

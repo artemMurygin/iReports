@@ -144,6 +144,12 @@ export class TaskCompletedEntity
                     ? [{ type: 'bitrixTask', id: matched.id, amount }]
                     : [],
             taskStatus: matched.status,
+            // Задача, сматчившаяся ИМЕННО на этот период — заполняется
+            // независимо от amount/статуса (docs/task-rule-archiving-and-links,
+            // Фаза 4), в отличие от sources[] выше: снапшоту при закрытии
+            // периода нужна ссылка на задачу для аудита даже когда начисления
+            // ещё нет (задача в работе на момент закрытия).
+            bitrixTaskId: matched.id,
         };
     }
 

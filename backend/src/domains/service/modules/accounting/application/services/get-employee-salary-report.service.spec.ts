@@ -391,6 +391,95 @@ describe('GetEmployeeSalaryReportService', () => {
             expect(report.isClosed).toBe(true);
             expect(report.total).toEqual({ fact: 0, prognose: null });
         });
+
+        // docs/task-rule-archiving-and-links, Фаза 4 — снапшот хранит
+        // bitrixTaskId, определённый для правила именно на этот период
+        // (findTaskForPeriod, см. rule-breakdown.builder.ts); закрытый
+        // отчёт строит из него bitrixTaskUrl тем же buildBitrixTaskLink(),
+        // что и открытый период/список незакрытых задач.
+        describe('bitrixTaskUrl из снапшота (TaskCompleted)', () => {
+            const ORIGINAL_WEBHOOK_URL = process.env.BITRIX24_WEBHOOK_URL;
+
+            beforeEach(() => {
+                process.env.BITRIX24_WEBHOOK_URL =
+                    'https://portal.bitrix24.ru/rest/1/xxx/';
+            });
+
+            afterEach(() => {
+                if (ORIGINAL_WEBHOOK_URL === undefined) {
+                    delete process.env.BITRIX24_WEBHOOK_URL;
+                } else {
+                    process.env.BITRIX24_WEBHOOK_URL = ORIGINAL_WEBHOOK_URL;
+                }
+            });
+
+            const closedPeriod = () =>
+                withRequestContext(() => {
+                    const period = AccountingPeriod.openFor({
+                        direction: 'service',
+                        period: '2026-07',
+                    });
+                    period.close(1, 1);
+                    return period;
+                });
+
+            it('строку с bitrixTaskId в снапшоте — отдаёт рабочую bitrixTaskUrl', async () => {
+                const { service } = buildService({
+                    accountingPeriod: closedPeriod(),
+                    snapshot: {
+                        employeeId: 42,
+                        total: 10000,
+                        lines: [
+                            {
+                                ruleId: 'r1',
+                                type: 'TaskCompleted',
+                                name: 'За задачу',
+                                targetRole: 'ENGINEER',
+                                amount: 10000,
+                                sources: [],
+                                bitrixTaskId: 555,
+                            },
+                        ],
+                    },
+                });
+
+                const report = await service.execute(42, '2026-07');
+
+                expect(report.rules[0]).toMatchObject({
+                    ruleId: 'r1',
+                    bitrixTaskUrl:
+                        'https://portal.bitrix24.ru/company/personal/user/0/tasks/task/view/555/',
+                });
+            });
+
+            // "Технические ограничения" PRD: снапшоты, созданные до этой
+            // фичи, не имеют bitrixTaskId в сохранённом JSON — отчёт
+            // обязан строиться без ошибок, просто без ссылки.
+            it('legacy-строку без bitrixTaskId в снапшоте — отдаёт отчёт без ссылки, без ошибок', async () => {
+                const { service } = buildService({
+                    accountingPeriod: closedPeriod(),
+                    snapshot: {
+                        employeeId: 42,
+                        total: 10000,
+                        lines: [
+                            {
+                                ruleId: 'r1',
+                                type: 'TaskCompleted',
+                                name: 'За задачу',
+                                targetRole: 'ENGINEER',
+                                amount: 10000,
+                                sources: [],
+                                // bitrixTaskId отсутствует — снапшот до Фазы 4.
+                            },
+                        ],
+                    },
+                });
+
+                const report = await service.execute(42, '2026-07');
+
+                expect(report.rules[0].bitrixTaskUrl).toBeUndefined();
+            });
+        });
     });
 
     // Режим расчёта FACT | PROGNOSE (Фаза 9, issue #42/#46): один и тот же
