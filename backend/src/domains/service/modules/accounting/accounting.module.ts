@@ -113,6 +113,7 @@ import { PayoutCashboxRecordRepository } from '@/domains/service/modules/account
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period-closed.event-handler';
+import { ArchiveOneTimeTaskRulesOnPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/archive-one-time-task-rules-on-period-closed.event-handler';
 import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/events/salary-accrual-documents-created.event-handler';
 
 // SalesModule — вход SALES_PLAN_REPOSITORY: закрытие периода читает
@@ -309,6 +310,7 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         ListUnclosedTaskRulesForPeriodService,
         MotivationSchemaCreatedEventHandler,
         AccountingPeriodClosedEventHandler,
+        ArchiveOneTimeTaskRulesOnPeriodClosedEventHandler,
         SalaryAccrualDocumentsCreatedEventHandler,
         {
             provide: MOTIVATION_SCHEMA_REPOSITORY,

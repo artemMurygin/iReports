@@ -6,6 +6,7 @@ import type {
 } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { TaskRuleAlreadyArchivedException } from '@/domains/service/modules/accounting/domain/exceptions/task-rule.exception';
 
 const REPORT_PERIOD = '2026-08';
 
@@ -263,6 +264,47 @@ describe('TaskCompletedEntity', () => {
                 { period: '2026-08', amount: 5000 },
                 { period: '2026-09', amount: 1000 },
             ]);
+        });
+    });
+
+    // docs/task-rule-archiving-and-links, Фаза 1 — жизненный цикл статуса
+    // разового правила.
+    describe('status/archive()', () => {
+        it('новое правило создаётся в статусе ACTIVE', () => {
+            const rule = buildRule();
+
+            expect(rule.status).toBe('ACTIVE');
+        });
+
+        it('archive() переводит правило в ARCHIVED', () => {
+            const rule = buildRule();
+
+            rule.archive();
+
+            expect(rule.status).toBe('ARCHIVED');
+        });
+
+        // Архив необратим (PRD "Архив необратим") — повторный archive() на
+        // уже ARCHIVED правиле бросает исключение, тем же паттерном, что
+        // AccountingPeriod.close()/TaskCompletion.confirm() у соседних
+        // сущностей (throw, а не идемпотентный no-op).
+        it('повторный archive() на уже заархивированном правиле бросает исключение и не ломает инвариант', () => {
+            withRequestContext(() => {
+                const rule = buildRule();
+                rule.archive();
+
+                expect(() => rule.archive()).toThrow(
+                    TaskRuleAlreadyArchivedException,
+                );
+                expect(rule.status).toBe('ARCHIVED');
+            });
+        });
+
+        it('isDueInPeriod сравнивает месяц dueDate с расчётным периодом', () => {
+            const rule = buildRule();
+
+            expect(rule.isDueInPeriod(REPORT_PERIOD)).toBe(true);
+            expect(rule.isDueInPeriod('2026-09')).toBe(false);
         });
     });
 });
