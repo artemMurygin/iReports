@@ -11,7 +11,7 @@ import { DateRange } from '@/shared/domain/date-range.value-object';
 //
 // Единственный метод — то, что реально вызывается ListDealsService, см.
 // YAGNI-комментарий в
-// accounting/application/ports/motivation-schema.port.ts.
+// accounting/application/ports/motivation-schema/motivation-schema.port.ts.
 export interface DealListRepositoryPort {
     findByDateRange(range: DateRange): Promise<DealListItemEntity[]>;
 }

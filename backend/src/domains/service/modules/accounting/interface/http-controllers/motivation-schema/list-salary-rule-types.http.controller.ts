@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryRuleTypesResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { ListSalaryRuleTypesService } from '../../application/services/list-salary-rule-types.service';
+import { ListSalaryRuleTypesService } from '../../../application/services/motivation-schema/list-salary-rule-types.service';
 
 @ApiTags('Бухгалтерия: типы правил')
 @Controller()

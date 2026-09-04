@@ -2,8 +2,8 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ListMotivationSchemasResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { ListMotivationSchemasQueryDto } from '../dto/list-motivation-schemas-query.dto';
-import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/list-motivation-schemas.service';
+import { ListMotivationSchemasQueryDto } from '../../dto/motivation-schema/list-motivation-schemas-query.dto';
+import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/motivation-schema/list-motivation-schemas.service';
 
 @ApiTags('Бухгалтерия: мотивационная схема')
 @Controller()

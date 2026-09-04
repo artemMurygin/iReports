@@ -1,7 +1,7 @@
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { ListMotivationSchemasHttpController } from './list-motivation-schemas.http.controller';
-import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/list-motivation-schemas.service';
-import type { ListMotivationSchemasQueryDto } from '../dto/list-motivation-schemas-query.dto';
+import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/motivation-schema/list-motivation-schemas.service';
+import type { ListMotivationSchemasQueryDto } from '../../dto/motivation-schema/list-motivation-schemas-query.dto';
 
 describe('ListMotivationSchemasHttpController', () => {
     it('передаёт query-параметры в ListMotivationSchemasService.execute как есть', async () => {

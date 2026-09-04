@@ -1,7 +1,7 @@
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { CreateSalaryRuleHandler } from './create-salary-rule.handler';
 import { CreateSalaryRuleCommand } from './create-salary-rule.command';
-import type { SalaryRuleRepositoryPort } from '../ports/salary-rule.port';
+import type { SalaryRuleRepositoryPort } from '../../ports/motivation-schema/salary-rule.port';
 import type { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 

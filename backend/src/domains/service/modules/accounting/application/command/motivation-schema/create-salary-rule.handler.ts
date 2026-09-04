@@ -1,8 +1,8 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { CreateSalaryRuleCommand } from '@/domains/service/modules/accounting/application/command/create-salary-rule.command';
-import type { SalaryRuleRepositoryPort } from '../ports/salary-rule.port';
-import { SALARY_RULE_REPOSITORY } from '../ports/salary-rule.port';
+import { CreateSalaryRuleCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-salary-rule.command';
+import type { SalaryRuleRepositoryPort } from '../../ports/motivation-schema/salary-rule.port';
+import { SALARY_RULE_REPOSITORY } from '../../ports/motivation-schema/salary-rule.port';
 import { SalaryRuleFactory } from '@/domains/service/modules/accounting/domain/factories/salary-rule.factory';
 
 // Создание одного зарплатного правила — общая точка и для

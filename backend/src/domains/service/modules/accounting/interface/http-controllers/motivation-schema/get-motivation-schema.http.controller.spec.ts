@@ -1,6 +1,6 @@
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { GetMotivationSchemaHttpController } from './get-motivation-schema.http.controller';
-import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/get-motivation-schema.service';
+import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/motivation-schema/get-motivation-schema.service';
 
 describe('GetMotivationSchemaHttpController', () => {
     it('передаёт :id из параметров маршрута в GetMotivationSchemaService.execute', async () => {

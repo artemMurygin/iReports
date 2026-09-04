@@ -1,12 +1,12 @@
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { UpdateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.command';
-import { CreateSalaryRuleCommand } from '@/domains/service/modules/accounting/application/command/create-salary-rule.command';
+import { UpdateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/update-motivation-schema.command';
+import { CreateSalaryRuleCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-salary-rule.command';
 import { NotFoundException } from '@/shared/exceptions';
-import type { MotivationSchemaRepositoryPort } from '../ports/motivation-schema.port';
-import { MOTIVATION_SCHEMA_REPOSITORY } from '../ports/motivation-schema.port';
-import type { SalaryRuleRepositoryPort } from '../ports/salary-rule.port';
-import { SALARY_RULE_REPOSITORY } from '../ports/salary-rule.port';
+import type { MotivationSchemaRepositoryPort } from '../../ports/motivation-schema/motivation-schema.port';
+import { MOTIVATION_SCHEMA_REPOSITORY } from '../../ports/motivation-schema/motivation-schema.port';
+import type { SalaryRuleRepositoryPort } from '../../ports/motivation-schema/salary-rule.port';
+import { SALARY_RULE_REPOSITORY } from '../../ports/motivation-schema/salary-rule.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationResponse } from 'ireports-contracts';

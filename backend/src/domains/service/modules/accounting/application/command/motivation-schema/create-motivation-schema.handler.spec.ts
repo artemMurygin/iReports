@@ -3,7 +3,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import { CreateMotivationSchemaHandler } from './create-motivation-schema.handler';
 import { CreateMotivationSchemaCommand } from './create-motivation-schema.command';
 import { CreateSalaryRuleCommand } from './create-salary-rule.command';
-import type { MotivationSchemaRepositoryPort } from '../ports/motivation-schema.port';
+import type { MotivationSchemaRepositoryPort } from '../../ports/motivation-schema/motivation-schema.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 

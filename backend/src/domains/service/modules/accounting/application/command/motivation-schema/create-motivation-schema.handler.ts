@@ -1,9 +1,9 @@
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { CreateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.command';
-import { CreateSalaryRuleCommand } from '@/domains/service/modules/accounting/application/command/create-salary-rule.command';
+import { CreateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-motivation-schema.command';
+import { CreateSalaryRuleCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-salary-rule.command';
 import { Inject } from '@nestjs/common';
-import type { MotivationSchemaRepositoryPort } from '../ports/motivation-schema.port';
-import { MOTIVATION_SCHEMA_REPOSITORY } from '../ports/motivation-schema.port';
+import type { MotivationSchemaRepositoryPort } from '../../ports/motivation-schema/motivation-schema.port';
+import { MOTIVATION_SCHEMA_REPOSITORY } from '../../ports/motivation-schema/motivation-schema.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';

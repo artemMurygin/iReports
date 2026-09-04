@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
-import { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
+import { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import { SalaryRuleMapper } from '../../mappers/motivation-schema/salary-rule.mapper';

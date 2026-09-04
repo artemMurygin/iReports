@@ -3,8 +3,8 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { MotivationResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { UpdateMotivationSchemaDto } from '../dto/update-motivation-schema.dto';
-import { UpdateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.command';
+import { UpdateMotivationSchemaDto } from '../../dto/motivation-schema/update-motivation-schema.dto';
+import { UpdateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/update-motivation-schema.command';
 
 @ApiTags('Бухгалтерия: мотивационная схема')
 @Controller()

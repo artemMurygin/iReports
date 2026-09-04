@@ -2,9 +2,9 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { routesV1 } from '@/config/app.routes';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { MotivationSchemaCreateDto } from '../dto/motivation-schema-create.dto';
+import { MotivationSchemaCreateDto } from '../../dto/motivation-schema/motivation-schema-create.dto';
 import { MotivationResponse } from 'ireports-contracts';
-import { CreateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.command';
+import { CreateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-motivation-schema.command';
 
 @ApiTags('Бухгалтерия: мотивационная схема')
 @Controller()

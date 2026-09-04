@@ -1,8 +1,8 @@
 import { CommandBus } from '@nestjs/cqrs';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { CreateMotivationSchemaHttpController } from './create-motivation-schema.http.controller';
-import { CreateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.command';
-import { MotivationSchemaCreateDto } from '../dto/motivation-schema-create.dto';
+import { CreateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-motivation-schema.command';
+import { MotivationSchemaCreateDto } from '../../dto/motivation-schema/motivation-schema-create.dto';
 
 describe('CreateMotivationSchemaHttpController', () => {
     it('оборачивает тело запроса в CreateMotivationSchemaCommand и передаёт его в CommandBus', async () => {

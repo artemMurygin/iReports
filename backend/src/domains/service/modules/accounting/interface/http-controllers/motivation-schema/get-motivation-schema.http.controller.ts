@@ -2,7 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { MotivationSchemaDetailResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/get-motivation-schema.service';
+import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/motivation-schema/get-motivation-schema.service';
 
 @ApiTags('Бухгалтерия: мотивационная схема')
 @Controller()

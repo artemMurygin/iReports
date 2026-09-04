@@ -82,7 +82,7 @@ export class FunnelStageMap extends ValueObject<FunnelStageMapProps> {
 
     // Единственный метод, реально нужный потребителям (KPI-калькулятору,
     // фильтру по stageGroupIds) — см. YAGNI-комментарий в
-    // accounting/application/ports/motivation-schema.port.ts.
+    // accounting/application/ports/motivation-schema/motivation-schema.port.ts.
     classify(stageId: string | null | undefined): FunnelGroup {
         if (stageId == null) return 'other';
         return this.lookup.get(stageId) ?? 'other';

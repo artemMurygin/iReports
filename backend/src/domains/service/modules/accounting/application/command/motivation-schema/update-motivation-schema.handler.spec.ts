@@ -4,8 +4,8 @@ import { UpdateMotivationSchemaHandler } from './update-motivation-schema.handle
 import { UpdateMotivationSchemaCommand } from './update-motivation-schema.command';
 import { CreateSalaryRuleCommand } from './create-salary-rule.command';
 import { NotFoundException } from '@/shared/exceptions';
-import type { MotivationSchemaRepositoryPort } from '../ports/motivation-schema.port';
-import type { SalaryRuleRepositoryPort } from '../ports/salary-rule.port';
+import type { MotivationSchemaRepositoryPort } from '../../ports/motivation-schema/motivation-schema.port';
+import type { SalaryRuleRepositoryPort } from '../../ports/motivation-schema/salary-rule.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
