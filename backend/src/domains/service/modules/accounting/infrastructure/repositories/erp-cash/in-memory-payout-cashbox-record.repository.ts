@@ -30,9 +30,7 @@ export class InMemoryPayoutCashboxRecordRepository implements PayoutCashboxRecor
         return Promise.resolve();
     }
 
-    findByTransactionId(
-        transactionId: string,
-    ): Promise<Cashbox | null> {
+    findByTransactionId(transactionId: string): Promise<Cashbox | null> {
         return Promise.resolve(
             [...this.store.values()].find(
                 (document) => document.transactionId === transactionId,
@@ -40,9 +38,7 @@ export class InMemoryPayoutCashboxRecordRepository implements PayoutCashboxRecor
         );
     }
 
-    findByTransactionIds(
-        transactionIds: string[],
-    ): Promise<Cashbox[]> {
+    findByTransactionIds(transactionIds: string[]): Promise<Cashbox[]> {
         const ids = new Set(transactionIds);
         return Promise.resolve(
             [...this.store.values()].filter((document) =>

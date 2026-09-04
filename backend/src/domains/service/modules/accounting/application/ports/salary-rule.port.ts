@@ -17,17 +17,13 @@ export interface SalaryRuleRepositoryPort {
     // (сотрудник с идентичностями в обеих ERP).
     deleteAllByMotivationSchema(motivationSchemaId: string): Promise<void>;
 
-    // Правило-задача по id (change salary-rule-bitrix-task, задачи 6.4/6.5:
-    // SetTaskRuleActualAmountHandler читает правило перед upsertActualAmount,
-    // EnsureBitrixTaskForPeriodService — перед addBitrixTaskId). null, если
-    // правила с таким id нет либо оно принадлежит направлению shop (та же
-    // фильтрация direction='service' в WHERE, что и у остальных методов
-    // этого порта).
+    // Правило по id. null, если правила с таким id нет либо оно принадлежит
+    // направлению shop (та же фильтрация direction='service' в WHERE, что и
+    // у остальных методов этого порта).
     findById(ruleId: string): Promise<SalaryRule | null>;
 
     // Персист правила ПОСЛЕ создания (не insert — сущность уже существует
-    // в БД): upsertActualAmount (задача 6.4) и addBitrixTaskId (задача 6.5)
-    // мутируют props правила in-place, этот метод сохраняет результат.
+    // в БД), для точечных мутаций props правила in-place.
     update(entity: SalaryRule): Promise<void>;
 }
 

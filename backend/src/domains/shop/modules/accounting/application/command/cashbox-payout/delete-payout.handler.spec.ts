@@ -246,9 +246,7 @@ describe('DeleteShopPayoutHandler', () => {
                     new DeleteShopPayoutCommand({ payoutId: payout.id }),
                 ),
             ),
-        ).rejects.toThrow(
-            PayoutCashboxRecordMissingForTransactionException,
-        );
+        ).rejects.toThrow(PayoutCashboxRecordMissingForTransactionException);
         expect(deleteCalls).toHaveLength(0);
         expect(transactionRepo.store.size).toBe(1);
     });

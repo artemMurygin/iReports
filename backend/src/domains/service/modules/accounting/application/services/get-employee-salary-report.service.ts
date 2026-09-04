@@ -27,8 +27,6 @@ import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-statu
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
-import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix.config';
 
 // Тонкий сквозной путь Фазы 1, дополненный Фазой 6 ленивым кэшем и
 // снапшотом закрытого периода, и Фазой 9 парой факт/прогноз + компактным
@@ -82,7 +80,6 @@ export class GetEmployeeSalaryReportService {
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
         private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
-        private readonly ensureTaskRules: EnsureTaskRulesOnReadService,
     ) {}
 
     async execute(
@@ -153,17 +150,6 @@ export class GetEmployeeSalaryReportService {
                 deviceColor: source.deviceColor,
                 malfunction: source.malfunction,
             })),
-            // Ссылка на задачу, привязанную к ЭТОМУ закрытому периоду
-            // (docs/task-rule-archiving-and-links, Фаза 4) — строится из
-            // line.bitrixTaskId, сохранённого в снапшоте на момент
-            // закрытия (findTaskForPeriod), а не из "текущей" задачи
-            // правила, как в открытом периоде (см. to-salary-report-rules.ts).
-            // undefined у снапшотов, созданных до этой фичи (обратная
-            // совместимость) — line.bitrixTaskId тогда тоже undefined.
-            bitrixTaskUrl:
-                line.bitrixTaskId !== undefined
-                    ? buildBitrixTaskLink(line.bitrixTaskId)
-                    : undefined,
         }));
 
         return {
@@ -189,13 +175,6 @@ export class GetEmployeeSalaryReportService {
         const { rules, schemasVersion } =
             await this.salaryRulesResolver.forEmployee(employeeId);
 
-        // Ленивое достраивание задачи регулярного правила-задачи на
-        // запрошенный период (задача 7.2 change salary-rule-bitrix-task,
-        // design.md Decision 5) — тот же приём, что ListSalesPlansService
-        // применяет к EnsureSalesPlansForPeriodService: @ProdCron первого
-        // числа не тикает в dev.
-        await this.ensureTaskRules.ensureAll(rules, employeeId, period);
-
         const freshnessStamp = await this.computeFreshnessStamp(
             'service',
             schemasVersion,
@@ -220,7 +199,6 @@ export class GetEmployeeSalaryReportService {
         const baseContext = await this.contextBuilder.build(
             validatedPeriod,
             employeeId,
-            rules,
         );
 
         const [factLines, prognoseLines] = await Promise.all([

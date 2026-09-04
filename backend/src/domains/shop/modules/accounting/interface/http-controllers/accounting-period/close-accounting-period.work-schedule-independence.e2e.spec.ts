@@ -18,8 +18,6 @@ import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accoun
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import type { ShopSalaryRuleRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
-import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/task-completion/task-completion.port';
-import type { ShopTaskCompletionRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/task-completion/task-completion.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/accounting-period/accounting-period.port';
@@ -92,19 +90,10 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
         insert: () => Promise.resolve(),
         deleteAllByMotivationSchema: () => Promise.resolve(),
     };
-    const fakeShopTaskCompletionRepo: ShopTaskCompletionRepositoryPort = {
-        insert: () => Promise.resolve(),
-        update: () => Promise.resolve(),
-        delete: () => Promise.resolve(),
-        findById: () => Promise.resolve(null),
-        findByPeriod: () => Promise.resolve([]),
-        findConfirmedByPeriod: () => Promise.resolve([]),
-    };
     const fakeShopCalculationData: ShopCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve({ fact: 0, prognose: 0 }),
         findProductSoldItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
@@ -188,6 +177,9 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
     };
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
         findEmployees: () => Promise.resolve([]),
     };
     const fakeUnitOfWork: UnitOfWorkPort = { run: (work) => work() };
@@ -230,8 +222,6 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
             .useValue(fakeShopMotivationSchemaRepo)
             .overrideProvider(SHOP_SALARY_RULE_REPOSITORY)
             .useValue(fakeShopSalaryRuleRepo)
-            .overrideProvider(SHOP_TASK_COMPLETION_REPOSITORY)
-            .useValue(fakeShopTaskCompletionRepo)
             .overrideProvider(SHOP_CALCULATION_DATA)
             .useValue(fakeShopCalculationData)
             .overrideProvider(SHOP_SALES_PERFORMANCE_READER)

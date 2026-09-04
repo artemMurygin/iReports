@@ -12,6 +12,7 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
@@ -23,7 +24,6 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
 
 // Отчёт сотрудника направления service (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит ОДНО
@@ -95,9 +95,17 @@ describe('GetEmployeeSalaryReportService', () => {
         const calculationDataSource = {
             findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
         } as unknown as ServiceCalculationDataPort;
+        // forEmployee() не читает findServiceAccountEmployeeIds (только
+        // forAllTargets делает это, docs/employee-ordering-and-salary-filter,
+        // Фаза 3) — фейк не задействуется, но нужен для сигнатуры конструктора.
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+        } as unknown as DirectoryRepositoryPort;
         const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
             motivationSchemaRepo,
             calculationDataSource,
+            directoryRepo,
         );
 
         const findByDirectionAndPeriodPeriod = jest
@@ -194,11 +202,6 @@ describe('GetEmployeeSalaryReportService', () => {
             deleteByDirectionAndPeriod: jest.fn(),
         };
 
-        const ensureAll = jest.fn().mockResolvedValue(undefined);
-        const ensureTaskRules = {
-            ensureAll,
-        } as unknown as EnsureTaskRulesOnReadService;
-
         const service = new GetEmployeeSalaryReportService(
             periodRepo,
             snapshotRepo,
@@ -208,7 +211,6 @@ describe('GetEmployeeSalaryReportService', () => {
             salesPlanRepo,
             contextBuilder,
             salaryRulesResolver,
-            ensureTaskRules,
         );
 
         return {
@@ -221,7 +223,6 @@ describe('GetEmployeeSalaryReportService', () => {
             upsertCache,
             getLastSuccessfulSyncAt,
             findPlansByDirectionAndPeriod,
-            ensureAll,
         };
     };
 
@@ -261,24 +262,6 @@ describe('GetEmployeeSalaryReportService', () => {
 
         expect(report.direction).toBe('service');
         expect(report.total).toEqual({ fact: 2000, prognose: 2000 });
-    });
-
-    // Задача 7.2 change salary-rule-bitrix-task: ленивое достраивание
-    // задачи Bitrix24 регулярного правила-задачи на запрошенный период при
-    // каждом чтении открытого отчёта — @ProdCron первого числа не тикает в
-    // dev.
-    it('открытый период — лениво достраивает задачи правил-задач схемы', async () => {
-        const schema = buildSchema(42);
-        const { service, ensureAll } = buildService({ schema });
-
-        await service.execute(42, '2026-08');
-
-        expect(ensureAll).toHaveBeenCalledTimes(1);
-        expect(ensureAll).toHaveBeenCalledWith(
-            schema.getProps().rules,
-            42,
-            '2026-08',
-        );
     });
 
     describe('ленивый кэш открытого периода', () => {
@@ -391,95 +374,6 @@ describe('GetEmployeeSalaryReportService', () => {
             expect(report.isClosed).toBe(true);
             expect(report.total).toEqual({ fact: 0, prognose: null });
         });
-
-        // docs/task-rule-archiving-and-links, Фаза 4 — снапшот хранит
-        // bitrixTaskId, определённый для правила именно на этот период
-        // (findTaskForPeriod, см. rule-breakdown.builder.ts); закрытый
-        // отчёт строит из него bitrixTaskUrl тем же buildBitrixTaskLink(),
-        // что и открытый период/список незакрытых задач.
-        describe('bitrixTaskUrl из снапшота (TaskCompleted)', () => {
-            const ORIGINAL_WEBHOOK_URL = process.env.BITRIX24_WEBHOOK_URL;
-
-            beforeEach(() => {
-                process.env.BITRIX24_WEBHOOK_URL =
-                    'https://portal.bitrix24.ru/rest/1/xxx/';
-            });
-
-            afterEach(() => {
-                if (ORIGINAL_WEBHOOK_URL === undefined) {
-                    delete process.env.BITRIX24_WEBHOOK_URL;
-                } else {
-                    process.env.BITRIX24_WEBHOOK_URL = ORIGINAL_WEBHOOK_URL;
-                }
-            });
-
-            const closedPeriod = () =>
-                withRequestContext(() => {
-                    const period = AccountingPeriod.openFor({
-                        direction: 'service',
-                        period: '2026-07',
-                    });
-                    period.close(1, 1);
-                    return period;
-                });
-
-            it('строку с bitrixTaskId в снапшоте — отдаёт рабочую bitrixTaskUrl', async () => {
-                const { service } = buildService({
-                    accountingPeriod: closedPeriod(),
-                    snapshot: {
-                        employeeId: 42,
-                        total: 10000,
-                        lines: [
-                            {
-                                ruleId: 'r1',
-                                type: 'TaskCompleted',
-                                name: 'За задачу',
-                                targetRole: 'ENGINEER',
-                                amount: 10000,
-                                sources: [],
-                                bitrixTaskId: 555,
-                            },
-                        ],
-                    },
-                });
-
-                const report = await service.execute(42, '2026-07');
-
-                expect(report.rules[0]).toMatchObject({
-                    ruleId: 'r1',
-                    bitrixTaskUrl:
-                        'https://portal.bitrix24.ru/company/personal/user/0/tasks/task/view/555/',
-                });
-            });
-
-            // "Технические ограничения" PRD: снапшоты, созданные до этой
-            // фичи, не имеют bitrixTaskId в сохранённом JSON — отчёт
-            // обязан строиться без ошибок, просто без ссылки.
-            it('legacy-строку без bitrixTaskId в снапшоте — отдаёт отчёт без ссылки, без ошибок', async () => {
-                const { service } = buildService({
-                    accountingPeriod: closedPeriod(),
-                    snapshot: {
-                        employeeId: 42,
-                        total: 10000,
-                        lines: [
-                            {
-                                ruleId: 'r1',
-                                type: 'TaskCompleted',
-                                name: 'За задачу',
-                                targetRole: 'ENGINEER',
-                                amount: 10000,
-                                sources: [],
-                                // bitrixTaskId отсутствует — снапшот до Фазы 4.
-                            },
-                        ],
-                    },
-                });
-
-                const report = await service.execute(42, '2026-07');
-
-                expect(report.rules[0].bitrixTaskUrl).toBeUndefined();
-            });
-        });
     });
 
     // Режим расчёта FACT | PROGNOSE (Фаза 9, issue #42/#46): один и тот же
@@ -582,7 +476,6 @@ describe('GetEmployeeSalaryReportService', () => {
                     serviceCompletedItems: [],
                     hoursWorked: { fact: 0, prognose: 0 },
                     orderPayedItems: [orderPayedItem],
-                    confirmedTaskCompletions: [],
                 },
                 identities,
                 salesPerformanceDetail: fakePerformance(65, 70),

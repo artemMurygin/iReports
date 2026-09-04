@@ -1,9 +1,9 @@
 import { ResolveEmployeeSalaryRulesService } from './resolve-employee-salary-rules.service';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ServiceCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/service-completed.entity';
-import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Регрессия на баг «расчёт зарплаты по нулям»: у сотрудника мотивация
@@ -56,6 +56,9 @@ describe('ResolveEmployeeSalaryRulesService', () => {
         allEmployeeTargets?: MotivationSchema[];
         allDepartmentTargets?: MotivationSchema[];
         employeesInDepartment?: { id: number; name: string }[];
+        // Id служебных аккаунтов (docs/employee-ordering-and-salary-filter,
+        // Фаза 3) — по умолчанию пусто, forAllTargets ничего не отсеивает.
+        serviceAccountIds?: number[];
     }) => {
         const schemaRepo = {
             insert: jest.fn(),
@@ -95,12 +98,19 @@ describe('ResolveEmployeeSalaryRulesService', () => {
                 .mockResolvedValue(overrides?.employeesInDepartment ?? []),
         };
 
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: jest
+                .fn()
+                .mockResolvedValue(new Set(overrides?.serviceAccountIds ?? [])),
+        } as unknown as DirectoryRepositoryPort;
+
         const service = new ResolveEmployeeSalaryRulesService(
             schemaRepo,
             dataSource as unknown as ServiceCalculationDataPort,
+            directoryRepo,
         );
 
-        return { service, schemaRepo, dataSource };
+        return { service, schemaRepo, dataSource, directoryRepo };
     };
 
     describe('forEmployee', () => {
@@ -175,52 +185,6 @@ describe('ResolveEmployeeSalaryRulesService', () => {
         });
     });
 
-    // Регрессия Фазы 1 docs/task-rule-archiving-and-links: фильтрация по
-    // статусу ACTIVE/ARCHIVED — ответственность Фазы 2 (мотивационная
-    // схема для отображения/редактирования), НЕ этого сервиса. Расчёт
-    // зарплаты (в т.ч. открытого периода) обязан по-прежнему видеть
-    // ARCHIVED-правило — иначе только что подтверждённая сумма пропала бы
-    // из отчёта сразу после архивации (PRD, "Технические ограничения").
-    describe('регрессия: статус правила (ACTIVE/ARCHIVED) не фильтруется', () => {
-        it('forEmployee отдаёт ARCHIVED правило-задачу наравне с ACTIVE', async () => {
-            const archivedRule = withRequestContext(() => {
-                const rule = TaskCompletedEntity.create({
-                    type: 'TaskCompleted',
-                    name: 'За задачу',
-                    targetRole: 'ENGINEER',
-                    config: {
-                        description: 'Сделать что-то важное',
-                        period: '2026-08',
-                        isRecurring: false,
-                        dueDate: '2026-08-15',
-                        rewardAmount: 10000,
-                    },
-                });
-                rule.archive();
-                return rule;
-            });
-            const schemaWithArchivedRule = withRequestContext(() =>
-                MotivationSchema.create({
-                    targetType: 'Employee',
-                    targetId: EMPLOYEE_ID,
-                    name: 'Личная мотивация',
-                    rules: [archivedRule],
-                }),
-            );
-
-            const { service } = buildService({
-                personal: schemaWithArchivedRule,
-                department: null,
-            });
-
-            const { rules } = await service.forEmployee(EMPLOYEE_ID);
-
-            expect(rules).toHaveLength(1);
-            expect(rules[0].type).toBe('TaskCompleted');
-            expect((rules[0] as TaskCompletedEntity).status).toBe('ARCHIVED');
-        });
-    });
-
     describe('forDepartment', () => {
         it('выдаёт правила отдела каждому сотруднику, включая тех, у кого нет личной схемы', async () => {
             const { service, schemaRepo } = buildService({
@@ -265,6 +229,39 @@ describe('ResolveEmployeeSalaryRulesService', () => {
             expect(resolved.get(99)?.rules.map((r) => r.type)).toEqual([
                 'PayPerHour',
             ]);
+        });
+
+        // docs/employee-ordering-and-salary-filter, Фаза 3, "не попадают ...
+        // в расчёты": личная схема служебного аккаунта не должна попасть в
+        // снапшот/начисление закрытия периода.
+        it('не включает личную схему сотрудника с isServiceAccount: true', async () => {
+            const { service } = buildService({
+                allEmployeeTargets: [personalSchema()],
+                allDepartmentTargets: [],
+                serviceAccountIds: [EMPLOYEE_ID],
+            });
+
+            const resolved = await service.forAllTargets();
+
+            expect(resolved.has(EMPLOYEE_ID)).toBe(false);
+        });
+
+        // Служебный аккаунт со схемой, заведённой на его отдел, уже не
+        // разворачивается в него — findEmployeesInDepartment (прод-
+        // реализация) фильтрует его сама (см.
+        // ServiceCalculationDataRepository.findEmployeesInDepartment); фейк
+        // здесь имитирует уже отфильтрованную выборку.
+        it('сотрудник, отсутствующий в employeesInDepartment (уже отфильтрован как служебный), не получает схему отдела', async () => {
+            const { service } = buildService({
+                allEmployeeTargets: [],
+                allDepartmentTargets: [departmentSchema()],
+                employeesInDepartment: [{ id: 99, name: 'Второй Сотрудник' }],
+            });
+
+            const resolved = await service.forAllTargets();
+
+            expect(resolved.has(EMPLOYEE_ID)).toBe(false);
+            expect(resolved.has(99)).toBe(true);
         });
     });
 });

@@ -27,16 +27,12 @@ export interface PayoutCashboxRecordRepositoryPort {
 
     // Идемпотентность/дедупликация — локальный lookup по уникальному
     // индексу transactionId, а не запрос к самой ERP.
-    findByTransactionId(
-        transactionId: string,
-    ): Promise<Cashbox | null>;
+    findByTransactionId(transactionId: string): Promise<Cashbox | null>;
 
     // Лента баланса — один батч-запрос по всем движениям страницы вместо N
     // findByTransactionId в цикле. Пустой массив на входе даёт пустой
     // результат без обращения к БД.
-    findByTransactionIds(
-        transactionIds: string[],
-    ): Promise<Cashbox[]>;
+    findByTransactionIds(transactionIds: string[]): Promise<Cashbox[]>;
 }
 
 export const SHOP_PAYOUT_CASHBOX_RECORD_REPOSITORY = Symbol(

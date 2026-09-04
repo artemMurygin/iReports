@@ -90,6 +90,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
 
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve(departments),
+        updateEmployeesOrder: () => Promise.resolve(),
         findEmployees: (departmentId) =>
             Promise.resolve(
                 employees.filter(
@@ -98,6 +99,8 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
                         employee.departmentId === departmentId,
                 ),
             ),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
     };
     const fakeEmployeeDismissal: EmployeeDismissalPort = {
         findDismissedEmployeeIds: (employeeIds) =>
@@ -163,7 +166,6 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         findServiceCompletedItems: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve({ fact: 8, prognose: 8 }),
         findOrderPayedItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),

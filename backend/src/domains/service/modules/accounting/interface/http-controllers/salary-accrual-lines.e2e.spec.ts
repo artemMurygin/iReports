@@ -138,7 +138,6 @@ describe('Проведение строк: close → accrue → balance → unac
         findServiceCompletedItems: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve({ fact: 8, prognose: 8 }),
         findOrderPayedItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
@@ -146,6 +145,9 @@ describe('Проведение строк: close → accrue → balance → unac
     };
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
         findEmployees: () =>
             Promise.resolve([
                 {

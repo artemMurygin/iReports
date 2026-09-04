@@ -24,9 +24,7 @@ export class PayoutCashboxRecordMapper implements Mapper<
         });
     }
 
-    toPersistence(
-        entity: Cashbox,
-    ): Prisma.ErpCashDocumentCreateInput {
+    toPersistence(entity: Cashbox): Prisma.ErpCashDocumentCreateInput {
         const props = entity.getProps();
         return {
             id: props.id,

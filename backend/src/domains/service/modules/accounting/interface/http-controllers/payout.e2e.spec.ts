@@ -163,7 +163,6 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         findServiceCompletedItems: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve({ fact: 20, prognose: 20 }),
         findOrderPayedItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
@@ -177,6 +176,9 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
     };
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
         findEmployees: () => Promise.resolve([employee]),
     };
     const fakeUnitOfWork: UnitOfWorkPort = { run: (work) => work() };

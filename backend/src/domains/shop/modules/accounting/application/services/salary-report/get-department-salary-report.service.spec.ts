@@ -2,6 +2,7 @@ import { GetShopDepartmentSalaryReportService } from './get-department-salary-re
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { ResolveShopEmployeeSalaryRulesService } from '@/domains/shop/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/sales-performance.port';
 import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { ShopAccountingPeriodSnapshotPort } from '@/domains/shop/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
@@ -60,7 +61,6 @@ describe('GetShopDepartmentSalaryReportService', () => {
             .fn()
             .mockResolvedValue(overrides.employees);
         const findProductSoldItems = jest.fn().mockResolvedValue([]);
-        const findConfirmedTaskCompletions = jest.fn().mockResolvedValue([]);
         const findEmployeeIdentitiesForEmployees = jest
             .fn()
             .mockResolvedValue(new Map());
@@ -89,7 +89,6 @@ describe('GetShopDepartmentSalaryReportService', () => {
                 .fn()
                 .mockResolvedValue({ fact: 0, prognose: 0 }),
             findProductSoldItems,
-            findConfirmedTaskCompletions,
             findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
             findEmployeesInDepartment,
             findEmployeeIdentitiesForEmployees,
@@ -124,12 +123,17 @@ describe('GetShopDepartmentSalaryReportService', () => {
             initializeName: jest.fn().mockResolvedValue(undefined),
         };
 
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+        } as unknown as DirectoryRepositoryPort;
         const salaryRulesResolver = new ResolveShopEmployeeSalaryRulesService(
             shopMotivationSchemaRepo,
             {
                 findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
                 findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
             } as unknown as ShopCalculationDataPort,
+            directoryRepo,
         );
 
         const findByPeriod = jest
@@ -188,7 +192,6 @@ describe('GetShopDepartmentSalaryReportService', () => {
             service,
             findEmployeesInDepartment,
             findProductSoldItems,
-            findConfirmedTaskCompletions,
             findEmployeeIdentitiesForEmployees,
             findHoursWorkedForEmployees,
             resolveCategoryDescendantFolderIds,
@@ -220,6 +223,31 @@ describe('GetShopDepartmentSalaryReportService', () => {
             prognose: 500,
         });
         expect(report.employees[0].rules).toHaveLength(1);
+        expect(report.total).toEqual({ fact: 500, prognose: 500 });
+    });
+
+    // docs/employee-ordering-and-salary-filter, Фаза 3 — зеркало
+    // GetDepartmentSalaryReportService.spec.ts (domains/service), см. WHY
+    // там: сотрудник, отсутствующий в составе отдела (в реальности
+    // отфильтрованный isServiceAccount: true), не попадает ни в employees[],
+    // ни в total.
+    it('сотрудник, отсутствующий в составе отдела (служебный аккаунт), не попадает в отчёт и не входит в total', async () => {
+        const employees = [{ id: 1, name: 'Продавец' }];
+        const shopSchemas = [buildShopSchema(1, 100)];
+        const shopHoursByEmployee = new Map([
+            [1, 5],
+            [2, 999],
+        ]);
+
+        const { service } = buildService({
+            employees,
+            shopSchemas,
+            shopHoursByEmployee,
+        });
+
+        const report = await service.execute(1, '2026-08');
+
+        expect(report.employees.map((e) => e.employeeId)).toEqual([1]);
         expect(report.total).toEqual({ fact: 500, prognose: 500 });
     });
 
@@ -274,7 +302,6 @@ describe('GetShopDepartmentSalaryReportService', () => {
         const {
             service,
             findProductSoldItems,
-            findConfirmedTaskCompletions,
             findEmployeeIdentitiesForEmployees,
             findHoursWorkedForEmployees,
             findByEmployees,
@@ -286,7 +313,6 @@ describe('GetShopDepartmentSalaryReportService', () => {
         // Общие ERP-данные, SalesPerformance и мотивационные схемы читаются
         // РОВНО ОДИН РАЗ на весь отдел, независимо от числа сотрудников.
         expect(findProductSoldItems).toHaveBeenCalledTimes(1);
-        expect(findConfirmedTaskCompletions).toHaveBeenCalledTimes(1);
         expect(findEmployeeIdentitiesForEmployees).toHaveBeenCalledTimes(1);
         expect(findHoursWorkedForEmployees).toHaveBeenCalledTimes(1);
         expect(findByEmployees).toHaveBeenCalledTimes(1);

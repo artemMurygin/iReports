@@ -3,9 +3,8 @@ import { GetClosePeriodPreviewService } from './get-close-period-preview.service
 import { CalculateServiceSnapshotRowsService } from './calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { ResolveEmployeeSalaryRulesService } from './resolve-employee-salary-rules.service';
-import { ListUnclosedTaskRulesForPeriodService } from './list-unclosed-task-rules-for-period.service';
 import type { BuildServiceCalculationContextService } from './build-service-calculation-context.service';
-import type { BitrixTasksService } from '@/integrations/bitrix/bitrix-tasks.service';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
 import { CloseAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/close-accounting-period.command';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
@@ -20,8 +19,6 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
-import type { BitrixTaskBatchItem } from '@/integrations/bitrix/bitrix-tasks.service';
 import { WorkScheduleEntry } from '@/modules/work-schedule/domain/entities/work-schedule-entry.entity';
 import { ScheduleDate } from '@/modules/work-schedule/domain/value-objects/schedule-date.value-object';
 import { WorkDay } from '@/modules/work-schedule/domain/value-objects/work-day.value-object';
@@ -77,36 +74,12 @@ describe('GetClosePeriodPreviewService', () => {
             return plan;
         });
 
-    const buildTaskSchema = (employeeId: number, taskIds: number[]) =>
-        withRequestContext(() => {
-            const rule = TaskCompletedEntity.create({
-                type: 'TaskCompleted',
-                name: 'Задача',
-                targetRole: 'ENGINEER',
-                config: {
-                    description: 'Описание',
-                    period: PERIOD,
-                    isRecurring: false,
-                    dueDate: `${PERIOD}-20`,
-                    rewardAmount: 1000,
-                    bitrixTaskIds: taskIds,
-                },
-            });
-            return MotivationSchema.create({
-                targetType: 'Employee',
-                targetId: employeeId,
-                name: 'Схема с задачей',
-                rules: [rule],
-            });
-        });
-
     const setup = (options: {
         schemas: MotivationSchema[];
         plans: SalesPlan[];
         dismissedEmployeeIds: number[];
         scheduleEntries: WorkScheduleEntry[];
         hoursByEmployee: Record<number, number>;
-        bitrixBatch?: BitrixTaskBatchItem[];
     }) => {
         const motivationSchemaRepo = {
             findAllEmployeeTargets: jest
@@ -140,22 +113,21 @@ describe('GetClosePeriodPreviewService', () => {
                 }),
             ),
         } as unknown as BuildServiceCalculationContextService;
+        // Ни один тест этого файла не заводит служебных аккаунтов
+        // (docs/employee-ordering-and-salary-filter, Фаза 3) — пустое
+        // множество.
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+        } as unknown as DirectoryRepositoryPort;
         const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
             motivationSchemaRepo,
             calculationDataSource,
+            directoryRepo,
         );
         const rowsCalculator = new CalculateServiceSnapshotRowsService(
             contextBuilder,
             salaryRulesResolver,
-        );
-        const bitrixTasksService = {
-            getTasksBatch: jest
-                .fn()
-                .mockResolvedValue(options.bitrixBatch ?? []),
-        } as unknown as BitrixTasksService;
-        const listUnclosedTaskRules = new ListUnclosedTaskRulesForPeriodService(
-            salaryRulesResolver,
-            bitrixTasksService,
         );
         const salesPlanRepo = {
             findByDirectionAndPeriod: jest
@@ -184,7 +156,6 @@ describe('GetClosePeriodPreviewService', () => {
             rowsCalculator,
             employeeDismissal,
             workScheduleRepo,
-            listUnclosedTaskRules,
         );
 
         const periodRepo: AccountingPeriodRepositoryPort = {
@@ -259,7 +230,6 @@ describe('GetClosePeriodPreviewService', () => {
             unapprovedPlanRows: [],
             // Сотрудники 2 и 3 с PayPerHour без записи часов за месяц.
             employeesWithoutHours: 2,
-            unclosedTaskRules: [],
         });
         expect(summary.employeesCount).toBe(3);
         expect(summary.dismissedEmployeesCount).toBe(1);
@@ -331,43 +301,5 @@ describe('GetClosePeriodPreviewService', () => {
             preview.execute('service', PERIOD),
         );
         expect(summary.employeesWithoutHours).toBe(0);
-    });
-
-    // Задача 10.4 change salary-rule-bitrix-task: список незакрытых правил-
-    // задач доступен через тот же close-preview, что уже читает
-    // ClosePeriodDialog на фронте (design.md, задача 6.6).
-    it('unclosedTaskRules — правило-задача не в статусе "Закрыта" за период, только для direction service', async () => {
-        const { preview } = setup({
-            schemas: [buildTaskSchema(1, [101])],
-            plans: [],
-            dismissedEmployeeIds: [],
-            scheduleEntries: [],
-            hoursByEmployee: {},
-            bitrixBatch: [
-                {
-                    id: 101,
-                    isAvailable: true,
-                    status: '3',
-                    responsibleId: 1,
-                    period: PERIOD,
-                },
-            ],
-        });
-
-        const serviceSummary = await withRequestContext(() =>
-            preview.execute('service', PERIOD),
-        );
-        expect(serviceSummary.unclosedTaskRules).toHaveLength(1);
-        expect(serviceSummary.unclosedTaskRules[0]).toMatchObject({
-            employeeId: 1,
-            bitrixTaskId: 101,
-            status: 'IN_PROGRESS',
-            isUnavailable: false,
-        });
-
-        const shopSummary = await withRequestContext(() =>
-            preview.execute('shop', PERIOD),
-        );
-        expect(shopSummary.unclosedTaskRules).toEqual([]);
     });
 });

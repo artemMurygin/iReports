@@ -10,11 +10,9 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import type { BitrixTasksService } from '@/integrations/bitrix/bitrix-tasks.service';
-import type { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
 
 // Отчёт по отделу (Фаза 9) — тот же расчёт, что и у отчёта сотрудника,
 // агрегированный по отделу без N+1. Отчёт строго однонаправленный (только
@@ -64,7 +62,6 @@ describe('GetDepartmentSalaryReportService', () => {
             .mockResolvedValue(overrides.employees);
         const findServiceCompletedItems = jest.fn().mockResolvedValue([]);
         const findOrderPayedItems = jest.fn().mockResolvedValue([]);
-        const findConfirmedTaskCompletions = jest.fn().mockResolvedValue([]);
         const findEmployeeIdentitiesForEmployees = jest
             .fn()
             .mockResolvedValue(new Map());
@@ -91,7 +88,6 @@ describe('GetDepartmentSalaryReportService', () => {
                 .fn()
                 .mockResolvedValue({ fact: 0, prognose: 0 }),
             findOrderPayedItems,
-            findConfirmedTaskCompletions,
             findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
             findEmployeesInDepartment,
             findEmployeeIdentitiesForEmployees,
@@ -125,9 +121,19 @@ describe('GetDepartmentSalaryReportService', () => {
         // легальный вход к правилам сотрудников отдела для этого отчёта (см.
         // шапку файла сервиса); построен поверх тех же фейков motivationSchemaRepo/
         // dataSource, что и раньше читал сервис напрямую.
+        // Служебные аккаунты (docs/employee-ordering-and-salary-filter,
+        // Фаза 3) уже отсеяны на входе этого сервиса — overrides.employees
+        // симулирует уже отфильтрованный findEmployeesInDepartment (см. WHY
+        // в ServiceCalculationDataRepository.findEmployeesInDepartment),
+        // поэтому здесь достаточно пустого множества.
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+        } as unknown as DirectoryRepositoryPort;
         const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
             motivationSchemaRepo,
             dataSource,
+            directoryRepo,
         );
 
         const findByDirectionAndPeriod = jest
@@ -171,20 +177,6 @@ describe('GetDepartmentSalaryReportService', () => {
             findByDirectionAndPeriod: jest.fn().mockResolvedValue([]),
         };
 
-        // Ни одна фикстура этого файла не заводит правил TaskCompleted —
-        // getTasksBatch не должен вызываться вовсе (ids пуст, см.
-        // fetchBitrixTaskStatuses), поэтому достаточно голого мока без
-        // ожиданий на вызовы (используется отдельным юнит-тестом ниже).
-        const getTasksBatch = jest.fn().mockResolvedValue([]);
-        const bitrixTasksService = {
-            getTasksBatch,
-        } as unknown as BitrixTasksService;
-
-        const ensureAll = jest.fn().mockResolvedValue(undefined);
-        const ensureTaskRules = {
-            ensureAll,
-        } as unknown as EnsureTaskRulesOnReadService;
-
         const service = new GetDepartmentSalaryReportService(
             dataSource,
             salesPerformanceReader,
@@ -194,22 +186,17 @@ describe('GetDepartmentSalaryReportService', () => {
             domainSyncStatus,
             salesPlanRepo,
             salaryRulesResolver,
-            bitrixTasksService,
-            ensureTaskRules,
         );
 
         return {
             service,
             findServiceCompletedItems,
             findOrderPayedItems,
-            findConfirmedTaskCompletions,
             findEmployeeIdentitiesForEmployees,
             findHoursWorkedForEmployees,
             findByEmployees,
             findForScope,
             findManyByKey,
-            getTasksBatch,
-            ensureAll,
         };
     };
 
@@ -237,6 +224,35 @@ describe('GetDepartmentSalaryReportService', () => {
         expect(report.total).toEqual({ fact: 2000, prognose: 2000 });
     });
 
+    // docs/employee-ordering-and-salary-filter, Фаза 3, "не попадают ... в
+    // списки, ни в расчёты, ни в итоговые суммы": сервис доверяет составу
+    // отдела ServiceCalculationDataPort.findEmployeesInDepartment целиком —
+    // сотрудник, которого там нет (в реальности отфильтрованный
+    // isServiceAccount: true, см. WHY в ServiceCalculationDataRepository),
+    // не попадает ни в employees[] ответа, ни в total, даже если у него есть
+    // мотивационная схема отдела/личная.
+    it('сотрудник, отсутствующий в составе отдела (служебный аккаунт), не попадает в отчёт и не входит в total', async () => {
+        const employees = [{ id: 1, name: 'Иван Иванов' }];
+        // Схема отдела применилась бы и к «служебному» id 2, если бы он
+        // был в составе, — но findEmployeesInDepartment его не вернул.
+        const schemas = [buildServiceSchema(1, 250)];
+        const hoursByEmployee = new Map([
+            [1, 8],
+            [2, 100],
+        ]);
+
+        const { service } = buildService({
+            employees,
+            schemas,
+            hoursByEmployee,
+        });
+
+        const report = await service.execute(1, '2026-08');
+
+        expect(report.employees.map((e) => e.employeeId)).toEqual([1]);
+        expect(report.total).toEqual({ fact: 2000, prognose: 2000 });
+    });
+
     it('расчёт отдела не порождает запросов к БД, пропорциональных числу сотрудников', async () => {
         const manyEmployees = Array.from({ length: 20 }, (_, i) => ({
             id: i + 1,
@@ -248,7 +264,6 @@ describe('GetDepartmentSalaryReportService', () => {
             service,
             findServiceCompletedItems,
             findOrderPayedItems,
-            findConfirmedTaskCompletions,
             findEmployeeIdentitiesForEmployees,
             findHoursWorkedForEmployees,
             findByEmployees,
@@ -261,7 +276,6 @@ describe('GetDepartmentSalaryReportService', () => {
         // РОВНО ОДИН РАЗ на весь отдел, независимо от числа сотрудников.
         expect(findServiceCompletedItems).toHaveBeenCalledTimes(1);
         expect(findOrderPayedItems).toHaveBeenCalledTimes(1);
-        expect(findConfirmedTaskCompletions).toHaveBeenCalledTimes(1);
         expect(findEmployeeIdentitiesForEmployees).toHaveBeenCalledTimes(1);
         expect(findHoursWorkedForEmployees).toHaveBeenCalledTimes(1);
         expect(findByEmployees).toHaveBeenCalledTimes(1);
@@ -312,99 +326,6 @@ describe('GetDepartmentSalaryReportService', () => {
         ).toBe(true);
     });
 
-    // docs/task-rule-archiving-and-links, Фаза 4 — та же логика, что и в
-    // GetEmployeeSalaryReportService: bitrixTaskUrl строится из
-    // line.bitrixTaskId, сохранённого в снапшоте на момент закрытия.
-    describe('bitrixTaskUrl из снапшота закрытого периода (TaskCompleted)', () => {
-        const ORIGINAL_WEBHOOK_URL = process.env.BITRIX24_WEBHOOK_URL;
-
-        beforeEach(() => {
-            process.env.BITRIX24_WEBHOOK_URL =
-                'https://portal.bitrix24.ru/rest/1/xxx/';
-        });
-
-        afterEach(() => {
-            if (ORIGINAL_WEBHOOK_URL === undefined) {
-                delete process.env.BITRIX24_WEBHOOK_URL;
-            } else {
-                process.env.BITRIX24_WEBHOOK_URL = ORIGINAL_WEBHOOK_URL;
-            }
-        });
-
-        it('строку с bitrixTaskId в снапшоте — отдаёт рабочую bitrixTaskUrl', async () => {
-            const employees = [{ id: 1, name: 'Иван Иванов' }];
-            const serviceAccountingPeriod = buildClosedPeriod();
-            const serviceSnapshots = new Map([
-                [
-                    1,
-                    {
-                        employeeId: 1,
-                        total: 10000,
-                        lines: [
-                            {
-                                ruleId: 'r1',
-                                type: 'TaskCompleted',
-                                name: 'За задачу',
-                                targetRole: 'ENGINEER' as const,
-                                amount: 10000,
-                                sources: [],
-                                bitrixTaskId: 555,
-                            },
-                        ],
-                    },
-                ],
-            ]);
-
-            const { service } = buildService({
-                employees,
-                serviceAccountingPeriod,
-                serviceSnapshots: serviceSnapshots as never,
-            });
-
-            const report = await service.execute(1, '2026-07');
-
-            expect(report.employees[0].rules[0]).toMatchObject({
-                ruleId: 'r1',
-                bitrixTaskUrl:
-                    'https://portal.bitrix24.ru/company/personal/user/0/tasks/task/view/555/',
-            });
-        });
-
-        it('legacy-строку без bitrixTaskId в снапшоте — отдаёт отчёт без ссылки, без ошибок', async () => {
-            const employees = [{ id: 1, name: 'Иван Иванов' }];
-            const serviceAccountingPeriod = buildClosedPeriod();
-            const serviceSnapshots = new Map([
-                [
-                    1,
-                    {
-                        employeeId: 1,
-                        total: 10000,
-                        lines: [
-                            {
-                                ruleId: 'r1',
-                                type: 'TaskCompleted',
-                                name: 'За задачу',
-                                targetRole: 'ENGINEER' as const,
-                                amount: 10000,
-                                sources: [],
-                            },
-                        ],
-                    },
-                ],
-            ]);
-
-            const { service } = buildService({
-                employees,
-                serviceAccountingPeriod,
-                serviceSnapshots: serviceSnapshots as never,
-            });
-
-            const report = await service.execute(1, '2026-07');
-
-            expect(report.employees[0].rules[0].bitrixTaskUrl).toBeUndefined();
-        });
-    });
-
     it('сотрудник без личной схемы получает нулевой вклад, не ломая расчёт остальных', async () => {
         const employees = [
             { id: 1, name: 'С личной схемой' },
@@ -428,75 +349,6 @@ describe('GetDepartmentSalaryReportService', () => {
         expect(withSchema?.rules).toHaveLength(1);
         expect(withoutSchema?.total).toEqual({ fact: 0, prognose: 0 });
         expect(withoutSchema?.rules).toHaveLength(0);
-    });
-
-    // spec.md, "Пакетный запрос статусов при большом числе правил-задач" —
-    // сценарий явно называет и отчёт отдела: до 30 правил-задач, не более
-    // одного пакетного запроса статусов задач в Bitrix24.
-    it('несколько правил TaskCompleted у разных сотрудников отдела — ровно один вызов getTasksBatch на весь отдел', async () => {
-        const employees = [
-            { id: 1, name: 'Первый' },
-            { id: 2, name: 'Второй' },
-        ];
-        const buildTaskSchema = (employeeId: number, taskId: number) =>
-            withRequestContext(() => {
-                const rule = TaskCompletedEntity.create({
-                    type: 'TaskCompleted',
-                    name: 'Задача',
-                    targetRole: 'ENGINEER',
-                    config: {
-                        description: 'Описание',
-                        period: '2026-08',
-                        isRecurring: false,
-                        dueDate: '2026-08-20',
-                        rewardAmount: 1000,
-                        bitrixTaskIds: [taskId],
-                    },
-                });
-                return MotivationSchema.create({
-                    targetType: 'Employee',
-                    targetId: employeeId,
-                    name: 'Схема с задачей',
-                    rules: [rule],
-                });
-            });
-        const schemas = [buildTaskSchema(1, 101), buildTaskSchema(2, 102)];
-
-        const { service, getTasksBatch } = buildService({
-            employees,
-            schemas,
-        });
-        getTasksBatch.mockResolvedValue([
-            { id: 101, isAvailable: true, status: '5', period: '2026-08' },
-            { id: 102, isAvailable: true, status: '2', period: '2026-08' },
-        ]);
-
-        await service.execute(1, '2026-08');
-
-        expect(getTasksBatch).toHaveBeenCalledTimes(1);
-        expect(getTasksBatch).toHaveBeenCalledWith([101, 102]);
-    });
-
-    // Задача 7.2 change salary-rule-bitrix-task: ленивое достраивание
-    // задач регулярных правил-задач — по одному вызову ensureAll на
-    // сотрудника отдела, до чтения статусов у Bitrix24.
-    it('открытый период — лениво достраивает задачи правил-задач для каждого сотрудника отдела', async () => {
-        const employees = [
-            { id: 1, name: 'Первый' },
-            { id: 2, name: 'Второй' },
-        ];
-        const schemas = [
-            buildServiceSchema(1, 250),
-            buildServiceSchema(2, 250),
-        ];
-
-        const { service, ensureAll } = buildService({ employees, schemas });
-
-        await service.execute(1, '2026-08');
-
-        expect(ensureAll).toHaveBeenCalledTimes(2);
-        expect(ensureAll).toHaveBeenCalledWith(expect.any(Array), 1, '2026-08');
-        expect(ensureAll).toHaveBeenCalledWith(expect.any(Array), 2, '2026-08');
     });
 
     it('отдел без сотрудников отдаёт пустой список и нулевой итог', async () => {

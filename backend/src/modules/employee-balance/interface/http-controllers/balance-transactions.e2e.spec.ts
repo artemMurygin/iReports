@@ -158,7 +158,6 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         findServiceCompletedItems: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve({ fact: 8, prognose: 8 }),
         findOrderPayedItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
@@ -170,6 +169,9 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
     ];
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
         // Сводка отдела зовёт findEmployees(departmentId) — текущий состав
         // отдела Bitrix24 на момент запроса.
         findEmployees: (departmentId) =>

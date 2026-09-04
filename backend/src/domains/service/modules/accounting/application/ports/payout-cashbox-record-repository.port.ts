@@ -43,18 +43,14 @@ export interface PayoutCashboxRecordRepositoryPort {
     // «уже создан ли документ для этого движения», отличаются только тем,
     // что порт — это то, что видит будущий обработчик выплаты, а
     // реализация порта (адаптер ERP) внутри просто делегирует сюда.
-    findByTransactionId(
-        transactionId: string,
-    ): Promise<Cashbox | null>;
+    findByTransactionId(transactionId: string): Promise<Cashbox | null>;
 
     // Лента баланса сотрудника (PRD 3, «Критерии готовности»: «Внешний ID
     // документа ERP сохраняется и показывается в ленте баланса») — один
     // батч-запрос по всем движениям страницы вместо N findByTransactionId в
     // цикле (см. GetEmployeeBalanceService). Пустой массив на входе даёт
     // пустой результат без обращения к БД.
-    findByTransactionIds(
-        transactionIds: string[],
-    ): Promise<Cashbox[]>;
+    findByTransactionIds(transactionIds: string[]): Promise<Cashbox[]>;
 }
 
 export const PAYOUT_CASHBOX_RECORD_REPOSITORY = Symbol(

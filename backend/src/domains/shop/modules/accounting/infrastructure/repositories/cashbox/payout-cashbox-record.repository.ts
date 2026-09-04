@@ -55,18 +55,14 @@ export class PayoutCashboxRecordRepository
         );
     }
 
-    async findByTransactionId(
-        transactionId: string,
-    ): Promise<Cashbox | null> {
+    async findByTransactionId(transactionId: string): Promise<Cashbox | null> {
         const record = await this.client.erpCashDocument.findFirst({
             where: { transactionId, direction: 'shop' },
         });
         return record ? this.mapper.toDomain(record) : null;
     }
 
-    async findByTransactionIds(
-        transactionIds: string[],
-    ): Promise<Cashbox[]> {
+    async findByTransactionIds(transactionIds: string[]): Promise<Cashbox[]> {
         if (transactionIds.length === 0) {
             return [];
         }
