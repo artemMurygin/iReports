@@ -84,7 +84,7 @@ import { ServiceCalculationDataRepository } from '@/domains/service/modules/acco
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/salary-accrual.repository';
 import { BalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infrastructure/repositories/employee-dismissal.repository';
-import { ErpCashConfigProvider } from '@/domains/service/modules/accounting/infrastructure/config/erp-cash-config.provider';
+import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/erp-cash-config.repository';
 import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema/motivation-schema-created.event-handler';
@@ -310,14 +310,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         // ERP» (PRD 3 docs/payroll-closing-and-accrual, Фаза 11) —
         // direction-агностичные реализации, тот же приём, что
         // BALANCE_TRANSACTION_REPOSITORY выше: ShopAccountingModule заводит
-        // собственные экземпляры под теми же токенами. ErpCashConfigProvider
+        // собственные экземпляры под теми же токенами. ErpCashConfigRepository
         // читает файловый конфиг модуля (env-переменные), не БД — PUT убран
         // (правка пользователя от 2026-08-24, см. заметку в конце Фазы 11
         // плана).
         GetErpCashConfigService,
         {
             provide: ERP_CASH_CONFIG_REPOSITORY,
-            useClass: ErpCashConfigProvider,
+            useClass: ErpCashConfigRepository,
         },
         {
             provide: PAYOUT_CASHBOX_RECORD_REPOSITORY,

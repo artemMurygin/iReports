@@ -10,7 +10,7 @@ import type { AccountingDirection } from '@/shared/domain/calculation-context';
 //
 // Плоский тип, не доменная сущность (до этой правки — ErpCashConfig,
 // domain/entities/erp-cash-config.entity.ts): значения — ID кассы/статьи
-// RemOnline из файлового конфига (config/erp-cash.config.ts), у них нет ни
+// RemOnline из файлового конфига (infrastructure/repositories/erp-cash/erp-cash.config.ts), у них нет ни
 // идентичности, отслеживаемой во времени (объект пересобирается заново на
 // каждый вызов findByDirection(), не персистентная запись БД), ни
 // консистентности между несколькими объектами, которую было бы нужно
@@ -19,7 +19,7 @@ import type { AccountingDirection } from '@/shared/domain/calculation-context';
 // оставлены в форме ради обратной совместимости контракта
 // ErpCashConfigResponse (один общий объект с полями обоих направлений, см.
 // WHY в contracts/commands/erp-cash.ts) — у service-конфигурации они всегда
-// null (см. ErpCashConfigProvider).
+// null (см. ErpCashConfigRepository).
 export type ErpCashConfig = {
     direction: AccountingDirection;
     roappCashboxId: number | null;
@@ -31,8 +31,10 @@ export type ErpCashConfig = {
 
 // Только чтение — начиная с правки пользователя от 2026-08-24 (см. заметку
 // в конце Фазы 11 плана) конфигурация читается из файлового конфига модуля
-// (env-переменные, domains/{service,shop}/modules/accounting/config/
-// erp-cash.config.ts), а не из БД, и больше не редактируется через API:
+// (env-переменные, domains/service/modules/accounting/infrastructure/
+// repositories/erp-cash/erp-cash.config.ts; у domains/shop свой аналог
+// рядом с cashbox-config.repository.ts), а не из БД, и больше не
+// редактируется через API:
 // метод save() и PUT-эндпоинт убраны вместе с этим.
 export interface ErpCashConfigRepositoryPort {
     // null — направление не сконфигурировано (env-переменные не заданы) —

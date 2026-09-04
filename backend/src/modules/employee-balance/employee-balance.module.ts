@@ -35,7 +35,7 @@ import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/in
 import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
 import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';
 import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
-import { ErpCashConfigProvider } from '@/domains/service/modules/accounting/infrastructure/config/erp-cash-config.provider';
+import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/erp-cash-config.repository';
 // Дедуп-репозиторий/конфиг кассы направления shop (Фаза 4
 // docs/service-shop-boundary-violations-fix) — нужны ТОЛЬКО собственному
 // экземпляру MoyskladCashDocumentAdapter (SHOP_ERP_CASH_DOCUMENT_PORT ниже):
@@ -135,7 +135,7 @@ import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infras
         },
         {
             provide: ERP_CASH_CONFIG_REPOSITORY,
-            useClass: ErpCashConfigProvider,
+            useClass: ErpCashConfigRepository,
         },
         // Дедуп-репозиторий/конфиг кассы направления shop — только для
         // MoyskladCashDocumentAdapter (SHOP_ERP_CASH_DOCUMENT_PORT ниже), см.

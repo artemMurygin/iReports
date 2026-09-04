@@ -4,11 +4,11 @@ import type {
     ErpCashConfigRepositoryPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
-import { serviceErpCashConfig } from '@/domains/service/modules/accounting/config/erp-cash.config';
+import { serviceErpCashConfig } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/erp-cash.config';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 
 // Реализация ErpCashConfigRepositoryPort поверх файлового конфига модуля
-// (env-переменные, см. config/erp-cash.config.ts), а не БД — правка
+// (env-переменные, см. erp-cash.config.ts рядом), а не БД — правка
 // пользователя от 2026-08-24 (см. заметку в конце Фазы 11
 // docs/payroll-closing-and-accrual/plan-payroll-closing-and-accrual.md):
 // изначально (Фаза 11) это был Prisma-репозиторий поверх модели
@@ -51,7 +51,7 @@ function assertPositiveIntegerOrNull(
 }
 
 @Injectable()
-export class ErpCashConfigProvider implements ErpCashConfigRepositoryPort {
+export class ErpCashConfigRepository implements ErpCashConfigRepositoryPort {
     findByDirection(
         direction: AccountingDirection,
     ): Promise<ErpCashConfig | null> {
