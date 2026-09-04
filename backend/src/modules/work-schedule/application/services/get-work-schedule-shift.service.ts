@@ -50,7 +50,13 @@ export class GetWorkScheduleShiftService {
         // тот же VO, что и у записи графика (единое место разбора даты).
         const scheduleDate = ScheduleDate.create(date);
 
-        const employees = await this.directory.findEmployees(departmentId);
+        // includeServiceAccounts: true (docs/employee-ordering-and-salary-filter,
+        // Фаза 3) — состав смены обязан продолжать показывать служебных
+        // аккаунтов без изменений, тот же приём, что и в
+        // GetMonthlyWorkScheduleService (см. WHY там).
+        const employees = await this.directory.findEmployees(departmentId, {
+            includeServiceAccounts: true,
+        });
         const employeeIds = employees.map((employee) => employee.id);
 
         const entries = await this.fetchDayEntries(scheduleDate, employeeIds);

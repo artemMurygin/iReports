@@ -5,3 +5,4 @@
 // features/SalesPlan/index.ts.
 export { useDepartments, useEmployees } from './model/useTargetDirectory.ts'
 export type { TargetOption } from './model/types.ts'
+export { EMPLOYEES_QUERY_KEY } from './model/api.ts'

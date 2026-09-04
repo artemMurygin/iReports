@@ -123,6 +123,28 @@ export const routesV1 = {
     directory: {
         departments: `${directoryRoot}/departments`,
         employees: `${directoryRoot}/employees`,
+        // Сохранение нового порядка сотрудников (docs/employee-ordering-and-salary-filter,
+        // Фаза 1) — тот же литеральный сегмент "order" на своём собственном
+        // PATCH-методе, что и у sales.plan.order/shopSalesPlan.order (см.
+        // комментарий там про регистрацию до маршрутов с :id) — здесь
+        // конфликта нет, employees не имеет соседнего PATCH .../:id.
+        reorderEmployees: `${directoryRoot}/employees/order`,
+        // Включение/выключение признака «служебный аккаунт» у сотрудника
+        // (docs/employee-ordering-and-salary-filter, Фаза 3) — :id/service-
+        // account, а не литеральный сегмент вроде order выше: это правка
+        // ОДНОГО сотрудника по его id, а не батч-операция над всем
+        // справочником.
+        setServiceAccount: `${directoryRoot}/employees/:id/service-account`,
+        // Полный справочник (ВСЕ сотрудники, включая служебные аккаунты) с
+        // их текущим isServiceAccount (docs/employee-ordering-and-salary-filter,
+        // Фаза 4) — питает список с переключателем «исключить из зарплаты»
+        // на странице настроек и справочник сотрудников на странице «Связи
+        // сотрудников» (последняя обязана продолжать видеть служебные
+        // аккаунты, см. WHY в contracts/commands/directory.ts). Отдельный
+        // литеральный сегмент, а не query-параметр у employees выше:
+        // employees намеренно и без исключений фильтрует служебные аккаунты
+        // для всех своих потребителей (зарплатные списки).
+        employeesWithServiceAccount: `${directoryRoot}/employees/service-accounts`,
     },
     // График работы сотрудников (Фаза 1, docs/employee-work-schedule) —
     // без гарда, тот же принцип, что и directory выше (модель прав в

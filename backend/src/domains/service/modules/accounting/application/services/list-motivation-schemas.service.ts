@@ -39,15 +39,38 @@ export class ListMotivationSchemasService {
         // будто не существует, даже если строка motivation_schemas физически
         // есть (правила принадлежат shop-стороне той же схемы, см. apiDesign
         // плана и открытый вопрос про смешанные схемы).
-        const ownSchemas = schemas.filter(
+        let ownSchemas = schemas.filter(
             (schema) => schema.getProps().rules.length > 0,
         );
         if (ownSchemas.length === 0) {
             return [];
         }
 
+        // Схема, заведённая на служебный аккаунт (docs/employee-ordering-and-salary-filter,
+        // Фаза 3, "не попадают ... в списки"), исключается явно, ДО
+        // резолвинга имени — иначе она попала бы в ответ с реальным именем
+        // сотрудника вместо того, чтобы отсутствовать вовсе (в отличие от
+        // resolveTargetName ниже — та заглушка только для сотрудника,
+        // действительно отсутствующего в Bitrix24).
+        const serviceAccountIds =
+            await this.directoryRepo.findServiceAccountEmployeeIds();
+        ownSchemas = ownSchemas.filter((schema) => {
+            const target = schema.getProps().target;
+            return (
+                target.getType() !== 'Employee' ||
+                !serviceAccountIds.has(target.getId())
+            );
+        });
+        if (ownSchemas.length === 0) {
+            return [];
+        }
+
         // Один батч-запрос на весь список (не N+1) — тот же принцип, что и
-        // у GetDepartmentSalaryReportService.
+        // у GetDepartmentSalaryReportService. findEmployees() по умолчанию
+        // уже исключает служебные аккаунты (см. WHY на FindEmployeesOptions
+        // в directory.port.ts) — здесь это не задействовано (схемы на них
+        // уже отсеяны выше), но и не мешает: employeeNames/employeeOrder
+        // просто не содержат их ключей.
         const [departments, employees] = await Promise.all([
             this.directoryRepo.findDepartments(),
             this.directoryRepo.findEmployees(),
@@ -61,6 +84,32 @@ export class ListMotivationSchemasService {
                 `${employee.firstName} ${employee.lastName}`,
             ]),
         );
+        // Единый порядок сотрудников (docs/employee-ordering-and-salary-filter,
+        // Фаза 1) — employees уже отсортирован по order
+        // (DirectoryRepository.findEmployees), здесь берём позицию
+        // сотрудника в этом списке как ключ сортировки схем с targetType
+        // Employee. Схемы с targetType Department сортировкой не
+        // затрагиваются (order определён только для сотрудников, PRD не
+        // требует единого порядка отделов) — сравнение между схемами
+        // разных targetType не меняет их взаимный порядок (см. compare ниже).
+        const employeeOrder = new Map(
+            employees.map((employee, index) => [employee.id, index]),
+        );
+
+        ownSchemas.sort((a, b) => {
+            const targetA = a.getProps().target;
+            const targetB = b.getProps().target;
+            if (
+                targetA.getType() !== 'Employee' ||
+                targetB.getType() !== 'Employee'
+            ) {
+                return 0;
+            }
+            return (
+                (employeeOrder.get(targetA.getId()) ?? Infinity) -
+                (employeeOrder.get(targetB.getId()) ?? Infinity)
+            );
+        });
 
         return ownSchemas.map((schema) => {
             const target = schema.getProps().target;

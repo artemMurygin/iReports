@@ -1,6 +1,7 @@
 import { ResolveShopEmployeeSalaryRulesService } from './resolve-employee-salary-rules.service';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
@@ -63,6 +64,9 @@ describe('ResolveShopEmployeeSalaryRulesService', () => {
         allEmployeeTargets?: ShopMotivationSchema[];
         allDepartmentTargets?: ShopMotivationSchema[];
         employeesInDepartment?: { id: number; name: string }[];
+        // Id служебных аккаунтов (docs/employee-ordering-and-salary-filter,
+        // Фаза 3) — по умолчанию пусто, forAllTargets ничего не отсеивает.
+        serviceAccountIds?: number[];
     }) => {
         // findByDepartment держим отдельной ссылкой, а не достаём с уже
         // приведённого к порту объекта: eslint (unbound-method) справедливо
@@ -107,10 +111,17 @@ describe('ResolveShopEmployeeSalaryRulesService', () => {
                 .mockResolvedValue(overrides?.employeesInDepartment ?? []),
         } as unknown as ShopCalculationDataPort;
 
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: jest
+                .fn()
+                .mockResolvedValue(new Set(overrides?.serviceAccountIds ?? [])),
+        } as unknown as DirectoryRepositoryPort;
+
         return {
             service: new ResolveShopEmployeeSalaryRulesService(
                 schemaRepo,
                 dataSource,
+                directoryRepo,
             ),
             findByDepartment,
         };
@@ -231,6 +242,41 @@ describe('ResolveShopEmployeeSalaryRulesService', () => {
             expect(resolved.get(99)?.rules.map((rule) => rule.type)).toEqual([
                 'PayPerHour',
             ]);
+        });
+
+        // docs/employee-ordering-and-salary-filter, Фаза 3, "не попадают ...
+        // в расчёты": личная схема служебного аккаунта не должна попасть в
+        // снапшот/начисление закрытия периода — сотрудник просто отсутствует
+        // в возвращённой карте.
+        it('не включает личную схему сотрудника с isServiceAccount: true', async () => {
+            const { service } = buildService({
+                allEmployeeTargets: [personalSchema()],
+                allDepartmentTargets: [],
+                serviceAccountIds: [EMPLOYEE_ID],
+            });
+
+            const resolved = await service.forAllTargets();
+
+            expect(resolved.has(EMPLOYEE_ID)).toBe(false);
+        });
+
+        // Схема отдела служебного аккаунта уже не разворачивается в него —
+        // findEmployeesInDepartment (Прод-реализация) фильтрует его сама
+        // (см. ShopCalculationDataRepository.findEmployeesInDepartment); этот
+        // тест фиксирует ожидание на уровне контракта: фейк здесь имитирует
+        // такую уже отфильтрованную выборку (служебный аккаунт просто не
+        // числится среди employeesInDepartment).
+        it('сотрудник, отсутствующий в employeesInDepartment (уже отфильтрован как служебный), не получает схему отдела', async () => {
+            const { service } = buildService({
+                allEmployeeTargets: [],
+                allDepartmentTargets: [departmentSchema()],
+                employeesInDepartment: [{ id: 99, name: 'Продавец Второй' }],
+            });
+
+            const resolved = await service.forAllTargets();
+
+            expect(resolved.has(EMPLOYEE_ID)).toBe(false);
+            expect(resolved.has(99)).toBe(true);
         });
     });
 });

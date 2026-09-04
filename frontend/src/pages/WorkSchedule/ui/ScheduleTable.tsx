@@ -1,4 +1,19 @@
 import { useMemo } from 'react'
+import type { CSSProperties } from 'react'
+import {
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+    type DraggableAttributes,
+    type DraggableSyntheticListeners,
+} from '@dnd-kit/core'
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { GripVertical } from 'lucide-react'
 import type { MonthlyWorkScheduleResponse, WorkScheduleDayCell } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
@@ -24,6 +39,14 @@ export type ScheduleTableProps = {
     /** Строка сотрудника, к которой прокрутить и которую подсветить — переход по `?employeeId=` с
      * мобильного экрана «Отдел сегодня» (см. `ScheduleBody`'s `highlightedEmployeeId`). */
     highlightedEmployeeId?: number | null
+    /** Фаза 2, docs/employee-ordering-and-salary-filter — можно ли перетаскивать строки сотрудников
+     * (см. `useWorkSchedulePage.canReorderEmployees`: `false`, пока полный справочник сотрудников
+     * ещё не загружен). Когда `false`, строки рендерятся без обвязки `@dnd-kit` вообще и без ручки
+     * — тот же приём, что и `EditPlanTable`'s `canReorder` (см. её комментарий). */
+    canReorderEmployees?: boolean
+    /** `activeId`/`overId` — `employeeId` перетаскиваемой и целевой строки одного и того же жеста
+     * (см. `useWorkSchedulePage.handleReorderEmployees`, вызывает `PATCH .../employees/order`). */
+    onReorderEmployees?: (activeEmployeeId: number, overEmployeeId: number) => void
     className?: string
 }
 
@@ -50,11 +73,59 @@ function ScheduleTable({
     dayAggregates,
     totalHours,
     highlightedEmployeeId = null,
+    canReorderEmployees = false,
+    onReorderEmployees,
     className,
 }: ScheduleTableProps) {
     const gridTemplateColumns = useMemo(() => buildScheduleGridTemplate(days.length), [days.length])
     const dayAggregateMap = useMemo(() => buildDayAggregateMap(dayAggregates), [dayAggregates])
     const year = useMemo(() => Number(days[0]?.date.slice(0, 4)) || new Date().getFullYear(), [days])
+
+    // Тот же сенсор-набор, что и `EditPlanTable` (Фаза 2, docs/sales-plan-row-drag-and-drop-reorder)
+    // — `activationConstraint.distance` не даёт клику по ручке (без движения мыши) ложно
+    // засчитаться перетаскиванием, `KeyboardSensor` даёт клавиатурную перестановку (Tab на ручку,
+    // стрелки) бесплатно поверх мышиного/тачевого пути `useSortable`.
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    )
+
+    function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event
+        if (!over || active.id === over.id) return
+        onReorderEmployees?.(Number(active.id), Number(over.id))
+    }
+
+    const rows = canReorderEmployees ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext
+                items={employees.map((employee) => employee.employeeId)}
+                strategy={verticalListSortingStrategy}
+            >
+                {employees.map((employee) => (
+                    <SortableScheduleTableRow
+                        key={employee.employeeId}
+                        employee={employee}
+                        days={days}
+                        year={year}
+                        gridTemplateColumns={gridTemplateColumns}
+                        isHighlighted={employee.employeeId === highlightedEmployeeId}
+                    />
+                ))}
+            </SortableContext>
+        </DndContext>
+    ) : (
+        employees.map((employee) => (
+            <ScheduleTableRow
+                key={employee.employeeId}
+                employee={employee}
+                days={days}
+                year={year}
+                gridTemplateColumns={gridTemplateColumns}
+                isHighlighted={employee.employeeId === highlightedEmployeeId}
+            />
+        ))
+    )
 
     return (
         <div
@@ -65,16 +136,7 @@ function ScheduleTable({
                 <div style={{ minWidth: 'max-content' }}>
                     <ScheduleTableHeaderRow days={days} gridTemplateColumns={gridTemplateColumns} />
 
-                    {employees.map((employee) => (
-                        <ScheduleTableRow
-                            key={employee.employeeId}
-                            employee={employee}
-                            days={days}
-                            year={year}
-                            gridTemplateColumns={gridTemplateColumns}
-                            isHighlighted={employee.employeeId === highlightedEmployeeId}
-                        />
-                    ))}
+                    {rows}
 
                     <ScheduleTableFooterRow
                         days={days}
@@ -85,6 +147,41 @@ function ScheduleTable({
                 </div>
             </div>
         </div>
+    )
+}
+
+/** Единственное место, вызывающее `useSortable` (Фаза 2, docs/employee-ordering-and-salary-filter)
+ * — по одному инстансу на строку, ключ `employee.employeeId`; тот же приём, что
+ * `EditPlanTable.tsx`'s `SortableEditPlanTableRow` (см. её комментарий). Собирает результат
+ * `useSortable` в один проп `dragHandle`, которого ждёт `ScheduleTableRow`, чтобы сама
+ * презентационная строка не знала о `@dnd-kit` сверх этого типа. */
+function SortableScheduleTableRow({
+    employee,
+    ...rowProps
+}: {
+    employee: MonthlyWorkScheduleResponse['employees'][number]
+    days: ScheduleDayMeta[]
+    year: number
+    gridTemplateColumns: string
+    isHighlighted?: boolean
+}) {
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable(
+        { id: employee.employeeId },
+    )
+
+    return (
+        <ScheduleTableRow
+            employee={employee}
+            {...rowProps}
+            dragHandle={{
+                setNodeRef,
+                setActivatorNodeRef,
+                style: { transform: CSS.Transform.toString(transform), transition: transition ?? undefined },
+                isDragging,
+                attributes,
+                listeners,
+            }}
+        />
     )
 }
 
@@ -144,35 +241,72 @@ export function ScheduleTableHeaderRow({
     )
 }
 
+/** Всё, что отдаёт `useSortable` (`@dnd-kit/sortable`) и что нужно строке, чтобы отрисоваться
+ * перетаскиваемой — собирается `SortableScheduleTableRow` (компонент, реально вызывающий
+ * `useSortable`) и передаётся сюда одним пропом, тот же приём, что и `EditPlanRowDragHandle`
+ * (`features/SalesPlan/ui/EditPlanModal/ui/EditPlanTableRow.tsx`, см. её комментарий). Отсутствует
+ * целиком, когда строка не перетаскиваемая (`ScheduleTable`'s `canReorderEmployees` — `false`) —
+ * так строка узнаёт, что ручку рисовать не нужно, без отдельного булева пропа. */
+export type ScheduleRowDragHandle = {
+    setNodeRef: (node: HTMLElement | null) => void
+    setActivatorNodeRef: (node: HTMLElement | null) => void
+    style?: CSSProperties
+    isDragging: boolean
+    attributes: DraggableAttributes
+    listeners: DraggableSyntheticListeners
+}
+
 function ScheduleTableRow({
     employee,
     days,
     year,
     gridTemplateColumns,
     isHighlighted = false,
+    dragHandle,
 }: {
     employee: MonthlyWorkScheduleResponse['employees'][number]
     days: ScheduleDayMeta[]
     year: number
     gridTemplateColumns: string
     isHighlighted?: boolean
+    dragHandle?: ScheduleRowDragHandle
 }) {
     const cellsByDate = useMemo(() => buildEmployeeCellMap(employee), [employee])
     const remaining = vacationDaysRemaining(employee)
-    const rowRef = useScrollIntoViewOnce<HTMLDivElement>(isHighlighted)
+    const scrollRef = useScrollIntoViewOnce<HTMLDivElement>(isHighlighted)
+
+    // Сливает `useScrollIntoViewOnce`'s ref-объект (переход по `?employeeId=`) с dnd-kit's
+    // callback-ref для корня перетаскиваемой строки (`dragHandle.setNodeRef`) — обоим нужен один и
+    // тот же DOM-узел строки, `useScrollIntoViewOnce` возвращает `RefObject`, а не колбэк, поэтому
+    // их нельзя просто передать в `ref` вдвоём.
+    function setRowRef(node: HTMLDivElement | null) {
+        scrollRef.current = node
+        dragHandle?.setNodeRef(node)
+    }
 
     return (
         <div
-            ref={rowRef}
+            ref={setRowRef}
             data-slot="work-schedule-row"
             data-employee-id={employee.employeeId}
+            style={{ ...dragHandle?.style, gridTemplateColumns }}
             className={cn(
                 'grid h-[42px] border-b border-hairline bg-surface last:border-b-0',
                 isHighlighted && 'ring-2 ring-inset ring-brand-strong',
+                dragHandle?.isDragging && 'relative z-20 opacity-70 shadow-md',
             )}
-            style={{ gridTemplateColumns }}
         >
-            <div className="sticky left-0 z-10 flex items-center border-r border-hairline bg-surface px-3.5">
+            <div
+                ref={dragHandle?.setActivatorNodeRef}
+                aria-label={dragHandle ? `Изменить порядок: ${employee.name}` : undefined}
+                className={cn(
+                    'sticky left-0 z-10 flex items-center gap-1.5 border-r border-hairline bg-surface px-3.5',
+                    dragHandle && 'cursor-grab touch-none outline-none active:cursor-grabbing',
+                )}
+                {...dragHandle?.attributes}
+                {...dragHandle?.listeners}
+            >
+                {dragHandle && <GripVertical className="size-3.5 shrink-0 text-ink-faint" aria-hidden />}
                 <span className="truncate font-ui text-[13px] font-medium text-ink">{employee.name}</span>
             </div>
 

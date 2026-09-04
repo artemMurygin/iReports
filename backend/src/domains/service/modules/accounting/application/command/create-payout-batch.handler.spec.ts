@@ -30,6 +30,9 @@ import { CreatePayoutBatchCommand } from './create-payout-batch.command';
 describe('CreatePayoutBatchHandler', () => {
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
         findEmployees: () =>
             Promise.resolve([
                 {

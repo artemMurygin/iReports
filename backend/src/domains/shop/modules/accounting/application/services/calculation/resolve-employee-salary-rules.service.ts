@@ -7,6 +7,8 @@ import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accoun
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
+import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 
 // Набор правил сотрудника вместе с версией схем, из которых он собран, —
 // версия нужна вызывающему для freshnessStamp ленивого кэша и обязана
@@ -47,6 +49,8 @@ export class ResolveShopEmployeeSalaryRulesService {
         private readonly motivationSchemaRepo: ShopMotivationSchemaRepositoryPort,
         @Inject(SHOP_CALCULATION_DATA)
         private readonly dataSource: ShopCalculationDataPort,
+        @Inject(DIRECTORY_REPOSITORY)
+        private readonly directoryRepo: DirectoryRepositoryPort,
     ) {}
 
     // Один сотрудник (GET /v1/shop/accounting/salary_report/employee/:id/
@@ -102,12 +106,23 @@ export class ResolveShopEmployeeSalaryRulesService {
     async forAllTargets(): Promise<
         Map<number, ResolvedShopEmployeeSalaryRules>
     > {
-        const [personalSchemas, departmentSchemas] = await Promise.all([
-            this.motivationSchemaRepo.findAllEmployeeTargets(),
-            this.motivationSchemaRepo.findAllDepartmentTargets(),
-        ]);
+        const [personalSchemas, departmentSchemas, serviceAccountIds] =
+            await Promise.all([
+                this.motivationSchemaRepo.findAllEmployeeTargets(),
+                this.motivationSchemaRepo.findAllDepartmentTargets(),
+                this.directoryRepo.findServiceAccountEmployeeIds(),
+            ]);
 
-        const personalByEmployee = indexByTarget(personalSchemas);
+        // Личная схема служебного аккаунта не должна фиксировать снапшот/
+        // начисление при закрытии периода (docs/employee-ordering-and-salary-filter,
+        // Фаза 3) — зеркало ResolveEmployeeSalaryRulesService.forAllTargets
+        // (domains/service), см. WHY там.
+        const personalByEmployee = indexByTarget(
+            personalSchemas.filter(
+                (schema) =>
+                    !serviceAccountIds.has(schema.getProps().target.getId()),
+            ),
+        );
         const departmentByEmployee = new Map<number, ShopMotivationSchema>();
 
         for (const departmentSchema of departmentSchemas) {

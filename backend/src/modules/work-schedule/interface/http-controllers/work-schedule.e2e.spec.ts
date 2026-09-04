@@ -72,15 +72,22 @@ describe('WorkSchedule HTTP (e2e)', () => {
     // Фаза 3); отдел 3 — три сотрудника отдельно для GET
     // /v1/work-schedule/shift (Фаза 4), чтобы проверять «на смене»/«не на
     // смене» на группе, не задевая ассерты Фазы 3 по отделам 1/2 (там
-    // ожидается ровно по одному сотруднику).
-    const fakeDirectory: DirectoryRepositoryPort = {
-        findDepartments: () =>
-            Promise.resolve([
-                { id: 1, name: 'Сервис' },
-                { id: 2, name: 'Магазин' },
-                { id: 3, name: 'Смена' },
-            ]),
-        findEmployees: (departmentId) =>
+    // ожидается ровно по одному сотруднику). Отдел 4 — отдельный,
+    // единственный сотрудник в нём (104) служебный
+    // (docs/employee-ordering-and-salary-filter, Фаза 3): не подмешан в
+    // отдел 3, чтобы не задеть точные ассерты Фазы 4 по составу «на смене»/
+    // «не на смене» там (тем же приёмом, что и разделение отделов 1/2 и 3
+    // в комментарии выше). Фейк ничего не отсеивает по isServiceAccount (в
+    // отличие от реального DirectoryRepository) — так тест ниже доказывает
+    // именно то, что требуется явной проверкой: график работы запрашивает
+    // findEmployees с { includeServiceAccounts: true } и не теряет такого
+    // сотрудника из ответа, а не полагается на случайное совпадение
+    // поведения фейка с продом.
+    const findEmployees = jest.fn(
+        (
+            departmentId?: number,
+            _options?: { includeServiceAccounts?: boolean },
+        ) =>
             Promise.resolve(
                 [
                     {
@@ -113,12 +120,31 @@ describe('WorkSchedule HTTP (e2e)', () => {
                         lastName: 'Смирнов',
                         departmentId: 3,
                     },
+                    {
+                        id: 104,
+                        firstName: 'Служебный',
+                        lastName: 'Аккаунт',
+                        departmentId: 4,
+                    },
                 ].filter(
                     (employee) =>
                         departmentId === undefined ||
                         employee.departmentId === departmentId,
                 ),
             ),
+    );
+    const fakeDirectory: DirectoryRepositoryPort = {
+        findDepartments: () =>
+            Promise.resolve([
+                { id: 1, name: 'Сервис' },
+                { id: 2, name: 'Магазин' },
+                { id: 3, name: 'Смена' },
+                { id: 4, name: 'Служебные' },
+            ]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findEmployees,
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set([104])),
+        setServiceAccount: () => Promise.resolve(null),
     };
 
     // Период всегда OPEN — блокировку закрытым периодом (Ensure-
@@ -519,5 +545,55 @@ describe('WorkSchedule HTTP (e2e)', () => {
             .get('/v1/work-schedule/shift')
             .query({ departmentId: 3 })
             .expect(400);
+    });
+
+    // docs/employee-ordering-and-salary-filter, Фаза 3, "Не в скоупе":
+    // "Скрытие служебных сотрудников за пределами зарплатного раздела" —
+    // явная проверка, что график работы продолжает возвращать служебных
+    // сотрудников без изменений (сотрудник 104, findServiceAccountEmployeeIds
+    // выше отмечает его как служебного).
+    it('GET /v1/work-schedule?departmentId= — служебный сотрудник (isServiceAccount: true) остаётся в таблице графика', async () => {
+        const response = await request(app.getHttpServer())
+            .get('/v1/work-schedule')
+            .query({ month: '2026-08', departmentId: 4 })
+            .expect(200);
+        const body = response.body as MonthlyWorkScheduleResponse;
+
+        expect(body.employees).toHaveLength(1);
+        expect(body.employees[0].employeeId).toBe(104);
+        expect(findEmployees).toHaveBeenCalledWith(4, {
+            includeServiceAccounts: true,
+        });
+    });
+
+    it('GET /v1/work-schedule/shift — служебный сотрудник (isServiceAccount: true) остаётся в составе смены', async () => {
+        await request(app.getHttpServer())
+            .put('/v1/work-schedule/entries')
+            .send({
+                employeeId: 104,
+                date: '2026-08-05',
+                status: 'WORKING',
+                hours: 8,
+                role: 'ENGINEER',
+            })
+            .expect(200);
+
+        const response = await request(app.getHttpServer())
+            .get('/v1/work-schedule/shift')
+            .query({ date: '2026-08-05', departmentId: 4 })
+            .expect(200);
+        const body = response.body as WorkScheduleShiftResponse;
+
+        expect(body.onShift).toEqual([
+            {
+                employeeId: 104,
+                name: 'Служебный Аккаунт',
+                role: 'ENGINEER',
+                hours: 8,
+            },
+        ]);
+        expect(findEmployees).toHaveBeenCalledWith(4, {
+            includeServiceAccounts: true,
+        });
     });
 });

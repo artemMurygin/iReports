@@ -58,6 +58,10 @@ describe('GetShopMotivationSchemaService', () => {
         const directoryRepo: DirectoryRepositoryPort = {
             findDepartments,
             findEmployees,
+            updateEmployeesOrder: () => Promise.resolve(),
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+            setServiceAccount: () => Promise.resolve(null),
         };
 
         const service = new GetShopMotivationSchemaService(

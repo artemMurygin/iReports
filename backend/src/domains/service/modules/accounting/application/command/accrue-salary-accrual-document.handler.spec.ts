@@ -19,6 +19,9 @@ import { AccrueSalaryAccrualDocumentCommand } from './accrue-salary-accrual-docu
 describe('AccrueSalaryAccrualDocumentHandler', () => {
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
         findEmployees: () =>
             Promise.resolve([
                 {

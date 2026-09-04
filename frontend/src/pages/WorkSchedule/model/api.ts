@@ -1,6 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
 import type {
     MonthlyWorkScheduleResponse,
+    ReorderEmployeesRequest,
+    ReorderEmployeesResponse,
     UpsertWorkScheduleEntryRequest,
     WorkScheduleEntryResponse,
 } from 'ireports-contracts'
@@ -47,5 +49,19 @@ export const api = {
             .then((r) => r.data)
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить день графика'))
+            }),
+
+    // PATCH /v1/directory/employees/order (docs/employee-ordering-and-salary-filter, Фаза 1) —
+    // drag-n-drop сотрудников на этой странице (Фаза 2, `useReorderEmployees.ts`). Доступен любому
+    // авторизованному пользователю без отдельных прав (см. `ReorderEmployeesHttpController`'s
+    // комментарий на бэкенде) — здесь никакого дополнительного гейта тоже нет. Ответ — весь
+    // справочник сотрудников уже в новом порядке (см. `reorderEmployeesResponseSchema`'s комментарий
+    // в контрактах), которым `useReorderEmployees` сразу заполняет кэш `useEmployees()`.
+    reorderEmployees: (payload: ReorderEmployeesRequest): Promise<ReorderEmployeesResponse> =>
+        apiInstance
+            .patch<ReorderEmployeesResponse>('/v1/directory/employees/order', payload)
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить порядок сотрудников'))
             }),
 }

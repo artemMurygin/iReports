@@ -12,6 +12,7 @@ import {
     Settings,
     Target,
     TrendingUp,
+    UserCog,
     Wallet,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -53,8 +54,10 @@ export type NavSection = {
  * docs/salary-schema-list-ui; schema creation moved to the child route `/salaries/rules/new`,
  * `pages/SalaryRules`, still linked from there via its "Создать схему" actions — see
  * docs/salary-schema-creation-ui/plan-salary-schema-creation-ui.md, Фаза 2), "Связи
- * сотрудников" (единственная страница нового раздела «Настройки» — сопоставление сотрудников
- * между ERP-системами, `/settings/employee-identity`) and "График работы" (calendar view only,
+ * сотрудников" (сопоставление сотрудников между ERP-системами, `/settings/employee-identity`)
+ * and "Служебные аккаунты" (переключатель «исключить из зарплаты» на сотрудника,
+ * `/settings/service-accounts`, docs/employee-ordering-and-salary-filter, Фаза 4) — оба пункта
+ * раздела «Настройки» — and "График работы" (calendar view only,
  * `/work-schedule` — `pages/WorkSchedule`, see docs/employee-work-schedule, Фаза 6) are real
  * today.
  *
@@ -141,15 +144,19 @@ const NAV_ENTRIES: NavEntry[] = [
         },
     },
     // Раздел «Настройки» — служебная часть IA (нет в Pencil-макете, там только
-    // Продажи/Аналитика/Зарплата/График). Пока в нём одна страница, поэтому Subnav для него
-    // не рисуется (`app/Header.tsx` показывает вкладки только при items.length > 1), а
-    // верхнеуровневая ссылка ведёт сразу на «Связи сотрудников».
+    // Продажи/Аналитика/Зарплата/График). Второй пункт, «Служебные аккаунты»
+    // (docs/employee-ordering-and-salary-filter, Фаза 4), добавлен рядом со «Связи
+    // сотрудников» — теперь items.length > 1, поэтому `app/Header.tsx` рисует Subnav раздела
+    // (см. её условие `items.length > 1`), а верхнеуровневая ссылка ведёт на первый пункт.
     {
         kind: 'section',
         section: {
             label: 'Настройки',
             icon: <Settings />,
-            items: [{ label: 'Связи сотрудников', to: '/settings/employee-identity', icon: <Link2 /> }],
+            items: [
+                { label: 'Связи сотрудников', to: '/settings/employee-identity', icon: <Link2 /> },
+                { label: 'Служебные аккаунты', to: '/settings/service-accounts', icon: <UserCog /> },
+            ],
         },
     },
 ]

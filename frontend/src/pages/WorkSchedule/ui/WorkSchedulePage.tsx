@@ -35,6 +35,8 @@ export function WorkSchedulePage() {
         isRefreshing,
         dataVersion,
         error,
+        canReorderEmployees,
+        onReorderEmployees,
     } = useWorkSchedulePage()
 
     return (
@@ -69,6 +71,8 @@ export function WorkSchedulePage() {
                     hasData={hasData}
                     periodLabel={periodLabel}
                     highlightedEmployeeId={highlightedEmployeeId}
+                    canReorderEmployees={canReorderEmployees}
+                    onReorderEmployees={onReorderEmployees}
                 />
             }
         />

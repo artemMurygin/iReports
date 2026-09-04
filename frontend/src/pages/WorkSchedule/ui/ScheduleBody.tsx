@@ -19,6 +19,13 @@ export type ScheduleBodyProps = {
     /** Сотрудник, на чью строку прокрутить и подсветить таблицу — переход по `?employeeId=` с
      * мобильного экрана «Отдел сегодня» (план, Фаза 9). `null` — обычное открытие страницы. */
     highlightedEmployeeId: number | null
+    /** Фаза 2, docs/employee-ordering-and-salary-filter — прокидываются только во вкладку
+     * «Календарь» (`ScheduleTable`): вкладка «Роли» (`RolesTable`) рендерит те же `employees` в
+     * уже сохранённом порядке, но своего drag-n-drop не заводит — двух независимых ручек
+     * перетаскивания на один и тот же общий порядок не нужно, см. `useWorkSchedulePage`'s
+     * комментарий у `handleReorderEmployees`. */
+    canReorderEmployees: boolean
+    onReorderEmployees: (activeEmployeeId: number, overEmployeeId: number) => void
 }
 
 /**
@@ -42,6 +49,8 @@ function ScheduleBody({
     hasData,
     periodLabel,
     highlightedEmployeeId,
+    canReorderEmployees,
+    onReorderEmployees,
 }: ScheduleBodyProps) {
     if (!hasData) {
         return (
@@ -61,6 +70,8 @@ function ScheduleBody({
                 dayAggregates={dayAggregates}
                 totalHours={totalHours}
                 highlightedEmployeeId={highlightedEmployeeId}
+                canReorderEmployees={canReorderEmployees}
+                onReorderEmployees={onReorderEmployees}
             />
         </>
     ) : (

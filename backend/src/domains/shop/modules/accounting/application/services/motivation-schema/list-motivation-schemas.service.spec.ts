@@ -35,7 +35,10 @@ describe('ListShopMotivationSchemasService', () => {
         });
     };
 
-    const buildService = (schemas: ShopMotivationSchema[]) => {
+    const buildService = (
+        schemas: ShopMotivationSchema[],
+        options?: { serviceAccountIds?: number[] },
+    ) => {
         const findAll = jest
             .fn<Promise<ShopMotivationSchema[]>, [any]>()
             .mockResolvedValue(schemas);
@@ -51,9 +54,15 @@ describe('ListShopMotivationSchemasService', () => {
                 departmentId: 1,
             },
         ]);
+        const findServiceAccountEmployeeIds = jest
+            .fn()
+            .mockResolvedValue(new Set(options?.serviceAccountIds ?? []));
         const directoryRepo: DirectoryRepositoryPort = {
             findDepartments,
             findEmployees,
+            updateEmployeesOrder: () => Promise.resolve(),
+            findServiceAccountEmployeeIds,
+            setServiceAccount: () => Promise.resolve(null),
         };
 
         const service = new ListShopMotivationSchemasService(
@@ -61,7 +70,13 @@ describe('ListShopMotivationSchemasService', () => {
             directoryRepo,
         );
 
-        return { service, findAll, findDepartments, findEmployees };
+        return {
+            service,
+            findAll,
+            findDepartments,
+            findEmployees,
+            findServiceAccountEmployeeIds,
+        };
     };
 
     it('отбрасывает схемы с 0 правилами направления shop', async () => {
@@ -87,6 +102,20 @@ describe('ListShopMotivationSchemasService', () => {
         expect(result).toEqual([]);
         expect(findDepartments).not.toHaveBeenCalled();
         expect(findEmployees).not.toHaveBeenCalled();
+    });
+
+    // docs/employee-ordering-and-salary-filter, Фаза 3 — зеркало
+    // list-motivation-schemas.service.spec.ts (domains/service), см. WHY
+    // там.
+    it('исключает схему, заведённую на сотрудника с isServiceAccount: true', async () => {
+        const schemas = [buildSchema('with-rules', 1, 1)];
+        const { service } = buildService(schemas, {
+            serviceAccountIds: [1],
+        });
+
+        const result = await service.execute({});
+
+        expect(result).toEqual([]);
     });
 
     it('резолвит имя цели из справочника сотрудников', async () => {

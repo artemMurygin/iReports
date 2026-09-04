@@ -37,7 +37,10 @@ describe('ListMotivationSchemasService', () => {
         });
     };
 
-    const buildService = (schemas: MotivationSchema[]) => {
+    const buildService = (
+        schemas: MotivationSchema[],
+        options?: { serviceAccountIds?: number[] },
+    ) => {
         const findAll = jest
             .fn<Promise<MotivationSchema[]>, [unknown]>()
             .mockResolvedValue(schemas);
@@ -65,9 +68,15 @@ describe('ListMotivationSchemasService', () => {
                 departmentId: 1,
             },
         ]);
+        const findServiceAccountEmployeeIds = jest
+            .fn()
+            .mockResolvedValue(new Set(options?.serviceAccountIds ?? []));
         const directoryRepo: DirectoryRepositoryPort = {
             findDepartments,
             findEmployees,
+            updateEmployeesOrder: () => Promise.resolve(),
+            findServiceAccountEmployeeIds,
+            setServiceAccount: () => Promise.resolve(null),
         };
 
         const service = new ListMotivationSchemasService(
@@ -75,7 +84,13 @@ describe('ListMotivationSchemasService', () => {
             directoryRepo,
         );
 
-        return { service, findAll, findDepartments, findEmployees };
+        return {
+            service,
+            findAll,
+            findDepartments,
+            findEmployees,
+            findServiceAccountEmployeeIds,
+        };
     };
 
     it('отбрасывает схемы с 0 правилами направления service (rules уже отфильтрованы репозиторием)', async () => {
@@ -103,6 +118,36 @@ describe('ListMotivationSchemasService', () => {
             expect(result).toEqual([]);
             expect(findDepartments).not.toHaveBeenCalled();
             expect(findEmployees).not.toHaveBeenCalled();
+        });
+    });
+
+    // docs/employee-ordering-and-salary-filter, Фаза 3, "не попадают ... в
+    // списки": схема, заведённая на служебный аккаунт, отсутствует в ответе
+    // целиком — не с заглушкой имени (в отличие от подлинно отсутствующего
+    // в Bitrix24 сотрудника, см. тест "подставляет фоллбек-имя" ниже).
+    it('исключает схему, заведённую на сотрудника с isServiceAccount: true', async () => {
+        await withRequestContext(async () => {
+            const schema = buildSchema('Employee', 42, 'Служебный оклад', 1);
+            const { service } = buildService([schema], {
+                serviceAccountIds: [42],
+            });
+
+            const result = await service.execute({});
+
+            expect(result).toEqual([]);
+        });
+    });
+
+    it('не исключает схему отдела, даже если её id совпадает с id служебного сотрудника', async () => {
+        await withRequestContext(async () => {
+            const schema = buildSchema('Department', 42, 'Оклад отдела', 1);
+            const { service } = buildService([schema], {
+                serviceAccountIds: [42],
+            });
+
+            const result = await service.execute({});
+
+            expect(result).toHaveLength(1);
         });
     });
 

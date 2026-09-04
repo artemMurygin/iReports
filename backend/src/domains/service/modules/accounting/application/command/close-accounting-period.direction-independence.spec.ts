@@ -36,6 +36,16 @@ import { MotivationSchema } from '@/domains/service/modules/accounting/domain/en
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
+
+// Ни один сценарий этого файла не заводит служебных аккаунтов
+// (docs/employee-ordering-and-salary-filter, Фаза 3) — фейк с пустым
+// множеством переиспользуется обоими ResolveEmployeeSalaryRulesService/
+// ResolveShopEmployeeSalaryRulesService ниже (изоляция направлений, которую
+// проверяет этот файл, признака служебного аккаунта не касается).
+const fakeDirectoryRepo = {
+    findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+} as unknown as DirectoryRepositoryPort;
 
 // Расчётный период магазина заводится и закрывается независимо от периода
 // сервиса (Фаза 11, issue #55/#56) — AccountingPeriod (Фаза 6) уже общая
@@ -257,6 +267,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
         const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
             motivationSchemaRepo,
             calculationDataSource,
+            fakeDirectoryRepo,
         );
         const salesPlanRepo: SalesPlanRepositoryPort = {
             insert: jest.fn(),
@@ -342,6 +353,7 @@ describe('CloseAccountingPeriodHandler / CloseShopAccountingPeriodHandler — н
                     findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
                     findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
                 } as unknown as ShopCalculationDataPort,
+                fakeDirectoryRepo,
             );
         const salesPlanRepo: ShopSalesPlanRepositoryPort = {
             insert: jest.fn(),

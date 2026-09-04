@@ -66,10 +66,15 @@ export class ShopSalaryAccrualRepository
     }
 
     async findByPeriod(period: string): Promise<ShopSalaryAccrual[]> {
+        // Без orderBy по employeeId (docs/employee-ordering-and-salary-filter,
+        // Фаза 1) — тот же WHY, что и в зеркальном SalaryAccrualRepository
+        // направления service: SalaryAccrual не связан с BitrixEmployee
+        // Prisma-relation'ом, единый order сотрудника здесь не выразить
+        // через orderBy. Единственный потребитель, которому важен порядок
+        // строк (ListShopSalaryAccrualsService), сортирует результат сам.
         const records = await this.client.salaryAccrual.findMany({
             where: { direction: 'shop', period },
             include: { lines: { include: { adjustments: true } } },
-            orderBy: { employeeId: 'asc' },
         });
         return records.map((record) => this.mapper.toDomain(record));
     }

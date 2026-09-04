@@ -36,7 +36,12 @@ describe('GetWorkScheduleShiftService', () => {
             .mockResolvedValue(overrides.employees ?? []);
         const directory: DirectoryRepositoryPort = {
             findDepartments: jest.fn().mockResolvedValue([]),
+            updateEmployeesOrder: jest.fn().mockResolvedValue(undefined),
             findEmployees,
+            findServiceAccountEmployeeIds: jest
+                .fn()
+                .mockResolvedValue(new Set<number>()),
+            setServiceAccount: jest.fn().mockResolvedValue(null),
         };
 
         const findByEmployeeIdsAndDateRange = jest
@@ -224,8 +229,38 @@ describe('GetWorkScheduleShiftService', () => {
 
         const result = await service.execute('2026-08-05');
 
-        expect(findEmployees).toHaveBeenCalledWith(undefined);
+        expect(findEmployees).toHaveBeenCalledWith(undefined, {
+            includeServiceAccounts: true,
+        });
         expect(result.departmentId).toBeNull();
+    });
+
+    // docs/employee-ordering-and-salary-filter, Фаза 3, "Не в скоупе":
+    // "Скрытие служебных сотрудников за пределами зарплатного раздела" —
+    // состав смены обязан продолжать показывать служебных аккаунтов без
+    // изменений, тот же явный контракт-тест, что и у
+    // GetMonthlyWorkScheduleService.
+    it('запрашивает findEmployees с includeServiceAccounts: true и не теряет служебного сотрудника из состава смены', async () => {
+        const employees = [
+            {
+                id: 1,
+                firstName: 'Служебный',
+                lastName: 'Аккаунт',
+                departmentId: 1,
+            },
+        ];
+        const entries = [buildEntry(1, '2026-08-05', 'WORKING', 8)];
+        const { service, findEmployees } = buildService({
+            employees,
+            entries,
+        });
+
+        const result = await service.execute('2026-08-05', 1);
+
+        expect(findEmployees).toHaveBeenCalledWith(1, {
+            includeServiceAccounts: true,
+        });
+        expect(result.onShift.map((e) => e.employeeId)).toEqual([1]);
     });
 
     it('число запросов к портам фиксировано (по одному вызову) независимо от числа сотрудников', async () => {

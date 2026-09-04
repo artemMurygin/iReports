@@ -14,6 +14,9 @@ import { GetDepartmentBalancesService } from './get-department-balances.service'
 describe('GetDepartmentBalancesService', () => {
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set<number>()),
+        setServiceAccount: () => Promise.resolve(null),
         findEmployees: (departmentId) =>
             Promise.resolve(
                 [

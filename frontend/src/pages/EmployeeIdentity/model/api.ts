@@ -4,7 +4,7 @@ import type {
     CreateEmployeeIdentityRequest,
     EmployeeIdentityResponse,
     ListDepartmentsResponse,
-    ListEmployeesResponse,
+    ListEmployeesWithServiceAccountResponse,
     UpdateEmployeeIdentityRequest,
 } from 'ireports-contracts'
 
@@ -58,13 +58,21 @@ export const api = {
                     }),
         }),
 
+    // GET .../employees/service-accounts (docs/employee-ordering-and-salary-filter, Фаза 4), а
+    // НЕ обычный GET .../employees: тот теперь (Фаза 3) намеренно исключает служебные
+    // аккаунты — а эта страница обязана продолжать их видеть (PRD "Не в скоупе": "Скрытие
+    // служебных сотрудников за пределами зарплатного раздела"). Сам флаг isServiceAccount
+    // здесь не используется (строка таблицы типизирована `EmployeeResponse`, см.
+    // `model/useEmployeeIdentities.ts` — расширенный ответ структурно ему соответствует).
     getEmployees: () =>
         queryOptions({
             queryKey: ['employee-identity', 'employees'],
             staleTime: 5 * 60 * 1000,
-            queryFn: ({ signal }): Promise<ListEmployeesResponse> =>
+            queryFn: ({ signal }): Promise<ListEmployeesWithServiceAccountResponse> =>
                 apiInstance
-                    .get<ListEmployeesResponse>('/v1/directory/employees', { signal })
+                    .get<ListEmployeesWithServiceAccountResponse>('/v1/directory/employees/service-accounts', {
+                        signal,
+                    })
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить список сотрудников ' + serverMessage(error))

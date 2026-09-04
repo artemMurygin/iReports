@@ -142,8 +142,19 @@ export class ShopCalculationDataRepository
         departmentId: number,
     ): Promise<{ id: number; name: string }[]> {
         const records = await this.client.bitrixEmployee.findMany({
-            where: { departmentId },
+            // isServiceAccount: false (docs/employee-ordering-and-salary-filter,
+            // Фаза 3) — зеркало ServiceCalculationDataRepository.findEmployeesInDepartment
+            // (см. WHY там): единственный источник состава отдела и для
+            // отчёта по зарплате отдела, и для расчёта закрытия периода по
+            // схеме отдела.
+            where: { departmentId, isServiceAccount: false },
             select: { id: true, firstName: true, lastName: true },
+            // Единый порядок сотрудников (docs/employee-ordering-and-salary-filter,
+            // Фаза 1) — тот же order, что и в DirectoryRepository.findEmployees,
+            // а не прежний порядок БД по умолчанию (без orderBy): отчёт по
+            // зарплате отдела (GetShopDepartmentSalaryReportService) строит
+            // employees[] в точности в порядке этого списка.
+            orderBy: { order: 'asc' },
         });
         return records.map((record) => ({
             id: record.id,

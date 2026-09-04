@@ -9,6 +9,7 @@ import type { ServiceCalculationDataPort } from '@/domains/service/modules/accou
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import type { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { Period } from '@/shared/domain/period.value-object';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
@@ -107,9 +108,17 @@ describe('CloseAccountingPeriodHandler', () => {
         const calculationDataSource = {
             findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
         } as unknown as ServiceCalculationDataPort;
+        // Ни один тест этого файла не заводит служебных аккаунтов
+        // (docs/employee-ordering-and-salary-filter, Фаза 3) — пустое
+        // множество.
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+        } as unknown as DirectoryRepositoryPort;
         const salaryRulesResolver = new ResolveEmployeeSalaryRulesService(
             motivationSchemaRepo,
             calculationDataSource,
+            directoryRepo,
         );
 
         const salesPlanRepo: SalesPlanRepositoryPort = {

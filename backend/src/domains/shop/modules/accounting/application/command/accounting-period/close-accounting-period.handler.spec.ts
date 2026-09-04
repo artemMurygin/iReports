@@ -25,6 +25,7 @@ import type { EventEmitter2 } from '@nestjs/event-emitter';
 import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events/salary-accrual-documents-created.domain-event';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 
 // Зеркало domains/service/modules/accounting/application/command/
 // close-accounting-period.handler.spec.ts (только shop-кейсы) — независимый
@@ -99,12 +100,17 @@ describe('CloseShopAccountingPeriodHandler', () => {
             initializeName: jest.fn(),
         };
 
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+        } as unknown as DirectoryRepositoryPort;
         const salaryRulesResolver = new ResolveShopEmployeeSalaryRulesService(
             shopMotivationSchemaRepo,
             {
                 findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
                 findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
             } as unknown as ShopCalculationDataPort,
+            directoryRepo,
         );
 
         const salesPlanRepo: ShopSalesPlanRepositoryPort = {

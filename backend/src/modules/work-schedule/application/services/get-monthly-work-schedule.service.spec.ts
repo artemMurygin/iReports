@@ -38,7 +38,12 @@ describe('GetMonthlyWorkScheduleService', () => {
             .mockResolvedValue(overrides.employees ?? []);
         const directory: DirectoryRepositoryPort = {
             findDepartments: jest.fn().mockResolvedValue([]),
+            updateEmployeesOrder: jest.fn().mockResolvedValue(undefined),
             findEmployees,
+            findServiceAccountEmployeeIds: jest
+                .fn()
+                .mockResolvedValue(new Set<number>()),
+            setServiceAccount: jest.fn().mockResolvedValue(null),
         };
 
         const findByEmployeeIdsAndDateRange = jest
@@ -142,8 +147,45 @@ describe('GetMonthlyWorkScheduleService', () => {
 
         const result = await service.execute('2026-08');
 
-        expect(findEmployees).toHaveBeenCalledWith(undefined);
+        expect(findEmployees).toHaveBeenCalledWith(undefined, {
+            includeServiceAccounts: true,
+        });
         expect(result.departmentId).toBeNull();
+    });
+
+    // docs/employee-ordering-and-salary-filter, Фаза 3, "Не в скоупе":
+    // "Скрытие служебных сотрудников за пределами зарплатного раздела" —
+    // график работы обязан продолжать показывать служебных аккаунтов без
+    // изменений. Явная проверка на уровне контракта с DirectoryRepositoryPort:
+    // findEmployees запрашивается с { includeServiceAccounts: true }, а
+    // сотрудник, отмеченный как служебный (что и означает его присутствие
+    // в фейке — DirectoryRepositoryPort сам решает, кого вернуть при этой
+    // опции), остаётся строкой таблицы.
+    it('запрашивает findEmployees с includeServiceAccounts: true и не теряет служебного сотрудника из ответа', async () => {
+        const employees = [
+            {
+                id: 1,
+                firstName: 'Иван',
+                lastName: 'Иванов',
+                departmentId: 1,
+            },
+            {
+                id: 2,
+                firstName: 'Служебный',
+                lastName: 'Аккаунт',
+                departmentId: 1,
+            },
+        ];
+        const { service, findEmployees } = buildService({
+            employees,
+        });
+
+        const result = await service.execute('2026-08', 1);
+
+        expect(findEmployees).toHaveBeenCalledWith(1, {
+            includeServiceAccounts: true,
+        });
+        expect(result.employees.map((e) => e.employeeId)).toEqual([1, 2]);
     });
 
     it('«Человек в смене» и фонд часов дня агрегируются по всем сотрудникам', async () => {

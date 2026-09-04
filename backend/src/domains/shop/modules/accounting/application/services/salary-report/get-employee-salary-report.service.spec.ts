@@ -22,6 +22,7 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { ShopSalaryAccrualRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 
 // Отчёт по зарплате сотрудника магазина (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит
@@ -89,12 +90,17 @@ describe('GetShopEmployeeSalaryReportService', () => {
         // сотрудника всегда нет отдела (department-схемы здесь не
         // проверяются), поэтому findEmployeeDepartmentId возвращает null и
         // forEmployee() сводится ровно к findByEmployee(), как и раньше.
+        const directoryRepo = {
+            findServiceAccountEmployeeIds: () =>
+                Promise.resolve(new Set<number>()),
+        } as unknown as DirectoryRepositoryPort;
         const salaryRulesResolver = new ResolveShopEmployeeSalaryRulesService(
             shopMotivationSchemaRepo,
             {
                 findEmployeeDepartmentId: jest.fn().mockResolvedValue(null),
                 findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
             } as unknown as ShopCalculationDataPort,
+            directoryRepo,
         );
 
         const findByPeriod = jest

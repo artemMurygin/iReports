@@ -23,6 +23,7 @@ describe('GetBalanceSummaryService', () => {
             lastName: 'Петров',
             departmentId: 5,
             position: 'Инженер',
+            isServiceAccount: false,
         },
         {
             id: 43,
@@ -30,6 +31,7 @@ describe('GetBalanceSummaryService', () => {
             lastName: 'Сидоров',
             departmentId: 5,
             position: null,
+            isServiceAccount: false,
         },
         {
             id: 44,
@@ -37,18 +39,46 @@ describe('GetBalanceSummaryService', () => {
             lastName: 'Кузнецова',
             departmentId: 6,
             position: 'Продавец',
+            isServiceAccount: false,
+        },
+        // Служебный аккаунт (docs/employee-ordering-and-salary-filter,
+        // Фаза 3) — исключается фейком default-фильтром ниже, тем же
+        // приёмом, что и реальный DirectoryRepository.findEmployees.
+        {
+            id: 45,
+            firstName: 'Служебный',
+            lastName: 'Аккаунт',
+            departmentId: 5,
+            position: null,
+            isServiceAccount: true,
         },
     ];
     const fakeDirectoryRepo: DirectoryRepositoryPort = {
         findDepartments: () => Promise.resolve(departments),
-        findEmployees: (departmentId) =>
+        updateEmployeesOrder: () => Promise.resolve(),
+        findEmployees: (departmentId, options) =>
             Promise.resolve(
-                employees.filter(
-                    (employee) =>
-                        departmentId === undefined ||
-                        employee.departmentId === departmentId,
+                employees
+                    .filter(
+                        (employee) =>
+                            departmentId === undefined ||
+                            employee.departmentId === departmentId,
+                    )
+                    .filter(
+                        (employee) =>
+                            options?.includeServiceAccounts ||
+                            !employee.isServiceAccount,
+                    ),
+            ),
+        findServiceAccountEmployeeIds: () =>
+            Promise.resolve(
+                new Set(
+                    employees
+                        .filter((e) => e.isServiceAccount)
+                        .map((e) => e.id),
                 ),
             ),
+        setServiceAccount: () => Promise.resolve(null),
     };
     // Сотрудник 43 уволен (BitrixEmployee.isActive = false), но остаётся в
     // списке из-за ненулевого баланса (PRD, "уволенный сотрудник с
@@ -190,6 +220,29 @@ describe('GetBalanceSummaryService', () => {
             toPay: { amount: 5000, count: 1 },
             debt: { amount: -2000, count: 1 },
         });
+    });
+
+    // docs/employee-ordering-and-salary-filter, Фаза 3, "не попадают ... в
+    // списки, ни в расчёты, ни в итоговые суммы": сотрудник 45
+    // (isServiceAccount: true) исключается findEmployees() ПО УМОЛЧАНИЮ —
+    // сервис не задаёт includeServiceAccounts, поэтому даже с крупным
+    // остатком он не появляется ни в employees[], ни влияет на totals.
+    it('служебный аккаунт с ненулевым балансом не попадает в список и не входит в итоги', async () => {
+        const { service, transactionRepo } = build();
+        await transactionRepo.insertMany([
+            manual(42, 1000, new Date('2026-07-01T10:00:00.000Z')),
+            manual(45, 999999, new Date('2026-07-01T10:00:00.000Z')),
+        ]);
+
+        const response = await service.execute('2026-07', {
+            departmentId: 5,
+        });
+
+        expect(response.employees.some((row) => row.employeeId === 45)).toBe(
+            false,
+        );
+        expect(response.totals.balance).toBe(1000);
+        expect(response.totals.toPay).toEqual({ amount: 1000, count: 1 });
     });
 
     it('уволенный сотрудник с ненулевым балансом остаётся в списке с isDismissed: true', async () => {

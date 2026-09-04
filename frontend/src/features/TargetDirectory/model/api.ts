@@ -12,6 +12,14 @@ import { ApiError } from '@/shared/errors/apiError.ts'
  * (frontend/CLAUDE.md), so this became a `features/TargetDirectory` module instead — see this
  * feature's `index.ts` for why it has no root UI component of its own.
  */
+// Экспортирован для переиспользования вне `useQuery` (frontend/CLAUDE.md, тот же приём, что и
+// `WORK_SCHEDULE_QUERY_KEY_PREFIX` в `pages/WorkSchedule/model/api.ts`) — reorder-мутация
+// сотрудников (`pages/WorkSchedule/model/useReorderEmployees.ts`, docs/employee-ordering-and-
+// salary-filter, Фаза 2) кладёт свежий ответ PATCH .../employees/order прямо в этот кэш
+// (`queryClient.setQueryData`), чтобы все страницы, использующие `useEmployees()` (справочник
+// выбора сотрудника при создании отчёта и т.д.), сразу увидели новый порядок без лишнего GET.
+export const EMPLOYEES_QUERY_KEY = ['target-directory', 'employees'] as const
+
 export const api = {
     getDepartments: () =>
         queryOptions({
@@ -28,7 +36,7 @@ export const api = {
 
     getEmployees: () =>
         queryOptions({
-            queryKey: ['target-directory', 'employees'],
+            queryKey: EMPLOYEES_QUERY_KEY,
             staleTime: 5 * 60 * 1000,
             queryFn: ({ signal }): Promise<ListEmployeesResponse> =>
                 apiInstance

@@ -12,6 +12,7 @@ import { SalaryAccrualDocumentPage } from '@/pages/SalaryAccrualDocument'
 import { EmployeeBalancePage } from '@/pages/EmployeeBalance'
 import { EmployeeSettlementsPage } from '@/pages/EmployeeSettlements'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
+import { ServiceAccountsPage } from '@/pages/ServiceAccounts'
 import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
 import { UiKitPreview } from '@/pages/UiKitPreview'
@@ -126,12 +127,18 @@ export const router = createBrowserRouter([
                 path: 'salaries/rules/:direction/:id',
                 element: <SalaryRuleDetailPage />,
             },
-            // Раздел «Настройки» (см. `app/navigation.tsx`, секция «Настройки»). Вложенный путь
-            // задаётся одной строкой без ведущего слэша — отдельный layout-роут для `/settings`
-            // не нужен, пока в разделе одна страница.
+            // Раздел «Настройки» (см. `app/navigation.tsx`, секция «Настройки»). Вложенные пути
+            // задаются отдельными строками без ведущего слэша — отдельный layout-роут для
+            // `/settings` не заведён, оба пункта раздела регистрируются рядом друг с другом.
             {
                 path: 'settings/employee-identity',
                 element: <EmployeeIdentityPage />,
+            },
+            {
+                // Переключатель «служебный аккаунт» (docs/employee-ordering-and-salary-filter,
+                // Фаза 4) — второй пункт раздела «Настройки».
+                path: 'settings/service-accounts',
+                element: <ServiceAccountsPage />,
             },
         ],
     },

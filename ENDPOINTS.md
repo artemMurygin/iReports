@@ -51,7 +51,31 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
 - `GET /v1/directory/departments` — список отделов (`id`/`name`)
 - `GET /v1/directory/employees?departmentId=` — список сотрудников (`id`/`name`/`departmentId`),
   `name` — `firstName + lastName`, собранные на бэкенде; `departmentId` — опциональный фильтр, без него
-  отдаются сотрудники всех отделов
+  отдаются сотрудники всех отделов. Сортировка — по локальному полю `order`
+  (`BitrixEmployee.order`, независимому от синхронизации с Bitrix24), единая для этого справочника,
+  отчёта по зарплате, взаиморасчётов/баланса и списка зарплатных схем (docs/employee-ordering-and-salary-filter,
+  Фаза 1)
+- `PATCH /v1/directory/employees/order` — сохранить новый порядок сотрудников: `{ items: [{ employeeId,
+  order }] }` (минимум один элемент), ответ — весь справочник сотрудников уже в применённом порядке (тот
+  же список, что отдаёт `GET .../employees` без фильтра по отделу). Порядок глобальный (общий для всей
+  компании, не на отдел/страницу); доступно любому авторизованному пользователю без отдельных прав,
+  эндпоинт без гарда (docs/employee-ordering-and-salary-filter, Фаза 1)
+- `GET /v1/directory/employees` по умолчанию исключает сотрудников с `isServiceAccount: true`
+  («служебные аккаунты») — этим списком питаются все зарплатные справочники/списки (сам справочник
+  выбора сотрудника, отчёт по зарплате, взаиморасчёты/баланс, зарплатные схемы). Признак локальный,
+  независимый от синхронизации с Bitrix24 и от `isActive` (docs/employee-ordering-and-salary-filter,
+  Фаза 3)
+- `PATCH /v1/directory/employees/:id/service-account` — включить/выключить признак «служебный
+  аккаунт» у сотрудника: `{ isServiceAccount: boolean }`, ответ — сотрудник целиком
+  (`id`/`name`/`departmentId`/`isServiceAccount`). Сотрудник не найден → `404`. Доступно любому
+  авторизованному пользователю без отдельных прав, эндпоинт без гарда (docs/employee-ordering-and-salary-filter,
+  Фаза 3)
+- `GET /v1/directory/employees/service-accounts` — полный справочник сотрудников (ВСЕ, включая
+  служебные аккаунты) с их текущим `isServiceAccount` — в отличие от `GET .../employees` выше,
+  ничего не фильтрует. Питает список с переключателем «исключить из зарплаты» на странице настроек
+  (`/settings/service-accounts`) и справочник сотрудников на странице «Связи сотрудников»
+  (`/settings/employee-identity`, которая обязана продолжать видеть служебные аккаунты)
+  (docs/employee-ordering-and-salary-filter, Фаза 4)
 
 ## modules/employee-identity (`/v1/employee-identity`)
 Идентификация сотрудника между Bitrix24 / RemOnline / МойСклад (Фаза 2). Эндпоинты блока временно

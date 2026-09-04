@@ -34,15 +34,30 @@ export class ListSalaryAccrualsService {
         period: string,
     ): Promise<SalaryAccrualListResponse> {
         const periodValue = Period.create(period).getValue();
-        const accruals = await this.accrualRepo.findByDirectionAndPeriod(
-            direction,
-            periodValue,
+        const [accruals, employees] = await Promise.all([
+            this.accrualRepo.findByDirectionAndPeriod(direction, periodValue),
+            this.directoryRepo.findEmployees(),
+        ]);
+        const employeesInfo = toEmployeeInfoMap(employees);
+        // Единый порядок сотрудников (docs/employee-ordering-and-salary-filter,
+        // Фаза 1) — findByDirectionAndPeriod сам не сортирует по сотруднику
+        // (см. WHY в SalaryAccrualRepository), поэтому строки ведомости
+        // упорядочиваются здесь по позиции сотрудника в уже отсортированном
+        // по order справочнике (DirectoryRepository.findEmployees).
+        // Сотрудник, которого больше нет в справочнике (unknownEmployeeInfo
+        // ниже), уходит в конец списка.
+        const employeeOrder = new Map(
+            employees.map((employee, index) => [employee.id, index]),
         );
-        const employees = await resolveEmployees(this.directoryRepo);
-        const items = accruals.map((accrual) =>
+        const orderedAccruals = [...accruals].sort(
+            (a, b) =>
+                (employeeOrder.get(a.employeeId) ?? Infinity) -
+                (employeeOrder.get(b.employeeId) ?? Infinity),
+        );
+        const items = orderedAccruals.map((accrual) =>
             this.mapper.toListItemResponse(
                 accrual,
-                employees.get(accrual.employeeId) ??
+                employeesInfo.get(accrual.employeeId) ??
                     SalaryAccrualMapper.unknownEmployeeInfo(accrual.employeeId),
             ),
         );
@@ -55,11 +70,9 @@ export class ListSalaryAccrualsService {
     }
 }
 
-// Один запрос к справочнику на весь список, а не по сотруднику (нет N+1).
-export async function resolveEmployees(
-    directoryRepo: DirectoryRepositoryPort,
-): Promise<Map<number, SalaryAccrualEmployeeInfo>> {
-    const employees = await directoryRepo.findEmployees();
+function toEmployeeInfoMap(
+    employees: Awaited<ReturnType<DirectoryRepositoryPort['findEmployees']>>,
+): Map<number, SalaryAccrualEmployeeInfo> {
     return new Map(
         employees.map((employee) => [
             employee.id,
@@ -69,4 +82,11 @@ export async function resolveEmployees(
             },
         ]),
     );
+}
+
+// Один запрос к справочнику на весь список, а не по сотруднику (нет N+1).
+export async function resolveEmployees(
+    directoryRepo: DirectoryRepositoryPort,
+): Promise<Map<number, SalaryAccrualEmployeeInfo>> {
+    return toEmployeeInfoMap(await directoryRepo.findEmployees());
 }

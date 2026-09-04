@@ -71,10 +71,19 @@ export class SalaryAccrualRepository
         direction: AccountingDirection,
         period: string,
     ): Promise<SalaryAccrual[]> {
+        // Без orderBy по employeeId (docs/employee-ordering-and-salary-filter,
+        // Фаза 1): SalaryAccrual не связан с BitrixEmployee Prisma-relation'ом
+        // (общая с shop таблица, employeeId — обычный Int, см. WHY в
+        // backend/CLAUDE.md "Общие таблицы между service и shop"), поэтому
+        // единый order сотрудника здесь не выразить через orderBy на
+        // связанном поле. Единственный потребитель, которому важен порядок
+        // строк (ListSalaryAccrualsService, ведомость начислений периода),
+        // сортирует результат сам — по order уже загруженного им списка
+        // сотрудников (см. WHY там); остальные потребители (закрытие
+        // периода, сводка баланса и т.п.) порядок не используют.
         const records = await this.client.salaryAccrual.findMany({
             where: { direction, period },
             include: { lines: { include: { adjustments: true } } },
-            orderBy: { employeeId: 'asc' },
         });
         return records.map((record) => this.mapper.toDomain(record));
     }
