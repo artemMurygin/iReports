@@ -1,12 +1,12 @@
 import { AggregateRoot } from '@/shared/domain/aggregate-root.base';
 import { randomUUID } from 'crypto';
 import { AggregateID } from '@/shared/domain/entity.base';
-import { MotivationSchemaCreatedDomainEvent } from '../events/motivation-schema-created.domain-event';
+import { MotivationSchemaCreatedDomainEvent } from '../../events/motivation-schema-created.domain-event';
 import {
     MotivationSchemaCreateProps,
     MotivationSchemaProps,
-} from '../types/motivation-schema.types';
-import { MotivationTarget } from '../value-objects/motivation-target.value-object';
+} from '../../types/motivation-schema.types';
+import { MotivationTarget } from '../../value-objects/motivation-target.value-object';
 
 export class MotivationSchema extends AggregateRoot<MotivationSchemaProps> {
     declare protected readonly _id: AggregateID;

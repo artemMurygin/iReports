@@ -1,7 +1,7 @@
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { GetDepartmentBalancesService } from './get-department-balances.service';

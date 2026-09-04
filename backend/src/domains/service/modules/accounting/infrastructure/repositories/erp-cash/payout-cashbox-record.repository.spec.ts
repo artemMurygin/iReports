@@ -1,6 +1,6 @@
 import { PayoutCashboxRecordRepository } from './payout-cashbox-record.repository';
 import { Prisma } from '../../../../../../../../prisma/generated/prisma/schema/client';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 import { PayoutCashboxRecordAlreadyExistsException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { DatabaseService } from '@/infrustructure/database/database.service';

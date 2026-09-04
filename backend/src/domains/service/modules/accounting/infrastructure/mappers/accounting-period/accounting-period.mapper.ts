@@ -4,7 +4,7 @@ import {
     Prisma,
 } from '../../../../../../../../prisma/generated/prisma/schema/client';
 import { Mapper } from '@/shared/domain/mapper.interface';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import { Period } from '@/shared/domain/period.value-object';
 import { PeriodClosure } from '@/domains/service/modules/accounting/domain/value-objects/period-closure.value-object';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';

@@ -5,7 +5,7 @@ import { ReorderEmployeesHandler } from '@/modules/directory/application/command
 import { ReorderEmployeesCommand } from '@/modules/directory/application/command/reorder-employees.command';
 import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/salary-accrual/list-salary-accruals.service';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { GetDepartmentBalancesService } from '@/modules/employee-balance/application/services/get-department-balances.service';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 

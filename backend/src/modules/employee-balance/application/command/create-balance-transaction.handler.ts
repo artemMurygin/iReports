@@ -17,7 +17,7 @@ import type { ErpCashDocumentPort as ShopErpCashDocumentPort } from '@/domains/s
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import {
     buildErpCashDocumentPurpose,

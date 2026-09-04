@@ -6,8 +6,8 @@ import type {
     ErpCashDocumentPort,
 } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import {
     BalanceTransactionNotFoundException,
     BalanceTransactionNotPayoutException,

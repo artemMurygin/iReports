@@ -11,7 +11,7 @@ import type { BuildServiceCalculationContextService } from '@/domains/service/mo
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { Period } from '@/shared/domain/period.value-object';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { UnapprovedSalesPlanRowsException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
@@ -21,7 +21,7 @@ import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/applica
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculation/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import {
     PeriodAlreadyClosedException,
     PeriodNotExpiredException,

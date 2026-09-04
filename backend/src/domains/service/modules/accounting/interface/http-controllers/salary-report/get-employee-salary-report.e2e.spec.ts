@@ -26,7 +26,7 @@ import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/a
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';

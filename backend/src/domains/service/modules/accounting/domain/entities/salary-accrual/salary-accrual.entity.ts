@@ -10,7 +10,7 @@ import {
     SalaryAccrualNotAccruedException,
     SalaryAccrualNotPaidException,
     SalaryAccrualPaidException,
-} from '../exceptions/salary-accrual.exception';
+} from '../../exceptions/salary-accrual.exception';
 import {
     SalaryAccrualLine,
     SalaryAccrualSourceLine,

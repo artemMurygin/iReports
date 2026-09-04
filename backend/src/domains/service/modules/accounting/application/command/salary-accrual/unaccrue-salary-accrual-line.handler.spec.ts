@@ -5,7 +5,7 @@ import { UnaccrueSalaryAccrualLineCommand } from './unaccrue-salary-accrual-line
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import {
     SalaryAccrualLineNotAccruedException,
     SalaryAccrualPaidException,

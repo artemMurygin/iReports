@@ -87,8 +87,8 @@ import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infras
 import { ErpCashConfigProvider } from '@/domains/service/modules/accounting/infrastructure/config/erp-cash-config.provider';
 import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
-import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
-import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period-closed.event-handler';
+import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema/motivation-schema-created.event-handler';
+import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period/accounting-period-closed.event-handler';
 import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/events/salary-accrual-documents-created.event-handler';
 
 // SalesModule — вход SALES_PLAN_REPOSITORY: закрытие периода читает

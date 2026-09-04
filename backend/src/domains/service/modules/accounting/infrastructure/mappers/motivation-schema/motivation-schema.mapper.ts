@@ -9,7 +9,7 @@ import {
     SalaryRule as SalaryRuleRecord,
 } from '../../../../../../../../prisma/generated/prisma/schema/client';
 import { Mapper } from '@/shared/domain/mapper.interface';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { MotivationTarget } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
 import { SalaryRuleMapper } from './salary-rule.mapper';
 

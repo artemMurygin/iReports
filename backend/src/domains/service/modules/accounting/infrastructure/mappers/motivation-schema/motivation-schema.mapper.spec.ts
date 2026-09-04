@@ -1,5 +1,5 @@
 import { MotivationSchemaMapper } from './motivation-schema.mapper';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 describe('MotivationSchemaMapper', () => {

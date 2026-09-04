@@ -17,7 +17,7 @@ import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/ap
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { WorkScheduleEntry } from '@/modules/work-schedule/domain/entities/work-schedule-entry.entity';
 import { ScheduleDate } from '@/modules/work-schedule/domain/value-objects/schedule-date.value-object';

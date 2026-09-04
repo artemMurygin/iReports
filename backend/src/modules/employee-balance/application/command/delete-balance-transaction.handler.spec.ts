@@ -2,8 +2,8 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employee-operation-lock';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 import {
     BalanceTransactionNotDeletableException,
     BalanceTransactionNotFoundException,

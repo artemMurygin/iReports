@@ -7,8 +7,8 @@ import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/acc
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/calculation/accounting-calculation-cache.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';

@@ -40,8 +40,8 @@ import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/dire
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';

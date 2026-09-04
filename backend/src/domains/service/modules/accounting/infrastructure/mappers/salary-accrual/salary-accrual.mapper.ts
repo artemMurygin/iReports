@@ -12,9 +12,9 @@ import {
 } from '../../../../../../../../prisma/generated/prisma/schema/client';
 import { Period } from '@/shared/domain/period.value-object';
 import type { CalculationSourceRef } from '@/shared/domain/calculation-line';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual-line.entity';
-import { SalaryAccrualLineAdjustment } from '@/domains/service/modules/accounting/domain/entities/salary-accrual-line-adjustment.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual-line.entity';
+import { SalaryAccrualLineAdjustment } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual-line-adjustment.entity';
 
 export type SalaryAccrualRecordWithLines = SalaryAccrualRecord & {
     lines: (SalaryAccrualLineRecord & {

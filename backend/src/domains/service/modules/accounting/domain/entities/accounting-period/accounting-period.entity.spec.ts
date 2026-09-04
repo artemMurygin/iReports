@@ -2,8 +2,8 @@ import { AccountingPeriod } from './accounting-period.entity';
 import {
     PeriodAlreadyClosedException,
     PeriodNotClosedException,
-} from '../exceptions/accounting-period.exception';
-import { AccountingPeriodClosedDomainEvent } from '../events/accounting-period-closed.domain-event';
+} from '../../exceptions/accounting-period.exception';
+import { AccountingPeriodClosedDomainEvent } from '../../events/accounting-period-closed.domain-event';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 describe('AccountingPeriod', () => {

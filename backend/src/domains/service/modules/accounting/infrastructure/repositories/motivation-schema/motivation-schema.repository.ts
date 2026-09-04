@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import { MotivationSchemaMapper } from '../../mappers/motivation-schema/motivation-schema.mapper';

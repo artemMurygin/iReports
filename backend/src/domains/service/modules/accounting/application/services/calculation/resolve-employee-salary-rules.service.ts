@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { mergeEmployeeSalaryRules } from '@/shared/domain/employee-salary-rules';
 import { AccountingCacheFreshness } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';

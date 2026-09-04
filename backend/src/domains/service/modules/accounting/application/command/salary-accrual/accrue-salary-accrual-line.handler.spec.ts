@@ -4,8 +4,8 @@ import type { DirectoryRepositoryPort } from '@/modules/directory/application/po
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { Period } from '@/shared/domain/period.value-object';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual-line.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual-line.entity';
 import {
     SalaryAccrualLineAlreadyAccruedException,
     SalaryAccrualNotFoundException,

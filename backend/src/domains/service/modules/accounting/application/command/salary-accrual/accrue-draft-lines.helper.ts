@@ -1,6 +1,6 @@
 import type { CommandBus } from '@nestjs/cqrs';
 import type { SalaryAccrualLineFailure } from 'ireports-contracts';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import type { SalaryAccrualEmployeeInfo } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { AccrueSalaryAccrualLineCommand } from './accrue-salary-accrual-line.command';

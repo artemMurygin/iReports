@@ -1,5 +1,5 @@
 import { SalaryAccrualMapper } from './salary-accrual.mapper';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 describe('SalaryAccrualMapper', () => {

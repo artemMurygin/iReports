@@ -5,7 +5,7 @@ import { CreateMotivationSchemaCommand } from './create-motivation-schema.comman
 import { CreateSalaryRuleCommand } from './create-salary-rule.command';
 import type { MotivationSchemaRepositoryPort } from '../../ports/motivation-schema/motivation-schema.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 
 describe('CreateMotivationSchemaHandler', () => {
     const buildHandler = (existingId: string | null = null) => {

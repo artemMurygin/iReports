@@ -4,7 +4,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import {
     SalaryAccrualNotAccruedException,
     SalaryAccrualNotPaidException,
-} from '../exceptions/salary-accrual.exception';
+} from '../../exceptions/salary-accrual.exception';
 
 describe('SalaryAccrual', () => {
     const line = (ruleId: string, amount: number) => ({

@@ -7,7 +7,7 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculation/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import {
     PeriodAlreadyClosedException,
     PeriodNotExpiredException,
@@ -28,7 +28,7 @@ import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events/salary-accrual-documents-created.domain-event';
 import { AccountingPeriodMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/accounting-period/accounting-period.mapper';
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';

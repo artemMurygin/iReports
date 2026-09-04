@@ -8,7 +8,7 @@ import {
     SalaryAccrualLineNotAccruedException,
     SalaryAccrualLineNotDraftException,
     SalaryAccrualLineNotPaidException,
-} from '../exceptions/salary-accrual.exception';
+} from '../../exceptions/salary-accrual.exception';
 import { SalaryAccrualLineAdjustment } from './salary-accrual-line-adjustment.entity';
 
 // Строка документа начисления — одна на зарплатное правило из разбивки

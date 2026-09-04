@@ -6,7 +6,7 @@ import type { MotivationSchemaRepositoryPort } from '../../ports/motivation-sche
 import { MOTIVATION_SCHEMA_REPOSITORY } from '../../ports/motivation-schema/motivation-schema.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { SalaryRuleFactory } from '@/domains/service/modules/accounting/domain/factories/salary-rule.factory';
 import { MotivationResponse } from 'ireports-contracts';
 

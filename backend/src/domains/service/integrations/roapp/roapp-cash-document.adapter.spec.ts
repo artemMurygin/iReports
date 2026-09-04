@@ -1,6 +1,6 @@
 import { BadGatewayException } from '@nestjs/common';
 import { RoappCashDocumentAdapter } from './roapp-cash-document.adapter';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 import {
     EmployeeErpIdentityMissingException,
     ErpCashConfigMissingException,

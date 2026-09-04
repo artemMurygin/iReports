@@ -1,4 +1,4 @@
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 
 // Порт объявляет только реально используемые операции (insert из
 // CreateMotivationSchemaHandler, findByEmployee из

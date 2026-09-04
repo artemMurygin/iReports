@@ -1,4 +1,4 @@
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 
 // Локальная персистентность связки «движение баланса → документ ERP» (PRD 3,
 // Фаза 11) — НЕ путать с ErpCashDocumentPort (application/ports/erp-cash-document.port.ts

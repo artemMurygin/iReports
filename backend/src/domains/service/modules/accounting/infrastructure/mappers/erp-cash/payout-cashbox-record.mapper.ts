@@ -4,7 +4,7 @@ import {
     Prisma,
 } from '../../../../../../../../prisma/generated/prisma/schema/client';
 import { Mapper } from '@/shared/domain/mapper.interface';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 
 export class PayoutCashboxRecordMapper implements Mapper<
     Cashbox,

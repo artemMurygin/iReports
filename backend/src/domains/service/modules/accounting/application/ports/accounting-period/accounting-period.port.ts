@@ -1,4 +1,4 @@
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 
 export interface AccountingPeriodRepositoryPort {

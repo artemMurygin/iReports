@@ -4,12 +4,12 @@ import { AggregateID } from '@/shared/domain/entity.base';
 import { Period } from '@/shared/domain/period.value-object';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
-import { PeriodClosure } from '../value-objects/period-closure.value-object';
+import { PeriodClosure } from '../../value-objects/period-closure.value-object';
 import {
     PeriodAlreadyClosedException,
     PeriodNotClosedException,
-} from '../exceptions/accounting-period.exception';
-import { AccountingPeriodClosedDomainEvent } from '../events/accounting-period-closed.domain-event';
+} from '../../exceptions/accounting-period.exception';
+import { AccountingPeriodClosedDomainEvent } from '../../events/accounting-period-closed.domain-event';
 
 export type AccountingPeriodStatus = 'OPEN' | 'CLOSED';
 

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../../../../../../prisma/generated/prisma/schema/client';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 import { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
 import { PayoutCashboxRecordAlreadyExistsException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
 import { PayoutCashboxRecordMapper } from '../../mappers/erp-cash/payout-cashbox-record.mapper';

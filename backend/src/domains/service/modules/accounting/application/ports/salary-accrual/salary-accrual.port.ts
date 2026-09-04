@@ -1,5 +1,5 @@
 import type { SalaryAccrualStatus } from 'ireports-contracts';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 
 // Документы начисления зарплаты (PRD 1 docs/payroll-closing-and-accrual) —

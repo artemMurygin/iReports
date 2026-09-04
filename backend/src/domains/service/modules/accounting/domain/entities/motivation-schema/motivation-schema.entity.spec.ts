@@ -1,8 +1,8 @@
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { MotivationSchema } from './motivation-schema.entity';
-import { MotivationSchemaCreatedDomainEvent } from '../events/motivation-schema-created.domain-event';
-import { PayPerHoursEntity } from './salary-rules/pay-per-hour.entity';
+import { MotivationSchemaCreatedDomainEvent } from '../../events/motivation-schema-created.domain-event';
+import { PayPerHoursEntity } from '../salary-rules/pay-per-hour.entity';
 
 describe('MotivationSchema', () => {
     const baseProps = {

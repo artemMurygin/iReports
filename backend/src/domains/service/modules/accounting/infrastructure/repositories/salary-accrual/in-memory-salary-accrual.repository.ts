@@ -1,7 +1,7 @@
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual-line.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual-line.entity';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 
 // In-memory реализация SalaryAccrualRepositoryPort для юнит- и e2e-тестов

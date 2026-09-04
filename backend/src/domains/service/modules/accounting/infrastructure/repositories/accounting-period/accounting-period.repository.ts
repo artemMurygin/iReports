@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { AccountingPeriodMapper } from '../../mappers/accounting-period/accounting-period.mapper';

@@ -2,7 +2,7 @@ import { AdjustSalaryAccrualLineHandler } from './adjust-salary-accrual-line.han
 import { AdjustSalaryAccrualLineCommand } from './adjust-salary-accrual-line.command';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import {
     SalaryAccrualLineNotDraftException,
     SalaryAccrualNotFoundException,

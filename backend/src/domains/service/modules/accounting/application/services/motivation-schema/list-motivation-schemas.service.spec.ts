@@ -2,7 +2,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import { ListMotivationSchemasService } from './list-motivation-schemas.service';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
-import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
+import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ServiceCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/service-completed.entity';
 

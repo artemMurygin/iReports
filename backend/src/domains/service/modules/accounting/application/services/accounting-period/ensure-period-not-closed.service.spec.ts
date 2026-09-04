@@ -5,7 +5,7 @@ import { DeleteWorkScheduleEntryHandler } from '@/modules/work-schedule/applicat
 import { DeleteWorkScheduleEntryCommand } from '@/modules/work-schedule/application/command/delete-work-schedule-entry.command';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
-import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
+import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import { WorkScheduleEntry } from '@/modules/work-schedule/domain/entities/work-schedule-entry.entity';
 import { ScheduleDate } from '@/modules/work-schedule/domain/value-objects/schedule-date.value-object';
 import { WorkDay } from '@/modules/work-schedule/domain/value-objects/work-day.value-object';

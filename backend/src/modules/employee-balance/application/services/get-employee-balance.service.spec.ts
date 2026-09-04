@@ -3,10 +3,10 @@ import { GetEmployeeBalanceService } from './get-employee-balance.service';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import type { BalanceTransactionProps } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
+import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
-import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
+import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/erp-cash/payout-cashbox-record.entity';
 
 // Общий баланс сотрудника (PRD 2, Фаза 8b): остаток = SUM ВСЕЙ ленты
 // сотрудника независимо от направления движений — проверяется на смешанной
