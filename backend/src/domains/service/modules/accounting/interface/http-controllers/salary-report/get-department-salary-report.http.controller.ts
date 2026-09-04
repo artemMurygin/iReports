@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { DepartmentSalaryReportResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
 import { ArgumentInvalidException } from '@/shared/exceptions';
-import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-department-salary-report.service';
+import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/salary-report/get-department-salary-report.service';
 
 @ApiTags('Бухгалтерия: отчёты')
 @Controller()

@@ -21,8 +21,8 @@ import { CreatePayoutHandler } from '@/domains/service/modules/accounting/applic
 import { CreatePayoutBatchHandler } from '@/domains/service/modules/accounting/application/command/erp-cash-payout/create-payout-batch.handler';
 import { DeletePayoutHandler } from '@/domains/service/modules/accounting/application/command/erp-cash-payout/delete-payout.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/accounting-period/recalculate-accounting-period.handler';
-import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-employee-salary-report.service';
-import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-department-salary-report.service';
+import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accounting/application/services/salary-report/get-employee-salary-report.service';
+import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/salary-report/get-department-salary-report.service';
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/accounting-period/get-accounting-period.service';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
@@ -42,8 +42,8 @@ import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/
 import { ListMotivationSchemasHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/list-motivation-schemas.http.controller';
 import { GetMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/get-motivation-schema.http.controller';
 import { UpdateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/update-motivation-schema.http.controller';
-import { GetEmployeeSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-employee-salary-report.http.controller';
-import { GetDepartmentSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-department-salary-report.http.controller';
+import { GetEmployeeSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-report/get-employee-salary-report.http.controller';
+import { GetDepartmentSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-report/get-department-salary-report.http.controller';
 import { CloseAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accounting-period/close-accounting-period.http.controller';
 import { ReopenAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accounting-period/reopen-accounting-period.http.controller';
 import { RecalculateAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accounting-period/recalculate-accounting-period.http.controller';
