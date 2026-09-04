@@ -1,23 +1,14 @@
 import { ServiceSaleEntity } from '../entities/service-sale.entity';
 import { ServiceMetrics } from '../value-objects/service-metrics.value-object';
 
-// Перенос calcServiceMetrics (src/TODO/reports/reports.service.ts) без
-// изменения бизнес-правила (см. "Не в скоупе" PRD: "изменение бизнес-логики
-// ... переносится как есть"). rows — все строки "услуга × заказ" ОДНОЙ
-// услуги за период (вызывающий код группирует по serviceId, см.
-// GetServicesAnalyticsService), как и в легаси buildServiceMap.
-//
-// Инвариант дедупликации заказов (сохранён буквально): totalRevenue/
-// totalProfit/avgOrderCheck считаются по УНИКАЛЬНЫМ orderId, а не по
-// строкам услуг — одна услуга может встретиться в заказе несколько раз (или
-// один заказ содержит несколько строк этой услуги в разном количестве), но
-// payed/cost заказа не должны просуммироваться дважды. totalCount/
-// totalEngineerBonus/avgServicePrice, наоборот, считаются по всем строкам
-// (quantity суммируется как есть) — эти две оси намеренно расходятся, как и
-// в легаси.
+// Перенос calcServiceMetrics (src/TODO/reports/reports.service.ts). rows —
+// все строки "услуга × заказ" ОДНОЙ услуги за период (вызывающий код
+// группирует по serviceId, см. GetServicesAnalyticsService), как и в легаси
+// buildServiceMap.
 export function calculateServiceMetrics(
     rows: readonly ServiceSaleEntity[],
 ): ServiceMetrics {
+    // spec: service/reports#requirement-показатели-количества-и-бонуса-считаются-по-всем-строкам-услуги
     const totalCount = rows.reduce(
         (sum, row) => sum + row.getProps().quantity,
         0,
@@ -26,6 +17,7 @@ export function calculateServiceMetrics(
         (sum, row) => sum + row.getProps().engineerSalary,
         0,
     );
+    // spec: service/reports#requirement-средняя-цена-услуги-средневзвешенная-по-количеству
     const priceWeightedSum = rows.reduce((sum, row) => {
         const { price, quantity } = row.getProps();
         return sum + price * quantity;
@@ -33,6 +25,7 @@ export function calculateServiceMetrics(
     const avgServicePrice =
         totalCount > 0 ? Math.round(priceWeightedSum / totalCount) : 0;
 
+    // spec: service/reports#requirement-выручка-прибыль-и-средний-чек-считаются-по-уникальным-заказам-а-не-по-строкам
     const uniqueOrders = new Map<number, { payed: number; cost: number }>();
     for (const row of rows) {
         const { orderId, orderPayed, orderCost } = row.getProps();

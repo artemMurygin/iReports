@@ -211,6 +211,43 @@ read-side (read-only поверх уже засинканных данных, б
   это отдельный read-side слой поверх `DealListRepository`/`DealCatalogRepository`, не связанный с
   заготовками `LeadEntity`/`DealEntity` выше.
 
+### `modules/reports`
+
+Read-side аналитика проданных услуг направления «Сервис» (Фаза 5, `docs/todo-modules-ddd-refactoring`)
+— источник данных `roapp_service_orders`/`roapp_service_categories`/`roapp_order_types`; не путать с
+отчётом по воронке сервисных сделок (тот остался в `modules/sales`, читает `bitrix_deals`). В отличие
+от `accounting`/`sales`, зарплатных правил модуль не имеет — только чтение и агрегация.
+
+Бизнес-правила модуля (агрегация показателей услуги, дедупликация по заказу, разбивка по периодам и
+гранулярность, фильтры по категориям/услугам, валидация диапазона дат, форма справочников) описаны в
+[`openspec/specs/service/reports/spec.md`](../../../../openspec/specs/service/reports/spec.md) — ищи
+их там, а не здесь; этот раздел — только карта «эндпоинт/класс → где в коде».
+
+- **HTTP-эндпоинты**: `GET /v1/service/reports/services` (`GetServicesAnalyticsHttpController` →
+  `GetServicesAnalyticsService`) — аналитика проданных услуг за период с разбивкой по времени;
+  `GET /v1/service/reports/service-categories` (`ListServiceCategoriesHttpController` →
+  `ListServiceCategoriesService`) — плоский справочник категорий услуг; `GET
+  /v1/service/reports/order-type` (`ListOrderTypesHttpController` → `ListOrderTypesService`) —
+  справочник типов заказов (используется как справочник значений для `SalaryRule.orderTypeIds` в
+  `modules/accounting`).
+- **Единственный порт источника данных** — `ServiceSalesSourcePort`/`SERVICE_SALES_SOURCE`
+  (`application/ports/service-sales.port.ts`), реализован одним Prisma-репозиторием
+  `ServiceSalesRepository` (`infrastructure/repositories/service-sales.repository.ts`) поверх
+  `roappServiceOrder`/`roappServiceCategory`/`roappOrderType` — отдельного порта под справочники нет.
+- **Доменный слой**: `ServiceSaleEntity` (read-модель строки «услуга × заказ», не агрегат) +
+  `ServiceCategory`/`OrderType` VO (`domain/value-objects/`); расчёты вынесены в доменные сервисы
+  `service-metrics.calculator.ts` (агрегированные показатели услуги) и
+  `period-breakdown.calculator.ts` (разбивка по периодам) поверх `PeriodBucket` VO
+  (`domain/value-objects/period-bucket.value-object.ts`, гранулярность день/неделя/месяц).
+- Слоистость (`domain`/`application`/`infrastructure`/`interface`) зеркалирует `accounting`/`sales`,
+  без переиспользования их кода — не путай `OrderType` этого модуля с одноимённым VO в
+  `modules/sales/domain/value-objects/order-type.value-object.ts` (тот обслуживает `Deal` entity в
+  другом модуле).
+
+Отдельно, вне скоупа этой миграции документации: тестовая заглушка порта источника данных в
+`interface/http-controllers/reports.e2e.spec.ts` не реализует метод `listOrderTypes`, что не ловится
+`npm run test`, но всплывает при `tsc --noEmit`, — актуализация заглушки требует отдельной задачи.
+
 ## Целевой набор модулей домена
 
 `service` и `shop` — параллельные бизнес-направления с похожим набором бизнес-процессов, поэтому

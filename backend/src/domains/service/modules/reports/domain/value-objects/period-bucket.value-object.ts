@@ -8,16 +8,16 @@ export interface PeriodBucketProps {
 
 // Гранулярность разбивки аналитики услуг по периодам (`groupBy` в GET
 // /v1/service/reports/services, Фаза 5) — перенос getPeriodBucketKey/
-// generatePeriodKeys (src/TODO/reports/reports.helpers.ts) БУКВАЛЬНО, без
-// изменения бизнес-правила (см. "Не в скоупе" PRD): неделя начинается с
-// понедельника (ISO), месяц — с 1 числа. bucketStart() ниже сохраняет и
-// особенность легаси-реализации, которая выглядит как расчёт в UTC, но им
-// не является: календарный день берётся ЛОКАЛЬНЫМИ геттерами Date
-// (getFullYear/getMonth/getDate — часовой пояс сервера), а затем
-// пересобирается как UTC-полночь этого дня (Date.UTC(...)) — то есть
-// граница бакета фактически зависит от TZ процесса backend, а не от даты в
-// UTC. Это унаследованная особенность легаси-кода, не новое поведение —
-// сознательно не исправлена этой фазой.
+// generatePeriodKeys (src/TODO/reports/reports.helpers.ts) БУКВАЛЬНО.
+// spec: service/reports#requirement-гранулярность-разбивки-по-периодам
+//
+// bucketStart() ниже сохраняет особенность легаси-реализации, которая
+// выглядит как расчёт в UTC, но им не является: календарный день берётся
+// ЛОКАЛЬНЫМИ геттерами Date (getFullYear/getMonth/getDate — часовой пояс
+// сервера), а затем пересобирается как UTC-полночь этого дня (Date.UTC(...))
+// — то есть граница бакета фактически зависит от TZ процесса backend, а не
+// от даты в UTC. Это унаследованная особенность легаси-кода, не новое
+// поведение — сознательно не исправлена этой фазой.
 export class PeriodBucket extends ValueObject<PeriodBucketProps> {
     static create(granularity: PeriodGranularity): PeriodBucket {
         return new PeriodBucket({ granularity });

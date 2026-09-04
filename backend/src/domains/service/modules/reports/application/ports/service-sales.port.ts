@@ -6,9 +6,8 @@ import { OrderType } from '../../domain/value-objects/order-type.value-object';
 // Фильтр строк "услуга × заказ" (GET /v1/service/reports/services, Фаза 5)
 // — тот же набор, что у легаси getServicesSoldReportDTO (src/TODO/reports/
 // dto/getServicesSoldReport.dto.ts): диапазон дат закрытия заказа +
-// категории/услуги. Пустой массив у categoryIds/serviceIds means "без
-// фильтра по этому полю" (тот же смысл, что inFilter() в легаси
-// reports.helpers.ts).
+// категории/услуги.
+// spec: service/reports#requirement-отчёт-по-проданным-услугам-можно-ограничить-категориями-и-конкретными-услугами
 export interface ServiceSalesFilter {
     range: DateRange;
     categoryIds: number[];

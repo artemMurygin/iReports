@@ -4,8 +4,8 @@ import { ValueObject } from '@/shared/domain/value-object.base';
 // GET /v1/service/reports/service-categories (Фаза 5), перенос
 // ReportsService.getServiceCategories (src/TODO/reports/reports.service.ts).
 // В отличие от CategoryNode каталога магазина (domains/shop/modules/
-// warehouse) — не дерево, а плоский список с одним лишь указателем на
-// родителя (parentId), той же формы, что и легаси-ответ.
+// warehouse) — не дерево, а плоский список, той же формы, что и легаси-ответ.
+// spec: service/reports#requirement-справочник-категорий-услуг-плоский-список-с-указателем-на-родителя
 export interface ServiceCategoryProps {
     id: number;
     name: string;

@@ -11,14 +11,12 @@ export interface PeriodBreakdownEntry {
     avgPrice: number;
 }
 
-// Перенос buildPeriodBreakdown (src/TODO/reports/reports.service.ts) без
-// изменения бизнес-правила: count — сумма quantity в бакете, avgPrice —
-// средневзвешенная по quantity цена (не среднее арифметическое цен строк),
-// 0 для периода без единой продажи. periods — уже сгенерированная
-// последовательность ключей (PeriodBucket.generateKeys), передаётся отдельно
-// от bucket, чтобы не пересчитывать её на каждую услугу в цикле вызывающего
-// кода (см. GetServicesAnalyticsService — один generateKeys() на весь
-// ответ, как и в легаси getServicesAnalytics).
+// Перенос buildPeriodBreakdown (src/TODO/reports/reports.service.ts).
+// periods — уже сгенерированная последовательность ключей
+// (PeriodBucket.generateKeys), передаётся отдельно от bucket, чтобы не
+// пересчитывать её на каждую услугу в цикле вызывающего кода (см.
+// GetServicesAnalyticsService — один generateKeys() на весь ответ, как и в
+// легаси getServicesAnalytics).
 export function buildPeriodBreakdown(
     rows: readonly ServiceSaleEntity[],
     periods: readonly string[],
@@ -38,11 +36,13 @@ export function buildPeriodBreakdown(
         buckets.set(key, entry);
     }
 
+    // spec: service/reports#requirement-разбивка-по-периодам-содержит-все-периоды-диапазона-включая-пустые
     return periods.map((period) => {
         const entry = buckets.get(period);
         return {
             period,
             count: entry?.count ?? 0,
+            // spec: service/reports#requirement-средняя-цена-услуги-средневзвешенная-по-количеству
             avgPrice:
                 entry && entry.count > 0
                     ? Math.round(entry.priceWeightedSum / entry.count)
