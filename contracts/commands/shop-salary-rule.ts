@@ -4,21 +4,18 @@ import {
     salaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema,
     targetRoleSchema,
-    taskCompletedActualAmountEntrySchema,
 } from './salary-rule';
-import { periodSchema } from './sales-plan';
 
 // Контракты зарплатных правил направления `shop` (Фаза 12/13, issue
 // #57/#60/#62/#64, см. docs/payroll/plan-payroll-calculation.md). Отдельный
 // discriminatedUnion, НЕ смешанный с сервисным `salaryRuleRequestSchema`
 // (contracts/commands/salary-rule.ts) — состав типов правил разный
-// (`PayPerHour`/`ProductSold`/`UsedProductSold`/`TaskCompleted` здесь,
-// `PayPerHour`/`ServiceCompleted`/`OrderPayed`/`TaskCompleted` у сервиса), а
-// `type: 'PayPerHour'`/`type: 'TaskCompleted'` у обоих направлений совпадают
-// буквально — смешение узла discriminatedUnion дало бы неоднозначный тип
-// (то же решение и по той же причине для `TaskCompleted`, Фаза 13, что и
-// для `PayPerHour` в Фазе 12). `targetRoleSchema`/`percentBordersSchema` —
-// переиспользованы напрямую из
+// (`PayPerHour`/`ProductSold`/`UsedProductSold` здесь,
+// `PayPerHour`/`ServiceCompleted`/`OrderPayed` у сервиса), а
+// `type: 'PayPerHour'` у обоих направлений совпадает буквально — смешение
+// узла discriminatedUnion дало бы неоднозначный тип (то же решение и по той
+// же причине, что и для `PayPerHour` в Фазе 12). `targetRoleSchema`/
+// `percentBordersSchema` — переиспользованы напрямую из
 // `salary-rule.ts`: это НЕ бизнес-логика (issue #57 запрещает
 // переиспользовать именно её), а разделяемый примитивный словарь форм
 // (см. комментарий у targetRoleSchema в salary-rule.ts).
@@ -119,70 +116,12 @@ const usedProductSoldSalaryRuleSchema = z.object({
     config: usedProductSoldSalaryConfigSchema,
 });
 
-// ========================== За выполненную задачу ========================== //
-
-// TaskCompleted магазина — зеркало формы taskCompletedSalaryConfigSchema
-// сервиса (contracts/commands/salary-rule.ts, change
-// salary-rule-bitrix-task), но отдельный литерал схемы (issue #57 —
-// направления технически не связаны одним объектом, как и остальные типы
-// правил этого файла). Как и у сервиса, "задача" — реальная задача
-// Bitrix24, привязанная к правилу (взамен временного воркфлоу
-// TaskCompletion), единственный вид вознаграждения — фиксированная сумма
-// (design.md, Decision 2). taskCompletedActualAmountEntrySchema
-// переиспользован из salary-rule.ts напрямую (не бизнес-логика — общий
-// примитивный словарь формы {period, amount}, та же причина, что у
-// targetRoleSchema/percentBordersSchema выше).
-const taskCompletedShopDueDateSchema = z
-    .string()
-    .regex(
-        /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
-        'Дедлайн должен быть в формате YYYY-MM-DD',
-    );
-
-function lastDayOfShopPeriod(period: string): number {
-    const [year, month] = period.split('-').map(Number);
-    return new Date(year, month, 0).getDate();
-}
-
-const taskCompletedShopSalaryConfigSchema = z
-    .object({
-        description: z.string().min(1),
-        period: periodSchema,
-        isRecurring: z.boolean(),
-        dueDate: taskCompletedShopDueDateSchema,
-        rewardAmount: z.number().nonnegative(),
-        bitrixTaskIds: z.array(z.number().int().positive()).optional(),
-        actualAmounts: z.array(taskCompletedActualAmountEntrySchema).optional(),
-    })
-    .superRefine((config, ctx) => {
-        const minDate = `${config.period}-01`;
-        const maxDate = `${config.period}-${String(
-            lastDayOfShopPeriod(config.period),
-        ).padStart(2, '0')}`;
-        if (config.dueDate < minDate || config.dueDate > maxDate) {
-            ctx.addIssue({
-                code: 'custom',
-                path: ['dueDate'],
-                message:
-                    'Дедлайн должен находиться в пределах выбранного расчётного месяца правила',
-            });
-        }
-    });
-
-const taskCompletedShopSalaryRuleSchema = z.object({
-    type: z.literal('TaskCompleted'),
-    name: z.string(),
-    targetRole: targetRoleSchema,
-    config: taskCompletedShopSalaryConfigSchema,
-});
-
 // ========================== Итоговый дискриминированный союз ========================== //
 
 const shopSalaryRuleRequestSchema = z.discriminatedUnion('type', [
     payPerHourShopSalaryRuleSchema,
     productSoldSalaryRuleSchema,
     usedProductSoldSalaryRuleSchema,
-    taskCompletedShopSalaryRuleSchema,
 ]);
 
 export type ShopSalaryRuleRequest = z.infer<typeof shopSalaryRuleRequestSchema>;
@@ -201,7 +140,6 @@ const shopSalaryRuleResponseSchema = z.discriminatedUnion('type', [
     payPerHourShopSalaryRuleSchema.extend({ id: z.string() }),
     productSoldSalaryRuleSchema.extend({ id: z.string() }),
     usedProductSoldSalaryRuleSchema.extend({ id: z.string() }),
-    taskCompletedShopSalaryRuleSchema.extend({ id: z.string() }),
 ]);
 
 export type ShopSalaryRuleResponse = z.infer<
@@ -223,7 +161,6 @@ export {
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,
     usedProductSoldSalaryConfigSchema,
-    taskCompletedShopSalaryConfigSchema,
     salaryRuleTypeInfoSchema as shopSalaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema as shopSalaryRuleTypesResponseSchema,
 };

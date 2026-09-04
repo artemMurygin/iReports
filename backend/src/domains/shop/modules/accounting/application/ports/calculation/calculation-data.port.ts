@@ -2,7 +2,6 @@ import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import type {
     PayPerHourHours,
     ShopProductSoldErpItem,
-    ShopTaskCompletionErpItem,
 } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 
 // Источник данных для сборки CalculationContext направления shop (Фаза
@@ -42,12 +41,6 @@ export interface ShopCalculationDataPort {
         from: Date,
         to: Date,
     ): Promise<ShopProductSoldErpItem[]>;
-
-    // Подтверждённые записи о выполнении задач за период (Фаза 13,
-    // direction: 'shop') — источник для TaskCompletedShopEntity.
-    findConfirmedTaskCompletions(
-        period: string,
-    ): Promise<ShopTaskCompletionErpItem[]>;
 
     // Отдел Bitrix-сотрудника — вход для поиска ShopSalesPerformance
     // подразделения (вход FloatPercent).

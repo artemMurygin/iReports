@@ -30,7 +30,7 @@ export type {
     BorderDraft,
     SalaryBasisValue,
 } from './model/ruleDraft.ts'
-export { SALARY_BASIS_LABELS, restrictRuleFormConfigToTarget } from './model/ruleFormConfig.ts'
+export { SALARY_BASIS_LABELS } from './model/ruleFormConfig.ts'
 export type { RuleFormConfig, AwardOptionConfig } from './model/ruleFormConfig.ts'
 export { useSalaryRulesDraft } from './model/useSalaryRulesDraft.ts'
 export type { RuleListState } from './model/useSalaryRulesDraft.ts'

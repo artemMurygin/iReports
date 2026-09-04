@@ -1,5 +1,4 @@
 import type { ServiceOrderRoleFields } from '../services/service-role-source';
-import type { TaskRuleStatus } from 'ireports-contracts';
 
 // Конкретное наполнение CalculationContext.erpData для направления service
 // (Фаза 7, см. docs/payroll/plan-payroll-calculation.md). Собирается один
@@ -87,42 +86,6 @@ export interface OrderPayedErpItem {
     orderTypeId: number;
 }
 
-// Одна подтверждённая руководителем запись о выполнении задачи — временный
-// воркфлоу TaskCompletion (см. domain/entities/task-completion.entity.ts),
-// выведенный из эксплуатации change'ем salary-rule-bitrix-task (spec.md,
-// "Вывод из эксплуатации воркфлоу TaskCompletion"): TaskCompletedEntity
-// больше не читает это поле в calculate() — источник факта/прогноза теперь
-// bitrixTaskStatuses ниже. Тип и заполняющий его код (см.
-// build-service-calculation-context.service.ts) остаются до
-// завершения cutover (задачи 5.3/11.2 change salary-rule-bitrix-task), не
-// удалены этим срезом задач.
-export interface ConfirmedTaskCompletionErpItem {
-    id: string;
-    employeeId: number;
-}
-
-// Статус и расчётный месяц одной задачи Bitrix24, привязанной к правилу
-// TaskCompleted (source для TaskCompletedEntity.calculate(), design.md
-// change salary-rule-bitrix-task, Decision 1) — уже нормализованный к трём
-// бизнес-статусам (Decision 6), а не сырой код Bitrix24 Tasks: маппинг
-// сырого статуса ('1'..'7', BitrixTasksService/bitrix-api.types.ts) в
-// TaskRuleStatus делает application-слой при сборке контекста
-// (BuildServiceCalculationContextService), а не домен — домен не зависит от
-// src/integrations/bitrix (см. backend/CLAUDE.md, "domain never imports
-// from infrastructure").
-//
-// isAvailable — false для удалённой/недоступной задачи (нет прав, не
-// найдена); тогда status/period не несут значения (Decision 6/7 и Risks).
-// period — расчётный месяц, распарсенный из тега периода задачи; null, если
-// тег отсутствует или не в формате YYYY-MM (spec.md, "Обработка недоступной
-// задачи" — нераспознанный тег трактуется как недоступность).
-export interface BitrixTaskRuleStatusItem {
-    id: number;
-    isAvailable: boolean;
-    status: TaskRuleStatus | null;
-    period: string | null;
-}
-
 // Пара факт/прогноз часов PayPerHour — считаются один раз (см.
 // ServiceCalculationDataRepository.findHoursWorked) и передаются в ОБА
 // прохода calculate() (FACT и PROGNOSE читают один и тот же erpData,
@@ -144,22 +107,11 @@ export interface ServiceCalculationErpData {
     // значение пришло из контекста. 0 по обоим полям, если подходящих
     // рабочих смен нет.
     hoursWorked: PayPerHourHours;
-    // Фаза 8 — заказы, оплаченные в периоде (источник OrderPayedEntity), и
-    // подтверждённые выполнения задач (источник TaskCompletedEntity).
-    // Опциональны (в отличие от serviceCompletedItems/hoursWorked Фазы 7) —
+    // Фаза 8 — заказы, оплаченные в периоде (источник OrderPayedEntity).
+    // Опционально (в отличие от serviceCompletedItems/hoursWorked Фазы 7) —
     // так существующие фикстуры контекста PayPerHour/ServiceCompleted
-    // (Фаза 7) остаются валидными без правки; OrderPayedEntity/
-    // TaskCompletedEntity сами подставляют [] при отсутствии поля (тот же
-    // приём, что и erpData?.hoursWorked ?? 0).
+    // (Фаза 7) остаются валидными без правки; OrderPayedEntity сама
+    // подставляет [] при отсутствии поля (тот же приём, что и
+    // erpData?.hoursWorked ?? 0).
     orderPayedItems?: OrderPayedErpItem[];
-    confirmedTaskCompletions?: ConfirmedTaskCompletionErpItem[];
-    // Пакетно полученные статусы/расчётные месяцы задач Bitrix24 всех
-    // bitrixTaskIds правил TaskCompleted, попавших в расчёт (Decision 1 и
-    // 3) — один batched-запрос на весь отчёт, а не по одному на правило
-    // (собирается BuildServiceCalculationContextService, задача 6.1
-    // change salary-rule-bitrix-task). Опционально по тому же принципу, что
-    // orderPayedItems/confirmedTaskCompletions выше — существующие
-    // фикстуры контекста без этого поля остаются валидными,
-    // TaskCompletedEntity сама подставляет [] при отсутствии.
-    bitrixTaskStatuses?: BitrixTaskRuleStatusItem[];
 }

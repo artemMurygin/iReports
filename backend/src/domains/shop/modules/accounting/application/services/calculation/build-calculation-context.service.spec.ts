@@ -42,7 +42,6 @@ describe('BuildShopCalculationContextService', () => {
             .fn()
             .mockResolvedValue({ fact: 8, prognose: 8 });
         const findProductSoldItems = jest.fn().mockResolvedValue([]);
-        const findConfirmedTaskCompletions = jest.fn().mockResolvedValue([]);
         const findEmployeeDepartmentId = jest
             .fn()
             .mockResolvedValue(overrides?.departmentId ?? null);
@@ -54,7 +53,6 @@ describe('BuildShopCalculationContextService', () => {
             findEmployeeIdentities,
             findHoursWorked,
             findProductSoldItems,
-            findConfirmedTaskCompletions,
             findEmployeeDepartmentId,
             findEmployeesInDepartment: jest.fn().mockResolvedValue([]),
             findEmployeeIdentitiesForEmployees: jest
@@ -98,7 +96,6 @@ describe('BuildShopCalculationContextService', () => {
             findEmployeeIdentities,
             findHoursWorked,
             findProductSoldItems,
-            findConfirmedTaskCompletions,
             findEmployeeDepartmentId,
             resolveCategoryDescendantFolderIds,
             findForScope,
@@ -112,7 +109,6 @@ describe('BuildShopCalculationContextService', () => {
             buildRule('ProductSold', 'root-1'),
             buildRule('UsedProductSold', 'root-1'),
             buildRule('ProductSold', null),
-            buildRule('TaskCompleted'),
         ];
 
         const context = await service.build(Period.create('2026-01'), 1, rules);
@@ -128,7 +124,7 @@ describe('BuildShopCalculationContextService', () => {
 
     it('нет правил с category — resolveCategoryDescendantFolderIds не вызывается', async () => {
         const { service, resolveCategoryDescendantFolderIds } = buildService();
-        const rules = [buildRule('PayPerHour'), buildRule('TaskCompleted')];
+        const rules = [buildRule('PayPerHour')];
 
         const context = await service.build(Period.create('2026-01'), 1, rules);
 
@@ -185,7 +181,6 @@ describe('BuildShopCalculationContextService', () => {
                 // Дубликат категории 'cat-a' у другого правила — не должен
                 // породить второй вызов findForScope на эту же category.
                 buildRule('ProductSold', 'cat-a'),
-                buildRule('TaskCompleted'),
             ];
 
             const context = await service.build(
@@ -256,7 +251,7 @@ describe('BuildShopCalculationContextService', () => {
                 departmentId: 7,
                 performance: departmentPerformance,
             });
-            const rules = [buildRule('PayPerHour'), buildRule('TaskCompleted')];
+            const rules = [buildRule('PayPerHour')];
 
             const context = await service.build(
                 Period.create('2026-01'),
@@ -271,7 +266,7 @@ describe('BuildShopCalculationContextService', () => {
         });
     });
 
-    it('собирает identities/hoursWorked/productSoldItems/taskCompletions из БД', async () => {
+    it('собирает identities/hoursWorked/productSoldItems из БД', async () => {
         const { service, dataSource } = buildService();
         (dataSource.findEmployeeIdentities as jest.Mock).mockResolvedValue([
             {

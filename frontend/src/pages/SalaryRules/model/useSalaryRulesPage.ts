@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { useDepartments, useEmployees, type TargetOption } from '@/features/TargetDirectory'
-import { restrictRuleFormConfigToTarget } from '@/features/SalaryRuleForm'
 
 import { useServiceDirection } from '../service'
 import { useShopDirection } from '../shop'
@@ -46,14 +45,7 @@ export function useSalaryRulesPage() {
     const targetOptionsError =
         (target.targetType === 'Department' ? departmentsQuery.error : employeesQuery.error)?.message ?? null
 
-    // TaskCompleted недоступен в схеме отдела (change salary-rule-bitrix-task, spec.md "Создание
-    // правила-задачи только в схеме на сотрудника") — фильтруем конфиг направления по уже выбранной
-    // цели схемы, до того как он попадёт в `RuleFormCardFields`'s тип-селект (`restrictRuleFormConfigToTarget`'s
-    // комментарий).
-    const config = useMemo(
-        () => restrictRuleFormConfigToTarget(active.config, target.targetType),
-        [active.config, target.targetType],
-    )
+    const config = active.config
 
     const isSubmitting = service.isSubmitting || shop.isSubmitting
     const canSubmit =

@@ -11,7 +11,6 @@ import {
     PercentBorder,
     ProductSoldSalaryConfig,
     ShopSalaryRule,
-    TaskCompletedShopSalaryConfig,
 } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import { buildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
 import { FloatPercentSchedule } from '@/domains/shop/modules/accounting/domain/value-objects/float-percent-schedule.value-object';
@@ -108,9 +107,9 @@ function buildThresholdInfo(
 }
 
 // Award-типы, где line.rate — процент/множитель, а не денежная ставка за
-// единицу (PayPerHour.price, ProductSold/UsedProductSold Fixed.price,
-// TaskCompleted Fixed.price) — appliedPercent для остальных не
-// заполняется, чтобы не путать деньги с процентом на UI.
+// единицу (PayPerHour.price, ProductSold/UsedProductSold Fixed.price) —
+// appliedPercent для остальных не заполняется, чтобы не путать деньги с
+// процентом на UI.
 const PERCENT_AWARD_TYPES = new Set(['FixedPercent', 'FloatPercent']);
 
 function isPercentAward(rule: ShopSalaryRule): boolean {
@@ -118,21 +117,17 @@ function isPercentAward(rule: ShopSalaryRule): boolean {
     return !!award && PERCENT_AWARD_TYPES.has(award.type);
 }
 
-// Пороги FloatPercent есть только у ProductSold/TaskCompleted, и только
-// когда их award выбран как FloatPercent (а не Fixed/FixedPercent) —
-// UsedProductSold FloatPercent вообще не поддерживает (закупщик не
-// привязан к выполнению плана продаж, см. salary-rule.types.ts), для
-// остальных типов правил (PayPerHour) и остальных award того же правила
-// возвращает null, что и означает "поля floatPercent в ответе не будет".
+// Пороги FloatPercent есть только у ProductSold, и только когда его award
+// выбран как FloatPercent (а не Fixed/FixedPercent) — UsedProductSold
+// FloatPercent вообще не поддерживает (закупщик не привязан к выполнению
+// плана продаж, см. salary-rule.types.ts), для остальных типов правил
+// (PayPerHour) и остальных award того же правила возвращает null, что и
+// означает "поля floatPercent в ответе не будет".
 function getFloatPercentBorders(
     rule: ShopSalaryRule,
 ): [PercentBorder, PercentBorder, PercentBorder] | null {
     if (rule.type === 'ProductSold') {
         const award = (rule.config as ProductSoldSalaryConfig).award;
-        return award.type === 'FloatPercent' ? award.percentBorders : null;
-    }
-    if (rule.type === 'TaskCompleted') {
-        const award = (rule.config as TaskCompletedShopSalaryConfig).award;
         return award.type === 'FloatPercent' ? award.percentBorders : null;
     }
     return null;

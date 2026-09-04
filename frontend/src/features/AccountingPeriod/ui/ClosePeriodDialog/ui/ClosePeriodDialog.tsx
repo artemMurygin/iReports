@@ -19,9 +19,6 @@ export type ClosePeriodDialogProps = {
     rowDetailsById?: Record<string, UnapprovedRowDetails>
     /** Названия отделов Bitrix по id (справочник страницы). */
     departmentNameById?: Record<number, string>
-    /** ФИО сотрудников Bitrix по id (справочник страницы) — обогащение перечня незакрытых
-     * правил-задач (`UnclosedTaskRulesList`, close-preview несёт только `employeeId`). */
-    employeeNameById?: Record<number, string>
     /** «Утвердить» у строки перечня — утверждение принадлежит фиче плана продаж,
      * поэтому приходит колбэком со страницы (кросс-импорты features запрещены). */
     onApproveRow?: (id: string) => void
@@ -32,7 +29,6 @@ export type ClosePeriodDialogProps = {
 
 const NO_ROW_DETAILS: Record<string, UnapprovedRowDetails> = {}
 const NO_DEPARTMENT_NAMES: Record<number, string> = {}
-const NO_EMPLOYEE_NAMES: Record<number, string> = {}
 
 /**
  * Окно подтверждения «Закрыть {месяц} · {направление}» (Pencil: `GUo20` готово,
@@ -50,7 +46,6 @@ function ClosePeriodDialog({
     period,
     rowDetailsById = NO_ROW_DETAILS,
     departmentNameById = NO_DEPARTMENT_NAMES,
-    employeeNameById = NO_EMPLOYEE_NAMES,
     onApproveRow,
     isApprovingRow = false,
     onClosed,
@@ -95,7 +90,6 @@ function ClosePeriodDialog({
                 period={period}
                 rowDetailsById={rowDetailsById}
                 departmentNameById={departmentNameById}
-                employeeNameById={employeeNameById}
                 onApproveRow={onApproveRow ?? (() => undefined)}
                 isApproving={isApprovingRow}
                 onRetryClose={submit}

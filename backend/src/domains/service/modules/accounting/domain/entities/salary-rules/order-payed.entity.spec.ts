@@ -56,7 +56,6 @@ const buildContext = (
         serviceCompletedItems: [],
         hoursWorked: { fact: 0, prognose: 0 },
         orderPayedItems: items,
-        confirmedTaskCompletions: [],
     } satisfies ServiceCalculationErpData,
     salesPerformance: overrides.salesPerformance ?? null,
 });

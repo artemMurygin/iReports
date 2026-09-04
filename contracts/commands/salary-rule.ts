@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { salaryAccrualStatusSchema } from './salary-accrual-status';
-import { periodSchema } from './sales-plan';
 
 // ========================== Роль правила ========================== //
 
@@ -36,8 +35,8 @@ import { periodSchema } from './sales-plan';
 // PAY_PER_HOUR_ELIGIBLE_ROLES (domain/services/pay-per-hour-roles.ts) наравне
 // с ONLINE_MANAGER/OFFLINE_MANAGER, поэтому часы рабочих смен с этой ролью
 // засчитываются в почасовую оплату (PayPerHour). В ALL_SERVICE_ROLES она,
-// как и OFFICE, намеренно не входит — остальные три типа правил сервиса
-// (ServiceCompleted/OrderPayed/TaskCompleted) матчат сотрудника через
+// как и OFFICE, намеренно не входит — остальные два типа правил сервиса
+// (ServiceCompleted/OrderPayed) матчат сотрудника через
 // service-role-source.ts, где у неё нет собственного поля ERP.
 const targetRoleSchema = z.enum([
     'ENGINEER',
@@ -52,10 +51,9 @@ const targetRoleSchema = z.enum([
 
 export type TargetRole = z.infer<typeof targetRoleSchema>;
 
-// База начисления процентных правил — общая для OrderPayed и TaskCompleted
-// (Фаза 8): REVENUE (выручка заказа), MARGIN (маржа), SALARY_MINUS_ENGINEER_SALARY
-// (сумма за вычетом зарплаты инженера). См.
-// docs/payroll/prd-payroll-calculation.md, раздел 2.
+// База начисления процентных правил OrderPayed (Фаза 8): REVENUE (выручка
+// заказа), MARGIN (маржа), SALARY_MINUS_ENGINEER_SALARY (сумма за вычетом
+// зарплаты инженера). См. docs/payroll/prd-payroll-calculation.md, раздел 2.
 const salaryBasisSchema = z.enum([
     'REVENUE',
     'MARGIN',
@@ -167,141 +165,10 @@ const orderPayedSalaryRuleSchema = z.object({
     config: orderPayedSalaryConfigSchema,
 });
 
-// ========================== За выполненную задачу ========================== //
-
-// "Задача" здесь — реальная задача Bitrix24, привязанная к правилу
-// (change salary-rule-bitrix-task, взамен временного внутреннего
-// воркфлоу TaskCompletion — контракт удалён этим же change). Постановка, обсуждение и
-// приёмка идут в Bitrix24; iReports хранит только bitrixTaskIds
-// (см. ниже) и по ним читает статус/расчётный месяц задачи пакетным
-// запросом при расчёте (design.md, Decision 1) — расчётный месяц задачи
-// НЕ дублируется здесь: `period` ниже — это только расчётный месяц,
-// выбранный руководителем при создании/редактировании правила (для
-// валидации dueDate и для тега созданной Bitrix-задачи), а не текущий
-// расчётный месяц, который правило обслуживает в моменте (тот определяется
-// живым тегом Bitrix24, см. design.md, Decision 1 и 7).
-//
-// Единственный вид вознаграждения — фиксированная сумма (design.md,
-// Decision 2; BREAKING — вариант FloatPercent удалён вместе с award-union,
-// см. proposal.md).
-const taskCompletedActualAmountEntrySchema = z.object({
-    period: periodSchema,
-    amount: z.number().min(0),
-});
-
-export type TaskCompletedActualAmountEntry = z.infer<
-    typeof taskCompletedActualAmountEntrySchema
->;
-
-// Дедлайн — календарный день без времени/часового пояса, строкой (не
-// z.coerce.date(): та же причина, что у scheduleDateSchema в
-// work-schedule.ts — сериализация OpenAPI и «дедлайн 5 августа» не должен
-// уезжать на сутки при смене часового пояса).
-const taskCompletedDueDateSchema = z
-    .string()
-    .regex(
-        /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
-        'Дедлайн должен быть в формате YYYY-MM-DD',
-    );
-
-// Последний календарный день месяца period (YYYY-MM) — используется только
-// для проверки границ dueDate ниже (design.md, Decision 9).
-function lastDayOfPeriod(period: string): number {
-    const [year, month] = period.split('-').map(Number);
-    return new Date(year, month, 0).getDate();
-}
-
-// Жизненный цикл разового правила-задачи
-// (docs/task-rule-archiving-and-links, Фаза 1) — имеет смысл только при
-// isRecurring: false; для регулярных правил не используется и не
-// проверяется. ACTIVE — правило ещё часть мотивационной схемы; ARCHIVED —
-// необратимый терминал, правило переводится сюда автоматически при
-// закрытии расчётного периода, к которому относится dueDate (backend:
-// TaskCompletedEntity.archive()). Не заполняется клиентом — сервер
-// проставляет ACTIVE по умолчанию и ARCHIVED только сам, см. дефолт ниже.
-const taskCompletedRuleStatusSchema = z.enum(['ACTIVE', 'ARCHIVED']);
-
-export type TaskCompletedRuleStatus = z.infer<
-    typeof taskCompletedRuleStatusSchema
->;
-
-const taskCompletedSalaryConfigSchema = z
-    .object({
-        description: z.string().min(1),
-        // Расчётный месяц правила на момент создания/редактирования —
-        // границы, в которых обязан лежать dueDate (design.md, Decision 9).
-        period: periodSchema,
-        isRecurring: z.boolean(),
-        dueDate: taskCompletedDueDateSchema,
-        rewardAmount: z.number().nonnegative(),
-        // ID задач Bitrix24, накопленные за всё время правила — один
-        // элемент для разового правила, по одному новому элементу на
-        // каждый регенерированный месяц регулярного (design.md, Decision 1).
-        // Не заполняется клиентом — проставляется сервером после
-        // createTask, поэтому опционален с дефолтом.
-        bitrixTaskIds: z.array(z.number().int().positive()).optional(),
-        // Фактическая сумма к выплате по закрытой задаче, по одной записи
-        // на период (design.md, Decision 2). Не заполняется клиентом при
-        // создании/редактировании правила — пишется отдельным контрактом
-        // (см. setTaskRuleActualAmountRequestSchema).
-        actualAmounts: z.array(taskCompletedActualAmountEntrySchema).optional(),
-        status: taskCompletedRuleStatusSchema.default('ACTIVE'),
-    })
-    .superRefine((config, ctx) => {
-        const minDate = `${config.period}-01`;
-        const maxDate = `${config.period}-${String(
-            lastDayOfPeriod(config.period),
-        ).padStart(2, '0')}`;
-        if (config.dueDate < minDate || config.dueDate > maxDate) {
-            ctx.addIssue({
-                code: 'custom',
-                path: ['dueDate'],
-                message:
-                    'Дедлайн должен находиться в пределах выбранного расчётного месяца правила',
-            });
-        }
-    });
-
-const taskCompletedSalaryRuleSchema = z.object({
-    type: z.literal('TaskCompleted'),
-    name: z.string(),
-    targetRole: targetRoleSchema,
-    config: taskCompletedSalaryConfigSchema,
-});
-
-// Бизнес-статус задачи Bitrix24, привязанной к правилу-задаче (design.md,
-// Decision 6) — прямое соответствие нативным статусам задач Bitrix24 Tasks:
-// PENDING = "Ждёт выполнения" (Создана), IN_PROGRESS = "Выполняется"
-// (Реализована), COMPLETED = "Завершена" (Закрыта). Отсутствует
-// (не заполнен), когда правило помечено isTaskUnavailable (см.
-// employeeSalaryReportRuleSchema ниже) — статус недоступной задачи не
-// определён.
-const taskRuleStatusSchema = z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED']);
-
-export type TaskRuleStatus = z.infer<typeof taskRuleStatusSchema>;
-
-// PUT/PATCH ручного ввода фактической суммы по закрытой задаче правила
-// (spec.md, "Ручной ввод фактической суммы по закрытой задаче") — доступно
-// только на странице зарплатного отчёта сотрудника за открытый период, для
-// правила-задачи в статусе "Закрыта" (проверяется на бэкенде, не здесь).
-// actualAmount >= 0 — верхняя граница (сумма правила) не известна на уровне
-// контракта (сумма правила не передаётся в этом запросе, читается сервером
-// по ruleId) и проверяется в домене/application-хендлере.
-const setTaskRuleActualAmountRequestSchema = z.object({
-    ruleId: z.string(),
-    period: periodSchema,
-    actualAmount: z.number().min(0),
-});
-
-export type SetTaskRuleActualAmountRequest = z.infer<
-    typeof setTaskRuleActualAmountRequestSchema
->;
-
 const salaryRuleRequestSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleSchema,
     serviceCompletedSalaryRuleSchema,
     orderPayedSalaryRuleSchema,
-    taskCompletedSalaryRuleSchema,
 ]);
 
 export type SalaryRuleRequest = z.infer<typeof salaryRuleRequestSchema>;
@@ -321,22 +188,11 @@ const serviceCompletedSalaryRuleResponseSchema =
 const orderPayedSalaryRuleResponseSchema = orderPayedSalaryRuleSchema.extend({
     id: z.string(),
 });
-// bitrixTaskUrl — ссылка на ТЕКУЩУЮ (последнюю добавленную) задачу
-// правила в Bitrix24 (spec.md, "Ссылка на задачу Bitrix24"); строится на
-// бэкенде из config.bitrixTaskIds (портал Bitrix24 — конфигурация
-// бэкенда, не должна утекать во фронтенд, см. change salary-rule-bitrix-task).
-// undefined, если у правила ещё нет ни одной задачи.
-const taskCompletedSalaryRuleResponseSchema =
-    taskCompletedSalaryRuleSchema.extend({
-        id: z.string(),
-        bitrixTaskUrl: z.string().optional(),
-    });
 
 const salaryRuleResponseSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleResponseSchema,
     serviceCompletedSalaryRuleResponseSchema,
     orderPayedSalaryRuleResponseSchema,
-    taskCompletedSalaryRuleResponseSchema,
 ]);
 
 export type SalaryRuleResponse = z.infer<typeof salaryRuleResponseSchema>;
@@ -487,18 +343,6 @@ export type EmployeeSalaryReportSource = z.infer<
 // правил с award.type === 'FloatPercent' и только пока для периода известен
 // SalesPerformance (иначе отсутствует, как и amount.prognose у закрытого
 // периода).
-//
-// bitrixTaskUrl/taskStatus/isTaskUnavailable/actualAmount — только для
-// правил type === 'TaskCompleted' (spec.md, "Ссылка на задачу Bitrix24",
-// "Обработка недоступной задачи", "Ручной ввод фактической суммы по
-// закрытой задаче"), поэтому все опциональны на этом общем для всех типов
-// правил объекте, а не в отдельной ветке union — тот же приём, что и у
-// floatPercent/appliedPercent выше. isTaskUnavailable === true — задача
-// удалена/недоступна или расчётный месяц не распознан (design.md, Decision
-// 7 и Risks): taskStatus/bitrixTaskUrl в этом случае могут отсутствовать,
-// начисления по правилу нет ни в факте, ни в прогнозе (amount = 0/0).
-// actualAmount — только когда задача в статусе COMPLETED и руководитель
-// уже указал фактическую сумму за этот период.
 const employeeSalaryReportRuleSchema = z.object({
     ruleId: z.string(),
     type: z.string(),
@@ -510,10 +354,6 @@ const employeeSalaryReportRuleSchema = z.object({
         .object({ fact: floatPercentInfoSchema, prognose: floatPercentInfoSchema })
         .optional(),
     sources: z.array(employeeSalaryReportSourceSchema),
-    bitrixTaskUrl: z.string().optional(),
-    taskStatus: taskRuleStatusSchema.optional(),
-    isTaskUnavailable: z.boolean().optional(),
-    actualAmount: z.number().optional(),
 });
 
 export type EmployeeSalaryReportRule = z.infer<
@@ -598,11 +438,6 @@ export {
     payPerHourSalaryConfigSchema,
     serviceCompletedSalaryConfigSchema,
     orderPayedSalaryConfigSchema,
-    taskCompletedSalaryConfigSchema,
-    taskCompletedActualAmountEntrySchema,
-    taskCompletedRuleStatusSchema,
-    taskRuleStatusSchema,
-    setTaskRuleActualAmountRequestSchema,
     percentBorderSchema,
     percentBordersSchema,
     salaryBasisSchema,

@@ -499,9 +499,6 @@ async function main() {
         },
     );
     await exportModel('salary_rules', () => prisma.salaryRule.findMany());
-    await exportModel('task_completions', () =>
-        prisma.taskCompletion.findMany(),
-    );
     await exportModel('work_schedule_entries', () =>
         prisma.workScheduleEntry.findMany(),
     );

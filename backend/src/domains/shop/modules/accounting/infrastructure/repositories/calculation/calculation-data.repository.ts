@@ -6,7 +6,6 @@ import { Period } from '@/shared/domain/period.value-object';
 import type {
     PayPerHourHours,
     ShopProductSoldErpItem,
-    ShopTaskCompletionErpItem,
 } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 import { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
@@ -127,20 +126,6 @@ export class ShopCalculationDataRepository
             onlinePurchaserId: position.onlinePurchaserId,
             offlinePurchaserId: position.offlinePurchaserId,
         }));
-    }
-
-    async findConfirmedTaskCompletions(
-        period: string,
-    ): Promise<ShopTaskCompletionErpItem[]> {
-        // direction: 'shop' — зеркало TaskCompletionRepository сервиса
-        // (фильтрует 'service'); без него сюда попали бы и записи
-        // сервисного CQRS-модуля (см. TaskCompletion.direction в
-        // prisma/schema/salary.prisma).
-        const records = await this.client.taskCompletion.findMany({
-            where: { period, status: 'CONFIRMED', direction: 'shop' },
-            select: { id: true, employeeId: true },
-        });
-        return records;
     }
 
     async findEmployeeDepartmentId(

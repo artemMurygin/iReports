@@ -12,8 +12,6 @@ import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accoun
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import type { ShopSalaryRuleRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
-import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/task-completion/task-completion.port';
-import type { ShopTaskCompletionRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/task-completion/task-completion.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import type { ShopCalculationDataPort } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/accounting-period/accounting-period.port';
@@ -115,14 +113,6 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         insert: () => Promise.resolve(),
         deleteAllByMotivationSchema: () => Promise.resolve(),
     };
-    const fakeShopTaskCompletionRepo: ShopTaskCompletionRepositoryPort = {
-        insert: () => Promise.resolve(),
-        update: () => Promise.resolve(),
-        delete: () => Promise.resolve(),
-        findById: () => Promise.resolve(null),
-        findByPeriod: () => Promise.resolve([]),
-        findConfirmedByPeriod: () => Promise.resolve([]),
-    };
     const fakeShopAccountingPeriodRepo: ShopAccountingPeriodRepositoryPort = {
         findByPeriod: () => Promise.resolve(null),
         save: () => Promise.resolve(),
@@ -193,7 +183,6 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
                     offlinePurchaserId: null,
                 },
             ]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: (employeeId) =>
             Promise.resolve(employeeId === 43 ? 100 : null),
         findEmployeesInDepartment: () => Promise.resolve([]),
@@ -370,8 +359,6 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             .useValue(fakeShopMotivationSchemaRepo)
             .overrideProvider(SHOP_SALARY_RULE_REPOSITORY)
             .useValue(fakeShopSalaryRuleRepo)
-            .overrideProvider(SHOP_TASK_COMPLETION_REPOSITORY)
-            .useValue(fakeShopTaskCompletionRepo)
             .overrideProvider(SHOP_CALCULATION_DATA)
             .useValue(fakeShopCalculationData)
             .overrideProvider(SHOP_ACCOUNTING_PERIOD_REPOSITORY)

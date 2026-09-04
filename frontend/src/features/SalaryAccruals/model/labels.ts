@@ -54,7 +54,6 @@ export function getSalaryBasisLabel(basis: string | undefined): string {
 const SOURCE_TYPE_LABEL: Record<string, string> = {
     order: 'Заказ',
     serviceOrderItem: 'Позиция услуги',
-    taskCompletion: 'Задача',
     demandPosition: 'Позиция отгрузки',
 }
 
@@ -74,7 +73,6 @@ export function getSourceTypeLabel(type: string): string {
 export const RULE_UNIT_FORMS: Record<string, [one: string, few: string, many: string]> = {
     OrderPayed: ['заказ', 'заказа', 'заказов'],
     ServiceCompleted: ['услуга', 'услуги', 'услуг'],
-    TaskCompleted: ['задача', 'задачи', 'задач'],
     ProductSold: ['продажа', 'продажи', 'продаж'],
     UsedProductSold: ['продажа', 'продажи', 'продаж'],
 }
@@ -88,7 +86,6 @@ export const RULE_UNIT_FORMS: Record<string, [one: string, few: string, many: st
 export const RULE_UNIT_PLURAL_LABEL: Record<string, string> = {
     OrderPayed: 'заказы',
     ServiceCompleted: 'услуги',
-    TaskCompleted: 'задачи',
     ProductSold: 'продажи',
     UsedProductSold: 'продажи',
 }

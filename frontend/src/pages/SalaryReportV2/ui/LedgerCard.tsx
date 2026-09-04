@@ -42,7 +42,6 @@ export function LedgerCard({
                 <LedgerDirectionBlock
                     key={directionReport.direction}
                     report={directionReport}
-                    period={report.period}
                     isRuleExpanded={isRuleExpanded}
                     onToggleRule={onToggleRule}
                     isExpanded={isDirectionExpanded(directionReport.direction)}

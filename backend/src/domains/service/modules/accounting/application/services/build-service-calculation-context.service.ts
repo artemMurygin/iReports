@@ -4,19 +4,10 @@ import { Period } from '@/shared/domain/period.value-object';
 import { buildBaseCalculationContext } from '@/domains/service/modules/accounting/domain/services/calculation-context.builder';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
-import type {
-    BitrixTaskRuleStatusItem,
-    ServiceCalculationErpData,
-} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 import { SALES_PERFORMANCE_READER } from '@/domains/service/modules/sales/application/ports/sales-performance.port';
 import type { SalesPerformanceReaderPort } from '@/domains/service/modules/sales/application/ports/sales-performance.port';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
-import { BitrixTasksService } from '@/integrations/bitrix/bitrix-tasks.service';
-import { toTaskRuleStatus } from '@/domains/service/modules/accounting/application/mappers/to-task-rule-status';
-import type {
-    SalaryRule,
-    TaskCompletedSalaryConfig,
-} from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 
 // Базовый контекст расчёта направления service, ещё не привязанный к
 // конкретному режиму (FACT/PROGNOSE, Фаза 9) — salesPerformanceDetail несёт
@@ -52,20 +43,11 @@ export class BuildServiceCalculationContextService {
         private readonly dataSource: ServiceCalculationDataPort,
         @Inject(SALES_PERFORMANCE_READER)
         private readonly salesPerformanceReader: SalesPerformanceReaderPort,
-        private readonly bitrixTasksService: BitrixTasksService,
     ) {}
 
-    // rules — набор зарплатных правил, попавших в этот расчёт (личная схема
-    // сотрудника + схема его отдела, см. ResolveEmployeeSalaryRulesService),
-    // третьим параметром — по тому же образцу, что и у
-    // BuildShopCalculationContextService.build(period, employeeId, rules).
-    // Единственный потребитель здесь — bitrixTaskStatuses ниже: набор
-    // bitrixTaskIds всех правил TaskCompleted схемы известен только вызывающей
-    // стороне, которая уже резолвит правила перед сборкой контекста.
     async build(
         period: Period,
         employeeId: number,
-        rules: SalaryRule[],
     ): Promise<ServiceCalculationBaseContext> {
         // 'service' захардкожен: этот сервис живёт в domains/service/modules/accounting
         // и не переиспользуется магазином (Фаза 12 заведёт для shop
@@ -79,9 +61,7 @@ export class BuildServiceCalculationContextService {
             serviceCompletedItems,
             hoursWorked,
             orderPayedItems,
-            confirmedTaskCompletions,
             departmentId,
-            bitrixTaskStatuses,
         ] = await Promise.all([
             this.dataSource.findEmployeeIdentities(employeeId),
             this.dataSource.findServiceCompletedItems(
@@ -93,9 +73,7 @@ export class BuildServiceCalculationContextService {
                 base.period.from,
                 base.period.to,
             ),
-            this.dataSource.findConfirmedTaskCompletions(period.getValue()),
             this.dataSource.findEmployeeDepartmentId(employeeId),
-            this.fetchBitrixTaskStatuses(rules),
         ]);
 
         const salesPerformanceDetail = await this.findSalesPerformance(
@@ -110,47 +88,9 @@ export class BuildServiceCalculationContextService {
                 serviceCompletedItems,
                 hoursWorked,
                 orderPayedItems,
-                confirmedTaskCompletions,
-                bitrixTaskStatuses,
             },
             salesPerformanceDetail,
         };
-    }
-
-    // Один пакетный вызов BitrixTasksService.getTasksBatch на ВСЕ
-    // bitrixTaskIds правил TaskCompleted схемы разом (spec.md, "Пакетный
-    // запрос статусов", design.md Decision 1/3) — не по одному запросу на
-    // правило. Дедуплицирует id (два правила теоретически не должны делить
-    // задачу, но Set защищает от лишнего элемента в cmd batch, если такое
-    // всё же случится).
-    private async fetchBitrixTaskStatuses(
-        rules: SalaryRule[],
-    ): Promise<BitrixTaskRuleStatusItem[]> {
-        const ids = this.collectBitrixTaskIds(rules);
-        if (ids.length === 0) {
-            return [];
-        }
-        const batch = await this.bitrixTasksService.getTasksBatch(ids);
-        return batch.map((item) => ({
-            id: item.id,
-            isAvailable: item.isAvailable,
-            status: toTaskRuleStatus(item.status),
-            period: item.period,
-        }));
-    }
-
-    private collectBitrixTaskIds(rules: SalaryRule[]): number[] {
-        const ids = new Set<number>();
-        for (const rule of rules) {
-            if (rule.type !== 'TaskCompleted') {
-                continue;
-            }
-            const config = rule.config as TaskCompletedSalaryConfig;
-            for (const id of config.bitrixTaskIds ?? []) {
-                ids.add(id);
-            }
-        }
-        return [...ids];
     }
 
     // Полный SalesPerformance подразделения сотрудника (Фаза 5/8/9) — вход

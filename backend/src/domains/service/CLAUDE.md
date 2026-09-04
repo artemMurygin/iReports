@@ -85,26 +85,27 @@ domains/service/
 Единственный в проекте модуль, полностью выстроенный по целевой DDD/CQRS-слоистости
 (`domain`/`application`/`infrastructure`/`interface`) — используй его как образец при рефакторинге
 или добавлении нового модуля (в том числе для `shop`, см. ниже, который его зеркалирует, но
-самостоятельно). Основной источник замысла — `docs/payroll/prd-payroll-calculation.md` и
-`docs/payroll/plan-payroll-calculation.md` в корне репозитория (Фазы 1–9 покрывают всё, что описано
-в этом разделе).
+самостоятельно).
 
-- **Мотивационная схема** (`MotivationSchemaEntity`) — агрегат, объединяющий набор зарплатных правил
-  сотрудника/должности.
-- **Зарплатные правила** (`domain/entities/salary-rules/*`) — четыре типа правил как отдельные
-  сущности: `PayPerHoursEntity` (почасовая оплата), `ServiceCompletedEntity` (оплата за выполненную
-  услугу), `OrderPayedEntity` (вознаграждение за оплаченный заказ), `TaskCompletedEntity`
-  (вознаграждение за подтверждённую выполненную задачу). Тип правила резолвится через
-  `salary-rule-registry.ts` (`Map<SalaryRuleTypes, SalaryRuleClass>`) и создаётся фабрикой
+Бизнес-правила модуля (из чего складывается начисление, жизненный цикл расчётного периода,
+устройство зарплатных отчётов) описаны в
+[`openspec/specs/service/accounting/spec.md`](../../../../openspec/specs/service/accounting/spec.md)
+— ищи их там, а не здесь; этот раздел — только карта «правило → где в коде». Пока
+`openspec/changes/docs-migration-to-openspec` не заархивирован, актуальная версия спека временно
+лежит по пути `openspec/changes/docs-migration-to-openspec/specs/service/accounting/spec.md` — после
+архивации переедет по ссылке выше без изменения содержания. Основной источник замысла на момент
+реализации — `docs/payroll/prd-payroll-calculation.md` и `docs/payroll/plan-payroll-calculation.md`
+(Фазы 1–9).
+
+- **Мотивационная схема** — `MotivationSchemaEntity` (агрегат).
+- **Зарплатные правила** — `domain/entities/salary-rules/*` (`PayPerHoursEntity`,
+  `ServiceCompletedEntity`, `OrderPayedEntity`); тип резолвится через `salary-rule-registry.ts`
+  (`Map<SalaryRuleTypes, SalaryRuleClass>`), создаётся фабрикой
   `domain/factories/salary-rule.factory.ts` — при добавлении нового типа правила регистрируй его в
-  обоих местах. `PeriodCalculationOrchestrator` (`domain/services/`) вызывает `calculate()` каждого
-  правила схемы и суммирует строки — правила независимы, не ссылаются на результаты друг друга.
-- **Команды** (`application/command/`): помимо создания схемы/правила — `CloseAccountingPeriodCommand`,
-  `ReopenAccountingPeriodCommand`, `RecalculateAccountingPeriodCommand` и CRUD `TaskCompletion`
-  (`Create/Delete...`, `ConfirmTaskCompletion`) — стандартный `@nestjs/cqrs`
-  `CommandBus` (`CqrsModule` импортирован в `accounting.module.ts`). CRUD `EmployeeHoursEntry` (Фаза 7)
-  удалён Фазой 5 `docs/employee-work-schedule` — источник часов `PayPerHour` теперь общий модуль
-  `modules/work-schedule` (см. ниже).
+  обоих местах. Оркестрация расчёта — `PeriodCalculationOrchestrator` (`domain/services/`).
+- **Команды** (`application/command/`): создание схемы/правила, `CloseAccountingPeriodCommand`,
+  `ReopenAccountingPeriodCommand`, `RecalculateAccountingPeriodCommand` — стандартный `@nestjs/cqrs`
+  `CommandBus` (`CqrsModule` импортирован в `accounting.module.ts`).
 - **События**: `MotivationSchemaCreatedDomainEvent` → `MotivationSchemaCreatedEventHandler`;
   `AccountingPeriodClosedDomainEvent` → `AccountingPeriodClosedEventHandler` (создаёт снапшот).
 - HTTP-вход: `CreateMotivationSchemaHttpController`, эндпоинты периода/отчётов/задач (см.
@@ -112,49 +113,21 @@ domains/service/
   из `ENDPOINTS.md`) обслуживаются другим, ещё не мигрированным модулем `salary` (см.
   закомментированный импорт `SalaryModule` в `app.module.ts`) — не путай его с `accounting`, они пока
   частично дублируют предметную область на время переноса.
-- **Роли и правила расчёта (Фазы 7–8)**: `domain/services/service-role-source.ts`
-  — маппинг «роль правила → поле ERP RoApp» и функция `employeeMatchesServiceRole`, общая точка,
-  которую переиспользуют все четыре правила для ролевой выборки (кроме `OrderPayedEntity` в роли
-  `ENGINEER`, которая матчится по позициям заказа, а не по одному полю — см. комментарий в
-  `order-payed.entity.ts`). `domain/services/money.ts` — `roundRubles()`, единая точка округления
-  процентных начислений (целые рубли, `Math.round`) для всего модуля. `domain/services/float-percent.ts`
-  — `resolveFloatPercentMultiplier()`, разрешение множителя `FloatPercent` по границам процента
-  выполнения плана. `application/services/build-service-calculation-context.service.ts`
-  — единственное место, где `CalculationContext.erpData`/`employee.identities` реально заполняются из
-  БД (`ServiceCalculationDataPort`/`ServiceCalculationDataRepository`): собирает вход для оркестратора
-  и для `GetEmployeeSalaryReportService`/`GetDepartmentSalaryReportService`, и для
-  `CloseAccountingPeriodHandler`. Источник часов `PayPerHour` (Фаза 5,
-  `docs/employee-work-schedule`) — сумма часов рабочих смен графика (`WorkScheduleEntry.status =
-  WORKING` за период), читаемая `ServiceCalculationDataRepository.findHoursWorked` напрямую из общего
-  модуля `modules/work-schedule` (не через его HTTP-порт); прежний ручной ввод часов (CRUD-эндпоинты
-  под `/v1/service/accounting`, теперь удалённые вместе с моделью) заменён этим источником, данные
-  перенесены разовой миграцией (`npm run migrate:work-schedule-hours`). Источник `TaskCompleted` —
-  `TaskCompletion` (`domain/entities/task-completion.entity.ts`) — временный внутренний двухступенчатый
-  воркфлоу подтверждения (сотрудник отмечает выполненной → руководитель подтверждает `CONFIRMED`) без
-  интеграции с Bitrix24 Tasks (реальная синхронизация запланирована отдельной будущей фазой); только
-  подтверждённые записи участвуют в расчёте. Prisma-модель `TaskCompletion` общая для `service`/`shop`
-  (дискриминатор `direction`, дефолт `'service'`, Фаза 13) — с Фазы 13.5 у `shop` есть собственный,
-  независимый CQRS-вход для записи этих задач (`ShopTaskCompletion`, см. `domains/shop/CLAUDE.md`),
-  пишущий в ту же таблицу с `direction: 'shop'`.
-- **Расчётный период (`AccountingPeriod`, Фаза 6)** — `direction` + `period` (`YYYY-MM`) как
-  естественный ключ, сервис и магазин закрываются независимо; период без записи в БД трактуется как
-  `OPEN` (см. `AccountingPeriodRepositoryPort.findByDirectionAndPeriod`). `close()`/`reopen()` —
-  переходы статуса на агрегате; проверка «все строки плана продаж утверждены» перед закрытием —
-  ответственность `CloseAccountingPeriodHandler` (знает про модуль `sales` через
-  `SALES_PLAN_REPOSITORY`), не самой сущности. Закрытие создаёт неизменяемый снапшот по каждому
-  сотруднику с личной мотивационной схемой (`AccountingPeriodSnapshotPort`) — закрытый период отчёты
-  читают из снапшота (`prognose` не хранится, только `fact`), открытый — считает заново через ленивый
-  кэш (`ACCOUNTING_CALCULATION_CACHE`, ключ `(direction, period, employeeId)`), инвалидируемый штампом
-  свежести (`accounting-cache-freshness.ts`: версия мотивационной схемы + штамп последней успешной
-  синхронизации ERP + штамп последнего изменения плана продаж).
-- **Отчёты (Фаза 9)** — `GetEmployeeSalaryReportService` (`GET
-  /v1/service/accounting/salary_report/employee/:id/:period`) и `GetDepartmentSalaryReportService`
-  (`GET .../department/:id/:period`) используют один и тот же расчёт
-  (`PeriodCalculationOrchestrator` + `rule.calculate()`); отчёт отдела — сумма отчётов сотрудников
-  отдела, но контекст (ERP-данные, `SalesPerformance`, схемы, идентичности, часы) собирается **один
-  раз на весь отдел**, а не на каждого сотрудника — чтобы не было N+1. Оба режима расчёта — `FACT` и
-  `PROGNOSE` — считаются параллельно; `PROGNOSE` берёт `SalesPrognose.percentCompletion` вместо
-  `SalesFact.percentCompletion` для `FloatPercent`, личная база сотрудника не экстраполируется.
+- **Ключевые классы для навигации по коду**: `domain/services/service-role-source.ts` (маппинг
+  «роль правила → поле ERP RoApp», `employeeMatchesServiceRole`), `domain/services/money.ts`
+  (`roundRubles()`), `domain/services/float-percent.ts` (`resolveFloatPercentMultiplier()`),
+  `application/services/build-service-calculation-context.service.ts` (единственное место, где
+  `CalculationContext.erpData`/`employee.identities` заполняются из БД через
+  `ServiceCalculationDataPort`/`ServiceCalculationDataRepository`), `accounting-cache-freshness.ts`
+  (штамп свежести ленивого кэша расчёта открытого периода — `ACCOUNTING_CALCULATION_CACHE`),
+  `ServiceCalculationDataRepository.findHoursWorked` (источник часов из `modules/work-schedule`, не
+  через его HTTP-порт; прежний ручной ввод часов заменён этим источником разовой миграцией
+  `npm run migrate:work-schedule-hours`), `CloseAccountingPeriodHandler` (знает про модуль `sales`
+  через `SALES_PLAN_REPOSITORY`), `AccountingPeriodSnapshotPort`/`AccountingPeriodRepositoryPort`.
+- Отчёты — `GetEmployeeSalaryReportService` (`GET
+  /v1/service/accounting/salary_report/employee/:id/:period`),
+  `GetDepartmentSalaryReportService` (`GET .../department/:id/:period`), оба поверх
+  `PeriodCalculationOrchestrator` + `rule.calculate()`.
 
 ### `modules/sales` — план/факт/прогноз продаж (Фазы 3–5) + сделки/лиды (в разработке)
 
@@ -235,8 +208,8 @@ read-side:
 `service` и `shop` — параллельные бизнес-направления с похожим набором бизнес-процессов, поэтому
 итоговая структура `modules/` у них похожая, но бизнес-логика внутри каждого процесса разная (разные
 ERP, разные правила) — это **не общий переиспользуемый код**, а зеркальный, но независимый набор
-модулей в каждом домене, за двумя осознанными исключениями: модели `SalesPlan`/`SalesPlanTemplate`/
-`TaskCompletion`, общие на уровне Prisma-схемы с дискриминатором `direction` (см. выше), и CRUD плана/
+модулей в каждом домене, за двумя осознанными исключениями: модели `SalesPlan`/`SalesPlanTemplate`,
+общие на уровне Prisma-схемы с дискриминатором `direction` (см. выше), и CRUD плана/
 шаблона плана продаж внутри `modules/sales` — там HTTP-контроллеры `shop` напрямую диспатчат те же
 классы команд `service` через общий `CommandBus` (см. выше, раздел про `modules/sales`, и
 `domains/shop/CLAUDE.md`); эндпоинты (`/v1/service/sales/plan*` и `/v1/shop/sales/plan*`) при этом
@@ -288,9 +261,8 @@ ERP, разные правила) — это **не общий переиспо�
 ## Данные и тесты
 
 - Prisma-схема: `prisma/schema/roapp.prisma` (собственные таблицы `roapp*`),
-  `prisma/schema/salary.prisma` (`MotivationSchema`/`SalaryRule`/`TaskCompletion` — `TaskCompletion`
-  общая с `shop`, дискриминатор `direction`; `EmployeeHoursEntry` удалена Фазой 5, см.
-  `prisma/schema/work-schedule.prisma`),
+  `prisma/schema/salary.prisma` (`MotivationSchema`/`SalaryRule`; `EmployeeHoursEntry` удалена
+  Фазой 5, см. `prisma/schema/work-schedule.prisma`),
   `prisma/schema/accounting-period.prisma` (`AccountingPeriod`/`AccountingCalculationCache`/
   `AccountingPeriodSnapshot`), `prisma/schema/sales.prisma` (`SalesPlan`/`SalesPlanTemplate`, тоже
   общие с `shop` через `direction`) и `prisma/schema/bitrix.prisma` (общие с CRM-контуром, читаются

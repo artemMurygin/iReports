@@ -26,7 +26,7 @@ export type CreatePayoutCashboxRecordProps = PayoutCashboxRecordProps;
 // ФИЗИЧЕСКИ ТУ ЖЕ таблицу erp_cash_documents (см. prisma/schema/erp-cash.prisma
 // — таблицы между service/shop не разбиваются, backend/CLAUDE.md), но
 // всегда подставляет/фильтрует direction = 'shop' — то же самое разделение,
-// каким уже пользуются SalaryRule/TaskCompletion (Prisma-дискриминатор
+// каким уже пользуется SalaryRule (Prisma-дискриминатор
 // direction на общей таблице).
 export class Cashbox extends AggregateRoot<PayoutCashboxRecordProps> {
     declare protected readonly _id: AggregateID;

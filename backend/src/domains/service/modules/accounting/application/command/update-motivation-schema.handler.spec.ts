@@ -9,9 +9,6 @@ import type { SalaryRuleRepositoryPort } from '../ports/salary-rule.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
-import { TaskRuleBitrixDeletionFailedException } from '@/domains/service/modules/accounting/domain/exceptions/task-rule.exception';
-import type { BitrixTasksService } from '@/integrations/bitrix/bitrix-tasks.service';
 
 describe('UpdateMotivationSchemaHandler', () => {
     const buildExistingSchema = (ruleCount = 1) => {
@@ -72,19 +69,11 @@ describe('UpdateMotivationSchemaHandler', () => {
             .mockResolvedValue({ id: 'rule-id' });
         const commandBus = { execute } as unknown as CommandBus;
 
-        const deleteTask = jest
-            .fn<Promise<void>, [number]>()
-            .mockResolvedValue(undefined);
-        const bitrixTasksService = {
-            deleteTask,
-        } as unknown as BitrixTasksService;
-
         const handler = new UpdateMotivationSchemaHandler(
             motivationSchemaRepo,
             salaryRuleRepo,
             unitOfWork,
             commandBus,
-            bitrixTasksService,
         );
 
         return {
@@ -94,7 +83,6 @@ describe('UpdateMotivationSchemaHandler', () => {
             deleteAllByMotivationSchema,
             run,
             execute,
-            deleteTask,
         };
     };
 
@@ -234,105 +222,6 @@ describe('UpdateMotivationSchemaHandler', () => {
             );
             expect(update).not.toHaveBeenCalled();
             expect(deleteAllByMotivationSchema).not.toHaveBeenCalled();
-        });
-    });
-
-    // spec.md, Requirement "Удаление задачи Bitrix24 при удалении правила
-    // или схемы".
-    describe('удаление задач Bitrix24 существующих правил TaskCompleted', () => {
-        const buildSchemaWithTaskRule = (taskIds: number[]) =>
-            withRequestContext(() => {
-                const rule = TaskCompletedEntity.create({
-                    type: 'TaskCompleted',
-                    name: 'Сдать отчёт',
-                    targetRole: 'ENGINEER',
-                    config: {
-                        description: 'Описание',
-                        period: '2026-08',
-                        isRecurring: false,
-                        dueDate: '2026-08-20',
-                        rewardAmount: 1000,
-                        bitrixTaskIds: taskIds,
-                    },
-                });
-                return MotivationSchema.create({
-                    targetType: 'Employee',
-                    targetId: 1,
-                    name: 'Схема с задачей',
-                    rules: [rule],
-                });
-            });
-
-        it('удаляет задачи Bitrix24 всех существующих правил TaskCompleted перед пересозданием', async () => {
-            await withRequestContext(async () => {
-                const existingSchema = buildSchemaWithTaskRule([101, 102]);
-                const { handler, deleteTask, deleteAllByMotivationSchema } =
-                    buildHandler(existingSchema);
-                const command = new UpdateMotivationSchemaCommand({
-                    motivationSchemaId: existingSchema.id,
-                    name: 'Новое имя',
-                    rules: [],
-                });
-
-                await handler.execute(command);
-
-                expect(deleteTask).toHaveBeenCalledTimes(2);
-                expect(deleteTask).toHaveBeenCalledWith(101);
-                expect(deleteTask).toHaveBeenCalledWith(102);
-                // Удаление задач Bitrix24 — до deleteAllByMotivationSchema
-                // (design.md, Decision 4: "сначала Bitrix").
-                const deleteTaskOrder = deleteTask.mock.invocationCallOrder[0];
-                const deleteAllOrder =
-                    deleteAllByMotivationSchema.mock.invocationCallOrder[0];
-                expect(deleteTaskOrder).toBeLessThan(deleteAllOrder);
-            });
-        });
-
-        it('ошибка удаления задачи Bitrix24 прерывает обновление — правило не удаляется', async () => {
-            await withRequestContext(async () => {
-                const existingSchema = buildSchemaWithTaskRule([101]);
-                const {
-                    handler,
-                    deleteTask,
-                    deleteAllByMotivationSchema,
-                    update,
-                    execute,
-                } = buildHandler(existingSchema);
-                (deleteTask as jest.Mock).mockRejectedValueOnce(
-                    new Error('bitrix unreachable'),
-                );
-                const command = new UpdateMotivationSchemaCommand({
-                    motivationSchemaId: existingSchema.id,
-                    name: 'Новое имя',
-                    rules: [],
-                });
-
-                await expect(handler.execute(command)).rejects.toThrow(
-                    TaskRuleBitrixDeletionFailedException,
-                );
-
-                expect(update).not.toHaveBeenCalled();
-                expect(deleteAllByMotivationSchema).not.toHaveBeenCalled();
-                expect(execute).not.toHaveBeenCalled();
-                // Имя схемы не изменилось — переименование не применилось.
-                expect(existingSchema.getProps().name).toBe('Схема с задачей');
-            });
-        });
-
-        it('схема без правил TaskCompleted не обращается в Bitrix24', async () => {
-            await withRequestContext(async () => {
-                const existingSchema = buildExistingSchema();
-                const { handler, deleteTask } = buildHandler(existingSchema);
-                const command = new UpdateMotivationSchemaCommand({
-                    motivationSchemaId: existingSchema.id,
-                    name: 'Новое имя',
-                    rules: [],
-                });
-
-                await handler.execute(command);
-
-                expect(deleteTask).not.toHaveBeenCalled();
-            });
         });
     });
 });

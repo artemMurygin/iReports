@@ -43,24 +43,3 @@ export type RuleFormConfig = {
     categoryRuleTypes: RuleType[]
     orderTypeRuleTypes: RuleType[]
 }
-
-/**
- * `TaskCompleted` создаёт задачу Bitrix24 с ответственным = сотрудник схемы (change
- * salary-rule-bitrix-task, spec.md "Создание правила-задачи только в схеме на сотрудника") — у
- * схемы отдела нет конкретного исполнителя, поэтому тип недоступен для добавления, когда цель
- * схемы — отдел. Обе точки, что строят финальный `RuleFormConfig` для карточки правила (создание —
- * `pages/SalaryRules/model/useSalaryRulesPage.ts`, редактирование — `useServiceSchemaEditPage.ts`/
- * `useShopSchemaEditPage.ts`), пропускают свой направленческий конфиг через эту функцию с уже
- * известной целью схемы, вместо того чтобы `core/ui/RuleFormCard`'s тип-селект знал о цели схемы
- * сам — `config.ruleTypeOrder` остаётся единственным источником списка типов для селекта
- * (`RuleFormCardFields.tsx`), фильтрация целиком происходит до него. `targetType: null` (цель ещё
- * не выбрана/схема ещё не загружена) не сужает список — те немногие миллисекунды до выбора цели не
- * должны прятать тип, который окажется доступным.
- */
-export function restrictRuleFormConfigToTarget(
-    config: RuleFormConfig,
-    targetType: 'Department' | 'Employee' | null,
-): RuleFormConfig {
-    if (targetType !== 'Department') return config
-    return { ...config, ruleTypeOrder: config.ruleTypeOrder.filter((type) => type !== 'TaskCompleted') }
-}

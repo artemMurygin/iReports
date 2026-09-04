@@ -149,10 +149,6 @@
       "file": "salary_rules.json",
       "rows": 19
     },
-    "task_completions": {
-      "file": "task_completions.json",
-      "rows": 0
-    },
     "work_schedule_entries": {
       "file": "work_schedule_entries.json",
       "rows": 136

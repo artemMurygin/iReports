@@ -78,82 +78,14 @@ export type OrderPayedSalaryRule = {
     config: OrderPayedSalaryConfig;
 };
 
-// За выполненную задачу (change salary-rule-bitrix-task) — "задача" здесь
-// реальная задача Bitrix24, привязанная к правилу; постановка, обсуждение и
-// приёмка идут в Bitrix24, а iReports читает статус и расчётный месяц задачи
-// пакетным запросом при расчёте (см. task-completed.entity.ts,
-// design.md Decision 1). Единственный вид вознаграждения — фиксированная
-// сумма (Decision 2; BREAKING — вариант award/FloatPercent, использовавшийся
-// прежним временным воркфлоу TaskCompletion, удалён вместе с ним).
-// Фактическая сумма к выплате по закрытой задаче за конкретный расчётный
-// период — ручной ввод руководителя (spec.md, "Ручной ввод фактической
-// суммы по закрытой задаче"), хранится в props правила, без отдельной
-// Prisma-модели (Decision 2).
-export type TaskCompletedActualAmountEntry = {
-    period: string;
-    amount: number;
-};
-
-// Жизненный цикл разового правила-задачи (docs/task-rule-archiving-and-links,
-// Фаза 1) — имеет смысл ТОЛЬКО при isRecurring: false. Для регулярных
-// правил статус не присваивается и нигде не проверяется (PRD, "В скоупе":
-// "Регулярные правила ... не затрагиваются этой фичей вообще"). ACTIVE —
-// правило ещё часть мотивационной схемы; ARCHIVED — необратимый терминал,
-// правило автоматически переводится сюда при закрытии расчётного периода,
-// к которому относится dueDate (см. TaskCompletedEntity.archive() и
-// application/events/archive-one-time-task-rules-on-period-closed.event-handler.ts).
-export type TaskCompletedRuleStatus = 'ACTIVE' | 'ARCHIVED';
-
-export type TaskCompletedSalaryConfig = {
-    description: string;
-    // Расчётный месяц правила на момент создания/редактирования — границы,
-    // в которых обязан лежать dueDate (Decision 9). НЕ текущий расчётный
-    // месяц, который правило обслуживает в моменте расчёта — тот
-    // определяется живым тегом периода задачи Bitrix24 (Decision 1 и 7).
-    period: string;
-    isRecurring: boolean;
-    // 'YYYY-MM-DD', см. contracts/commands/salary-rule.ts —
-    // taskCompletedDueDateSchema.
-    dueDate: string;
-    // Сумма вознаграждения за полное выполнение — единственный вид награды
-    // (Decision 2). Оборачивается value object'ом TaskRewardAmount на
-    // доменном уровне (см. task-completed.entity.ts), сырое число — только
-    // форма хранения в props: Json.
-    rewardAmount: number;
-    // ID задач Bitrix24, накопленные за всё время правила: один элемент
-    // для разового правила, по одному новому элементу на каждый
-    // регенерированный месяц для регулярного (design.md change
-    // salary-rule-bitrix-task, Decision 1). Расчётный месяц задачи не
-    // дублируется здесь — при расчёте он читается из Bitrix24 (тег
-    // периода) пакетным запросом по этим ID.
-    bitrixTaskIds?: number[];
-    // По одной записи на период, где руководитель вводил фактическую
-    // сумму (Decision 2 выше) — upsert по period, см.
-    // TaskCompletedEntity.upsertActualAmount.
-    actualAmounts?: TaskCompletedActualAmountEntry[];
-    // См. WHY у TaskCompletedRuleStatus. Опционально с дефолтом 'ACTIVE'
-    // (и на уровне zod-схемы contracts, и в геттере TaskCompletedEntity.status)
-    // — уже существующие в БД правила, созданные до этой фичи, читаются как
-    // ACTIVE без миграции данных.
-    status?: TaskCompletedRuleStatus;
-};
-
-export type TaskCompletedSalaryRule = {
-    type: 'TaskCompleted';
-    name: string;
-    targetRole: TargetRole;
-    config: TaskCompletedSalaryConfig;
-};
-
 export type SalaryRuleConfig =
     | PayPerHourSalaryConfig
     | ServiceCompletedSalaryConfig
-    | OrderPayedSalaryConfig
-    | TaskCompletedSalaryConfig;
+    | OrderPayedSalaryConfig;
 
 // Форма запроса на создание правила — контракт (SalaryRuleRequest), а не
 // подмножество из двух реализованных типов: контракт уже включает
-// OrderPayed/TaskCompleted (сущности которых — заглушки до Фаз 7-8), и
+// OrderPayed (сущность которого — заглушка до Фазы 8), и
 // дублировать здесь список вручную значит расходиться с ним при каждом
 // добавлении нового типа правила (см. docs/CLAUDE.md — контракты как
 // единственный источник истины по форме данных). Незарегистрированный тип

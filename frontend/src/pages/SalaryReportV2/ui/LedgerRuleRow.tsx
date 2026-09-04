@@ -8,13 +8,10 @@ import { isFloatPercentRule, type SalaryDirection, type SalaryReportRule } from 
 import { LEDGER_CHEVRON_COL, LEDGER_VALUE_COL } from '../model/ledgerColumns.ts'
 
 import { RuleSourcesRail } from './RuleSourcesRail.tsx'
-import { TaskRulePanel } from './TaskRulePanel.tsx'
 
 export type LedgerRuleRowProps = {
     rule: SalaryReportRule
     direction: SalaryDirection
-    period: string
-    isClosed: boolean
     isExpanded: boolean
     onToggle: () => void
     className?: string
@@ -42,9 +39,8 @@ const DOT_CLASS: Record<SalaryDirection, string> = {
  * `isRuleExpanded`/`onToggleRule`, так что без явного триггера кликабельность строки была бы не
  * очевидна пользователю.
  */
-export function LedgerRuleRow({ rule, direction, period, isClosed, isExpanded, onToggle, className }: LedgerRuleRowProps) {
+export function LedgerRuleRow({ rule, direction, isExpanded, onToggle, className }: LedgerRuleRowProps) {
     const metaLabel = isFloatPercentRule(rule) ? 'Плавающий процент · KPI' : 'Фиксированная ставка'
-    const isUnavailableTask = rule.type === 'TaskCompleted' && rule.isTaskUnavailable === true
 
     return (
         <div data-slot="ledger-rule-row" className={cn(expanded(isExpanded), className)}>
@@ -61,11 +57,6 @@ export function LedgerRuleRow({ rule, direction, period, isClosed, isExpanded, o
                     </span>
                     <span className="flex min-w-0 items-center gap-1.5">
                         <span className="truncate font-ui text-[11px] text-ink-muted">{metaLabel}</span>
-                        {isUnavailableTask && (
-                            <span className="inline-flex w-fit shrink-0 items-center rounded-md bg-danger-soft px-1.5 py-[1px] font-ui text-[10px] font-semibold whitespace-nowrap text-danger">
-                                Задача недоступна
-                            </span>
-                        )}
                     </span>
                 </span>
 
@@ -88,7 +79,6 @@ export function LedgerRuleRow({ rule, direction, period, isClosed, isExpanded, o
 
             {isExpanded && (
                 <div className="border-t border-hairline bg-canvas">
-                    <TaskRulePanel rule={rule} period={period} isClosed={isClosed} />
                     <RuleSourcesRail sources={rule.sources} />
                 </div>
             )}

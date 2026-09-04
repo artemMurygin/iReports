@@ -200,7 +200,7 @@ direction-agnostic блокировки было бы чище использо�
   `semantically_similar_to`, `shares_data_with`) из семантической экстракции графа, не импорты кода.
 - **`src/shared/filter.md → domains/shop/CLAUDE.md`** — то же самое, документ-документ.
 - **CLI/миграционные скрипты в `src/shared/*.ts`** (`migrateEmployeeIdentities.ts`,
-  `migrateWorkScheduleHours.ts`, `migrateTaskCompletedRuleConfigs.ts`, `exportRoappOrders.ts`) —
+  `migrateWorkScheduleHours.ts`, `exportRoappOrders.ts`) —
   импортируют `AppModule` и конкретные бизнес-сервисы обоих доменов. Ровно та же логика, что
   `review.md:104-110` уже применил к `initialUploadData.ts`: это одноразовые CLI-точки входа (`npm
   run migrate-*`), а не часть runtime-приложения — ожидаемо, не архитектурная утечка. Физически они
@@ -226,7 +226,7 @@ direction-agnostic блокировки было бы чище использо�
 4. Обновить `docs/review.md:104-105` — убрать или скорректировать утверждение о строгой
    однонаправленности `shop → service`, добавить ссылку на этот документ.
 5. Вынести CLI-скрипты `src/shared/{migrateEmployeeIdentities,migrateWorkScheduleHours,
-   migrateTaskCompletedRuleConfigs,exportRoappOrders,initialUploadData}.ts` из `src/shared` в
+   exportRoappOrders,initialUploadData}.ts` из `src/shared` в
    отдельную `scripts/`-директорию вне рантайм-кода — устранит ложные срабатывания при будущих
    графовых/статических проверках границ и просто более понятно организационно.
 6. Заменить прямой импорт `RoappSyncCron`/`RoappSyncService`/`RoappErpPeriodSyncAdapter` в

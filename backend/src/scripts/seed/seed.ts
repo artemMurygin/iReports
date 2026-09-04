@@ -66,7 +66,6 @@ const SEEDED_TABLES = [
     'salary_accrual_line_adjustments',
     'motivation_schemas',
     'salary_rules',
-    'task_completions',
     'work_schedule_entries',
     'sales_plan_templates',
     'sales_plans',
@@ -169,7 +168,10 @@ async function confirmDestructiveSeed(): Promise<void> {
         process.exit(1);
     }
 
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const rl = createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
     const answer = await rl.question('Введите "yes" для продолжения: ');
     rl.close();
     if (answer.trim().toLowerCase() !== 'yes') {
@@ -258,7 +260,6 @@ async function main() {
 
     await insertMany('motivation_schemas', prisma.motivationSchema);
     await insertMany('salary_rules', prisma.salaryRule);
-    await insertMany('task_completions', prisma.taskCompletion);
     await insertMany('work_schedule_entries', prisma.workScheduleEntry);
 
     await insertMany('sales_plan_templates', prisma.salesPlanTemplate);

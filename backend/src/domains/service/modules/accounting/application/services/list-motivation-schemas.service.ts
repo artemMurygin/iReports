@@ -12,8 +12,8 @@ import { MotivationSchemaMapper } from '@/domains/service/modules/accounting/inf
 
 // Список мотивационных схем направления service (GET
 // /v1/service/motivation-schema, Фаза "Редактирование зарплатных схем").
-// DI-провайдер, а не CQRS-запрос — тот же приём, что и ListSalaryRuleTypesService/
-// ListTaskCompletionsService у остальных read-эндпоинтов модуля.
+// DI-провайдер, а не CQRS-запрос — тот же приём, что и
+// ListSalaryRuleTypesService у остальных read-эндпоинтов модуля.
 @Injectable()
 export class ListMotivationSchemasService {
     private readonly mapper = new MotivationSchemaMapper();

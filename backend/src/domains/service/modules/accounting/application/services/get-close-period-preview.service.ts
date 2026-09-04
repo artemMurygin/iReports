@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ClosePeriodPreviewResponse } from 'ireports-contracts';
 import { Period } from '@/shared/domain/period.value-object';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
@@ -11,7 +11,6 @@ import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/applica
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import type { AccountingPeriodSnapshotRow } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
-import { ListUnclosedTaskRulesForPeriodService } from '@/domains/service/modules/accounting/application/services/list-unclosed-task-rules-for-period.service';
 
 const PAY_PER_HOUR_RULE_TYPE = 'PayPerHour';
 
@@ -31,18 +30,6 @@ export class GetClosePeriodPreviewService {
         private readonly employeeDismissal: EmployeeDismissalPort,
         @Inject(WORK_SCHEDULE_ENTRY_REPOSITORY)
         private readonly workScheduleRepo: WorkScheduleEntryRepositoryPort,
-        // Optional: этот сервис инстанцируется как СВОЙ отдельный провайдер
-        // и в service-, и в shop-модуле (см. shop-accounting.module.ts,
-        // комментарий "собственные экземпляры под теми же токенами"), а
-        // ListUnclosedTaskRulesForPeriodService зависит от
-        // ResolveEmployeeSalaryRulesService/MOTIVATION_SCHEMA_REPOSITORY —
-        // токенов, которых в shop-модуле нет (там свой,
-        // ResolveShopEmployeeSalaryRulesService/SHOP_MOTIVATION_SCHEMA_REPOSITORY).
-        // TaskCompleted ещё не читает Bitrix24 для shop (см. execute() ниже),
-        // поэтому shop-модуль просто не предоставляет этот провайдер, а не
-        // дублирует чужой DI-граф ради недостижимой ветки.
-        @Optional()
-        private readonly listUnclosedTaskRules?: ListUnclosedTaskRulesForPeriodService,
     ) {}
 
     async execute(
@@ -71,13 +58,6 @@ export class GetClosePeriodPreviewService {
             period,
             rows,
         );
-        // TaskCompleted читает Bitrix24 только для направления service
-        // (design.md/tasks.md раздел 7 — у shop эта интеграция ещё не
-        // заведена) — у shop список всегда пуст, без обращения к Bitrix24.
-        const unclosedTaskRules =
-            direction === 'service' && this.listUnclosedTaskRules
-                ? await this.listUnclosedTaskRules.execute(period.getValue())
-                : [];
 
         return {
             direction,
@@ -89,7 +69,6 @@ export class GetClosePeriodPreviewService {
             totalAmount: rows.reduce((sum, row) => sum + row.total, 0),
             unapprovedPlanRows,
             employeesWithoutHours,
-            unclosedTaskRules,
         };
     }
 

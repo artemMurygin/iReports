@@ -19,8 +19,8 @@ export interface FloatPercentThresholdInfo {
 // — группа полей с реальными инвариантами (см. WHY в create() ниже), а не
 // голый примитив, что по backend/CLAUDE.md ("Value Objects") требует VO.
 //
-// НЕ хранится внутри config сущностей правил (ProductSoldSalaryConfig/
-// TaskCompletedShopSalaryConfig по-прежнему держат сырой percentBorders) —
+// НЕ хранится внутри config сущностей правил (ProductSoldSalaryConfig
+// по-прежнему держит сырой percentBorders) —
 // salary-rule.schema.ts прямым текстом фиксирует инвариант "конфиг — одни
 // и те же данные от HTTP-запроса до jsonb-колонки props, без
 // трансформаций", а ShopSalaryRuleMapper generic по всем 4 типам правил,

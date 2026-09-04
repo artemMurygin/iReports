@@ -11,9 +11,6 @@ import {
 import { Mapper } from '@/shared/domain/mapper.interface';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { MotivationTarget } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
-import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
-import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
-import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix.config';
 import { SalaryRuleMapper } from './salary-rule.mapper';
 
 // Правила больше не хранятся в самой строке motivation_schemas (см.
@@ -80,7 +77,7 @@ export class MotivationSchemaMapper implements Mapper<
         targetName: string,
     ): MotivationSchemaListItem {
         const props = entity.getProps();
-        const rules = this.visibleRules(props.rules);
+        const rules = props.rules;
 
         const ruleTypes: string[] = [];
         for (const rule of rules) {
@@ -114,7 +111,7 @@ export class MotivationSchemaMapper implements Mapper<
         targetName: string,
     ): MotivationSchemaDetailResponse {
         const props = entity.getProps();
-        const rules = this.visibleRules(props.rules);
+        const rules = props.rules;
 
         return {
             id: props.id,
@@ -126,15 +123,14 @@ export class MotivationSchemaMapper implements Mapper<
                 name: targetName,
             },
             // Каждое доменное правило (PayPerHoursEntity/
-            // ServiceCompletedEntity/OrderPayedEntity/TaskCompletedEntity)
-            // структурно совпадает с одним из вариантов
-            // salaryRuleResponseSchema по (type, targetRole, config) — id
-            // добавлен явно (сущность правила его уже несёт). Cast, а не
-            // построчная сборка каждого варианта union, — тот же приём, что
-            // уже используется в модуле для доменных типов, широких по
-            // сравнению с контрактным discriminatedUnion (см.
-            // SalaryRuleMapper.toDomain: `salaryRuleTypeSchema.parse(...) as
-            // SalaryRuleTypes`).
+            // ServiceCompletedEntity/OrderPayedEntity) структурно совпадает
+            // с одним из вариантов salaryRuleResponseSchema по (type,
+            // targetRole, config) — id добавлен явно (сущность правила его
+            // уже несёт). Cast, а не построчная сборка каждого варианта
+            // union, — тот же приём, что уже используется в модуле для
+            // доменных типов, широких по сравнению с контрактным
+            // discriminatedUnion (см. SalaryRuleMapper.toDomain:
+            // `salaryRuleTypeSchema.parse(...) as SalaryRuleTypes`).
             rules: rules.map(
                 (rule) =>
                     ({
@@ -143,43 +139,10 @@ export class MotivationSchemaMapper implements Mapper<
                         name: rule.name,
                         targetRole: rule.targetRole,
                         config: rule.config,
-                        // bitrixTaskUrl — только TaskCompleted, только когда у
-                        // правила уже есть накопленная задача (see
-                        // taskCompletedSalaryRuleResponseSchema).
-                        ...(rule instanceof TaskCompletedEntity &&
-                        rule.bitrixTaskIds.length > 0
-                            ? {
-                                  bitrixTaskUrl: buildBitrixTaskLink(
-                                      rule.bitrixTaskIds[
-                                          rule.bitrixTaskIds.length - 1
-                                      ],
-                                  ),
-                              }
-                            : {}),
                     }) as SalaryRuleResponse,
             ),
             updatedAt: this.computeUpdatedAt(entity).toISOString(),
         };
-    }
-
-    // Фаза 2 docs/task-rule-archiving-and-links: заархивированные разовые
-    // TaskCompleted-правила полностью исключаются из ответов "просмотр/
-    // редактирование схемы" (список, деталь) — PRD, "В скоупе": "они не
-    // должны попадать на клиент ни в каком виде". Только эти две
-    // response-сборки фильтруются — toDomain() (используется расчётом
-    // зарплаты через MotivationSchemaRepositoryPort/
-    // ResolveEmployeeSalaryRulesService) правила не теряет: расчёт обязан
-    // видеть все правила независимо от статуса (см. "Технические
-    // ограничения" PRD и регрессионный тест
-    // ResolveEmployeeSalaryRulesService.spec.ts из Фазы 1).
-    private visibleRules(rules: SalaryRule[]): SalaryRule[] {
-        return rules.filter(
-            (rule) =>
-                !(
-                    rule instanceof TaskCompletedEntity &&
-                    rule.status === 'ARCHIVED'
-                ),
-        );
     }
 
     // updatedAt = max(schema.updatedAt, ...rules[].updatedAt) — тот же

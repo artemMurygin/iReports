@@ -17,11 +17,7 @@ export type FloatPercentFieldsProps = {
 
 /**
  * Под-поля награды `FloatPercent`: редактор порогов плюс базовый процент со слайдером и «База
- * начисления» — единственная форма этого варианта с тех пор, как `TaskCompleted`'s `FloatPercent`
- * (свой вариант с базовой ставкой в рублях, `basePrice`) удалён вместе с award-union этого типа
- * (change salary-rule-bitrix-task, design.md Decision 2 — единственный вид вознаграждения теперь
- * фиксированная сумма, `AWARD_OPTIONS_BY_TYPE.TaskCompleted` пуст, эта форма для него больше не
- * рендерится).
+ * начисления».
  */
 export function FloatPercentFields({ draft, config, errors, onChange, onChangeBorder }: FloatPercentFieldsProps) {
     return (

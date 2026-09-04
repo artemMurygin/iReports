@@ -14,8 +14,8 @@ export interface ShopSalesPlanScopeProps {
 // ShopSalesPlanRepository/ShopSalesPlanTemplateRepository — подставляет
 // `direction: 'shop'` при работе с общей Prisma-таблицей, см.
 // infrastructure/mappers/sales-plan.mapper.ts), тот же приём, что уже
-// применён у ShopAccountingPeriod/ShopTaskCompletion (см.
-// domains/shop/CLAUDE.md). Отдел и, опционально, категория всегда меняются
+// применён у ShopAccountingPeriod (см. domains/shop/CLAUDE.md). Отдел и,
+// опционально, категория всегда меняются
 // вместе (это была бы уже другая строка плана/шаблона, а не правка этой) и
 // вместе задают естественный ключ (@@unique в sales.prisma в паре с
 // зафиксированным direction), поэтому не два голых поля entity, а один

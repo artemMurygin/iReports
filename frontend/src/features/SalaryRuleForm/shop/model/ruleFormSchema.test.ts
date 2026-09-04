@@ -6,8 +6,8 @@ import { resolveShopRuleDraft } from './ruleFormSchema.ts'
 /**
  * Shop mirror of `service/model/ruleFormSchema.test.ts` (Фаза 4, docs/salary-schema-creation-ui) — `PayPerHour`
  * and the shared `percentBorders`/award boundary classes are covered there already (this resolver
- * reuses the same award builders for `ProductSold`/`TaskCompleted`, see `shop/model/ruleFormSchema.ts`'s
- * file comment), so this file focuses on what's actually different for shop:
+ * reuses the same award builder for `ProductSold`, see `shop/model/ruleFormSchema.ts`'s file
+ * comment), so this file focuses on what's actually different for shop:
  * `category`/`ProductSold`/`UsedProductSold`'s narrower award set (no `FloatPercent`), and that the
  * output is `ShopSalaryRuleRequest`, never mixed with the service `SalaryRuleRequest` shape.
  */
@@ -121,35 +121,5 @@ describe('resolveShopRuleDraft — UsedProductSold has no FloatPercent', () => {
         if (result.success && result.data.type === 'UsedProductSold') {
             expect(result.data.config.award).toEqual({ type: 'FixedPercent', percent: 6, salaryBasis: 'MARGIN' })
         }
-    })
-})
-
-describe('resolveShopRuleDraft — TaskCompleted (change salary-rule-bitrix-task, no category, no award-union)', () => {
-    function taskDraft(overrides: Partial<RuleDraft> = {}): RuleDraft {
-        return baseDraft({
-            type: 'TaskCompleted',
-            description: 'Провести инвентаризацию склада',
-            period: '2026-08',
-            isRecurring: false,
-            dueDate: '2026-08-15',
-            price: '10000',
-            ...overrides,
-        })
-    }
-
-    it('succeeds with all required fields, no category and no award-union in the payload', () => {
-        const result = resolveShopRuleDraft(taskDraft())
-        expect(result.success).toBe(true)
-        if (result.success && result.data.type === 'TaskCompleted') {
-            expect('category' in result.data.config).toBe(false)
-            expect('award' in result.data.config).toBe(false)
-            expect(result.data.config.rewardAmount).toBe(10000)
-        }
-    })
-
-    it('rejects a due date outside the selected period', () => {
-        const result = resolveShopRuleDraft(taskDraft({ period: '2026-08', dueDate: '2026-09-01' }))
-        expect(result.success).toBe(false)
-        if (!result.success) expect(result.errors.dueDate).toBeTruthy()
     })
 })

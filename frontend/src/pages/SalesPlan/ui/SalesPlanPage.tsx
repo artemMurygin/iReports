@@ -98,7 +98,6 @@ export function SalesPlanPage() {
                         period={period}
                         rowDetailsById={unapprovedRowDetailsById}
                         departmentNameById={departmentNameById}
-                        employeeNameById={employeeNameById}
                         onApproveRow={handleApproveFromCloseDialog}
                         isApprovingRow={approveRows.isPending}
                         onClosed={handlePeriodClosed}

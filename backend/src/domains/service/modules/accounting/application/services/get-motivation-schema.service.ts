@@ -7,8 +7,6 @@ import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/dire
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import type { MotivationTargetType } from '@/domains/service/modules/accounting/domain/value-objects/motivation-target.value-object';
 import { MotivationSchemaMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/motivation-schema/motivation-schema.mapper';
-import { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
-import { Period } from '@/shared/domain/period.value-object';
 
 // Деталь мотивационной схемы направления service (GET
 // /v1/service/motivation-schema/:id) — предзаполнение формы редактирования.
@@ -21,7 +19,6 @@ export class GetMotivationSchemaService {
         private readonly motivationSchemaRepo: MotivationSchemaRepositoryPort,
         @Inject(DIRECTORY_REPOSITORY)
         private readonly directoryRepo: DirectoryRepositoryPort,
-        private readonly ensureTaskRules: EnsureTaskRulesOnReadService,
     ) {}
 
     async execute(id: string): Promise<MotivationSchemaDetailResponse> {
@@ -35,21 +32,6 @@ export class GetMotivationSchemaService {
         }
 
         const target = schema.getProps().target;
-
-        // Ленивое достраивание задачи регулярного правила-задачи на текущий
-        // расчётный месяц (задача 7.2 change salary-rule-bitrix-task) —
-        // только для схемы на сотрудника: правило TaskCompleted недоступно
-        // на схеме отдела (spec.md, "Создание правила-задачи только в схеме
-        // на сотрудника"), поэтому у схемы отдела ensureAll() всё равно не
-        // нашёл бы ни одного правила TaskCompleted, но проверка
-        // target.isEmployee() дешевле, чем резолвить employeeId для отдела.
-        if (target.isEmployee()) {
-            await this.ensureTaskRules.ensureAll(
-                schema.getProps().rules,
-                target.getId(),
-                Period.current().getValue(),
-            );
-        }
 
         const targetName = await this.resolveTargetName(
             target.getType(),

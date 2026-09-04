@@ -13,8 +13,8 @@ import { ShopPeriodClosure } from '@/domains/shop/modules/accounting/domain/valu
 // — независимая копия для направления shop. Таблица accounting_periods
 // общая для обоих доменов (дискриминатор direction) — здесь он
 // подставляется фиксированным 'shop' в toPersistence(), toDomain() его
-// намеренно не читает (см. тот же приём у ShopTaskCompletionMapper):
-// строки этого направления и так фильтруются ShopAccountingPeriodRepository
+// намеренно не читает: строки этого направления и так фильтруются
+// ShopAccountingPeriodRepository
 // (`where: { direction: 'shop' } `).
 export class ShopAccountingPeriodMapper implements Mapper<
     ShopAccountingPeriod,

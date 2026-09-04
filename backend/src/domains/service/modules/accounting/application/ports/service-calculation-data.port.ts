@@ -1,6 +1,5 @@
 import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import type {
-    ConfirmedTaskCompletionErpItem,
     OrderPayedErpItem,
     PayPerHourHours,
     ServiceCompletedErpItem,
@@ -51,12 +50,6 @@ export interface ServiceCalculationDataPort {
     // OrderPayedEntity. Период-широкий набор, без фильтра по сотруднику —
     // тот же принцип, что и у findServiceCompletedItems.
     findOrderPayedItems(from: Date, to: Date): Promise<OrderPayedErpItem[]>;
-
-    // Подтверждённые записи о выполнении задач за период (Фаза 8) —
-    // источник для TaskCompletedEntity. Период-широкий набор.
-    findConfirmedTaskCompletions(
-        period: string,
-    ): Promise<ConfirmedTaskCompletionErpItem[]>;
 
     // Отдел Bitrix-сотрудника — вход для поиска SalesPerformance
     // подразделения (Фаза 8, вход FloatPercent). null, если сотрудник не

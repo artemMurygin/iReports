@@ -1,6 +1,6 @@
 import { ConflictException } from '@/shared/exceptions';
 
-// FloatPercent (OrderPayed/TaskCompleted) не может посчитать множитель без
+// FloatPercent (OrderPayed) не может посчитать множитель без
 // SalesPerformance подразделения сотрудника за период (Фаза 8, задача плана
 // "отсутствие плана на период даёт внятную доменную ошибку"). Возникает,
 // когда для CalculationContext.salesPerformance не нашлось строки плана —

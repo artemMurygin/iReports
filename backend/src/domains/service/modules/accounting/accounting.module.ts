@@ -7,18 +7,9 @@ import { RoappSyncModule } from '@/domains/service/sync/roapp/roapp-sync.module'
 import { RoappModule } from '@/domains/service/integrations/roapp/roapp.module';
 import { RoappCashDocumentAdapter } from '@/domains/service/integrations/roapp/roapp-cash-document.adapter';
 import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/employee-operation-lock.module';
-// BitrixModule — вход BitrixTasksService (change salary-rule-bitrix-task):
-// write-доступ к задачам Bitrix24, используемый правилом TaskCompleted —
-// создание/удаление задачи при сохранении/удалении правила (задачи 6.2/6.3),
-// пакетное чтение статусов при расчёте (задача 6.1) и в списке незакрытых
-// задач периода (задача 6.6), автосоздание задач регулярных правил (задача
-// 6.5). Тот же приём, что и у RoappModule/MoyskladModule выше — модуль
-// экспортирует нужный сервис отдельно от контроллера/остальной интеграции.
-import { BitrixModule } from '@/integrations/bitrix/bitrix.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/update-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/create-salary-rule.handler';
-import { SetTaskRuleActualAmountHandler } from '@/domains/service/modules/accounting/application/command/set-task-rule-actual-amount.handler';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/close-accounting-period.handler';
 import { ReopenAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.handler';
 import { AccrueSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-line.handler';
@@ -30,15 +21,11 @@ import { CreatePayoutHandler } from '@/domains/service/modules/accounting/applic
 import { CreatePayoutBatchHandler } from '@/domains/service/modules/accounting/application/command/create-payout-batch.handler';
 import { DeletePayoutHandler } from '@/domains/service/modules/accounting/application/command/delete-payout.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
-import { CreateTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/create-task-completion.handler';
-import { ConfirmTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/confirm-task-completion.handler';
-import { DeleteTaskCompletionHandler } from '@/domains/service/modules/accounting/application/command/delete-task-completion.handler';
 import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-employee-salary-report.service';
 import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-department-salary-report.service';
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
-import { ListTaskCompletionsService } from '@/domains/service/modules/accounting/application/services/list-task-completions.service';
 import { ListSalaryRuleTypesService } from '@/domains/service/modules/accounting/application/services/list-salary-rule-types.service';
 import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/list-motivation-schemas.service';
 import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/get-motivation-schema.service';
@@ -49,10 +36,6 @@ import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounti
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
-import { EnsureBitrixTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/ensure-bitrix-task-for-period.service';
-import { EnsureTaskRulesOnReadService } from '@/domains/service/modules/accounting/application/services/ensure-task-rules-on-read.service';
-import { ListUnclosedTaskRulesForPeriodService } from '@/domains/service/modules/accounting/application/services/list-unclosed-task-rules-for-period.service';
-import { TaskRuleAutoCreationCron } from '@/domains/service/modules/accounting/infrastructure/cron/task-rule-auto-creation.cron';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-motivation-schema.http.controller';
@@ -65,10 +48,6 @@ import { CloseAccountingPeriodHttpController } from '@/domains/service/modules/a
 import { ReopenAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/reopen-accounting-period.http.controller';
 import { RecalculateAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/recalculate-accounting-period.http.controller';
 import { GetAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-accounting-period.http.controller';
-import { CreateTaskCompletionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-task-completion.http.controller';
-import { ConfirmTaskCompletionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/confirm-task-completion.http.controller';
-import { DeleteTaskCompletionHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-task-completion.http.controller';
-import { ListTaskCompletionsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-task-completions.http.controller';
 import { ListSalaryRuleTypesHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-rule-types.http.controller';
 import { ListSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/list-salary-accruals.http.controller';
 import { GetSalaryAccrualHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-salary-accrual.http.controller';
@@ -82,14 +61,12 @@ import { CreatePayoutBatchHttpController } from '@/domains/service/modules/accou
 import { DeletePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-payout.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { GetErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-erp-cash-config.http.controller';
-import { SetTaskRuleActualAmountHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/set-task-rule-actual-amount.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
-import { TASK_COMPLETION_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/task-completion.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
@@ -104,7 +81,6 @@ import { AccountingPeriodRepository } from '@/domains/service/modules/accounting
 import { AccountingPeriodSnapshotRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period-snapshot.repository';
 import { AccountingCalculationCacheRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/calculation/accounting-calculation-cache.repository';
 import { ServiceCalculationDataRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/calculation/service-calculation-data.repository';
-import { TaskCompletionRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/task-completion/task-completion.repository';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/salary-accrual.repository';
 import { BalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/balance-transaction.repository';
 import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infrastructure/repositories/employee-dismissal.repository';
@@ -113,7 +89,6 @@ import { PayoutCashboxRecordRepository } from '@/domains/service/modules/account
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period-closed.event-handler';
-import { ArchiveOneTimeTaskRulesOnPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/archive-one-time-task-rules-on-period-closed.event-handler';
 import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/events/salary-accrual-documents-created.event-handler';
 
 // SalesModule — вход SALES_PLAN_REPOSITORY: закрытие периода читает
@@ -185,9 +160,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         // на процесс, тот же приём, что DirectionSyncLockModule у
         // RoappSyncModule/MoySkladSyncModule.
         EmployeeOperationLockModule,
-        // BitrixTasksService (change salary-rule-bitrix-task) — см. WHY у
-        // импорта выше.
-        BitrixModule,
     ],
     controllers: [
         CreateMotivationSchemaHttpController,
@@ -200,11 +172,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         ReopenAccountingPeriodHttpController,
         RecalculateAccountingPeriodHttpController,
         GetAccountingPeriodHttpController,
-        CreateTaskCompletionHttpController,
-        ConfirmTaskCompletionHttpController,
-        DeleteTaskCompletionHttpController,
-        ListTaskCompletionsHttpController,
-        SetTaskRuleActualAmountHttpController,
         ListSalaryRuleTypesHttpController,
         ListSalaryAccrualsHttpController,
         GetSalaryAccrualHttpController,
@@ -275,15 +242,11 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         CreatePayoutHandler,
         CreatePayoutBatchHandler,
         DeletePayoutHandler,
-        CreateTaskCompletionHandler,
-        ConfirmTaskCompletionHandler,
-        DeleteTaskCompletionHandler,
         GetEmployeeSalaryReportService,
         GetDepartmentSalaryReportService,
         GetAccountingPeriodService,
         BuildServiceCalculationContextService,
         ResolveEmployeeSalaryRulesService,
-        ListTaskCompletionsService,
         ListSalaryRuleTypesService,
         ListSalaryAccrualsService,
         GetSalaryAccrualService,
@@ -291,26 +254,8 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         CalculateServiceSnapshotRowsService,
         ErpPeriodSyncRunner,
         EnsurePeriodNotClosedService,
-        // change salary-rule-bitrix-task: ручной ввод фактической суммы
-        // (задача 6.4), автосоздание/ленивое достраивание задач регулярных
-        // правил (задача 6.5, потребители — Фаза 7, не эта), список
-        // незакрытых задач периода (задача 6.6, потребитель — HTTP-слой
-        // Фазы 8, не эта).
-        SetTaskRuleActualAmountHandler,
-        EnsureBitrixTaskForPeriodService,
-        // change salary-rule-bitrix-task, Фаза 7: EnsureTaskRulesOnReadService
-        // — ленивое достраивание задачи регулярного правила при GET схемы/
-        // отчёта (задача 7.2), потребители — GetMotivationSchemaService/
-        // GetEmployeeSalaryReportService/GetDepartmentSalaryReportService.
-        // TaskRuleAutoCreationCron — тот же ensure первого числа месяца
-        // (задача 7.1, @ProdCron, только направление service — см. WHY в
-        // самом файле крона).
-        EnsureTaskRulesOnReadService,
-        TaskRuleAutoCreationCron,
-        ListUnclosedTaskRulesForPeriodService,
         MotivationSchemaCreatedEventHandler,
         AccountingPeriodClosedEventHandler,
-        ArchiveOneTimeTaskRulesOnPeriodClosedEventHandler,
         SalaryAccrualDocumentsCreatedEventHandler,
         {
             provide: MOTIVATION_SCHEMA_REPOSITORY,
@@ -335,10 +280,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         {
             provide: SERVICE_CALCULATION_DATA,
             useClass: ServiceCalculationDataRepository,
-        },
-        {
-            provide: TASK_COMPLETION_REPOSITORY,
-            useClass: TaskCompletionRepository,
         },
         // Документы начисления (PRD 1 docs/payroll-closing-and-accrual) и
         // признак увольнения для них — direction-агностичные реализации,

@@ -130,7 +130,6 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
         findServiceCompletedItems: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve(0),
         findOrderPayedItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),

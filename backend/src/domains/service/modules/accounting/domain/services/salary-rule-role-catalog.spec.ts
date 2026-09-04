@@ -8,7 +8,6 @@ describe('listSalaryRuleTypes', () => {
             'OrderPayed',
             'PayPerHour',
             'ServiceCompleted',
-            'TaskCompleted',
         ]);
         for (const entry of types) {
             expect(entry.allowedRoles).toEqual(

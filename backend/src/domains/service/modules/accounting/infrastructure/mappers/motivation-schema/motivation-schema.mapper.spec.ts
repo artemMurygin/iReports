@@ -1,7 +1,5 @@
 import { MotivationSchemaMapper } from './motivation-schema.mapper';
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
-import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
-import { TaskCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completed.entity';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 describe('MotivationSchemaMapper', () => {
@@ -110,82 +108,6 @@ describe('MotivationSchemaMapper', () => {
             });
 
             expect(schema.getProps().name).toBe('Общее имя строки');
-        });
-    });
-
-    // Фаза 2 docs/task-rule-archiving-and-links: заархивированные разовые
-    // TaskCompleted-правила не должны попадать в ответ "просмотр/
-    // редактирование схемы" ни в каком виде (PRD, "В скоупе") — ни в
-    // rules[], ни в ruleCount/ruleTypes. Регулярное (isRecurring: true)
-    // и другие типы правил статуса не имеют вовсе и никогда не
-    // фильтруются. Путь расчёта зарплаты (toDomain(), используемый
-    // ResolveEmployeeSalaryRulesService) не затрагивается — см.
-    // регрессионный тест resolve-employee-salary-rules.service.spec.ts
-    // (Фаза 1).
-    describe('фильтрация ARCHIVED-правил (toListItemResponse/toDetailResponse)', () => {
-        const buildSchemaWithRules = () =>
-            withRequestContext(() => {
-                const archivedRule = TaskCompletedEntity.create({
-                    type: 'TaskCompleted',
-                    name: 'Заархивированная задача',
-                    targetRole: 'ENGINEER',
-                    config: {
-                        description: 'Сделать что-то важное',
-                        period: '2026-08',
-                        isRecurring: false,
-                        dueDate: '2026-08-15',
-                        rewardAmount: 10000,
-                    },
-                });
-                archivedRule.archive();
-
-                const activeTaskRule = TaskCompletedEntity.create({
-                    type: 'TaskCompleted',
-                    name: 'Активная задача',
-                    targetRole: 'ENGINEER',
-                    config: {
-                        description: 'Сделать другое',
-                        period: '2026-09',
-                        isRecurring: false,
-                        dueDate: '2026-09-15',
-                        rewardAmount: 5000,
-                    },
-                });
-
-                const payPerHourRule = PayPerHoursEntity.create({
-                    type: 'PayPerHour',
-                    name: 'Почасовая ставка',
-                    targetRole: 'ENGINEER',
-                    config: { price: 300 },
-                });
-
-                return MotivationSchema.create({
-                    targetType: 'Employee',
-                    targetId: 42,
-                    name: 'Личная мотивация',
-                    rules: [archivedRule, activeTaskRule, payPerHourRule],
-                });
-            });
-
-        it('toListItemResponse исключает ARCHIVED-правило из ruleCount/ruleTypes', () => {
-            const schema = buildSchemaWithRules();
-
-            const response = mapper.toListItemResponse(schema, 'Олег Фадеев');
-
-            expect(response.ruleCount).toBe(2);
-            expect(response.ruleTypes).toEqual(['TaskCompleted', 'PayPerHour']);
-        });
-
-        it('toDetailResponse исключает ARCHIVED-правило из rules[]', () => {
-            const schema = buildSchemaWithRules();
-
-            const response = mapper.toDetailResponse(schema, 'Олег Фадеев');
-
-            expect(response.rules).toHaveLength(2);
-            expect(response.rules.map((rule) => rule.name)).toEqual([
-                'Активная задача',
-                'Почасовая ставка',
-            ]);
         });
     });
 

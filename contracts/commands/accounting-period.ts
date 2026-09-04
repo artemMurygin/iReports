@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { periodSchema, salesDirectionSchema } from './sales-plan';
-import { taskRuleStatusSchema } from './salary-rule';
 
 // Расчётный период направления (Фаза 6, см.
 // docs/payroll/plan-payroll-calculation.md и prd-payroll-calculation.md,
@@ -50,34 +49,6 @@ export type UnapprovedSalesPlanRow = z.infer<
     typeof unapprovedSalesPlanRowSchema
 >;
 
-// Правило-задача периода, чья связанная задача Bitrix24 ещё не в статусе
-// "Закрыта" (change salary-rule-bitrix-task, spec.md "Список незакрытых
-// задач перед закрытием периода") — включая недоступные (задача не может
-// быть закрыта, если её вообще не видно). bitrixTaskId/status/bitrixTaskUrl
-// отсутствуют именно у недоступного правила (isUnavailable: true) — та же
-// форма, что и bitrixTaskUrl/taskStatus в employeeSalaryReportRuleSchema
-// ниже по файлу. Направление — всегда 'service' (единственное направление,
-// где правило TaskCompleted сегодня читает Bitrix24, см. design.md/tasks.md
-// раздел 7) — поэтому поля direction здесь нет, в отличие от остального
-// closePeriodPreviewSchema.
-//
-// bitrixTaskUrl (docs/task-rule-archiving-and-links, Фаза 3) — кликабельная
-// ссылка на задачу, построенная сервером через buildBitrixTaskLink(); может
-// отсутствовать даже при заданном bitrixTaskId, если BITRIX24_WEBHOOK_URL
-// не настроен (тот же паттерн опциональности, что и у остальных
-// bitrixTaskUrl в контрактах).
-const unclosedTaskRuleSchema = z.object({
-    ruleId: z.string(),
-    employeeId: z.number(),
-    ruleName: z.string(),
-    bitrixTaskId: z.number().optional(),
-    bitrixTaskUrl: z.string().optional(),
-    status: taskRuleStatusSchema.optional(),
-    isUnavailable: z.boolean(),
-});
-
-export type UnclosedTaskRule = z.infer<typeof unclosedTaskRuleSchema>;
-
 // Сводка окна подтверждения закрытия (PRD 1 docs/payroll-closing-and-accrual,
 // Фаза 2) — GET .../period/:period/close-preview. Считается тем же
 // калькулятором строк снапшота, что и само закрытие, поэтому при неизменных
@@ -87,11 +58,8 @@ export type UnclosedTaskRule = z.infer<typeof unclosedTaskRuleSchema>;
 // totalAmount — фонд оплаты направления в целых рублях (как total снапшота),
 // unapprovedPlanRows — строки плана, из-за которых закрытие будет отклонено,
 // employeesWithoutHours — сотрудники с правилом PayPerHour без записи часов
-// за месяц, unclosedTaskRules — правила-задачи месяца, чьи задачи ещё не
-// "Закрыта" (spec.md, задача 6.6/10.4 change salary-rule-bitrix-task; всегда
-// [], у направления shop — TaskCompleted там ещё не читает Bitrix24, см.
-// tasks.md раздел 7). Сама синхронизация ERP в preview не выполняется — она
-// шаг закрытия.
+// за месяц. Сама синхронизация ERP в preview не выполняется — она шаг
+// закрытия.
 const closePeriodPreviewSchema = z.object({
     direction: salesDirectionSchema,
     period: periodSchema,
@@ -100,7 +68,6 @@ const closePeriodPreviewSchema = z.object({
     totalAmount: z.number().int(),
     unapprovedPlanRows: z.array(unapprovedSalesPlanRowSchema),
     employeesWithoutHours: z.number().int().nonnegative(),
-    unclosedTaskRules: z.array(unclosedTaskRuleSchema),
 });
 export type ClosePeriodPreviewResponse = z.infer<
     typeof closePeriodPreviewSchema
@@ -122,7 +89,6 @@ export {
     accountingPeriodSchema,
     closeAccountingPeriodRequestSchema,
     unapprovedSalesPlanRowSchema,
-    unclosedTaskRuleSchema,
     closePeriodPreviewSchema,
     reopenAccountingPeriodRequestSchema,
 };

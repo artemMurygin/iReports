@@ -4,7 +4,7 @@
 //
 // ПОЧЕМУ отдельный файл схемы, а не salary.prisma: сущность общая на
 // компанию и не принадлежит ни направлению service, ни shop (у неё нет
-// поля direction, в отличие от SalaryRule/TaskCompletion) — её пишет общий
+// поля direction, в отличие от SalaryRule) — её пишет общий
 // модуль src/modules/work-schedule, а читать будут контексты расчёта обоих
 // направлений (см. PRD, "Технические ограничения").
 model WorkScheduleEntry {
@@ -16,8 +16,8 @@ model WorkScheduleEntry {
   // соответствует ScheduleDate (строка YYYY-MM-DD ↔ UTC-полночь).
   date       DateTime @db.Date
   // Статус дня: WORKING / DAY_OFF / TIME_OFF / SICK_LEAVE / VACATION.
-  // Строка, а не enum БД — тем же приёмом, что TaskCompletion.status и
-  // SalaryRule.type: набор значений живёт в контрактах
+  // Строка, а не enum БД — тем же приёмом, что SalaryRule.type: набор
+  // значений живёт в контрактах
   // (workScheduleStatusSchema) и в домене, добавление нового статуса не
   // требует миграции типа.
   status     String

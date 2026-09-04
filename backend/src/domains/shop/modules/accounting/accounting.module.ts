@@ -18,7 +18,6 @@ import { DirectoryModule } from '@/modules/directory/directory.module';
 // — цикла нет.
 import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balance.module';
 import { ListShopSalaryRuleTypesService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/list-salary-rule-types.service';
-import { ListShopTaskCompletionsService } from '@/domains/shop/modules/accounting/application/services/task-completion/list-task-completions.service';
 import { ListShopMotivationSchemasService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/list-motivation-schemas.service';
 import { GetShopMotivationSchemaService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/get-motivation-schema.service';
 import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/calculation/build-calculation-context.service';
@@ -31,9 +30,6 @@ import { CreateShopPayoutBatchHandler } from '@/domains/shop/modules/accounting/
 import { DeleteShopPayoutHandler } from '@/domains/shop/modules/accounting/application/command/cashbox-payout/delete-payout.handler';
 import { CreateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/create-motivation-schema.handler';
 import { UpdateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/update-motivation-schema.handler';
-import { CreateShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/task-completion/create-task-completion.handler';
-import { ConfirmShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/task-completion/confirm-task-completion.handler';
-import { DeleteShopTaskCompletionHandler } from '@/domains/shop/modules/accounting/application/command/task-completion/delete-task-completion.handler';
 import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculation/calculate-snapshot-rows.service';
 import { MoySkladErpPeriodSyncAdapter } from '@/domains/shop/modules/accounting/infrastructure/sync/moysklad-erp-period-sync.adapter';
 import { GetShopClosePeriodPreviewHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/get-close-period-preview.http.controller';
@@ -47,10 +43,6 @@ import { CreateShopMotivationSchemaHttpController } from '@/domains/shop/modules
 import { ListShopMotivationSchemasHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/motivation-schema/list-motivation-schemas.http.controller';
 import { GetShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/motivation-schema/get-motivation-schema.http.controller';
 import { UpdateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/motivation-schema/update-motivation-schema.http.controller';
-import { CreateShopTaskCompletionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/task-completion/create-task-completion.http.controller';
-import { ConfirmShopTaskCompletionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/task-completion/confirm-task-completion.http.controller';
-import { DeleteShopTaskCompletionHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/task-completion/delete-task-completion.http.controller';
-import { ListShopTaskCompletionsHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/task-completion/list-task-completions.http.controller';
 import { GetShopAccountingPeriodHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/get-accounting-period.http.controller';
 import { ReopenShopAccountingPeriodHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/reopen-accounting-period.http.controller';
 import { RecalculateShopAccountingPeriodHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/recalculate-accounting-period.http.controller';
@@ -73,11 +65,9 @@ import { ReopenShopAccountingPeriodHandler } from '@/domains/shop/modules/accoun
 import { RecalculateShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/accounting-period/recalculate-accounting-period.handler';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
-import { SHOP_TASK_COMPLETION_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/task-completion/task-completion.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import { ShopMotivationSchemaRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/motivation-schema/motivation-schema.repository';
 import { ShopSalaryRuleRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/motivation-schema/salary-rule.repository';
-import { ShopTaskCompletionRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/task-completion/task-completion.repository';
 import { ShopCalculationDataRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/calculation/calculation-data.repository';
 import { GetShopAccountingPeriodService } from '@/domains/shop/modules/accounting/application/services/accounting-period/get-accounting-period.service';
 import { GetShopErpCashConfigService } from '@/domains/shop/modules/accounting/application/services/cashbox/get-cashbox-config.service';
@@ -216,10 +206,6 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         ListShopMotivationSchemasHttpController,
         GetShopMotivationSchemaHttpController,
         UpdateShopMotivationSchemaHttpController,
-        CreateShopTaskCompletionHttpController,
-        ConfirmShopTaskCompletionHttpController,
-        DeleteShopTaskCompletionHttpController,
-        ListShopTaskCompletionsHttpController,
         GetShopAccountingPeriodHttpController,
         ReopenShopAccountingPeriodHttpController,
         RecalculateShopAccountingPeriodHttpController,
@@ -277,10 +263,6 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         UpdateShopMotivationSchemaHandler,
         ListShopMotivationSchemasService,
         GetShopMotivationSchemaService,
-        CreateShopTaskCompletionHandler,
-        ConfirmShopTaskCompletionHandler,
-        DeleteShopTaskCompletionHandler,
-        ListShopTaskCompletionsService,
         BuildShopCalculationContextService,
         ResolveShopEmployeeSalaryRulesService,
         CloseShopAccountingPeriodHandler,
@@ -335,10 +317,6 @@ import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySkla
         {
             provide: SHOP_SALARY_RULE_REPOSITORY,
             useClass: ShopSalaryRuleRepository,
-        },
-        {
-            provide: SHOP_TASK_COMPLETION_REPOSITORY,
-            useClass: ShopTaskCompletionRepository,
         },
         {
             provide: SHOP_CALCULATION_DATA,

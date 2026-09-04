@@ -178,23 +178,6 @@ export const routesV1 = {
         },
         accounting: {
             salaryRuleTypes: `${serviceAccountingRoot}/salary_role_types`,
-            // TaskCompletion (Фаза 8) — воркфлоу выведен из эксплуатации
-            // (change salary-rule-bitrix-task, design.md Decision 10, шаг 1):
-            // create/confirm/reject/delete отвечают 410 Gone, маршруты
-            // оставлены зарегистрированными только чтобы вернуть внятную
-            // ошибку клиентам старого UI, а не 404. list/get (без отдельных
-            // констант выше — оба используют taskCompletions/
-            // taskCompletionById) остаются рабочими до задачи 11.2.
-            taskCompletions: `${serviceAccountingRoot}/task_completions`,
-            taskCompletionById: `${serviceAccountingRoot}/task_completions/:id`,
-            confirmTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/confirm`,
-            rejectTaskCompletion: `${serviceAccountingRoot}/task_completions/:id/reject`,
-            // Ручной ввод фактической суммы по закрытой задаче правила
-            // TaskCompleted (change salary-rule-bitrix-task, задача 8.2) —
-            // ruleId уже часть тела запроса
-            // (setTaskRuleActualAmountRequestSchema в contracts), путь без
-            // :id, в отличие от остальных byId-маршрутов этого блока.
-            taskRuleActualAmount: `${serviceAccountingRoot}/task_rules/actual_amount`,
             // Расчётный период направления service (Фаза 3) — раньше жил на
             // общем для service/shop пути /accounting/period/:direction/:period
             // с direction, читаемым из route-параметра (см.
@@ -348,11 +331,11 @@ export const routesV1 = {
         // Зарплатные правила магазина (Фаза 12, см. domains/shop/modules/accounting).
         accounting: {
             salaryRuleTypes: `${shopAccountingRoot}/salary_role_types`,
-            // Схема мотивации и подтверждение выполненных задач магазина
-            // (Фаза 13.5, см. docs/payroll/phase-13.5-shop-report-integration.md)
-            // — зеркалят одноимённые маршруты accounting сервиса, но в своём
-            // namespace shopAccountingRoot, а не через общие константы сервиса
-            // (см. запрет на импорт между domains/service и domains/shop в
+            // Схема мотивации магазина (Фаза 13.5, см.
+            // docs/payroll/phase-13.5-shop-report-integration.md) — зеркалит
+            // одноимённые маршруты accounting сервиса, но в своём namespace
+            // shopAccountingRoot, а не через общие константы сервиса (см.
+            // запрет на импорт между domains/service и domains/shop в
             // backend/CLAUDE.md и src/domains/service/CLAUDE.md).
             // motivationSchema: { root, byId } — Фаза "Редактирование
             // зарплатных схем" добавила GET-список/GET-по-id/PATCH к уже
@@ -364,10 +347,6 @@ export const routesV1 = {
                 root: `${shopAccountingRoot}/motivation-schema`,
                 byId: `${shopAccountingRoot}/motivation-schema/:id`,
             },
-            taskCompletions: `${shopAccountingRoot}/task_completions`,
-            taskCompletionById: `${shopAccountingRoot}/task_completions/:id`,
-            confirmTaskCompletion: `${shopAccountingRoot}/task_completions/:id/confirm`,
-            rejectTaskCompletion: `${shopAccountingRoot}/task_completions/:id/reject`,
             // Расчётный период направления shop (Фаза 3) — зеркалит
             // service.accounting.period выше, в своём namespace
             // shopAccountingRoot (см. запрет на импорт между

@@ -91,39 +91,16 @@ export type UsedProductSoldSalaryRule = {
     config: UsedProductSoldSalaryConfig;
 };
 
-// ========================== За выполненную задачу ========================== //
-
-// TaskCompleted магазина (Фаза 13, issue #64) — зеркало
-// TaskCompletedSalaryConfig сервиса по структуре, независимый тип (issue
-// #57). Источник данных — domain/entities/salary-rules/task-completed.entity.ts.
-export type TaskCompletedShopSalaryConfig = {
-    award:
-        | { type: 'Fixed'; price: number }
-        | {
-              type: 'FloatPercent';
-              basePrice: number;
-              percentBorders: [PercentBorder, PercentBorder, PercentBorder];
-          };
-};
-
-export type TaskCompletedShopSalaryRule = {
-    type: 'TaskCompleted';
-    name: string;
-    targetRole: TargetRole;
-    config: TaskCompletedShopSalaryConfig;
-};
-
 export type ShopSalaryRuleConfig =
     | PayPerHourShopSalaryConfig
     | ProductSoldSalaryConfig
-    | UsedProductSoldSalaryConfig
-    | TaskCompletedShopSalaryConfig;
+    | UsedProductSoldSalaryConfig;
 
 // Форма запроса на создание правила — контракт (ShopSalaryRuleRequest), а
 // не подмножество реализованных типов (то же решение, что у сервиса — см.
 // domains/service/modules/accounting/domain/types/salary-rule.types.ts):
-// расширение contracts/commands/shop-salary-rule.ts в Фазе 13
-// (UsedProductSold/TaskCompleted) не потребует правки этого файла заново.
+// расширение contracts/commands/shop-salary-rule.ts новым типом правила не
+// потребует правки этого файла заново.
 export type CreateShopSalaryRuleProps = ShopSalaryRuleRequest;
 
 export type ShopSalaryRuleTypes = CreateShopSalaryRuleProps['type'];

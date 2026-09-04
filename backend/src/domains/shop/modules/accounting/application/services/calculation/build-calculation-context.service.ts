@@ -32,7 +32,6 @@ export interface ShopCalculationBaseContext {
     // категории СВОЕГО правила, а не по отделу целиком (см. findSalesPerformance
     // ниже). Ключ null — тот же ShopSalesPerformance, что и
     // salesPerformanceDetail (отдел целиком), под тем же ключом, что читает
-    // TaskCompletedShopEntity.FloatPercent (у него категории нет вовсе) и
     // ProductSold/UsedProductSold с config.category === null.
     salesPerformanceByCategory: Map<string | null, ShopSalesPerformance>;
     // Все строки ShopSalesPerformance отдела сотрудника за период (по
@@ -76,22 +75,16 @@ export class BuildShopCalculationContextService {
         // но независимые" модули доменов).
         const base = new CalculationContextBuilder('shop', period, employeeId);
 
-        const [
-            identities,
-            hoursWorked,
-            productSoldItems,
-            confirmedTaskCompletions,
-            departmentId,
-        ] = await Promise.all([
-            this.dataSource.findEmployeeIdentities(employeeId),
-            this.dataSource.findHoursWorked(employeeId, period.getValue()),
-            this.dataSource.findProductSoldItems(
-                base.period.from,
-                base.period.to,
-            ),
-            this.dataSource.findConfirmedTaskCompletions(period.getValue()),
-            this.dataSource.findEmployeeDepartmentId(employeeId),
-        ]);
+        const [identities, hoursWorked, productSoldItems, departmentId] =
+            await Promise.all([
+                this.dataSource.findEmployeeIdentities(employeeId),
+                this.dataSource.findHoursWorked(employeeId, period.getValue()),
+                this.dataSource.findProductSoldItems(
+                    base.period.from,
+                    base.period.to,
+                ),
+                this.dataSource.findEmployeeDepartmentId(employeeId),
+            ]);
 
         const categoryIds = this.collectProductCategoryIds(rules);
 
@@ -120,7 +113,6 @@ export class BuildShopCalculationContextService {
                 hoursWorked,
                 productSoldItems,
                 categoryDescendantFolderIds,
-                taskCompletions: confirmedTaskCompletions,
             } satisfies ShopCalculationErpData,
             salesPerformanceDetail,
             salesPerformanceByCategory,
@@ -130,7 +122,7 @@ export class BuildShopCalculationContextService {
 
     // Уникальные category правил ProductSold/UsedProductSold схемы (issue
     // #60) — только у этих двух типов правил config несёт поле category,
-    // остальные (PayPerHour/TaskCompleted) его не читают вовсе. Общий
+    // PayPerHour его не читает вовсе. Общий
     // список переиспользуется и для раскрытия дерева категорий
     // (resolveCategoryDescendantFolderIds), и для резолва salesPerformance
     // по категории (resolveSalesPerformanceByCategory, Фаза 2 плана
@@ -170,9 +162,9 @@ export class BuildShopCalculationContextService {
     // — вход для компактного блока SalesPerformance в ответе отчёта
     // (to-sales-performance-summary.ts) и для записи «весь отдел» в
     // карте salesPerformanceByCategory (правила без категории —
-    // TaskCompletedShopEntity.FloatPercent, ProductSold/UsedProductSold с
-    // config.category === null). null, если у сотрудника нет отдела или для
-    // этого отдела ещё нет ни плана, ни факта за период.
+    // ProductSold/UsedProductSold с config.category === null). null, если у
+    // сотрудника нет отдела или для этого отдела ещё нет ни плана, ни факта
+    // за период.
     async findSalesPerformance(
         period: Period,
         departmentId: number | null,

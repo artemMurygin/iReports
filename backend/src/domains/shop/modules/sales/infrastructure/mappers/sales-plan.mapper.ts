@@ -13,9 +13,9 @@ import { ShopSalesPlanApproval } from '@/domains/shop/modules/sales/domain/value
 // же сентинелом NO_CATEGORY_ID = '' (см. WHY в сервисном мапере) — тот же
 // составной уникальный индекс (direction, department_id, category_id[,
 // period]) на общей таблице sales_plans/sales_plan_templates. Направление
-// (record.direction) не читается в toDomain намеренно — то же решение, что
-// и у ShopTaskCompletionMapper: строки этого направления и так
-// отфильтрованы ShopSalesPlanRepository (`where: { direction: 'shop' }`),
+// (record.direction) не читается в toDomain намеренно: строки этого
+// направления и так отфильтрованы ShopSalesPlanRepository
+// (`where: { direction: 'shop' }`),
 // а доменная сущность ShopSalesPlan направления не хранит вовсе.
 export const NO_CATEGORY_ID = '';
 

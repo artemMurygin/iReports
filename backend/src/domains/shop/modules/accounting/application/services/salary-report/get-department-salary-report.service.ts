@@ -220,7 +220,6 @@ export class GetShopDepartmentSalaryReportService {
             identitiesByEmployee,
             hoursByEmployee,
             productSoldItems,
-            confirmedTaskCompletions,
             salaryRulesByEmployee,
             domainSyncAt,
             plans,
@@ -231,7 +230,6 @@ export class GetShopDepartmentSalaryReportService {
                 period,
             ),
             this.shopDataSource.findProductSoldItems(from, to),
-            this.shopDataSource.findConfirmedTaskCompletions(period),
             // Правила ОБЕИХ схем каждого сотрудника — личной и схемы этого
             // отдела (см. ResolveShopEmployeeSalaryRulesService): без второй
             // половины сотрудники отдела, у которых нет личной схемы,
@@ -311,7 +309,6 @@ export class GetShopDepartmentSalaryReportService {
                     },
                     productSoldItems,
                     categoryDescendantFolderIds,
-                    taskCompletions: confirmedTaskCompletions,
                 } satisfies ShopCalculationErpData,
             };
 

@@ -9,7 +9,6 @@ import type { CloseDialogState } from '../model/dialogState.ts'
 import { CloseDialogKpiGrid } from './CloseDialogKpiGrid.tsx'
 import { DialogAlert } from './DialogAlert.tsx'
 import { UnapprovedRowsList, type UnapprovedRowDetails } from './UnapprovedRowsList.tsx'
-import { UnclosedTaskRulesList } from './UnclosedTaskRulesList.tsx'
 
 export type ClosePeriodDialogBodyProps = {
     state: CloseDialogState
@@ -18,7 +17,6 @@ export type ClosePeriodDialogBodyProps = {
     period: string
     rowDetailsById: Record<string, UnapprovedRowDetails>
     departmentNameById: Record<number, string>
-    employeeNameById: Record<number, string>
     onApproveRow: (id: string) => void
     isApproving: boolean
     onRetryClose: () => void
@@ -39,7 +37,6 @@ function ClosePeriodDialogBody({
     period,
     rowDetailsById,
     departmentNameById,
-    employeeNameById,
     onApproveRow,
     isApproving,
     onRetryClose,
@@ -73,7 +70,6 @@ function ClosePeriodDialogBody({
     }
 
     const showRowsList = state.unapprovedRows.length > 0 && state.status !== 'erp-error'
-    const showUnclosedTaskRules = preview.unclosedTaskRules.length > 0 && state.status !== 'erp-error'
 
     return (
         <div className="flex flex-col gap-4">
@@ -88,10 +84,6 @@ function ClosePeriodDialogBody({
                     onApproveRow={onApproveRow}
                     isApproving={isApproving}
                 />
-            )}
-
-            {showUnclosedTaskRules && (
-                <UnclosedTaskRulesList rules={preview.unclosedTaskRules} employeeNameById={employeeNameById} />
             )}
 
             {state.status === 'ready' && (

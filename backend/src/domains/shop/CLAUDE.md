@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `shop` и `service` — параллельные бизнес-направления с похожим набором бизнес-процессов; `shop`
 зеркалирует структуру `service` (см. `domains/service/CLAUDE.md`), но с самостоятельной, независимой
 реализацией — общий код в основном ограничен `src/shared/*` и несколькими Prisma-моделями с
-дискриминатором `direction` (`SalesPlan`/`SalesPlanTemplate`/`TaskCompletion`). Единственное осознанное
+дискриминатором `direction` (`SalesPlan`/`SalesPlanTemplate`). Единственное осознанное
 исключение из «независимого доменного кода» — CRUD плана и шаблона плана продаж в `modules/sales`
 (см. ниже): HTTP-контроллеры `shop` напрямую диспатчат те же классы команд из
 `domains/service/modules/sales/application/command/*` через общий `CommandBus`, подставляя
@@ -157,7 +157,7 @@ ERP-специфичной логики, поэтому контроллеры `
 Собственный реестр (`shopSalaryRuleRegistry`) и фабрика (`ShopSalaryRuleFactory`) правил, независимые
 от одноимённого модуля `domains/service/modules/accounting` — ни один класс сервисного `accounting`
 здесь не импортируется (в т.ч. `domain/services/role-source.ts`, `money.ts`, `float-percent.ts`
-— зеркала, но отдельные файлы). Четыре типа правил:
+— зеркала, но отдельные файлы). Три типа правил:
 
 - **`PayPerHourEntity`** — почасовая оплата, тот же источник часов, что у `service` (Фаза 5,
   `docs/employee-work-schedule`): сумма часов рабочих смен графика (`WorkScheduleEntry.status =
@@ -181,9 +181,7 @@ ERP-специфичной логики, поэтому контроллеры `
   каждой уникальной `category` правил `ProductSold`/`UsedProductSold` схемы сотрудника. Правило читает
   запись по `this.props.config.category`; **fail closed**, если для этой категории в карте нет
   расчёта (нет плана/факта по scope) — вознаграждение не начисляется, тот же принцип, что и у
-  раскрытия дерева категорий выше. `TaskCompletedShopEntity.FloatPercent` категории не имеет вовсе —
-  всегда читает запись «весь отдел» (`category: null`) и по-прежнему бросает
-  `ShopSalesPerformanceRequiredException`, если её нет. `category` у `ProductSold` и у `SalesPlan`
+  раскрытия дерева категорий выше. `category` у `ProductSold` и у `SalesPlan`
   теперь одного типа (`string | null`, для `shop` — UUID папки МойСклад, `MoySkladProductFolder.id`),
   но это по-прежнему две независимые системы без фактической ссылочной связи/валидации между ними.
 - **`UsedProductSoldEntity`** (Фаза 13) — вознаграждение закупщику БУ техники за **продажу**
@@ -195,11 +193,6 @@ ERP-специфичной логики, поэтому контроллеры `
   ещё не проданный остаток в выборку не попадает вообще. `award` только `Fixed`/`FixedPercent`, без
   `FloatPercent` — вознаграждение закупщика не привязано к выполнению плана продаж. Необязательная
   категория (та же логика раскрытия дерева и fail closed, что у `ProductSoldEntity`).
-- **`TaskCompletedEntity`** (Фаза 13) — `Fixed`/`FloatPercent`, использует ту же временную Prisma-
-  модель `TaskCompletion`, что и одноимённое правило `service` (различаются полем
-  `TaskCompletion.direction`, дефолт `'service'`) — с Фазы 13.5 у `shop` есть собственный CQRS-вход
-  для записи задач магазина (`ShopTaskCompletion`, см. ниже), пишущий в ту же таблицу с
-  `direction: 'shop'`.
 - Ролей инженера в `shop` нет. Дедупликация «правило × позиция/источник» — внутри каждого правила
   независимо (`dedupeByPosition`); вырожденный случай «продавец и закупщик — один сотрудник» не
   считается двойным начислением — `ProductSold` и `UsedProductSold` разные правила, начисляют
@@ -211,18 +204,13 @@ ERP-специфичной логики, поэтому контроллеры `
 Независимая (не переиспользующая классы `service`) реализация: `ShopSalaryRuleMapper`/`schema`/
 `Repository`, `ShopMotivationSchema` (сущность + `ShopMotivationSchemaMapper`/`Repository`, включая
 `findIdByTarget` — защита от дублирования строки `MotivationSchema` для сотрудника с идентичностями в
-обеих ERP, у неё нет `direction`, ключ только `(targetType, targetId)`), `ShopTaskCompletion`
-(сущность + mapper/repository, пишет в общую таблицу `TaskCompletion` с `direction: 'shop'`),
+обеих ERP, у неё нет `direction`, ключ только `(targetType, targetId)`),
 `BuildShopCalculationContextService` (`application/services/`, зеркало
 `BuildServiceCalculationContextService` — но `build(period, employeeId, rules)` берёт третьим
 параметром правила схемы, так как `categoryDescendantFolderIds` зависит от `category` конкретных
 правил `ProductSold`/`UsedProductSold`), собственный `PeriodCalculationOrchestrator`/
 `rule-breakdown.builder`/`to-salary-report-rules.ts`. HTTP-запись: `POST
-/v1/shop/accounting/motivation-schema` (find-or-create по `findIdByTarget`), `POST|GET
-/v1/shop/accounting/task_completions`,
-`POST /v1/shop/accounting/task_completions/:id/{confirm,reject}`,
-`DELETE /v1/shop/accounting/task_completions/:id` (DTO переиспользуют направление-агностичные Zod-схемы
-`TaskCompletion` из `ireports-contracts`, не бизнес-код).
+/v1/shop/accounting/motivation-schema` (find-or-create по `findIdByTarget`).
 
 Расчётный период (`GET|POST /v1/shop/accounting/period/*`) и отчёт по зарплате
 (`GET /v1/shop/accounting/salary_report/{employee,department}/:id/:period`) — независимые от
@@ -275,9 +263,8 @@ generic-по-`direction` `GetAccountingPeriodService`/`ReopenAccountingPeriodCom
 
 - Prisma-схема: `prisma/schema/moySklad.prisma` (собственные таблицы `moySklad*`, включая поля
   закупщиков `onlinePurchaserId`/`offlinePurchaserId` на `moySkladDemandPosition` и `pathName`-индекс
-  (`text_pattern_ops`) на `moySkladProductFolder`), `prisma/schema/sales.prisma`
-  (`SalesPlan`/`SalesPlanTemplate`, общие с `service` через поле `direction`) и
-  `prisma/schema/salary.prisma` (`TaskCompletion`, тоже общая с `service` через `direction`).
+  (`text_pattern_ops`) на `moySkladProductFolder`) и `prisma/schema/sales.prisma`
+  (`SalesPlan`/`SalesPlanTemplate`, общие с `service` через поле `direction`).
 - Тесты интеграций: `integrations/moySklad/moysklad.service.spec.ts`. `sync/moySklad` тестами
   покрыт частично (`moysklad-sync.mappers.spec.ts`, `product-folder-tree.service.spec.ts`,
   `resolve-purchaser-identity.spec.ts`); сам `MoySkladSyncService` — нет. `modules/sales`

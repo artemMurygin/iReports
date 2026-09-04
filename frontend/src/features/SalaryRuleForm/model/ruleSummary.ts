@@ -55,14 +55,6 @@ export function summarizeRuleDraft(draft: RuleDraft, categories: CatalogCategory
         return `${formatNumber(draft.price)} ₽ за час · без варианта награды`
     }
 
-    // TaskCompleted (change salary-rule-bitrix-task) — задача Bitrix24, а не award-union
-    // (design.md, Decision 2): своя сводка вместо `summarizeAward`, тот же приём, что и у
-    // `PayPerHour` выше.
-    if (draft.type === 'TaskCompleted') {
-        const recurrence = draft.isRecurring ? 'регулярная' : 'разовая'
-        return `${formatNumber(draft.price)} ₽ за задачу · ${recurrence}`
-    }
-
     const parts = [summarizeAward(draft)]
 
     if (draft.type === 'ProductSold' || draft.type === 'UsedProductSold') {

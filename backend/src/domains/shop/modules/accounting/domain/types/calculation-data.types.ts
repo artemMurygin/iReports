@@ -58,28 +58,6 @@ export interface ShopProductSoldErpItem {
     offlinePurchaserId: string | null;
 }
 
-// Источник TaskCompleted.calculate() магазина (Фаза 13, issue #64) —
-// зеркало ConfirmedTaskCompletionErpItem сервиса
-// (service-calculation-data.types.ts). Что считается "задачей" для
-// TaskCompleted в магазине — открытый вопрос PRD, не решённый ни для
-// сервиса, ни для магазина ("Открытые вопросы", "Что считается задачей для
-// TaskCompleted в магазине"). Решение по умолчанию: то же временное
-// решение, что и у сервиса в Фазе 8, — тот же внутренний двухступенчатый
-// воркфлоу подтверждения (TaskCompletion, domains/service/modules/
-// accounting/domain/entities/task-completion.entity.ts), различаемый по
-// TaskCompletion.direction (Prisma-поле, добавлено в Фазе 13 — см.
-// комментарий у направления в prisma/schema/salary.prisma) вместо
-// заведения шоп-специфичного дубликата сущности: у "выполненной задачи"
-// нет собственных данных ERP (это ручная отметка руководителя, а не запись
-// RemOnline/МойСклад), поэтому дублировать саму таблицу ради направления
-// избыточно — коллизия та же, что у SalaryRule.direction (см. там), решение
-// то же самое (общее поле-дискриминатор на общей таблице, а не отдельная
-// сущность на домен).
-export interface ShopTaskCompletionErpItem {
-    id: string;
-    employeeId: number;
-}
-
 // Пара факт/прогноз часов PayPerHour — зеркало PayPerHourHours сервиса (см.
 // service-calculation-data.types.ts). fact — сумма часов графика по
 // сегодняшний день включительно, prognose — сумма часов графика за весь
@@ -111,7 +89,4 @@ export interface ShopCalculationErpData {
     // переплатит сотруднику. Используется и UsedProductSold (Фаза 13) —
     // его необязательная категория раскрывается тем же механизмом.
     categoryDescendantFolderIds?: Record<string, string[]>;
-    // Источник TaskCompleted.calculate() магазина (Фаза 13) — см.
-    // ShopTaskCompletionErpItem выше.
-    taskCompletions?: ShopTaskCompletionErpItem[];
 }

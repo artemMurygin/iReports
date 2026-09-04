@@ -4,7 +4,6 @@ import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.rep
 import type { EmployeeIdentityRef } from '@/shared/domain/calculation-context';
 import { Period } from '@/shared/domain/period.value-object';
 import type {
-    ConfirmedTaskCompletionErpItem,
     OrderPayedErpItem,
     PayPerHourHours,
     ServiceCompletedErpItem,
@@ -192,20 +191,6 @@ export class ServiceCalculationDataRepository
             engineerSalary: row.engineerSalary ?? 0,
             orderTypeId: row.orderTypeId,
         }));
-    }
-
-    async findConfirmedTaskCompletions(
-        period: string,
-    ): Promise<ConfirmedTaskCompletionErpItem[]> {
-        // direction: 'service' (Фаза 13, issue #64) — тот же фильтр, что и
-        // в TaskCompletionRepository: без него сюда попали бы и записи
-        // будущего CQRS-модуля shop (см. комментарий у
-        // TaskCompletion.direction в prisma/schema/salary.prisma).
-        const records = await this.client.taskCompletion.findMany({
-            where: { period, status: 'CONFIRMED', direction: 'service' },
-            select: { id: true, employeeId: true },
-        });
-        return records;
     }
 
     async findEmployeeDepartmentId(

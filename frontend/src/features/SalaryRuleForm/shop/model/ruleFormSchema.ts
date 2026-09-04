@@ -5,7 +5,7 @@ import {
 } from 'ireports-contracts'
 
 import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
-import { buildOrderPayedAward, buildTaskCompletedConfig } from '../../model/ruleAwards.ts'
+import { buildOrderPayedAward } from '../../model/ruleAwards.ts'
 import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ruleDraft.ts'
 
 /**
@@ -13,12 +13,10 @@ import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ru
  * Deliberately a SEPARATE function/file, not a branch inside `resolveRuleDraft`: it validates
  * against `shopSalaryRuleRequestSchema` (`contracts/commands/shop-salary-rule.ts`), a distinct
  * `discriminatedUnion` from the service's `salaryRuleRequestSchema` (see that file's header comment
- * — "issue #57: направления технически не связаны одним объектом"). It reuses two of the core's
- * builders (`core/model/ruleAwards.ts` — `buildOrderPayedAward` for `ProductSold`'s award,
- * `buildTaskCompletedConfig` for `TaskCompleted`'s whole `config`, no award-union any more since
- * change salary-rule-bitrix-task) because those two shapes are byte-for-byte identical between the
- * two contracts (see the reuse comment on each) — that is UI-logic reuse, not contract mixing,
- * since the two `safeParse` calls stay fully separate.
+ * — "issue #57: направления технически не связаны одним объектом"). It reuses one of the core's
+ * builders (`core/model/ruleAwards.ts` — `buildOrderPayedAward` for `ProductSold`'s award) because
+ * that shape is byte-for-byte identical between the two contracts (see the reuse comment there) —
+ * that is UI-logic reuse, not contract mixing, since the two `safeParse` calls stay fully separate.
  */
 export type ResolveShopRuleDraftResult =
     { success: true; data: ShopSalaryRuleRequest } | { success: false; errors: RuleFieldErrors }
@@ -67,9 +65,6 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
             break
         case 'UsedProductSold':
             config = { category: draft.category, award: buildUsedProductSoldAward(draft, errors) }
-            break
-        case 'TaskCompleted':
-            config = buildTaskCompletedConfig(draft, errors)
             break
         default:
             // `draft.type` is the shared `RuleType` union (`core/model/ruleDraft.ts`) — the service-only
@@ -135,10 +130,6 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         // orderTypeIds — сервисное поле (`OrderPayed`/`ServiceCompleted`, Фаза 5,
         // docs/service-plan-salary-rule-order-category-filter), ни один shop-тип его не имеет.
         orderTypeIds: [],
-        description: '',
-        period: '',
-        isRecurring: false,
-        dueDate: '',
     }
 
     switch (rule.type) {
@@ -175,16 +166,6 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
             }
             break
         }
-
-        case 'TaskCompleted':
-            return {
-                ...base,
-                description: rule.config.description,
-                period: rule.config.period,
-                isRecurring: rule.config.isRecurring,
-                dueDate: rule.config.dueDate,
-                price: String(rule.config.rewardAmount),
-            }
     }
 
     return base

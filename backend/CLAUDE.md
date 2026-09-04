@@ -13,9 +13,17 @@ product/architecture picture. This file covers backend-specific commands and con
 (см. «Architecture» ниже) — не копируй паттерн только потому, что он уже где-то использован;
 ориентируйся на то, что написано здесь, даже если это расходится с наблюдаемым кодом.
 
-## Граф знаний (`/graphify`)
+## Поведенческие спеки (`openspec/specs/`)
 
-Для вопросов об архитектуре, связях между доменами/модулями или «что от чего зависит» сначала проверяй `graphify-out/graph.json` в корне репозитория и используй `/graphify query "<вопрос>"` — это быстрее и точнее, чем ручной grep по `src/domains`. Граф локальный (в `.gitignore`), после крупных переносов/переименований файлов между доменами перестраивай его через `/graphify --update`, иначе ответы будут по устаревшей структуре. Подробнее — в [корневом CLAUDE.md](../CLAUDE.md#knowledge-graph-graphify).
+Бизнес-правила и наблюдаемое поведение модулей постепенно переносятся из CLAUDE.md в
+`openspec/specs/<domain>/<module>/spec.md` — CLAUDE.md остаётся источником архитектурных/
+имплементационных деталей (структура файлов, DI, паттерны), а не бизнес-логики. Объяснительные
+("почему") комментарии в коде, описывающие бизнес-правило, а не архитектурное решение, оформляются
+как `spec: <capability-path>#<anchor>` вместо инлайн-текста — см.
+`openspec/specs/conventions/documentation/spec.md` за полной конвенцией (формат id, критерий
+"бизнес-правило vs архитектура", требования к валидатору ссылок). Миграция идёт модуль за модулем;
+если раздел этого файла или доменного CLAUDE.md заменён на указатель на спек — актуальные бизнес-
+правила ищи там, а не здесь.
 
 ## Commands
 
@@ -156,7 +164,7 @@ Cross-cutting request context (`AsyncLocalStorage`-based) lives in
 `domains/shop/CLAUDE.md`), но на уровне **данных** несколько таблиц физически общие для обоих
 направлений с дискриминатором `direction` на каждой строке (`AccountingPeriod`,
 `AccountingPeriodSnapshot`, `AccountingCalculationCache`, `SalaryAccrual`/`SalaryAccrualLine`/
-`SalaryAccrualLineAdjustment`, `SalesPlan`/`SalesPlanTemplate`, `TaskCompletion`) — это осознанное
+`SalaryAccrualLineAdjustment`, `SalesPlan`/`SalesPlanTemplate`) — это осознанное
 решение, таблицы **не разбиваются** на отдельные per-domain таблицы/Prisma-модели и данные между
 ними не переносятся. Если таблице для различения `service`/`shop` ещё не хватает `direction`
 (например, `ErpCashDocument` пока различает домены только по `system`), добавляй `direction`

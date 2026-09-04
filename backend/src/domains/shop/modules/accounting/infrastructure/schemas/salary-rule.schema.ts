@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,
-    taskCompletedShopSalaryConfigSchema,
     usedProductSoldSalaryConfigSchema,
 } from 'ireports-contracts';
 import { shopSalaryRuleRegistry } from '@/domains/shop/modules/accounting/domain/salary-rule-registry';
@@ -24,7 +23,6 @@ export const shopSalaryRuleConfigSchemaByType: Partial<
     PayPerHour: payPerHourShopSalaryConfigSchema,
     ProductSold: productSoldSalaryConfigSchema,
     UsedProductSold: usedProductSoldSalaryConfigSchema,
-    TaskCompleted: taskCompletedShopSalaryConfigSchema,
 };
 
 // Список типов берём из ключей реестра, а не хардкодим второй раз — так

@@ -6,8 +6,8 @@ import { SALARY_BASIS_LABELS, type AwardOptionConfig, type RuleFormConfig } from
 
 /**
  * Shop mirror of `service/model/ruleTypes.ts` (Фаза 4, docs/salary-schema-creation-ui) — labels/
- * options for the 4 shop rule types from `contracts/commands/shop-salary-rule.ts` (`PayPerHour`/`ProductSold`/
- * `UsedProductSold`/`TaskCompleted`). Kept in its own file rather than added to `service/model/ruleTypes.ts`'s
+ * options for the 3 shop rule types from `contracts/commands/shop-salary-rule.ts` (`PayPerHour`/`ProductSold`/
+ * `UsedProductSold`). Kept in its own file rather than added to `service/model/ruleTypes.ts`'s
  * records so each direction's constants stay `Record<XRuleType, ...>` — exhaustively type-checked
  * against that direction's own rule-type union, not the shared superset (`core/model/ruleDraft.ts`'s `RuleType`).
  *
@@ -19,7 +19,7 @@ export { SHOP_RULE_TYPE_LABELS }
 
 /** Порядок типов в селекте «Тип правила» направления «Магазин» — зеркало
  * `service/model/ruleTypes.ts`'s `RULE_TYPE_ORDER`, живёт в своём направлении. */
-export const SHOP_RULE_TYPE_ORDER: ShopRuleType[] = ['PayPerHour', 'ProductSold', 'UsedProductSold', 'TaskCompleted']
+export const SHOP_RULE_TYPE_ORDER: ShopRuleType[] = ['PayPerHour', 'ProductSold', 'UsedProductSold']
 
 /** `shopSalaryBasisSchema` (`shop-salary-rule.ts`) — only `REVENUE`/`MARGIN`, no
  * `SALARY_MINUS_ENGINEER_SALARY` (shop has no engineer role/salary, see that schema's comment) —
@@ -36,11 +36,8 @@ export const SHOP_SALARY_BASIS_OPTIONS: SegmentedControlOption<'REVENUE' | 'MARG
 /** Mirrors `contracts/commands/shop-salary-rule.ts`'s per-type award unions exactly:
  * `ProductSold` — `Fixed`/`FixedPercent`/`FloatPercent` (`productSoldSalaryConfigSchema`);
  * `UsedProductSold` — `Fixed`/`FixedPercent` only, no `FloatPercent` (`usedProductSoldSalaryConfigSchema`
- * — the purchaser's reward isn't tied to plan completion); `TaskCompleted` — no award at all any
- * more (change salary-rule-bitrix-task, design.md Decision 2 — `award`-union removed, единственный
- * вид вознаграждения фиксированная сумма, `taskCompletedShopSalaryConfigSchema.rewardAmount`), same
- * empty-array convention as `PayPerHour` — its own field set is rendered unconditionally by
- * `TaskCompletedFields`, not through `AwardSection`. */
+ * — the purchaser's reward isn't tied to plan completion). `PayPerHour` has no award at all, same
+ * empty-array convention. */
 export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
     ProductSold: [
@@ -52,7 +49,6 @@ export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за проданное Б/У устройство' },
         { kind: 'FixedPercent', title: 'Фиксированный процент', description: 'Процент от выбранной базы' },
     ],
-    TaskCompleted: [],
 }
 
 /** The shop rule types whose `config` has a `category` field (`productSoldSalaryConfigSchema`/

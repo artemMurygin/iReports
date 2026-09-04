@@ -1,4 +1,4 @@
-import type { TargetRole, TaskRuleStatus } from 'ireports-contracts'
+import type { TargetRole } from 'ireports-contracts'
 
 import { ALL_RULE_TYPE_LABELS } from '@/kernel/ruleTypeLabels.ts'
 
@@ -29,7 +29,7 @@ export function getRoleLabel(role: TargetRole): string {
 
 /**
  * Названия типов правил (`rule.type`) — реэкспорт объединённой карты `kernel/ruleTypeLabels.ts`
- * (уже покрывает оба направления, `PayPerHour`/`ServiceCompleted`/`OrderPayed`/`TaskCompleted`/
+ * (уже покрывает оба направления, `PayPerHour`/`ServiceCompleted`/`OrderPayed`/
  * `ProductSold`/`UsedProductSold`) под именем, которое ожидают потребители этого модуля. Не копия
  * — тот же объект, чтобы не рассинхронизироваться с `kernel`, если список типов вырастет.
  */
@@ -40,14 +40,4 @@ export const RULE_TYPE_LABELS: Record<string, string> = ALL_RULE_TYPE_LABELS
  * значение — на случай, если бэкенд начнёт отдавать тип правила, ещё не заведённый в карте. */
 export function getRuleTypeLabel(type: string): string {
     return RULE_TYPE_LABELS[type] ?? type
-}
-
-/** Бизнес-статусы задачи Bitrix24 правила-задачи (`TaskCompleted`, change
- * salary-rule-bitrix-task) — те же три формулировки, что design.md, Decision 6, использует для
- * нативных статусов Bitrix24 Tasks: PENDING = "Ждёт выполнения", IN_PROGRESS = "Выполняется",
- * COMPLETED = "Завершена". */
-export const TASK_RULE_STATUS_LABELS: Record<TaskRuleStatus, string> = {
-    PENDING: 'Ждёт выполнения',
-    IN_PROGRESS: 'Выполняется',
-    COMPLETED: 'Завершена',
 }

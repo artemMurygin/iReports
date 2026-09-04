@@ -16,14 +16,14 @@ import {
 // (Фаза 7 docs/service-shop-boundary-violations-fix) — независимая копия
 // для направления shop: план на конкретный месяц по отделу и, опционально,
 // категории — вход для всех процентных зарплатных правил shop
-// (ProductSold/UsedProductSold/TaskCompleted, см. domains/shop/CLAUDE.md).
+// (ProductSold/UsedProductSold, см. domains/shop/CLAUDE.md).
 //
 // В отличие от сервисной сущности здесь нет поля `direction`: направление
 // зафиксировано самим расположением класса в домене shop (инфраструктурный
 // слой — ShopSalesPlanRepository — подставляет `direction: 'shop'` при
 // работе с общей Prisma-таблицей sales_plans, см.
 // infrastructure/mappers/sales-plan.mapper.ts), тот же приём, что уже
-// применён у ShopAccountingPeriod/ShopTaskCompletion. Отдел/категория и
+// применён у ShopAccountingPeriod. Отдел/категория и
 // период неизменны после создания (правка на другую комбинацию — это
 // создание новой строки, а не update этой).
 export class ShopSalesPlan extends Entity<ShopSalesPlanProps> {

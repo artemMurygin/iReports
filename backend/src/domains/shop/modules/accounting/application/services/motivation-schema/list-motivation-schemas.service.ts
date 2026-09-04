@@ -15,8 +15,8 @@ import { ShopMotivationSchemaMapper } from '@/domains/shop/modules/accounting/in
 // схем", issue #57) — независимая копия для направления shop. Список
 // мотивационных схем направления shop (GET
 // /v1/shop/accounting/motivation-schema). DI-провайдер, а не CQRS-запрос —
-// тот же приём, что и ListShopSalaryRuleTypesService/
-// ListShopTaskCompletionsService у остальных read-эндпоинтов модуля.
+// тот же приём, что и ListShopSalaryRuleTypesService у остальных
+// read-эндпоинтов модуля.
 @Injectable()
 export class ListShopMotivationSchemasService {
     private readonly mapper = new ShopMotivationSchemaMapper();

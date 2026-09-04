@@ -13,7 +13,7 @@ export { RULE_TYPE_LABELS }
 
 /** Порядок типов в селекте «Тип правила» направления «Сервис» — живёт здесь, рядом с остальными
  * сервисными наборами, а не в направление-агностичном `core/model/ruleDraft.ts`. */
-export const RULE_TYPE_ORDER: ServiceRuleType[] = ['PayPerHour', 'ServiceCompleted', 'OrderPayed', 'TaskCompleted']
+export const RULE_TYPE_ORDER: ServiceRuleType[] = ['PayPerHour', 'ServiceCompleted', 'OrderPayed']
 
 /** Pencil `tSYIw` → `Salary Basis` / `Basis Tabs` — 3-tab segmented control, same shape
  * `SegmentedControl` already renders for "Направление" and the borders' "Режим" tabs. */
@@ -25,17 +25,9 @@ export const SALARY_BASIS_OPTIONS: SegmentedControlOption<SalaryBasisValue>[] = 
 
 /**
  * Which `award.type` variants each `RuleType` offers, and the `RadioCard` copy for each — mirrors
- * `contracts/commands/salary-rule.ts`'s per-type award unions exactly (not the plan text's
- * "TaskCompleted: Fixed/FixedPercent/FloatPercent", which doesn't match the contract: `TaskCompleted`
- * has no `FixedPercent` variant — see `taskCompletedSalaryConfigSchema`). `PayPerHour` has no
+ * `contracts/commands/salary-rule.ts`'s per-type award unions exactly. `PayPerHour` has no
  * award at all (`config` is just `price`), hence the empty array — its own field
  * (`Ставка, ₽/час`) is rendered unconditionally by `core/ui/RuleFormCard`, not through this list.
- *
- * `TaskCompleted` is empty for the same reason since change salary-rule-bitrix-task
- * (design.md, Decision 2 — `award`-union removed, единственный вид вознаграждения теперь
- * фиксированная сумма, `taskCompletedSalaryConfigSchema.rewardAmount`) — its own field set
- * (`Описание`/`Расчётный месяц`/`Вид`/`Дедлайн`/`Сумма вознаграждения`) is rendered unconditionally
- * by `TaskCompletedFields`, not through `AwardSection`/this list.
  */
 export const AWARD_OPTIONS_BY_TYPE: Record<ServiceRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
@@ -57,14 +49,13 @@ export const AWARD_OPTIONS_BY_TYPE: Record<ServiceRuleType, AwardOptionConfig[]>
         { kind: 'FixedPercent', title: 'Фиксированный процент', description: 'Процент от выбранной базы' },
         { kind: 'FloatPercent', title: 'Плавающий процент', description: 'Базовый процент и 3 порога плана' },
     ],
-    TaskCompleted: [],
 }
 
 /** The service rule types whose `config` has an `orderTypeIds` field
  * (`orderPayedSalaryConfigSchema`/`serviceCompletedSalaryConfigSchema`, Фаза 5,
  * docs/service-plan-salary-rule-order-category-filter) — `core/ui/RuleFormCard` shows the
- * `OrderTypeField` multiselect only for these two; `PayPerHour`/`TaskCompleted` don't accept the
- * field at all. */
+ * `OrderTypeField` multiselect only for these two; `PayPerHour` doesn't accept the field at
+ * all. */
 export const SERVICE_ORDER_TYPE_RULE_TYPES: ServiceRuleType[] = ['OrderPayed', 'ServiceCompleted']
 
 export const SERVICE_RULE_FORM_CONFIG: RuleFormConfig = {

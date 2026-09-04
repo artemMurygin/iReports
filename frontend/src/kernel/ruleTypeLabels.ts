@@ -1,15 +1,15 @@
 /**
- * The 4 service rule types from `contracts/commands/salary-rule.ts`'s `salaryRuleRequestSchema`
- * discriminated union (`PayPerHour`/`ServiceCompleted`/`OrderPayed`/`TaskCompleted`).
+ * The 3 service rule types from `contracts/commands/salary-rule.ts`'s `salaryRuleRequestSchema`
+ * discriminated union (`PayPerHour`/`ServiceCompleted`/`OrderPayed`).
  */
-export type ServiceRuleType = 'PayPerHour' | 'ServiceCompleted' | 'OrderPayed' | 'TaskCompleted'
+export type ServiceRuleType = 'PayPerHour' | 'ServiceCompleted' | 'OrderPayed'
 
 /**
- * The 4 shop rule types from `contracts/commands/shop-salary-rule.ts`'s `shopSalaryRuleRequestSchema`
- * discriminated union — `PayPerHour`/`TaskCompleted` share their literal name with the service union
- * (same word, two separate contract discriminants), `ProductSold`/`UsedProductSold` are shop-only.
+ * The 3 shop rule types from `contracts/commands/shop-salary-rule.ts`'s `shopSalaryRuleRequestSchema`
+ * discriminated union — `PayPerHour` shares its literal name with the service union (same word, two
+ * separate contract discriminants), `ProductSold`/`UsedProductSold` are shop-only.
  */
-export type ShopRuleType = 'PayPerHour' | 'ProductSold' | 'UsedProductSold' | 'TaskCompleted'
+export type ShopRuleType = 'PayPerHour' | 'ProductSold' | 'UsedProductSold'
 
 /**
  * Moved here from `pages/SalaryRules/model/{ruleDraft,ruleTypes,shopRuleTypes}.ts` (originally Фаза
@@ -21,14 +21,13 @@ export type ShopRuleType = 'PayPerHour' | 'ProductSold' | 'UsedProductSold' | 'T
  */
 
 /** "Тип правила" select labels — Pencil `tSYIw`/`TKUBK` shows `OrderPayed` as "Оплата заказа"
- * verbatim; the other three follow the same short, present-tense-noun style and the wording
+ * verbatim; the other two follow the same short, present-tense-noun style and the wording
  * `docs/payroll/prd-payroll-calculation.md` (§2) already uses for each type ("за выполненную
- * услугу"/"за выполненную задачу"). */
+ * услугу"). */
 export const RULE_TYPE_LABELS: Record<ServiceRuleType, string> = {
     PayPerHour: 'Почасовая оплата',
     ServiceCompleted: 'Выполнение услуги',
     OrderPayed: 'Оплата заказа',
-    TaskCompleted: 'Выполнение задачи',
 }
 
 /** Node `ZMEof` shows `ProductSold` as "Продажа товара", `UsedProductSold` as "Продажа Б/У товара". */
@@ -36,10 +35,9 @@ export const SHOP_RULE_TYPE_LABELS: Record<ShopRuleType, string> = {
     PayPerHour: 'Почасовая оплата',
     ProductSold: 'Продажа товара',
     UsedProductSold: 'Продажа Б/У товара',
-    TaskCompleted: 'Выполнение задачи',
 }
 
-/** Merged lookup by rule type string, regardless of direction — `PayPerHour`/`TaskCompleted` carry
+/** Merged lookup by rule type string, regardless of direction — `PayPerHour` carries
  * the same label in both maps, so the merge is unambiguous. Used by `pages/SalaryRuleList`'s
  * `SchemaCard` chips, which render a schema's `ruleTypes` without first knowing which direction map
  * each entry belongs to. */

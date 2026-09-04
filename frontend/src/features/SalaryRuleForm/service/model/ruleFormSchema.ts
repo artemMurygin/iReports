@@ -1,7 +1,7 @@
 import { salaryRuleRequestSchema, type SalaryRuleRequest, type SalaryRuleResponse } from 'ireports-contracts'
 
 import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
-import { buildOrderPayedAward, buildServiceCompletedAward, buildTaskCompletedConfig } from '../../model/ruleAwards.ts'
+import { buildOrderPayedAward, buildServiceCompletedAward } from '../../model/ruleAwards.ts'
 import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ruleDraft.ts'
 
 // Re-exported so existing imports (`core/ui/RuleFormCard`, `core/ui/RuleList`,
@@ -41,9 +41,6 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             break
         case 'OrderPayed':
             config = { award: buildOrderPayedAward(draft, errors), orderTypeIds: draft.orderTypeIds }
-            break
-        case 'TaskCompleted':
-            config = buildTaskCompletedConfig(draft, errors)
             break
         default:
             // `draft.type` is the shared `RuleType` union (Фаза 4, `core/model/ruleDraft.ts`) — the shop-only
@@ -111,10 +108,6 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
-        description: '',
-        period: '',
-        isRecurring: false,
-        dueDate: '',
     }
 
     switch (rule.type) {
@@ -153,16 +146,6 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
             }
             break
         }
-
-        case 'TaskCompleted':
-            return {
-                ...base,
-                description: rule.config.description,
-                period: rule.config.period,
-                isRecurring: rule.config.isRecurring,
-                dueDate: rule.config.dueDate,
-                price: String(rule.config.rewardAmount),
-            }
     }
 
     return base

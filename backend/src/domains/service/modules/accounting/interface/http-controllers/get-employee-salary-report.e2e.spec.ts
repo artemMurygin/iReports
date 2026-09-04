@@ -139,10 +139,10 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     // BuildServiceCalculationContextService, { fact: 8, prognose: 8 }
     // сохраняет числовые ожидания теста (2000 = 8ч × 250, одинаково для
     // факта и прогноза).
-    // Фаза 8 расширила порт тремя источниками (OrderPayed/TaskCompleted/
-    // отдел сотрудника) — пустые/null здесь достаточны: тест проверяет
-    // только PayPerHour, а findEmployeeDepartmentId: null отключает поход
-    // в SalesPerformanceReaderPort (см. buildSalesPerformance) — реального
+    // Фаза 8 расширила порт источником OrderPayed и отделом сотрудника —
+    // пустые/null здесь достаточны: тест проверяет только PayPerHour, а
+    // findEmployeeDepartmentId: null отключает поход в
+    // SalesPerformanceReaderPort (см. buildSalesPerformance) — реального
     // Postgres в этом e2e-тесте нет, а SALES_PERFORMANCE_READER здесь не
     // подменяется.
     const fakeServiceCalculationData: ServiceCalculationDataPort = {
@@ -150,7 +150,6 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
         findServiceCompletedItems: () => Promise.resolve([]),
         findHoursWorked: () => Promise.resolve({ fact: 8, prognose: 8 }),
         findOrderPayedItems: () => Promise.resolve([]),
-        findConfirmedTaskCompletions: () => Promise.resolve([]),
         findEmployeeDepartmentId: () => Promise.resolve(null),
         findEmployeesInDepartment: () => Promise.resolve([]),
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),

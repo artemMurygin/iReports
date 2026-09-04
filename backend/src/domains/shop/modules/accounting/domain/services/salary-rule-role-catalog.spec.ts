@@ -14,7 +14,6 @@ const SERVICE_SALARY_RULE_TYPES = [
     'PayPerHour',
     'ServiceCompleted',
     'OrderPayed',
-    'TaskCompleted',
 ];
 
 describe('listShopSalaryRuleTypes', () => {
@@ -23,7 +22,6 @@ describe('listShopSalaryRuleTypes', () => {
         expect(types.sort()).toEqual([
             'PayPerHour',
             'ProductSold',
-            'TaskCompleted',
             'UsedProductSold',
         ]);
     });
@@ -44,8 +42,8 @@ describe('listShopSalaryRuleTypes', () => {
     // issue #61: "GET списка типов правил возвращает разные наборы для
     // service и shop; типы правил сервиса и магазина не пересекаются" — как
     // РЕЕСТРЫ (независимые Map/классы), даже когда буквальные строковые
-    // имена типов совпадают ('PayPerHour', 'TaskCompleted', Фаза 13).
-    it('набор типов не пересекается с сервисом, кроме совпадающих по имени PayPerHour/TaskCompleted', () => {
+    // имена типов совпадают ('PayPerHour').
+    it('набор типов не пересекается с сервисом, кроме совпадающих по имени PayPerHour', () => {
         const shopTypes = new Set(
             listShopSalaryRuleTypes().map((entry) => entry.type),
         );

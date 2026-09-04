@@ -6,9 +6,8 @@ import type { CalculationContext } from '@/shared/domain/calculation-context';
 // UsedProductSoldSalaryConfig.category (id корневой папки
 // MoySkladProductFolder — та же категория, что раскрывается до потомков в
 // erpData.categoryDescendantFolderIds, см. calculation-data.types.ts);
-// null — «весь отдел» (правила без категории: TaskCompletedShopEntity с
-// FloatPercent, у которого понятия категории нет вовсе, либо ProductSold/
-// UsedProductSold с config.category === null). Одна мотивационная схема
+// null — «весь отдел» (правила без категории: ProductSold/UsedProductSold
+// с config.category === null). Одна мотивационная схема
 // сотрудника может нести несколько правил ProductSold с РАЗНЫМИ
 // категориями — каждому нужен факт именно своей категории, поэтому
 // единственное значение SalesPerformanceContext общего CalculationContext
