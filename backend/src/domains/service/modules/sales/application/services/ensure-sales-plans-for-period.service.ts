@@ -28,14 +28,9 @@ function growBy(value: number, growthPercent: number): number {
 // Идемпотентное достраивание плана месяца — общая операция для крона
 // первого числа (SalesPlanAutoCreationCron) и ленивого достраивания при
 // первом обращении к периоду (ListSalesPlansService); см. Фазу 4,
-// docs/payroll/plan-payroll-calculation.md. План месяца никогда не бывает
-// пустым: для каждой комбинации (department, category), встречавшейся в
-// плане предыдущего месяца или в шаблоне, но отсутствующей в текущем
-// периоде, создаётся строка — из предыдущего плана + growthPercent
-// (source = PREVIOUS_MONTH), а если предыдущего плана для этой комбинации
-// нет — из шаблона без надбавки (source = TEMPLATE). Уже существующие
-// строки периода не трогаются вне зависимости от статуса и источника
-// (в том числе APPROVED и MANUAL) — это и делает операцию идемпотентной.
+// docs/payroll/plan-payroll-calculation.md.
+//
+// spec: service/sales#requirement-автосоздание-плана-на-период-идемпотентно
 @Injectable()
 export class EnsureSalesPlansForPeriodService {
     constructor(
@@ -85,8 +80,7 @@ export class EnsureSalesPlansForPeriodService {
 
         let createdAny = false;
         for (const scope of scopesToEnsure) {
-            // Строка уже есть в текущем периоде (в любом статусе/источнике)
-            // — не перезатираем, идемпотентность именно в этом.
+            // spec: service/sales#scenario-существующая-строка-периода-не-перезатирается
             if (existingScopes.has(scope)) {
                 continue;
             }

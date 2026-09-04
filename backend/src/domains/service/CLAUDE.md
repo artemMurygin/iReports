@@ -129,33 +129,37 @@ domains/service/
   `GetDepartmentSalaryReportService` (`GET .../department/:id/:period`), оба поверх
   `PeriodCalculationOrchestrator` + `rule.calculate()`.
 
-### `modules/sales` — план/факт/прогноз продаж (Фазы 3–5) + сделки/лиды (в разработке)
+### `modules/sales` — план/факт/прогноз продаж (Фазы 3–5) + сделки/лиды (в разработке, read-only)
 
 Модуль объединяет два независимых среза с общим route-неймспейсом `/v1/service/sales/*` и общей
 бизнес-областью "продажи", но без переиспользования кода между ними — слоистость и провайдеры у
 каждого свои.
 
-**План продаж, факт и прогноз** (`docs/payroll/plan-payroll-calculation.md`, Фазы 3–5) — выстроен по
-целевой DDD/CQRS-слоистости, как `accounting`:
+Бизнес-правила модуля (шаблон и план продаж, их автосоздание и утверждение, факт и прогноз,
+классификация сделок воронки и её KPI, read-side список сделок/лидов) описаны в
+[`openspec/specs/service/sales/spec.md`](../../../../openspec/specs/service/sales/spec.md) — ищи их
+там, а не здесь; этот раздел — только карта «правило → где в коде». Основной источник замысла на
+момент реализации плана/факта/прогноза — `docs/payroll/plan-payroll-calculation.md` (Фазы 3–5).
 
-- `SalesPlanTemplate` (`GET|PUT /v1/service/sales/plan_template`) — дефолтные значения плана по
-  отделу и, опционально, категории, с процентом ежемесячного роста; `PUT` — upsert по естественному
+**План продаж, факт и прогноз** — выстроен по целевой DDD/CQRS-слоистости, как `accounting`:
+
+- `SalesPlanTemplate` (`GET|PUT /v1/service/sales/plan_template`) — `PUT` upsert по естественному
   ключу `(direction, department, category)`.
 - `SalesPlan` (`POST|GET|PATCH|DELETE /v1/service/sales/plan`,
   `POST /v1/service/sales/plan/approve`) — план на конкретный месяц; `source`
   (`PREVIOUS_MONTH`/`TEMPLATE`/`MANUAL`) и `status` (`CREATED`/`APPROVED`) — см.
   `SalesPlan.edit()`/`.approve()`.
-- Автосоздание планов (Фаза 4) — `EnsureSalesPlansForPeriodService.ensure(direction, period)`:
-  для каждой комбинации отдел/категория без строки в текущем периоде берёт план предыдущего
-  месяца + `growthPercent` (`source = PREVIOUS_MONTH`), а если предыдущего плана нет — строку
-  шаблона без надбавки (`source = TEMPLATE`); уже существующие строки (в т.ч. `APPROVED`/`MANUAL`)
-  не трогает. Два входа в одну операцию: `SalesPlanAutoCreationCron`
-  (`infrastructure/cron/`, `@ProdCron` первого числа, только `direction = 'service'`) и ленивое
-  достраивание внутри `ListSalesPlansService` при каждом `GET /v1/service/sales/plan` —
-  обязательное, так как `@ProdCron` не тикает в dev. Крон выполняется вне HTTP-запроса, поэтому
-  оборачивается в `runInSystemRequestContext`
+- Автосоздание планов (Фаза 4) — `EnsureSalesPlansForPeriodService.ensure(direction, period)`. Два
+  входа в одну операцию: `SalesPlanAutoCreationCron` (`infrastructure/cron/`, `@ProdCron` первого
+  числа, только `direction = 'service'`) и ленивое достраивание внутри `ListSalesPlansService` при
+  каждом `GET /v1/service/sales/plan` — обязательное, так как `@ProdCron` не тикает в dev. Крон
+  выполняется вне HTTP-запроса, поэтому оборачивается в `runInSystemRequestContext`
   (`shared/application/context/run-in-system-context.ts`) — без него репозитории падают:
   домен/`DatabaseService.getClient()` читают `RequestContext`, который вне запроса никем не открыт.
+- Глобальный порядок строк плана — `domain/services/order-sales-plans.ts`
+  (`orderSalesPlansByTemplate()`), унаследован от `SalesPlanTemplate.sortOrder`; батч-эндпоинт
+  переупорядочивания — `UpdateSalesPlanOrderHandler`, трогает только `sortOrder` (см. отдельный от
+  `update()` метод `SalesPlanTemplate.reorder()`).
 - `category` — строка (`string | null`; для `shop` — UUID папки МойСклад, см. `domains/shop/CLAUDE.md`),
   хранится в БД сентинелом `NO_CATEGORY_ID = ''` вместо `NULL` (Postgres не считает два `NULL`
   равными в составном уникальном индексе) — см. комментарий в
@@ -164,11 +168,15 @@ domains/service/
   `GetSalesPerformanceService` (единственная реализация `SalesPerformanceReaderPort`) на каждый вызов
   пересчитывает `SalesFact` (агрегат по ERP через `ServiceSalesFactSourcePort`,
   `RoappSalesFactSourceRepository`) и `SalesPrognose` (`SalesPrognose.forPeriod()`, общая формула в
-  `src/shared/domain/`) поверх плана — ни факт, ни прогноз нигде не персистятся, это и есть механизм,
-  которым «изменение плана пересчитывает факт и прогноз». Жёстко привязан к `direction = 'service'`
-  (`SalesPerformanceDirectionNotSupportedException` для любого другого значения) — читает RoApp/
-  RemOnline напрямую; аналог для `shop` — отдельный эндпоинт `domains/shop/modules/sales`, см.
-  `domains/shop/CLAUDE.md`, а не параметр `direction` этого же роута.
+  `src/shared/domain/`) поверх плана — читает RoApp/RemOnline напрямую; аналог для `shop` — отдельный
+  эндпоинт `domains/shop/modules/sales`, см. `domains/shop/CLAUDE.md`, а не параметр `direction`
+  этого же роута.
+- Отчёт по воронке сервисных сделок — `GetServiceFunnelReportService` +
+  `domain/services/funnel-kpi.calculator.ts` (`calculateServiceFunnelKpi()`) поверх
+  `FunnelStageMap` (`domain/value-objects/funnel-stage-map.value-object.ts`,
+  `FunnelStageMap.default()` — единственное место в проекте, где Bitrix stage-ID группы воронки
+  перечислены буквально) — перенос `serviceFunnelKPICalculation` из легаси
+  `src/TODO/reports/reports.helpers.ts` без изменения бизнес-правила.
 - Prisma-модели (`SalesPlan`/`SalesPlanTemplate`) общие для `service`/`shop` (поле `direction`), но
   CRUD-роуты — нет: у `/v1/service/sales/plan*` (контроллеры этого модуля) и `/v1/shop/sales/plan*`
   (`domains/shop/modules/sales`, см. `domains/shop/CLAUDE.md`) — два независимых набора HTTP-
@@ -185,15 +193,15 @@ domains/service/
   `sales.module.ts`.
 
 **Сделки/лиды** — гораздо более ранняя стадия, чем остальной модуль, сейчас это фактически только
-read-side:
+read-side (read-only поверх уже засинканных данных, без создания/изменения):
 
 - `LeadRepository`/`DealRepository` (`infrastructure/sales.repositories.ts`) читают уже
   засинканные данные напрямую из Prisma и мапят в доменные `LeadEntity`/`DealEntity`:
   - `LeadEntity` — из таблицы `bitrixDeal`, отфильтрованной по
-    `categoryId = SERVICE_FUNNEL_CATEGORY_ID (0)` — это воронка Bitrix24, принадлежащая направлению
-    "Сервис" (см. также `CATEGORY_ID` в `src/integrations/bitrix/bitrix.service.ts`, откуда
-    синхронизируются все воронки Bitrix). Сама синхронизация Bitrix living не в этом домене, а в
-    `src/sync/bitrix` + `src/integrations/bitrix` (общекорпоративный CRM-контур, общий для доменов).
+    `categoryId = SERVICE_FUNNEL_CATEGORY_ID (0)` (см. также `CATEGORY_ID` в
+    `src/integrations/bitrix/bitrix.service.ts`, откуда синхронизируются все воронки Bitrix). Сама
+    синхронизация Bitrix живёт не в этом домене, а в `src/sync/bitrix` + `src/integrations/bitrix`
+    (общекорпоративный CRM-контур, общий для доменов).
   - `DealEntity` — из таблицы `roappOrder` (уже засинканной `sync/roapp` выше).
 - `api/sales.routes.ts`, `api/schemas/sales.shcemas.ts`, `domain/sales.events.ts`,
   `application/event.handlers.ts` — **пустые файлы-заготовки**: контроллеров, схем запросов и

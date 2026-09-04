@@ -1,12 +1,11 @@
 import { ValueObject } from '@/shared/domain/value-object.base';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 
+// spec: service/sales#requirement-классификация-сделки-воронки-по-ровно-одной-группе
+//
 // Группа воронки сервисных сделок, к которой относится этап (Bitrix
 // stageId) — см. serviceFunnelKPICalculation в
-// src/TODO/reports/reports.helpers.ts. 'other' — этап не входит ни в один
-// из захардкоженных списков легаси-функции (она такие этапы просто не
-// считает ни в одном из отдельных счётчиков, но включает в targetedLeads,
-// см. FunnelStageMap.classify).
+// src/TODO/reports/reports.helpers.ts.
 export type FunnelGroup =
     | 'won'
     | 'lose'
@@ -31,11 +30,8 @@ export interface FunnelStageMapProps {
 // без изменения бизнес-правила (см. docs/todo-modules-ddd-refactoring,
 // Фаза 4: "захардкоженных массивов stage-ID вне VO FunnelStageMap нет").
 //
-// Инвариант: этап принадлежит ровно одной группе — FunnelStageMap.create()
-// (и default()) бросает ArgumentInvalidException, если один и тот же
-// stageId встретился в двух группах. Этапы вне всех списков — валидный
-// случай ('other'), а не нарушение инварианта: легаси-функция тоже не
-// требует полного покрытия всех Bitrix-этапов явной группой.
+// spec: service/sales#requirement-классификация-сделки-воронки-по-ровно-одной-группе
+// spec: service/sales#scenario-этап-входящий-сразу-в-две-группы-считается-ошибкой
 export class FunnelStageMap extends ValueObject<FunnelStageMapProps> {
     private readonly lookup: ReadonlyMap<string, FunnelGroup>;
 

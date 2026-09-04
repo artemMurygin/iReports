@@ -15,9 +15,9 @@ import {
 
 // План на конкретный месяц по отделу и, опционально, категории — вход для
 // всех процентных зарплатных правил (Фаза 3, см.
-// docs/payroll/plan-payroll-calculation.md). Направление/отдел/категория и
-// период неизменны после создания (правка на другую комбинацию — это
-// создание новой строки, а не update этой).
+// docs/payroll/plan-payroll-calculation.md).
+//
+// spec: service/sales#requirement-план-на-период-неизменен-по-scope
 export class SalesPlan extends Entity<SalesPlanProps> {
     declare protected readonly _id: AggregateID;
 
@@ -66,9 +66,10 @@ export class SalesPlan extends Entity<SalesPlanProps> {
         return this.props.margin;
     }
 
-    // [] = "учитывать заказы всех типов" — как для строк, где выбор сделан
-    // явно, так и для строк, созданных до появления этого поля (@default([])
-    // в sales.prisma, без разовой миграции данных).
+    // spec: service/sales#scenario-пустой-список-типов-заказов-означает-все-типы
+    //
+    // Значение по умолчанию для строк, созданных до появления этого поля
+    // (@default([]) в sales.prisma, без разовой миграции данных).
     get orderTypeIds(): number[] {
         return this.props.orderTypeIds;
     }
@@ -89,11 +90,7 @@ export class SalesPlan extends Entity<SalesPlanProps> {
         return this.props.approval?.getApprovedAt() ?? null;
     }
 
-    // Ручная правка значений — не создание, не удаление, не утверждение.
-    // Всегда переводит источник в MANUAL; если строка была утверждена,
-    // сбрасывает статус в CREATED и снимает утверждение целиком (см.
-    // docs/payroll/prd-payroll-calculation.md: "утверждать нужно то, что
-    // видишь" — цифры изменились, прошлое утверждение к ним не относится).
+    // spec: service/sales#requirement-ручное-редактирование-плана-сбрасывает-утверждение
     edit(patch: SalesPlanEditProps): void {
         if (patch.turnover !== undefined) {
             this.props.turnover = patch.turnover;
@@ -112,9 +109,7 @@ export class SalesPlan extends Entity<SalesPlanProps> {
         this.validate();
     }
 
-    // Идемпотентно: повторное утверждение (в т.ч. в массовом сценарии
-    // "утвердить весь месяц") просто обновляет approvedBy/approvedAt на
-    // актуальные — отдельного запрета на переутверждение нет.
+    // spec: service/sales#requirement-утверждение-плана-идемпотентно
     approve(approvedBy: number): void {
         this.props.approval = SalesPlanApproval.create(approvedBy);
         this.props.status = 'APPROVED';
@@ -131,8 +126,9 @@ export class SalesPlan extends Entity<SalesPlanProps> {
                 'Плановая маржа не может быть отрицательной',
             );
         }
-        // Бросает ArgumentInvalidException при неверном формате периода —
-        // сам объект Period здесь не нужен, только валидация формата.
+        // spec: service/sales#requirement-валидация-числовых-значений-плана-и-шаблона
+        //
+        // Сам объект Period здесь не нужен, только валидация формата.
         Period.create(this.props.period);
     }
 }

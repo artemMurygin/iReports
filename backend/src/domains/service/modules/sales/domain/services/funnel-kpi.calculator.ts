@@ -17,15 +17,8 @@ export interface FunnelDealFacts {
 // FunnelStageMap.classify() вместо четырёх захардкоженных массивов и двух
 // строковых литералов ('WON'/'3') инлайн.
 //
-// Инвариант легаси-функции сохранён буквально: won/lose/inWork/
-// waitingInService/inService не эксклюзивны с targetedLeads/nonTargetDeals
-// — это две независимые оси классификации одного и того же stageId
-// (целевой/нецелевой И группа воронки), а не единая пятисекционная
-// диаграмма. FunnelStageMap.classify() возвращает ОДНУ группу на этих осях
-// одновременно, потому что группы 'nonTarget'/'won'/'lose'/'inWork'/
-// 'waitingInService'/'inService' в default() взаимно не пересекаются по
-// stageId (инвариант проверен в FunnelStageMap.buildLookup) — так каждый
-// classify() результат однозначно маппится ровно на один инкремент ниже.
+// spec: service/sales#requirement-целевыенецелевые-лиды-и-группа-воронки-независимые-классификации
+// spec: service/sales#requirement-классификация-сделки-воронки-по-ровно-одной-группе
 export function calculateServiceFunnelKpi(
     deals: readonly FunnelDealFacts[],
     stageMap: FunnelStageMap,

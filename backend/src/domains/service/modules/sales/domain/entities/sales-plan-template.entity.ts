@@ -9,14 +9,13 @@ import {
 } from '../types/sales-plan-template.types';
 import type { SalesDirection } from '../types/sales-plan.types';
 
-// growthPercent по умолчанию — см. docs/payroll/prd-payroll-calculation.md,
-// раздел "План продаж": "процент, на который автоматически растёт план от
-// месяца к месяцу, по умолчанию 10%".
+// spec: service/sales#scenario-шаблон-без-явного-процента-роста-получает-значение-по-умолчанию
 export const DEFAULT_GROWTH_PERCENT = 10;
 
-// Дефолтные значения плана по отделу и, опционально, категории — стартовая
-// точка для самого первого месяца направления и запасной вариант, если
-// плана за предыдущий месяц ещё нет (Фаза 4). Не привязана к периоду.
+// spec: service/sales#requirement-шаблон-плана-как-отправная-точка-отделакатегории
+//
+// Стартовая точка для самого первого месяца направления и запасной
+// вариант, если плана за предыдущий месяц ещё нет (Фаза 4).
 export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
     declare protected readonly _id: AggregateID;
 
@@ -63,9 +62,11 @@ export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
         return this.props.growthPercent;
     }
 
-    // [] = "учитывать заказы всех типов" — переносится на автосоздаваемый
-    // план (см. EnsureSalesPlansForPeriodService.fromTemplate()), когда для
-    // комбинации отдел/категория нет плана предыдущего месяца.
+    // spec: service/sales#scenario-пустой-список-типов-заказов-означает-все-типы
+    //
+    // Переносится на автосоздаваемый план (см.
+    // EnsureSalesPlansForPeriodService.fromTemplate()), когда для комбинации
+    // отдел/категория нет плана предыдущего месяца.
     get orderTypeIds(): number[] {
         return this.props.orderTypeIds;
     }

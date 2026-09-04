@@ -3,9 +3,10 @@ import { SalesPlanTemplate } from '../entities/sales-plan-template.entity';
 
 export interface OrderedSalesPlan {
     plan: SalesPlan;
-    // Порядок, унаследованный от связанного SalesPlanTemplate.sortOrder
-    // (см. комментарий там) — null, если для комбинации
-    // (department, category) строки плана нет сохранённого шаблона.
+    // spec: service/sales#requirement-глобальный-порядок-строк-плана-наследуется-от-шаблона
+    //
+    // null, если для комбинации (department, category) строки плана нет
+    // сохранённого шаблона.
     sortOrder: number | null;
 }
 
@@ -26,19 +27,16 @@ export function buildTemplateSortOrderMap(
     return map;
 }
 
-// Глобальный (общий для всех пользователей) порядок строк плана продаж —
-// см. docs/sales-plan-row-drag-and-drop-reorder. Хранится не на самой
-// строке SalesPlan (её id и вообще существование меняются каждый месяц), а
-// на связанном SalesPlanTemplate — период-независимой сущности на том же
-// естественном ключе (direction, department, category). Строки, для чьей
-// комбинации (department, category) сохранённого шаблона нет, уходят в
-// конец списка, не нарушая порядок остальных строк (см. PRD, критерий
-// готовности "категория, ранее отсутствовавшая в сохранённом порядке,
-// отображается в конце списка"). Группировка по отделу сохраняется как и
-// в прежней сортировке (departmentId asc, categoryId asc, см.
-// SalesPlanRepository.findByDirectionAndPeriod) — sortOrder работает уже
-// внутри отдела; категории без шаблона внутри отдела сортируются по
-// categoryId как раньше, чтобы порядок был детерминирован.
+// spec: service/sales#requirement-глобальный-порядок-строк-плана-наследуется-от-шаблона
+//
+// Глобальный (общий для всех пользователей) порядок строк — см.
+// docs/sales-plan-row-drag-and-drop-reorder. Хранится не на самой строке
+// SalesPlan (её id и вообще существование меняются каждый месяц), а на
+// связанном SalesPlanTemplate — период-независимой сущности на том же
+// естественном ключе (direction, department, category). Группировка по
+// отделу сохраняется как и в прежней сортировке (departmentId asc,
+// categoryId asc, см. SalesPlanRepository.findByDirectionAndPeriod) —
+// sortOrder работает уже внутри отдела.
 export function orderSalesPlansByTemplate(
     plans: SalesPlan[],
     templates: SalesPlanTemplate[],
@@ -59,8 +57,7 @@ export function orderSalesPlansByTemplate(
         if (a.sortOrder !== null && b.sortOrder !== null) {
             return a.sortOrder - b.sortOrder;
         }
-        // Ровно один из них не null — строка со связанным шаблоном всегда
-        // раньше строки без него (см. заголовок комментария выше).
+        // spec: service/sales#scenario-строка-без-связанного-шаблона-уходит-в-конец-списка-отдела
         if (a.sortOrder !== null) {
             return -1;
         }

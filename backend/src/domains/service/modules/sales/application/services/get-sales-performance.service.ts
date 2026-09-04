@@ -17,11 +17,10 @@ import type { SalesDirection } from '../../domain/types/sales-plan.types';
 // никогда не бывает пустым (переиспользует то же ленивое достраивание
 // Фазы 4, что и ListSalesPlansService), факт агрегируется одним запросом
 // на весь период (ServiceSalesFactSourcePort), прогноз считается по нему
-// же через единую формулу SalesPrognose.forPeriod(). Ни факт, ни прогноз
-// нигде не персистятся — пересчёт на каждый вызов и есть тот механизм,
-// которым "изменение плана пересчитывает факт и прогноз", а "удаление
-// плана удаляет факт и прогноз" (строка планов просто перестаёт попадать
-// в результат) — см. "Когда готово" Фазы 5.
+// же через единую формулу SalesPrognose.forPeriod().
+//
+// spec: service/sales#requirement-факт-и-прогноз-продаж-не-персистятся-и-пересчитываются-на-каждый-запрос
+// spec: service/sales#scenario-удаление-строки-плана-убирает-её-из-отчёта-фактпрогноз
 @Injectable()
 export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
     constructor(
@@ -34,8 +33,9 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
         direction: SalesDirection,
         period: string,
     ): Promise<SalesPerformance[]> {
-        // См. SalesPerformanceDirectionNotSupportedException — источник
-        // ERP-факта для shop появится в Фазе 11.
+        // spec: service/sales#requirement-факт-и-прогноз-продаж-поддерживаются-только-для-направления-сервис
+        //
+        // Источник ERP-факта для shop появится в Фазе 11.
         if (direction !== 'service') {
             throw new SalesPerformanceDirectionNotSupportedException(direction);
         }
@@ -70,8 +70,7 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
         return orderedPlans.map(({ plan, sortOrder }) => {
             const departmentFacts =
                 factsByDepartment.get(plan.department) ?? [];
-            // [] у плана = "все типы заказов" — тогда в расчёт идут все
-            // бакеты отдела; иначе — только бакеты перечисленных типов.
+            // spec: service/sales#requirement-типы-заказов-ограничивают-какие-данные-erp-попадают-в-факт-строки-плана
             const matching =
                 plan.orderTypeIds.length === 0
                     ? departmentFacts
