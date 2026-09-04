@@ -8,7 +8,7 @@ import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/appli
 import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
-import { resolveEmployees } from '../services/list-salary-accruals.service';
+import { resolveEmployees } from '../../services/list-salary-accruals.service';
 import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { CreatePayoutCommand } from './create-payout.command';
 import { CreatePayoutBatchCommand } from './create-payout-batch.command';

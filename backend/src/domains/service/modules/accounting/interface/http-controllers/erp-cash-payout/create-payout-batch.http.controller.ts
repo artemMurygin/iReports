@@ -3,8 +3,8 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { PayoutBatchResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { CreatePayoutBatchCommand } from '@/domains/service/modules/accounting/application/command/create-payout-batch.command';
-import { PayoutBatchDto } from '../dto/payout-batch.dto';
+import { CreatePayoutBatchCommand } from '@/domains/service/modules/accounting/application/command/erp-cash-payout/create-payout-batch.command';
+import { PayoutBatchDto } from '../../dto/erp-cash-payout/payout-batch.dto';
 
 @ApiTags('Бухгалтерия: выплата')
 @Controller()

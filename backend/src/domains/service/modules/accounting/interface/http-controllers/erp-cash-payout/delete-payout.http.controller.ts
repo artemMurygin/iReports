@@ -8,7 +8,7 @@ import {
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
-import { DeletePayoutCommand } from '@/domains/service/modules/accounting/application/command/delete-payout.command';
+import { DeletePayoutCommand } from '@/domains/service/modules/accounting/application/command/erp-cash-payout/delete-payout.command';
 
 @ApiTags('Бухгалтерия: выплата')
 @Controller()

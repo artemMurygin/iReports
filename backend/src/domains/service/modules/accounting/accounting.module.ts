@@ -17,9 +17,9 @@ import { UnaccrueSalaryAccrualLineHandler } from '@/domains/service/modules/acco
 import { AdjustSalaryAccrualLineHandler } from '@/domains/service/modules/accounting/application/command/adjust-salary-accrual-line.handler';
 import { AccrueSalaryAccrualDocumentHandler } from '@/domains/service/modules/accounting/application/command/accrue-salary-accrual-document.handler';
 import { AccruePeriodSalaryAccrualsHandler } from '@/domains/service/modules/accounting/application/command/accrue-period-salary-accruals.handler';
-import { CreatePayoutHandler } from '@/domains/service/modules/accounting/application/command/create-payout.handler';
-import { CreatePayoutBatchHandler } from '@/domains/service/modules/accounting/application/command/create-payout-batch.handler';
-import { DeletePayoutHandler } from '@/domains/service/modules/accounting/application/command/delete-payout.handler';
+import { CreatePayoutHandler } from '@/domains/service/modules/accounting/application/command/erp-cash-payout/create-payout.handler';
+import { CreatePayoutBatchHandler } from '@/domains/service/modules/accounting/application/command/erp-cash-payout/create-payout-batch.handler';
+import { DeletePayoutHandler } from '@/domains/service/modules/accounting/application/command/erp-cash-payout/delete-payout.handler';
 import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.handler';
 import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-employee-salary-report.service';
 import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/get-department-salary-report.service';
@@ -56,9 +56,9 @@ import { UnaccrueSalaryAccrualLineHttpController } from '@/domains/service/modul
 import { AdjustSalaryAccrualLineHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/adjust-salary-accrual-line.http.controller';
 import { AccrueSalaryAccrualDocumentHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-salary-accrual-document.http.controller';
 import { AccruePeriodSalaryAccrualsHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accrue-period-salary-accruals.http.controller';
-import { CreatePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-payout.http.controller';
-import { CreatePayoutBatchHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/create-payout-batch.http.controller';
-import { DeletePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/delete-payout.http.controller';
+import { CreatePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/erp-cash-payout/create-payout.http.controller';
+import { CreatePayoutBatchHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/erp-cash-payout/create-payout-batch.http.controller';
+import { DeletePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/erp-cash-payout/delete-payout.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-close-period-preview.http.controller';
 import { GetErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/get-erp-cash-config.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema.port';
