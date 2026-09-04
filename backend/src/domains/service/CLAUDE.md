@@ -87,10 +87,7 @@ domains/service/
 Бизнес-правила модуля (из чего складывается начисление, жизненный цикл расчётного периода,
 устройство зарплатных отчётов) описаны в
 [`openspec/specs/service/accounting/spec.md`](../../../../openspec/specs/service/accounting/spec.md)
-— ищи их там, а не здесь; этот раздел — только карта «правило → где в коде». Пока
-`openspec/changes/docs-migration-to-openspec` не заархивирован, актуальная версия спека временно
-лежит по пути `openspec/changes/docs-migration-to-openspec/specs/service/accounting/spec.md` — после
-архивации переедет по ссылке выше без изменения содержания. Основной источник замысла на момент
+— ищи их там, а не здесь; этот раздел — только карта «правило → где в коде». Основной источник замысла на момент
 реализации — `docs/payroll/prd-payroll-calculation.md` и `docs/payroll/plan-payroll-calculation.md`
 (Фазы 1–9).
 

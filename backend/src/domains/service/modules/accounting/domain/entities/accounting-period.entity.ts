@@ -25,18 +25,18 @@ export type AccountingPeriodCreateProps = {
     period: string;
 };
 
-// Расчётный период направления — сервис и магазин закрываются независимо
-// (направление — часть естественного ключа, см. PRD раздел 4). Период, для
-// которого ещё нет записи в БД, трактуется вызывающей стороной как OPEN
-// (см. AccountingPeriodRepositoryPort.findByDirectionAndPeriod) — заводить
-// строку заранее на каждый месяц не нужно, первая запись появляется при
-// закрытии.
+// spec: service/accounting#requirement-расчётный-период-идентифицируется-направлением-и-месяцем
 //
-// Проверка "все строки плана продаж утверждены" — ответственность
-// application-слоя (CloseAccountingPeriodHandler, знающего про модуль sales
-// через SALES_PLAN_REPOSITORY), а не этой сущности: период ничего не знает
-// про модуль sales, как и оркестратор расчёта (Фаза 1) ничего не знает про
-// роли/типы правил.
+// Период, для которого ещё нет записи в БД, трактуется вызывающей стороной как OPEN (см.
+// AccountingPeriodRepositoryPort.findByDirectionAndPeriod) — заводить строку заранее на каждый
+// месяц не нужно, первая запись появляется при закрытии.
+//
+// spec: service/accounting#requirement-закрытие-периода-требует-утверждённого-плана-продаж
+//
+// Проверка "все строки плана продаж утверждены" — ответственность application-слоя
+// (CloseAccountingPeriodHandler, знающего про модуль sales через SALES_PLAN_REPOSITORY), а не этой
+// сущности: период ничего не знает про модуль sales, как и оркестратор расчёта (Фаза 1) ничего не
+// знает про роли/типы правил.
 export class AccountingPeriod extends AggregateRoot<AccountingPeriodProps> {
     declare protected readonly _id: AggregateID;
 

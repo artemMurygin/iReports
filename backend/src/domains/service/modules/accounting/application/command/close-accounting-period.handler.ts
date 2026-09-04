@@ -33,39 +33,24 @@ import { SalaryAccrualDocumentsCreatedDomainEvent } from '@/shared/domain/events
 import { AccountingPeriodMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/accounting-period/accounting-period.mapper';
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';
 
-// Закрытие расчётного периода (Фаза 6, см.
-// docs/payroll/plan-payroll-calculation.md, "Фаза 6: Расчётный период,
-// ленивый кэш и снапшоты"):
-// 1) отклоняется, если есть хоть одна неутверждённая строка плана продаж
-//    периода/направления;
-// 2) иначе снимает FACT-срез по каждому сотруднику, у которого есть
-//    зарплатные правила — в личной схеме ИЛИ в схеме его отдела (тем же
-//    оркестратором, что и открытый расчёт), — и фиксирует его неизменяемым
-//    снапшотом;
-// 3) переводит период в CLOSED и порождает AccountingPeriodClosedDomainEvent.
+// spec: service/accounting#requirement-закрытие-периода-требует-утверждённого-плана-продаж
+// spec: service/accounting#requirement-закрыть-можно-только-истёкший-период-с-актуальными-данными-erp
+// spec: service/accounting#requirement-закрытие-периода-фиксирует-неизменяемый-снапшот
 //
-// PRD 1 docs/payroll-closing-and-accrual (Фаза 1, tracer bullet) дополняет
-// закрытие документами начисления:
-// 4) перед расчётом сбрасывается кэш периода — закрытие никогда не фиксирует
-//    устаревший кэш (расчёт и так идёт оркестратором напрямую, но снапшот и
-//    документы должны совпадать с тем, что увидит отчёт после закрытия);
-// 5) по каждой строке снапшота — включая нулевые суммы и уволенных
-//    (isDismissed по активности BitrixEmployee, EmployeeDismissalPort) —
-//    создаётся документ SalaryAccrual в статусе DRAFT, сумма = total
-//    снапшота, строки = lines снапшота; пишется в той же транзакции
-//    UnitOfWork, что снапшот и CLOSED (всё или ничего);
-// 6) после коммита публикуется SalaryAccrualDocumentsCreatedDomainEvent с
-//    перечнем accrualId — на него подпишется PRD 2.
+// Реализация (Фаза 6, docs/payroll/plan-payroll-calculation.md): проверки выше — в указанном
+// порядке (план → истечение/статус периода → синк ERP) — до расчёта, чтобы не трогать ERP зря.
+// Снапшот снимается по сотрудникам с правилами в личной схеме ИЛИ в схеме их отдела, тем же
+// оркестратором, что и открытый расчёт. Синк ERP — ErpPeriodSyncRunner → ERP_PERIOD_SYNC, таймаут
+// 2 мин, блокировка направления от тика крона. Строки снапшота считает
+// CalculateServiceSnapshotRowsService — тот же код, что и у GET .../close-preview.
 //
-// Фаза 2 PRD 1 — неявная синхронизация ERP и ограничения:
-// 7) закрыть можно только истёкший календарный месяц (Period.isExpired) и
-//    только ещё не закрытый период — иначе 409 до любых обращений к ERP;
-// 8) перед сбросом кэша и расчётом синхронизируются заказы RemOnline,
-//    закрытые в месяце (ErpPeriodSyncRunner → ERP_PERIOD_SYNC, таймаут 2
-//    мин, блокировка направления от тика крона); ошибка/таймаут →
-//    ErpSyncFailedException, период остаётся открытым, ничего не создано;
-// 9) строки снапшота считает CalculateServiceSnapshotRowsService — тот же
-//    код, что и у GET .../close-preview.
+// PRD 1 docs/payroll-closing-and-accrual (документ начисления SalaryAccrual — вне спека этого
+// модуля, см. openspec/changes/docs-migration-to-openspec/proposal.md → Impact) дополняет закрытие:
+// перед расчётом сбрасывается кэш периода (закрытие не должно зафиксировать устаревший кэш); по
+// каждой строке снапшота — включая нулевые суммы и уволенных (isDismissed по активности
+// BitrixEmployee, EmployeeDismissalPort) — создаётся документ SalaryAccrual в статусе DRAFT в той
+// же транзакции UnitOfWork, что снапшот и CLOSED (всё или ничего); после коммита публикуется
+// SalaryAccrualDocumentsCreatedDomainEvent с перечнем accrualId.
 @CommandHandler(CloseAccountingPeriodCommand)
 export class CloseAccountingPeriodHandler implements ICommandHandler<
     CloseAccountingPeriodCommand,

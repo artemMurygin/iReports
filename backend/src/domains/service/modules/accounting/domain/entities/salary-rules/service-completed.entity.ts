@@ -138,13 +138,10 @@ export class ServiceCompletedEntity
 
     validate(): void {}
 
-    // Фильтр по категории заказа (Фаза 3,
-    // docs/service-plan-salary-rule-order-category-filter/) —
-    // config.orderTypeIds указывает список допустимых RoappOrderType
-    // (RoappOrder.orderTypeId, здесь — item.orderTypeId позиции заказа).
-    // Пусто/не указано — условие не применяется, правило считает позиции
-    // заказов всех типов (совместимо с уже существующими правилами без
-    // этого поля).
+    // spec: service/accounting#requirement-оплату-за-услугу-и-вознаграждение-за-заказ-можно-ограничить-типами-заказа
+    //
+    // config.orderTypeIds — список допустимых RoappOrderType (RoappOrder.orderTypeId, здесь —
+    // item.orderTypeId позиции заказа).
     private matchesOrderType(item: ServiceCompletedErpItem): boolean {
         const { orderTypeIds } = this.props.config;
         if (!orderTypeIds || orderTypeIds.length === 0) {

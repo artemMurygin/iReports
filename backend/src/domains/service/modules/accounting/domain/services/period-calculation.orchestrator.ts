@@ -13,8 +13,7 @@ import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/sa
 // эквивалентного прохода) и одинаковую выборку данных для всех правил
 // одного сотрудника — см. docs/payroll/prd-payroll-calculation.md, Фаза 1.
 //
-// Правила в этой итерации независимы и не ссылаются на результаты друг
-// друга — итог является простой суммой строк.
+// spec: service/accounting#requirement-мотивационная-схема-как-набор-зарплатных-правил
 export class PeriodCalculationOrchestrator {
     static async calculate(
         rules: SalaryRule[],

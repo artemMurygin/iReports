@@ -23,12 +23,12 @@ import type {
     ServiceCalculationErpData,
 } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
 
-// Правило "вознаграждение за оплаченный заказ" (Фаза 8, см.
-// docs/payroll/plan-payroll-calculation.md и prd-payroll-calculation.md,
-// раздел 2). "Оплаченный" — решается по группе статуса заказа (см.
-// domain/services/paid-order-status.ts), сама фильтрация уже применена
-// источником данных (ServiceCalculationDataRepository.findOrderPayedItems)
-// — сюда попадают только заказы, прошедшие этот фильтр.
+// spec: service/accounting#scenario-оплаченность-заказа-определяется-его-статусом-а-не-накопленной-суммой
+//
+// "Оплаченный" решается по группе статуса заказа (см. domain/services/paid-order-status.ts), сама
+// фильтрация уже применена источником данных
+// (ServiceCalculationDataRepository.findOrderPayedItems) — сюда попадают только заказы, прошедшие
+// этот фильтр.
 export class OrderPayedEntity
     extends Entity<OrderPayedSalaryRule>
     implements SalaryRule
@@ -192,12 +192,9 @@ export class OrderPayedEntity
         });
     }
 
-    // Фильтр по категории заказа (Фаза 3,
-    // docs/service-plan-salary-rule-order-category-filter/) —
-    // config.orderTypeIds указывает список допустимых RoappOrderType
-    // (RoappOrder.orderTypeId). Пусто/не указано — условие не применяется,
-    // правило считает заказы всех типов (совместимо с уже существующими
-    // правилами без этого поля).
+    // spec: service/accounting#requirement-оплату-за-услугу-и-вознаграждение-за-заказ-можно-ограничить-типами-заказа
+    //
+    // config.orderTypeIds — список допустимых RoappOrderType (RoappOrder.orderTypeId).
     private matchesOrderType(item: OrderPayedErpItem): boolean {
         const { orderTypeIds } = this.props.config;
         if (!orderTypeIds || orderTypeIds.length === 0) {
