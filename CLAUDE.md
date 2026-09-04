@@ -77,9 +77,3 @@ As the project grows, this section will link to more detailed MD files for each 
 
 - [`backend/CLAUDE.md`](./backend/CLAUDE.md) — instructions for working on the backend.
 - [`frontend/CLAUDE.md`](./frontend/CLAUDE.md) — instructions for working on the frontend.
-
-## Knowledge graph (`/graphify`)
-
-The repo has a graphify knowledge graph in `graphify-out/` (gitignored, local-only — rebuilt per machine, not shared via git). For questions about architecture, cross-module/cross-domain relationships, or "what connects to what", prefer `/graphify query "<question>"` over ad-hoc grepping across the domain-oriented backend or the FSD-layered frontend — the graph already has community detection and cross-file edges. If `graphify-out/graph.json` doesn't exist yet, run `/graphify` to build it first.
-
-The graph goes stale after large refactors (file moves/renames across `src/domains`, module splits, etc.) — run `/graphify --update` after such changes before relying on graph answers.
