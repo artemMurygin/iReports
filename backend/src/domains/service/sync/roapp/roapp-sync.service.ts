@@ -282,10 +282,9 @@ export class RoappSyncService {
     }
 
     // Синк месяца по требованию (закрытие расчётного периода, PRD 1
-    // docs/payroll-closing-and-accrual): заказы, закрытые в [from, to], и
-    // их позиции. Штамп DomainSyncStatus здесь НЕ ставится — это не полный
-    // проход крона, а точечное обновление диапазона; закрытие само сбрасывает
-    // кэш расчёта после синка.
+    // docs/payroll-closing-and-accrual); закрытие само сбрасывает кэш
+    // расчёта после синка.
+    // spec: service/roapp-sync#requirement-успешная-синхронизация-фиксируется-отдельно-от-точечной-синхронизации-периода
     async uploadOrdersClosedBetween(from: Date, to: Date): Promise<number[]> {
         const orderIds = await this._uploadOrders(undefined, () =>
             this.roapp.fetchOrdersClosedBetween(from, to),

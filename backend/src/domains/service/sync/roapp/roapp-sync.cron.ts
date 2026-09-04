@@ -19,9 +19,9 @@ export class RoappSyncCron {
         private readonly lock: DirectionSyncLock,
     ) {}
 
-    // Тик идёт под блокировкой направления (DirectionSyncLock) — не
-    // параллельно с неявным синком месяца внутри закрытия периода (PRD 1
-    // docs/payroll-closing-and-accrual, RoappErpPeriodSyncAdapter).
+    // Тик идёт под блокировкой направления (DirectionSyncLock, см.
+    // RoappErpPeriodSyncAdapter — PRD 1 docs/payroll-closing-and-accrual).
+    // spec: service/roapp-sync#scenario-точечная-синхронизация-ждёт-завершения-идущей-регулярной
     @ProdCron(CronExpression.EVERY_5_MINUTES)
     async run() {
         const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
@@ -35,11 +35,11 @@ export class RoappSyncCron {
             this.logger.log('Successfully synced updated orders from Roapp');
             this.failedSince = null;
             // Штамп для ленивого кэша расчёта зарплаты (Фаза 6, см.
-            // docs/payroll/plan-payroll-calculation.md) — фиксируется только
-            // здесь, синхронизация выше не переписана. DomainSyncStatusRepository
+            // docs/payroll/plan-payroll-calculation.md). DomainSyncStatusRepository
             // пишет напрямую через DatabaseService (не через
             // PrismaRepository/RequestContext), поэтому вызов безопасен и
             // вне HTTP-запроса, в котором выполняется крон.
+            // spec: service/roapp-sync#scenario-успешный-регулярный-запуск-фиксирует-отметку-актуальности
             await this.domainSyncStatus.markSuccessful('service');
         } catch (error) {
             if (!this.failedSince) {

@@ -62,23 +62,20 @@ domains/service/
 ### `sync/roapp` — синхронизация с ERP
 
 `RoappSyncService` тянет данные через `RoappGateway` и делает `upsert` в Prisma-таблицы `roapp*`
-(`prisma/schema/roapp.prisma`). Порядок важен там, где есть FK/иерархии:
-категории — топологическая сортировка родитель→потомок (`topoSortCategories`) перед upsert; заказы —
-сначала сами заказы (`uploadCreatedOrders`/`uploadUpdatedOrders`), затем их позиции
-(`uploadOrderItems`, за отдельным проходом с задержкой между заказами — `delay(500)`, чтобы не
-душить RoApp rate-limit'ом). Позиции заказа записываются в одной Prisma-транзакции вместе с
-пересчётом KPI заказа (`cost`, `engineerSalary`, `managerSalary` — см.
-`calculateOrderKPIs`, `managerSalary` = 10% от `payed - cost - engineerSalary`).
+(`prisma/schema/roapp.prisma`); `RoappSyncCron` (`@ProdCron(CronExpression.EVERY_5_MINUTES)`, см.
+`src/shared/cron/prod-cron.decorator.ts` — крон реально тикает только в проде) вызывает его по
+расписанию и синкает только заказы. Полная первичная загрузка всех справочников (сотрудники,
+статусы и типы заказов, маркетинговые источники, категории услуг и товаров, услуги, товары, бонусы
+инженеров) — отдельная ручная/разовая операция (`npm run initial`, см.
+`src/scripts/initialUploadData.ts` и `application/command/upload-initial-roapp-data.handler.ts` в
+этой же папке — сама последовательность вызовов теперь в CQRS-хендлере, а не в скрипте), крон её не
+покрывает.
 
-`RoappSyncCron` (`@ProdCron(CronExpression.EVERY_5_MINUTES)`, см.
-`src/shared/cron/prod-cron.decorator.ts` — крон реально тикает только в проде) синкает только
-*обновлённые* заказы. При ошибке `failedSince` запоминается и следующий тик продолжает с этой же
-точки, а не сдвигается — так пропуски не теряются, но и не растёт неограниченно окно догонки.
-Остальные справочники (сотрудники, статусы, типы заказов, маркетинговые источники, категории,
-услуги, товары, бонусы) через cron не гоняются — это ручные/разовые операции (`npm run initial`,
-см. `src/scripts/initialUploadData.ts` и `application/command/upload-initial-roapp-data.handler.ts`
-в этой же папке — сама последовательность вызовов теперь в CQRS-хендлере, а не в скрипте), крон
-покрывает только заказы.
+Бизнес-правила синка (что синхронизируется по расписанию, а что только вручную, в каком порядке
+обрабатываются связанные сущности, как считаются финансовые показатели заказа и как система
+восстанавливается после сбоя синхронизации) описаны в
+[`openspec/specs/service/roapp-sync/spec.md`](../../../../openspec/specs/service/roapp-sync/spec.md)
+— ищи их там, а не здесь; этот раздел — только карта «код ↔ спек».
 
 ### `modules/accounting` — зарплатные схемы, расчётный период и отчёты
 
