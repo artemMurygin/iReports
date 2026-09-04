@@ -3,8 +3,8 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { AdjustSalaryAccrualLineCommand } from '@/domains/service/modules/accounting/application/command/adjust-salary-accrual-line.command';
-import { AdjustSalaryAccrualLineDto } from '../dto/adjust-salary-accrual-line.dto';
+import { AdjustSalaryAccrualLineCommand } from '@/domains/service/modules/accounting/application/command/salary-accrual/adjust-salary-accrual-line.command';
+import { AdjustSalaryAccrualLineDto } from '../../dto/salary-accrual/adjust-salary-accrual-line.dto';
 
 @ApiTags('Бухгалтерия: начисления зарплаты')
 @Controller()

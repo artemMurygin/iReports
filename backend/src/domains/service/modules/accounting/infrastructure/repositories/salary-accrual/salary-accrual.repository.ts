@@ -3,7 +3,7 @@ import type { SalaryAccrualStatus } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
-import { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { SalaryAccrualMapper } from '../../mappers/salary-accrual/salary-accrual.mapper';
 

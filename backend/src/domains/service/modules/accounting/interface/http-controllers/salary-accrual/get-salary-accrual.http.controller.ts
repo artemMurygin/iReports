@@ -2,7 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/get-salary-accrual.service';
+import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/salary-accrual/get-salary-accrual.service';
 
 @ApiTags('Бухгалтерия: начисления зарплаты')
 @Controller()

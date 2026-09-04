@@ -3,7 +3,7 @@ import type { DirectoryRepositoryPort } from '@/modules/directory/application/po
 import { ListEmployeesService } from '@/modules/directory/application/services/list-employees.service';
 import { ReorderEmployeesHandler } from '@/modules/directory/application/command/reorder-employees.handler';
 import { ReorderEmployeesCommand } from '@/modules/directory/application/command/reorder-employees.command';
-import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/list-salary-accruals.service';
+import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/application/services/salary-accrual/list-salary-accruals.service';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { GetDepartmentBalancesService } from '@/modules/employee-balance/application/services/get-department-balances.service';

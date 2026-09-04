@@ -7,8 +7,8 @@ import type {
 import { Period } from '@/shared/domain/period.value-object';
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import type { BalanceTransactionRepositoryPort } from '@/modules/employee-balance/application/ports/balance-transaction.port';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';

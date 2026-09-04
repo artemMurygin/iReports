@@ -23,7 +23,7 @@ import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { SalaryAccrualStatus } from 'ireports-contracts';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 
 // Отчёт сотрудника направления service (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит ОДНО

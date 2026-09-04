@@ -1,13 +1,13 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { SalaryAccrualNotFoundException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
-import { resolveEmployees } from '../services/list-salary-accruals.service';
+import { resolveEmployees } from '../../services/salary-accrual/list-salary-accruals.service';
 import { AdjustSalaryAccrualLineCommand } from './adjust-salary-accrual-line.command';
 
 // Корректировка строки документа начисления (PRD 2 docs/payroll-closing-

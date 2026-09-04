@@ -30,7 +30,7 @@ import { BalanceTransactionRepository } from '@/modules/employee-balance/infrast
 // бизнес-логика ни одного из доменов — тот же приём "собственный экземпляр
 // под тем же токеном", которым accounting.module.ts/accounting.module.ts
 // уже пользуются друг у друга для ACCOUNTING_PERIOD_REPOSITORY и т.п.
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/salary-accrual.repository';
 import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
 import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';

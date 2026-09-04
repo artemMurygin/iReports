@@ -9,8 +9,8 @@ import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounti
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { SalaryAccrualsNotDraftException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { AccountingPeriodMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/accounting-period/accounting-period.mapper';
 import { ReopenAccountingPeriodCommand } from './reopen-accounting-period.command';

@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { SalaryAccrualNotFoundException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';

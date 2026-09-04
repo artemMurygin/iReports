@@ -3,7 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { UnaccrueSalaryAccrualLineCommand } from '@/domains/service/modules/accounting/application/command/unaccrue-salary-accrual-line.command';
+import { UnaccrueSalaryAccrualLineCommand } from '@/domains/service/modules/accounting/application/command/salary-accrual/unaccrue-salary-accrual-line.command';
 
 @ApiTags('Бухгалтерия: начисления зарплаты')
 @Controller()

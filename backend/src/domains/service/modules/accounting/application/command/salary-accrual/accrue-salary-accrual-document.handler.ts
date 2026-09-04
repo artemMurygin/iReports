@@ -1,8 +1,8 @@
 import { Inject } from '@nestjs/common';
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import type { AccrueSalaryAccrualDocumentResponse } from 'ireports-contracts';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
-import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import {
@@ -10,7 +10,7 @@ import {
     SalaryAccrualPaidException,
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
-import { resolveEmployees } from '../services/list-salary-accruals.service';
+import { resolveEmployees } from '../../services/salary-accrual/list-salary-accruals.service';
 import { accrueDraftLines } from './accrue-draft-lines.helper';
 import { AccrueSalaryAccrualDocumentCommand } from './accrue-salary-accrual-document.command';
 

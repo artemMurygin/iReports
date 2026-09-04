@@ -3,9 +3,9 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccruePeriodSalaryAccrualsResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { AccruePeriodSalaryAccrualsCommand } from '@/domains/service/modules/accounting/application/command/accrue-period-salary-accruals.command';
-import { AccrueSalaryAccrualLineDto } from '../dto/accrue-salary-accrual-line.dto';
-import { ListSalaryAccrualsQueryDto } from '../dto/list-salary-accruals-query.dto';
+import { AccruePeriodSalaryAccrualsCommand } from '@/domains/service/modules/accounting/application/command/salary-accrual/accrue-period-salary-accruals.command';
+import { AccrueSalaryAccrualLineDto } from '../../dto/salary-accrual/accrue-salary-accrual-line.dto';
+import { ListSalaryAccrualsQueryDto } from '../../dto/salary-accrual/list-salary-accruals-query.dto';
 
 @ApiTags('Бухгалтерия: начисления зарплаты')
 @Controller()

@@ -8,12 +8,13 @@ import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
 import type {
     AccountingPeriodResponse,
-    EmployeeSalaryReportResponse,
+    EmployeeBalanceResponse,
     SalaryAccrualListResponse,
     SalaryAccrualResponse,
 } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
+import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balance.module';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
@@ -27,7 +28,8 @@ import type {
 } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual.port';
+import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
@@ -44,20 +46,24 @@ import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/en
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
+import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
-// Сквозной путь PRD 1 docs/payroll-closing-and-accrual (Фаза 1, tracer
-// bullet): close → list → get → reopen через реальные HTTP-контроллеры,
-// CommandBus, хендлеры и сущности AccountingModule, с in-memory заменой
-// только границы БД (тот же приём и те же оговорки, что и в
-// get-employee-salary-report.e2e.spec.ts).
-describe('Документы начисления: close → salary_accruals → reopen (e2e)', () => {
+// Сквозной путь PRD 2 docs/payroll-closing-and-accrual (Фаза 6, tracer
+// bullet): close → accrue → balance → unaccrue → reopen через реальные
+// HTTP-контроллеры, CommandBus, хендлеры и сущности AccountingModule, с
+// in-memory заменой только границы БД (тот же приём, что и в
+// salary-accruals.e2e.spec.ts). Плюс сквозная проверка «reopen с
+// проведённой строкой → 409» — теперь через реальное проведение, а не
+// тестовый рычаг markStatus.
+describe('Проведение строк: close → accrue → balance → unaccrue → reopen (e2e)', () => {
     let app: INestApplication<Server>;
     const schemas = new Map<number, MotivationSchema>();
     const periods = new Map<string, AccountingPeriod>();
     const snapshots = new Map<string, AccountingPeriodSnapshotRow[]>();
     const accrualRepo = new InMemorySalaryAccrualRepository();
+    const transactionRepo = new InMemoryBalanceTransactionRepository();
     const periodKey = (direction: string, period: string) =>
         `${direction}:${period}`;
 
@@ -112,8 +118,7 @@ describe('Документы начисления: close → salary_accruals →
         deleteByDirectionAndPeriod: () => Promise.resolve(),
     };
     const fakeEmployeeDismissal: EmployeeDismissalPort = {
-        findDismissedEmployeeIds: (ids) =>
-            Promise.resolve(new Set(ids.filter((id) => id === 43))),
+        findDismissedEmployeeIds: () => Promise.resolve(new Set<number>()),
     };
     const fakeDomainSyncStatus: DomainSyncStatusPort = {
         getLastSuccessfulSyncAt: () => Promise.resolve(null),
@@ -151,12 +156,6 @@ describe('Документы начисления: close → salary_accruals →
                     lastName: 'Петров',
                     departmentId: 5,
                 },
-                {
-                    id: 43,
-                    firstName: 'Пётр',
-                    lastName: 'Уволенный',
-                    departmentId: 5,
-                },
             ]),
     };
     const fakeUnitOfWork: UnitOfWorkPort = { run: (work) => work() };
@@ -173,33 +172,29 @@ describe('Документы начисления: close → salary_accruals →
     class FakeInfrastructureModule {}
 
     beforeAll(async () => {
-        for (const [employeeId, price] of [
-            [42, 250],
-            [43, 100],
-        ] as const) {
-            const schema = withRequestContext(() =>
-                MotivationSchema.create({
-                    targetType: 'Employee',
-                    targetId: employeeId,
-                    name: 'Оклад инженера',
-                    rules: [
-                        PayPerHoursEntity.create({
-                            type: 'PayPerHour',
-                            name: 'Почасовая ставка',
-                            targetRole: 'ENGINEER',
-                            config: { price },
-                        }),
-                    ],
-                }),
-            );
-            schemas.set(employeeId, schema);
-        }
+        const schema = withRequestContext(() =>
+            MotivationSchema.create({
+                targetType: 'Employee',
+                targetId: 42,
+                name: 'Оклад инженера',
+                rules: [
+                    PayPerHoursEntity.create({
+                        type: 'PayPerHour',
+                        name: 'Почасовая ставка',
+                        targetRole: 'ENGINEER',
+                        config: { price: 250 },
+                    }),
+                ],
+            }),
+        );
+        schemas.set(42, schema);
 
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
                 FakeInfrastructureModule,
                 AccountingModule,
+                EmployeeBalanceModule,
             ],
         })
             .overrideProvider(MOTIVATION_SCHEMA_REPOSITORY)
@@ -214,8 +209,8 @@ describe('Документы начисления: close → salary_accruals →
             .useValue(fakeAccountingCalculationCache)
             .overrideProvider(SALARY_ACCRUAL_REPOSITORY)
             .useValue(accrualRepo)
-            // Неявная синхронизация ERP внутри закрытия (Фаза 2 PRD 1) —
-            // в e2e заменена no-op: реальная ERP недоступна.
+            .overrideProvider(BALANCE_TRANSACTION_REPOSITORY)
+            .useValue(transactionRepo)
             .overrideProvider(ERP_PERIOD_SYNC)
             .useValue({ syncPeriod: () => Promise.resolve() })
             .overrideProvider(EMPLOYEE_DISMISSAL)
@@ -243,149 +238,217 @@ describe('Документы начисления: close → salary_accruals →
         await app.close();
     });
 
-    it('до закрытия список начислений за период пуст', async () => {
-        const response = await request(app.getHttpServer())
-            .get('/v1/service/accounting/salary_accruals?period=2026-07')
-            .expect(200);
-        expect(response.body as SalaryAccrualListResponse).toEqual({
-            direction: 'service',
-            period: '2026-07',
-            items: [],
-            total: 0,
-        });
-    });
-
-    it('close → документы DRAFT в списке и в карточке, статус в отчёте сотрудника → reopen удаляет документы', async () => {
-        const closeResponse = await request(app.getHttpServer())
+    it('close → accrue → balance → unaccrue → reopen', async () => {
+        // Закрытие месяца рождает документ DRAFT.
+        await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/close')
             .send({ closedBy: 1 })
             .expect(201);
-        expect((closeResponse.body as AccountingPeriodResponse).status).toBe(
-            'CLOSED',
-        );
 
-        const listResponse = await request(app.getHttpServer())
-            .get('/v1/service/accounting/salary_accruals?period=2026-07')
-            .expect(200);
-        const list = listResponse.body as SalaryAccrualListResponse;
-        expect(list.direction).toBe('service');
-        expect(list.period).toBe('2026-07');
-        expect(list.total).toBe(2000 + 800);
-        expect(list.items).toHaveLength(2);
-        expect(list.items).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    employeeId: 42,
-                    employeeName: 'Иван Петров',
-                    departmentId: 5,
-                    status: 'DRAFT',
-                    isDismissed: false,
-                    total: 2000,
-                    linesCount: 1,
-                }),
-                expect.objectContaining({
-                    employeeId: 43,
-                    employeeName: 'Пётр Уволенный',
-                    status: 'DRAFT',
-                    isDismissed: true,
-                    total: 800,
-                    linesCount: 1,
-                }),
-            ]),
-        );
-
-        const accrual42 = list.items.find((item) => item.employeeId === 42);
-        const cardResponse = await request(app.getHttpServer())
-            .get(`/v1/service/accounting/salary_accruals/${accrual42?.id}`)
-            .expect(200);
-        const card = cardResponse.body as SalaryAccrualResponse;
-        expect(card).toMatchObject({
-            id: accrual42?.id,
-            employeeId: 42,
+        const list = (
+            await request(app.getHttpServer())
+                .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .expect(200)
+        ).body as SalaryAccrualListResponse;
+        const accrualId = list.items[0].id;
+        expect(list.items[0]).toMatchObject({
             status: 'DRAFT',
-            total: 2000,
+            accruedLinesCount: 0,
+            linesCount: 1,
         });
-        expect(card.lines).toEqual([
-            expect.objectContaining({
-                type: 'PayPerHour',
-                name: 'Почасовая ставка',
-                targetRole: 'ENGINEER',
-                quantity: 8,
-                rate: 250,
-                originalAmount: 2000,
-                amount: 2000,
-                status: 'DRAFT',
-                sources: [],
-            }),
-        ]);
 
-        // Статус документа в отчёте сотрудника за закрытый период.
-        const reportResponse = await request(app.getHttpServer())
-            .get('/v1/service/accounting/salary_report/employee/42/2026-07')
-            .expect(200);
-        const report = reportResponse.body as EmployeeSalaryReportResponse;
-        expect(report.isClosed).toBe(true);
-        expect(report.accrualStatus).toBe('DRAFT');
+        const card = (
+            await request(app.getHttpServer())
+                .get(`/v1/service/accounting/salary_accruals/${accrualId}`)
+                .expect(200)
+        ).body as SalaryAccrualResponse;
+        const lineId = card.lines[0].id;
 
-        // Документа shop под путём service нет.
+        // До проведения баланс пуст.
+        const emptyBalance = (
+            await request(app.getHttpServer())
+                .get('/v1/accounting/balance/employee/42')
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(emptyBalance).toMatchObject({
+            employeeId: 42,
+            balance: 0,
+            transactions: [],
+        });
+
+        // Проведение строки — на балансе движение SALARY_ACCRUAL.
+        const accrued = (
+            await request(app.getHttpServer())
+                .post(
+                    `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/accrue`,
+                )
+                .send({ accruedBy: 7 })
+                .expect(201)
+        ).body as SalaryAccrualResponse;
+        expect(accrued.status).toBe('ACCRUED');
+        expect(accrued.accruedLinesCount).toBe(1);
+        expect(accrued.lines[0].status).toBe('ACCRUED');
+
+        const balance = (
+            await request(app.getHttpServer())
+                .get('/v1/accounting/balance/employee/42')
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(balance.balance).toBe(2000);
+        expect(balance.selectionTotal).toBe(2000);
+        expect(balance.transactions).toHaveLength(1);
+        expect(balance.transactions[0]).toMatchObject({
+            type: 'SALARY_ACCRUAL',
+            amount: 2000,
+            employeeId: 42,
+            direction: 'service',
+            period: '2026-07',
+            accrualId,
+            lineId,
+            createdBy: 7,
+        });
+        // Лента не раскрывается (Фаза 8b): детализация начисления живёт в
+        // документе, движение ведёт на него ссылкой accrualId (проверена
+        // выше), поля accrualLine в ответе нет.
+        expect(balance.transactions[0]).not.toHaveProperty('accrualLine');
+
+        // Повторное проведение той же строки → 409, второго движения нет.
         await request(app.getHttpServer())
-            .get('/v1/service/accounting/salary_accruals/unknown-id')
-            .expect(404);
+            .post(
+                `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/accrue`,
+            )
+            .send({ accruedBy: 7 })
+            .expect(409);
+        expect(transactionRepo.store.size).toBe(1);
 
-        const reopenResponse = await request(app.getHttpServer())
+        // Reopen с проведённой строкой → 409 с перечнем (сквозная проверка
+        // блокировки из Фазы 1 на реально проведённой строке).
+        const reopenBlocked = await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/reopen')
             .send({ confirm: true })
-            .expect(201);
-        expect((reopenResponse.body as AccountingPeriodResponse).status).toBe(
-            'OPEN',
-        );
-
-        const afterReopen = await request(app.getHttpServer())
-            .get('/v1/service/accounting/salary_accruals?period=2026-07')
-            .expect(200);
-        expect((afterReopen.body as SalaryAccrualListResponse).items).toEqual(
-            [],
-        );
-        expect(accrualRepo.store.size).toBe(0);
-        expect(snapshots.has(periodKey('service', '2026-07'))).toBe(false);
-    });
-
-    it('reopen с документом не в DRAFT → 409 с перечнем, документы и снапшот на месте', async () => {
-        await request(app.getHttpServer())
-            .post('/v1/service/accounting/period/2026-06/close')
-            .send({ closedBy: 1 })
-            .expect(201);
-        const accruals = await accrualRepo.findByDirectionAndPeriod(
-            'service',
-            '2026-06',
-        );
-        const accrued = accruals.find((item) => item.employeeId === 43);
-        accrualRepo.markStatus(accrued!.id, 'ACCRUED');
-
-        const response = await request(app.getHttpServer())
-            .post('/v1/service/accounting/period/2026-06/reopen')
-            .send({ confirm: true })
             .expect(409);
-        expect(response.body).toMatchObject({
+        expect(reopenBlocked.body).toMatchObject({
             metadata: {
                 accruals: [
-                    { id: accrued!.id, employeeId: 43, status: 'ACCRUED' },
+                    { id: accrualId, employeeId: 42, status: 'ACCRUED' },
                 ],
             },
         });
 
-        expect(periods.get(periodKey('service', '2026-06'))?.status).toBe(
-            'CLOSED',
-        );
-        expect(snapshots.has(periodKey('service', '2026-06'))).toBe(true);
-        await expect(
-            accrualRepo.findByDirectionAndPeriod('service', '2026-06'),
-        ).resolves.toHaveLength(2);
+        // Отмена начисления удаляет движение, остаток снова 0.
+        const unaccrued = (
+            await request(app.getHttpServer())
+                .post(
+                    `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/unaccrue`,
+                )
+                .expect(201)
+        ).body as SalaryAccrualResponse;
+        expect(unaccrued.status).toBe('DRAFT');
+        expect(unaccrued.lines[0].status).toBe('DRAFT');
+
+        const balanceAfter = (
+            await request(app.getHttpServer())
+                .get('/v1/accounting/balance/employee/42')
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(balanceAfter.balance).toBe(0);
+        expect(balanceAfter.transactions).toEqual([]);
+
+        // После отмены документ снова DRAFT — reopen проходит.
+        const reopen = await request(app.getHttpServer())
+            .post('/v1/service/accounting/period/2026-07/reopen')
+            .send({ confirm: true })
+            .expect(201);
+        expect((reopen.body as AccountingPeriodResponse).status).toBe('OPEN');
+        expect(accrualRepo.store.size).toBe(0);
     });
 
-    it('список без period → 400', async () => {
+    it('корректировка по HTTP: PATCH до проведения, 400 без комментария, при проведении два движения', async () => {
         await request(app.getHttpServer())
-            .get('/v1/service/accounting/salary_accruals')
+            .post('/v1/service/accounting/period/2026-06/close')
+            .send({ closedBy: 1 })
+            .expect(201);
+        const list = (
+            await request(app.getHttpServer())
+                .get('/v1/service/accounting/salary_accruals?period=2026-06')
+                .expect(200)
+        ).body as SalaryAccrualListResponse;
+        const accrualId = list.items[0].id;
+        const card = (
+            await request(app.getHttpServer())
+                .get(`/v1/service/accounting/salary_accruals/${accrualId}`)
+                .expect(200)
+        ).body as SalaryAccrualResponse;
+        const lineId = card.lines[0].id;
+
+        // Без комментария — 400 на границе HTTP (zod), домен не тронут.
+        await request(app.getHttpServer())
+            .patch(
+                `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}`,
+            )
+            .send({ amount: 1500, comment: '', adjustedBy: 7 })
             .expect(400);
+
+        const adjusted = (
+            await request(app.getHttpServer())
+                .patch(
+                    `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}`,
+                )
+                .send({
+                    amount: 1500,
+                    comment: 'Простой оборудования',
+                    adjustedBy: 7,
+                })
+                .expect(200)
+        ).body as SalaryAccrualResponse;
+        expect(adjusted.lines[0]).toMatchObject({
+            amount: 1500,
+            originalAmount: 2000,
+            adjustmentComment: 'Простой оборудования',
+        });
+
+        // Проведение скорректированной строки — два движения, сумма = новая.
+        await request(app.getHttpServer())
+            .post(
+                `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/accrue`,
+            )
+            .send({ accruedBy: 7 })
+            .expect(201);
+
+        const balance = (
+            await request(app.getHttpServer())
+                .get('/v1/accounting/balance/employee/42')
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(balance.transactions).toHaveLength(2);
+        expect(balance.balance).toBe(1500);
+        const adjustment = balance.transactions.find(
+            (transaction) => transaction.type === 'ACCRUAL_ADJUSTMENT',
+        );
+        expect(adjustment).toMatchObject({
+            amount: -500,
+            comment: 'Простой оборудования',
+            lineId,
+        });
+
+        // Корректировка проведённой строки → 409.
+        await request(app.getHttpServer())
+            .patch(
+                `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}`,
+            )
+            .send({ amount: 1000, comment: 'Поздно', adjustedBy: 7 })
+            .expect(409);
+
+        // Фильтр ленты по типам.
+        const filtered = (
+            await request(app.getHttpServer())
+                .get(
+                    '/v1/accounting/balance/employee/42?types=ACCRUAL_ADJUSTMENT',
+                )
+                .expect(200)
+        ).body as EmployeeBalanceResponse;
+        expect(filtered.transactions).toHaveLength(1);
+        expect(filtered.selectionTotal).toBe(-500);
+        expect(filtered.balance).toBe(1500);
     });
 });
