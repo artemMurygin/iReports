@@ -17,9 +17,6 @@ function PageHeader({ todayLabel, className }: PageHeaderProps) {
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
                     <h1 className="font-display text-[26px] font-bold tracking-[-0.4px] text-ink">График работы</h1>
-                    <p className="font-ui text-sm text-ink-muted">
-                        Кто в какой день работает и сколько часов. Отсюда берутся часы для правила «оплата по часам»
-                    </p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-canvas px-3 py-[7px]">
