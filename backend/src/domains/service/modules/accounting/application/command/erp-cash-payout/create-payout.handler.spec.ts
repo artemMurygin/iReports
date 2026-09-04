@@ -7,7 +7,7 @@ import type {
     CreateErpCashDocumentParams,
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { PayoutConfirmationRequiredException } from '@/modules/employee-balance/domain/exceptions/salary-payout.exception';

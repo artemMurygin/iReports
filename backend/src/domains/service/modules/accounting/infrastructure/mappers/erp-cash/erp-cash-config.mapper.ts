@@ -1,5 +1,5 @@
 import type { ErpCashConfigResponse } from 'ireports-contracts';
-import type { ErpCashConfig } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import type { ErpCashConfig } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 
 // Конфигурация кассы не персистится через Prisma (файловый конфиг модуля,

@@ -4,19 +4,19 @@ import { RoappHttpService } from './roapp.instace';
 import { toRoappIsoDate } from './roapp.service';
 import { FinanceTransactionSchema } from './schemas/financeTransaction.schema';
 import { DatabaseService } from '@/infrustructure/database/database.service';
-import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
 import type {
     ErpCashConfig,
     ErpCashConfigRepositoryPort,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
-import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
 import type {
     CreateErpCashDocumentParams,
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
     FoundErpCashDocument,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import {
     EmployeeErpIdentityMissingException,
     ErpCashConfigMissingException,

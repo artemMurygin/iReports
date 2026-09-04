@@ -5,8 +5,8 @@ import type {
     BalanceTransactionFilter,
     BalanceTransactionRepositoryPort,
 } from '@/modules/employee-balance/application/ports/balance-transaction.port';
-import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
-import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
 import { toBalanceTransactionResponse } from '../mappers/to-balance-transaction-response';
 
 // Общий баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual, Фаза 8b,

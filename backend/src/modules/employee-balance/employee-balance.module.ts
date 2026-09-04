@@ -32,9 +32,9 @@ import { BalanceTransactionRepository } from '@/modules/employee-balance/infrast
 // уже пользуются друг у друга для ACCOUNTING_PERIOD_REPOSITORY и т.п.
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { SalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/salary-accrual.repository';
-import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
 import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';
-import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
 import { ErpCashConfigProvider } from '@/domains/service/modules/accounting/infrastructure/config/erp-cash-config.provider';
 // Дедуп-репозиторий/конфиг кассы направления shop (Фаза 4
 // docs/service-shop-boundary-violations-fix) — нужны ТОЛЬКО собственному
@@ -53,7 +53,7 @@ import { SHOP_ERP_CASH_CONFIG_REPOSITORY } from '@/domains/shop/modules/accounti
 import { ShopCashboxConfigRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/cashbox/cashbox-config.repository';
 import { SHOP_PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/cashbox/payout-cashbox-record-repository.port';
 import { PayoutCashboxRecordRepository as ShopPayoutCashboxRecordRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/cashbox/payout-cashbox-record.repository';
-import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
 import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import { EmployeeIdentityRepository } from '@/modules/employee-identity/infrastructure/repositories/employee-identity.repository';

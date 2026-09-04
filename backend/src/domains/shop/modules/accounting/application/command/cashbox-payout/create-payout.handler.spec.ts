@@ -16,7 +16,7 @@ import { InMemoryPayoutCashboxRecordRepository as InMemoryShopPayoutCashboxRecor
 import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
-import type { ErpCashDocumentPort as ServiceErpCashDocumentPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+import type { ErpCashDocumentPort as ServiceErpCashDocumentPort } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { CreatePayoutHandler } from '@/domains/service/modules/accounting/application/command/create-payout.handler';
 import { CreatePayoutCommand } from '@/domains/service/modules/accounting/application/command/create-payout.command';
 import { CreateShopPayoutHandler } from './create-payout.handler';

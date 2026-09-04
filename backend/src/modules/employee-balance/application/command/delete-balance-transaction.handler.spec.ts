@@ -12,7 +12,7 @@ import { PayoutCashboxRecordMissingForTransactionException } from '@/domains/ser
 import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { DeleteBalanceTransactionHandler } from './delete-balance-transaction.handler';

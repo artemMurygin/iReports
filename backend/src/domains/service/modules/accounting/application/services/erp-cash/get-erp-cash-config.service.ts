@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ErpCashConfigResponse } from 'ireports-contracts';
-import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import type { ErpCashConfigRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
+import type { ErpCashConfigRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { ErpCashConfigMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/erp-cash/erp-cash-config.mapper';
 

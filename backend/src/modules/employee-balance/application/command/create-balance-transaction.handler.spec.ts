@@ -14,7 +14,7 @@ import type {
     CreateErpCashDocumentParams,
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';

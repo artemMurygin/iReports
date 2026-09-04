@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type {
     ErpCashConfig,
     ErpCashConfigRepositoryPort,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { serviceErpCashConfig } from '@/domains/service/modules/accounting/config/erp-cash.config';
 import { ArgumentInvalidException } from '@/shared/exceptions';

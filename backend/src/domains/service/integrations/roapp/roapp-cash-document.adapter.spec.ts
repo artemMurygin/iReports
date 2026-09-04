@@ -9,8 +9,8 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import type {
     ErpCashConfig,
     ErpCashConfigRepositoryPort,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-config.port';
-import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/payout-cashbox-record-repository.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-config.port';
+import type { PayoutCashboxRecordRepositoryPort } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
 import type { DatabaseService } from '@/infrustructure/database/database.service';
 import type { RoappHttpService } from './roapp.instace';
 

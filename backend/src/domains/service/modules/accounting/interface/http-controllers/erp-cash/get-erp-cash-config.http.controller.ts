@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ErpCashConfigResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { GetErpCashConfigService } from '@/domains/service/modules/accounting/application/services/get-erp-cash-config.service';
+import { GetErpCashConfigService } from '@/domains/service/modules/accounting/application/services/erp-cash/get-erp-cash-config.service';
 
 @ApiTags('Бухгалтерия: касса ERP')
 @Controller()

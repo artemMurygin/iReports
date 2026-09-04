@@ -4,7 +4,7 @@ import { EmployeeOperationLock } from '@/shared/infrastructure/sync-lock/employe
 import type {
     DeleteErpCashDocumentParams,
     ErpCashDocumentPort,
-} from '@/domains/service/modules/accounting/application/ports/erp-cash-document.port';
+} from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { Cashbox } from '@/domains/service/modules/accounting/domain/entities/payout-cashbox-record.entity';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual.entity';
