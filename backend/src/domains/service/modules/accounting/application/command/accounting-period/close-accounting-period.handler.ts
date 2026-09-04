@@ -13,13 +13,13 @@ import {
     PeriodNotExpiredException,
     UnapprovedSalesPlanRowsException,
 } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
+import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 import type {
     AccountingPeriodSnapshotPort,
     AccountingPeriodSnapshotRow,
-} from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+} from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';

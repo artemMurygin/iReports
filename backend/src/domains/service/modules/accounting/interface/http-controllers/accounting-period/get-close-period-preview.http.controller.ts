@@ -2,7 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ClosePeriodPreviewResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/get-close-period-preview.service';
+import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/accounting-period/get-close-period-preview.service';
 
 @ApiTags('Бухгалтерия: расчётный период')
 @Controller()

@@ -10,7 +10,7 @@ import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/por
 import type { EmployeeDismissalPort } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
-import type { AccountingPeriodSnapshotRow } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import type { AccountingPeriodSnapshotRow } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 
 const PAY_PER_HOUR_RULE_TYPE = 'PayPerHour';
 

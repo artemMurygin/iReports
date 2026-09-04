@@ -2,7 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/get-accounting-period.service';
+import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/accounting-period/get-accounting-period.service';
 
 @ApiTags('Бухгалтерия: расчётный период')
 @Controller()

@@ -5,8 +5,8 @@ import { CloseAccountingPeriodHandler } from './close-accounting-period.handler'
 import { CloseAccountingPeriodCommand } from './close-accounting-period.command';
 import { CloseShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/accounting-period/close-accounting-period.handler';
 import { CloseShopAccountingPeriodCommand } from '@/domains/shop/modules/accounting/application/command/accounting-period/close-accounting-period.command';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
+import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import { PeriodClosure } from '@/domains/service/modules/accounting/domain/value-objects/period-closure.value-object';
 import type { ShopAccountingPeriodRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/accounting-period/accounting-period.port';

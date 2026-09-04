@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { DirectoryModule } from '@/modules/directory/directory.module';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period.repository';
-import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
+import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from './application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from './infrastructure/repositories/work-schedule-entry.repository';
 import { UpsertWorkScheduleEntryHandler } from './application/command/upsert-work-schedule-entry.handler';

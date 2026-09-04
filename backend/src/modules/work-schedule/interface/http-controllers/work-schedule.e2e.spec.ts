@@ -18,8 +18,8 @@ import { WorkDay } from '@/modules/work-schedule/domain/value-objects/work-day.v
 import { ANNUAL_VACATION_DAYS_LIMIT } from '@/modules/work-schedule/domain/constants/annual-vacation-limit';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 

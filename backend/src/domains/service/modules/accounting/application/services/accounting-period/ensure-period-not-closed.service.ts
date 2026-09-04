@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { AccountingPeriodClosedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
-import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 
 const ALL_DIRECTIONS: readonly AccountingDirection[] = ['service', 'shop'];
 

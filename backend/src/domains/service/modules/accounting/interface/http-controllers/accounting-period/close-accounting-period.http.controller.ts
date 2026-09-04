@@ -3,7 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { CloseAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/close-accounting-period.command';
+import { CloseAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/accounting-period/close-accounting-period.command';
 import { CloseAccountingPeriodDto } from '@/shared/interface/dto/close-accounting-period.dto';
 
 @ApiTags('Бухгалтерия: расчётный период')

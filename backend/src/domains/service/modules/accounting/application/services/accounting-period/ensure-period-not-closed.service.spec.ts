@@ -3,7 +3,7 @@ import { UpsertWorkScheduleEntryHandler } from '@/modules/work-schedule/applicat
 import { UpsertWorkScheduleEntryCommand } from '@/modules/work-schedule/application/command/upsert-work-schedule-entry.command';
 import { DeleteWorkScheduleEntryHandler } from '@/modules/work-schedule/application/command/delete-work-schedule-entry.handler';
 import { DeleteWorkScheduleEntryCommand } from '@/modules/work-schedule/application/command/delete-work-schedule-entry.command';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { WorkScheduleEntry } from '@/modules/work-schedule/domain/entities/work-schedule-entry.entity';

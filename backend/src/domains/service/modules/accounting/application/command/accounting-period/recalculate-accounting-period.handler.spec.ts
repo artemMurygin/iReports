@@ -1,6 +1,6 @@
 import { RecalculateAccountingPeriodHandler } from './recalculate-accounting-period.handler';
 import { RecalculateAccountingPeriodCommand } from './recalculate-accounting-period.command';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PeriodAlreadyClosedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';

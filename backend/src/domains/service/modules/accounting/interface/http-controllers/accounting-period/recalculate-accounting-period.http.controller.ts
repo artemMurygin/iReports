@@ -2,7 +2,7 @@ import { Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
-import { RecalculateAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/recalculate-accounting-period.command';
+import { RecalculateAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/accounting-period/recalculate-accounting-period.command';
 
 @ApiTags('Бухгалтерия: расчётный период')
 @Controller()

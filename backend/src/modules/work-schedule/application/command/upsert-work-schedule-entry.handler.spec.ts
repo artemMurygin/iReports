@@ -6,7 +6,7 @@ import type { WorkScheduleEntryRepositoryPort } from '../ports/work-schedule-ent
 import { WorkScheduleEntry } from '@/modules/work-schedule/domain/entities/work-schedule-entry.entity';
 import { ScheduleDate } from '@/modules/work-schedule/domain/value-objects/schedule-date.value-object';
 import { WorkDay } from '@/modules/work-schedule/domain/value-objects/work-day.value-object';
-import type { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
+import type { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
 
 describe('UpsertWorkScheduleEntryHandler', () => {
     const buildHandler = (existing: WorkScheduleEntry | null) => {

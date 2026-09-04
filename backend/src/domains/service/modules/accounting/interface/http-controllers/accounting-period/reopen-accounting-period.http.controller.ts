@@ -3,8 +3,8 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import { ReopenAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/reopen-accounting-period.command';
-import { ReopenAccountingPeriodDto } from '../dto/reopen-accounting-period.dto';
+import { ReopenAccountingPeriodCommand } from '@/domains/service/modules/accounting/application/command/accounting-period/reopen-accounting-period.command';
+import { ReopenAccountingPeriodDto } from '../../dto/accounting-period/reopen-accounting-period.dto';
 
 @ApiTags('Бухгалтерия: расчётный период')
 @Controller()

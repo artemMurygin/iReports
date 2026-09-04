@@ -6,7 +6,7 @@ import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.rep
 import {
     AccountingPeriodSnapshotPort,
     AccountingPeriodSnapshotRow,
-} from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+} from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 import { RuleBreakdownLine } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 

@@ -13,7 +13,7 @@ import { ShopAccountingModule } from '@/domains/shop/modules/accounting/accounti
 // период ТОЛЬКО через ShopAccountingModule, без generic reopen/recalculate,
 // чтобы граф зависимостей был максимально узким и явным.
 import { WorkScheduleModule } from '@/modules/work-schedule/work-schedule.module';
-import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
+import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import type { ShopMotivationSchemaRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';

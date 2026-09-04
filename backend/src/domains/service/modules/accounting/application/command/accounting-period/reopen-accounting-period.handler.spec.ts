@@ -1,7 +1,7 @@
 import { ReopenAccountingPeriodHandler } from './reopen-accounting-period.handler';
 import { ReopenAccountingPeriodCommand } from './reopen-accounting-period.command';
-import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period.port';
-import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period-snapshot.port';
+import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
+import type { AccountingPeriodSnapshotPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period.entity';
 import { PeriodNotClosedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';

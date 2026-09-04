@@ -4,7 +4,7 @@ import { DeleteWorkScheduleEntryCommand } from './delete-work-schedule-entry.com
 import { WorkScheduleEntryNotFoundException } from '@/modules/work-schedule/domain/exceptions/work-schedule-entry.exception';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import type { WorkScheduleEntryRepositoryPort } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
-import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/ensure-period-not-closed.service';
+import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
 
 // Удаление — возврат дня в состояние «не заполнен» (PRD, "В скоупе"), а не
 // правка статуса: строки без записи графика читаются контекстами расчёта и
