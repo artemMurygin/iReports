@@ -4,8 +4,8 @@ import { Period } from '@/shared/domain/period.value-object';
 import { PeriodAlreadyClosedException } from '@/domains/service/modules/accounting/domain/exceptions/accounting-period.exception';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
-import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/calculation/accounting-calculation-cache.port';
+import type { AccountingCalculationCachePort } from '@/domains/service/modules/accounting/application/ports/calculation/accounting-calculation-cache.port';
 import { RecalculateAccountingPeriodCommand } from './recalculate-accounting-period.command';
 
 // Ручное «пересчитать» для руководителя (PRD: "Руководитель нажимает

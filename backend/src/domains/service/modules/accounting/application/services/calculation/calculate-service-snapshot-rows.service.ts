@@ -4,7 +4,7 @@ import { PeriodCalculationOrchestrator } from '@/domains/service/modules/account
 import { buildRuleBreakdown } from '@/domains/service/modules/accounting/domain/services/rule-breakdown.builder';
 import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
 import type { AccountingPeriodSnapshotRow } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
-import type { SnapshotRowsCalculatorPort } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
+import type { SnapshotRowsCalculatorPort } from '@/domains/service/modules/accounting/application/ports/calculation/snapshot-rows-calculator.port';
 import { BuildServiceCalculationContextService } from './build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from './resolve-employee-salary-rules.service';
 

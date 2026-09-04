@@ -6,7 +6,7 @@ import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.rep
 import {
     AccountingCalculationCacheEntry,
     AccountingCalculationCachePort,
-} from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
+} from '@/domains/service/modules/accounting/application/ports/calculation/accounting-calculation-cache.port';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 

@@ -1,5 +1,5 @@
 import { Period } from '@/shared/domain/period.value-object';
-import type { AccountingPeriodSnapshotRow } from './accounting-period/accounting-period-snapshot.port';
+import type { AccountingPeriodSnapshotRow } from '../accounting-period/accounting-period-snapshot.port';
 
 // Расчёт строк снапшота закрытия (FACT-срез по каждому сотруднику с
 // зарплатными правилами направления) — единственный вход и для самого

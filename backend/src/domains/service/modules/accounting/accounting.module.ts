@@ -24,8 +24,8 @@ import { RecalculateAccountingPeriodHandler } from '@/domains/service/modules/ac
 import { GetEmployeeSalaryReportService } from '@/domains/service/modules/accounting/application/services/salary-report/get-employee-salary-report.service';
 import { GetDepartmentSalaryReportService } from '@/domains/service/modules/accounting/application/services/salary-report/get-department-salary-report.service';
 import { GetAccountingPeriodService } from '@/domains/service/modules/accounting/application/services/accounting-period/get-accounting-period.service';
-import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/build-service-calculation-context.service';
-import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/resolve-employee-salary-rules.service';
+import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/calculation/build-service-calculation-context.service';
+import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
 import { ListSalaryRuleTypesService } from '@/domains/service/modules/accounting/application/services/motivation-schema/list-salary-rule-types.service';
 import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/motivation-schema/list-motivation-schemas.service';
 import { GetMotivationSchemaService } from '@/domains/service/modules/accounting/application/services/motivation-schema/get-motivation-schema.service';
@@ -33,7 +33,7 @@ import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/
 import { GetSalaryAccrualService } from '@/domains/service/modules/accounting/application/services/salary-accrual/get-salary-accrual.service';
 import { GetErpCashConfigService } from '@/domains/service/modules/accounting/application/services/erp-cash/get-erp-cash-config.service';
 import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounting/application/services/accounting-period/get-close-period-preview.service';
-import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculate-service-snapshot-rows.service';
+import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculation/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
@@ -65,8 +65,8 @@ import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounti
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import { ACCOUNTING_PERIOD_SNAPSHOT } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period-snapshot.port';
-import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/accounting-calculation-cache.port';
-import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/service-calculation-data.port';
+import { ACCOUNTING_CALCULATION_CACHE } from '@/domains/service/modules/accounting/application/ports/calculation/accounting-calculation-cache.port';
+import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
 import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { EMPLOYEE_DISMISSAL } from '@/modules/employee-dismissal/application/ports/employee-dismissal.port';
@@ -74,7 +74,7 @@ import { ERP_CASH_CONFIG_REPOSITORY } from '@/domains/service/modules/accounting
 import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/erp-cash/payout-cashbox-record-repository.port';
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
-import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/snapshot-rows-calculator.port';
+import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/calculation/snapshot-rows-calculator.port';
 import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/motivation-schema.repository';
 import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/salary-rule.repository';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period.repository';
