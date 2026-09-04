@@ -1,0 +1,54 @@
+schema: my-workflow
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+context: |
+  ## Приоритет инструкций
+  Паттерны и правила код-стиля/архитектуры (см. rules.architecture ниже) важнее того, что фактически
+  встречается в существующем коде проекта. Часть кодовой базы ещё не приведена к целевой архитектуре —
+  не копируй паттерн только потому, что он уже где-то использован в коде; ориентируйся на эти правила,
+  даже если это расходится с наблюдаемым кодом.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Перенесено из CLAUDE.md (корневой, backend/CLAUDE.md, frontend/CLAUDE.md,
+# backend/src/domains/service/CLAUDE.md, backend/src/domains/shop/CLAUDE.md) — привязано к артефакту
+# `architecture` схемы end-to-end-feature-design (openspec/schemas/end-to-end-feature-design/), где
+# заполняется архитектура фичи (доменные сущности/сервисы backend, компоненты/хуки/страницы
+# frontend) — именно там эти правила должны применяться при заполнении. CLAUDE.md остаётся основным,
+# всегда загружаемым источником этих же правил для обычных (не через openspec) сессий — здесь их
+# копия для openspec-потока; при изменении конвенции обновляй оба места.
+rules:
+  architecture:
+    - "Контракты: request/response-схемы, общие между backend и frontend, определяются один раз в workspace-пакете ireports-contracts через Zod и потребляются оттуда обеими сторонами (backend — через nestjs-zod); при изменении формы payload'а сначала правь схему в contracts/, не дублируй тип вручную."
+    - "Backend, слоистость модуля в domains/{service,shop}/modules/*: domain/ (entities, value objects, events, ports) → application/ (CQRS commands+handlers через @nestjs/cqrs, application ports) → infrastructure/ (Prisma-репозитории, мапперы, zod-схемы персистентности) → interface/ (HTTP-контроллеры, DTO). Направление зависимостей interface → application → domain; domain никогда не импортирует из application/infrastructure/interface."
+    - "Backend: общие DDD-базовые классы наследовать, не переизобретать — src/shared/domain/ (aggregate-root.base.ts, entity.base.ts, value-object.base.ts, domain-event.base.ts, command.base.ts, repository.port.ts, mapper.interface.ts)."
+    - "Backend: value object обязателен для поля/группы полей с собственной валидацией/инвариантами (диапазон, формат, набор значений), сравнением по значению (не по идентичности), или для группы полей с самостоятельным смыслом (деньги+валюта, диапазон дат, адрес, статус с ограниченным набором переходов). Голые примитивы (string/number) допустимы только для простых атрибутов без своей семантики (например, суррогатный id). Если у существующей сущности такое поле — примитив, заведи VO и обнови сущность/мапперы/zod-схемы, даже если явно не просили."
+    - "Backend: репозитории идут через unit-of-work (UNIT_OF_WORK / PrismaUnitOfWork), а не через прямую инъекцию PrismaClient, там где важна транзакционная согласованность между агрегатами."
+    - "Backend: сквозной request context — AsyncLocalStorage (src/shared/application/context/, AppRequestContext/ContextInterceptor), заполняется RequestContextMiddleware, который должен идти раньше любого другого middleware. Path alias @/* → src/*."
+    - "Backend: общие таблицы service/shop (AccountingPeriod, AccountingPeriodSnapshot, AccountingCalculationCache, SalaryAccrual/SalaryAccrualLine/SalaryAccrualLineAdjustment, SalesPlan/SalesPlanTemplate — все с полем direction) не разбивать на отдельные per-domain модели; если таблице не хватает direction для различения доменов — добавляй его аддитивной миграцией (ALTER TABLE ADD COLUMN), а не новой таблицей."
+    - "Backend: изоляция service/shop — только на уровне кода, не данных. У каждого домена свои независимые Entity/Port/Repository-классы, каждый фильтрует/подставляет свой фиксированный direction через свой Prisma Client делегат. Один класс/DI-токен на оба домена, прямой импорт чужого Prisma-репозитория или общий CommandBus-диспатч в чужие CQRS-хендлеры — нарушение границы, даже если физическая таблица общая. Исключение в обе стороны — данные, не привязанные к одному направлению (BalanceTransaction, EmployeeDismissal): они живут в сквозных модулях src/modules/employee-balance/, src/modules/employee-dismissal/, а не дублируются по доменам."
+    - "Backend: внутри domains/service/* и domains/shop/* не добавляй слово service/shop в имя файла (домен уже задан путём domains/<domain>/modules/...) — называй файл нейтрально. Класс/интерфейс/DI-токен внутри по-прежнему называй с явным префиксом домена там, где домен не следует из контекста использования (ShopAccountingPeriodRepository, SHOP_ERP_CASH_CONFIG_REPOSITORY) — при импорте символа в другом месте виден только он, а не путь к файлу."
+    - "Backend: доменные исключения наследуются от базового класса в src/shared/exceptions/exception.base.ts с кодами из exception.codes.ts; DomainExceptionFilter маппит их в HTTP-ответы."
+    - "Backend: любой новый *.http-controller.ts обязан получить @ApiTags('<Домен>: <модуль/область>') на классе (по-русски, формат 'Область: подобласть') и @ApiOperation({ summary: '...' }) на каждом методе (по-русски); тело запроса — через nestjs-zod DTO (createZodDto), для union-схем — явный @ApiBody({ schema: zodSchemaToOpenApiBody(...) }); типизированный возврат метода (тип из ireports-contracts) достаточен для схемы ответа, отдельный @ApiResponse не нужен. Контроллер без @ApiTags/@ApiOperation считается незавершённым. Новый DDD-модуль дополнительно нужно добавить в include: [...] соответствующего документа в src/config/swagger.config.ts (serviceDocument/shopDocument/commonDocument) в том же PR."
+    - "Frontend: слои Feature-Sliced Design сверху вниз — app (может импортировать любой слой, его не может импортировать никто) → pages (импортирует features/kernel/shared и свои подмодули, не другую page) → features (импортирует kernel/shared и свои подмодули, не другие features) → kernel (не имеет входящих импортов извне, сам импортирует только kernel) → shared (чистая инфраструктура без бизнес-логики, не импортирует другие слои). Направление проверяется eslint-plugin-boundaries. features/<X> и pages/<X> делятся на model/ (хуки, данные, состояние) и ui/ (компоненты); крупный компонент внутри ui/ с достаточной логикой выносится в свой подмодуль ui/<Компонент>/{model,ui} со своим index.ts."
+    - "Frontend: features/<Feature>/index.ts реэкспортирует только корневой UI-компонент фичи — импортировать из фичи только через этот index.ts, не напрямую из ui/ или model/."
+    - "Frontend: запросы к backend оформляются через объект api в model/api.ts с методами, возвращающими queryOptions({...}) из TanStack Query, а не как обычные async-функции — переиспользуемые типобезопасные queryKey/queryFn для useQuery/prefetchQuery/invalidateQueries."
+    - "Frontend: ошибки сети/API оборачивать в ApiError (shared/errors/apiError.ts) прямо в .catch() внутри queryFn, с человекочитаемым сообщением на русском; компоненты читают queryError.message, не работают с сырыми ошибками axios напрямую."
+    - "Frontend: хуки в model/ инкапсулируют одну зону ответственности и возвращают плоский объект состояния/обработчиков; композиция нескольких хуков — на уровне страницы/mediator-компонента, хуки не знают друг о друге."
+    - "Frontend: страница с несколькими stateful-виджетами использует отдельный mediator/-компонент (вызывает model-хуки, прокидывает результат в ui, без собственной бизнес-логики — только оркестрация); страница с одним виджетом держит весь стейт/обработчики в одном model/useXPage.ts-хуке с плоским объектом на возврате. Медиатор/страница не должен содержать условного рендера — такое ветвление выносится в отдельный презентационный компонент."
+    - "Frontend: Layout/контейнерные компоненты принимают именованные слоты (header/body/footer/actions как пропсы ReactNode), а не единый children; если контент слота собирается из нескольких пропсов/компонентов — вычислять его в переменную выше return, а не инлайнить в JSX-проп."
+    - "Frontend: в хуках аналитики разделять isInitialLoad (данных ещё нет — скелетон на весь блок) и isRefreshing (данные уже есть, идёт фоновый рефетч — лёгкий индикатор), вычисляемые поверх useQuery с placeholderData: keepPreviousData — там, где смена фильтров не должна 'схлопывать' уже отрисованные данные."
+    - "Frontend: новые страницы и компоненты — в shared/ui-kit/ (tokens/, atoms/, organisms/), не в shared/ui/ (shadcn-примитивы на старых токенах — только для уже существующих, ещё не мигрированных страниц). Паттерн, начавший повторяться в ≥2 страницах/фичах, выносится в shared/ui/ вместо копирования. Клиентское состояние — Zustand, только для бизнес-данных; серверное состояние — TanStack Query."
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
