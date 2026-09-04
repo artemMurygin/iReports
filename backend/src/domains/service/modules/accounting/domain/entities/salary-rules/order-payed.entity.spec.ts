@@ -3,7 +3,7 @@ import { CalculationContext } from '@/shared/domain/calculation-context';
 import type {
     OrderPayedErpItem,
     ServiceCalculationErpData,
-} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+} from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 import { SalesPerformanceRequiredException } from '@/domains/service/modules/accounting/domain/exceptions/float-percent.exception';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { withRequestContext } from '@/shared/testing/with-request-context';

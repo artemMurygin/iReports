@@ -8,13 +8,13 @@ import {
     ServiceCompletedSalaryRule,
     TargetRole,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
-import { employeeMatchesServiceRole } from '@/domains/service/modules/accounting/domain/services/service-role-source';
+import { employeeMatchesServiceRole } from '@/domains/service/modules/accounting/domain/services/role-source';
 import { roundRubles } from '@/domains/service/modules/accounting/domain/services/money';
 import type {
     ServiceCalculationErpData,
     ServiceCompletedErpItem,
-} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
-import { buildRoappOrderLink } from '@/domains/service/modules/accounting/domain/services/roapp-order-link';
+} from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
+import { buildErpOrderLink } from '@/domains/service/modules/accounting/domain/services/erp-order-link-builder';
 import { randomUUID } from 'crypto';
 
 export class ServiceCompletedEntity
@@ -161,7 +161,7 @@ export class ServiceCompletedEntity
             type: 'serviceOrderItem',
             id: item.serviceOrderId,
             label: item.orderLabel,
-            link: buildRoappOrderLink(item.orderId),
+            link: buildErpOrderLink(item.orderId),
             amount: amountFor(item),
             brand: item.brand ?? undefined,
             deviceModel: item.deviceModel ?? undefined,

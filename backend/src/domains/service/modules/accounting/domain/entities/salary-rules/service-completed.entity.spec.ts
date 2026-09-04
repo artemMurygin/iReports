@@ -3,7 +3,7 @@ import { CalculationContext } from '@/shared/domain/calculation-context';
 import type {
     ServiceCalculationErpData,
     ServiceCompletedErpItem,
-} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+} from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 
 // Юнит-тесты на подготовленном объекте контекста — без поднятия БД и без
 // моков репозиториев (см. docs/payroll/prd-payroll-calculation.md, Фаза 1

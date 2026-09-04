@@ -18,7 +18,7 @@ import { MotivationSchema } from '@/domains/service/modules/accounting/domain/en
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { OrderPayedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/order-payed.entity';
-import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';

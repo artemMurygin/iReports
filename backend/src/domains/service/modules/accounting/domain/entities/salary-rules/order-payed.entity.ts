@@ -13,15 +13,15 @@ import {
 import {
     employeeMatchesServiceRole,
     hasRoappEmployeeIdentity,
-} from '@/domains/service/modules/accounting/domain/services/service-role-source';
+} from '@/domains/service/modules/accounting/domain/services/role-source';
 import { roundRubles } from '@/domains/service/modules/accounting/domain/services/money';
 import { resolveFloatPercentMultiplier } from '@/domains/service/modules/accounting/domain/services/float-percent';
-import { buildRoappOrderLink } from '@/domains/service/modules/accounting/domain/services/roapp-order-link';
+import { buildErpOrderLink } from '@/domains/service/modules/accounting/domain/services/erp-order-link-builder';
 import { SalesPerformanceRequiredException } from '@/domains/service/modules/accounting/domain/exceptions/float-percent.exception';
 import type {
     OrderPayedErpItem,
     ServiceCalculationErpData,
-} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+} from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 
 // spec: service/accounting#scenario-оплаченность-заказа-определяется-его-статусом-а-не-накопленной-суммой
 //
@@ -149,7 +149,7 @@ export class OrderPayedEntity
             type: 'order',
             id: item.orderId,
             label: item.label,
-            link: buildRoappOrderLink(item.orderId),
+            link: buildErpOrderLink(item.orderId),
             amount: amountFor(item),
             brand: item.brand ?? undefined,
             deviceModel: item.deviceModel ?? undefined,

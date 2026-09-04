@@ -3,7 +3,7 @@ import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import { roundRubles } from '../../services/money';
-import type { ServiceCalculationErpData } from '../../types/service-calculation-data.types';
+import type { ServiceCalculationErpData } from '../../types/calculation-data.types';
 import {
     CreateSalaryRuleProps,
     PayPerHourSalaryConfig,

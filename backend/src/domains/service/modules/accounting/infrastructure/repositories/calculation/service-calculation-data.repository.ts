@@ -7,7 +7,7 @@ import type {
     OrderPayedErpItem,
     PayPerHourHours,
     ServiceCompletedErpItem,
-} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+} from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 import { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
 import { PAID_ORDER_STATUS_GROUPS } from '@/domains/service/modules/accounting/domain/services/paid-order-status';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';

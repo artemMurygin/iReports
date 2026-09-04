@@ -1,4 +1,4 @@
-import type { ServiceOrderRoleFields } from '../services/service-role-source';
+import type { ServiceOrderRoleFields } from '../services/role-source';
 
 // Конкретное наполнение CalculationContext.erpData для направления service
 // (Фаза 7, см. docs/payroll/plan-payroll-calculation.md). Собирается один

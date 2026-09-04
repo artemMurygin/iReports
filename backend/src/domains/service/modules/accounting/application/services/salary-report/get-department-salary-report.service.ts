@@ -26,7 +26,7 @@ import { SALES_PERFORMANCE_READER } from '@/domains/service/modules/sales/applic
 import type { SalesPerformanceReaderPort } from '@/domains/service/modules/sales/application/ports/sales-performance.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
-import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
 
 interface EmployeeCalculationResult {

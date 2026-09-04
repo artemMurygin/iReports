@@ -2,7 +2,7 @@ import {
     employeeMatchesServiceRole,
     resolveServiceRoleSource,
     ServiceOrderRoleFields,
-} from './service-role-source';
+} from './role-source';
 import type { CalculationEmployee } from '@/shared/domain/calculation-context';
 
 const buildFields = (

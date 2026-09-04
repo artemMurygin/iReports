@@ -3,7 +3,7 @@ import type {
     OrderPayedErpItem,
     PayPerHourHours,
     ServiceCompletedErpItem,
-} from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+} from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 
 // Источник данных для сборки CalculationContext направления service (Фаза
 // 7, см. docs/payroll/plan-payroll-calculation.md). Единый порт, а не по

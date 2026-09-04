@@ -1,7 +1,7 @@
 import { PeriodCalculationOrchestrator } from './period-calculation.orchestrator';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
-import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 
 // Часы сотрудника за период — одно значение из ручного ввода (Фаза 7),
 // общее для всех правил его схемы вне зависимости от роли; независимость

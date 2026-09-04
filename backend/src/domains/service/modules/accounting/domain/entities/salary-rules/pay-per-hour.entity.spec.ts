@@ -1,6 +1,6 @@
 import { PayPerHoursEntity } from './pay-per-hour.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
-import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/service-calculation-data.types';
+import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 
 // Юнит-тест на подготовленном объекте контекста — без поднятия БД и без
 // моков репозиториев (см. docs/payroll/prd-payroll-calculation.md, Фаза 1).
