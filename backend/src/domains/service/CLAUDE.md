@@ -248,6 +248,27 @@ Read-side аналитика проданных услуг направлени�
 `interface/http-controllers/reports.e2e.spec.ts` не реализует метод `listOrderTypes`, что не ловится
 `npm run test`, но всплывает при `tsc --noEmit`, — актуализация заглушки требует отдельной задачи.
 
+### `modules/marketing/pricing`
+
+`marketing` пока существует только в этом узком срезе (Фаза 7 `docs/todo-modules-ddd-refactoring`) —
+обновление цен и себестоимости услуг RoApp, `POST /v1/service/marketing/pricing/update-service-prices`
+(см. `ENDPOINTS.md`). Слоистость минимальная, без агрегата: `UpdateServicePricesHttpController` →
+`UpdateServicePricesCommand` → `UpdateServicePricesHandler` (`application/command/`, `@nestjs/cqrs`) —
+единственный сценарий модуля. Хендлер валидирует входные строки через доменный value object
+`ServicePriceChange` (`domain/value-objects/`), затем идёт через `ROAPP_GATEWAY` (см. выше,
+`integrations/roapp-gateway`): выгружает актуальные услуги и категории, строит иерархический путь
+категории, собирает XLSX-файл (формат колонок — как ждёт `CustomApiRoapp /updateServices`) и
+отправляет его в RoApp.
+
+Бизнес-правила (валидация строки изменения, молчаливый пропуск услуг, отсутствующих в ERP, маппинг
+входной себестоимости в поле вознаграждения ERP, трактовка частичного/полного отказа ERP при
+обновлении) описаны в
+[`openspec/specs/service/marketing/spec.md`](../../../../openspec/specs/service/marketing/spec.md) —
+ищи их там, а не здесь.
+
+Остальная часть маркетинговой области (источники обращений, кампании и их эффективность) в этом
+модуле пока не реализована.
+
 ## Целевой набор модулей домена
 
 `service` и `shop` — параллельные бизнес-направления с похожим набором бизнес-процессов, поэтому
@@ -272,9 +293,7 @@ ERP, разные правила) — это **не общий переиспо�
 - **`warehouse`** — склад/остатки (запчасти, расходники). Не существует.
 
 `marketing` уже существует (`modules/marketing/pricing`, Фаза 7 `docs/todo-modules-ddd-refactoring`)
-— обновление цен и себестоимости услуг RoApp (`POST
-/v1/service/marketing/pricing/update-service-prices`), см. `ENDPOINTS.md`. Остальная часть маркетинга
-(источники обращений, кампании и их эффективность) в этом модуле пока не покрыта.
+— обновление цен и себестоимости услуг RoApp, см. раздел "`modules/marketing/pricing`" ниже.
 
 Ремонт как таковой отдельным модулем (`repair`) не планируется — это и есть содержание домена
 `service` целиком, выносить его в отдельный модуль внутри самого себя незачем.

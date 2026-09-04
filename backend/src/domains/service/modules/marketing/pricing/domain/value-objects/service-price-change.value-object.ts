@@ -11,11 +11,11 @@ export interface ServicePriceChangeProps {
 // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
 // перенос легаси `UpdateServicePricesInRoappItem`
 // (src/TODO/priceMonitoring/dto/updateServicePricesInRoapp.dto.ts) в
-// доменный VO с инвариантами неотрицательности: легаси DTO принимала
-// `price`/`serviceCost` как произвольные числа (z.number()), домен —
-// строже. Агрегат для этой операции не нужен (см. PRD, раздел 3б,
+// доменный VO. Агрегат для этой операции не нужен (см. PRD, раздел 3б,
 // "синхронная stateless-операция") — VO лишь валидирует одну строку
 // батча перед сборкой XLSX.
+//
+// spec: service/marketing#requirement-идентификатор-услуги-цена-и-себестоимость-не-могут-быть-отрицательными
 export class ServicePriceChange extends ValueObject<ServicePriceChangeProps> {
     static create(props: ServicePriceChangeProps): ServicePriceChange {
         if (!Number.isInteger(props.serviceId) || props.serviceId <= 0) {
