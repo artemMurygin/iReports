@@ -17,6 +17,20 @@ services:
     # ports:
     #   - "5432:5432"
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Uncomment to expose Redis port for local debugging:
+    # ports:
+    #   - "6379:6379"
+
   backend:
     build:
       # Контекст — корень репозитория: backend зависит от workspace-пакета
@@ -28,6 +42,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-iReports}
+      REDIS_URL: redis://redis:6379
       PORT: 3000
       CORS_ORIGIN: https://ireports.murygin.tech
       BITRIX24_WEBHOOK_URL: ${BITRIX24_WEBHOOK_URL}
@@ -36,6 +51,8 @@ services:
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -54,3 +71,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

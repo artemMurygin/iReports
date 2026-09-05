@@ -1,0 +1,150 @@
+## 1. Инфраструктура и Prisma-схема (setup)
+
+- [x] 1.1 Добавить сервис `redis` в `docker-compose.yml` и зависимость `ioredis` в `backend/package.json`; создать `RedisModule` (конфиг `REDIS_URL`) по аналогии с `backend/src/infrustructure/database/database.module.ts`. Verify: `docker compose up redis` проходит healthcheck, backend стартует и логирует успешное подключение к Redis.
+- [x] 1.2 Создать `backend/prisma/schema/auth.prisma` с моделями `Role`, `Permission`, `EmployeeRole` (FK `bitrixEmployeeId` → `BitrixEmployee.id` из `backend/prisma/schema/bitrix.prisma`, FK `roleId` → `Role.id`), `RolePermission`, `BitrixEmployeeCredentials` (FK `bitrixEmployeeId`, поля токенов) — конвенция FK `bitrixEmployeeId`, не `userId` (design.md). Verify: `npx prisma migrate dev` создаёт миграцию без ошибок, `npx prisma studio` показывает новые таблицы.
+- [x] 1.3 Создать скелеты трёх сквозных модулей `backend/src/modules/auth`, `backend/src/modules/session`, `backend/src/modules/roles` со слоями `domain/{entities,exceptions,types}`, `application/{command,ports,services,mappers}`, `infrastructure/{repositories,mappers}`, `interface/{dto,http-controllers}` — по конвенции `backend/src/modules/employee-identity/employee-identity.module.ts`. Подключить пустые `*.module.ts` в `backend/src/app.module.ts`. Verify: Nest-приложение стартует без ошибок DI (`npm run start:dev` поднимается).
+
+## 2. Value Objects домена (TDD)
+
+- [ ] 2.1 Написать тесты (`*.spec.ts` рядом с VO): `BitrixCredentials.isExpired()` по `expiresAt`; `PermissionCode` принимает только формат `resource:action` и бросает исключение на невалидный формат; `SessionId` — генерация с ≥32 байт энтропии и валидация формата. Verify: тест-раннер (`npm run test`) видит новые файлы.
+- [ ] 2.2 Прогнать тесты из 2.1 и зафиксировать red (классов VO ещё нет).
+- [ ] 2.3 Реализовать `BitrixCredentials`, `PermissionCode`, `SessionId` наследуя `backend/src/shared/domain/value-object.base.ts`, разместить в `domain/` соответствующих модулей (`auth`, `roles`, `session`).
+- [ ] 2.4 Прогнать тесты из 2.1, зафиксировать green, регрессий в соседних тестах нет (`npm run test`).
+
+## 3. Permission-реестр и `PermissionsCatalogSeeder` (Decision 12) (TDD)
+
+- [ ] 3.1 Написать тест на `PermissionsCatalogSeeder`: агрегирует список реестров `{code,label,group}[]` от модулей-владельцев и делает идемпотентный `upsert` в таблицу `Permission` (повторный запуск не создаёт дублей, не удаляет существующие права других модулей). Verify: тест виден раннеру.
+- [ ] 3.2 Прогнать тест из 3.1, зафиксировать red (сидера ещё нет).
+- [ ] 3.3 Реализовать `PermissionsCatalogSeeder` в `backend/src/modules/roles/infrastructure/`, механизм регистрации реестров модулей (простой массив провайдеров/токен `PERMISSION_REGISTRY`, каждый модуль-владелец пушит свой файл `<module>.permissions.ts`), подключить запуск сидера как отдельный npm-скрипт (по аналогии с `"initial"` в `backend/package.json`, отдельный скрипт `"seed:permissions"`).
+- [ ] 3.4 Прогнать тест из 3.1, зафиксировать green; локально запустить сид-скрипт и проверить через `prisma studio`, что таблица `Permission` наполнилась.
+
+## 4. `auth`: самовосстановление `BitrixEmployee` при логине (TDD)
+
+- [ ] 4.1 Написать тесты: `BITRIX_EMPLOYEE_UPSERT_PORT.upsertOne(bitrixUserId)` создаёт/обновляет `BitrixEmployee` по данным `user.current`; существующий путь `BitrixSyncService.uploadEmployees()` (`backend/src/sync/bitrix/bitrix-sync.service.ts`) продолжает работать без изменения поведения для массового вызова (регрессионный тест). Verify: тесты видны раннеру.
+- [ ] 4.2 Прогнать тесты из 4.1, зафиксировать red.
+- [ ] 4.3 Извлечь одноэлементный апсерт из `uploadEmployees()` в отдельный метод, выставить через новый порт `BITRIX_EMPLOYEE_UPSERT_PORT` (токен + интерфейс в `backend/src/sync/bitrix/application/ports/`, реализация — тот же извлечённый код), без изменения поведения текущего массового пути (`UploadInitialBitrixDataHandler` продолжает работать как раньше).
+- [ ] 4.4 Прогнать тесты из 4.1, зафиксировать green; убедиться, что `npm run initial` (существующий путь) не сломан — регрессионный прогон.
+
+## 5. `auth`: `BitrixIdentityResolver` + embedded-логин (TDD)
+
+- [ ] 5.1 Написать тесты: `BitrixIdentityResolver.resolveBitrixEmployeeId(accessToken, clientEndpoint)` вызывает `user.current` (по образцу `BitrixPortalAdminCheckService` из `backend/src/integrations/bitrix/auth/portal-admin-check.service.ts` — fail-closed, таймаут 5с), при отсутствии `BitrixEmployee` вызывает `BITRIX_EMPLOYEE_UPSERT_PORT.upsertOne`; `BitrixEmbeddedLoginHandler.execute(authId, memberId)` валидирует `AUTH_ID` реальным REST-запросом (не доверяет фронтенд-данным напрямую) и возвращает `{ sessionId, delivery }`. Verify: тесты видны раннеру.
+- [ ] 5.2 Прогнать тесты из 5.1, зафиксировать red.
+- [ ] 5.3 Реализовать `BitrixIdentityResolver` и `BitrixEmbeddedLoginHandler` в `backend/src/modules/auth/application/`.
+- [ ] 5.4 Прогнать тесты из 5.1, зафиксировать green, регрессий нет.
+
+## 6. `auth`: OAuth-логин + обновление токена (TDD)
+
+- [ ] 6.1 Написать тесты: `BitrixOAuthLoginHandler.execute(code, state)` обменивает `code` на токены через `oauth.bitrix24.tech/oauth/token/` (design.md — не через legacy `oauth.bitrix.info`, отдельный клиент от `BitrixAuthService.saveInstallation`), резолвит `user.current`, возвращает `{ sessionId, delivery }`; `BitrixTokenRefreshService.getValidAccessToken(bitrixEmployeeId)` обновляет `access_token` через `refresh_token` при истечении `expiresAt` (используя `BitrixCredentials.isExpired()`). Verify: тесты видны раннеру.
+- [ ] 6.2 Прогнать тесты из 6.1, зафиксировать red.
+- [ ] 6.3 Реализовать `BitrixOAuthLoginHandler` и `BitrixTokenRefreshService` в `backend/src/modules/auth/application/`, репозиторий `BitrixEmployeeCredentials` в `backend/src/modules/auth/infrastructure/`.
+- [ ] 6.4 Прогнать тесты из 6.1, зафиксировать green, регрессий нет.
+
+## 7. `session`: `SessionService` (Redis) + `SessionAuthGuard`, fail-closed (Decision 10) (TDD)
+
+- [ ] 7.1 Написать тесты: `SessionService` (реализация `SESSION_PORT`) — `createSession` генерирует новый `session_id` при каждом логине (защита от session fixation), `validateSession`/продление TTL (sliding expiration), `invalidateSession`, `invalidateAllSessionsForEmployee` через обратный индекс `employee_sessions:<bitrixEmployeeId>`, `refreshPermissionsForEmployee`; `SessionAuthGuard.canActivate` бросает `UnauthorizedException` при отсутствии/невалидности сессии, включая случай недоступности Redis (fail-closed — Decision 10, не пропускает запрос). Verify: тесты видны раннеру.
+- [ ] 7.2 Прогнать тесты из 7.1, зафиксировать red.
+- [ ] 7.3 Реализовать `SessionService` в `backend/src/modules/session/infrastructure/` (ioredis), `SessionAuthGuard` в `backend/src/modules/session/interface/`, доставка `session_id` — HttpOnly/Secure/SameSite=None cookie либо `Authorization: Bearer` в зависимости от заголовка контекста запроса.
+- [ ] 7.4 Прогнать тесты из 7.1, зафиксировать green, включая сценарий недоступности Redis (мок соединения), регрессий нет.
+
+## 8. `roles`: `PermissionsResolverAdapter`, `PermissionsGuard`, декораторы (TDD)
+
+- [ ] 8.1 Написать тесты: `PermissionsResolverAdapter.resolvePermissions(bitrixEmployeeId)` агрегирует `permissionCode` всех ролей сотрудника без дублей; `PermissionsGuard.canActivate` сверяет метаданные `@RequirePermissions('resource:action', ...)` (через `Reflector`) с `request.user.permissions`, бросает `ForbiddenException` при отсутствии хотя бы одного нужного права; роут без `@RequirePermissions` доступен любому аутентифицированному пользователю; роут с `@Public()` не требует сессии вообще. Verify: тесты видны раннеру.
+- [ ] 8.2 Прогнать тесты из 8.1, зафиксировать red.
+- [ ] 8.3 Реализовать `PermissionsResolverAdapter` (`backend/src/modules/roles/infrastructure/`), `PermissionsGuard` (`backend/src/modules/roles/interface/`), декораторы `@RequirePermissions`/`@Public` в `backend/src/shared/decorators/` (используются `Reflector`); подключить `SessionAuthGuard` → `PermissionsGuard` как `APP_GUARD` в этом порядке (Decision 5) в `backend/src/app.module.ts`.
+- [ ] 8.4 Прогнать тесты из 8.1, зафиксировать green, регрессий нет.
+
+## 9. `roles`: CRUD ролей и каталог прав (TDD)
+
+- [ ] 9.1 Написать тесты на `RolesCommandHandlers`: `createRole`/`renameRole` (уникальность `name`), `deleteRole` (нельзя удалить системную роль `Administrator`); `RolesQueryHandlers.getPermissionsCatalog()` возвращает каталог `Permission` (наполнен `PermissionsCatalogSeeder`, раздел 3) без возможности создать новый код через API (спек `roles`, требование "Каталог permission-кодов формируется из кода"). Verify: тесты видны раннеру.
+- [ ] 9.2 Прогнать тесты из 9.1, зафиксировать red.
+- [ ] 9.3 Реализовать `Role`-агрегат (`domain/`, наследует `backend/src/shared/domain/aggregate-root.base.ts`), `RolesCommandHandlers`/`RolesQueryHandlers` (CQRS, `application/command`), репозиторий ролей (`infrastructure/repositories`); добавить в реестр `roles.permissions.ts` (раздел 3) права `roles:view`, `roles:manage`.
+- [ ] 9.4 Прогнать тесты из 9.1, зафиксировать green, регрессий нет.
+
+## 10. `roles`: назначение ролей сотрудникам + push прав в активные сессии (TDD)
+
+- [ ] 10.1 Написать тесты: `RolesCommandHandlers.assignRoleToEmployee`/`revokeRoleFromEmployee` (many-to-many `EmployeeRole`); `updateRolePermissions(roleId, permissionCodes)` меняет права роли и вызывает `SESSION_PORT.refreshPermissionsForEmployee` для всех сотрудников этой роли (снятое право перестаёт действовать без релогина — спек `roles`). Verify: тесты видны раннеру.
+- [ ] 10.2 Прогнать тесты из 10.1, зафиксировать red.
+- [ ] 10.3 Реализовать `assignRoleToEmployee`/`revokeRoleFromEmployee`/`updateRolePermissions` в `RolesCommandHandlers`, список сотрудников для UI — через уже существующий `DIRECTORY_REPOSITORY` (`backend/src/modules/directory/application/ports/directory.port.ts`, `findEmployees`), не заводить параллельный источник.
+- [ ] 10.4 Прогнать тесты из 10.1, зафиксировать green, регрессий нет.
+
+## 11. Bootstrap первого администратора (Decision 9) (TDD)
+
+- [ ] 11.1 Написать тесты: при логине сотрудника без единой роли backend вызывает Bitrix24 REST `user.admin` с его токеном (тот же приём, что `BitrixPortalAdminCheckService`); если сотрудник — админ портала, ему назначается системная роль `Administrator` (сидируется с полным набором прав каталога — Migration Plan); если не админ — роль не назначается. Verify: тесты видны раннеру.
+- [ ] 11.2 Прогнать тесты из 11.1, зафиксировать red.
+- [ ] 11.3 Реализовать bootstrap-шаг в логин-флоу `auth` (после успешного резолва `bitrixEmployeeId`, до выдачи сессии); добавить сид роли `Administrator` в миграцию/сид-скрипт раздела 3.
+- [ ] 11.4 Прогнать тесты из 11.1, зафиксировать green, регрессий нет.
+
+## 12. HTTP-слой: контракты, контроллеры, Swagger, ENDPOINTS.md
+
+- [ ] 12.1 Определить Zod-схемы в `contracts/commands/auth.ts` (`bitrixEmbeddedLoginSchema`, OAuth callback, `authMeResponseSchema`), `contracts/commands/session.ts`, `contracts/commands/roles.ts` (создание/переименование роли, `updateRolePermissionsSchema`, назначение/снятие роли, `permissionCatalogItemSchema`) — по образцу `contracts/commands/employee-identity.ts`; реэкспортировать в `contracts/commands/index.ts`. Verify: `tsc` в `contracts/` проходит без ошибок.
+- [ ] 12.2 Написать e2e-тесты контроллеров (`*.e2e.spec.ts` рядом с контроллером, по образцу `backend/src/modules/employee-identity/interface/http-controllers/employee-identity.e2e.spec.ts`) на ключевые сценарии specs (401 без сессии, 403 без permission, 200 с валидной сессией и правом) для новых эндпоинтов: OAuth callback/exchange (`@Public()`), `GET /auth/me`, `POST /auth/logout`, `GET/POST/PATCH/DELETE /roles`, `GET /roles/permissions` (каталог), `PATCH /roles/:id/permissions`, `POST/DELETE /roles/:id/employees/:employeeId`. Verify: тесты видны раннеру.
+- [ ] 12.3 Прогнать тесты из 12.2, зафиксировать red.
+- [ ] 12.4 Реализовать HTTP-контроллеры в `interface/http-controllers/` трёх модулей, DTO через `createZodDto` (nestjs-zod) из схем 12.1; добавить `@ApiTags('Роли и доступ: ...')`/`@ApiOperation` на каждый контроллер/метод (правило `openspec/config.yaml`); подключить `AuthModule`, `SessionModule`, `RolesModule` в `include: [...]` `commonDocument` в `backend/src/config/swagger.config.ts`; обновить `/ENDPOINTS.md` новым разделом по формату существующих (`## modules/roles (...)` + список `` - `METHOD /path` — описание``).
+- [ ] 12.5 Прогнать тесты из 12.2, зафиксировать green, регрессий в соседних e2e нет.
+
+## 13. CSRF-защита cookie-варианта (TDD)
+
+- [ ] 13.1 Написать тесты: запрос с `SameSite=None` cookie-сессией без корректного double-submit CSRF-токена отклоняется; запрос с корректным токеном проходит. Verify: тесты видны раннеру.
+- [ ] 13.2 Прогнать тесты из 13.1, зафиксировать red.
+- [ ] 13.3 Реализовать double-submit CSRF-проверку для cookie-варианта сессии (middleware/guard, применяется только к cookie-доставке, не к `Authorization: Bearer`).
+- [ ] 13.4 Прогнать тесты из 13.1, зафиксировать green, регрессий нет.
+
+## 14. CI-контракт: каталог прав не расходится с кодом (Decision 12) (TDD)
+
+- [ ] 14.1 Написать `permissions-catalog.contract.spec.ts`: статически обходит исходники `backend/src/**` в поиске всех использований `@RequirePermissions('...')` (разделы 8–10, 12) и падает, если встретилась строка, отсутствующая в объединённом реестре модулей. Verify: тест виден раннеру.
+- [ ] 14.2 Прогнать тест из 14.1 и зафиксировать текущее состояние (red, если реестр неполный, либо сразу green, если предыдущие разделы уже держали реестр в актуальном состоянии) — задокументировать фактический результат в PR.
+- [ ] 14.3 При необходимости — дополнить реестры модулей недостающими записями `{code,label,group}` до полного покрытия всех `@RequirePermissions` в коде.
+- [ ] 14.4 Прогнать тест из 14.1, зафиксировать green; подключить его в CI (существующий `npm run test`), регрессий нет.
+
+## 15. Frontend: контекст запуска + защита роутов приложения (TDD)
+
+- [ ] 15.1 Написать тесты (`*.spec.tsx`/`*.spec.ts` рядом с файлом, Vitest): `detectRuntimeContext()` (`frontend/src/shared/lib/`) возвращает `'iframe'` при `window.self !== window.top` и наличии BX24 SDK, иначе `'standalone'`; обёртка вокруг роутов в `frontend/src/app/router.tsx` рендерит `pages/Login` в standalone-контексте без валидной сессии и `pages/AccessDenied` при отсутствии нужного permission у защищённого роута. Verify: тесты видны раннеру (`npm run test`).
+- [ ] 15.2 Прогнать тесты из 15.1, зафиксировать red.
+- [ ] 15.3 Реализовать `detectRuntimeContext`, `shared/api/session-token.ts` (in-memory holder для iframe), axios-интерцептор в `frontend/src/shared/api/axios.instance.ts` (подстановка `Authorization: Bearer` в iframe-контексте), обёртку защиты роутов вокруг `element: <Layout />` в `frontend/src/app/router.tsx` (первая реализация route-guard в проекте — см. разведку кодовой базы).
+- [ ] 15.4 Прогнать тесты из 15.1, зафиксировать green, регрессий нет.
+
+## 16. Frontend: `features/Auth` (TDD)
+
+- [ ] 16.1 Написать тесты: `useHasPermission(permission)` читает Zustand-стор; `useCurrentUser` (`GET /auth/me`) возвращает `{ employee, permissions, isInitialLoad }`; `useLogout` (`POST /auth/logout`); `useBitrixLogin().login()` редиректит на `{portal}/oauth/authorize/`; `RequirePermission` рендерит `children` при наличии права, иначе `AccessDeniedScreen`. Verify: тесты видны раннеру.
+- [ ] 16.2 Прогнать тесты из 16.1, зафиксировать red.
+- [ ] 16.3 Добавить зависимость `zustand` в `frontend/package.json` (первое использование в проекте); реализовать `frontend/src/features/Auth/model/api.ts` (queryOptions-фабрики по образцу `frontend/src/features/EmployeeBalance/model/api.ts`, ошибки — через `ApiError` в `.catch()`), `authStore.ts` (Zustand), хуки, `ui/RequirePermission.tsx`, публичный `index.ts` (только корневые экспорты).
+- [ ] 16.4 Прогнать тесты из 16.1, зафиксировать green, регрессий нет.
+
+## 17. Frontend: `AccessDeniedScreen` + `pages/AccessDenied`
+
+- [ ] 17.1 Реализовать `shared/ui-kit/organisms/AccessDeniedScreen` (`title?`, `description?`) по фрейму `WZqMK` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`) — чисто визуальная вёрстка без ветвлений/данных, тесты не заводятся (обоснование: нет логики, только пропсы → разметка). Сверить со скриншотом фрейма `WZqMK`.
+- [ ] 17.2 Написать тест: `pages/AccessDenied` рендерит `AccessDeniedScreen` при прямом переходе без нужного permission (использует `RequirePermission` из раздела 16). Verify: тест виден раннеру.
+- [ ] 17.3 Прогнать тест из 17.2, зафиксировать red.
+- [ ] 17.4 Реализовать `pages/AccessDenied`; прогнать тест из 17.2, зафиксировать green, регрессий нет.
+
+## 18. Frontend: `pages/Login`
+
+- [ ] 18.1 Реализовать `pages/Login/ui/LoginGate` по фрейму `cewQc` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`) — карточка с логотипом, заголовком «Войдите через Bitrix24», текстом и кнопкой CTA. Чисто визуальная вёрстка, тесты не заводятся.
+- [ ] 18.2 Написать тест: клик по кнопке CTA вызывает `useBitrixLogin().login()` (раздел 16). Verify: тест виден раннеру.
+- [ ] 18.3 Прогнать тест из 18.2, зафиксировать red.
+- [ ] 18.4 Подключить `useBitrixLogin` к кнопке; прогнать тест из 18.2, зафиксировать green, регрессий нет.
+
+## 19. Frontend: `features/RoleManagement` (TDD)
+
+- [ ] 19.1 Написать тесты на `model/api.ts`: `useRoles` (CRUD ролей), каталог прав (`GET /roles/permissions`, только чтение — UI не создаёт новые коды, спек `roles`), `useRolePermissionsMatrix` (чтение матрицы + `togglePermission`/`save` → `PATCH /roles/:id/permissions`), `useEmployeeRoleAssignment` (список сотрудников через уже существующий `GET /directory/employees` + мутации назначения/снятия роли). Verify: тесты видны раннеру.
+- [ ] 19.2 Прогнать тесты из 19.1, зафиксировать red.
+- [ ] 19.3 Реализовать `frontend/src/features/RoleManagement/model/api.ts` и хуки, публичный `index.ts` (реэкспорт `RoleManagementPanel`).
+- [ ] 19.4 Прогнать тесты из 19.1, зафиксировать green, регрессий нет.
+
+## 20. Frontend: `pages/RolesManagement` — UI по ui-design.md
+
+- [ ] 20.1 Реализовать `features/RoleManagement/ui/RoleList` (карточки ролей с CRUD, бейдж «Системная» для `Administrator` без удаления) по фрейму `s5nMLx` (узел «Roles Bar», `design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`). Чисто визуальная вёрстка карточек, логика CRUD подключается к хукам раздела 19 без отдельных тестов вёрстки (обоснование: ветвление — только `roles.length`/`role.system`, уже покрыто тестами `useRoles` из 19.1).
+- [ ] 20.2 Реализовать `features/RoleManagement/ui/RolePermissionMatrix` (роли-колонки × права-строки с группировкой, чекбоксы) по фрейму `s5nMLx` (узел «Permission Matrix») — сверить со скриншотом, проверить отсутствие overflow при большом числе ролей/прав (`ctx.problems` — по аналогии с проверкой в Pencil).
+- [ ] 20.3 Написать тест: пустое состояние (`uRNsj`) рендерится вместо списка ролей и матрицы, когда `useRoles().roles` пуст. Verify: тест виден раннеру.
+- [ ] 20.4 Прогнать тест из 20.3, зафиксировать red, затем реализовать переключение на пустое состояние по фрейму `uRNsj` и зафиксировать green.
+- [ ] 20.5 Написать тест: модалка создания роли (`vKQ8C`) вызывает `useRoles().createRole(name)` при сохранении и закрывается. Verify: тест виден раннеру.
+- [ ] 20.6 Прогнать тест из 20.5, зафиксировать red, реализовать модалку по фрейму `vKQ8C`, зафиксировать green.
+- [ ] 20.7 Реализовать `features/RoleManagement/ui/EmployeeRoleAssignment` (таблица сотрудников с бейджами ролей, состояние «Роль не назначена» — иконка `user-plus` вместо `pencil`) по фрейму `F6d3a` (`design/sallary-first-iteration.pen`).
+- [ ] 20.8 Реализовать `pages/RolesManagement/mediator/RolesManagementPage` — оркестрация хуков `useRoles`/`useRolePermissionsMatrix`/`useEmployeeRoleAssignment`, переключение вкладок «Роли и права»/«Сотрудники» (без условного рендера внутри самого медиатора — ветвление в презентационных компонентах). Подключить роут `/admin/roles` с защитой `roles:manage` (раздел 15–17).
+- [ ] 20.9 Финальная сверка: скриншот полного экрана `s5nMLx` (вкладка «Роли и права») и `F6d3a` (вкладка «Сотрудники») из Pencil сопоставлен с рендером реализованной страницы — layout, тексты и состояния совпадают.
+
+## 21. Итоговая интеграционная проверка
+
+- [ ] 21.1 Прогнать полный backend test suite (`npm run test`) и e2e-тесты контроллеров — все зелёные, регрессий в существующих модулях (`employee-identity`, `directory` и др.) нет.
+- [ ] 21.2 Прогнать полный frontend test suite (`npm run test`) — все зелёные.
+- [ ] 21.3 Ручной сквозной прогон (или e2e-сценарий) через оба сценария логина: embedded (`BX24.init()` → `AUTH_ID` → сессия) и standalone (`pages/Login` → OAuth-редирект → callback → сессия) — в обоих случаях `GET /auth/me` возвращает корректные `permissions`, `/admin/roles` доступен только с `roles:manage`, изменение прав роли отражается в активной сессии без релогина (спек `roles`), logout инвалидирует сессию в Redis.

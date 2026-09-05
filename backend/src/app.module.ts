@@ -6,6 +6,7 @@ import { RequestContextMiddleware } from 'nestjs-request-context';
 import { LoggerMiddleware } from './shared/logger.middleware';
 import { ContextInterceptor } from './shared/application/context/ContextInterceptor';
 import { DatabaseModule } from './infrustructure/database/database.module';
+import { RedisModule } from './infrustructure/redis/redis.module';
 import { BitrixModule } from './integrations/bitrix/bitrix.module';
 import { AiModule } from './integrations/ai/ai.module';
 import { GoogleSheetsModule } from './integrations/google-sheets/google-sheets.module';
@@ -24,6 +25,9 @@ import { EmployeeIdentityModule } from './modules/employee-identity/employee-ide
 import { DirectoryModule } from './modules/directory/directory.module';
 import { WorkScheduleModule } from './modules/work-schedule/work-schedule.module';
 import { EmployeeBalanceModule } from './modules/employee-balance/employee-balance.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { SessionModule } from './modules/session/session.module';
+import { RolesModule } from './modules/roles/roles.module';
 // Аналитика услуг и категории услуг (Фаза 5,
 // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
 // новый дом для src/TODO/reports, удалённого этой же фазой целиком.
@@ -34,6 +38,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
 @Module({
     imports: [
         DatabaseModule,
+        RedisModule,
         BitrixModule,
         RoappModule,
         CustomApiRoappModule,
@@ -50,6 +55,9 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         DirectoryModule,
         WorkScheduleModule,
         EmployeeBalanceModule,
+        AuthModule,
+        SessionModule,
+        RolesModule,
         ReportsModule,
         PricingModule,
         ShopPricingModule,

@@ -106,6 +106,13 @@ model BitrixEmployee {
 
   bitrixDeal BitrixDeal[]
 
+  /// Токены Bitrix24 сотрудника (add-bitrix24-auth-and-rbac, auth.prisma) —
+  /// 1:1, отсутствует до первого входа сотрудника в iReports.
+  credentials BitrixEmployeeCredentials?
+  /// Роли iReports, назначенные сотруднику (add-bitrix24-auth-and-rbac,
+  /// auth.prisma) — независимо от должности/отдела в Bitrix24.
+  employeeRoles EmployeeRole[]
+
   @@map("bitrix_employees")
 }
 

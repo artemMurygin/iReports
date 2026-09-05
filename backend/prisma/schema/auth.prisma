@@ -1,0 +1,87 @@
+// Аутентификация/сессии/RBAC (add-bitrix24-auth-and-rbac) — см.
+// openspec/changes/add-bitrix24-auth-and-rbac/design.md, Decision 2/3/12.
+// Идентичность пользователя — существующий BitrixEmployee (bitrix.prisma),
+// отдельная сущность User НЕ заводится: FK bitrixEmployeeId везде указывает
+// прямо на BitrixEmployee.id (числовой Bitrix24 user ID).
+
+// Токены Bitrix24 КОНКРЕТНОГО СОТРУДНИКА (вход в iReports), 1:1 с
+// BitrixEmployee. Не путать с BitrixInstallation (bitrix.prisma) — та
+// таблица хранит токен УСТАНОВКИ ПРИЛОЖЕНИЯ на портал (одна строка на
+// memberId), совершенно другая сущность (design.md, Decision 3).
+model BitrixEmployeeCredentials {
+  bitrixEmployeeId Int    @id @map("bitrix_employee_id")
+  memberId         String @map("member_id")
+
+  accessToken     String   @map("access_token")
+  refreshToken    String   @map("refresh_token")
+  accessExpiresAt DateTime @map("access_expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  bitrixEmployee BitrixEmployee @relation(fields: [bitrixEmployeeId], references: [id], onDelete: Cascade)
+
+  @@map("bitrix_employee_credentials")
+}
+
+// Именованный набор permissions (design.md Decision 12 — сама роль и
+// назначение ей прав ИЗ каталога управляются через UI/API без деплоя;
+// каталог permission-кодов ниже — нет). isSystem — признак роли
+// Administrator, засеиваемой миграцией (design.md Decision 9,
+// bootstrap первого администратора) — такую роль нельзя удалить через API.
+model Role {
+  id       String  @id @default(uuid())
+  name     String  @unique
+  isSystem Boolean @default(false) @map("is_system")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+  employeeRoles   EmployeeRole[]
+
+  @@map("roles")
+}
+
+// Каталог permission-кодов (`resource:action`) — наполняется ТОЛЬКО
+// PermissionsCatalogSeeder из типизированных реестров модулей-владельцев
+// при деплое, не создаётся вручную через UI/API (design.md Decision 12).
+model Permission {
+  id    String @id @default(uuid())
+  code  String @unique
+  label String
+  group String
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+// Многие-ко-многим: право входит в набор роли.
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// Многие-ко-многим: сотруднику назначена роль. FK bitrixEmployeeId —
+// конвенция репозитория (см. employee-identity.prisma), не userId.
+model EmployeeRole {
+  bitrixEmployeeId Int    @map("bitrix_employee_id")
+  roleId           String @map("role_id")
+
+  bitrixEmployee BitrixEmployee @relation(fields: [bitrixEmployeeId], references: [id], onDelete: Cascade)
+  role           Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([bitrixEmployeeId, roleId])
+  @@index([roleId])
+  @@map("employee_roles")
+}
