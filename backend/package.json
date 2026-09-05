@@ -19,6 +19,7 @@
         "test:debug": "TS_NODE_PROJECT=tsconfig.json node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
         "test:e2e": "jest --config ./test/jest-e2e.json",
         "initial": "nest build -c nest-cli.json && node dist/src/scripts/initialUploadData.js",
+        "seed:permissions": "nest build -c nest-cli.json && node dist/src/scripts/seedPermissions.js",
         "initialProd": "node dist/src/scripts/initialUploadData.js",
         "price:monitoring": "nest build -c nest-cli.json && node dist/src/utils/runPriceMonitoring.js",
         "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js",

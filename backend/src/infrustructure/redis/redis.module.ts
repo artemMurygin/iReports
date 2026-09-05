@@ -1,13 +1,9 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import Redis from 'ioredis';
+import { REDIS_CLIENT } from './redis-client.token';
+import { RedisLifecycleService } from './redis-lifecycle.service';
 
-// DI-токен клиента Redis — по аналогии с UNIT_OF_WORK/DatabaseModule
-// (см. backend/src/infrustructure/database/database.module.ts). Redis
-// впервые появляется в проекте этой фичей (design.md, Decision 6): единый
-// клиент на всё приложение, пространство ключей сессий (session:<id>,
-// employee_sessions:<bitrixEmployeeId>) — за модулем session, будущие
-// фичи кэширования переиспользуют этот же клиент, а не заводят второй.
-export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
+export { REDIS_CLIENT } from './redis-client.token';
 
 @Global()
 @Module({
@@ -35,6 +31,7 @@ export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
                 return client;
             },
         },
+        RedisLifecycleService,
     ],
     exports: [REDIS_CLIENT],
 })
