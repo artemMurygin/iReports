@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { Layout } from './Layout'
+import { RouteGuard } from './route-guard'
 import { FunnelReport } from '@/pages/FunnelReport'
 import { ServicesAnalytics } from '@/pages/ServicesReport'
 import { SalesPlanPage } from '@/pages/SalesPlan'
@@ -23,7 +24,16 @@ import { defaults as funnelReportDefaultFilters } from '@/pages/FunnelReport/mod
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <Layout />,
+        // Первая реализация route-guard в проекте (add-bitrix24-auth-and-
+        // rbac, раздел 15 tasks.md): в standalone-контексте без валидной
+        // сессии рендерит `pages/Login` вместо `<Layout />` и его детей; на
+        // защищённых роутах (см. `handle.requiredPermission` у отдельных
+        // роутов ниже) без нужного permission — `pages/AccessDenied`.
+        element: (
+            <RouteGuard>
+                <Layout />
+            </RouteGuard>
+        ),
         children: [
             {
                 index: true,

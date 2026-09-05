@@ -169,10 +169,18 @@
 
 ## 15. Frontend: контекст запуска + защита роутов приложения (TDD)
 
-- [ ] 15.1 Написать тесты (`*.spec.tsx`/`*.spec.ts` рядом с файлом, Vitest): `detectRuntimeContext()` (`frontend/src/shared/lib/`) возвращает `'iframe'` при `window.self !== window.top` и наличии BX24 SDK, иначе `'standalone'`; обёртка вокруг роутов в `frontend/src/app/router.tsx` рендерит `pages/Login` в standalone-контексте без валидной сессии и `pages/AccessDenied` при отсутствии нужного permission у защищённого роута. Verify: тесты видны раннеру (`npm run test`).
-- [ ] 15.2 Прогнать тесты из 15.1, зафиксировать red.
-- [ ] 15.3 Реализовать `detectRuntimeContext`, `shared/api/session-token.ts` (in-memory holder для iframe), axios-интерцептор в `frontend/src/shared/api/axios.instance.ts` (подстановка `Authorization: Bearer` в iframe-контексте), обёртку защиты роутов вокруг `element: <Layout />` в `frontend/src/app/router.tsx` (первая реализация route-guard в проекте — см. разведку кодовой базы).
-- [ ] 15.4 Прогнать тесты из 15.1, зафиксировать green, регрессий нет.
+- [x] 15.1 Написать тесты (`*.spec.tsx`/`*.spec.ts` рядом с файлом, Vitest): `detectRuntimeContext()` (`frontend/src/shared/lib/`) возвращает `'iframe'` при `window.self !== window.top` и наличии BX24 SDK, иначе `'standalone'`; обёртка вокруг роутов в `frontend/src/app/router.tsx` рендерит `pages/Login` в standalone-контексте без валидной сессии и `pages/AccessDenied` при отсутствии нужного permission у защищённого роута. Verify: тесты видны раннеру (`npm run test`).
+- [x] 15.2 Прогнать тесты из 15.1, зафиксировать red.
+- [x] 15.3 Реализовать `detectRuntimeContext`, `shared/api/session-token.ts` (in-memory holder для iframe), axios-интерцептор в `frontend/src/shared/api/axios.instance.ts` (подстановка `Authorization: Bearer` в iframe-контексте), обёртку защиты роутов вокруг `element: <Layout />` в `frontend/src/app/router.tsx` (первая реализация route-guard в проекте — см. разведку кодовой базы).
+
+  Примечание: `pages/Login`/`pages/AccessDenied` (нужны route-guard'у как цель рендера) на этом
+  этапе — минимальные текстовые заглушки (`ui/LoginPage.tsx`/`ui/AccessDeniedPage.tsx`), а не
+  вёрстка по фреймам `cewQc`/`WZqMK` — та приходит разделами 17/18 и заменит содержимое этих же
+  файлов. Проверка сессии/permission в `app/route-guard/model/session.api.ts` дергает
+  `GET /v1/auth/me` напрямую тем же query-ключом (`auth-me`), которым, ожидается, воспользуется
+  `features/Auth`'s `useCurrentUser` из раздела 16 — риск отмечен в финальном отчёте раздела 15
+  как то, что раздел 16 должен свести к одному источнику (не обязательно к дублированию).
+- [x] 15.4 Прогнать тесты из 15.1, зафиксировать green, регрессий нет.
 
 ## 16. Frontend: `features/Auth` (TDD)
 
