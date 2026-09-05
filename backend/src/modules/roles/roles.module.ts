@@ -1,19 +1,25 @@
 import { Module } from '@nestjs/common';
+import { SessionModule } from '@/modules/session/session.module';
 import { PERMISSION_REGISTRY } from './application/ports/permission-registry.port';
 import { PERMISSION_CATALOG_REPOSITORY } from './application/ports/permission-catalog.port';
 import { PERMISSIONS_RESOLVER_PORT } from './application/ports/permissions-resolver.port';
+import { ROLE_REPOSITORY } from './application/ports/role.repository.port';
 import { PermissionCatalogRepository } from './infrastructure/repositories/permission-catalog.repository';
+import { RoleRepository } from './infrastructure/repositories/role.repository';
 import { PermissionsCatalogSeeder } from './infrastructure/permissions-catalog.seeder';
 import { PermissionsResolverAdapter } from './infrastructure/permissions-resolver.adapter';
 import { PermissionsGuard } from './interface/permissions.guard';
+import { RolesCommandHandlers } from './application/command/roles-command-handlers.service';
+import { RolesQueryHandlers } from './application/services/roles-query-handlers.service';
 import { ROLES_PERMISSIONS } from './roles.permissions';
 
 // Сквозной модуль ролей/прав (add-bitrix24-auth-and-rbac) — владеет
 // Role/Permission, guard'ами (PermissionsGuard), админ-API (design.md,
 // Decision 1). Живёт вне domains/{service,shop}, по аналогии с
-// src/modules/employee-identity. Наполняется по мере прохождения
-// tasks.md (разделы 9, 10, 11 добавят CRUD ролей/назначение).
+// src/modules/employee-identity. HTTP-контроллеры добавляет раздел 12
+// tasks.md.
 @Module({
+    imports: [SessionModule],
     providers: [
         PermissionsCatalogSeeder,
         {
@@ -37,12 +43,20 @@ import { ROLES_PERMISSIONS } from './roles.permissions';
             useExisting: PermissionsResolverAdapter,
         },
         PermissionsGuard,
+        {
+            provide: ROLE_REPOSITORY,
+            useClass: RoleRepository,
+        },
+        RolesCommandHandlers,
+        RolesQueryHandlers,
     ],
     exports: [
         PermissionsCatalogSeeder,
         PERMISSION_CATALOG_REPOSITORY,
         PERMISSIONS_RESOLVER_PORT,
         PermissionsGuard,
+        RolesCommandHandlers,
+        RolesQueryHandlers,
     ],
 })
 export class RolesModule {}

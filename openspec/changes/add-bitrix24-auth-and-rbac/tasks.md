@@ -92,10 +92,10 @@
 
 ## 9. `roles`: CRUD ролей и каталог прав (TDD)
 
-- [ ] 9.1 Написать тесты на `RolesCommandHandlers`: `createRole`/`renameRole` (уникальность `name`), `deleteRole` (нельзя удалить системную роль `Administrator`); `RolesQueryHandlers.getPermissionsCatalog()` возвращает каталог `Permission` (наполнен `PermissionsCatalogSeeder`, раздел 3) без возможности создать новый код через API (спек `roles`, требование "Каталог permission-кодов формируется из кода"). Verify: тесты видны раннеру.
-- [ ] 9.2 Прогнать тесты из 9.1, зафиксировать red.
-- [ ] 9.3 Реализовать `Role`-агрегат (`domain/`, наследует `backend/src/shared/domain/aggregate-root.base.ts`), `RolesCommandHandlers`/`RolesQueryHandlers` (CQRS, `application/command`), репозиторий ролей (`infrastructure/repositories`); добавить в реестр `roles.permissions.ts` (раздел 3) права `roles:view`, `roles:manage`.
-- [ ] 9.4 Прогнать тесты из 9.1, зафиксировать green, регрессий нет.
+- [x] 9.1 Написать тесты на `RolesCommandHandlers`: `createRole`/`renameRole` (уникальность `name`), `deleteRole` (нельзя удалить системную роль `Administrator`); `RolesQueryHandlers.getPermissionsCatalog()` возвращает каталог `Permission` (наполнен `PermissionsCatalogSeeder`, раздел 3) без возможности создать новый код через API (спек `roles`, требование "Каталог permission-кодов формируется из кода"). Verify: тесты видны раннеру.
+- [x] 9.2 Прогнать тесты из 9.1, зафиксировать red.
+- [x] 9.3 Реализовать `Role`-агрегат (`domain/`, наследует `backend/src/shared/domain/aggregate-root.base.ts`), `RolesCommandHandlers`/`RolesQueryHandlers` (CQRS, `application/command`), репозиторий ролей (`infrastructure/repositories`); добавить в реестр `roles.permissions.ts` (раздел 3) права `roles:view`, `roles:manage`. Каталог-валидация ("нельзя сослаться на несуществующий permission-код") реализована в `createRole`/`updateRolePermissions` — `createRole` принимает опциональный `permissionCodes` сразу (spec: roles#model-role-permission, сценарий "новая роль с набором прав создаётся без деплоя" одним вызовом).
+- [x] 9.4 Прогнать тесты из 9.1, зафиксировать green, регрессий нет.
 
 ## 10. `roles`: назначение ролей сотрудникам + push прав в активные сессии (TDD)
 

@@ -19,6 +19,18 @@ describe('PermissionsCatalogSeeder', () => {
             }
             return Promise.resolve();
         }
+
+        findAll(): Promise<PermissionCatalogEntry[]> {
+            return Promise.resolve([...this.store.values()]);
+        }
+
+        findManyByCodes(codes: string[]): Promise<PermissionCatalogEntry[]> {
+            return Promise.resolve(
+                codes
+                    .map((code) => this.store.get(code))
+                    .filter((entry): entry is PermissionCatalogEntry => !!entry),
+            );
+        }
     }
 
     it('агрегирует реестры нескольких модулей-владельцев в один upsert', async () => {
