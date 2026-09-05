@@ -65,10 +65,23 @@
 
 ## 7. `session`: `SessionService` (Redis) + `SessionAuthGuard`, fail-closed (Decision 10) (TDD)
 
-- [ ] 7.1 Написать тесты: `SessionService` (реализация `SESSION_PORT`) — `createSession` генерирует новый `session_id` при каждом логине (защита от session fixation), `validateSession`/продление TTL (sliding expiration), `invalidateSession`, `invalidateAllSessionsForEmployee` через обратный индекс `employee_sessions:<bitrixEmployeeId>`, `refreshPermissionsForEmployee`; `SessionAuthGuard.canActivate` бросает `UnauthorizedException` при отсутствии/невалидности сессии, включая случай недоступности Redis (fail-closed — Decision 10, не пропускает запрос). Verify: тесты видны раннеру.
-- [ ] 7.2 Прогнать тесты из 7.1, зафиксировать red.
-- [ ] 7.3 Реализовать `SessionService` в `backend/src/modules/session/infrastructure/` (ioredis), `SessionAuthGuard` в `backend/src/modules/session/interface/`, доставка `session_id` — HttpOnly/Secure/SameSite=None cookie либо `Authorization: Bearer` в зависимости от заголовка контекста запроса.
-- [ ] 7.4 Прогнать тесты из 7.1, зафиксировать green, включая сценарий недоступности Redis (мок соединения), регрессий нет.
+- [x] 7.1 Написать тесты: `SessionService` (реализация `SESSION_PORT`) — `createSession` генерирует новый `session_id` при каждом логине (защита от session fixation), `validateSession`/продление TTL (sliding expiration), `invalidateSession`, `invalidateAllSessionsForEmployee` через обратный индекс `employee_sessions:<bitrixEmployeeId>`, `refreshPermissionsForEmployee`; `SessionAuthGuard.canActivate` бросает `UnauthorizedException` при отсутствии/невалидности сессии, включая случай недоступности Redis (fail-closed — Decision 10, не пропускает запрос). Verify: тесты видны раннеру.
+- [x] 7.2 Прогнать тесты из 7.1, зафиксировать red.
+- [x] 7.3 Реализовать `SessionService` в `backend/src/modules/session/infrastructure/` (ioredis), `SessionAuthGuard` в `backend/src/modules/session/interface/`, доставка `session_id` — HttpOnly/Secure/SameSite=None cookie либо `Authorization: Bearer` в зависимости от заголовка контекста запроса.
+- [x] 7.4 Прогнать тесты из 7.1, зафиксировать green, включая сценарий недоступности Redis (мок соединения), регрессий нет.
+
+  Примечание: добавлена зависимость `cookie-parser` (+ `app.use(cookieParser())` в
+  `main.ts`) — без неё `req.cookies` был бы всегда `undefined`, а cookie-доставка
+  session_id для standalone/iOS нерабочей. Метод `validateSessionAndTouch` — часть
+  конкретного класса `SessionService`, не самого `SESSION_PORT` (кросс-модульный контракт
+  по design.md ограничен `createSession`/`invalidateSession`/
+  `invalidateAllSessionsForEmployee`/`refreshPermissionsForEmployee`) — `SessionAuthGuard`
+  живёт в том же модуле и внедряет `SessionService` напрямую, без токена порта. Ключевая
+  схема Redis (`hset`/`hgetall`/`expire`/`sadd`/`srem`/`smembers`/`del`) проверена не
+  только фейком в тестах, но и вручную против реального локального Redis (`brew install
+  redis`, `redis-cli ping` → `PONG`). Проверка `@Public()` в `SessionAuthGuard` умышленно
+  отложена до раздела 8 (design.md, Decision 5 — декоратор появляется вместе с
+  `PermissionsGuard`).
 
 ## 8. `roles`: `PermissionsResolverAdapter`, `PermissionsGuard`, декораторы (TDD)
 
