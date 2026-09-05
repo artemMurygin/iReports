@@ -14,14 +14,26 @@ import {
     PERMISSION_CATALOG_REPOSITORY,
     type PermissionCatalogRepositoryPort,
 } from '../ports/permission-catalog.port';
+import {
+    SESSION_PORT,
+    type SessionPort,
+} from '@/modules/session/application/ports/session.port';
+import { PermissionsResolverAdapter } from '../../infrastructure/permissions-resolver.adapter';
 
 // CRUD ролей (spec: roles#model-role-permission) + каталог permission-
 // кодов, ИЗ которого роли могут получать права, но который сам не
 // создаётся через API (spec: roles#permission-catalog-from-code, design.md
-// Decision 12). Единый класс с несколькими методами (не отдельный
-// Command+Handler на каждое действие, как в employee-identity) — так
-// называет их architecture.md ("RolesCommandHandlers"), а сами операции —
-// простые CRUD-сценарии без нужды в шине команд.
+// Decision 12) + назначение ролей сотрудникам и немедленное применение
+// изменений прав роли к активным сессиям (spec:
+// roles#immediate-permission-changes). Единый класс с несколькими методами
+// (не отдельный Command+Handler на каждое действие, как в employee-identity)
+// — так называет их architecture.md ("RolesCommandHandlers"), а сами
+// операции — простые CRUD/связующие сценарии без нужды в шине команд.
+//
+// PermissionsResolverAdapter инжектируется напрямую конкретным классом, а
+// не через PERMISSIONS_RESOLVER_PORT — это тот же модуль-владелец порта
+// (design.md, Decision 1: потребитель порта через Symbol-токен — только
+// ВНЕШНИЙ модуль `auth`), лишняя косвенность внутри одного модуля не нужна.
 @Injectable()
 export class RolesCommandHandlers {
     constructor(
@@ -29,6 +41,9 @@ export class RolesCommandHandlers {
         private readonly roleRepository: RoleRepositoryPort,
         @Inject(PERMISSION_CATALOG_REPOSITORY)
         private readonly catalogRepository: PermissionCatalogRepositoryPort,
+        @Inject(SESSION_PORT)
+        private readonly sessionPort: SessionPort,
+        private readonly permissionsResolver: PermissionsResolverAdapter,
     ) {}
 
     async createRole(
@@ -66,6 +81,62 @@ export class RolesCommandHandlers {
         }
 
         await this.roleRepository.delete(roleId);
+    }
+
+    // Многие-ко-многим EmployeeRole (spec: roles#model-role-permission).
+    // Немедленный push permissions в активные сессии здесь не требуется —
+    // spec (roles#immediate-permission-changes) описывает только изменение
+    // прав уже назначенной роли, не сам факт назначения/снятия роли.
+    async assignRoleToEmployee(
+        bitrixEmployeeId: number,
+        roleId: string,
+    ): Promise<void> {
+        await this.findRoleOrThrow(roleId);
+        await this.roleRepository.assignToEmployee(bitrixEmployeeId, roleId);
+    }
+
+    // Идемпотентно (см. RoleRepository.revokeFromEmployee) — снятие роли,
+    // которая уже не назначена, не считается ошибкой.
+    async revokeRoleFromEmployee(
+        bitrixEmployeeId: number,
+        roleId: string,
+    ): Promise<void> {
+        await this.roleRepository.revokeFromEmployee(bitrixEmployeeId, roleId);
+    }
+
+    // Полная замена набора permissions роли + немедленный push
+    // пересчитанных permissions во все активные сессии сотрудников этой
+    // роли (spec: roles#immediate-permission-changes — снятое право
+    // перестаёт действовать без релогина). Пересчёт идёт через
+    // PermissionsResolverAdapter (не просто новый набор роли), потому что у
+    // сотрудника может быть несколько ролей одновременно — сессия должна
+    // получить объединение прав ВСЕХ его ролей, а не только этой.
+    async updateRolePermissions(
+        roleId: string,
+        permissionCodes: string[],
+    ): Promise<Role> {
+        const role = await this.findRoleOrThrow(roleId);
+        await this.ensureCodesExistInCatalog(permissionCodes);
+
+        role.updatePermissions(permissionCodes);
+        await this.roleRepository.save(role);
+
+        const employeeIds =
+            await this.roleRepository.findEmployeeIdsByRoleId(roleId);
+        await Promise.all(
+            employeeIds.map(async (employeeId) => {
+                const permissions =
+                    await this.permissionsResolver.resolvePermissions(
+                        employeeId,
+                    );
+                await this.sessionPort.refreshPermissionsForEmployee(
+                    employeeId,
+                    permissions,
+                );
+            }),
+        );
+
+        return role;
     }
 
     protected async findRoleOrThrow(roleId: string): Promise<Role> {

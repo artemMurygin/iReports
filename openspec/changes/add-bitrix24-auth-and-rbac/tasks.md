@@ -99,10 +99,10 @@
 
 ## 10. `roles`: назначение ролей сотрудникам + push прав в активные сессии (TDD)
 
-- [ ] 10.1 Написать тесты: `RolesCommandHandlers.assignRoleToEmployee`/`revokeRoleFromEmployee` (many-to-many `EmployeeRole`); `updateRolePermissions(roleId, permissionCodes)` меняет права роли и вызывает `SESSION_PORT.refreshPermissionsForEmployee` для всех сотрудников этой роли (снятое право перестаёт действовать без релогина — спек `roles`). Verify: тесты видны раннеру.
-- [ ] 10.2 Прогнать тесты из 10.1, зафиксировать red.
-- [ ] 10.3 Реализовать `assignRoleToEmployee`/`revokeRoleFromEmployee`/`updateRolePermissions` в `RolesCommandHandlers`, список сотрудников для UI — через уже существующий `DIRECTORY_REPOSITORY` (`backend/src/modules/directory/application/ports/directory.port.ts`, `findEmployees`), не заводить параллельный источник.
-- [ ] 10.4 Прогнать тесты из 10.1, зафиксировать green, регрессий нет.
+- [x] 10.1 Написать тесты: `RolesCommandHandlers.assignRoleToEmployee`/`revokeRoleFromEmployee` (many-to-many `EmployeeRole`); `updateRolePermissions(roleId, permissionCodes)` меняет права роли и вызывает `SESSION_PORT.refreshPermissionsForEmployee` для всех сотрудников этой роли (снятое право перестаёт действовать без релогина — спек `roles`). Verify: тесты видны раннеру.
+- [x] 10.2 Прогнать тесты из 10.1, зафиксировать red.
+- [x] 10.3 Реализовать `assignRoleToEmployee`/`revokeRoleFromEmployee`/`updateRolePermissions` в `RolesCommandHandlers`, список сотрудников для UI — через уже существующий `DIRECTORY_REPOSITORY` (`backend/src/modules/directory/application/ports/directory.port.ts`, `findEmployees`), не заводить параллельный источник. Список сотрудников для UI отдельным методом в `roles` НЕ заводится — architecture.md явно маршрутизирует его через существующий фронтенд-хук `useEmployeeRoleAssignment`, читающий уже существующий эндпоинт `/directory/employees` НАПРЯМУЮ (не через `roles`), поэтому `roles`-модулю сам `DIRECTORY_REPOSITORY` не инжектируется — задел на дублирование источника отсутствует по построению.
+- [x] 10.4 Прогнать тесты из 10.1, зафиксировать green, регрессий нет.
 
 ## 11. Bootstrap первого администратора (Decision 9) (TDD)
 

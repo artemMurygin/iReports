@@ -4,6 +4,8 @@ import { Role } from '../../domain/entities/role.entity';
 import type { RoleRepositoryPort } from '../ports/role.repository.port';
 import type { PermissionCatalogRepositoryPort } from '../ports/permission-catalog.port';
 import type { PermissionCatalogEntry } from '../ports/permission-registry.port';
+import type { SessionPort } from '@/modules/session/application/ports/session.port';
+import type { PermissionsResolverAdapter } from '../../infrastructure/permissions-resolver.adapter';
 import {
     PermissionCodeNotInCatalogException,
     RoleNameAlreadyExistsException,
@@ -23,9 +25,13 @@ describe('RolesCommandHandlers', () => {
     const createHandlers = (options?: {
         roles?: Role[];
         catalog?: PermissionCatalogEntry[];
+        employeeIdsByRole?: Record<string, number[]>;
+        permissionsByEmployee?: Record<number, string[]>;
     }) => {
         const roles = new Map((options?.roles ?? []).map((r) => [r.id, r]));
         const catalog = options?.catalog ?? CATALOG;
+        const employeeIdsByRole = options?.employeeIdsByRole ?? {};
+        const permissionsByEmployee = options?.permissionsByEmployee ?? {};
 
         const roleRepository: jest.Mocked<RoleRepositoryPort> = {
             insert: jest.fn(async (role: Role) => {
@@ -48,7 +54,8 @@ describe('RolesCommandHandlers', () => {
             assignToEmployee: jest.fn(),
             revokeFromEmployee: jest.fn(),
             findEmployeeIdsByRoleId: jest.fn(
-                async (_roleId: string): Promise<number[]> => [],
+                async (roleId: string): Promise<number[]> =>
+                    employeeIdsByRole[roleId] ?? [],
             ),
         };
 
@@ -61,12 +68,35 @@ describe('RolesCommandHandlers', () => {
                 ),
             };
 
+        const sessionPort: jest.Mocked<SessionPort> = {
+            createSession: jest.fn(),
+            invalidateSession: jest.fn(),
+            invalidateAllSessionsForEmployee: jest.fn(),
+            refreshPermissionsForEmployee: jest.fn(),
+        };
+
+        const permissionsResolver = {
+            resolvePermissions: jest.fn(
+                async (bitrixEmployeeId: number): Promise<string[]> =>
+                    permissionsByEmployee[bitrixEmployeeId] ?? [],
+            ),
+        } as unknown as jest.Mocked<PermissionsResolverAdapter>;
+
         const handlers = new RolesCommandHandlers(
             roleRepository,
             catalogRepository,
+            sessionPort,
+            permissionsResolver,
         );
 
-        return { handlers, roleRepository, catalogRepository, roles };
+        return {
+            handlers,
+            roleRepository,
+            catalogRepository,
+            sessionPort,
+            permissionsResolver,
+            roles,
+        };
     };
 
     describe('createRole', () => {
@@ -204,6 +234,149 @@ describe('RolesCommandHandlers', () => {
             await expect(
                 withRequestContext(() => handlers.deleteRole('missing-id')),
             ).rejects.toThrow(RoleNotFoundException);
+        });
+    });
+
+    // spec: roles#model-role-permission — назначение/снятие роли сотруднику
+    // (EmployeeRole, many-to-many).
+    describe('assignRoleToEmployee', () => {
+        it('назначает роль сотруднику', async () => {
+            const role = withRequestContext(() =>
+                Role.create({ name: 'Оператор' }),
+            );
+            const { handlers, roleRepository } = createHandlers({
+                roles: [role],
+            });
+
+            await withRequestContext(() =>
+                handlers.assignRoleToEmployee(42, role.id),
+            );
+
+            expect(roleRepository.assignToEmployee).toHaveBeenCalledWith(
+                42,
+                role.id,
+            );
+        });
+
+        it('бросает RoleNotFoundException при назначении несуществующей роли', async () => {
+            const { handlers, roleRepository } = createHandlers();
+
+            await expect(
+                withRequestContext(() =>
+                    handlers.assignRoleToEmployee(42, 'missing-id'),
+                ),
+            ).rejects.toThrow(RoleNotFoundException);
+            expect(roleRepository.assignToEmployee).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('revokeRoleFromEmployee', () => {
+        it('снимает роль с сотрудника', async () => {
+            const role = withRequestContext(() =>
+                Role.create({ name: 'Оператор' }),
+            );
+            const { handlers, roleRepository } = createHandlers({
+                roles: [role],
+            });
+
+            await withRequestContext(() =>
+                handlers.revokeRoleFromEmployee(42, role.id),
+            );
+
+            expect(roleRepository.revokeFromEmployee).toHaveBeenCalledWith(
+                42,
+                role.id,
+            );
+        });
+    });
+
+    // spec: roles#immediate-permission-changes — снятое право перестаёт
+    // действовать без релогина: updateRolePermissions пересчитывает и
+    // проталкивает permissions во все активные сессии сотрудников этой роли.
+    describe('updateRolePermissions', () => {
+        it('меняет набор permissions роли', async () => {
+            const role = withRequestContext(() =>
+                Role.create({ name: 'Оператор', permissionCodes: ['roles:view'] }),
+            );
+            const { handlers, roleRepository } = createHandlers({
+                roles: [role],
+            });
+
+            const updated = await withRequestContext(() =>
+                handlers.updateRolePermissions(role.id, ['roles:manage']),
+            );
+
+            expect(updated.permissionCodes).toEqual(['roles:manage']);
+            expect(roleRepository.save).toHaveBeenCalledWith(role);
+        });
+
+        it('отклоняет permission-код, отсутствующий в каталоге', async () => {
+            const role = withRequestContext(() => Role.create({ name: 'Оператор' }));
+            const { handlers } = createHandlers({ roles: [role] });
+
+            await expect(
+                withRequestContext(() =>
+                    handlers.updateRolePermissions(role.id, ['unknown:code']),
+                ),
+            ).rejects.toThrow(PermissionCodeNotInCatalogException);
+        });
+
+        it('бросает RoleNotFoundException для несуществующей роли', async () => {
+            const { handlers } = createHandlers();
+
+            await expect(
+                withRequestContext(() =>
+                    handlers.updateRolePermissions('missing-id', ['roles:view']),
+                ),
+            ).rejects.toThrow(RoleNotFoundException);
+        });
+
+        it('пересчитывает и проталкивает permissions во все активные сессии сотрудников этой роли (снятое право перестаёт действовать без релогина)', async () => {
+            const role = withRequestContext(() =>
+                Role.create({
+                    name: 'Оператор',
+                    permissionCodes: ['roles:view', 'roles:manage'],
+                }),
+            );
+            const { handlers, sessionPort, permissionsResolver } =
+                createHandlers({
+                    roles: [role],
+                    employeeIdsByRole: { [role.id]: [1, 2] },
+                    permissionsByEmployee: {
+                        1: ['roles:view'],
+                        2: ['roles:view', 'reports:view'],
+                    },
+                });
+
+            await withRequestContext(() =>
+                handlers.updateRolePermissions(role.id, ['roles:view']),
+            );
+
+            expect(permissionsResolver.resolvePermissions).toHaveBeenCalledWith(1);
+            expect(permissionsResolver.resolvePermissions).toHaveBeenCalledWith(2);
+            expect(
+                sessionPort.refreshPermissionsForEmployee,
+            ).toHaveBeenCalledWith(1, ['roles:view']);
+            expect(
+                sessionPort.refreshPermissionsForEmployee,
+            ).toHaveBeenCalledWith(2, ['roles:view', 'reports:view']);
+        });
+
+        it('не трогает сессии, если у роли нет ни одного сотрудника', async () => {
+            const role = withRequestContext(() =>
+                Role.create({ name: 'Оператор' }),
+            );
+            const { handlers, sessionPort } = createHandlers({
+                roles: [role],
+            });
+
+            await withRequestContext(() =>
+                handlers.updateRolePermissions(role.id, ['roles:view']),
+            );
+
+            expect(
+                sessionPort.refreshPermissionsForEmployee,
+            ).not.toHaveBeenCalled();
         });
     });
 });
