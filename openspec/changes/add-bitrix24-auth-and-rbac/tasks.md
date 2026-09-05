@@ -50,10 +50,18 @@
 
 ## 6. `auth`: OAuth-логин + обновление токена (TDD)
 
-- [ ] 6.1 Написать тесты: `BitrixOAuthLoginHandler.execute(code, state)` обменивает `code` на токены через `oauth.bitrix24.tech/oauth/token/` (design.md — не через legacy `oauth.bitrix.info`, отдельный клиент от `BitrixAuthService.saveInstallation`), резолвит `user.current`, возвращает `{ sessionId, delivery }`; `BitrixTokenRefreshService.getValidAccessToken(bitrixEmployeeId)` обновляет `access_token` через `refresh_token` при истечении `expiresAt` (используя `BitrixCredentials.isExpired()`). Verify: тесты видны раннеру.
-- [ ] 6.2 Прогнать тесты из 6.1, зафиксировать red.
-- [ ] 6.3 Реализовать `BitrixOAuthLoginHandler` и `BitrixTokenRefreshService` в `backend/src/modules/auth/application/`, репозиторий `BitrixEmployeeCredentials` в `backend/src/modules/auth/infrastructure/`.
-- [ ] 6.4 Прогнать тесты из 6.1, зафиксировать green, регрессий нет.
+- [x] 6.1 Написать тесты: `BitrixOAuthLoginHandler.execute(code, state)` обменивает `code` на токены через `oauth.bitrix24.tech/oauth/token/` (design.md — не через legacy `oauth.bitrix.info`, отдельный клиент от `BitrixAuthService.saveInstallation`), резолвит `user.current`, возвращает `{ sessionId, delivery }`; `BitrixTokenRefreshService.getValidAccessToken(bitrixEmployeeId)` обновляет `access_token` через `refresh_token` при истечении `expiresAt` (используя `BitrixCredentials.isExpired()`). Verify: тесты видны раннеру.
+- [x] 6.2 Прогнать тесты из 6.1, зафиксировать red.
+- [x] 6.3 Реализовать `BitrixOAuthLoginHandler` и `BitrixTokenRefreshService` в `backend/src/modules/auth/application/`, репозиторий `BitrixEmployeeCredentials` в `backend/src/modules/auth/infrastructure/`.
+- [x] 6.4 Прогнать тесты из 6.1, зафиксировать green, регрессий нет.
+
+  Открытый вопрос (не решался самостоятельно): `BitrixOAuthLoginHandler.execute` принимает
+  `state` по сигнатуре architecture.md, но параметр не валидируется — ни proposal.md, ни
+  specs/auth/spec.md не описывают, против чего backend должен сверять `state` (обычно —
+  одноразовое значение, выданное перед редиректом на `{portal}/oauth/authorize/`, и
+  сверяемое в момент callback для защиты от CSRF самого OAuth-потока). Решение о механизме
+  хранения/проверки `state` — на усмотрение пользователя, либо явное решение "не проверять
+  в этой итерации" стоит зафиксировать в design.md.
 
 ## 7. `session`: `SessionService` (Redis) + `SessionAuthGuard`, fail-closed (Decision 10) (TDD)
 
