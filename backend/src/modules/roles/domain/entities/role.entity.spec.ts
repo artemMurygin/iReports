@@ -6,7 +6,9 @@ import { Role } from './role.entity';
 // (PermissionCode самовалидируется).
 describe('Role', () => {
     it('создаёт роль без permissions по умолчанию', () => {
-        const role = withRequestContext(() => Role.create({ name: 'Оператор' }));
+        const role = withRequestContext(() =>
+            Role.create({ name: 'Оператор' }),
+        );
 
         expect(role.name).toBe('Оператор');
         expect(role.isSystem).toBe(false);
@@ -39,13 +41,18 @@ describe('Role', () => {
     it('отклоняет создание роли с невалидным форматом permission-кода', () => {
         expect(() =>
             withRequestContext(() =>
-                Role.create({ name: 'Оператор', permissionCodes: ['RolesManage'] }),
+                Role.create({
+                    name: 'Оператор',
+                    permissionCodes: ['RolesManage'],
+                }),
             ),
         ).toThrow();
     });
 
     it('rename() меняет название роли', () => {
-        const role = withRequestContext(() => Role.create({ name: 'Оператор' }));
+        const role = withRequestContext(() =>
+            Role.create({ name: 'Оператор' }),
+        );
 
         withRequestContext(() => role.rename('Старший оператор'));
 
@@ -53,18 +60,27 @@ describe('Role', () => {
     });
 
     it('rename() отклоняет пустое название', () => {
-        const role = withRequestContext(() => Role.create({ name: 'Оператор' }));
+        const role = withRequestContext(() =>
+            Role.create({ name: 'Оператор' }),
+        );
 
         expect(() => withRequestContext(() => role.rename(''))).toThrow();
     });
 
     it('updatePermissions() полностью заменяет набор permissions роли без дублей', () => {
         const role = withRequestContext(() =>
-            Role.create({ name: 'Оператор', permissionCodes: ['reports:view'] }),
+            Role.create({
+                name: 'Оператор',
+                permissionCodes: ['reports:view'],
+            }),
         );
 
         withRequestContext(() =>
-            role.updatePermissions(['reports:edit', 'reports:edit', 'reports:view']),
+            role.updatePermissions([
+                'reports:edit',
+                'reports:edit',
+                'reports:view',
+            ]),
         );
 
         expect([...role.permissionCodes].sort()).toEqual([
@@ -74,7 +90,9 @@ describe('Role', () => {
     });
 
     it('updatePermissions() отклоняет невалидный формат кода', () => {
-        const role = withRequestContext(() => Role.create({ name: 'Оператор' }));
+        const role = withRequestContext(() =>
+            Role.create({ name: 'Оператор' }),
+        );
 
         expect(() =>
             withRequestContext(() => role.updatePermissions(['reports edit'])),

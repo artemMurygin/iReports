@@ -11,9 +11,7 @@ type RoleRecordWithPermissions = RoleRecord & {
     rolePermissions: (RolePermission & { permission: Permission })[];
 };
 
-export class RoleMapper
-    implements Mapper<Role, Prisma.RoleCreateInput>
-{
+export class RoleMapper implements Mapper<Role, Prisma.RoleCreateInput> {
     toDomain(record: RoleRecordWithPermissions): Role {
         return new Role({
             id: record.id,

@@ -164,9 +164,7 @@ export class RolesCommandHandlers {
     // реестра кода) — ни при создании роли, ни при последующем изменении
     // её прав нельзя сослаться на несуществующий код (spec:
     // roles#permission-catalog-from-code).
-    protected async ensureCodesExistInCatalog(
-        codes: string[],
-    ): Promise<void> {
+    protected async ensureCodesExistInCatalog(codes: string[]): Promise<void> {
         if (codes.length === 0) {
             return;
         }

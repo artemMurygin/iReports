@@ -19,30 +19,44 @@ describe('AuthenticatedSessionIssuer', () => {
         isPortalAdmin?: boolean;
         permissions?: string[];
     }) => {
+        const resolvePermissions = jest.fn(() =>
+            Promise.resolve(options?.permissions ?? []),
+        );
         const permissionsResolver: jest.Mocked<PermissionsResolverPort> = {
-            resolvePermissions: jest.fn(
-                async () => options?.permissions ?? [],
-            ),
+            resolvePermissions,
         };
 
+        const createSession = jest.fn(() =>
+            Promise.resolve({ sessionId: 'session-1' }),
+        );
         const sessionPort: jest.Mocked<SessionPort> = {
-            createSession: jest.fn(async () => ({ sessionId: 'session-1' })),
+            createSession,
             invalidateSession: jest.fn(),
             invalidateAllSessionsForEmployee: jest.fn(),
             refreshPermissionsForEmployee: jest.fn(),
         };
 
+        const hasAnyRole = jest.fn(() =>
+            Promise.resolve(options?.hasAnyRole ?? true),
+        );
+        const assignAdministratorRole = jest.fn(() => Promise.resolve());
         const bootstrapAdminPort: jest.Mocked<BootstrapAdminPort> = {
-            hasAnyRole: jest.fn(async () => options?.hasAnyRole ?? true),
-            assignAdministratorRole: jest.fn(),
+            hasAnyRole,
+            assignAdministratorRole,
         };
 
+        const getValidAccessToken = jest.fn(() =>
+            Promise.resolve('valid-access-token'),
+        );
         const tokenRefreshService = {
-            getValidAccessToken: jest.fn(async () => 'valid-access-token'),
+            getValidAccessToken,
         } as unknown as jest.Mocked<BitrixTokenRefreshService>;
 
+        const isPortalAdmin = jest.fn(() =>
+            Promise.resolve(options?.isPortalAdmin ?? false),
+        );
         const portalAdminCheckService = {
-            isPortalAdmin: jest.fn(async () => options?.isPortalAdmin ?? false),
+            isPortalAdmin,
         } as unknown as jest.Mocked<BitrixPortalAdminCheckService>;
 
         const issuer = new AuthenticatedSessionIssuer(
@@ -55,74 +69,78 @@ describe('AuthenticatedSessionIssuer', () => {
 
         return {
             issuer,
-            permissionsResolver,
-            sessionPort,
-            bootstrapAdminPort,
-            tokenRefreshService,
-            portalAdminCheckService,
+            resolvePermissions,
+            createSession,
+            hasAnyRole,
+            assignAdministratorRole,
+            getValidAccessToken,
+            isPortalAdmin,
         };
     };
 
     it('выдаёт сессию с посчитанными permissions (без bootstrap, если у сотрудника уже есть роль)', async () => {
-        const { issuer, sessionPort, bootstrapAdminPort, portalAdminCheckService } =
-            createIssuer({ hasAnyRole: true, permissions: ['reports:view'] });
+        const {
+            issuer,
+            createSession,
+            isPortalAdmin,
+            assignAdministratorRole,
+        } = createIssuer({ hasAnyRole: true, permissions: ['reports:view'] });
 
         const result = await issuer.issueSession(42, 'header');
 
         expect(result).toEqual({ sessionId: 'session-1', delivery: 'header' });
-        expect(sessionPort.createSession).toHaveBeenCalledWith(
+        expect(createSession).toHaveBeenCalledWith(
             42,
             ['reports:view'],
             'header',
         );
         // У сотрудника уже есть роль — REST-вызов user.admin избыточен и не
         // выполняется вовсе.
-        expect(portalAdminCheckService.isPortalAdmin).not.toHaveBeenCalled();
-        expect(bootstrapAdminPort.assignAdministratorRole).not.toHaveBeenCalled();
+        expect(isPortalAdmin).not.toHaveBeenCalled();
+        expect(assignAdministratorRole).not.toHaveBeenCalled();
     });
 
     it('назначает роль Administrator сотруднику без единой роли, если он админ портала Bitrix24', async () => {
         const {
             issuer,
-            bootstrapAdminPort,
-            tokenRefreshService,
-            portalAdminCheckService,
+            getValidAccessToken,
+            isPortalAdmin,
+            assignAdministratorRole,
         } = createIssuer({ hasAnyRole: false, isPortalAdmin: true });
 
         await issuer.issueSession(42, 'cookie');
 
-        expect(tokenRefreshService.getValidAccessToken).toHaveBeenCalledWith(42);
-        expect(portalAdminCheckService.isPortalAdmin).toHaveBeenCalledWith(
-            'valid-access-token',
-        );
-        expect(bootstrapAdminPort.assignAdministratorRole).toHaveBeenCalledWith(
-            42,
-        );
+        expect(getValidAccessToken).toHaveBeenCalledWith(42);
+        expect(isPortalAdmin).toHaveBeenCalledWith('valid-access-token');
+        expect(assignAdministratorRole).toHaveBeenCalledWith(42);
     });
 
     it('не назначает роль Administrator сотруднику без единой роли, если он не админ портала', async () => {
-        const { issuer, bootstrapAdminPort } = createIssuer({
+        const { issuer, assignAdministratorRole } = createIssuer({
             hasAnyRole: false,
             isPortalAdmin: false,
         });
 
         await issuer.issueSession(42, 'cookie');
 
-        expect(bootstrapAdminPort.assignAdministratorRole).not.toHaveBeenCalled();
+        expect(assignAdministratorRole).not.toHaveBeenCalled();
     });
 
     it('пересчитывает permissions ПОСЛЕ bootstrap — назначенная роль отражается в той же сессии без релогина', async () => {
-        const { permissionsResolver, sessionPort, bootstrapAdminPort, issuer } =
-            createIssuer({ hasAnyRole: false, isPortalAdmin: true });
+        const {
+            issuer,
+            resolvePermissions,
+            createSession,
+            assignAdministratorRole,
+        } = createIssuer({ hasAnyRole: false, isPortalAdmin: true });
 
         await issuer.issueSession(42, 'cookie');
 
         const bootstrapCallOrder =
-            bootstrapAdminPort.assignAdministratorRole.mock.invocationCallOrder[0];
-        const resolveCallOrder =
-            permissionsResolver.resolvePermissions.mock.invocationCallOrder[0];
+            assignAdministratorRole.mock.invocationCallOrder[0];
+        const resolveCallOrder = resolvePermissions.mock.invocationCallOrder[0];
         const createSessionCallOrder =
-            sessionPort.createSession.mock.invocationCallOrder[0];
+            createSession.mock.invocationCallOrder[0];
 
         expect(bootstrapCallOrder).toBeLessThan(resolveCallOrder);
         expect(resolveCallOrder).toBeLessThan(createSessionCallOrder);

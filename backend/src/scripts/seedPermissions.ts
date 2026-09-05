@@ -18,11 +18,15 @@ async function bootstrap() {
     try {
         const permissionsCatalogSeeder = app.get(PermissionsCatalogSeeder);
         await permissionsCatalogSeeder.seed();
-        console.log('Каталог permission-кодов синхронизирован с реестрами модулей.');
+        console.log(
+            'Каталог permission-кодов синхронизирован с реестрами модулей.',
+        );
 
         const administratorRoleSeeder = app.get(AdministratorRoleSeeder);
         await administratorRoleSeeder.seed();
-        console.log('Системная роль Administrator синхронизирована с текущим каталогом прав.');
+        console.log(
+            'Системная роль Administrator синхронизирована с текущим каталогом прав.',
+        );
 
         await app.close();
     } catch (error) {

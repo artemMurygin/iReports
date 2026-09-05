@@ -47,9 +47,8 @@ export class SessionAuthGuard implements CanActivate {
             ReturnType<SessionService['validateSessionAndTouch']>
         >;
         try {
-            result = await this.sessionService.validateSessionAndTouch(
-                sessionId,
-            );
+            result =
+                await this.sessionService.validateSessionAndTouch(sessionId);
         } catch {
             // Fail-closed (design.md, Decision 10): недоступность Redis —
             // не пропуск запроса, а отсутствие валидной сессии.
@@ -79,9 +78,11 @@ export class SessionAuthGuard implements CanActivate {
             return authHeader.slice('Bearer '.length).trim();
         }
 
-        const cookieSessionId = (request as Request & {
-            cookies?: Record<string, string>;
-        }).cookies?.session_id;
+        const cookieSessionId = (
+            request as Request & {
+                cookies?: Record<string, string>;
+            }
+        ).cookies?.session_id;
 
         return cookieSessionId ?? null;
     }

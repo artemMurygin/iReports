@@ -33,54 +33,71 @@ describe('RolesCommandHandlers', () => {
         const employeeIdsByRole = options?.employeeIdsByRole ?? {};
         const permissionsByEmployee = options?.permissionsByEmployee ?? {};
 
+        const insert = jest.fn((role: Role) => {
+            roles.set(role.id, role);
+            return Promise.resolve();
+        });
+        const save = jest.fn((role: Role) => {
+            roles.set(role.id, role);
+            return Promise.resolve();
+        });
+        const deleteRole = jest.fn((id: string) => {
+            roles.delete(id);
+            return Promise.resolve();
+        });
+        const findById = jest.fn((id: string) =>
+            Promise.resolve(roles.get(id) ?? null),
+        );
+        const findByName = jest.fn((name: string) => {
+            for (const role of roles.values()) {
+                if (role.name === name) return Promise.resolve(role);
+            }
+            return Promise.resolve(null);
+        });
+        const assignToEmployee = jest.fn(() => Promise.resolve());
+        const revokeFromEmployee = jest.fn(() => Promise.resolve());
+        const findEmployeeIdsByRoleId = jest.fn((roleId: string) =>
+            Promise.resolve(employeeIdsByRole[roleId] ?? []),
+        );
+
         const roleRepository: jest.Mocked<RoleRepositoryPort> = {
-            insert: jest.fn(async (role: Role) => {
-                roles.set(role.id, role);
-            }),
-            save: jest.fn(async (role: Role) => {
-                roles.set(role.id, role);
-            }),
-            delete: jest.fn(async (id: string) => {
-                roles.delete(id);
-            }),
-            findById: jest.fn(async (id: string) => roles.get(id) ?? null),
-            findByName: jest.fn(async (name: string) => {
-                for (const role of roles.values()) {
-                    if (role.name === name) return role;
-                }
-                return null;
-            }),
-            findAll: jest.fn(async () => [...roles.values()]),
-            assignToEmployee: jest.fn(),
-            revokeFromEmployee: jest.fn(),
-            findEmployeeIdsByRoleId: jest.fn(
-                async (roleId: string): Promise<number[]> =>
-                    employeeIdsByRole[roleId] ?? [],
-            ),
-            hasAnyRole: jest.fn(async (): Promise<boolean> => false),
+            insert,
+            save,
+            delete: deleteRole,
+            findById,
+            findByName,
+            findAll: jest.fn(() => Promise.resolve([...roles.values()])),
+            assignToEmployee,
+            revokeFromEmployee,
+            findEmployeeIdsByRoleId,
+            hasAnyRole: jest.fn(() => Promise.resolve(false)),
         };
 
+        const findManyByCodes = jest.fn((codes: string[]) =>
+            Promise.resolve(
+                catalog.filter((entry) => codes.includes(entry.code)),
+            ),
+        );
         const catalogRepository: jest.Mocked<PermissionCatalogRepositoryPort> =
             {
                 upsertMany: jest.fn(),
-                findAll: jest.fn(async () => catalog),
-                findManyByCodes: jest.fn(async (codes: string[]) =>
-                    catalog.filter((entry) => codes.includes(entry.code)),
-                ),
+                findAll: jest.fn(() => Promise.resolve(catalog)),
+                findManyByCodes,
             };
 
+        const refreshPermissionsForEmployee = jest.fn(() => Promise.resolve());
         const sessionPort: jest.Mocked<SessionPort> = {
             createSession: jest.fn(),
             invalidateSession: jest.fn(),
             invalidateAllSessionsForEmployee: jest.fn(),
-            refreshPermissionsForEmployee: jest.fn(),
+            refreshPermissionsForEmployee,
         };
 
+        const resolvePermissions = jest.fn((bitrixEmployeeId: number) =>
+            Promise.resolve(permissionsByEmployee[bitrixEmployeeId] ?? []),
+        );
         const permissionsResolver = {
-            resolvePermissions: jest.fn(
-                async (bitrixEmployeeId: number): Promise<string[]> =>
-                    permissionsByEmployee[bitrixEmployeeId] ?? [],
-            ),
+            resolvePermissions,
         } as unknown as jest.Mocked<PermissionsResolverAdapter>;
 
         const handlers = new RolesCommandHandlers(
@@ -92,24 +109,28 @@ describe('RolesCommandHandlers', () => {
 
         return {
             handlers,
-            roleRepository,
-            catalogRepository,
-            sessionPort,
-            permissionsResolver,
+            insert,
+            save,
+            deleteRole,
+            findByName,
+            assignToEmployee,
+            revokeFromEmployee,
+            refreshPermissionsForEmployee,
+            resolvePermissions,
             roles,
         };
     };
 
     describe('createRole', () => {
         it('создаёт роль без permissions', async () => {
-            const { handlers, roleRepository } = createHandlers();
+            const { handlers, insert } = createHandlers();
 
             const role = await withRequestContext(() =>
                 handlers.createRole('Оператор'),
             );
 
             expect(role.name).toBe('Оператор');
-            expect(roleRepository.insert).toHaveBeenCalledWith(role);
+            expect(insert).toHaveBeenCalledWith(role);
         });
 
         it('создаёт роль сразу с набором permissions ИЗ каталога', async () => {
@@ -155,7 +176,7 @@ describe('RolesCommandHandlers', () => {
             const existing = withRequestContext(() =>
                 Role.create({ name: 'Оператор' }),
             );
-            const { handlers, roleRepository } = createHandlers({
+            const { handlers, save } = createHandlers({
                 roles: [existing],
             });
 
@@ -164,7 +185,7 @@ describe('RolesCommandHandlers', () => {
             );
 
             expect(renamed.name).toBe('Старший оператор');
-            expect(roleRepository.save).toHaveBeenCalledWith(existing);
+            expect(save).toHaveBeenCalledWith(existing);
         });
 
         it('отклоняет переименование в уже занятое имя другой роли', async () => {
@@ -206,27 +227,27 @@ describe('RolesCommandHandlers', () => {
             const existing = withRequestContext(() =>
                 Role.create({ name: 'Оператор' }),
             );
-            const { handlers, roleRepository } = createHandlers({
+            const { handlers, deleteRole } = createHandlers({
                 roles: [existing],
             });
 
             await withRequestContext(() => handlers.deleteRole(existing.id));
 
-            expect(roleRepository.delete).toHaveBeenCalledWith(existing.id);
+            expect(deleteRole).toHaveBeenCalledWith(existing.id);
         });
 
         it('отклоняет удаление системной роли Administrator', async () => {
             const admin = withRequestContext(() =>
                 Role.create({ name: 'Administrator', isSystem: true }),
             );
-            const { handlers, roleRepository } = createHandlers({
+            const { handlers, deleteRole } = createHandlers({
                 roles: [admin],
             });
 
             await expect(
                 withRequestContext(() => handlers.deleteRole(admin.id)),
             ).rejects.toThrow(SystemRoleCannotBeDeletedException);
-            expect(roleRepository.delete).not.toHaveBeenCalled();
+            expect(deleteRole).not.toHaveBeenCalled();
         });
 
         it('бросает RoleNotFoundException для несуществующей роли', async () => {
@@ -245,7 +266,7 @@ describe('RolesCommandHandlers', () => {
             const role = withRequestContext(() =>
                 Role.create({ name: 'Оператор' }),
             );
-            const { handlers, roleRepository } = createHandlers({
+            const { handlers, assignToEmployee } = createHandlers({
                 roles: [role],
             });
 
@@ -253,21 +274,18 @@ describe('RolesCommandHandlers', () => {
                 handlers.assignRoleToEmployee(42, role.id),
             );
 
-            expect(roleRepository.assignToEmployee).toHaveBeenCalledWith(
-                42,
-                role.id,
-            );
+            expect(assignToEmployee).toHaveBeenCalledWith(42, role.id);
         });
 
         it('бросает RoleNotFoundException при назначении несуществующей роли', async () => {
-            const { handlers, roleRepository } = createHandlers();
+            const { handlers, assignToEmployee } = createHandlers();
 
             await expect(
                 withRequestContext(() =>
                     handlers.assignRoleToEmployee(42, 'missing-id'),
                 ),
             ).rejects.toThrow(RoleNotFoundException);
-            expect(roleRepository.assignToEmployee).not.toHaveBeenCalled();
+            expect(assignToEmployee).not.toHaveBeenCalled();
         });
     });
 
@@ -276,7 +294,7 @@ describe('RolesCommandHandlers', () => {
             const role = withRequestContext(() =>
                 Role.create({ name: 'Оператор' }),
             );
-            const { handlers, roleRepository } = createHandlers({
+            const { handlers, revokeFromEmployee } = createHandlers({
                 roles: [role],
             });
 
@@ -284,10 +302,7 @@ describe('RolesCommandHandlers', () => {
                 handlers.revokeRoleFromEmployee(42, role.id),
             );
 
-            expect(roleRepository.revokeFromEmployee).toHaveBeenCalledWith(
-                42,
-                role.id,
-            );
+            expect(revokeFromEmployee).toHaveBeenCalledWith(42, role.id);
         });
     });
 
@@ -297,9 +312,12 @@ describe('RolesCommandHandlers', () => {
     describe('updateRolePermissions', () => {
         it('меняет набор permissions роли', async () => {
             const role = withRequestContext(() =>
-                Role.create({ name: 'Оператор', permissionCodes: ['roles:view'] }),
+                Role.create({
+                    name: 'Оператор',
+                    permissionCodes: ['roles:view'],
+                }),
             );
-            const { handlers, roleRepository } = createHandlers({
+            const { handlers, save } = createHandlers({
                 roles: [role],
             });
 
@@ -308,11 +326,13 @@ describe('RolesCommandHandlers', () => {
             );
 
             expect(updated.permissionCodes).toEqual(['roles:manage']);
-            expect(roleRepository.save).toHaveBeenCalledWith(role);
+            expect(save).toHaveBeenCalledWith(role);
         });
 
         it('отклоняет permission-код, отсутствующий в каталоге', async () => {
-            const role = withRequestContext(() => Role.create({ name: 'Оператор' }));
+            const role = withRequestContext(() =>
+                Role.create({ name: 'Оператор' }),
+            );
             const { handlers } = createHandlers({ roles: [role] });
 
             await expect(
@@ -327,7 +347,9 @@ describe('RolesCommandHandlers', () => {
 
             await expect(
                 withRequestContext(() =>
-                    handlers.updateRolePermissions('missing-id', ['roles:view']),
+                    handlers.updateRolePermissions('missing-id', [
+                        'roles:view',
+                    ]),
                 ),
             ).rejects.toThrow(RoleNotFoundException);
         });
@@ -339,35 +361,39 @@ describe('RolesCommandHandlers', () => {
                     permissionCodes: ['roles:view', 'roles:manage'],
                 }),
             );
-            const { handlers, sessionPort, permissionsResolver } =
-                createHandlers({
-                    roles: [role],
-                    employeeIdsByRole: { [role.id]: [1, 2] },
-                    permissionsByEmployee: {
-                        1: ['roles:view'],
-                        2: ['roles:view', 'reports:view'],
-                    },
-                });
+            const {
+                handlers,
+                resolvePermissions,
+                refreshPermissionsForEmployee,
+            } = createHandlers({
+                roles: [role],
+                employeeIdsByRole: { [role.id]: [1, 2] },
+                permissionsByEmployee: {
+                    1: ['roles:view'],
+                    2: ['roles:view', 'reports:view'],
+                },
+            });
 
             await withRequestContext(() =>
                 handlers.updateRolePermissions(role.id, ['roles:view']),
             );
 
-            expect(permissionsResolver.resolvePermissions).toHaveBeenCalledWith(1);
-            expect(permissionsResolver.resolvePermissions).toHaveBeenCalledWith(2);
-            expect(
-                sessionPort.refreshPermissionsForEmployee,
-            ).toHaveBeenCalledWith(1, ['roles:view']);
-            expect(
-                sessionPort.refreshPermissionsForEmployee,
-            ).toHaveBeenCalledWith(2, ['roles:view', 'reports:view']);
+            expect(resolvePermissions).toHaveBeenCalledWith(1);
+            expect(resolvePermissions).toHaveBeenCalledWith(2);
+            expect(refreshPermissionsForEmployee).toHaveBeenCalledWith(1, [
+                'roles:view',
+            ]);
+            expect(refreshPermissionsForEmployee).toHaveBeenCalledWith(2, [
+                'roles:view',
+                'reports:view',
+            ]);
         });
 
         it('не трогает сессии, если у роли нет ни одного сотрудника', async () => {
             const role = withRequestContext(() =>
                 Role.create({ name: 'Оператор' }),
             );
-            const { handlers, sessionPort } = createHandlers({
+            const { handlers, refreshPermissionsForEmployee } = createHandlers({
                 roles: [role],
             });
 
@@ -375,9 +401,7 @@ describe('RolesCommandHandlers', () => {
                 handlers.updateRolePermissions(role.id, ['roles:view']),
             );
 
-            expect(
-                sessionPort.refreshPermissionsForEmployee,
-            ).not.toHaveBeenCalled();
+            expect(refreshPermissionsForEmployee).not.toHaveBeenCalled();
         });
     });
 });

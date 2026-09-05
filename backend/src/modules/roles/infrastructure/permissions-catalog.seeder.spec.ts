@@ -6,9 +6,7 @@ import type { PermissionCatalogRepositoryPort } from '../application/ports/permi
 // из типизированных реестров модулей-владельцев при деплое (design.md,
 // Decision 12), не рантайм-сканированием и не через UI.
 describe('PermissionsCatalogSeeder', () => {
-    class FakePermissionCatalogRepository
-        implements PermissionCatalogRepositoryPort
-    {
+    class FakePermissionCatalogRepository implements PermissionCatalogRepositoryPort {
         readonly store = new Map<string, PermissionCatalogEntry>();
         upsertCalls = 0;
 
@@ -28,7 +26,9 @@ describe('PermissionsCatalogSeeder', () => {
             return Promise.resolve(
                 codes
                     .map((code) => this.store.get(code))
-                    .filter((entry): entry is PermissionCatalogEntry => !!entry),
+                    .filter(
+                        (entry): entry is PermissionCatalogEntry => !!entry,
+                    ),
             );
         }
     }
@@ -83,7 +83,15 @@ describe('PermissionsCatalogSeeder', () => {
         });
 
         const seeder = new PermissionsCatalogSeeder(
-            [[{ code: 'roles:manage', label: 'Управление ролями', group: 'Роли' }]],
+            [
+                [
+                    {
+                        code: 'roles:manage',
+                        label: 'Управление ролями',
+                        group: 'Роли',
+                    },
+                ],
+            ],
             repo,
         );
 

@@ -67,19 +67,18 @@ export class AuthenticatedSessionIssuer {
     private async bootstrapAdministratorIfNeeded(
         bitrixEmployeeId: number,
     ): Promise<void> {
-        const hasAnyRole = await this.bootstrapAdminPort.hasAnyRole(
-            bitrixEmployeeId,
-        );
+        const hasAnyRole =
+            await this.bootstrapAdminPort.hasAnyRole(bitrixEmployeeId);
         if (hasAnyRole) {
             return;
         }
 
-        const accessToken = await this.tokenRefreshService.getValidAccessToken(
-            bitrixEmployeeId,
-        );
-        const isPortalAdmin = await this.portalAdminCheckService.isPortalAdmin(
-            accessToken,
-        );
+        const accessToken =
+            await this.tokenRefreshService.getValidAccessToken(
+                bitrixEmployeeId,
+            );
+        const isPortalAdmin =
+            await this.portalAdminCheckService.isPortalAdmin(accessToken);
         if (!isPortalAdmin) {
             return;
         }

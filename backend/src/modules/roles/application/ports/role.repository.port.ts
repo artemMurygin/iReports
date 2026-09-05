@@ -15,10 +15,7 @@ export interface RoleRepositoryPort {
 
     // Многие-ко-многим EmployeeRole (spec: roles#model-role-permission).
     assignToEmployee(bitrixEmployeeId: number, roleId: string): Promise<void>;
-    revokeFromEmployee(
-        bitrixEmployeeId: number,
-        roleId: string,
-    ): Promise<void>;
+    revokeFromEmployee(bitrixEmployeeId: number, roleId: string): Promise<void>;
 
     // Все сотрудники, у которых есть эта роль — вход для push новых
     // permissions во все их активные сессии после updateRolePermissions

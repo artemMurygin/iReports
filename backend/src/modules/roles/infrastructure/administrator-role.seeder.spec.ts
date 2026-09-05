@@ -22,32 +22,39 @@ describe('AdministratorRoleSeeder', () => {
         const roles = new Map((options?.roles ?? []).map((r) => [r.id, r]));
         const catalog = options?.catalog ?? CATALOG;
 
+        const insert = jest.fn((role: Role) => {
+            roles.set(role.id, role);
+            return Promise.resolve();
+        });
+        const save = jest.fn((role: Role) => {
+            roles.set(role.id, role);
+            return Promise.resolve();
+        });
+        const findByName = jest.fn((name: string) => {
+            for (const role of roles.values()) {
+                if (role.name === name) return Promise.resolve(role);
+            }
+            return Promise.resolve(null);
+        });
+
         const roleRepository: jest.Mocked<RoleRepositoryPort> = {
-            insert: jest.fn(async (role: Role) => {
-                roles.set(role.id, role);
-            }),
-            save: jest.fn(async (role: Role) => {
-                roles.set(role.id, role);
-            }),
+            insert,
+            save,
             delete: jest.fn(),
-            findById: jest.fn(async (id: string) => roles.get(id) ?? null),
-            findByName: jest.fn(async (name: string) => {
-                for (const role of roles.values()) {
-                    if (role.name === name) return role;
-                }
-                return null;
-            }),
-            findAll: jest.fn(async () => [...roles.values()]),
+            findById: jest.fn(),
+            findByName,
+            findAll: jest.fn(),
             assignToEmployee: jest.fn(),
             revokeFromEmployee: jest.fn(),
             findEmployeeIdsByRoleId: jest.fn(),
             hasAnyRole: jest.fn(),
         };
 
+        const findAllCatalog = jest.fn(() => Promise.resolve(catalog));
         const catalogRepository: jest.Mocked<PermissionCatalogRepositoryPort> =
             {
                 upsertMany: jest.fn(),
-                findAll: jest.fn(async () => catalog),
+                findAll: findAllCatalog,
                 findManyByCodes: jest.fn(),
             };
 
@@ -56,16 +63,16 @@ describe('AdministratorRoleSeeder', () => {
             catalogRepository,
         );
 
-        return { seeder, roleRepository, catalogRepository, roles };
+        return { seeder, insert, save, findByName, roles };
     };
 
     it('создаёт роль Administrator со всеми правами каталога, если её ещё нет', async () => {
-        const { seeder, roleRepository } = createSeeder();
+        const { seeder, insert } = createSeeder();
 
         await seeder.seed();
 
-        expect(roleRepository.insert).toHaveBeenCalledTimes(1);
-        const inserted = roleRepository.insert.mock.calls[0][0];
+        expect(insert).toHaveBeenCalledTimes(1);
+        const inserted = insert.mock.calls[0][0];
         expect(inserted.name).toBe('Administrator');
         expect(inserted.isSystem).toBe(true);
         expect([...inserted.permissionCodes].sort()).toEqual([
@@ -82,18 +89,22 @@ describe('AdministratorRoleSeeder', () => {
                 permissionCodes: ['roles:view'],
             }),
         );
-        const { seeder, roleRepository } = createSeeder({
+        const { seeder, insert, save } = createSeeder({
             roles: [existing],
             catalog: [
                 ...CATALOG,
-                { code: 'directory:manage', label: 'Справочник', group: 'Справочник' },
+                {
+                    code: 'directory:manage',
+                    label: 'Справочник',
+                    group: 'Справочник',
+                },
             ],
         });
 
         await seeder.seed();
 
-        expect(roleRepository.insert).not.toHaveBeenCalled();
-        expect(roleRepository.save).toHaveBeenCalledWith(existing);
+        expect(insert).not.toHaveBeenCalled();
+        expect(save).toHaveBeenCalledWith(existing);
         expect([...existing.permissionCodes].sort()).toEqual([
             'directory:manage',
             'roles:manage',

@@ -15,7 +15,9 @@ export class PermissionsResolverAdapter implements PermissionsResolverPort {
             where: { bitrixEmployeeId },
             include: {
                 role: {
-                    include: { rolePermissions: { include: { permission: true } } },
+                    include: {
+                        rolePermissions: { include: { permission: true } },
+                    },
                 },
             },
         });

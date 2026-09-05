@@ -63,8 +63,8 @@ describe('PermissionsGuard', () => {
     it('отклоняет пользователя вовсе без permissions в сессии (403)', () => {
         const guard = createGuard({ permissions: ['roles:manage'] });
 
-        expect(() => guard.canActivate(buildContext({ permissions: [] }))).toThrow(
-            ForbiddenException,
-        );
+        expect(() =>
+            guard.canActivate(buildContext({ permissions: [] })),
+        ).toThrow(ForbiddenException);
     });
 });

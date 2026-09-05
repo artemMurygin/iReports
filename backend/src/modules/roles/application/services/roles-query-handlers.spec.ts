@@ -11,10 +11,11 @@ describe('RolesQueryHandlers', () => {
             { code: 'roles:view', label: 'Просмотр ролей', group: 'Роли' },
             { code: 'roles:manage', label: 'Управление ролями', group: 'Роли' },
         ];
+        const findAll = jest.fn(() => Promise.resolve(catalog));
         const catalogRepository: jest.Mocked<PermissionCatalogRepositoryPort> =
             {
                 upsertMany: jest.fn(),
-                findAll: jest.fn(async () => catalog),
+                findAll,
                 findManyByCodes: jest.fn(),
             };
 
@@ -23,7 +24,7 @@ describe('RolesQueryHandlers', () => {
         await expect(handlers.getPermissionsCatalog()).resolves.toEqual(
             catalog,
         );
-        expect(catalogRepository.findAll).toHaveBeenCalled();
+        expect(findAll).toHaveBeenCalled();
     });
 
     it('не предоставляет метода создания нового permission-кода', () => {
