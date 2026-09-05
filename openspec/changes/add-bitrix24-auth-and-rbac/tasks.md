@@ -29,10 +29,24 @@
 
 ## 5. `auth`: `BitrixIdentityResolver` + embedded-логин (TDD)
 
-- [ ] 5.1 Написать тесты: `BitrixIdentityResolver.resolveBitrixEmployeeId(accessToken, clientEndpoint)` вызывает `user.current` (по образцу `BitrixPortalAdminCheckService` из `backend/src/integrations/bitrix/auth/portal-admin-check.service.ts` — fail-closed, таймаут 5с), при отсутствии `BitrixEmployee` вызывает `BITRIX_EMPLOYEE_UPSERT_PORT.upsertOne`; `BitrixEmbeddedLoginHandler.execute(authId, memberId)` валидирует `AUTH_ID` реальным REST-запросом (не доверяет фронтенд-данным напрямую) и возвращает `{ sessionId, delivery }`. Verify: тесты видны раннеру.
-- [ ] 5.2 Прогнать тесты из 5.1, зафиксировать red.
-- [ ] 5.3 Реализовать `BitrixIdentityResolver` и `BitrixEmbeddedLoginHandler` в `backend/src/modules/auth/application/`.
-- [ ] 5.4 Прогнать тесты из 5.1, зафиксировать green, регрессий нет.
+- [x] 5.1 Написать тесты: `BitrixIdentityResolver.resolveBitrixEmployeeId(accessToken, clientEndpoint)` вызывает `user.current` (по образцу `BitrixPortalAdminCheckService` из `backend/src/integrations/bitrix/auth/portal-admin-check.service.ts` — fail-closed, таймаут 5с), при отсутствии `BitrixEmployee` вызывает `BITRIX_EMPLOYEE_UPSERT_PORT.upsertOne`; `BitrixEmbeddedLoginHandler.execute(authId, memberId)` валидирует `AUTH_ID` реальным REST-запросом (не доверяет фронтенд-данным напрямую) и возвращает `{ sessionId, delivery }`. Verify: тесты видны раннеру.
+- [x] 5.2 Прогнать тесты из 5.1, зафиксировать red.
+- [x] 5.3 Реализовать `BitrixIdentityResolver` и `BitrixEmbeddedLoginHandler` в `backend/src/modules/auth/application/`.
+- [x] 5.4 Прогнать тесты из 5.1, зафиксировать green, регрессий нет.
+
+  Примечание: `BitrixIdentityResolver` дополнительно отклоняет уволенного сотрудника
+  (`BitrixEmployee.isActive: false`, design.md Decision 2 — проверка "бесплатно" через
+  существующее поле). `BitrixEmbeddedLoginHandler` получает `clientEndpoint` через
+  переиспользование (read-only) `BitrixAuthService.getInstallation(memberId)` из
+  нетронутой интеграции `integrations/bitrix/**`, а не через данные, присланные фронтендом.
+  Общий "хвост" обоих сценариев логина (посчитать permissions → выдать сессию) вынесен в
+  `AuthenticatedSessionIssuer` — используется этим и (в разделе 6) OAuth-хендлером, чтобы
+  bootstrap первого администратора (раздел 11) правился в одном месте. `SESSION_PORT`
+  (session) и `PERMISSIONS_RESOLVER_PORT` (roles) объявлены как токен+интерфейс во
+  владеющих модулях уже сейчас (нужны для сигнатур), их реализации появляются в разделах
+  7 и 8 — `AuthModule`/`SessionModule`/`RolesModule` полностью связываются DI ближе к
+  разделу 12, поэтому `npm run start:dev` целиком не проверялся в этом разделе (проверка
+  тестами через прямое конструирование классов, как и в разделах 3-4).
 
 ## 6. `auth`: OAuth-логин + обновление токена (TDD)
 
