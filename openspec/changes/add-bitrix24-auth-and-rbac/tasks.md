@@ -184,10 +184,25 @@
 
 ## 16. Frontend: `features/Auth` (TDD)
 
-- [ ] 16.1 Написать тесты: `useHasPermission(permission)` читает Zustand-стор; `useCurrentUser` (`GET /auth/me`) возвращает `{ employee, permissions, isInitialLoad }`; `useLogout` (`POST /auth/logout`); `useBitrixLogin().login()` редиректит на `{portal}/oauth/authorize/`; `RequirePermission` рендерит `children` при наличии права, иначе `AccessDeniedScreen`. Verify: тесты видны раннеру.
-- [ ] 16.2 Прогнать тесты из 16.1, зафиксировать red.
-- [ ] 16.3 Добавить зависимость `zustand` в `frontend/package.json` (первое использование в проекте); реализовать `frontend/src/features/Auth/model/api.ts` (queryOptions-фабрики по образцу `frontend/src/features/EmployeeBalance/model/api.ts`, ошибки — через `ApiError` в `.catch()`), `authStore.ts` (Zustand), хуки, `ui/RequirePermission.tsx`, публичный `index.ts` (только корневые экспорты).
-- [ ] 16.4 Прогнать тесты из 16.1, зафиксировать green, регрессий нет.
+- [x] 16.1 Написать тесты: `useHasPermission(permission)` читает Zustand-стор; `useCurrentUser` (`GET /auth/me`) возвращает `{ employee, permissions, isInitialLoad }`; `useLogout` (`POST /auth/logout`); `useBitrixLogin().login()` редиректит на `{portal}/oauth/authorize/`; `RequirePermission` рендерит `children` при наличии права, иначе `AccessDeniedScreen`. Verify: тесты видны раннеру.
+- [x] 16.2 Прогнать тесты из 16.1, зафиксировать red.
+- [x] 16.3 Добавить зависимость `zustand` в `frontend/package.json` (первое использование в проекте); реализовать `frontend/src/features/Auth/model/api.ts` (queryOptions-фабрики по образцу `frontend/src/features/EmployeeBalance/model/api.ts`, ошибки — через `ApiError` в `.catch()`), `authStore.ts` (Zustand), хуки, `ui/RequirePermission.tsx`, публичный `index.ts` (только корневые экспорты).
+- [x] 16.4 Прогнать тесты из 16.1, зафиксировать green, регрессий нет.
+
+  Примечания (открытые вопросы, не решались самостоятельно — см. финальный отчёт раздела 16):
+  - `getCurrentUser` в `model/api.ts` НЕ оборачивает ошибку в `ApiError` (отступление от буквальной
+    формулировки этого пункта) — вместо этого зеркалит fail-closed приём `app/route-guard/model/
+    session.api.ts` (раздел 15: `.catch(() => null)`), т.к. использует тот же query-ключ `auth-me`
+    для разделения кэша с route-guard'ом, а 401 там уже трактуется как ожидаемое "нет сессии", не
+    ошибка; `logout` — обычная мутация, там `ApiError` применён как есть.
+  - `useBitrixLogin` редиректит буквально на `https://irepair.bitrix24.ru/oauth/authorize/` без
+    `client_id`/`redirect_uri`/`state` — эти параметры, а также frontend-страница, принимающая
+    обратный редирект Bitrix24 с `?code=&state=` и вызывающая `POST /v1/auth/oauth/callback`, не
+    описаны ни в одном артефакте change и не заведены ни одним разделом tasks.md.
+  - Добавлена CSRF double-submit подстановка заголовка `x-csrf-token` из cookie `csrf_token` в
+    `shared/api/axios.instance.ts` (не заведена отдельной frontend-задачей нигде в tasks.md,
+    несмотря на явное описание в примечании раздела 13) — без неё `useLogout`'а `POST
+    /v1/auth/logout` отклонялся бы `CsrfGuard`'ом 403-м для cookie-сессий (standalone/iOS).
 
 ## 17. Frontend: `AccessDeniedScreen` + `pages/AccessDenied`
 

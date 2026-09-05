@@ -63,3 +63,50 @@ describe('axios interceptor — Authorization: Bearer в iframe-контекст
         expect(api.defaults.withCredentials).toBe(true)
     })
 })
+
+/**
+ * add-bitrix24-auth-and-rbac, раздел 13 tasks.md (примечание к разделу) +
+ * раздел 16 — double-submit CSRF cookie-варианта нигде явно не заводился
+ * отдельной frontend-задачей, но без него мутирующие запросы cookie-сессии
+ * (например `POST /v1/auth/logout` из `features/Auth`'s `useLogout`)
+ * отклонялись бы `CsrfGuard` 403-м (`backend/src/modules/session/interface/
+ * csrf.guard.ts`). Значения имён cookie/заголовка — `csrf_token`/
+ * `x-csrf-token` (`backend/src/modules/session/session.config.ts`, не
+ * HttpOnly по Decision 7 design.md, поэтому читаемая через `document.cookie`).
+ */
+describe('axios interceptor — CSRF double-submit cookie для мутирующих запросов', () => {
+    afterEach(() => {
+        document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/'
+    })
+
+    it('подставляет x-csrf-token из cookie для POST, когда csrf_token cookie установлена', async () => {
+        document.cookie = 'csrf_token=abc123'
+
+        const config = await runRequestInterceptor({
+            method: 'post',
+            headers: new AxiosHeaders(),
+        } as InternalAxiosRequestConfig)
+
+        expect(config.headers.get('x-csrf-token')).toBe('abc123')
+    })
+
+    it('не подставляет x-csrf-token для безопасного метода GET', async () => {
+        document.cookie = 'csrf_token=abc123'
+
+        const config = await runRequestInterceptor({
+            method: 'get',
+            headers: new AxiosHeaders(),
+        } as InternalAxiosRequestConfig)
+
+        expect(config.headers.has('x-csrf-token')).toBe(false)
+    })
+
+    it('не подставляет x-csrf-token, когда cookie csrf_token отсутствует (например, доставка сессии заголовком в iframe)', async () => {
+        const config = await runRequestInterceptor({
+            method: 'post',
+            headers: new AxiosHeaders(),
+        } as InternalAxiosRequestConfig)
+
+        expect(config.headers.has('x-csrf-token')).toBe(false)
+    })
+})
