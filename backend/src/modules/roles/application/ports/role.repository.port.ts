@@ -24,6 +24,12 @@ export interface RoleRepositoryPort {
     // permissions во все их активные сессии после updateRolePermissions
     // (spec: roles#immediate-permission-changes).
     findEmployeeIdsByRoleId(roleId: string): Promise<number[]>;
+
+    // Есть ли у сотрудника хотя бы одна назначенная роль — вход для
+    // bootstrap первого администратора (design.md, Decision 9, раздел 11
+    // tasks.md): REST-вызов Bitrix24 user.admin имеет смысл только для
+    // сотрудников без единой роли.
+    hasAnyRole(bitrixEmployeeId: number): Promise<boolean>;
 }
 
 export const ROLE_REPOSITORY = Symbol('ROLE_REPOSITORY');

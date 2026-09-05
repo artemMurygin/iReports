@@ -106,10 +106,10 @@
 
 ## 11. Bootstrap первого администратора (Decision 9) (TDD)
 
-- [ ] 11.1 Написать тесты: при логине сотрудника без единой роли backend вызывает Bitrix24 REST `user.admin` с его токеном (тот же приём, что `BitrixPortalAdminCheckService`); если сотрудник — админ портала, ему назначается системная роль `Administrator` (сидируется с полным набором прав каталога — Migration Plan); если не админ — роль не назначается. Verify: тесты видны раннеру.
-- [ ] 11.2 Прогнать тесты из 11.1, зафиксировать red.
-- [ ] 11.3 Реализовать bootstrap-шаг в логин-флоу `auth` (после успешного резолва `bitrixEmployeeId`, до выдачи сессии); добавить сид роли `Administrator` в миграцию/сид-скрипт раздела 3.
-- [ ] 11.4 Прогнать тесты из 11.1, зафиксировать green, регрессий нет.
+- [x] 11.1 Написать тесты: при логине сотрудника без единой роли backend вызывает Bitrix24 REST `user.admin` с его токеном (тот же приём, что `BitrixPortalAdminCheckService`); если сотрудник — админ портала, ему назначается системная роль `Administrator` (сидируется с полным набором прав каталога — Migration Plan); если не админ — роль не назначается. Verify: тесты видны раннеру.
+- [x] 11.2 Прогнать тесты из 11.1, зафиксировать red.
+- [x] 11.3 Реализовать bootstrap-шаг в логин-флоу `auth` (после успешного резолва `bitrixEmployeeId`, до выдачи сессии); добавить сид роли `Administrator` в миграцию/сид-скрипт раздела 3. Реализовано: `BOOTSTRAP_ADMIN_PORT` (владелец `roles`, `hasAnyRole`/`assignAdministratorRole`) + `BootstrapAdminRoleAssigner`; `AuthenticatedSessionIssuer.issueSession` вызывает bootstrap ДО расчёта permissions (переиспользует существующие `BitrixTokenRefreshService.getValidAccessToken` и `BitrixPortalAdminCheckService.isPortalAdmin` — интеграция `integrations/bitrix/**` не изменена, только используется как зависимость); `AdministratorRoleSeeder` (сид, не миграция БД — по аналогии с `PermissionsCatalogSeeder`, раздел 3) подключён вторым шагом в `npm run seed:permissions` (`src/scripts/seedPermissions.ts`).
+- [x] 11.4 Прогнать тесты из 11.1, зафиксировать green, регрессий нет.
 
 ## 12. HTTP-слой: контракты, контроллеры, Swagger, ENDPOINTS.md
 

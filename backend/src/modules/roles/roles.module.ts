@@ -11,6 +11,9 @@ import { PermissionsResolverAdapter } from './infrastructure/permissions-resolve
 import { PermissionsGuard } from './interface/permissions.guard';
 import { RolesCommandHandlers } from './application/command/roles-command-handlers.service';
 import { RolesQueryHandlers } from './application/services/roles-query-handlers.service';
+import { BOOTSTRAP_ADMIN_PORT } from './application/ports/bootstrap-admin.port';
+import { BootstrapAdminRoleAssigner } from './application/services/bootstrap-admin-role-assigner.service';
+import { AdministratorRoleSeeder } from './infrastructure/administrator-role.seeder';
 import { ROLES_PERMISSIONS } from './roles.permissions';
 
 // Сквозной модуль ролей/прав (add-bitrix24-auth-and-rbac) — владеет
@@ -49,6 +52,12 @@ import { ROLES_PERMISSIONS } from './roles.permissions';
         },
         RolesCommandHandlers,
         RolesQueryHandlers,
+        AdministratorRoleSeeder,
+        BootstrapAdminRoleAssigner,
+        {
+            provide: BOOTSTRAP_ADMIN_PORT,
+            useExisting: BootstrapAdminRoleAssigner,
+        },
     ],
     exports: [
         PermissionsCatalogSeeder,
@@ -57,6 +66,8 @@ import { ROLES_PERMISSIONS } from './roles.permissions';
         PermissionsGuard,
         RolesCommandHandlers,
         RolesQueryHandlers,
+        AdministratorRoleSeeder,
+        BOOTSTRAP_ADMIN_PORT,
     ],
 })
 export class RolesModule {}

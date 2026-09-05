@@ -111,4 +111,11 @@ export class RoleRepository
         });
         return rows.map((row) => row.bitrixEmployeeId);
     }
+
+    async hasAnyRole(bitrixEmployeeId: number): Promise<boolean> {
+        const count = await this.client.employeeRole.count({
+            where: { bitrixEmployeeId },
+        });
+        return count > 0;
+    }
 }

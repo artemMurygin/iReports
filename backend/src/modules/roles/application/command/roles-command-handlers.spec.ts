@@ -57,6 +57,7 @@ describe('RolesCommandHandlers', () => {
                 async (roleId: string): Promise<number[]> =>
                     employeeIdsByRole[roleId] ?? [],
             ),
+            hasAnyRole: jest.fn(async (): Promise<boolean> => false),
         };
 
         const catalogRepository: jest.Mocked<PermissionCatalogRepositoryPort> =
