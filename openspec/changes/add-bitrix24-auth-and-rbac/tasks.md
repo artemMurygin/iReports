@@ -6,10 +6,10 @@
 
 ## 2. Value Objects домена (TDD)
 
-- [ ] 2.1 Написать тесты (`*.spec.ts` рядом с VO): `BitrixCredentials.isExpired()` по `expiresAt`; `PermissionCode` принимает только формат `resource:action` и бросает исключение на невалидный формат; `SessionId` — генерация с ≥32 байт энтропии и валидация формата. Verify: тест-раннер (`npm run test`) видит новые файлы.
-- [ ] 2.2 Прогнать тесты из 2.1 и зафиксировать red (классов VO ещё нет).
-- [ ] 2.3 Реализовать `BitrixCredentials`, `PermissionCode`, `SessionId` наследуя `backend/src/shared/domain/value-object.base.ts`, разместить в `domain/` соответствующих модулей (`auth`, `roles`, `session`).
-- [ ] 2.4 Прогнать тесты из 2.1, зафиксировать green, регрессий в соседних тестах нет (`npm run test`).
+- [x] 2.1 Написать тесты (`*.spec.ts` рядом с VO): `BitrixCredentials.isExpired()` по `expiresAt`; `PermissionCode` принимает только формат `resource:action` и бросает исключение на невалидный формат; `SessionId` — генерация с ≥32 байт энтропии и валидация формата. Verify: тест-раннер (`npm run test`) видит новые файлы.
+- [x] 2.2 Прогнать тесты из 2.1 и зафиксировать red (классов VO ещё нет).
+- [x] 2.3 Реализовать `BitrixCredentials`, `PermissionCode`, `SessionId` наследуя `backend/src/shared/domain/value-object.base.ts`, разместить в `domain/` соответствующих модулей (`auth`, `roles`, `session`).
+- [x] 2.4 Прогнать тесты из 2.1, зафиксировать green, регрессий в соседних тестах нет (`npm run test`).
 
 ## 3. Permission-реестр и `PermissionsCatalogSeeder` (Decision 12) (TDD)
 
