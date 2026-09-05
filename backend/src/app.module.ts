@@ -1,5 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+// import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RequestContextMiddleware } from 'nestjs-request-context';
@@ -28,6 +29,8 @@ import { EmployeeBalanceModule } from './modules/employee-balance/employee-balan
 import { AuthModule } from './modules/auth/auth.module';
 import { SessionModule } from './modules/session/session.module';
 import { RolesModule } from './modules/roles/roles.module';
+// import { SessionAuthGuard } from './modules/session/interface/session-auth.guard';
+// import { PermissionsGuard } from './modules/roles/interface/permissions.guard';
 // Аналитика услуг и категории услуг (Фаза 5,
 // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
 // новый дом для src/TODO/reports, удалённого этой же фазой целиком.
@@ -75,6 +78,25 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
             provide: APP_INTERCEPTOR,
             useClass: ContextInterceptor,
         },
+        // add-bitrix24-auth-and-rbac (design.md, Decision 5 + Migration Plan
+        // шаг 6-7): SessionAuthGuard/PermissionsGuard реализованы и покрыты
+        // тестами (разделы 7-8 tasks.md), но НАМЕРЕННО не зарегистрированы
+        // как APP_GUARD здесь — включение делает систему "закрыто по
+        // умолчанию" ОДНОМОМЕНТНО для КАЖДОГО существующего роута
+        // приложения (ни один из них пока не размечен @Public()/
+        // @RequirePermissions). Design.md явно требует переключать это
+        // одним PR/релизом, когда весь frontend уже готов ходить через
+        // сессию (см. features/Auth, разделы 15-21 tasks.md) — до этого
+        // момента преждевременное включение сломает все текущие
+        // эндпоинты продакшена. Раскомментировать эти два провайдера —
+        // финальный шаг перед релизом (соответствует "Итоговой
+        // интеграционной проверке", раздел 21 tasks.md), по аналогии с уже
+        // существующим в проекте паттерном отложенного включения guard'а
+        // (см. PortalAdminGuard, закомментированный в контроллерах
+        // employee-identity, с тем же обоснованием "раскомментировать
+        // одним движением").
+        // { provide: APP_GUARD, useClass: SessionAuthGuard },
+        // { provide: APP_GUARD, useClass: PermissionsGuard },
     ],
 })
 export class AppModule implements NestModule {

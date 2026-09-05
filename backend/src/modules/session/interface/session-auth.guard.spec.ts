@@ -1,11 +1,13 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { SessionAuthGuard } from './session-auth.guard';
 import type { SessionService } from '../infrastructure/session.service';
 
 // spec: session#reject-requests-without-valid-session — fail-closed
 // (design.md, Decision 10): и отсутствие session_id, и невалидная сессия, и
 // недоступность Redis трактуются одинаково — 401, обработчик роута не
-// выполняется.
+// выполняется. spec: roles#public-routes-no-authentication — @Public()
+// освобождает роут от проверки сессии вовсе (design.md, Decision 5).
 describe('SessionAuthGuard', () => {
     const buildContext = (request: any): ExecutionContext =>
         ({
@@ -16,12 +18,15 @@ describe('SessionAuthGuard', () => {
             getClass: () => ({}),
         }) as unknown as ExecutionContext;
 
-    const createGuard = () => {
+    const createGuard = (isPublic = false) => {
         const validateSessionAndTouch = jest.fn();
         const sessionService = {
             validateSessionAndTouch,
         } as unknown as SessionService;
-        const guard = new SessionAuthGuard(sessionService);
+        const reflector = {
+            getAllAndOverride: jest.fn().mockReturnValue(isPublic),
+        } as unknown as Reflector;
+        const guard = new SessionAuthGuard(sessionService, reflector);
         return { guard, validateSessionAndTouch };
     };
 
@@ -108,5 +113,15 @@ describe('SessionAuthGuard', () => {
         await expect(guard.canActivate(buildContext(request))).rejects.toThrow(
             UnauthorizedException,
         );
+    });
+
+    it('пропускает роут с @Public() без session_id вообще', async () => {
+        const { guard, validateSessionAndTouch } = createGuard(true);
+        const request: any = { header: () => undefined, cookies: {} };
+
+        await expect(guard.canActivate(buildContext(request))).resolves.toBe(
+            true,
+        );
+        expect(validateSessionAndTouch).not.toHaveBeenCalled();
     });
 });

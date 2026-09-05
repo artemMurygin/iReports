@@ -85,10 +85,10 @@
 
 ## 8. `roles`: `PermissionsResolverAdapter`, `PermissionsGuard`, декораторы (TDD)
 
-- [ ] 8.1 Написать тесты: `PermissionsResolverAdapter.resolvePermissions(bitrixEmployeeId)` агрегирует `permissionCode` всех ролей сотрудника без дублей; `PermissionsGuard.canActivate` сверяет метаданные `@RequirePermissions('resource:action', ...)` (через `Reflector`) с `request.user.permissions`, бросает `ForbiddenException` при отсутствии хотя бы одного нужного права; роут без `@RequirePermissions` доступен любому аутентифицированному пользователю; роут с `@Public()` не требует сессии вообще. Verify: тесты видны раннеру.
-- [ ] 8.2 Прогнать тесты из 8.1, зафиксировать red.
-- [ ] 8.3 Реализовать `PermissionsResolverAdapter` (`backend/src/modules/roles/infrastructure/`), `PermissionsGuard` (`backend/src/modules/roles/interface/`), декораторы `@RequirePermissions`/`@Public` в `backend/src/shared/decorators/` (используются `Reflector`); подключить `SessionAuthGuard` → `PermissionsGuard` как `APP_GUARD` в этом порядке (Decision 5) в `backend/src/app.module.ts`.
-- [ ] 8.4 Прогнать тесты из 8.1, зафиксировать green, регрессий нет.
+- [x] 8.1 Написать тесты: `PermissionsResolverAdapter.resolvePermissions(bitrixEmployeeId)` агрегирует `permissionCode` всех ролей сотрудника без дублей; `PermissionsGuard.canActivate` сверяет метаданные `@RequirePermissions('resource:action', ...)` (через `Reflector`) с `request.user.permissions`, бросает `ForbiddenException` при отсутствии хотя бы одного нужного права; роут без `@RequirePermissions` доступен любому аутентифицированному пользователю; роут с `@Public()` не требует сессии вообще. Verify: тесты видны раннеру.
+- [x] 8.2 Прогнать тесты из 8.1, зафиксировать red.
+- [x] 8.3 Реализовать `PermissionsResolverAdapter` (`backend/src/modules/roles/infrastructure/`), `PermissionsGuard` (`backend/src/modules/roles/interface/`), декораторы `@RequirePermissions`/`@Public` в `backend/src/shared/decorators/` (используются `Reflector`); подключить `SessionAuthGuard` → `PermissionsGuard` как `APP_GUARD` в этом порядке (Decision 5) в `backend/src/app.module.ts`. Провайдеры `APP_GUARD` реализованы, но намеренно оставлены закомментированными в `app.module.ts` (design.md Migration Plan шаг 6-7: включение "закрыто по умолчанию" — одномоментный последний шаг перед релизом, когда frontend уже готов ходить через сессию; см. комментарий в `app.module.ts` и прецедент `PortalAdminGuard`).
+- [x] 8.4 Прогнать тесты из 8.1, зафиксировать green, регрессий нет.
 
 ## 9. `roles`: CRUD ролей и каталог прав (TDD)
 

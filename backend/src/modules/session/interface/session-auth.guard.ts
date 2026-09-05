@@ -4,8 +4,10 @@ import {
     Injectable,
     UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { SessionService } from '../infrastructure/session.service';
+import { IS_PUBLIC_KEY } from '@/shared/decorators/public.decorator';
 
 export interface AuthenticatedRequestUser {
     employeeId: number;
@@ -13,16 +15,27 @@ export interface AuthenticatedRequestUser {
 }
 
 // spec: roles#session-required-for-protected-routes /
-// session#reject-requests-without-valid-session. Guard'ы бросают нативные
+// session#reject-requests-without-valid-session /
+// roles#public-routes-no-authentication. Guard'ы бросают нативные
 // исключения @nestjs/common, не доменные (design.md, Decision 4) — это
 // инфраструктурная проверка доступа на границе HTTP, а не бизнес-правило
-// конкретного модуля. @Public()-обход добавляется в разделе 8 вместе с
-// PermissionsGuard/Reflector (design.md, Decision 5).
+// конкретного модуля.
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
-    constructor(private readonly sessionService: SessionService) {}
+    constructor(
+        private readonly sessionService: SessionService,
+        private readonly reflector: Reflector,
+    ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        const isPublic = this.reflector.getAllAndOverride<boolean>(
+            IS_PUBLIC_KEY,
+            [context.getHandler(), context.getClass()],
+        );
+        if (isPublic) {
+            return true;
+        }
+
         const request = context.switchToHttp().getRequest<Request>();
         const sessionId = this.extractSessionId(request);
 
