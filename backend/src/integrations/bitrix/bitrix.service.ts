@@ -106,6 +106,16 @@ export class BitrixService {
         return await this._fetchData<BitrixUser>('/user.get');
     }
 
+    // Точечный запрос одного сотрудника по ID (add-bitrix24-auth-and-rbac,
+    // BITRIX_EMPLOYEE_UPSERT_PORT) — тот же метод Bitrix24 REST, что и
+    // fetchEmployees(), но с фильтром по ID вместо полной выгрузки.
+    async fetchEmployeeById(id: number): Promise<BitrixUser | null> {
+        const users = await this._fetchData<BitrixUser>('/user.get', {
+            params: { ID: id },
+        });
+        return users[0] ?? null;
+    }
+
     async fetchEnums(): Promise<BitrixUserField[]> {
         return await this._fetchData<BitrixUserField>(
             '/crm.deal.userfield.list',

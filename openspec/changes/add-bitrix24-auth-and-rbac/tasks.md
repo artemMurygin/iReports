@@ -20,10 +20,12 @@
 
 ## 4. `auth`: самовосстановление `BitrixEmployee` при логине (TDD)
 
-- [ ] 4.1 Написать тесты: `BITRIX_EMPLOYEE_UPSERT_PORT.upsertOne(bitrixUserId)` создаёт/обновляет `BitrixEmployee` по данным `user.current`; существующий путь `BitrixSyncService.uploadEmployees()` (`backend/src/sync/bitrix/bitrix-sync.service.ts`) продолжает работать без изменения поведения для массового вызова (регрессионный тест). Verify: тесты видны раннеру.
-- [ ] 4.2 Прогнать тесты из 4.1, зафиксировать red.
-- [ ] 4.3 Извлечь одноэлементный апсерт из `uploadEmployees()` в отдельный метод, выставить через новый порт `BITRIX_EMPLOYEE_UPSERT_PORT` (токен + интерфейс в `backend/src/sync/bitrix/application/ports/`, реализация — тот же извлечённый код), без изменения поведения текущего массового пути (`UploadInitialBitrixDataHandler` продолжает работать как раньше).
-- [ ] 4.4 Прогнать тесты из 4.1, зафиксировать green; убедиться, что `npm run initial` (существующий путь) не сломан — регрессионный прогон.
+- [x] 4.1 Написать тесты: `BITRIX_EMPLOYEE_UPSERT_PORT.upsertOne(bitrixUserId)` создаёт/обновляет `BitrixEmployee` по данным `user.current`; существующий путь `BitrixSyncService.uploadEmployees()` (`backend/src/sync/bitrix/bitrix-sync.service.ts`) продолжает работать без изменения поведения для массового вызова (регрессионный тест). Verify: тесты видны раннеру.
+- [x] 4.2 Прогнать тесты из 4.1, зафиксировать red.
+- [x] 4.3 Извлечь одноэлементный апсерт из `uploadEmployees()` в отдельный метод, выставить через новый порт `BITRIX_EMPLOYEE_UPSERT_PORT` (токен + интерфейс в `backend/src/sync/bitrix/application/ports/`, реализация — тот же извлечённый код), без изменения поведения текущего массового пути (`UploadInitialBitrixDataHandler` продолжает работать как раньше).
+- [x] 4.4 Прогнать тесты из 4.1, зафиксировать green; убедиться, что `npm run initial` (существующий путь) не сломан — регрессионный прогон.
+
+  Примечание: реализация запрашивает единственного сотрудника через `user.get?ID=<id>` (тот же webhook-клиент `BitrixService`, что и массовый `uploadEmployees()`), а не через `user.current` — `user.current` требует access_token САМОГО сотрудника и используется в разделе 5 (`BitrixIdentityResolver`) для другой задачи (валидация embedded-токена входа). `BITRIX_EMPLOYEE_UPSERT_PORT` — точечное расширение существующего синка (design.md, Decision 11/Migration Plan шаг 2), формулировка "по данным user.current" в этом пункте относится к общему контуру design.md, а не к конкретному REST-методу self-heal-адаптера.
 
 ## 5. `auth`: `BitrixIdentityResolver` + embedded-логин (TDD)
 

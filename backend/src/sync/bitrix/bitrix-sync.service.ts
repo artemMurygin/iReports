@@ -3,6 +3,7 @@ import { DatabaseService } from '../../infrustructure/database/database.service'
 import { BitrixService } from '../../integrations/bitrix/bitrix.service';
 import { BitrixDealSchema } from '../../integrations/bitrix/schema';
 import { UploadLogger } from '../../shared/logger';
+import type { BitrixUser } from '../../integrations/bitrix/bitrix-api.types';
 
 type BitrixDealInput = ReturnType<typeof BitrixDealSchema.parse>;
 
@@ -72,26 +73,7 @@ export class BitrixSyncService {
         try {
             const employees = await this.bitrix.fetchEmployees();
             await Promise.all(
-                employees.map((e) =>
-                    this.db.bitrixEmployee.upsert({
-                        where: { id: Number(e.ID) },
-                        create: {
-                            id: Number(e.ID),
-                            firstName: e.NAME ?? '',
-                            lastName: e.LAST_NAME ?? '',
-                            departmentId: Number(e.UF_DEPARTMENT[0]),
-                            isActive: e.ACTIVE !== false,
-                        },
-                        // isActive — признак увольнения для документов
-                        // начисления (PRD 1 docs/payroll-closing-and-accrual);
-                        // отсутствие поля в ответе трактуется как «активен».
-                        update: {
-                            firstName: e.NAME ?? '',
-                            lastName: e.LAST_NAME ?? '',
-                            isActive: e.ACTIVE !== false,
-                        },
-                    }),
-                ),
+                employees.map((e) => this.upsertEmployeeRecord(e)),
             );
             return employees.length;
         } catch (err) {
@@ -99,6 +81,32 @@ export class BitrixSyncService {
                 `Ошибка синхронизации сотрудников: ${err instanceof Error ? err.message : String(err)}`,
             );
         }
+    }
+
+    // Извлечено из тела uploadEmployees() (add-bitrix24-auth-and-rbac,
+    // design.md Decision 11/Migration Plan шаг 2) — переиспользуется
+    // BitrixEmployeeUpsertAdapter (BITRIX_EMPLOYEE_UPSERT_PORT) для
+    // самовосстановления ОДНОЙ строки BitrixEmployee на пути логина, без
+    // изменения поведения массового вызова выше.
+    async upsertEmployeeRecord(e: BitrixUser): Promise<void> {
+        await this.db.bitrixEmployee.upsert({
+            where: { id: Number(e.ID) },
+            create: {
+                id: Number(e.ID),
+                firstName: e.NAME ?? '',
+                lastName: e.LAST_NAME ?? '',
+                departmentId: Number(e.UF_DEPARTMENT[0]),
+                isActive: e.ACTIVE !== false,
+            },
+            // isActive — признак увольнения для документов начисления
+            // (PRD 1 docs/payroll-closing-and-accrual); отсутствие поля в
+            // ответе трактуется как «активен».
+            update: {
+                firstName: e.NAME ?? '',
+                lastName: e.LAST_NAME ?? '',
+                isActive: e.ACTIVE !== false,
+            },
+        });
     }
 
     async uploadDeviceTypes() {
