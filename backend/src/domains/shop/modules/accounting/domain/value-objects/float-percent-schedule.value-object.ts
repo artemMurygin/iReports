@@ -71,15 +71,11 @@ export class FloatPercentSchedule extends ValueObject<FloatPercentScheduleProps>
         return this.props.borders;
     }
 
+    // spec: shop/accounting#requirement-множитель-по-проценту-выполнения-плана-ступенчатый-или-линейный
+    //
     // mode лежит НА КАЖДОМ пороге и описывает участок ОТ ЭТОГО порога
     // ВПЕРЁД, до следующего порога (или до бесконечности, если порог
-    // последний):
-    // - FIX    — множитель ступенькой: от fromPlanPercent этого порога и
-    //            до следующего действует множитель ЭТОГО порога;
-    // - LINEAR — на отрезке [fromPlanPercent этого порога, fromPlanPercent
-    //            следующего) множитель линейно интерполируется между
-    //            множителем этого порога и множителем следующего.
-    // Ниже самого нижнего порога — множитель 0.
+    // последний).
     resolveMultiplier(percentCompletion: number): number {
         const borders = this.props.borders;
 

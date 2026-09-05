@@ -88,7 +88,7 @@ export class StartPriceImportHandler implements ICommandHandler<
             );
             const costChanges = this.buildCostChanges(matches);
 
-            // await this.updateMoySklad(job, costChanges);
+            await this.updateMoySklad(job, costChanges);
             await this.writeResults(job, costChanges);
 
             job.complete({ matches, costChanges });
@@ -233,8 +233,9 @@ export class StartPriceImportHandler implements ICommandHandler<
         return allMatches;
     }
 
-    // Изменение принимается только для уже сопоставленных позиций с известной новой ценой — тот же
-    // фактический фильтр, что был у легаси `buildMoySkladUpdates`/`writeResultsToSheet`
+    // spec: shop/marketing#requirement-изменение-цены-принимается-только-для-сопоставленных-позиций-с-известной-ценой
+    //
+    // Тот же фактический фильтр, что был у легаси `buildMoySkladUpdates`/`writeResultsToSheet`
     // (`item.price != null && item.externalId != null`), но выраженный явно через доменные методы
     // ProductMatch, а не через ad-hoc проверку на null.
     private buildCostChanges(matches: ProductMatch[]): CostChange[] {

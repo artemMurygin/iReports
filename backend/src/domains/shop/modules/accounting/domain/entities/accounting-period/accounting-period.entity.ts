@@ -23,10 +23,8 @@ export type ShopAccountingPeriodProps = {
 // здесь нет поля `direction`: направление зафиксировано самим расположением
 // класса в домене shop (инфраструктурный слой — ShopAccountingPeriodRepository
 // — подставляет `direction: 'shop'` при работе с общей Prisma-таблицей
-// accounting_periods, см. accounting-period.mapper.ts). Период,
-// для которого ещё нет записи в БД, трактуется вызывающей стороной как OPEN
-// (см. ShopAccountingPeriodRepositoryPort.findByPeriod) — заводить строку
-// заранее на каждый месяц не нужно, первая запись появляется при закрытии.
+// accounting_periods, см. accounting-period.mapper.ts).
+// spec: shop/accounting#requirement-расчётный-период-без-записи-о-статусе-считается-открытым
 //
 // Проверка "все строки плана продаж утверждены" — ответственность
 // application-слоя (CloseShopAccountingPeriodHandler), а не этой сущности.

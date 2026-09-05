@@ -291,6 +291,7 @@ export class MoySkladSyncService {
                 },
             });
 
+            // spec: shop/moysklad-sync#requirement-позиции-отгрузки-при-синхронизации-полностью-замещаются-а-не-дополняются
             await tx.moySkladDemandPosition.deleteMany({
                 where: { demandId: demand.id },
             });
@@ -328,10 +329,7 @@ export class MoySkladSyncService {
                     (p) => !existingProductIds.has(p.assortment!.id),
                 );
                 if (missingProducts.length) {
-                    // Модификация (variant) не приходит в /entity/product и никогда не
-                    // будет докатана uploadProducts() — если не унаследовать folderId у
-                    // родительского товара сейчас, такой placeholder навсегда останется
-                    // без категории и будет выпадать из отчётов, отфильтрованных по ней.
+                    // spec: shop/moysklad-sync#requirement-товар-модификация-отсутствующий-в-каталоге-дозагружается-placeholder-записью-с-категорией-родителя
                     const parentIdByPositionId = new Map(
                         missingProducts.map((p) => [
                             p.id,
@@ -400,6 +398,7 @@ export class MoySkladSyncService {
                     (p) => !existingServiceIds.has(p.assortment!.id),
                 );
                 if (missingServices.length) {
+                    // spec: shop/moysklad-sync#requirement-услуга-отсутствующая-в-каталоге-дозагружается-по-ходу-синхронизации-позиций
                     await tx.moySkladService.createMany({
                         data: missingServices.map((p) => ({
                             id: p.assortment!.id,
@@ -432,10 +431,7 @@ export class MoySkladSyncService {
                     const profit = sum - cost;
                     const assortmentType = p.assortment!.meta.type;
 
-                    // Закупщики БУ техники (Фаза 10) — доп. поля позиции,
-                    // не отгрузки: каждая позиция может ссылаться на своего
-                    // закупщика (см. PURCHASER_ATTRIBUTE_NAME и комментарий
-                    // extractPurchaserExternalId в moysklad-sync.mappers.ts).
+                    // spec: shop/moysklad-sync#requirement-закупщик-бу-техники-резолвится-по-значению-доп-поля-позиции-независимо-от-менеджера-отгрузки
                     const onlinePurchaserId = extractPurchaserExternalId(
                         p.attributes,
                         PURCHASER_ATTRIBUTE_NAME.ONLINE,

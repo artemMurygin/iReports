@@ -26,26 +26,19 @@ import { buildErpDemandLink } from '../../services/erp-demand-link-builder';
 //
 // 1. Роль — ONLINE_PURCHASER/OFFLINE_PURCHASER, уровень ТОВАРНОЙ ПОЗИЦИИ
 //    (employeeMatchesShopPurchaserRole), а не отгрузки.
-// 2. award — только Fixed/FixedPercent, БЕЗ FloatPercent: вознаграждение
-//    закупщика не привязано к выполнению плана продаж (issue #62).
+// 2. award — только Fixed/FixedPercent, БЕЗ FloatPercent.
 // 3. Источник данных — тот же erpData.productSoldItems, что и у
-//    ProductSoldEntity (issue #63: "переиспользуй тот же источник данных...
-//    не изобретай отдельный источник данных под выкуп"), просто матчинг
-//    идёт по полям закупщика (onlinePurchaserId/offlinePurchaserId), а не
-//    менеджера. Позиция физически попадает в productSoldItems уже
-//    отфильтрованной application-слоем по MoySkladDemand.moment своей
-//    отгрузки — поэтому момент начисления закупщику автоматически становится
-//    ПРОДАЖЕЙ, а не выкупом (issue #63): выкупленный, но ещё не проданный
-//    (не попавший ни в одну отгрузку периода) остаток в этот массив не
-//    попадает вообще, calculate() его никогда не увидит.
+//    ProductSoldEntity ("переиспользуй тот же источник данных... не
+//    изобретай отдельный источник данных под выкуп"), просто матчинг идёт
+//    по полям закупщика (onlinePurchaserId/offlinePurchaserId), а не
+//    менеджера.
+// spec: shop/accounting#requirement-вознаграждение-закупщику-считается-только-по-продаже-не-по-факту-выкупа
 //
-// Дедупликация «правило × позиция» (issue #65) — тот же защитный механизм,
-// что у ProductSoldEntity.dedupeByPosition: НЕ дедупликация между
-// ProductSold и UsedProductSold (это разные правила — продавец и закупщик
-// получают оплату независимо, даже если это один и тот же сотрудник, PRD:
-// "разные люди и разные правила, двойным начислением не считается"), а
+// spec: shop/accounting#requirement-дедупликация-одной-и-той-же-позиции-внутри-правила
+//
+// Тот же защитный механизм, что у ProductSoldEntity.dedupeByPosition —
 // защита от повторения одной и той же позиции внутри выборки ОДНОГО этого
-// правила.
+// правила (не между ProductSold и UsedProductSold).
 export class UsedProductSoldEntity
     extends Entity<UsedProductSoldSalaryRule>
     implements ShopSalaryRule
@@ -91,9 +84,7 @@ export class UsedProductSoldEntity
             ),
         );
         const award = this.props.config.award;
-        // Fixed — "за единицу проданного устройства" (issue #62), то же
-        // явное решение на дробном quantity, что у ProductSold (issue #60):
-        // сумма quantity, а не число позиций.
+        // spec: shop/accounting#requirement-награда-по-количеству-считается-по-сумме-количества-а-не-по-числу-позиций
         const totalQuantity = matched.reduce(
             (sum, item) => sum + item.quantity,
             0,
@@ -169,9 +160,11 @@ export class UsedProductSoldEntity
         );
     }
 
-    // Необязательная категория (issue #62: "ставка за БУ айфон и за БУ
-    // ноутбук может отличаться") — идентичная логика ProductSoldEntity,
-    // включая fail closed при незаполненном раскрытии дерева.
+    // spec: shop/accounting#requirement-вознаграждение-закупщику-считается-только-по-продаже-не-по-факту-выкупа
+    // spec: shop/accounting#requirement-категория-обязательная-часть-правила-вознаграждения-за-товар
+    //
+    // Идентичная логика ProductSoldEntity, включая fail closed при
+    // незаполненном раскрытии дерева.
     private matchesCategory(
         item: ShopProductSoldErpItem,
         erpData: ShopCalculationErpData | undefined,

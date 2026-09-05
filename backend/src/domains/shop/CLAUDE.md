@@ -66,169 +66,98 @@ domains/shop/
 ### `sync/moySklad` — синхронизация с ERP
 
 `MoySkladSyncService` тянет данные и делает `upsert` в Prisma-таблицы `moySklad*`
-(`prisma/schema/moySklad.prisma`). Как и в `service`, порядок важен: категории товаров —
-топологическая сортировка родитель→потомок (`topoSortFolders`) перед upsert.
+(`prisma/schema/moySklad.prisma`). `extractIdFromHref` (`moysklad-sync.mappers.ts`) — сквозной
+хелпер: API МойСклад отдаёт связи (сотрудник, контрагент, склад, статус...) как `{ meta: { href } }`,
+а не голым id, поэтому id приходится вытаскивать из URL почти на каждом маппинге.
+`ProductFolderTreeService` (`sync/moySklad/product-folder-tree.service.ts`) живёт в `sync/`, а не в
+`modules/accounting`, потому что это чистый Prisma-доступ к `moySklad*`-таблицам без бизнес-логики
+правил. `ONLINE_MANAGER_ATTR_ID`/`PURCHASER_ATTRIBUTE_NAME` (`moysklad-sync.mappers.ts`) — id/имена
+кастомных атрибутов МойСклад, которыми размечены менеджер и закупщики отгрузки.
+`MoySkladSyncCron` — `@ProdCron(CronExpression.EVERY_5_MINUTES)`.
 
-`extractIdFromHref` (`moysklad-sync.mappers.ts`) — сквозной хелпер: API МойСклад отдаёт связи
-(сотрудник, контрагент, склад, статус...) как `{ meta: { href } }`, а не голым id, поэтому id
-приходится вытаскивать из URL почти на каждом маппинге.
+Бизнес-правила синхронизации (что и в каком порядке синкается, полная замена позиций отгрузки при
+каждом синке, докатка неизвестных товаров/услуг, резолв закупщиков, курсор докатки при сбое) —
+[`openspec/specs/shop/moysklad-sync/spec.md`](../../../../openspec/specs/shop/moysklad-sync/spec.md).
 
-Основной объект синхронизации — **отгрузки (demands)**, ключевая сущность для аналитики продаж
-магазина:
+### `modules/sales` — план продаж и SalesPerformance магазина (Фаза 11, 13.5)
 
-- `uploadDemand` пишет шапку отгрузки (`moySkladDemand`) и её позиции (`moySkladDemandPosition`) в
-  одной Prisma-транзакции, предварительно удаляя старые позиции (`deleteMany` + `createMany`, не
-  diff/upsert по позициям).
-- `ONLINE_MANAGER_ATTR_ID` — id кастомного атрибута в МойСклад, которым размечен
-  онлайн-менеджер отгрузки (в отличие от `owner` — offline-менеджера); без этого атрибута
-  `onlineManagerId` будет `null`.
-- **Товары-модификации (`variant`)** не приходят в `/entity/product` и никогда не будут докатаны
-  обычным `uploadProducts()` — если позиция отгрузки ссылается на неизвестный `variant`, для него
-  на лету создаётся placeholder-запись в `moySkladProduct`, **наследующая `folderId` от
-  родительского товара** (см. комментарий в `uploadDemand`). Это осознанное решение: без
-  унаследованной категории такой товар навсегда останется без `folderId` и будет выпадать из
-  отчётов, отфильтрованных по категории — не убирать это наследование при рефакторинге.
-- Услуги (`service`) в позициях отгрузки, которых ещё нет в `moySkladService`, создаются аналогично
-  через `createMany({ skipDuplicates: true })`.
-- **Закупщики БУ техники и доп. поля (Фаза 10)** — `products.schema.ts` теперь читает `attributes`
-  товара (не только `demands.schema.ts`, как раньше); `extractPurchaserExternalId`
-  (`moysklad-sync.mappers.ts`) достаёт значения кастомных доп. полей `ONLINE_PURCHASER`/
-  `OFFLINE_PURCHASER` из позиции отгрузки и резолвит их в `EmployeeIdentity` тем же механизмом, что
-  строковое поле «онлайн-менеджер» RemOnline у `service`. `onlinePurchaserId`/`offlinePurchaserId`
-  пишутся на уровне `moySkladDemandPosition` (закупщик свой у каждого устройства, а не один на
-  отгрузку — в одном чеке может быть два БУ-айфона от разных закупщиков).
-- **Дерево категорий (Фаза 10)** — `ProductFolderTreeService`
-  (`sync/moySklad/product-folder-tree.service.ts`) раскрывает выбранную категорию
-  (`MoySkladProductFolder`) до всех потомков одним запросом `pathName LIKE 'root.pathName/%'` по
-  индексу `@@index([pathName], ops: text_pattern_ops)`, а не рекурсивным обходом `parentId` — дерево
-  пополняется синком без ограничения глубины, обход в память или O(глубина) запросов деградировал бы
-  с ростом справочника. Живёт в `sync/`, а не в `modules/accounting`, потому что это чистый
-  Prisma-доступ к `moySklad*`-таблицам без бизнес-логики правил.
+Зеркалит структуру и большинство бизнес-правил `domains/service/modules/sales` («план/факт/прогноз»),
+но, начиная с `docs/service-shop-boundary-violations-fix`, **полностью независим**: собственные
+сущности (`ShopSalesPlan`/`ShopSalesPlanTemplate`), репозитории (`SHOP_SALES_PLAN_REPOSITORY`/
+`SHOP_SALES_PLAN_TEMPLATE_REPOSITORY`) и CQRS-хендлеры (`Create/Update/Delete/ApproveShopSalesPlan*`,
+`PutShopSalesPlanTemplate*`, `UpdateShopSalesPlanOrder*`) — ни один класс/токен направления `service`
+не переиспользуется, диспатч через общий `CommandBus` в хендлеры `service` не производится (см.
+`domains/service/CLAUDE.md`, "Общие таблицы между `service` и `shop`" в `backend/CLAUDE.md`).
+`SalesPlan`/`SalesPlanTemplate` — общие Prisma-модели с полем `direction` на каждой строке, но каждый
+домен обращается к ним только через свой собственный набор классов.
 
-`MoySkladSyncCron` (`@ProdCron(CronExpression.EVERY_5_MINUTES)`) синкает через крон **только**
-`uploadUpdatedDemands` — тот же паттерн `failedSince`-checkpoint при ошибке, что у `RoappSyncCron` в
-домене `service` (см. `backend/src/domains/service/CLAUDE.md`). Остальные методы сервиса
-(`uploadEmployees`, `uploadProductFolders`, `uploadProducts`, `uploadServices`) в крон не
-включены — это ручные/разовые операции (`npm run initial`).
+- HTTP: `POST|GET|PATCH|DELETE /v1/shop/sales/plan`, `GET|PUT /v1/shop/sales/plan_template`,
+  `POST /v1/shop/sales/plan/approve`, `GET /v1/shop/sales/salesPerformance/:period` (отдельный роут,
+  не параметр `direction` — сервисный роут жёстко читает RoApp), см.
+  `interface/http-controllers/*.http.controller.ts` и `shopSalesPlanRoot`/`shopSalesPlanTemplateRoot`/
+  `shopSalesPerformanceRoot` в `config/app.routes.ts`.
+- `ShopSalesFact`/`ShopSalesPerformance` — по `MoySkladDemand`/`MoySkladDemandPosition`.
+  `GetShopSalesPerformanceService` (единственная реализация `ShopSalesPerformanceReaderPort`)
+  использует ту же формулу прогноза (`SalesPrognose.forPeriod()`, `src/shared/domain/`), что и
+  `service`.
+- `ShopSalesPlanAutoCreationCron` — собственный крон автосоздания плана первого числа поверх
+  `EnsureShopSalesPlansForPeriodService` (собственный класс, не переиспользует сервисный).
+- `SHOP_SALES_PERFORMANCE_READER` — DI-порт, которым уже пользуется `modules/accounting`
+  (`ProductSoldEntity`/`FloatPercent` принимают его через `context.salesPerformance`).
 
-### `modules/sales` — SalesPerformance магазина (Фаза 11)
+Бизнес-правила (шаблон/план, автосоздание, глобальный порядок строк, факт/прогноз по МойСклад) —
+[`openspec/specs/shop/sales/spec.md`](../../../../openspec/specs/shop/sales/spec.md).
 
-Зеркало `SalesPerformance`-среза `domains/service/modules/sales`, и, с Фазы 13.5, **план и шаблон
-плана продаж для `shop` тоже обслуживаются собственными эндпоинтами** этого модуля
-(`POST|GET|PATCH|DELETE /v1/shop/sales/plan`, `GET|PUT /v1/shop/sales/plan_template`,
-`POST /v1/shop/sales/plan/approve`, см. `interface/http-controllers/*-shop-sales-plan*.http.controller.ts`
-и `shopSalesPlanRoot`/`shopSalesPlanTemplateRoot` в `config/app.routes.ts`) — независимые от
-`domains/service/modules/sales` по HTTP (свой путь, свой контроллер), но не по бизнес-логике:
-`SalesPlan`/`SalesPlanTemplate` — общие Prisma-модели с полем `direction` на каждой строке, без
-ERP-специфичной логики, поэтому контроллеры `shop` не дублируют CRUD, а диспатчат те же классы команд
-(`CreateSalesPlanCommand` и т.д.) из `domains/service/modules/sales/application/command/*` через
-общий на всё приложение `CommandBus` (обработчики регистрирует `SalesModule` направления service —
-они генерик по `direction`, повторная регистрация здесь не нужна), сами подставляя
-`direction: 'shop'` на сервере (не читая его из тела/query запроса) — клиент не может запросить чужое
-направление через этот путь. `ListSalesPlansService`/`ListSalesPlanTemplatesService`/
-`SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY`/`EnsureSalesPlansForPeriodService` — те же
-классы направления `service`, но предоставлены `ShopSalesModule` отдельными экземплярами (Nest DI не
-разделяет провайдеров между модулями без явного экспорта/импорта) — см. `ShopSalesModule`, комментарий
-в `sales.module.ts`.
+### `modules/accounting` — зарплатные правила магазина (Фазы 12–13.5+)
 
-Что у `shop` действительно самостоятельное:
+Полностью независим от одноимённого модуля `domains/service/modules/accounting` — ни один его класс
+здесь не импортируется (`domain/services/role-source.ts`, `money.ts`, `float-percent-schedule.ts` —
+зеркала, но отдельные файлы), включая расчётный период, документ начисления и зарплатные отчёты (см.
+ниже — это тоже полностью самостоятельные классы, а не переиспользование generic-по-`direction`
+классов `service`). Собственный реестр (`shopSalaryRuleRegistry`) и фабрика
+(`ShopSalaryRuleFactory`) трёх типов правил (`PayPerHourEntity`/`ProductSoldEntity`/
+`UsedProductSoldEntity`) — ролей инженера в `shop` нет.
 
-- **`ShopSalesFact`/`ShopSalesPerformance`** — по `MoySkladDemand`/`MoySkladDemandPosition`;
-  ⚠️ маржа берётся из готового `MoySkladDemandPosition.profit` (МойСклад сам считает его с учётом
-  метода списания себестоимости), а НЕ пересчитывается как `turnover - cost`, в отличие от `service`.
-  `quantity` — сумма `Float` (товар может быть весовым/дробным).
-  `GetShopSalesPerformanceService` (единственная реализация `ShopSalesPerformanceReaderPort`) на
-  каждый вызов пересчитывает факт и прогноз (`SalesPrognose.forPeriod()`, та же формула из
-  `src/shared/domain/`, что у `service`) — ни факт, ни прогноз не персистятся.
-- **Отдельный HTTP-эндпоинт** `GET /v1/shop/sales/salesPerformance/:period` вместо параметра
-  `direction` у сервисного `/v1/service/sales/salesPerformance/:period` (см. обоснование раздельного
-  пути в `config/app.routes.ts`) — сервисный роут жёстко читает RoApp и отклоняет любой `direction`,
-  кроме `service`.
-- **`ShopSalesPlanAutoCreationCron`** — собственный крон автосоздания плана первого числа поверх
-  общего `EnsureSalesPlansForPeriodService` (переиспользуется как класс направления `service`, но
-  предоставлен здесь отдельным экземпляром — Nest DI не разделяет провайдеров между модулями без
-  явного экспорта/импорта), плюс ленивое достраивание при первом обращении к периоду — тот же
-  механизм, что у `service` (Фаза 4).
-- `SHOP_SALES_PERFORMANCE_READER` экспортируется как DI-порт для будущего `modules/accounting`
-  (`ProductSoldEntity`/`FloatPercent` магазина уже принимают его через `context.salesPerformance`).
-
-### `modules/accounting` — зарплатные правила магазина (Фазы 12–13)
-
-Собственный реестр (`shopSalaryRuleRegistry`) и фабрика (`ShopSalaryRuleFactory`) правил, независимые
-от одноимённого модуля `domains/service/modules/accounting` — ни один класс сервисного `accounting`
-здесь не импортируется (в т.ч. `domain/services/role-source.ts`, `money.ts`, `float-percent.ts`
-— зеркала, но отдельные файлы). Три типа правил:
-
-- **`PayPerHourEntity`** — почасовая оплата, тот же источник часов, что у `service` (Фаза 5,
-  `docs/employee-work-schedule`): сумма часов рабочих смен графика (`WorkScheduleEntry.status =
-  WORKING`, общая модель без направления в самой сущности — источник данных общий).
-- **`ProductSoldEntity`** — вознаграждение за проданный товар в категории: роль `ONLINE_MANAGER`/
-  `OFFLINE_MANAGER` (уровень **отгрузки**, `MoySkladDemand.onlineManagerId`/`offlineManagerId`),
-  `award` `Fixed`/`FixedPercent`/`FloatPercent`, `salaryBasis` `REVENUE` (`sum`)/`MARGIN` (`profit`) —
-  `SALARY_MINUS_ENGINEER_SALARY` в магазине не существует. Категория — обязательная часть правила
-  (пара «категория × награда», `null` = все товары), раскрывается до потомков через
+- Роли правил: `ONLINE_MANAGER`/`OFFLINE_MANAGER` — на уровне **отгрузки**
+  (`MoySkladDemand.onlineManagerId`/`offlineManagerId`, `role-source.ts`); `ONLINE_PURCHASER`/
+  `OFFLINE_PURCHASER` — на уровне **товарной позиции**
+  (`MoySkladDemandPosition.onlinePurchaserId`/`offlinePurchaserId`). `salaryBasis`:
+  `REVENUE` (`sum`)/`MARGIN` (`profit`) — `SALARY_MINUS_ENGINEER_SALARY` в магазине не существует.
+- Категория правила раскрывается до потомков через
   `ProductFolderTreeService.resolveDescendantFolderIds` заранее application-слоем
-  (`erpData.categoryDescendantFolderIds`), правило только сверяет `folderId` позиции — при
-  отсутствующем раскрытии контекста **fail closed** (лучше не начислить, чем начислить по чужой
-  категории). `Fixed` считается по сумме `quantity` (а не числу позиций) — товар может быть
-  дробным/весовым. `FloatPercent` берёт `context.salesPerformance` **по СВОЕЙ категории**
-  (`docs/shop-sales-performance-by-category`, Фаза 2) — с тех пор как в `shop` появился факт продаж
-  по категории (Фаза 1 того же плана, `ShopSalesFactErpAggregate.category`/
-  `MoySkladSalesFactSourceRepository.aggregate`), `CalculationContext.salesPerformance` больше не
-  единственное значение на отдел, а карта `category → percentCompletion`
-  (`ShopSalesPerformanceByCategory`, ключ `null` = «весь отдел») — `BuildShopCalculationContextService`
-  резолвит её через `ShopSalesPerformanceReaderPort.findForScope(period, department, category)` по
-  каждой уникальной `category` правил `ProductSold`/`UsedProductSold` схемы сотрудника. Правило читает
-  запись по `this.props.config.category`; **fail closed**, если для этой категории в карте нет
-  расчёта (нет плана/факта по scope) — вознаграждение не начисляется, тот же принцип, что и у
-  раскрытия дерева категорий выше. `category` у `ProductSold` и у `SalesPlan`
-  теперь одного типа (`string | null`, для `shop` — UUID папки МойСклад, `MoySkladProductFolder.id`),
-  но это по-прежнему две независимые системы без фактической ссылочной связи/валидации между ними.
-- **`UsedProductSoldEntity`** (Фаза 13) — вознаграждение закупщику БУ техники за **продажу**
-  выкупленного им устройства (не за сам выкуп): роль `ONLINE_PURCHASER`/`OFFLINE_PURCHASER` (уровень
-  **товарной позиции**, `MoySkladDemandPosition.onlinePurchaserId`/`offlinePurchaserId`), тот же
-  источник данных `erpData.productSoldItems`, что у `ProductSoldEntity` (не отдельный) — момент
-  начисления становится «продажей», а не «выкупом» автоматически, потому что application-слой уже
-  отфильтровал позиции по `MoySkladDemand.moment` своей отгрузки внутри периода: невыкупленный или
-  ещё не проданный остаток в выборку не попадает вообще. `award` только `Fixed`/`FixedPercent`, без
-  `FloatPercent` — вознаграждение закупщика не привязано к выполнению плана продаж. Необязательная
-  категория (та же логика раскрытия дерева и fail closed, что у `ProductSoldEntity`).
-- Ролей инженера в `shop` нет. Дедупликация «правило × позиция/источник» — внутри каждого правила
-  независимо (`dedupeByPosition`); вырожденный случай «продавец и закупщик — один сотрудник» не
-  считается двойным начислением — `ProductSold` и `UsedProductSold` разные правила, начисляют
-  независимо.
+  (`erpData.categoryDescendantFolderIds`); `FloatPercent` резолвит `percentCompletion` через
+  карту `category → percentCompletion` (`ShopSalesPerformanceByCategory`,
+  `docs/shop-sales-performance-by-category`), которую строит `BuildShopCalculationContextService`
+  через `ShopSalesPerformanceReaderPort.findForScope(period, department, category)`.
+- `ShopMotivationSchema` (сущность + `ShopMotivationSchemaMapper`/`Repository`, включая
+  `findIdByTarget` — защита от дублирования строки для сотрудника с идентичностями в обеих ERP; у неё
+  нет `direction`, ключ только `(targetType, targetId)`). HTTP-запись: `POST
+  /v1/shop/accounting/motivation-schema` (find-or-create по `findIdByTarget`).
+- Расчёт: `BuildShopCalculationContextService` (зеркало `BuildServiceCalculationContextService`, но
+  `build(period, employeeId, rules)` берёт третьим параметром правила схемы — `categoryDescendantFolderIds`
+  зависит от `category` конкретных правил `ProductSold`/`UsedProductSold`), собственный
+  `PeriodCalculationOrchestrator`/`rule-breakdown.builder`/`to-salary-report-rules.ts`.
+- Расчётный период (`GET|POST /v1/shop/accounting/period/*`), документ начисления
+  (`ShopSalaryAccrual`, `GET .../salary_accrual/*`) и отчёт по зарплате
+  (`GET /v1/shop/accounting/salary_report/{employee,department}/:id/:period`) — **все** независимые
+  от `service` классы: `close`/`reopen`/`recalculate`/`get` обслуживают собственные
+  `Close`/`Reopen`/`RecalculateShopAccountingPeriodHandler`/`GetShopAccountingPeriodService`
+  (`docs/service-shop-boundary-violations-fix`, Фазы 5–6 — до этого `get`/`reopen`/`recalculate`
+  действительно переиспользовали generic-по-`direction` классы `service`, но это было заменено на
+  независимую реализацию), отчёт по зарплате — `GetShopEmployeeSalaryReportService`/
+  `GetShopDepartmentSalaryReportService` (ответ контракта односторонний, не объединяет `service`/
+  `shop` в одном вызове). `ShopAccountingModule` использует собственные, отдельно именованные
+  DI-токены (`SHOP_ACCOUNTING_PERIOD_REPOSITORY`/`SHOP_ACCOUNTING_PERIOD_SNAPSHOT`/
+  `SHOP_ACCOUNTING_CALCULATION_CACHE`/`SHOP_SALARY_ACCRUAL_REPOSITORY`/`SHOP_SALES_PLAN_REPOSITORY`) —
+  не переиспользует токены `service` даже под тем же именем; `AccountingModule` направления `service`
+  `ShopAccountingModule` не импортирует.
+- **Выплата начисленной зарплаты через кассу** (`cashbox-payout`: `create-payout`/
+  `create-payout-batch`/`delete-payout`, конфигурация кассы, кассовый документ ERP) — реализована, но
+  сознательно не описана в спеке ниже (см. Purpose спека и design.md соответствующего change): нюанс
+  интеграции (поле `agent` кассового документа) не проверен на проде.
 
-**Персистентность и оркестратор (Фаза 13.5, см. `docs/payroll/phase-13.5-shop-report-integration.md`)**:
-пробел, ранее задокументированный здесь (только domain-слой правил + `GET
-/v1/shop/accounting/salary_role_types`, без персистентности и без оркестратора расчёта из БД), закрыт.
-Независимая (не переиспользующая классы `service`) реализация: `ShopSalaryRuleMapper`/`schema`/
-`Repository`, `ShopMotivationSchema` (сущность + `ShopMotivationSchemaMapper`/`Repository`, включая
-`findIdByTarget` — защита от дублирования строки `MotivationSchema` для сотрудника с идентичностями в
-обеих ERP, у неё нет `direction`, ключ только `(targetType, targetId)`),
-`BuildShopCalculationContextService` (`application/services/`, зеркало
-`BuildServiceCalculationContextService` — но `build(period, employeeId, rules)` берёт третьим
-параметром правила схемы, так как `categoryDescendantFolderIds` зависит от `category` конкретных
-правил `ProductSold`/`UsedProductSold`), собственный `PeriodCalculationOrchestrator`/
-`rule-breakdown.builder`/`to-salary-report-rules.ts`. HTTP-запись: `POST
-/v1/shop/accounting/motivation-schema` (find-or-create по `findIdByTarget`).
-
-Расчётный период (`GET|POST /v1/shop/accounting/period/*`) и отчёт по зарплате
-(`GET /v1/shop/accounting/salary_report/{employee,department}/:id/:period`) — независимые от
-`service` эндпоинты (Фазы 3–4, см. `domains/service/CLAUDE.md`, разделы «Расчётный период» и
-«Отчёты»): `close` обслуживает собственный `CloseShopAccountingPeriodHandler`
-(`domains/shop/modules/accounting/application/command/`), `get`/`reopen`/`recalculate` переиспользуют
-generic-по-`direction` `GetAccountingPeriodService`/`ReopenAccountingPeriodCommand`/
-`RecalculateAccountingPeriodCommand` сервисного `accounting` напрямую (без своих классов — команда/
-хендлер уже не завязаны на конкретное направление), а отчёт по зарплате — собственные, строго
-однонаправленные `GetShopEmployeeSalaryReportService`/`GetShopDepartmentSalaryReportService` (ответ
-контракта односторонний, не объединяет `service`/`shop` в одном вызове, в отличие от того, как было
-устроено до Фазы 4). `ShopAccountingModule` заводит собственные экземпляры инфраструктурных токенов
-сервисного `accounting` (`ACCOUNTING_PERIOD_REPOSITORY`/`ACCOUNTING_PERIOD_SNAPSHOT`/
-`ACCOUNTING_CALCULATION_CACHE`/`SALES_PLAN_REPOSITORY`) под теми же именами — тот же приём, что уже
-применён в `ShopSalesModule` для `SALES_PLAN_REPOSITORY`/`SALES_PLAN_TEMPLATE_REPOSITORY`; сервисный
-`AccountingModule` `ShopAccountingModule` больше не импортирует (кросс-доменная связь на уровне Nest DI
-между `domains/service` и `domains/shop` в `accounting` полностью устранена, см.
-`domains/service/CLAUDE.md`).
+Бизнес-правила (мотивационная схема, формулы правил, жизненный цикл периода, документ начисления,
+отчёты) — [`openspec/specs/shop/accounting/spec.md`](../../../../openspec/specs/shop/accounting/spec.md).
 
 ## Целевой набор модулей домена
 
@@ -236,12 +165,18 @@ generic-по-`direction` `GetAccountingPeriodService`/`ReopenAccountingPeriodCom
 
 - **`purchasing`** — закупки товара у поставщиков. Не существует.
 - **`logistics`** — логистика (доставка товара, перемещения между складами/точками). Не существует.
-- **`warehouse`** — склад/остатки товаров. Не существует.
+- **`warehouse`** — склад/остатки товаров. Частично реализован: `GET /shop/warehouse/catalog` отдаёт
+  дерево категорий каталога (`GetCatalogService` строит его из уже синхронизированной
+  `MoySkladProductFolder`, без нового синка) — бизнес-правила см.
+  [`openspec/specs/shop/warehouse/spec.md`](../../../../openspec/specs/shop/warehouse/spec.md).
+  Остатки и резервы товара этот модуль не покрывает.
 
 `marketing` уже существует (`modules/marketing/pricing`, Фаза 8–10
 `docs/todo-modules-ddd-refactoring`) — импорт закупочных цен из XLSX-прайса поставщика
-(`POST /v1/shop/marketing/pricing/import-costs` + статус/SSE), см. `ENDPOINTS.md`. Остальная часть
-маркетинга (источники обращений, кампании и их эффективность) в этом модуле пока не покрыта.
+(`POST /v1/shop/marketing/pricing/import-costs` + статус/SSE), см. `ENDPOINTS.md`; бизнес-правила
+пайплайна импорта — [`openspec/specs/shop/marketing/spec.md`](../../../../openspec/specs/shop/marketing/spec.md).
+Остальная часть маркетинга (источники обращений, кампании и их эффективность) в этом модуле пока не
+покрыта.
 
 Именование модулей — короткое существительное на английском, без домена в названии (не
 `shop-warehouse`): домен и так задаёт контекст через путь `domains/shop/modules/*`. Для "склада"

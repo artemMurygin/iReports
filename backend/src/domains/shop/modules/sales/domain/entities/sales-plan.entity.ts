@@ -23,9 +23,8 @@ import {
 // слой — ShopSalesPlanRepository — подставляет `direction: 'shop'` при
 // работе с общей Prisma-таблицей sales_plans, см.
 // infrastructure/mappers/sales-plan.mapper.ts), тот же приём, что уже
-// применён у ShopAccountingPeriod. Отдел/категория и
-// период неизменны после создания (правка на другую комбинацию — это
-// создание новой строки, а не update этой).
+// применён у ShopAccountingPeriod.
+// spec: shop/sales#requirement-план-на-период-неизменен-по-scope
 export class ShopSalesPlan extends Entity<ShopSalesPlanProps> {
     declare protected readonly _id: AggregateID;
 
@@ -91,10 +90,7 @@ export class ShopSalesPlan extends Entity<ShopSalesPlanProps> {
         return this.props.approval?.getApprovedAt() ?? null;
     }
 
-    // Ручная правка значений — не создание, не удаление, не утверждение.
-    // Всегда переводит источник в MANUAL; если строка была утверждена,
-    // сбрасывает статус в CREATED и снимает утверждение целиком (см.
-    // WHY в SalesPlan.edit() направления service — та же семантика).
+    // spec: shop/sales#requirement-ручное-редактирование-плана-сбрасывает-утверждение
     edit(patch: ShopSalesPlanEditProps): void {
         if (patch.turnover !== undefined) {
             this.props.turnover = patch.turnover;
@@ -113,8 +109,7 @@ export class ShopSalesPlan extends Entity<ShopSalesPlanProps> {
         this.validate();
     }
 
-    // Идемпотентно: повторное утверждение просто обновляет
-    // approvedBy/approvedAt на актуальные.
+    // spec: shop/sales#requirement-утверждение-плана-идемпотентно
     approve(approvedBy: number): void {
         this.props.approval = ShopSalesPlanApproval.create(approvedBy);
         this.props.status = 'APPROVED';

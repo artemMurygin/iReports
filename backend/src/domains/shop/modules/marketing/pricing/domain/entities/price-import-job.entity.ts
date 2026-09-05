@@ -102,9 +102,7 @@ export class PriceImportJob extends AggregateRoot<PriceImportJobProps> {
         return this.props.status === 'FAILED';
     }
 
-    // CREATED -> RUNNING, один раз за жизнь джобы. Повторный запуск — в т.ч. джобы, уже
-    // завершившейся COMPLETED/FAILED, — запрещён: новая попытка импорта означает новую джобу
-    // (новый id), а не реюз старой.
+    // spec: shop/marketing#requirement-импорт-цен-джоба-с-явными-статусами-без-повторного-запуска
     start(): void {
         if (!this.isCreated()) {
             throw new PriceImportJobAlreadyStartedException(
@@ -116,9 +114,8 @@ export class PriceImportJob extends AggregateRoot<PriceImportJobProps> {
         this.props.startedAt = new Date();
     }
 
-    // Снапшот прогресса пайплайна (перенос смысла PriceMonitoringProgressService.emit) — допустим
-    // только пока джоба реально выполняется: прогресс у ещё не запущенной или уже завершённой
-    // джобы был бы противоречием состоянию.
+    // Снапшот прогресса пайплайна — перенос смысла PriceMonitoringProgressService.emit (легаси).
+    // spec: shop/marketing#requirement-обновление-прогресса-допустимо-только-у-выполняющейся-джобы
     updateProgress(progress: JobProgress): void {
         if (!this.isRunning()) {
             throw new PriceImportJobNotRunningException(this.id, this.status);

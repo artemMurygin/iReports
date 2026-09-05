@@ -36,13 +36,8 @@ export function buildTemplateSortOrderMap(
 // см. docs/sales-plan-row-drag-and-drop-reorder. Хранится не на самой
 // строке ShopSalesPlan (её id и вообще существование меняются каждый
 // месяц), а на связанном ShopSalesPlanTemplate — период-независимой
-// сущности на том же естественном ключе (department, category). Строки,
-// для чьей комбинации (department, category) сохранённого шаблона нет,
-// уходят в конец списка, не нарушая порядок остальных строк. Группировка
-// по отделу сохраняется как и в прежней сортировке (departmentId asc,
-// categoryId asc, см. ShopSalesPlanRepository.findByPeriod) — sortOrder
-// работает уже внутри отдела; категории без шаблона внутри отдела
-// сортируются по categoryId как раньше, чтобы порядок был детерминирован.
+// сущности на том же естественном ключе (department, category).
+// spec: shop/sales#requirement-глобальный-порядок-строк-плана-наследуется-от-шаблона
 export function orderShopSalesPlansByTemplate(
     plans: ShopSalesPlan[],
     templates: ShopSalesPlanTemplate[],

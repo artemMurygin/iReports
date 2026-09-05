@@ -9,17 +9,15 @@ interface FolderRow {
     parentId: string | null;
 }
 
-// Строит дерево категорий каталога магазина из уже синхронизированной
-// таблицы MoySkladProductFolder (Фаза 10 domains/shop/sync/moySklad) —
-// единственный источник данных, без нового синка (см. PRD, "В скоупе").
+// spec: shop/warehouse#requirement-дерево-категорий-строится-из-уже-синхронизированного-справочника
+//
 // В отличие от ProductFolderTreeService (sync/moySklad/
 // product-folder-tree.service.ts), которому нужны только id потомков ОДНОЙ
 // выбранной ветки (и поэтому выгоден индексированный LIKE-запрос по
 // pathName), здесь нужно дерево целиком — один findMany() и сборка в
-// памяти дешевле, чем N запросов на уровень вложенности. Архивные
-// категории (archived: true) не отфильтровываются — то же поведение, что
-// и у ProductFolderTreeService, справочник не должен молча терять узлы,
-// на которые могут ссылаться архивные товары.
+// памяти дешевле, чем N запросов на уровень вложенности.
+// spec: shop/warehouse#requirement-дерево-строится-одним-запросом-к-справочнику
+// spec: shop/warehouse#requirement-архивные-категории-не-исключаются-из-дерева
 @Injectable()
 export class GetCatalogService {
     constructor(private readonly db: DatabaseService) {}

@@ -12,15 +12,12 @@ import {
 // sales-plan-template.entity.ts (Фаза 7
 // docs/service-shop-boundary-violations-fix, sortOrder/reorder() — Фаза 4
 // docs/sales-plan-row-drag-and-drop-reorder) — независимая копия для
-// направления shop. growthPercent по умолчанию — та же договорённость, что
-// у направления service (10%, см. docs/payroll/prd-payroll-calculation.md).
+// направления shop.
+// spec: shop/sales#requirement-шаблон-плана-как-отправная-точка-отделакатегории
 export const DEFAULT_GROWTH_PERCENT = 10;
 
-// Дефолтные значения плана по отделу и, опционально, категории — стартовая
-// точка для самого первого месяца направления shop и запасной вариант, если
-// плана за предыдущий месяц ещё нет. Как и у ShopSalesPlan, здесь нет поля
-// `direction` — направление зафиксировано расположением класса в домене
-// shop (см. WHY в ShopSalesPlan).
+// Как и у ShopSalesPlan, здесь нет поля `direction` — направление
+// зафиксировано расположением класса в домене shop (см. WHY в ShopSalesPlan).
 export class ShopSalesPlanTemplate extends Entity<ShopSalesPlanTemplateProps> {
     declare protected readonly _id: AggregateID;
 
@@ -73,9 +70,8 @@ export class ShopSalesPlanTemplate extends Entity<ShopSalesPlanTemplateProps> {
     }
 
     // Отдельный от update() метод — намеренно, зеркалит SalesPlanTemplate.
-    // reorder() направления service: батч-эндпоинт переупорядочивания строк
-    // плана (см. UpdateShopSalesPlanOrderHandler) обязан трогать только
-    // sortOrder, никогда turnover/margin/orderTypeIds/growthPercent.
+    // reorder() направления service (см. UpdateShopSalesPlanOrderHandler).
+    // spec: shop/sales#requirement-глобальный-порядок-строк-плана-наследуется-от-шаблона
     reorder(sortOrder: number): void {
         this.props.sortOrder = sortOrder;
         this.validate();

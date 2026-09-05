@@ -64,10 +64,7 @@ export function extractPurchaserExternalId(
         : null;
 }
 
-/**
- * Категории/папки завязаны на self-relation по parentId, поэтому родителя
- * нужно upsert'ить раньше потомка — сортируем обходом дерева.
- */
+// spec: shop/moysklad-sync#requirement-категории-товаров-загружаются-от-родителя-к-потомку
 export function topoSortFolders<
     T extends { id: string; parentId: string | null },
 >(items: T[]): T[] {

@@ -31,13 +31,8 @@ function growBy(value: number, growthPercent: number): number {
 // репозиториев). Идемпотентное достраивание плана месяца — общая операция
 // для крона первого числа (ShopSalesPlanAutoCreationCron) и ленивого
 // достраивания при первом обращении к периоду (ListShopSalesPlansService/
-// GetShopSalesPerformanceService). План месяца никогда не бывает пустым:
-// для каждой комбинации (department, category), встречавшейся в плане
-// предыдущего месяца или в шаблоне, но отсутствующей в текущем периоде,
-// создаётся строка — из предыдущего плана + growthPercent
-// (source = PREVIOUS_MONTH), а если предыдущего плана для этой комбинации
-// нет — из шаблона без надбавки (source = TEMPLATE). Уже существующие
-// строки периода не трогаются вне зависимости от статуса и источника.
+// GetShopSalesPerformanceService).
+// spec: shop/sales#requirement-автосоздание-плана-на-период-идемпотентно
 @Injectable()
 export class EnsureShopSalesPlansForPeriodService {
     constructor(

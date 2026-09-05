@@ -10,12 +10,10 @@ export interface CategoryGroup {
     rows: PriceListRow[];
 }
 
-// Правила категоризации строк прайс-листа магазина — перенос
-// `PriceMonitoringService.categorize` (src/TODO/priceMonitoring/priceMonitoring.service.ts:351)
-// verbatim: регэкспы, их порядок и семантика "первое совпавшее правило побеждает,
-// не подошедшая ни под одно правило строка теряется" не менялись (см. PRD, раздел 3а: "перенос
-// regexp-правил categorize" — "не переносится" мёртвый код рядом, но сама бизнес-логика
-// категоризации — как есть).
+// Перенос `PriceMonitoringService.categorize`
+// (src/TODO/priceMonitoring/priceMonitoring.service.ts:351) verbatim — регэкспы и их порядок не
+// менялись ("не переносится" только мёртвый код рядом, см. PRD, раздел 3а).
+// spec: shop/marketing#requirement-строки-прайс-листа-категоризируются-по-названию-товара-первое-совпадение-побеждает
 export class RowCategorizationService {
     categorize(rows: PriceListRow[]): CategoryGroup[] {
         const rules: { key: CategoryKey; patterns: RegExp[] }[] = [

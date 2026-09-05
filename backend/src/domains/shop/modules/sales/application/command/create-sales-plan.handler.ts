@@ -29,8 +29,7 @@ export class CreateShopSalesPlanHandler implements ICommandHandler<
     async execute(
         command: CreateShopSalesPlanCommand,
     ): Promise<SalesPlanResponse[]> {
-        // Дубли внутри самого запроса отклоняются целиком, до единого
-        // обращения к репозиторию — см. WHY в сервисном зеркале.
+        // spec: shop/sales#requirement-дубли-строк-плана-в-одном-запросе-создания-отклоняются-целиком
         this.assertNoDuplicatesWithinRequest(command.plans);
 
         // Все строки батча создаются атомарно — см. WHY в сервисном

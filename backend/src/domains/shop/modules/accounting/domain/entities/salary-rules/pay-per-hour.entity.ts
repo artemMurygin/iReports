@@ -23,14 +23,14 @@ export class PayPerHourShopEntity
 {
     declare protected _id: AggregateID;
 
-    // Роли графика, чьи рабочие смены засчитываются в часы PayPerHour —
-    // «Оффлайн менеджер»/«Онлайн менеджер» (в shop нет SOLO_MANAGER — тот
-    // существует только у service, см. ELIGIBLE_SCHEDULE_ROLES сервисного
-    // PayPerHoursEntity). Факт уровня ТИПА правила, не конкретного
-    // экземпляра — не связан с targetRole экземпляра (см. calculate()
-    // ниже) — поэтому static, а не поле props. Читается напрямую отсюда
-    // инфраструктурным ShopCalculationDataRepository.findHoursWorked при
-    // построении Prisma-запроса к WorkScheduleEntry — правило PayPerHour
+    // spec: shop/accounting#requirement-виды-зарплатных-правил
+    //
+    // В shop нет SOLO_MANAGER — тот существует только у service (см.
+    // ELIGIBLE_SCHEDULE_ROLES сервисного PayPerHoursEntity). Факт уровня ТИПА
+    // правила, не конкретного экземпляра — не связан с targetRole экземпляра
+    // (см. calculate() ниже) — поэтому static, а не поле props. Читается
+    // напрямую отсюда инфраструктурным ShopCalculationDataRepository.findHoursWorked
+    // при построении Prisma-запроса к WorkScheduleEntry — правило PayPerHour
     // единственное место в домене, которому известно, какие роли графика
     // оно считает часами, поэтому эта политика — часть самой сущности
     // правила, а не отдельного domain-сервиса.
@@ -70,9 +70,8 @@ export class PayPerHourShopEntity
     // erpData.hoursWorked несёт ОБА значения (fact/prognose) сразу — режим
     // (FACT/PROGNOSE) выбирает нужное, дата "сегодня" и фильтр по роли дня
     // (см. ELIGIBLE_SCHEDULE_ROLES выше) уже учтены на стороне, собравшей
-    // контекст (см. ShopCalculationDataRepository.findHoursWorked). Часов нет в
-    // контексте — 0, а не ошибка: правило не обязано быть настроено для
-    // каждого сотрудника с этой ролью (то же решение, что и у сервиса).
+    // контекст (см. ShopCalculationDataRepository.findHoursWorked).
+    // spec: shop/accounting#requirement-виды-зарплатных-правил
     calculate(context: ShopCalculationContext): CalculationLine {
         const erpData = context.erpData as ShopCalculationErpData | undefined;
         const hours =

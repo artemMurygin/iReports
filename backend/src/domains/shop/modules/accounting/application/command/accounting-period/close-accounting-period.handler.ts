@@ -56,32 +56,17 @@ import { CloseShopAccountingPeriodCommand } from './close-accounting-period.comm
 // тоже собственный, независимый от domains/service/modules/sales
 // порт/репозиторий направления shop (закрывает §2.3/§4 аудита).
 //
-// Логика:
-// 1) отклоняется, если есть хоть одна неутверждённая строка плана продаж
-//    периода направления shop;
-// 2) иначе снимает FACT-срез по каждому сотруднику с личной shop-
-//    мотивационной схемой (тем же оркестратором, что и открытый расчёт) и
-//    фиксирует его неизменяемым снапшотом;
-// 3) переводит период в CLOSED и порождает ShopAccountingPeriodClosedDomainEvent.
+// spec: shop/accounting#requirement-закрытие-периода-требует-истёкшего-месяца-утверждённого-плана-и-успешной-синхронизации-erp
+// spec: shop/accounting#requirement-закрытие-периода-фиксирует-снапшот-и-документы-начисления-по-всем-сотрудникам-с-правилами
 //
-// PRD 1 docs/payroll-closing-and-accrual (Фаза 1) — документы начисления,
-// зеркально CloseAccountingPeriodHandler сервиса, но своим кодом (общего
-// хендлера нет): сброс кэша до расчёта, документ SalaryAccrual (DRAFT) на
-// каждую строку снапшота, включая нулевые и уволенных (isDismissed по
-// активности BitrixEmployee), в той же транзакции UnitOfWork, что снапшот и
-// CLOSED; после коммита — SalaryAccrualDocumentsCreatedDomainEvent.
 // ShopSalaryAccrual/порты документа — с Фазы 6
 // docs/service-shop-boundary-violations-fix собственные независимые классы/
 // токены domains/shop (не переиспользуют domains/service): общая таблица
 // salary_accruals остаётся физически одной (partitioned по direction),
 // изоляция — на уровне кода (см. WHY в salary-accrual.repository.ts).
-//
-// Фаза 2 PRD 1 — зеркально сервису: только истёкший и ещё не закрытый
-// месяц (409 иначе), неявная синхронизация отгрузок МойСклада за месяц
-// (ErpPeriodSyncRunner → ERP_PERIOD_SYNC, таймаут 2 мин, блокировка
-// направления от тика крона; ошибка → ErpSyncFailedException, период
-// открыт, ничего не создано) до сброса кэша и расчёта; строки снапшота
-// считает CalculateShopSnapshotRowsService — тот же код, что и close-preview.
+// ErpPeriodSyncRunner/ERP_PERIOD_SYNC — таймаут 2 мин, блокировка направления
+// от тика крона; строки снапшота считает CalculateShopSnapshotRowsService —
+// тот же код, что и close-preview.
 @CommandHandler(CloseShopAccountingPeriodCommand)
 export class CloseShopAccountingPeriodHandler implements ICommandHandler<
     CloseShopAccountingPeriodCommand,
@@ -182,8 +167,7 @@ export class CloseShopAccountingPeriodHandler implements ICommandHandler<
         return this.mapper.toResponse(periodEntity, period.getValue());
     }
 
-    // Документ на КАЖДУЮ строку снапшота, включая нулевые суммы и уволенных
-    // (isDismissed) — см. PRD 1, "Документы начисления".
+    // spec: shop/accounting#requirement-закрытие-периода-фиксирует-снапшот-и-документы-начисления-по-всем-сотрудникам-с-правилами
     private async buildAccrualDocuments(
         period: Period,
         rows: ShopAccountingPeriodSnapshotRow[],

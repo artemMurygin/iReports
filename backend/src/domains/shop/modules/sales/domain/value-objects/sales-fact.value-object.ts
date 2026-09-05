@@ -14,14 +14,7 @@ export interface ShopSalesFactProps {
 
 export interface ShopSalesFactCalculateInput {
     turnover: number;
-    // ⚠️ Готовая маржа из МойСклад (сумма MoySkladDemandPosition.profit по
-    // позициям отгрузок периода), а НЕ turnover - cost (см. issue #54,
-    // docs/payroll/plan-payroll-calculation.md, Фаза 11): МойСклад считает
-    // profit сам, с учётом метода списания себестоимости партии, и это
-    // значение может отличаться от прямой разницы turnover - cost —
-    // пересчёт по формуле разошёлся бы с отчётностью ERP. cost здесь несёт
-    // только справочную роль (отображается в SalesFact.cost), в margin не
-    // участвует.
+    // spec: shop/sales#requirement-факт-продаж-вычисляется-из-готовой-маржи-мойсклад-а-не-как-оборот-минус-себестоимость
     margin: number;
     cost: number;
     // Float — товар может быть весовым/дробным (MoySkladDemandPosition.quantity
@@ -34,12 +27,10 @@ export interface ShopSalesFactCalculateInput {
 }
 
 // Факт продаж магазина по данным МойСклад за период (Фаза 11) — зеркало
-// SalesFact направления service с одним принципиальным отличием: margin не
-// производная от turnover/cost, а отдельный обязательный вход (см.
-// ShopSalesFactCalculateInput.margin выше). marginPercent, averageCheck и
-// percentCompletion по-прежнему производные, поэтому задаются только
-// фабричным методом. Не персистентная сущность — пересчитывается на каждый
-// запрос, как и SalesFact.
+// SalesFact направления service (см. ShopSalesFactCalculateInput.margin
+// выше про принципиальное отличие). marginPercent, averageCheck и
+// percentCompletion — производные, задаются только фабричным методом.
+// spec: shop/sales#requirement-факт-и-прогноз-продаж-не-персистятся-и-пересчитываются-на-каждый-запрос
 export class ShopSalesFact extends ValueObject<ShopSalesFactProps> {
     static calculate(input: ShopSalesFactCalculateInput): ShopSalesFact {
         if (input.turnover < 0) {

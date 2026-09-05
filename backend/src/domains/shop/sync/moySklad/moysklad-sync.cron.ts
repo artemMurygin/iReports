@@ -15,9 +15,7 @@ export class MoySkladSyncCron {
         private readonly lock: DirectionSyncLock,
     ) {}
 
-    // Тик идёт под блокировкой направления (DirectionSyncLock) — не
-    // параллельно с неявным синком месяца внутри закрытия периода (PRD 1
-    // docs/payroll-closing-and-accrual, MoySkladErpPeriodSyncAdapter).
+    // spec: shop/moysklad-sync#requirement-синхронизации-одного-направления-не-выполняются-параллельно
     @ProdCron(CronExpression.EVERY_5_MINUTES)
     async run() {
         const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
@@ -31,6 +29,7 @@ export class MoySkladSyncCron {
             );
             this.failedSince = null;
         } catch (error) {
+            // spec: shop/moysklad-sync#requirement-сбой-регулярной-синхронизации-не-теряет-и-не-сдвигает-точку-докатки
             if (!this.failedSince) {
                 this.failedSince = since;
             }

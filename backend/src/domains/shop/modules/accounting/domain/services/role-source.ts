@@ -16,13 +16,10 @@ import type { TargetRole } from '../types/salary-rule.types';
 //   ПОЗИЦИИ (MoySkladDemandPosition.onlinePurchaserId/offlinePurchaserId,
 //   Фаза 10) — закупщик БУ техники свой у каждого устройства, в одном чеке
 //   могут быть два БУ-айфона, выкупленные разными людьми. Используется
-//   только будущим UsedProductSold (Фаза 13, issue #62) — ProductSold
-//   (Фаза 12) работает исключительно с ролями отгрузки, но каталог ролей
-//   уже включает обе пары, чтобы Фаза 13 не переносила
-//   контракт/registry задним числом.
+//   UsedProductSold (Фаза 13) — ProductSold (Фаза 12) работает исключительно
+//   с ролями отгрузки.
 //
-// Роли инженера в магазине нет (см. issue #58: "Роль инженера в магазине
-// отсутствует").
+// spec: shop/accounting#requirement-виды-зарплатных-правил
 export interface ShopDemandRoleFields {
     onlineManagerId: string | null;
     offlineManagerId: string | null;

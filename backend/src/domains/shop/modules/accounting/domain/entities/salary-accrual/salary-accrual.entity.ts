@@ -49,20 +49,13 @@ export type ShopSalaryAccrualCreateProps = {
 // самой сущности.
 //
 // Документ начисления зарплаты сотрудника за закрытый период (PRD 1
-// docs/payroll-closing-and-accrual/prd-accounting-period-closing-pipeline.md).
-// Рождается только закрытием расчётного периода направления shop — один
-// документ на (period, employeeId), уникальность обеспечивает БД (общий
-// @@unique(direction, period, employeeId) в salary-accrual.prisma, здесь
-// direction всегда 'shop'), строки повторяют RuleBreakdownLine снапшота
-// один в один, total равен total снапшота (инвариант проверяется в
-// validate()).
-//
-// Статус документа — производная от статусов строк (PRD 2, Фаза 6):
-// DRAFT — ни одна строка не проведена, PARTIALLY_ACCRUED — часть,
-// ACCRUED — все («ожидает выплаты»); пересчитывается после каждого
-// проведения/отмены (recalculateStatus). PAID выставляет выплата (PRD 3) и
-// блокирует любые действия над строками. isDismissed фиксируется на момент
-// закрытия по активности BitrixEmployee и на чтении не пересчитывается.
+// docs/payroll-closing-and-accrual/prd-accounting-period-closing-pipeline.md),
+// рождается только закрытием расчётного периода направления shop; уникальность
+// пары (period, employeeId) обеспечивает БД (общий @@unique(direction, period,
+// employeeId) в salary-accrual.prisma, здесь direction всегда 'shop'). Строки
+// повторяют RuleBreakdownLine снапшота один в один. isDismissed фиксируется на
+// момент закрытия по активности BitrixEmployee и на чтении не пересчитывается.
+// spec: shop/accounting#requirement-документ-начисления-один-на-сотрудника-за-период-статус-производная-от-статусов-строк
 export class ShopSalaryAccrual extends AggregateRoot<ShopSalaryAccrualProps> {
     declare protected readonly _id: AggregateID;
 

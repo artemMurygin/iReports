@@ -53,6 +53,7 @@ export class ReopenShopAccountingPeriodHandler implements ICommandHandler<
             throw new ShopPeriodNotClosedException(period.getValue());
         }
 
+        // spec: shop/accounting#requirement-переоткрытие-периода-блокируется-если-начисления-уже-вышли-из-черновика
         const accruals = await this.accrualRepo.findByPeriod(period.getValue());
         const notDraft = accruals.filter((accrual) => !accrual.isDraft());
         if (notDraft.length > 0) {

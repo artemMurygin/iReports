@@ -84,12 +84,7 @@ export class ProductSoldEntity
             ),
         );
         const award = this.props.config.award;
-        // Fixed на дробном quantity (issue #60): "сумма за единицу" магазина
-        // считается по количеству, а не по числу позиций — товар может быть
-        // весовым/дробным (MoySkladDemandPosition.quantity — Float), поэтому
-        // 1.5 кг товара с наградой "100 ₽ за единицу" даёт 150 ₽, а не 100 ₽
-        // за "одну позицию". Явное решение, зафиксированное по требованию
-        // issue: не count(matched), а сумма quantity по matched.
+        // spec: shop/accounting#requirement-награда-по-количеству-считается-по-сумме-количества-а-не-по-числу-позиций
         const totalQuantity = matched.reduce(
             (sum, item) => sum + item.quantity,
             0,
@@ -133,22 +128,15 @@ export class ProductSoldEntity
                 };
             }
             case 'FloatPercent': {
-                // Issue #60 закрыт (Фаза 2 плана
-                // shop-sales-performance-by-category): FloatPercent берёт
-                // процент выполнения плана СВОЕЙ категории, а не отдела
-                // целиком — application-слой (BuildShopCalculationContextService)
-                // резолвит salesPerformance по каждой уникальной category
-                // правил ProductSold/UsedProductSold схемы через
-                // ShopSalesPerformanceReaderPort.findForScope(period,
-                // department, category) и складывает результат в карту
-                // context.salesPerformance (category → percentCompletion,
-                // ключ null — «весь отдел», см. calculation-context.types.ts).
-                // Fail closed — тот же принцип, что и у matchesCategory
-                // ниже для categoryDescendantFolderIds: если для
-                // this.props.config.category в карте нет расчёта (нет
-                // плана/факта по этому scope), вознаграждение не
-                // начисляется, а не считается по проценту чужой
-                // категории/отдела.
+                // spec: shop/accounting#requirement-процент-выполнения-плана-продаж-резолвится-по-собственной-категории-правила
+                //
+                // Application-слой (BuildShopCalculationContextService) резолвит
+                // salesPerformance по каждой уникальной category правил
+                // ProductSold/UsedProductSold через
+                // ShopSalesPerformanceReaderPort.findForScope(period, department,
+                // category) и складывает результат в карту context.salesPerformance
+                // (category → percentCompletion, ключ null — «весь отдел», см.
+                // calculation-context.types.ts).
                 const percentCompletion = context.salesPerformance?.get(
                     this.props.config.category,
                 );
@@ -231,11 +219,12 @@ export class ProductSoldEntity
         );
     }
 
-    // Категория — обязательная часть правила (пара «категория × награда»,
-    // issue #60); null означает "все товары". Раскрытие до потомков дерева
-    // уже сделано application-слоем в erpData.categoryDescendantFolderIds
-    // (см. calculation-data.types.ts) — правило лишь сверяет
-    // собственный folderId позиции со списком по ключу категории.
+    // spec: shop/accounting#requirement-категория-обязательная-часть-правила-вознаграждения-за-товар
+    //
+    // Раскрытие до потомков дерева уже сделано application-слоем в
+    // erpData.categoryDescendantFolderIds (см. calculation-data.types.ts) —
+    // правило лишь сверяет собственный folderId позиции со списком по ключу
+    // категории.
     private matchesCategory(
         item: ShopProductSoldErpItem,
         erpData: ShopCalculationErpData | undefined,
@@ -250,22 +239,20 @@ export class ProductSoldEntity
         const allowedFolderIds =
             erpData?.categoryDescendantFolderIds?.[category];
         if (!allowedFolderIds) {
-            // Категория задана, но контекст не принёс её раскрытия —
-            // fail closed: лучше недоплатить, чем ошибочно засчитать
-            // позицию из другой категории при неполном контексте.
+            // spec: shop/accounting#requirement-категория-обязательная-часть-правила-вознаграждения-за-товар
             return false;
         }
         return allowedFolderIds.includes(item.folderId);
     }
 
-    // Дедупликация «правило × позиция» (issue #61) — то же защитное
-    // назначение, что у OrderPayedEntity.dedupeBySource сервиса: источник
-    // данных в норме отдаёт одну позицию одной строкой, но если по какой-то
-    // причине один и тот же positionId попал в выборку дважды (например,
-    // из-за пересечения по нескольким совпавшим полям), сумма не должна
-    // удвоиться. Это НЕ дедупликация между разными правилами (см. заголовок
-    // класса — онлайн- и офлайн-менеджер, даже будучи одним и тем же
-    // сотрудником, получают оплату по каждому своему правилу независимо).
+    // spec: shop/accounting#requirement-дедупликация-одной-и-той-же-позиции-внутри-правила
+    //
+    // Источник данных в норме отдаёт одну позицию одной строкой, но если по
+    // какой-то причине один и тот же positionId попал в выборку дважды
+    // (например, из-за пересечения по нескольким совпавшим полям), сумма не
+    // должна удвоиться. Это НЕ дедупликация между разными правилами (онлайн-
+    // и офлайн-менеджер, даже будучи одним и тем же сотрудником, получают
+    // оплату по каждому своему правилу независимо).
     private dedupeByPosition(
         items: ShopProductSoldErpItem[],
     ): ShopProductSoldErpItem[] {
