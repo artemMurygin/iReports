@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 import { useAuthStore } from '../model/authStore.ts'
 import { RequirePermission } from './RequirePermission.tsx'
@@ -10,6 +11,9 @@ import { RequirePermission } from './RequirePermission.tsx'
  * AccessDeniedScreen") читает `useHasPermission` (Zustand-стор), а не делает
  * собственный запрос — стор наполняется `useCurrentUser` в другом месте
  * дерева (обычно ближе к корню приложения).
+ *
+ * `MemoryRouter` оборачивает рендер, потому что `AccessDeniedScreen` (раздел 17 tasks.md)
+ * рендерит `react-router-dom`'s `<Link to="/">` для кнопки "На главную".
  */
 describe('RequirePermission', () => {
     beforeEach(() => {
@@ -32,9 +36,11 @@ describe('RequirePermission', () => {
         useAuthStore.setState({ permissions: ['reports:view'] })
 
         render(
-            <RequirePermission permission="roles:manage">
-                <div>Protected content</div>
-            </RequirePermission>,
+            <MemoryRouter>
+                <RequirePermission permission="roles:manage">
+                    <div>Protected content</div>
+                </RequirePermission>
+            </MemoryRouter>,
         )
 
         expect(screen.queryByText('Protected content')).not.toBeInTheDocument()

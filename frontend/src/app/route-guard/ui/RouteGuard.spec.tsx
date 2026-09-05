@@ -89,7 +89,7 @@ describe('RouteGuard', () => {
 
         renderGuardedRoute({ requiredPermission: 'roles:manage' })
 
-        expect(await screen.findByText('Нет доступа')).toBeInTheDocument()
+        expect(await screen.findByRole('alert')).toBeInTheDocument()
         expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
     })
 
@@ -118,6 +118,6 @@ describe('RouteGuard', () => {
 
         renderGuardedRoute({ requiredPermission: 'roles:manage' })
 
-        expect(await screen.findByText('Нет доступа')).toBeInTheDocument()
+        expect(await screen.findByRole('alert')).toBeInTheDocument()
     })
 })

@@ -206,10 +206,10 @@
 
 ## 17. Frontend: `AccessDeniedScreen` + `pages/AccessDenied`
 
-- [ ] 17.1 Реализовать `shared/ui-kit/organisms/AccessDeniedScreen` (`title?`, `description?`) по фрейму `WZqMK` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`) — чисто визуальная вёрстка без ветвлений/данных, тесты не заводятся (обоснование: нет логики, только пропсы → разметка). Сверить со скриншотом фрейма `WZqMK`.
-- [ ] 17.2 Написать тест: `pages/AccessDenied` рендерит `AccessDeniedScreen` при прямом переходе без нужного permission (использует `RequirePermission` из раздела 16). Verify: тест виден раннеру.
-- [ ] 17.3 Прогнать тест из 17.2, зафиксировать red.
-- [ ] 17.4 Реализовать `pages/AccessDenied`; прогнать тест из 17.2, зафиксировать green, регрессий нет.
+- [x] 17.1 Реализовать `shared/ui-kit/organisms/AccessDeniedScreen` (`title?`, `description?`) по фрейму `WZqMK` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`) — чисто визуальная вёрстка без ветвлений/данных, тесты не заводятся (обоснование: нет логики, только пропсы → разметка). Сверить со скриншотом фрейма `WZqMK`.
+- [x] 17.2 Написать тест: `pages/AccessDenied` рендерит `AccessDeniedScreen` при прямом переходе без нужного permission (использует `RequirePermission` из раздела 16). Verify: тест виден раннеру.
+- [x] 17.3 Прогнать тест из 17.2, зафиксировать red.
+- [x] 17.4 Реализовать `pages/AccessDenied`; прогнать тест из 17.2, зафиксировать green, регрессий нет.
 
 ## 18. Frontend: `pages/Login`
 
