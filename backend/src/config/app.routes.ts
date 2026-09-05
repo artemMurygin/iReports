@@ -3,6 +3,21 @@ const employeeIdentityRoot = 'employee-identity';
 // Api Versions
 const v1 = 'v1';
 
+// Аутентификация Bitrix24 + сессии (add-bitrix24-auth-and-rbac, раздел 12
+// tasks.md) — сквозной модуль, вне доменов service/shop, тем же приёмом, что
+// и directoryRoot/workScheduleRoot ниже. embeddedLogin/oauthCallback —
+// @Public() (спек auth), me/logout — требуют валидной сессии
+// (SessionAuthGuard, применён напрямую на этих контроллерах — см. WHY в
+// app.module.ts про отложенную ГЛОБАЛЬНУЮ регистрацию APP_GUARD).
+const authRoot = `/${v1}/auth`;
+
+// Управление ролями/правами (add-bitrix24-auth-and-rbac, раздел 12
+// tasks.md) — сквозной модуль. Все маршруты требуют permission roles:manage
+// (спек roles#admin-page-requires-roles-manage — вся страница управления
+// ролями, включая read-only список/каталог, гардируется одним и тем же
+// permission).
+const rolesRoot = `/${v1}/roles`;
+
 // Справочник отделов/сотрудников Bitrix (Фаза 1,
 // docs/salary-schema-creation-ui) — общий, не привязанный к домену
 // service/shop модуль (см. modules/directory), питает селекты «Отдел»/
@@ -115,6 +130,24 @@ const shopMarketingPricingRoot = `${shopRoot}/marketing/pricing`;
 
 export const routesV1 = {
     version: v1,
+    // add-bitrix24-auth-and-rbac, раздел 12 — см. комментарий у authRoot выше.
+    auth: {
+        embeddedLogin: `${authRoot}/embedded-login`,
+        oauthCallback: `${authRoot}/oauth/callback`,
+        me: `${authRoot}/me`,
+        logout: `${authRoot}/logout`,
+    },
+    // add-bitrix24-auth-and-rbac, раздел 12 — см. комментарий у rolesRoot
+    // выше. employees/:employeeId — назначение/снятие роли сотруднику
+    // (many-to-many EmployeeRole), не CRUD над самим сотрудником (тот уже
+    // существует в directory).
+    roles: {
+        root: rolesRoot,
+        byId: `${rolesRoot}/:id`,
+        permissionsCatalog: `${rolesRoot}/permissions`,
+        updatePermissions: `${rolesRoot}/:id/permissions`,
+        employeeAssignment: `${rolesRoot}/:id/employees/:employeeId`,
+    },
     // Справочник отделов/сотрудников Bitrix (Фаза 1,
     // docs/salary-schema-creation-ui) — без гарда, тот же принцип, что и
     // остальные внутренние read-only справочники (deals.managers,

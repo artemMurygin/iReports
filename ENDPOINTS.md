@@ -131,6 +131,58 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
   `departmentId` не передан — сотрудники всех отделов, в ответе `departmentId: null`. Ровно два запроса
   к БД независимо от числа сотрудников (список сотрудников + одна выборка записей графика за день)
 
+## modules/auth (`/v1/auth`)
+Аутентификация Bitrix24 (add-bitrix24-auth-and-rbac,
+`openspec/changes/add-bitrix24-auth-and-rbac`) — оба сценария входа (embedded/iframe и OAuth 2.0
+authorization code flow) сводятся к единой идентичности, уже существующему `BitrixEmployee` (design.md,
+Decision 2 — отдельная сущность `User` не заводится). `embedded-login`/`oauth/callback` — `@Public()`, не
+требуют сессии; `me`/`logout` защищены `SessionAuthGuard` (применён напрямую на этих контроллерах, не
+через глобальный `APP_GUARD` — тот для ВСЕХ остальных, уже существующих роутов приложения сознательно
+отложен до финального релиза этой фичи, см. WHY в `app.module.ts`); `logout` дополнительно защищён
+`CsrfGuard` (double-submit, раздел 13) для cookie-варианта сессии.
+- `POST /v1/auth/embedded-login` — embedded-вход из iframe портала Bitrix24: `{ authId, memberId }`
+  (`BX24.init()`), backend валидирует `AUTH_ID` реальным REST-запросом `user.current` (fail-closed, не
+  доверяет данным фронтенда напрямую), при отсутствии `BitrixEmployee` — самовосстанавливает запись.
+  Доставка `session_id` — заголовок `Authorization: Bearer` (iframe, SameSite/ITP ненадёжны): ответ
+  `{ sessionId }`
+- `POST /v1/auth/oauth/callback` — обмен `code` (+`state`) на `access_token`/`refresh_token` строго
+  серверным запросом к `oauth.bitrix24.tech/oauth/token/` (`client_secret` никогда не покидает backend);
+  тот же эндпоинт для standalone-сайта и iOS (`ASWebAuthenticationSession`). Доставка `session_id` —
+  HttpOnly/Secure/SameSite=None cookie `session_id` + читаемая (не HttpOnly) cookie `csrf_token`
+  (HMAC-производная от `session_id`, double-submit CSRF, раздел 13) — ответ `{ success: true }`, без
+  `sessionId` в теле
+- `GET /v1/auth/me` — текущий аутентифицированный сотрудник (`{ id, firstName, lastName }`) и его
+  `permissions` (снимок из сессии в Redis) — инициализация клиентского состояния после входа; доступен
+  любому аутентифицированному пользователю независимо от прав (нет `@RequirePermissions`)
+- `POST /v1/auth/logout` — удаляет сессию из Redis (не только cookie/состояние на клиенте) и очищает
+  `session_id`/`csrf_token` cookie
+
+## modules/roles (`/v1/roles`)
+Модель данных `Role`–`Permission`, привязанная к существующему `BitrixEmployee` через `EmployeeRole`
+(add-bitrix24-auth-and-rbac). ВСЕ эндпоинты ниже требуют permission `roles:manage` (спек
+`roles#admin-page-requires-roles-manage` — вся страница управления ролями, включая read-only список и
+каталог, гардируется одним и тем же permission) поверх валидной сессии (`SessionAuthGuard` →
+`PermissionsGuard`, применены напрямую на контроллерах — см. WHY в `app.module.ts`); мутирующие
+(`POST`/`PATCH`/`DELETE`) дополнительно проходят `CsrfGuard` для cookie-сессий (раздел 13). Каталог
+permission-кодов (`Permission`) наполняется ИСКЛЮЧИТЕЛЬНО `PermissionsCatalogSeeder` из типизированного
+реестра в коде (design.md, Decision 12) — ни один из эндпоинтов ниже не создаёт новый код, только
+назначает роли уже существующие.
+- `GET /v1/roles` — список всех ролей (`id`, `name`, `isSystem`, `permissionCodes`, `createdAt`,
+  `updatedAt`)
+- `POST /v1/roles` — создать роль, опционально сразу с набором `permissionCodes` ИЗ каталога (валидирует
+  принадлежность каталогу — `PermissionCodeNotInCatalogException` → `400`)
+- `PATCH /v1/roles/:id` — переименовать роль (уникальность `name` — `409` при конфликте)
+- `DELETE /v1/roles/:id` — удалить роль; системную роль `Administrator` удалить нельзя (`409`,
+  `SystemRoleCannotBeDeletedException`)
+- `GET /v1/roles/permissions` — каталог permission-кодов как есть (`{ code, label, group }[]`) — источник
+  строк матрицы «роль × permission» на UI
+- `PATCH /v1/roles/:id/permissions` — полная замена набора `permissionCodes` роли; немедленно
+  пересчитывает и проталкивает новые permissions во все активные сессии сотрудников этой роли через
+  Redis (снятое право перестаёт действовать без релогина)
+- `POST /v1/roles/:id/employees/:employeeId` — назначить роль сотруднику (many-to-many `EmployeeRole`);
+  список сотрудников для UI — через уже существующий `GET /v1/directory/employees`, не через этот модуль
+- `DELETE /v1/roles/:id/employees/:employeeId` — снять роль с сотрудника (идемпотентно)
+
 ## domains/service/modules/sales (`/v1/service/sales/plan`, `/v1/service/sales/plan_template`, `/v1/service/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели (`SalesPlan`/
 `SalesPlanTemplate`) общие для направлений `service`/`shop` (общая Prisma-схема с дискриминатором

@@ -15,14 +15,31 @@ import { BOOTSTRAP_ADMIN_PORT } from './application/ports/bootstrap-admin.port';
 import { BootstrapAdminRoleAssigner } from './application/services/bootstrap-admin-role-assigner.service';
 import { AdministratorRoleSeeder } from './infrastructure/administrator-role.seeder';
 import { ROLES_PERMISSIONS } from './roles.permissions';
+import { ListRolesHttpController } from './interface/http-controllers/list-roles.http.controller';
+import { CreateRoleHttpController } from './interface/http-controllers/create-role.http.controller';
+import { RenameRoleHttpController } from './interface/http-controllers/rename-role.http.controller';
+import { DeleteRoleHttpController } from './interface/http-controllers/delete-role.http.controller';
+import { ListPermissionsCatalogHttpController } from './interface/http-controllers/list-permissions-catalog.http.controller';
+import { UpdateRolePermissionsHttpController } from './interface/http-controllers/update-role-permissions.http.controller';
+import { AssignRoleToEmployeeHttpController } from './interface/http-controllers/assign-role-to-employee.http.controller';
+import { RevokeRoleFromEmployeeHttpController } from './interface/http-controllers/revoke-role-from-employee.http.controller';
 
 // Сквозной модуль ролей/прав (add-bitrix24-auth-and-rbac) — владеет
 // Role/Permission, guard'ами (PermissionsGuard), админ-API (design.md,
 // Decision 1). Живёт вне domains/{service,shop}, по аналогии с
-// src/modules/employee-identity. HTTP-контроллеры добавляет раздел 12
-// tasks.md.
+// src/modules/employee-identity. HTTP-контроллеры — раздел 12 tasks.md.
 @Module({
     imports: [SessionModule],
+    controllers: [
+        ListRolesHttpController,
+        CreateRoleHttpController,
+        RenameRoleHttpController,
+        DeleteRoleHttpController,
+        ListPermissionsCatalogHttpController,
+        UpdateRolePermissionsHttpController,
+        AssignRoleToEmployeeHttpController,
+        RevokeRoleFromEmployeeHttpController,
+    ],
     providers: [
         PermissionsCatalogSeeder,
         {

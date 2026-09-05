@@ -1,4 +1,7 @@
+import { withRequestContext } from '@/shared/testing/with-request-context';
 import { RolesQueryHandlers } from './roles-query-handlers.service';
+import { Role } from '../../domain/entities/role.entity';
+import type { RoleRepositoryPort } from '../ports/role.repository.port';
 import type { PermissionCatalogRepositoryPort } from '../ports/permission-catalog.port';
 import type { PermissionCatalogEntry } from '../ports/permission-registry.port';
 
@@ -6,6 +9,23 @@ import type { PermissionCatalogEntry } from '../ports/permission-registry.port';
 // наполняется ТОЛЬКО PermissionsCatalogSeeder, читается как есть, без
 // возможности создать новый код через этот (или любой другой) API.
 describe('RolesQueryHandlers', () => {
+    const createHandlers = (roles: Role[] = []) => {
+        const findAll = jest.fn(() => Promise.resolve(roles));
+        const roleRepository: jest.Mocked<RoleRepositoryPort> = {
+            insert: jest.fn(),
+            save: jest.fn(),
+            delete: jest.fn(),
+            findById: jest.fn(),
+            findByName: jest.fn(),
+            findAll,
+            assignToEmployee: jest.fn(),
+            revokeFromEmployee: jest.fn(),
+            findEmployeeIdsByRoleId: jest.fn(),
+            hasAnyRole: jest.fn(),
+        };
+        return { roleRepository, findAll };
+    };
+
     it('getPermissionsCatalog() возвращает каталог Permission как есть', async () => {
         const catalog: PermissionCatalogEntry[] = [
             { code: 'roles:view', label: 'Просмотр ролей', group: 'Роли' },
@@ -18,8 +38,12 @@ describe('RolesQueryHandlers', () => {
                 findAll,
                 findManyByCodes: jest.fn(),
             };
+        const { roleRepository } = createHandlers();
 
-        const handlers = new RolesQueryHandlers(catalogRepository);
+        const handlers = new RolesQueryHandlers(
+            catalogRepository,
+            roleRepository,
+        );
 
         await expect(handlers.getPermissionsCatalog()).resolves.toEqual(
             catalog,
@@ -34,5 +58,30 @@ describe('RolesQueryHandlers', () => {
             (RolesQueryHandlers.prototype as unknown as Record<string, unknown>)
                 .createPermission,
         ).toBeUndefined();
+    });
+
+    // spec: roles#model-role-permission — список ролей для списка/CRUD на
+    // админ-странице (GET /roles).
+    describe('getRoles', () => {
+        it('возвращает все роли как есть, без изменений', async () => {
+            const role = withRequestContext(() =>
+                Role.create({ name: 'Оператор', permissionCodes: [] }),
+            );
+            const catalogRepository: jest.Mocked<PermissionCatalogRepositoryPort> =
+                {
+                    upsertMany: jest.fn(),
+                    findAll: jest.fn(),
+                    findManyByCodes: jest.fn(),
+                };
+            const { roleRepository, findAll } = createHandlers([role]);
+
+            const handlers = new RolesQueryHandlers(
+                catalogRepository,
+                roleRepository,
+            );
+
+            await expect(handlers.getRoles()).resolves.toEqual([role]);
+            expect(findAll).toHaveBeenCalled();
+        });
     });
 });

@@ -6,9 +6,7 @@ import type {
 } from '../../application/ports/bitrix-employee-lookup.port';
 
 @Injectable()
-export class BitrixEmployeeLookupRepository
-    implements BitrixEmployeeLookupPort
-{
+export class BitrixEmployeeLookupRepository implements BitrixEmployeeLookupPort {
     constructor(private readonly db: DatabaseService) {}
 
     async findById(
@@ -16,7 +14,12 @@ export class BitrixEmployeeLookupRepository
     ): Promise<BitrixEmployeeSnapshot | null> {
         const record = await this.db.bitrixEmployee.findUnique({
             where: { id: bitrixEmployeeId },
-            select: { id: true, isActive: true },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                isActive: true,
+            },
         });
         return record;
     }

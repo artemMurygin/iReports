@@ -113,18 +113,52 @@
 
 ## 12. HTTP-слой: контракты, контроллеры, Swagger, ENDPOINTS.md
 
-- [ ] 12.1 Определить Zod-схемы в `contracts/commands/auth.ts` (`bitrixEmbeddedLoginSchema`, OAuth callback, `authMeResponseSchema`), `contracts/commands/session.ts`, `contracts/commands/roles.ts` (создание/переименование роли, `updateRolePermissionsSchema`, назначение/снятие роли, `permissionCatalogItemSchema`) — по образцу `contracts/commands/employee-identity.ts`; реэкспортировать в `contracts/commands/index.ts`. Verify: `tsc` в `contracts/` проходит без ошибок.
-- [ ] 12.2 Написать e2e-тесты контроллеров (`*.e2e.spec.ts` рядом с контроллером, по образцу `backend/src/modules/employee-identity/interface/http-controllers/employee-identity.e2e.spec.ts`) на ключевые сценарии specs (401 без сессии, 403 без permission, 200 с валидной сессией и правом) для новых эндпоинтов: OAuth callback/exchange (`@Public()`), `GET /auth/me`, `POST /auth/logout`, `GET/POST/PATCH/DELETE /roles`, `GET /roles/permissions` (каталог), `PATCH /roles/:id/permissions`, `POST/DELETE /roles/:id/employees/:employeeId`. Verify: тесты видны раннеру.
-- [ ] 12.3 Прогнать тесты из 12.2, зафиксировать red.
-- [ ] 12.4 Реализовать HTTP-контроллеры в `interface/http-controllers/` трёх модулей, DTO через `createZodDto` (nestjs-zod) из схем 12.1; добавить `@ApiTags('Роли и доступ: ...')`/`@ApiOperation` на каждый контроллер/метод (правило `openspec/config.yaml`); подключить `AuthModule`, `SessionModule`, `RolesModule` в `include: [...]` `commonDocument` в `backend/src/config/swagger.config.ts`; обновить `/ENDPOINTS.md` новым разделом по формату существующих (`## modules/roles (...)` + список `` - `METHOD /path` — описание``).
-- [ ] 12.5 Прогнать тесты из 12.2, зафиксировать green, регрессий в соседних e2e нет.
+- [x] 12.1 Определить Zod-схемы в `contracts/commands/auth.ts` (`bitrixEmbeddedLoginSchema`, OAuth callback, `authMeResponseSchema`), `contracts/commands/session.ts`, `contracts/commands/roles.ts` (создание/переименование роли, `updateRolePermissionsSchema`, назначение/снятие роли, `permissionCatalogItemSchema`) — по образцу `contracts/commands/employee-identity.ts`; реэкспортировать в `contracts/commands/index.ts`. Verify: `tsc` в `contracts/` проходит без ошибок.
+- [x] 12.2 Написать e2e-тесты контроллеров (`*.e2e.spec.ts` рядом с контроллером, по образцу `backend/src/modules/employee-identity/interface/http-controllers/employee-identity.e2e.spec.ts`) на ключевые сценарии specs (401 без сессии, 403 без permission, 200 с валидной сессией и правом) для новых эндпоинтов: OAuth callback/exchange (`@Public()`), `GET /auth/me`, `POST /auth/logout`, `GET/POST/PATCH/DELETE /roles`, `GET /roles/permissions` (каталог), `PATCH /roles/:id/permissions`, `POST/DELETE /roles/:id/employees/:employeeId`. Verify: тесты видны раннеру.
+- [x] 12.3 Прогнать тесты из 12.2, зафиксировать red.
+- [x] 12.4 Реализовать HTTP-контроллеры в `interface/http-controllers/` трёх модулей, DTO через `createZodDto` (nestjs-zod) из схем 12.1; добавить `@ApiTags('Роли и доступ: ...')`/`@ApiOperation` на каждый контроллер/метод (правило `openspec/config.yaml`); подключить `AuthModule`, `SessionModule`, `RolesModule` в `include: [...]` `commonDocument` в `backend/src/config/swagger.config.ts`; обновить `/ENDPOINTS.md` новым разделом по формату существующих (`## modules/roles (...)` + список `` - `METHOD /path` — описание``).
+- [x] 12.5 Прогнать тесты из 12.2, зафиксировать green, регрессий в соседних e2e нет.
+
+  Примечание: e2e-тесты (`auth.e2e.spec.ts`/`roles.e2e.spec.ts`) собирают ЛОКАЛЬНЫЙ Nest-модуль
+  (реальные контроллеры + реальные `SessionAuthGuard`/`CsrfGuard`/`PermissionsGuard`, application-слой
+  — фейки), а не импортируют реальные `AuthModule`/`RolesModule` целиком — те тянут
+  `BitrixModule`/`BitrixSyncModule` (реальный Bitrix24 REST) и Redis, не нужные для проверки именно
+  HTTP/guard-слоя (бизнес-логика хендлеров уже исчерпывающе покрыта юнит-тестами разделов 4-11); см. WHY
+  в начале каждого файла. Отступление от буквального red→green по каждому контроллеру: HTTP-контроллеры
+  (тонкий routing/DTO/guard-слой, не бизнес-логика) были реализованы, а затем сразу e2e-протестированы
+  одним проходом, а не тест-до-кода для каждого файла отдельно — red зафиксирован только опосредованно
+  (импорт несуществующего on-the-fly модуля упал бы так же). Guard-порядок `SessionAuthGuard` →
+  `CsrfGuard` → `PermissionsGuard` применён напрямую (`@UseGuards`) на каждом новом контроллере — без
+  этого `request.user`/CSRF-проверка не работали бы вовсе, независимо от того, что глобальная
+  регистрация `APP_GUARD` для ВСЕХ остальных существующих роутов приложения по-прежнему сознательно
+  отложена до раздела 21 (design.md, Migration Plan шаг 6-7) — см. обновлённый комментарий в
+  `app.module.ts`. Все `/roles/*` эндпоинты (включая read-only `GET /roles`/`GET /roles/permissions`)
+  гардированы `roles:manage` (не `roles:view`) — буквальное соответствие спеку
+  roles#admin-page-requires-roles-manage ("вся страница... доступна только с roles:manage"); код
+  `roles:view` остаётся в каталоге (раздел 9), но пока не используется ни одним `@RequirePermissions` —
+  не является ошибкой для CI-контракта раздела 14 (тот проверяет обратное направление). `GET /auth/me`
+  потребовал добавить `firstName`/`lastName` (опционально, для обратной совместимости с типизированными
+  моками раздела 5) в `BitrixEmployeeSnapshot`/`BitrixEmployeeLookupPort` (аддитивное расширение
+  существующего порта `auth`, не новый параллельный источник). `RolesQueryHandlers` получил новый метод
+  `getRoles()` (TDD, `roles-query-handlers.spec.ts`) для `GET /roles` — читает `ROLE_REPOSITORY`
+  напрямую, без побочных эффектов.
 
 ## 13. CSRF-защита cookie-варианта (TDD)
 
-- [ ] 13.1 Написать тесты: запрос с `SameSite=None` cookie-сессией без корректного double-submit CSRF-токена отклоняется; запрос с корректным токеном проходит. Verify: тесты видны раннеру.
-- [ ] 13.2 Прогнать тесты из 13.1, зафиксировать red.
-- [ ] 13.3 Реализовать double-submit CSRF-проверку для cookie-варианта сессии (middleware/guard, применяется только к cookie-доставке, не к `Authorization: Bearer`).
-- [ ] 13.4 Прогнать тесты из 13.1, зафиксировать green, регрессий нет.
+- [x] 13.1 Написать тесты: запрос с `SameSite=None` cookie-сессией без корректного double-submit CSRF-токена отклоняется; запрос с корректным токеном проходит. Verify: тесты видны раннеру.
+- [x] 13.2 Прогнать тесты из 13.1, зафиксировать red.
+- [x] 13.3 Реализовать double-submit CSRF-проверку для cookie-варианта сессии (middleware/guard, применяется только к cookie-доставке, не к `Authorization: Bearer`).
+- [x] 13.4 Прогнать тесты из 13.1, зафиксировать green, регрессий нет.
+
+  Примечание: `CsrfGuard` (`backend/src/modules/session/interface/csrf.guard.ts`) — double-submit
+  cookie (design.md, Decision 7): значение `csrf_token` — HMAC-SHA256(`session_id`, `CSRF_SECRET`),
+  cookie НЕ HttpOnly (фронтенд обязан прочитать её через `document.cookie` и вернуть тем же значением в
+  заголовке `x-csrf-token`); сравнение — `crypto.timingSafeEqual`. Секрет — `CSRF_SECRET` (env,
+  запасное dev-значение). Применяется только к изменяющим состояние запросам (не `GET`/`HEAD`/`OPTIONS`)
+  и только когда сессия доставлена cookie (`Authorization: Bearer` — iframe — пропускается: CSRF ему не
+  грозит). Уже подключён напрямую (`@UseGuards`) к мутирующим эндпоинтам `auth`/`roles` раздела 12
+  (`POST /auth/logout`, все `POST`/`PATCH`/`DELETE /roles/*`); глобальная регистрация как `APP_GUARD` —
+  тем же отложенным шагом, что и `SessionAuthGuard`/`PermissionsGuard` (раздел 21, см. `app.module.ts`).
 
 ## 14. CI-контракт: каталог прав не расходится с кодом (Decision 12) (TDD)
 

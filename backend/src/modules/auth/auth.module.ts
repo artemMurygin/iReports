@@ -12,15 +12,24 @@ import { BitrixTokenRefreshService } from './application/services/bitrix-token-r
 import { AuthenticatedSessionIssuer } from './application/services/authenticated-session-issuer.service';
 import { BitrixEmbeddedLoginHandler } from './application/services/bitrix-embedded-login.handler';
 import { BitrixOAuthLoginHandler } from './application/services/bitrix-oauth-login.handler';
+import { BitrixEmbeddedLoginHttpController } from './interface/http-controllers/bitrix-embedded-login.http.controller';
+import { BitrixOAuthCallbackHttpController } from './interface/http-controllers/bitrix-oauth-callback.http.controller';
+import { GetCurrentUserHttpController } from './interface/http-controllers/get-current-user.http.controller';
+import { LogoutHttpController } from './interface/http-controllers/logout.http.controller';
 
 // Сквозной модуль аутентификации (add-bitrix24-auth-and-rbac) — владеет
 // токенами Bitrix24 конкретного сотрудника, оркестрирует вход (design.md,
 // Decision 1). НЕ владеет идентичностью — она уже есть (BitrixEmployee).
 // Живёт вне domains/{service,shop}, по аналогии с
-// src/modules/employee-identity. HTTP-контроллеры добавляет раздел 12
-// tasks.md.
+// src/modules/employee-identity. HTTP-контроллеры — раздел 12 tasks.md.
 @Module({
     imports: [BitrixModule, BitrixSyncModule, SessionModule, RolesModule],
+    controllers: [
+        BitrixEmbeddedLoginHttpController,
+        BitrixOAuthCallbackHttpController,
+        GetCurrentUserHttpController,
+        LogoutHttpController,
+    ],
     providers: [
         {
             provide: BITRIX_EMPLOYEE_LOOKUP_PORT,

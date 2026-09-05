@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { SessionService } from '../infrastructure/session.service';
 import { IS_PUBLIC_KEY } from '@/shared/decorators/public.decorator';
+import { extractSessionId } from './session-request.util';
 
 export interface AuthenticatedRequestUser {
     employeeId: number;
@@ -37,7 +38,7 @@ export class SessionAuthGuard implements CanActivate {
         }
 
         const request = context.switchToHttp().getRequest<Request>();
-        const sessionId = this.extractSessionId(request);
+        const sessionId = extractSessionId(request);
 
         if (!sessionId) {
             throw new UnauthorizedException('Требуется вход в систему');
@@ -67,23 +68,5 @@ export class SessionAuthGuard implements CanActivate {
         };
 
         return true;
-    }
-
-    // Authorization: Bearer <session_id> — контекст iframe портала Bitrix24
-    // (spec: session#header-delivery-for-iframe); cookie `session_id` —
-    // standalone-сайт/iOS (spec: session#cookie-delivery-for-standalone-and-ios).
-    private extractSessionId(request: Request): string | null {
-        const authHeader = request.header('authorization');
-        if (authHeader?.startsWith('Bearer ')) {
-            return authHeader.slice('Bearer '.length).trim();
-        }
-
-        const cookieSessionId = (
-            request as Request & {
-                cookies?: Record<string, string>;
-            }
-        ).cookies?.session_id;
-
-        return cookieSessionId ?? null;
     }
 }

@@ -18,3 +18,6 @@ export * from './report';
 export * from './service-pricing';
 export * from './shop-pricing';
 export * from './work-schedule';
+export * from './auth';
+export * from './session';
+export * from './roles';
