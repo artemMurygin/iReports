@@ -73,6 +73,7 @@ services:
       dockerfile: frontend/docker/Dockerfile
       args:
         VITE_API_URL: https://test.api.murygin.tech
+        VITE_BITRIX24_CLIENT_ID: ${VITE_BITRIX24_CLIENT_ID}
     restart: unless-stopped
     ports:
       - "3011:80"

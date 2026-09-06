@@ -21,9 +21,11 @@ COPY frontend frontend
 WORKDIR /repo/frontend
 RUN npm ci
 
-# VITE_API_URL is baked into the JS bundle at build time
+# VITE_API_URL and VITE_BITRIX24_CLIENT_ID are baked into the JS bundle at build time
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_BITRIX24_CLIENT_ID
+ENV VITE_BITRIX24_CLIENT_ID=$VITE_BITRIX24_CLIENT_ID
 
 RUN npx vite build
 
