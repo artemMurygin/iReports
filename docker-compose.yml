@@ -73,7 +73,9 @@ services:
       dockerfile: frontend/docker/Dockerfile
       args:
         VITE_API_URL: https://test.api.murygin.tech
-        VITE_BITRIX24_CLIENT_ID: ${VITE_BITRIX24_CLIENT_ID}
+        # Переиспользуем BITRIX24_CLIENT_ID из корневого .env — client_id не секрет и совпадает
+        # с backend'ным, отдельную переменную в .env заводить не нужно.
+        VITE_BITRIX24_CLIENT_ID: ${BITRIX24_CLIENT_ID}
     restart: unless-stopped
     ports:
       - "3011:80"
