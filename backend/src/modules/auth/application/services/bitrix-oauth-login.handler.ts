@@ -25,7 +25,15 @@ interface BitrixOAuthTokenExchangeResponse {
     access_token: string;
     refresh_token: string;
     expires_in: number;
+    // ВАЖНО: `domain` в этом ответе — домен сервера авторизации
+    // (oauth.bitrix24.tech), а НЕ портала (см. официальный пример ответа,
+    // apidocs.bitrix24.ru/api-reference/oauth/index.html — "Авторизация
+    // приложения"). Адрес REST API портала уже отдаётся готовым в
+    // `client_endpoint`, вручную из `domain` его строить нельзя (обнаружено
+    // как реальный баг: `https://${domain}/rest/` резолвился в
+    // `oauth.bitrix24.tech`, REST-запросы получали 404 ERROR_METHOD_NOT_FOUND).
     domain: string;
+    client_endpoint: string;
     member_id: string;
 }
 
@@ -65,7 +73,7 @@ export class BitrixOAuthLoginHandler {
             code,
             redirectUri,
         );
-        const clientEndpoint = `https://${tokenResponse.domain}/rest/`;
+        const clientEndpoint = tokenResponse.client_endpoint;
         this.logger.debug(
             `Обмен code на токены Bitrix24 успешен, domain=${tokenResponse.domain}, clientEndpoint=${clientEndpoint}`,
         );

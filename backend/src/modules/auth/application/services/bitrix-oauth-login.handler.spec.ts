@@ -60,7 +60,11 @@ describe('BitrixOAuthLoginHandler', () => {
                 access_token: 'new-access',
                 refresh_token: 'new-refresh',
                 expires_in: 3600,
-                domain: 'irepair.bitrix24.ru',
+                // `domain` в ответе oauth.bitrix24.tech — домен сервера
+                // авторизации, НЕ портала (apidocs.bitrix24.ru/api-reference/oauth) —
+                // адрес REST API портала берётся из `client_endpoint`.
+                domain: 'oauth.bitrix24.tech',
+                client_endpoint: 'https://irepair.bitrix24.ru/rest/',
                 member_id: 'member-1',
             },
         });
@@ -98,7 +102,8 @@ describe('BitrixOAuthLoginHandler', () => {
                 access_token: 'new-access',
                 refresh_token: 'new-refresh',
                 expires_in: 3600,
-                domain: 'irepair.bitrix24.ru',
+                domain: 'oauth.bitrix24.tech',
+                client_endpoint: 'https://irepair.bitrix24.ru/rest/',
                 member_id: 'member-1',
             },
         });
