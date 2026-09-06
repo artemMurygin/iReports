@@ -22,7 +22,10 @@ COPY backend backend
 # не в корневой node_modules, а вложенно в backend/node_modules, и npx находит бинарники
 # только вверх по дереву от cwd, а не в дочерних директориях
 RUN cd backend && npx prisma generate --config prisma.config.ts
-RUN npm run build --workspace=backend
+# nest build/tsc на этом объёме кода (много доменов/модулей) упирается в дефолтный потолок кучи
+# V8 (~2GB) раньше, чем в реальную нехватку памяти — особенно в Alpine/musl-контейнере, где
+# автоопределение доступной памяти под кучу может быть консервативнее фактического лимита хоста.
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build --workspace=backend
 
 # ---- Production stage ----
 FROM node:22-alpine AS production
