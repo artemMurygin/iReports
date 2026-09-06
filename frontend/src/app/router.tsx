@@ -184,10 +184,11 @@ export const router = createBrowserRouter([
         element: <UiKitPreview />,
     },
     {
-        // add-bitrix24-auth-and-rbac, раздел 23 tasks.md; architecture.md `pages/OAuthCallback`
-        // (`/auth/callback` — тот же redirect_uri настраивается в приложении Bitrix24). Вне
-        // `RouteGuard` намеренно (см. комментарий в `OAuthCallbackPage.tsx`) — в момент обмена
-        // `code` на токены валидной сессии ещё не существует.
+        // add-bitrix24-auth-and-rbac, раздел 23 tasks.md; architecture.md `pages/OAuthCallback`.
+        // На практике Bitrix24 для локальных приложений редиректит не сюда, а на корень сайта
+        // (см. `RouteGuard` — там та же страница рендерится при `?code=` в query под `/`) —
+        // роут оставлен на случай изменения "Пути вашего обработчика" в настройках приложения
+        // на значение с этим путём.
         path: '/auth/callback',
         element: <OAuthCallbackPage />,
     },

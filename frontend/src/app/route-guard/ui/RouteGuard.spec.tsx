@@ -15,7 +15,7 @@ import { RouteGuard } from './RouteGuard.tsx'
  * роута (объявляется через `handle.requiredPermission`, см. `useRouteGuardState.ts`).
  */
 vi.mock('@/shared/api/axios.instance.ts', () => ({
-    api: { get: vi.fn() },
+    api: { get: vi.fn(), post: vi.fn() },
 }))
 
 function mockSession(response: AuthMeResponse | 'unauthenticated') {
@@ -39,19 +39,22 @@ const AUTHENTICATED: AuthMeResponse = {
     permissions: ['reports:view'],
 }
 
-function renderGuardedRoute(options: { requiredPermission?: string } = {}) {
+function renderGuardedRoute(options: { requiredPermission?: string; initialEntry?: string } = {}) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    const router = createMemoryRouter([
-        {
-            path: '/',
-            element: (
-                <RouteGuard>
-                    <div>Protected content</div>
-                </RouteGuard>
-            ),
-            handle: options.requiredPermission ? { requiredPermission: options.requiredPermission } : undefined,
-        },
-    ])
+    const router = createMemoryRouter(
+        [
+            {
+                path: '/',
+                element: (
+                    <RouteGuard>
+                        <div>Protected content</div>
+                    </RouteGuard>
+                ),
+                handle: options.requiredPermission ? { requiredPermission: options.requiredPermission } : undefined,
+            },
+        ],
+        { initialEntries: [options.initialEntry ?? '/'] },
+    )
 
     return render(
         <QueryClientProvider client={queryClient}>
@@ -112,6 +115,16 @@ describe('RouteGuard', () => {
         await waitFor(() => expect(axiosInstance.get).toHaveBeenCalled())
         expect(await screen.findByText('Protected content')).toBeInTheDocument()
         expect(screen.queryByText('Войдите через Bitrix24')).not.toBeInTheDocument()
+    })
+
+    it('рендерит pages/OAuthCallback вместо pages/Login, когда в query корневого роута есть code — Bitrix24 для локальных приложений редиректит не на /auth/callback, а на "Путь вашего обработчика" (корень сайта под этим guard-ом), см. oauthState.ts', async () => {
+        mockSession('unauthenticated')
+
+        renderGuardedRoute({ initialEntry: '/?code=auth-code&state=some-state' })
+
+        expect(await screen.findByText('Не удалось войти. Попробуйте снова.')).toBeInTheDocument()
+        expect(screen.queryByText('Войдите через Bitrix24')).not.toBeInTheDocument()
+        expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
     })
 
     it('в iframe-контексте всё равно применяет проверку requiredPermission', async () => {

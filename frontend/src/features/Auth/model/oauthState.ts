@@ -50,13 +50,22 @@ export function consumeStoredOAuthState(): string | null {
 }
 
 /**
- * `redirect_uri` для OAuth-редиректа — текущий origin + маршрут `pages/OAuthCallback`
- * (`/auth/callback`, раздел 23 tasks.md). Не хардкодится под конкретное окружение (localhost/
- * staging/прод), чтобы одна и та же сборка работала везде — значение должно быть зарегистрировано
- * как redirect_uri в настройках приложения Bitrix24 для того окружения, где оно используется (шаг
- * вне кода). Используется и `useBitrixLogin` (в исходном редиректе), и `useOAuthCallback` (при
- * обмене `code` — обязано совпадать со значением из исходного редиректа, RFC 6749 §4.1.3).
+ * `redirect_uri` для OAuth-редиректа — голый текущий origin, БЕЗ пути `/auth/callback`.
+ *
+ * Bitrix24 для локальных приложений ("Путь вашего обработчика" в настройках приложения)
+ * ИГНОРИРУЕТ значение `redirect_uri`, переданное в запросе на `{portal}/oauth/authorize/`, и
+ * всегда возвращает браузер на URL из этого поля настроек — подтверждено логами реального
+ * 302-редиректа на dev-стенде (`Location` в ответе Bitrix = origin без пути, несмотря на
+ * `redirect_uri=.../auth/callback` в запросе). Значение здесь должно буквально совпадать с
+ * «Путём вашего обработчика» в настройках приложения — отсюда просто origin, а не подпуть.
+ * `code`/`state` поэтому принимаются на корневом маршруте (`app/route-guard/ui/RouteGuard.tsx`),
+ * а не на выделенной странице `pages/OAuthCallback` (тот роут остаётся зарегистрированным, но
+ * Bitrix на него не редиректит).
+ *
+ * Не хардкодится под конкретное окружение (localhost/staging/прод), чтобы одна и та же сборка
+ * работала везде. Используется и `useBitrixLogin` (в исходном редиректе), и `useOAuthCallback`
+ * (при обмене `code` — обязано совпадать со значением из исходного редиректа, RFC 6749 §4.1.3).
  */
 export function getOAuthRedirectUri(): string {
-    return `${window.location.origin}/auth/callback`
+    return window.location.origin
 }

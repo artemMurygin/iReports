@@ -1,4 +1,9 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+    Inject,
+    Injectable,
+    Logger,
+    UnauthorizedException,
+} from '@nestjs/common';
 import axios from 'axios';
 import {
     BITRIX_EMPLOYEE_LOOKUP_PORT,
@@ -24,6 +29,8 @@ export interface ResolvedBitrixIdentity {
 // область ответственности.
 @Injectable()
 export class BitrixIdentityResolver {
+    private readonly logger = new Logger(BitrixIdentityResolver.name);
+
     constructor(
         @Inject(BITRIX_EMPLOYEE_LOOKUP_PORT)
         private readonly employeeLookup: BitrixEmployeeLookupPort,
@@ -73,10 +80,16 @@ export class BitrixIdentityResolver {
             }
 
             return data.result;
-        } catch {
+        } catch (error) {
             // Fail-closed (design.md, Decision 10 применяется и здесь по
             // аналогии): любая ошибка — сеть, таймаут, неожиданный ответ —
             // трактуется как невалидный токен, доступ не выдаётся.
+            const details = axios.isAxiosError(error)
+                ? { status: error.response?.status, data: error.response?.data }
+                : error;
+            this.logger.error(
+                `user.current не подтвердил токен Bitrix24: ${JSON.stringify(details)}`,
+            );
             throw new UnauthorizedException(
                 'Не удалось подтвердить пользователя в Bitrix24: невалидный или истёкший токен',
             );

@@ -1,4 +1,9 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+    Inject,
+    Injectable,
+    Logger,
+    UnauthorizedException,
+} from '@nestjs/common';
 import axios from 'axios';
 import { BitrixIdentityResolver } from './bitrix-identity-resolver.service';
 import {
@@ -34,6 +39,8 @@ interface BitrixOAuthTokenExchangeResponse {
 // auth#ios-oauth).
 @Injectable()
 export class BitrixOAuthLoginHandler {
+    private readonly logger = new Logger(BitrixOAuthLoginHandler.name);
+
     constructor(
         private readonly identityResolver: BitrixIdentityResolver,
         private readonly sessionIssuer: AuthenticatedSessionIssuer,
@@ -102,7 +109,13 @@ export class BitrixOAuthLoginHandler {
                 },
             );
             return data;
-        } catch {
+        } catch (error) {
+            const details = axios.isAxiosError(error)
+                ? { status: error.response?.status, data: error.response?.data }
+                : error;
+            this.logger.error(
+                `Обмен code на токены Bitrix24 не удался (redirect_uri=${redirectUri}): ${JSON.stringify(details)}`,
+            );
             throw new UnauthorizedException(
                 'Не удалось обменять code на токены Bitrix24',
             );

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
-import { useMatches } from 'react-router-dom'
+import { useMatches, useSearchParams } from 'react-router-dom'
 
 import { LoginPage } from '@/pages/Login'
 import { AccessDeniedPage } from '@/pages/AccessDenied'
+import { OAuthCallbackPage } from '@/pages/OAuthCallback'
 
 import type { RouteHandle } from '../model/useRouteGuardState.ts'
 import { useRouteGuardState } from '../model/useRouteGuardState.ts'
@@ -13,8 +14,14 @@ type Props = {
 
 // Первая реализация route-guard в проекте (add-bitrix24-auth-and-rbac,
 // раздел 15 tasks.md) — оборачивает `element: <Layout />` в
-// `app/router.tsx`. Два независимых правила:
+// `app/router.tsx`. Три независимых правила:
 //
+// 0. в query есть `code` (Bitrix24 для локальных приложений возвращает
+//    браузер на "Путь вашего обработчика" из настроек приложения — т.е. на
+//    корень сайта под этим guard'ом, а не обязательно на выделенный роут
+//    `pages/OAuthCallback` — см. `getOAuthRedirectUri`, oauthState.ts) ->
+//    рендерим тот же `pages/OAuthCallback` прямо здесь, ДО проверки сессии
+//    (её ещё нет — обмен `code` только начинается).
 // 1. standalone/iOS-контекст без валидной сессии -> `pages/Login`
 //    (architecture.md: `pages/Login` "не рендерится в embedded-контексте" —
 //    в iframe вместо этого ожидается скрытый embedded-логин, который эта
@@ -28,8 +35,13 @@ type Props = {
 export function RouteGuard({ children }: Props) {
     const matches = useMatches()
     const requiredPermission = (matches.at(-1)?.handle as RouteHandle | undefined)?.requiredPermission
+    const [searchParams] = useSearchParams()
 
     const { context, isLoading, hasSession, hasRequiredPermission } = useRouteGuardState(requiredPermission)
+
+    if (searchParams.has('code')) {
+        return <OAuthCallbackPage />
+    }
 
     if (isLoading) {
         return null

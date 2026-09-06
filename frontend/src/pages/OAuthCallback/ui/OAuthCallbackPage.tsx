@@ -4,10 +4,14 @@ import { useOAuthCallback } from '../model/useOAuthCallback.ts'
  * add-bitrix24-auth-and-rbac, раздел 23 tasks.md; architecture.md `pages/OAuthCallback`: "Приём
  * редиректа от Bitrix24 (`code`, `state`)... без собственной визуальной идентичности (короткий
  * "Выполняется вход…")" — страница не по Pencil-фрейму (не входит в ui-design.md), поэтому это
- * простой текст, а не UI Kit-компонент. Регистрируется отдельным top-level роутом
- * (`app/router.tsx`), вне `app/route-guard/ui/RouteGuard.tsx` — в момент обмена `code` на токены
- * валидной сессии ещё не существует, `RouteGuard` увёл бы на `pages/Login` раньше, чем страница
- * успела бы отправить `code` на backend.
+ * простой текст, а не UI Kit-компонент.
+ *
+ * Рендерится в двух местах: своим top-level роутом `/auth/callback` (`app/router.tsx`, вне
+ * `RouteGuard` — в момент обмена `code` валидной сессии ещё нет, `RouteGuard` увёл бы на
+ * `pages/Login`) и напрямую из `app/route-guard/ui/RouteGuard.tsx`, когда `code` приходит на
+ * корень сайта — Bitrix24 для локальных приложений игнорирует `redirect_uri` из запроса и всегда
+ * возвращает на "Путь вашего обработчика" из настроек приложения, см. `getOAuthRedirectUri`
+ * (oauthState.ts).
  */
 export function OAuthCallbackPage() {
     const { status } = useOAuthCallback()

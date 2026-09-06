@@ -88,20 +88,18 @@ describe('useBitrixLogin', () => {
         restore()
     })
 
-    // redirect_uri — текущий origin + /auth/callback (маршрут pages/OAuthCallback, раздел 23) —
-    // не хардкодится под конкретное окружение, чтобы одна и та же сборка работала на
-    // localhost/staging/проде (регистрация именно этого redirect_uri в настройках приложения
-    // Bitrix24 — операционный шаг вне кода).
-    it('login() включает redirect_uri = текущий origin + /auth/callback', () => {
+    // redirect_uri — голый текущий origin, БЕЗ пути (см. oauthState.ts): Bitrix24 для локальных
+    // приложений игнорирует этот параметр и всегда редиректит на "Путь вашего обработчика" из
+    // настроек приложения, поэтому значение должно буквально совпадать с этим полем — origin, а
+    // не origin + /auth/callback.
+    it('login() включает redirect_uri = текущий origin', () => {
         const { assignSpy, restore } = stubLocationAssign()
 
         const { result } = renderHook(() => useBitrixLogin())
         result.current.login()
 
         const redirectUrl = new URL(assignSpy.mock.calls[0]?.[0] as string)
-        expect(redirectUrl.searchParams.get('redirect_uri')).toBe(
-            `${window.location.origin}/auth/callback`,
-        )
+        expect(redirectUrl.searchParams.get('redirect_uri')).toBe(window.location.origin)
 
         restore()
     })
