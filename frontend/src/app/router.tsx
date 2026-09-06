@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { Layout } from './Layout'
-import { RouteGuard } from './route-guard'
+import { RouteGuard, routeGuardApi } from './route-guard'
 import { FunnelReport } from '@/pages/FunnelReport'
 import { ServicesAnalytics } from '@/pages/ServicesReport'
 import { SalesPlanPage } from '@/pages/SalesPlan'
@@ -40,11 +40,23 @@ export const router = createBrowserRouter([
             {
                 index: true,
                 element: <FunnelReport />,
-                loader: () =>
-                    Promise.all([
+                // Без сессии (standalone-контекст без валидного логина) прыгать сразу в
+                // ensureQueryData нельзя: запросы вернут 401, а queryFn по конвенции проекта
+                // осознанно бросает ApiError — не пойманный здесь loader роняет весь роут в
+                // дефолтный ErrorBoundary react-router вместо LoginPage, которую должен был
+                // отрендерить RouteGuard (обнаружено при тестировании OAuth-логина через ngrok:
+                // "/" не редиректил на логин, хотя остальные роуты без такого loader'а — редиректили).
+                // Проверяем ту же кэшированную сессию, что и RouteGuard, и просто пропускаем
+                // prefetch без сессии — FunnelReport в этом случае всё равно не смонтируется.
+                loader: async () => {
+                    const session = await queryClient.ensureQueryData(routeGuardApi.getCurrentSession())
+                    if (session === null) return null
+
+                    return Promise.all([
                         queryClient.ensureQueryData(funnelReportApi.getFilterOptions()),
                         queryClient.ensureQueryData(funnelReportApi.getDeals(funnelReportDefaultFilters)),
-                    ]),
+                    ])
+                },
             },
             {
                 path: 'services',
