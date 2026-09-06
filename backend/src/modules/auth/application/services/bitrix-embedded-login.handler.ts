@@ -43,7 +43,13 @@ export class BitrixEmbeddedLoginHandler {
 
         // Доставка session_id для embedded-контекста — заголовок
         // Authorization (spec: session#header-delivery-for-iframe),
-        // cookie ненадёжны в iframe из-за SameSite/ITP.
-        return this.sessionIssuer.issueSession(bitrixEmployeeId, 'header');
+        // cookie ненадёжны в iframe из-за SameSite/ITP. `clientEndpoint`
+        // передаётся дальше по той же причине, что и в OAuth-сценарии — см.
+        // WHY в AuthenticatedSessionIssuer.bootstrapAdministratorIfNeeded.
+        return this.sessionIssuer.issueSession(
+            bitrixEmployeeId,
+            'header',
+            clientEndpoint,
+        );
     }
 }

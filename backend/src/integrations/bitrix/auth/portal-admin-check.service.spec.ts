@@ -70,6 +70,23 @@ describe('BitrixPortalAdminCheckService', () => {
         expect(findFirst).toHaveBeenCalledTimes(1);
     });
 
+    it('использует переданный clientEndpoint напрямую, минуя БД-lookup BitrixInstallation', async () => {
+        findFirst.mockResolvedValueOnce(null);
+        axiosGet.mockResolvedValueOnce({ data: { result: true } });
+
+        await expect(
+            service.isPortalAdmin(
+                'token-7',
+                'https://irepair.bitrix24.ru/rest/',
+            ),
+        ).resolves.toBe(true);
+        expect(findFirst).not.toHaveBeenCalled();
+        expect(axiosGet).toHaveBeenCalledWith(
+            'https://irepair.bitrix24.ru/rest/user.admin',
+            { params: { auth: 'token-7' }, timeout: 5_000 },
+        );
+    });
+
     it('кэш ключуется по токену — другой пользователь проверяется заново', async () => {
         axiosGet
             .mockResolvedValueOnce({ data: { result: true } })

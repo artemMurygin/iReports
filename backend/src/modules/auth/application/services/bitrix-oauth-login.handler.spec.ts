@@ -23,9 +23,10 @@ describe('BitrixOAuthLoginHandler', () => {
             resolveBitrixEmployeeId,
         } as unknown as BitrixIdentityResolver;
 
-        const issueSession = jest
-            .fn()
-            .mockResolvedValue({ sessionId: 'session-xyz', delivery: 'cookie' });
+        const issueSession = jest.fn().mockResolvedValue({
+            sessionId: 'session-xyz',
+            delivery: 'cookie',
+        });
         const sessionIssuer = {
             issueSession,
         } as unknown as AuthenticatedSessionIssuer;
@@ -91,8 +92,15 @@ describe('BitrixOAuthLoginHandler', () => {
             'https://irepair.bitrix24.ru/rest/',
         );
         expect(upsert).toHaveBeenCalledTimes(1);
-        expect(issueSession).toHaveBeenCalledWith(42, 'cookie');
-        expect(result).toEqual({ sessionId: 'session-xyz', delivery: 'cookie' });
+        expect(issueSession).toHaveBeenCalledWith(
+            42,
+            'cookie',
+            'https://irepair.bitrix24.ru/rest/',
+        );
+        expect(result).toEqual({
+            sessionId: 'session-xyz',
+            delivery: 'cookie',
+        });
     });
 
     it('не содержит client_secret нигде в возвращаемом результате', async () => {

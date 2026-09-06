@@ -51,7 +51,11 @@ describe('BitrixEmbeddedLoginHandler', () => {
             'auth-id-token',
             'https://irepair.bitrix24.ru/rest/',
         );
-        expect(issueSession).toHaveBeenCalledWith(42, 'header');
+        expect(issueSession).toHaveBeenCalledWith(
+            42,
+            'header',
+            'https://irepair.bitrix24.ru/rest/',
+        );
         expect(result).toEqual({
             sessionId: 'session-abc',
             delivery: 'header',

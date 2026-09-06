@@ -98,7 +98,15 @@ export class BitrixOAuthLoginHandler {
 
         // Доставка session_id для standalone-сайта/iOS — HttpOnly/Secure/
         // SameSite=None cookie (spec: session#cookie-delivery-for-standalone-and-ios).
-        return this.sessionIssuer.issueSession(bitrixEmployeeId, 'cookie');
+        // `clientEndpoint` уже известен из обмена code на токены выше —
+        // передаётся дальше, чтобы bootstrap первого администратора не
+        // зависел от записи BitrixInstallation в БД (см. WHY в
+        // AuthenticatedSessionIssuer.bootstrapAdministratorIfNeeded).
+        return this.sessionIssuer.issueSession(
+            bitrixEmployeeId,
+            'cookie',
+            clientEndpoint,
+        );
     }
 
     private async exchangeCodeForTokens(

@@ -111,8 +111,29 @@ describe('AuthenticatedSessionIssuer', () => {
         await issuer.issueSession(42, 'cookie');
 
         expect(getValidAccessToken).toHaveBeenCalledWith(42);
-        expect(isPortalAdmin).toHaveBeenCalledWith('valid-access-token');
+        expect(isPortalAdmin).toHaveBeenCalledWith(
+            'valid-access-token',
+            undefined,
+        );
         expect(assignAdministratorRole).toHaveBeenCalledWith(42);
+    });
+
+    it('прокидывает clientEndpoint от login-хендлера в isPortalAdmin, минуя БД-lookup BitrixInstallation', async () => {
+        const { issuer, isPortalAdmin } = createIssuer({
+            hasAnyRole: false,
+            isPortalAdmin: true,
+        });
+
+        await issuer.issueSession(
+            42,
+            'cookie',
+            'https://irepair.bitrix24.ru/rest/',
+        );
+
+        expect(isPortalAdmin).toHaveBeenCalledWith(
+            'valid-access-token',
+            'https://irepair.bitrix24.ru/rest/',
+        );
     });
 
     it('не назначает роль Administrator сотруднику без единой роли, если он не админ портала', async () => {

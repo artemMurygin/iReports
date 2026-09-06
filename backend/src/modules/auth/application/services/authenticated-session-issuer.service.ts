@@ -42,8 +42,12 @@ export class AuthenticatedSessionIssuer {
     async issueSession(
         bitrixEmployeeId: number,
         delivery: SessionDelivery,
+        clientEndpoint?: string,
     ): Promise<IssuedSession> {
-        await this.bootstrapAdministratorIfNeeded(bitrixEmployeeId);
+        await this.bootstrapAdministratorIfNeeded(
+            bitrixEmployeeId,
+            clientEndpoint,
+        );
 
         const permissions =
             await this.permissionsResolver.resolvePermissions(bitrixEmployeeId);
@@ -63,9 +67,16 @@ export class AuthenticatedSessionIssuer {
     // permissions будут посчитаны, чтобы новые права отразились в этой же
     // сессии без релогина. Сотрудникам с уже назначенной ролью REST-вызов
     // не выполняется вовсе — избегает лишней сетевой зависимости на
-    // подавляющем большинстве входов.
+    // подавляющем большинстве входов. `clientEndpoint` прокидывается сюда от
+    // login-хендлеров (оба сценария резолвят его сами) и уходит в
+    // BitrixPortalAdminCheckService напрямую, минуя БД-lookup записи
+    // BitrixInstallation — той может не быть вовсе, если install-вебхук не
+    // вызывался (упрощённая регистрация тестового приложения Bitrix24;
+    // обнаружено как реальный баг: bootstrap молча fail-closed'ился на любом
+    // стенде без install-вебхука, роль Administrator не назначалась никому).
     private async bootstrapAdministratorIfNeeded(
         bitrixEmployeeId: number,
+        clientEndpoint?: string,
     ): Promise<void> {
         const hasAnyRole =
             await this.bootstrapAdminPort.hasAnyRole(bitrixEmployeeId);
@@ -77,8 +88,10 @@ export class AuthenticatedSessionIssuer {
             await this.tokenRefreshService.getValidAccessToken(
                 bitrixEmployeeId,
             );
-        const isPortalAdmin =
-            await this.portalAdminCheckService.isPortalAdmin(accessToken);
+        const isPortalAdmin = await this.portalAdminCheckService.isPortalAdmin(
+            accessToken,
+            clientEndpoint,
+        );
         if (!isPortalAdmin) {
             return;
         }
