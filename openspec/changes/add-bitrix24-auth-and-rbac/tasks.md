@@ -260,23 +260,12 @@
   конечная проводка до `useRoles().createRole(name)` происходит на уровне
   `mediator/RolesManagementPage` (20.8), который в этом разделе НЕ реализован (см. блокер ниже).
 
-- [ ] БЛОКЕР (см. финальный отчёт раздела 20, не решался самостоятельно): 20.7-20.9 не
-  реализованы. `features/RoleManagement/ui/EmployeeRoleAssignment` (20.7) по фрейму `F6d3a`
-  требует показывать текущие роли каждого сотрудника (бейджи ролей, состояние «Роль не
-  назначена» -> иконка `user-plus` вместо `pencil`), но ни один эндпоинт `roles`/`directory` не
-  отдаёт назначение роль<->сотрудник: `GET /roles` возвращает только `permissionCodes` роли (без
-  списка её сотрудников), `GET /directory/employees` — только `{id, name, departmentId}` (без
-  ролей). Таблица `EmployeeRole` существует в Prisma (`backend/prisma/schema/auth.prisma`), но не
-  читается наружу ни одним контроллером `roles` (раздел 10.3 tasks.md сознательно НЕ завёл под
-  это отдельный метод — весь список сотрудников уходит напрямую в `/directory/employees`, минуя
-  `roles`). Тот же открытый вопрос уже был зафиксирован в разделе 19
-  (`features/RoleManagement/model/useEmployeeRoleAssignment.ts`), но не был разрешён там как
-  архитектурное решение вне раздела 19 — раздел 20 подтверждает: без нового
-  эндпоинта/поля в контракте (например `GET /roles` с `employeeIds` на роль, или отдельный
-  `GET /roles/assignments`) `EmployeeRoleAssignment` нельзя реализовать, не приврав данные.
-  20.8 (мediator + роут `/admin/roles`) и 20.9 (финальная сверка обеих вкладок) зависят от 20.7 и
-  тоже не реализованы — вкладка «Роли и права» (20.1-20.6) существует только как отдельные
-  протестированные компоненты, ещё не собранные в страницу и не подключённые к роутеру.
+Блокер решён пользователем: раздел 22 добавляет `GET /roles/assignments`. 20.7-20.9 продолжаются
+ПОСЛЕ раздела 22 (нужны его данные), не раньше.
+
+- [ ] 20.7 Реализовать `features/RoleManagement/ui/EmployeeRoleAssignment` (таблица сотрудников с бейджами ролей через `useEmployeeRoleAssignment` — теперь читает `GET /roles/assignments` из раздела 22 — и состоянием «Роль не назначена»: иконка `user-plus` вместо `pencil`) по фрейму `F6d3a` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`).
+- [ ] 20.8 Реализовать `pages/RolesManagement/mediator/RolesManagementPage` — оркестрация хуков `useRoles`/`useRolePermissionsMatrix`/`useEmployeeRoleAssignment`, переключение вкладок «Роли и права»/«Сотрудники» (без условного рендера внутри самого медиатора). Подключить роут `/admin/roles` с защитой `roles:manage` (механизм `handle.requiredPermission` уже готов в `app/route-guard`, раздел 15).
+- [ ] 20.9 Финальная сверка: скриншот полного экрана `s5nMLx` (вкладка «Роли и права») и `F6d3a` (вкладка «Сотрудники») из Pencil сопоставлен с рендером реализованной страницы — layout, тексты и состояния совпадают.
 
 ## 21. Итоговая интеграционная проверка
 
@@ -285,3 +274,24 @@
 - [ ] 21.3 Ручной сквозной прогон (или e2e-сценарий) через оба сценария логина: embedded (`BX24.init()` → `AUTH_ID` → сессия) и standalone (`pages/Login` → OAuth-редирект → callback → сессия) — в обоих случаях `GET /auth/me` возвращает корректные `permissions`, `/admin/roles` доступен только с `roles:manage`, изменение прав роли отражается в активной сессии без релогина (спек `roles`), logout инвалидирует сессию в Redis.
   - НЕ ВЫПОЛНЕНО в рамках этой сессии. Ограничение среды: у агента нет доступа к реальному Bitrix24-порталу (нужен для `BX24.init()`/embedded-контекста и для OAuth-редиректа standalone-сценария), нет браузера для интерактивного прохода UI, и нет запущенного Redis/Postgres со staging-данными сотрудника. Автотесты (unit/e2e с моками Bitrix24 и Redis) покрывают эти сценарии на уровне контроллеров и сервисов, но не заменяют сквозную проверку через реальный портал.
   - Что нужно пользователю для финальной верификации вручную: (1) staging-инсталляция Bitrix24-портала с установленным embedded-приложением iReports (или тестовый портал с доступом к маркетплейсу разработчика) для сценария `BX24.init()` → `AUTH_ID`; (2) зарегистрированный тестовый OAuth-клиент Bitrix24 (client_id/secret, redirect_uri на dev/staging-домен iReports) для standalone-сценария `pages/Login` → редирект → callback; (3) поднятые Redis и Postgres (docker-compose) с применёнными миграциями и засеянным каталогом прав/ролью Administrator; (4) сотрудник в `BitrixEmployee` с правами, чтобы проверить как happy path (`GET /auth/me` → `permissions`, доступ к `/admin/roles`), так и live-обновление прав в активной сессии без релогина, и logout с проверкой инвалидации ключа сессии в Redis.
+
+## 22. Backend: `GET /roles/assignments` — данные о назначениях роль↔сотрудник (добавлено по итогам реализации раздела 20) (TDD)
+
+- [ ] 22.1 Написать тесты: `RolesQueryHandlers.getRoleAssignments()` возвращает `{employeeId, roleIds}[]` по всем сотрудникам, у которых есть хотя бы одна роль (через существующую таблицу `EmployeeRole`, `backend/prisma/schema/auth.prisma`); e2e-тест контроллера `GET /v1/roles/assignments` под `roles:manage` (401/403/200 по образцу раздела 12). Verify: тесты видны раннеру.
+- [ ] 22.2 Прогнать тесты из 22.1, зафиксировать red.
+- [ ] 22.3 Реализовать `RolesQueryHandlers.getRoleAssignments`, эндпоинт `GET /v1/roles/assignments` (`backend/src/modules/roles/interface/http-controllers/`), Zod-схему ответа в `contracts/commands/roles.ts`; обновить `/ENDPOINTS.md` и `@ApiOperation`.
+- [ ] 22.4 Прогнать тесты из 22.1, зафиксировать green, регрессий нет (`npm run test` backend). Обновить `backend/src/modules/roles/permissions-catalog.contract.spec.ts`-проверку при необходимости (раздел 14) — новый контроллер использует уже существующий код `roles:manage`, реестр менять не должно потребоваться.
+
+## 23. Frontend: OAuth `state` (защита от login-CSRF) + приём OAuth-редиректа (design.md Decision 13) (TDD)
+
+- [ ] 23.1 Написать тесты: `useBitrixLogin().login()` генерирует случайный `state`, сохраняет его в `sessionStorage` перед редиректом на `{portal}/oauth/authorize/` и включает его в query-параметры редиректа; `pages/OAuthCallback` (`useOAuthCallback`) при совпадении `state` из URL с сохранённым — отправляет `code` на backend и удаляет сохранённое значение; при несовпадении/отсутствии — не отправляет `code` и показывает ошибку, ничего не удаляя лишний раз. Verify: тесты видны раннеру.
+- [ ] 23.2 Прогнать тесты из 23.1, зафиксировать red.
+- [ ] 23.3 Реализовать генерацию/сохранение `state` в `features/Auth/model/useBitrixLogin.ts`; реализовать `pages/OAuthCallback/{ui/OAuthCallbackPage.tsx, model/useOAuthCallback.ts}` (без вёрстки по Pencil-фрейму — короткое сообщение "Выполняется вход…"/"Не удалось войти" текстом, страница не входит в ui-design.md), подключить `api.oauthExchange` в `features/Auth/model/api.ts` (`POST /v1/auth/oauth/callback`, уже реализован в разделе 12 backend), зарегистрировать роут (например `/auth/callback`) в `frontend/src/app/router.tsx`.
+- [ ] 23.4 Прогнать тесты из 23.1, зафиксировать green, регрессий нет (`npm run test` frontend).
+
+## 24. Финализация: включить глобальные guard'ы и повторная проверка (Decision 5, Migration Plan)
+
+- [ ] 24.1 Раскомментировать регистрацию `SessionAuthGuard`→`PermissionsGuard` (и, где применимо, `CsrfGuard`) как `APP_GUARD` в `backend/src/app.module.ts` — раздел 20 (маршрут `/admin/roles` и вся цепочка frontend-аутентификации) теперь реализован, откладывать больше не нужно (design.md Migration Plan, шаг 6-7).
+- [ ] 24.2 Прогнать полный backend test suite — убедиться, что глобальное включение guard'ов не сломало существующие роуты вне `auth`/`session`/`roles` (они не помечены `@RequirePermissions`, но теперь ВСЕ требуют валидной сессии, если не помечены `@Public()` — по спеку `roles` это ожидаемое поведение, но стоит явно проверить, что ни один нужный публичный/health-check роут не остался без `@Public()`).
+- [ ] 24.3 Прогнать полный frontend test suite и `npm run build` (backend и frontend) — регрессий нет.
+- [ ] 24.4 Обновить пункт 21.3: остаётся открытым для ручной проверки пользователем (см. обоснование в разделе 21) — не пытаться закрыть автоматически.

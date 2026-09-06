@@ -76,6 +76,7 @@ Decision 1.
 | `DIRECTORY_REPOSITORY.findEmployees` | `departmentId?, options?` | `Promise<EmployeeSummary[]>` | **Существующий** метод — список сотрудников для админ-страницы ролей (используется `roles`) |
 | `RolesCommandHandlers.updateRolePermissions` | `roleId, permissionCodes` | `Promise<void>` | Меняет права роли и триггерит `SESSION_PORT.refreshPermissionsForEmployee` для всех сотрудников с этой ролью |
 | `RolesQueryHandlers.getPermissionsCatalog` | — | `Promise<{code, label, group}[]>` | Читает каталог `Permission` (наполнен `PermissionsCatalogSeeder`) — источник строк матрицы для `useRolePermissionsMatrix`, не редактируется через UI |
+| `RolesQueryHandlers.getRoleAssignments` | — | `Promise<{employeeId, roleIds}[]>` | Текущие назначения роль↔сотрудник по всем сотрудникам — источник бейджей ролей и состояния "роль не назначена" для `useEmployeeRoleAssignment` (добавлено по итогам реализации — `GET /directory/employees`/`GET /roles` этих данных не отдают) |
 | `SessionAuthGuard.canActivate` | `ExecutionContext` | `Promise<boolean>` | Глобальная проверка сессии, throw `UnauthorizedException` при отказе |
 | `PermissionsGuard.canActivate` | `ExecutionContext` | `boolean` | Глобальная проверка permissions, throw `ForbiddenException` при отказе |
 
@@ -89,6 +90,7 @@ Decision 1.
 | `pages/RolesManagement` | `/admin/roles` | `ui` + `model` + `mediator` (несколько stateful-виджетов: список ролей, матрица, назначение сотрудникам) | Админ-UI управления ролями (требует `roles:manage`) |
 | `pages/AccessDenied` | — (рендерится на месте защищённого роута, не отдельный URL) | `ui` | Экран "нет доступа" при прямом переходе без нужного permission |
 | `pages/Login` | `/login` (standalone/iOS); не рендерится в embedded-контексте | `ui` + `model` | Экран-шлюз "Войдите через Bitrix24" для standalone-сайта/iOS без валидной сессии — CTA запускает OAuth authorization code flow по клику пользователя (см. ниже, добавлено по итогам UI-дизайна) |
+| `pages/OAuthCallback` | `/auth/callback` (или иной `redirect_uri`, настраивается в Bitrix24 app) | `ui` + `model` | Приём редиректа от Bitrix24 (`code`, `state`), сверка `state` (design.md Decision 13), передача `code` на backend — без собственной визуальной идентичности (короткий "Выполняется вход…"), добавлено по итогам реализации: без этого маршрута standalone-логин не может завершиться |
 
 ### Features
 | Feature | Статус | Публичный API (`index.ts`) | `model/` | Назначение |
@@ -113,7 +115,8 @@ Decision 1.
 | `useHasPermission` | `features/Auth/model` | state-хук (читает Zustand-стор) | `boolean` |
 | `useCurrentUser` | `features/Auth/model` | query options factory + хук | `{ employee, permissions, isInitialLoad }` |
 | `useLogout` | `features/Auth/model` | mutation-хук | `{ logout(), isPending }` |
-| `useBitrixLogin` | `features/Auth/model` | обычный хук (без запроса — формирует URL и делает redirect) | `{ login() }` — редиректит на `{portal}/oauth/authorize/` |
+| `useBitrixLogin` | `features/Auth/model` | обычный хук (без запроса — формирует URL и делает redirect) | `{ login() }` — генерирует `state`, сохраняет в `sessionStorage` (design.md Decision 13), редиректит на `{portal}/oauth/authorize/` |
+| `useOAuthCallback` | `pages/OAuthCallback/model` | mutation-хук | `{ status: 'processing'\|'error' }` — сверяет `state`, при успехе шлёт `code` на backend через `api.oauthExchange` (`features/Auth`) |
 | `useRoles` | `features/RoleManagement/model` | query + мутации CRUD | `{ roles, createRole, renameRole, deleteRole }` |
 | `useRolePermissionsMatrix` | `features/RoleManagement/model` | query + мутация | `{ matrix, togglePermission, save, isSaving }` |
 | `useEmployeeRoleAssignment` | `features/RoleManagement/model` | query (существующий `/directory/employees`) + мутации ролей | `{ employees, assignRole, revokeRole }` |
