@@ -295,10 +295,25 @@
 
 ## 23. Frontend: OAuth `state` (защита от login-CSRF) + приём OAuth-редиректа (design.md Decision 13) (TDD)
 
-- [ ] 23.1 Написать тесты: `useBitrixLogin().login()` генерирует случайный `state`, сохраняет его в `sessionStorage` перед редиректом на `{portal}/oauth/authorize/` и включает его в query-параметры редиректа; `pages/OAuthCallback` (`useOAuthCallback`) при совпадении `state` из URL с сохранённым — отправляет `code` на backend и удаляет сохранённое значение; при несовпадении/отсутствии — не отправляет `code` и показывает ошибку, ничего не удаляя лишний раз. Verify: тесты видны раннеру.
-- [ ] 23.2 Прогнать тесты из 23.1, зафиксировать red.
-- [ ] 23.3 Реализовать генерацию/сохранение `state` в `features/Auth/model/useBitrixLogin.ts`; реализовать `pages/OAuthCallback/{ui/OAuthCallbackPage.tsx, model/useOAuthCallback.ts}` (без вёрстки по Pencil-фрейму — короткое сообщение "Выполняется вход…"/"Не удалось войти" текстом, страница не входит в ui-design.md), подключить `api.oauthExchange` в `features/Auth/model/api.ts` (`POST /v1/auth/oauth/callback`, уже реализован в разделе 12 backend), зарегистрировать роут (например `/auth/callback`) в `frontend/src/app/router.tsx`.
-- [ ] 23.4 Прогнать тесты из 23.1, зафиксировать green, регрессий нет (`npm run test` frontend).
+- [x] 23.1 Написать тесты: `useBitrixLogin().login()` генерирует случайный `state`, сохраняет его в `sessionStorage` перед редиректом на `{portal}/oauth/authorize/` и включает его в query-параметры редиректа; `pages/OAuthCallback` (`useOAuthCallback`) при совпадении `state` из URL с сохранённым — отправляет `code` на backend и удаляет сохранённое значение; при несовпадении/отсутствии — не отправляет `code` и показывает ошибку, ничего не удаляя лишний раз. Verify: тесты видны раннеру.
+- [x] 23.2 Прогнать тесты из 23.1, зафиксировать red. Результат: `useBitrixLogin.spec.ts` падает на `Failed to resolve import "./oauthState.ts"`; `useOAuthCallback.spec.tsx`/`OAuthCallbackPage.spec.tsx` падают на отсутствующих `./useOAuthCallback.ts`/`./OAuthCallbackPage.tsx` — все три файла ещё не существовали.
+- [x] 23.3 Реализовать генерацию/сохранение `state` в `features/Auth/model/useBitrixLogin.ts`; реализовать `pages/OAuthCallback/{ui/OAuthCallbackPage.tsx, model/useOAuthCallback.ts}` (без вёрстки по Pencil-фрейму — короткое сообщение "Выполняется вход…"/"Не удалось войти" текстом, страница не входит в ui-design.md), подключить `api.oauthExchange` в `features/Auth/model/api.ts` (`POST /v1/auth/oauth/callback`, уже реализован в разделе 12 backend), зарегистрировать роут (например `/auth/callback`) в `frontend/src/app/router.tsx`.
+- [x] 23.4 Прогнать тесты из 23.1, зафиксировать green, регрессий нет (`npm run test` frontend).
+  Результат: `useBitrixLogin.spec.ts` — 4/4 green (2 новых теста на `state`); `useOAuthCallback.spec.tsx`
+  — 4/4 green (новый файл); `OAuthCallbackPage.spec.tsx` — 2/2 green (новый файл). Полный frontend
+  suite: 73 test files / 403 tests — все зелёные (было 71/395, +2 файла/+8 тестов). `npx tsc -b` и
+  `npm run build` — без ошибок, `npx eslint .` — без ошибок (только 2 pre-existing warning о legacy
+  boundaries-синтаксисе, не связанные с этой секцией). Реализация: `features/Auth/model/oauthState.ts`
+  (`createAndStoreOAuthState`/`consumeStoredOAuthState` — одноразовая сверка `state` одним
+  read+remove действием, spec: auth#oauth-login-csrf-state-protection), `useBitrixLogin.ts` теперь
+  включает `state` в query-параметр редиректа; `features/Auth/model/api.ts` — `api.oauthExchange`
+  (`POST /v1/auth/oauth/callback`); `features/Auth/index.ts` — новые публичные экспорты
+  (`AUTH_ME_QUERY_KEY`, `authApi`, `OAUTH_STATE_STORAGE_KEY`, `consumeStoredOAuthState`), нужные
+  `pages/OAuthCallback` (FSD-граница: импорт фичи только через её `index.ts`);
+  `pages/OAuthCallback/{model/useOAuthCallback.ts, ui/OAuthCallbackPage.tsx}` — mutation-хук +
+  текстовая страница без Pencil-вёрстки; роут `/auth/callback` в `app/router.tsx` вне `RouteGuard`
+  (в момент обмена `code` валидной сессии ещё не существует, `RouteGuard` увёл бы на `pages/Login`
+  раньше).
 
 ## 24. Финализация: включить глобальные guard'ы и повторная проверка (Decision 5, Migration Plan)
 

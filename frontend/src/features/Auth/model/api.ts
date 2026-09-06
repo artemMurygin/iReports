@@ -1,5 +1,10 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { AuthMeResponse, LogoutResponse } from 'ireports-contracts'
+import type {
+    AuthMeResponse,
+    BitrixOAuthCallbackRequest,
+    BitrixOAuthCallbackResponse,
+    LogoutResponse,
+} from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
@@ -56,5 +61,18 @@ export const api = {
             .then((r) => r.data)
             .catch((error) => {
                 throw new ApiError('Не удалось выполнить выход ' + error)
+            }),
+
+    // POST /v1/auth/oauth/callback (spec: auth#oauth-authorization-code-flow,
+    // auth#oauth-callback-frontend-route) — обмен `code` на токены строго на backend, уже
+    // реализован в разделе 12 tasks.md. Вызывается `pages/OAuthCallback`'s `useOAuthCallback`
+    // (раздел 23 tasks.md) ПОСЛЕ того, как `state` из URL сверен с сохранённым в `sessionStorage`
+    // значением (design.md Decision 13) — сама сверка происходит на вызывающей стороне, не здесь.
+    oauthExchange: (payload: BitrixOAuthCallbackRequest): Promise<BitrixOAuthCallbackResponse> =>
+        apiInstance
+            .post<BitrixOAuthCallbackResponse>('/v1/auth/oauth/callback', payload)
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError('Не удалось войти через Bitrix24 ' + error)
             }),
 }

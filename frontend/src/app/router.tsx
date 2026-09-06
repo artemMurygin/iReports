@@ -17,6 +17,7 @@ import { ServiceAccountsPage } from '@/pages/ServiceAccounts'
 import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
 import { UiKitPreview } from '@/pages/UiKitPreview'
+import { OAuthCallbackPage } from '@/pages/OAuthCallback'
 import { queryClient } from '@/shared/api/query-client.ts'
 import { api as funnelReportApi } from '@/pages/FunnelReport/model/api.ts'
 import { defaults as funnelReportDefaultFilters } from '@/pages/FunnelReport/model/useFilters.tsx'
@@ -158,5 +159,13 @@ export const router = createBrowserRouter([
     {
         path: '/ui-kit-preview',
         element: <UiKitPreview />,
+    },
+    {
+        // add-bitrix24-auth-and-rbac, раздел 23 tasks.md; architecture.md `pages/OAuthCallback`
+        // (`/auth/callback` — тот же redirect_uri настраивается в приложении Bitrix24). Вне
+        // `RouteGuard` намеренно (см. комментарий в `OAuthCallbackPage.tsx`) — в момент обмена
+        // `code` на токены валидной сессии ещё не существует.
+        path: '/auth/callback',
+        element: <OAuthCallbackPage />,
     },
 ])
