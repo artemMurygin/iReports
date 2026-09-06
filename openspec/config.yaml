@@ -1,4 +1,4 @@
-schema: my-workflow
+schema: end-to-end-feature-design
 
 # Project context (optional)
 # This is shown to AI when creating artifacts.
