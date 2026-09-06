@@ -31,7 +31,8 @@ export type NavDrawerSection = {
 
 export type NavDrawerUser = {
     name: string
-    role: string
+    /** Role/position label. Omit when unknown — hides the role line instead of showing a placeholder. */
+    role?: string
     initials: string
     avatarSrc?: string
 }
@@ -149,7 +150,9 @@ function NavDrawer({ open, onClose, sections, user, onLogout, className }: NavDr
                     </Avatar>
                     <div className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate text-sm font-medium text-ink">{user.name}</span>
-                        <span className="truncate text-[11px] text-ink-muted">{user.role}</span>
+                        {user.role ? (
+                            <span className="truncate text-[11px] text-ink-muted">{user.role}</span>
+                        ) : null}
                     </div>
                     <button
                         type="button"

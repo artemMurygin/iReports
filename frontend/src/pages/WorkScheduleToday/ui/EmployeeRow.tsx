@@ -5,7 +5,7 @@ import type { WorkScheduleShiftEmployee } from 'ireports-contracts'
 import { cn } from '@/shared/lib/tw'
 import { Avatar, AvatarFallback } from '@/shared/ui-kit/atoms/Avatar'
 
-import { getEmployeeInitials } from '../model/employeeInitials.ts'
+import { getEmployeeInitials } from '@/shared/lib/employeeInitials.ts'
 import { buildEmployeeScheduleLink } from '../model/employeeScheduleLink.ts'
 import { formatHours } from '../model/formatHours.ts'
 import { resolveRoleStyle } from '../model/rolePresentation.ts'

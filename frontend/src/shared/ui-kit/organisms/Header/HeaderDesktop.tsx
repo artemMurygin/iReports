@@ -36,8 +36,8 @@ import type { NavItem } from './types'
 export type HeaderDesktopUser = {
     /** Full name, e.g. "Артём Мурыгин". */
     name: string
-    /** Role/position label, e.g. "Руководитель". */
-    role: string
+    /** Role/position label, e.g. "Руководитель". Omit when unknown — hides the role line instead of showing a placeholder. */
+    role?: string
     /** Avatar fallback initials, e.g. "АМ". */
     initials: string
     /** Optional avatar image; falls back to `initials` when absent or failing to load. */
@@ -154,7 +154,7 @@ function HeaderDesktop({
                                 </Avatar>
                                 <span className="flex flex-col items-start gap-px">
                                     <span className="text-[13px] font-medium text-ink">{user.name}</span>
-                                    <span className="text-[11px] text-ink-muted">{user.role}</span>
+                                    {user.role ? <span className="text-[11px] text-ink-muted">{user.role}</span> : null}
                                 </span>
                                 <ChevronDown
                                     className={cn(

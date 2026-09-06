@@ -1,12 +1,24 @@
 import { useLocation } from 'react-router-dom'
 
+import { useCurrentUser } from '@/features/Auth'
 import { findMostSpecificNavMatch } from '@/shared/lib/nav.ts'
+import { getEmployeeInitials } from '@/shared/lib/employeeInitials.ts'
 import { Header as UiKitHeader } from '@/shared/ui-kit/organisms/Header'
 
 import { ALL_LEAVES, DRAWER_SECTIONS, isTopLevelNavItemActive, SECTIONS, TOP_LEVEL_NAV_ITEMS } from './navigation.tsx'
 
 export function Header() {
     const location = useLocation()
+    // Общий с RouteGuard/useRouteGuardState кэш TanStack Query (тот же ключ auth-me, session.api.ts)
+    // — Header не делает повторный сетевой запрос, здесь он уже прогрет к моменту, когда рендерится
+    // Header (Layout монтируется только внутри RouteGuard, после подтверждения сессии).
+    const { employee } = useCurrentUser()
+    const user = employee
+        ? {
+              name: `${employee.firstName} ${employee.lastName}`.trim(),
+              initials: getEmployeeInitials(`${employee.firstName} ${employee.lastName}`),
+          }
+        : undefined
 
     // Pick the most specific match, not the first one in array order: with `end: false` (the
     // default), a shorter leaf like "Отчёт по зарплате" (`/salaries`) matches any nested path,
@@ -63,6 +75,7 @@ export function Header() {
             navItems={navItems}
             subnavTabs={subnavTabs}
             drawerSections={drawerSections}
+            user={user}
             mobile={{ section: activeLeaf.section, page: activeLeaf.label }}
         />
     )
