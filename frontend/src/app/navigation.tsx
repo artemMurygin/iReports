@@ -10,6 +10,7 @@ import {
     Percent,
     Receipt,
     Settings,
+    ShieldCheck,
     Target,
     TrendingUp,
     UserCog,
@@ -148,6 +149,12 @@ const NAV_ENTRIES: NavEntry[] = [
     // (docs/employee-ordering-and-salary-filter, Фаза 4), добавлен рядом со «Связи
     // сотрудников» — теперь items.length > 1, поэтому `app/Header.tsx` рисует Subnav раздела
     // (см. её условие `items.length > 1`), а верхнеуровневая ссылка ведёт на первый пункт.
+    // Третий пункт, «Роли и права» (`/settings/roles`, `pages/RolesManagement`,
+    // add-bitrix24-auth-and-rbac), переехал сюда с отдельного роута `/admin/roles` — та же
+    // вкладка Subnav, что и два других пункта раздела; `requiredPermission: 'roles:manage'`
+    // на самом роуте (app/router.tsx) не даёт открыть страницу без прав через RouteGuard, но
+    // список пунктов «Настройки» permission не фильтрует (как и оба других пункта раздела) —
+    // вкладка видна всем, доступ проверяется при переходе.
     {
         kind: 'section',
         section: {
@@ -156,6 +163,7 @@ const NAV_ENTRIES: NavEntry[] = [
             items: [
                 { label: 'Связи сотрудников', to: '/settings/employee-identity', icon: <Link2 /> },
                 { label: 'Служебные аккаунты', to: '/settings/service-accounts', icon: <UserCog /> },
+                { label: 'Роли и права', to: '/settings/roles', icon: <ShieldCheck /> },
             ],
         },
     },

@@ -166,11 +166,16 @@ export const router = createBrowserRouter([
             },
             {
                 // add-bitrix24-auth-and-rbac, раздел 20.8 tasks.md; ui-design.md `s5nMLx`/`F6d3a`
-                // — админ-страница управления ролями. `handle.requiredPermission` — механизм
-                // раздела 15 (`app/route-guard/ui/RouteGuard.tsx`), уже готовый и покрытый
-                // тестами до этой задачи; без `roles:manage` у текущего сотрудника `RouteGuard`
-                // рендерит `pages/AccessDenied` вместо этого роута.
-                path: 'admin/roles',
+                // — админ-страница управления ролями. Третий пункт раздела «Настройки» (рядом со
+                // «Связи сотрудников»/«Служебные аккаунты» выше) — вкладка в Subnav, а не
+                // отдельная ссылка вне раздела, поэтому путь под общим префиксом `settings/`, а
+                // не `admin/`. `handle.requiredPermission` — механизм раздела 15
+                // (`app/route-guard/ui/RouteGuard.tsx`), уже готовый и покрытый тестами до этой
+                // задачи; без `roles:manage` у текущего сотрудника `RouteGuard` рендерит
+                // `pages/AccessDenied` вместо этого роута (вкладка при этом всё равно видна в
+                // Subnav — сам список пунктов «Настройки» permission не фильтрует, как и два
+                // других пункта раздела).
+                path: 'settings/roles',
                 element: <RolesManagementPage />,
                 handle: { requiredPermission: 'roles:manage' },
             },

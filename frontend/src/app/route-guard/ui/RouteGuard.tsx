@@ -28,10 +28,9 @@ type Props = {
 //    задача не реализует, см. финальный отчёт по разделу 15).
 // 2. защищённый роут (объявляет `handle.requiredPermission`, читается через
 //    `useMatches()`) без нужного permission у текущего пользователя ->
-//    `pages/AccessDenied` — независимо от контекста запуска. Ни один роут
-//    пока не объявляет `requiredPermission` (появится в разделе 20 tasks.md
-//    у `/admin/roles`), поэтому это правило сегодня не срабатывает ни на
-//    одном реальном роуте — только на роутах будущих задач.
+//    `pages/AccessDenied` — независимо от контекста запуска. `/settings/roles`
+//    (раздел 20 tasks.md, ранее `/admin/roles`) объявляет `requiredPermission:
+//    'roles:manage'` — это правило реально срабатывает на нём.
 export function RouteGuard({ children }: Props) {
     const matches = useMatches()
     const requiredPermission = (matches.at(-1)?.handle as RouteHandle | undefined)?.requiredPermission

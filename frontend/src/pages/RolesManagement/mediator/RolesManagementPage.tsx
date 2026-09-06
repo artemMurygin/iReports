@@ -11,13 +11,14 @@ import { RolesManagementBody, type RolesManagementTab } from '../ui/RolesManagem
  * `useEmployeeRoleAssignment`) и хранит только состояние активной вкладки (не рендер-ветвление,
  * а простое значение, переданное дальше как проп — само переключение "какой JSX показать" живёт
  * в `ui/RolesManagementBody.tsx`, frontend/CLAUDE.md, «Медиатор не должен содержать условного
- * рендера»). Смонтирован на `/admin/roles` (`app/router.tsx`, `handle.requiredPermission:
- * 'roles:manage'` — раздел 15 `app/route-guard`).
+ * рендера»).
  *
  * `useRoles()` и `useEmployeeRoleAssignment()` оба читают `GET /roles` (`ROLES_QUERY_KEY`) —
  * TanStack Query дедуплицирует одинаковый ключ между двумя одновременно смонтированными хуками,
  * поэтому `roles.roles` передаётся в обе вкладки (`RolesManagementBody`) одним и тем же пропом,
- * а не дублируется через `useEmployeeRoleAssignment().roles`.
+ * а не дублируется через `useEmployeeRoleAssignment().roles`. Смонтирован на `/settings/roles`
+ * (`app/router.tsx`, `handle.requiredPermission: 'roles:manage'` — раздел 15 `app/route-guard`) —
+ * третья вкладка раздела «Настройки» (`app/navigation.tsx`), ранее отдельный роут `/admin/roles`.
  *
  * `isEmpty` — `!roles.isLoading && roles.roles.length === 0`, а не просто `roles.roles.length ===
  * 0`: без гейта на `isLoading` пустое состояние (`uRNsj`) мигнуло бы на экране в момент между
