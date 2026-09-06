@@ -66,6 +66,9 @@ export class BitrixOAuthLoginHandler {
             redirectUri,
         );
         const clientEndpoint = `https://${tokenResponse.domain}/rest/`;
+        this.logger.debug(
+            `Обмен code на токены Bitrix24 успешен, domain=${tokenResponse.domain}, clientEndpoint=${clientEndpoint}`,
+        );
 
         const { bitrixEmployeeId } =
             await this.identityResolver.resolveBitrixEmployeeId(
