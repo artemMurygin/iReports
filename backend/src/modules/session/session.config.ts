@@ -26,3 +26,14 @@ export const CSRF_HEADER_NAME = 'x-csrf-token';
 // разработки/тестов.
 export const CSRF_SECRET =
     process.env.CSRF_SECRET ?? 'ireports-dev-insecure-csrf-secret';
+
+// Domain-атрибут для session_id/csrf_token cookies. Frontend и backend живут
+// на разных поддоменах одного родительского домена (например
+// test.ireports.murygin.tech / test.api.murygin.tech) — без явного Domain
+// cookie scope'ится только на хост backend'а, и фронтенд не может прочитать
+// csrf_token через document.cookie (баг: CsrfGuard отклонял все мутирующие
+// запросы, см. session#csrf-protection-for-cookie-session). Родительский
+// домен ('.murygin.tech') задаётся через .env на каждом стенде отдельно, не
+// хардкодится — на локальной разработке (http://localhost) переменная не
+// задаётся, и Domain-атрибут не выставляется вовсе (undefined).
+export const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN;

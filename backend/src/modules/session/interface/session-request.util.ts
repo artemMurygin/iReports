@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import {
+    COOKIE_DOMAIN,
     CSRF_COOKIE_NAME,
     CSRF_SECRET,
     SESSION_COOKIE_NAME,
@@ -40,6 +41,7 @@ export function applySessionCookie(res: Response, sessionId: string): void {
         sameSite: 'none',
         maxAge: SESSION_TTL_SECONDS * 1000,
         path: '/',
+        domain: COOKIE_DOMAIN,
     });
 }
 
@@ -49,11 +51,13 @@ export function clearSessionCookie(res: Response): void {
         secure: true,
         sameSite: 'none',
         path: '/',
+        domain: COOKIE_DOMAIN,
     });
     res.clearCookie(CSRF_COOKIE_NAME, {
         secure: true,
         sameSite: 'none',
         path: '/',
+        domain: COOKIE_DOMAIN,
     });
 }
 
@@ -75,6 +79,7 @@ export function applyCsrfCookie(res: Response, sessionId: string): void {
         sameSite: 'none',
         maxAge: SESSION_TTL_SECONDS * 1000,
         path: '/',
+        domain: COOKIE_DOMAIN,
     });
 }
 

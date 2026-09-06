@@ -47,6 +47,11 @@ services:
       # dev-стенд (ветка `dev`, деплой через .github/workflows/deploy-dev.yml) — отдельный домен от
       # прода (ireports.murygin.tech/api.murygin.tech, см. ветку main), не мержить это значение назад.
       CORS_ORIGIN: https://test.ireports.murygin.tech
+      # Родительский домен для session_id/csrf_token cookies — без него cookie scope'ится только на
+      # test.api.murygin.tech, и фронтенд (test.ireports.murygin.tech) не может прочитать csrf_token
+      # через document.cookie (CsrfGuard отклонял все мутирующие запросы). Оба поддомена (frontend/
+      # backend) dev-стенда — под .murygin.tech, как и прод; не мержить это значение назад в main.
+      COOKIE_DOMAIN: .murygin.tech
       BITRIX24_WEBHOOK_URL: ${BITRIX24_WEBHOOK_URL}
       SECRET_ACCESS: ${SECRET_ACCESS}
       SECRET_REFRESH: ${SECRET_REFRESH}
