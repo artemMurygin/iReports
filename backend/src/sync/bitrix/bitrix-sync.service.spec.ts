@@ -16,12 +16,36 @@ describe('BitrixSyncService', () => {
         ...overrides,
     });
 
-    const createService = () => {
+    const createService = (options: { existingDepartment?: boolean } = {}) => {
         const upsert = jest.fn().mockResolvedValue(undefined);
-        const db = { bitrixEmployee: { upsert } } as any;
-        const bitrix = { fetchEmployees: jest.fn() } as any;
+        const departmentFindUnique = jest
+            .fn()
+            .mockResolvedValue(
+                options.existingDepartment === false ? null : { id: 7 },
+            );
+        const departmentUpsert = jest.fn().mockResolvedValue(undefined);
+        const db = {
+            bitrixEmployee: { upsert },
+            bitrixDepartment: {
+                findUnique: departmentFindUnique,
+                upsert: departmentUpsert,
+            },
+        } as any;
+        const bitrix = {
+            fetchEmployees: jest.fn(),
+            fetchDepartmentById: jest
+                .fn()
+                .mockResolvedValue({ ID: '7', NAME: 'Отдел продаж' }),
+        } as any;
         const service = new BitrixSyncService(db, bitrix);
-        return { service, db, bitrix, upsert };
+        return {
+            service,
+            db,
+            bitrix,
+            upsert,
+            departmentFindUnique,
+            departmentUpsert,
+        };
     };
 
     describe('upsertEmployeeRecord', () => {
@@ -47,10 +71,45 @@ describe('BitrixSyncService', () => {
             });
         });
 
+        // spec: auth#self-heal-bitrix-employee — обнаруженный реальный баг: первый
+        // вход сотрудника из ещё не встречавшегося отдела падал с нарушением FK
+        // bitrix_employees_department_fkey, т.к. отдельной синхронизации отделов
+        // в проекте нет. Отдел теперь самовосстанавливается тем же приёмом.
+        it('подтягивает отдел из Bitrix24 и создаёт его локально, если он ещё не встречался', async () => {
+            const { service, bitrix, departmentFindUnique, departmentUpsert } =
+                createService({ existingDepartment: false });
+
+            await service.upsertEmployeeRecord(buildUser());
+
+            expect(departmentFindUnique).toHaveBeenCalledWith({
+                where: { id: 7 },
+                select: { id: true },
+            });
+            expect(bitrix.fetchDepartmentById).toHaveBeenCalledWith(7);
+            expect(departmentUpsert).toHaveBeenCalledWith({
+                where: { id: 7 },
+                create: { id: 7, name: 'Отдел продаж' },
+                update: {},
+            });
+        });
+
+        it('не запрашивает Bitrix24, если отдел уже есть локально', async () => {
+            const { service, bitrix, departmentUpsert } = createService({
+                existingDepartment: true,
+            });
+
+            await service.upsertEmployeeRecord(buildUser());
+
+            expect(bitrix.fetchDepartmentById).not.toHaveBeenCalled();
+            expect(departmentUpsert).not.toHaveBeenCalled();
+        });
+
         it('трактует отсутствие ACTIVE как "активен" (isActive: true)', async () => {
             const { service, upsert } = createService();
 
-            await service.upsertEmployeeRecord(buildUser({ ACTIVE: undefined }));
+            await service.upsertEmployeeRecord(
+                buildUser({ ACTIVE: undefined }),
+            );
 
             expect(upsert).toHaveBeenCalledWith(
                 expect.objectContaining({

@@ -89,13 +89,22 @@ export class BitrixSyncService {
     // самовосстановления ОДНОЙ строки BitrixEmployee на пути логина, без
     // изменения поведения массового вызова выше.
     async upsertEmployeeRecord(e: BitrixUser): Promise<void> {
+        const departmentId = Number(e.UF_DEPARTMENT[0]);
+        // BitrixEmployee.departmentId — обязательный FK на bitrix_departments,
+        // а отдельной синхронизации отделов в проекте нет (обнаружено как
+        // реальный баг: первый вход нового сотрудника падал с "Foreign key
+        // constraint violated on ... bitrix_employees_department_fkey", если
+        // его отдел ещё не встречался в БД). Гарантируем существование строки
+        // отдела здесь же, тем же self-heal приёмом, что и у сотрудника.
+        await this.ensureDepartmentExists(departmentId);
+
         await this.db.bitrixEmployee.upsert({
             where: { id: Number(e.ID) },
             create: {
                 id: Number(e.ID),
                 firstName: e.NAME ?? '',
                 lastName: e.LAST_NAME ?? '',
-                departmentId: Number(e.UF_DEPARTMENT[0]),
+                departmentId,
                 isActive: e.ACTIVE !== false,
             },
             // isActive — признак увольнения для документов начисления
@@ -106,6 +115,28 @@ export class BitrixSyncService {
                 lastName: e.LAST_NAME ?? '',
                 isActive: e.ACTIVE !== false,
             },
+        });
+    }
+
+    private async ensureDepartmentExists(departmentId: number): Promise<void> {
+        const existing = await this.db.bitrixDepartment.findUnique({
+            where: { id: departmentId },
+            select: { id: true },
+        });
+        if (existing) return;
+
+        const department = await this.bitrix.fetchDepartmentById(departmentId);
+        await this.db.bitrixDepartment.upsert({
+            where: { id: departmentId },
+            create: {
+                id: departmentId,
+                // Bitrix24 department.get не должен отдавать пустой результат
+                // для валидного ID отдела сотрудника — запасной вариант
+                // названия на случай гонки/устаревшего ID, чтобы не уронить
+                // логин сотрудника из-за проблемы с самим справочником отделов.
+                name: department?.NAME ?? `Отдел ${departmentId}`,
+            },
+            update: {},
         });
     }
 

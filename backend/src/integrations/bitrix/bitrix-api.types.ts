@@ -47,3 +47,10 @@ export interface BitrixStatus {
     SYSTEM_TYPE?: string;
     ENTITY_ID: string;
 }
+
+export interface BitrixDepartment {
+    ID: string;
+    NAME: string;
+    SORT?: string | number;
+    PARENT?: string;
+}

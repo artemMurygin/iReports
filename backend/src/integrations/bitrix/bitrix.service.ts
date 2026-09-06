@@ -5,6 +5,7 @@ import { BitrixDealSchema } from './schema';
 import { delay } from '../../shared/delay';
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import type {
+    BitrixDepartment,
     BitrixFilteredUserField,
     BitrixListResponse,
     BitrixStatus,
@@ -114,6 +115,17 @@ export class BitrixService {
             params: { ID: id },
         });
         return users[0] ?? null;
+    }
+
+    // BitrixSyncService.ensureDepartmentExists — самовосстановление
+    // bitrix_departments по одному отделу, тем же приёмом, что и
+    // fetchEmployeeById (точечный запрос вместо полной выгрузки).
+    async fetchDepartmentById(id: number): Promise<BitrixDepartment | null> {
+        const departments = await this._fetchData<BitrixDepartment>(
+            '/department.get',
+            { params: { ID: id } },
+        );
+        return departments[0] ?? null;
     }
 
     async fetchEnums(): Promise<BitrixUserField[]> {
