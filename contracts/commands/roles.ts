@@ -79,6 +79,23 @@ export type ListPermissionsCatalogResponse = z.infer<
     typeof listPermissionsCatalogResponseSchema
 >;
 
+// ========================== Назначения роль↔сотрудник ========================== //
+
+// Раздел 22 tasks.md (add-bitrix24-auth-and-rbac) — данные о назначениях
+// ролей сотрудникам для таблицы «Сотрудники» на админ-странице ролей
+// (spec: roles#model-role-permission, EmployeeRole many-to-many). Только
+// сотрудники, у которых есть хотя бы одна роль — read-only, без мутаций.
+const roleAssignmentSchema = z.object({
+    employeeId: z.number(),
+    roleIds: z.array(z.string()),
+});
+export type RoleAssignment = z.infer<typeof roleAssignmentSchema>;
+
+const listRoleAssignmentsResponseSchema = z.array(roleAssignmentSchema);
+export type ListRoleAssignmentsResponse = z.infer<
+    typeof listRoleAssignmentsResponseSchema
+>;
+
 export {
     permissionCodeSchema,
     roleResponseSchema,
@@ -88,4 +105,6 @@ export {
     updateRolePermissionsRequestSchema,
     permissionCatalogItemSchema,
     listPermissionsCatalogResponseSchema,
+    roleAssignmentSchema,
+    listRoleAssignmentsResponseSchema,
 };

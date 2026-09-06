@@ -118,4 +118,32 @@ export class RoleRepository
         });
         return count > 0;
     }
+
+    // Группировка по bitrixEmployeeId делается в приложении, а не через
+    // Prisma groupBy — groupBy не умеет вернуть агрегированный список
+    // roleId по группе (только count/sum и т.п.), а строк EmployeeRole
+    // (одна на пару сотрудник-роль) в масштабах компании не настолько
+    // много, чтобы группировка в памяти была проблемой производительности.
+    async findAllAssignments(): Promise<
+        { bitrixEmployeeId: number; roleIds: string[] }[]
+    > {
+        const rows = await this.client.employeeRole.findMany({
+            select: { bitrixEmployeeId: true, roleId: true },
+            orderBy: { bitrixEmployeeId: 'asc' },
+        });
+
+        const byEmployee = new Map<number, string[]>();
+        for (const row of rows) {
+            const roleIds = byEmployee.get(row.bitrixEmployeeId);
+            if (roleIds) {
+                roleIds.push(row.roleId);
+            } else {
+                byEmployee.set(row.bitrixEmployeeId, [row.roleId]);
+            }
+        }
+
+        return Array.from(byEmployee.entries()).map(
+            ([bitrixEmployeeId, roleIds]) => ({ bitrixEmployeeId, roleIds }),
+        );
+    }
 }

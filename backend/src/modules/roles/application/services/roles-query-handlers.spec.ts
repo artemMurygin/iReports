@@ -11,6 +11,10 @@ import type { PermissionCatalogEntry } from '../ports/permission-registry.port';
 describe('RolesQueryHandlers', () => {
     const createHandlers = (roles: Role[] = []) => {
         const findAll = jest.fn(() => Promise.resolve(roles));
+        const findAllAssignments = jest.fn<
+            ReturnType<RoleRepositoryPort['findAllAssignments']>,
+            []
+        >();
         const roleRepository: jest.Mocked<RoleRepositoryPort> = {
             insert: jest.fn(),
             save: jest.fn(),
@@ -22,8 +26,9 @@ describe('RolesQueryHandlers', () => {
             revokeFromEmployee: jest.fn(),
             findEmployeeIdsByRoleId: jest.fn(),
             hasAnyRole: jest.fn(),
+            findAllAssignments,
         };
-        return { roleRepository, findAll };
+        return { roleRepository, findAll, findAllAssignments };
     };
 
     it('getPermissionsCatalog() возвращает каталог Permission как есть', async () => {
@@ -82,6 +87,36 @@ describe('RolesQueryHandlers', () => {
 
             await expect(handlers.getRoles()).resolves.toEqual([role]);
             expect(findAll).toHaveBeenCalled();
+        });
+    });
+
+    // spec: roles#model-role-permission — назначения роль<->сотрудник
+    // (EmployeeRole) для таблицы «Сотрудники» на админ-странице ролей
+    // (раздел 22 tasks.md).
+    describe('getRoleAssignments', () => {
+        it('возвращает назначения роль<->сотрудник как есть, из репозитория', async () => {
+            const catalogRepository: jest.Mocked<PermissionCatalogRepositoryPort> =
+                {
+                    upsertMany: jest.fn(),
+                    findAll: jest.fn(),
+                    findManyByCodes: jest.fn(),
+                };
+            const { roleRepository, findAllAssignments } = createHandlers();
+            findAllAssignments.mockResolvedValueOnce([
+                { bitrixEmployeeId: 42, roleIds: ['role-1', 'role-2'] },
+                { bitrixEmployeeId: 43, roleIds: ['role-1'] },
+            ]);
+
+            const handlers = new RolesQueryHandlers(
+                catalogRepository,
+                roleRepository,
+            );
+
+            await expect(handlers.getRoleAssignments()).resolves.toEqual([
+                { bitrixEmployeeId: 42, roleIds: ['role-1', 'role-2'] },
+                { bitrixEmployeeId: 43, roleIds: ['role-1'] },
+            ]);
+            expect(findAllAssignments).toHaveBeenCalled();
         });
     });
 });

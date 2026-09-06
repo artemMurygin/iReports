@@ -16,6 +16,7 @@ import { BootstrapAdminRoleAssigner } from './application/services/bootstrap-adm
 import { AdministratorRoleSeeder } from './infrastructure/administrator-role.seeder';
 import { ROLES_PERMISSIONS } from './roles.permissions';
 import { ListRolesHttpController } from './interface/http-controllers/list-roles.http.controller';
+import { ListRoleAssignmentsHttpController } from './interface/http-controllers/list-role-assignments.http.controller';
 import { CreateRoleHttpController } from './interface/http-controllers/create-role.http.controller';
 import { RenameRoleHttpController } from './interface/http-controllers/rename-role.http.controller';
 import { DeleteRoleHttpController } from './interface/http-controllers/delete-role.http.controller';
@@ -39,6 +40,7 @@ import { RevokeRoleFromEmployeeHttpController } from './interface/http-controlle
         UpdateRolePermissionsHttpController,
         AssignRoleToEmployeeHttpController,
         RevokeRoleFromEmployeeHttpController,
+        ListRoleAssignmentsHttpController,
     ],
     providers: [
         PermissionsCatalogSeeder,

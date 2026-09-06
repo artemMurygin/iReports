@@ -23,6 +23,7 @@ import { ListPermissionsCatalogHttpController } from './list-permissions-catalog
 import { UpdateRolePermissionsHttpController } from './update-role-permissions.http.controller';
 import { AssignRoleToEmployeeHttpController } from './assign-role-to-employee.http.controller';
 import { RevokeRoleFromEmployeeHttpController } from './revoke-role-from-employee.http.controller';
+import { ListRoleAssignmentsHttpController } from './list-role-assignments.http.controller';
 
 // e2e-тесты HTTP-слоя `roles` (раздел 12 tasks.md) — проверяют РЕАЛЬНЫЙ
 // маршрут HTTP → SessionAuthGuard → PermissionsGuard → Controller →
@@ -48,6 +49,7 @@ describe('Roles HTTP (e2e)', () => {
     const updateRolePermissions = jest.fn();
     const getPermissionsCatalog = jest.fn();
     const getRoles = jest.fn();
+    const getRoleAssignments = jest.fn();
 
     const validateSessionAndTouch = jest.fn();
 
@@ -62,6 +64,7 @@ describe('Roles HTTP (e2e)', () => {
     const fakeQueryHandlers: Partial<RolesQueryHandlers> = {
         getPermissionsCatalog,
         getRoles,
+        getRoleAssignments,
     };
     const fakeSessionService: Partial<SessionService> = {
         validateSessionAndTouch,
@@ -78,6 +81,7 @@ describe('Roles HTTP (e2e)', () => {
             UpdateRolePermissionsHttpController,
             AssignRoleToEmployeeHttpController,
             RevokeRoleFromEmployeeHttpController,
+            ListRoleAssignmentsHttpController,
         ],
         providers: [
             { provide: RolesCommandHandlers, useValue: fakeCommandHandlers },
@@ -244,6 +248,38 @@ describe('Roles HTTP (e2e)', () => {
         expect(updateRolePermissions).toHaveBeenCalledWith(role.id, [
             'roles:view',
             'roles:manage',
+        ]);
+    });
+
+    // spec: roles#session-required-for-protected-routes — раздел 22 tasks.md.
+    it('GET /v1/roles/assignments без сессии — 401, обработчик не вызывается', async () => {
+        await request(app.getHttpServer())
+            .get('/v1/roles/assignments')
+            .expect(401);
+        expect(getRoleAssignments).not.toHaveBeenCalled();
+    });
+
+    // spec: roles#permission-check-on-route — раздел 22 tasks.md.
+    it('GET /v1/roles/assignments с валидной сессией, но без roles:manage — 403', async () => {
+        await request(app.getHttpServer())
+            .get('/v1/roles/assignments')
+            .set(authHeader(['reports:view']))
+            .expect(403);
+        expect(getRoleAssignments).not.toHaveBeenCalled();
+    });
+
+    it('GET /v1/roles/assignments с roles:manage — 200, отдаёт назначения роль<->сотрудник', async () => {
+        getRoleAssignments.mockResolvedValueOnce([
+            { bitrixEmployeeId: 42, roleIds: ['role-1', 'role-2'] },
+        ]);
+
+        const response = await request(app.getHttpServer())
+            .get('/v1/roles/assignments')
+            .set(authHeader())
+            .expect(200);
+
+        expect(response.body).toEqual([
+            { employeeId: 42, roleIds: ['role-1', 'role-2'] },
         ]);
     });
 

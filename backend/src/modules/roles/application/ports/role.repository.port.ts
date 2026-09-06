@@ -27,6 +27,14 @@ export interface RoleRepositoryPort {
     // tasks.md): REST-вызов Bitrix24 user.admin имеет смысл только для
     // сотрудников без единой роли.
     hasAnyRole(bitrixEmployeeId: number): Promise<boolean>;
+
+    // Назначения роль<->сотрудник для ВСЕХ сотрудников, у которых есть хотя
+    // бы одна роль (раздел 22 tasks.md) — источник таблицы «Сотрудники» на
+    // админ-странице ролей (spec: roles#model-role-permission, EmployeeRole
+    // many-to-many); сотрудники без единой роли в результат не попадают.
+    findAllAssignments(): Promise<
+        { bitrixEmployeeId: number; roleIds: string[] }[]
+    >;
 }
 
 export const ROLE_REPOSITORY = Symbol('ROLE_REPOSITORY');

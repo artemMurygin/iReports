@@ -36,4 +36,14 @@ export class RolesQueryHandlers {
     async getRoles(): Promise<Role[]> {
         return this.roleRepository.findAll();
     }
+
+    // Назначения роль<->сотрудник (spec: roles#model-role-permission,
+    // EmployeeRole many-to-many) — источник таблицы «Сотрудники» на
+    // админ-странице ролей (раздел 22 tasks.md, GET /roles/assignments);
+    // read-only, только сотрудники с хотя бы одной ролью.
+    async getRoleAssignments(): Promise<
+        { bitrixEmployeeId: number; roleIds: string[] }[]
+    > {
+        return this.roleRepository.findAllAssignments();
+    }
 }

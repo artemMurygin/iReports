@@ -147,6 +147,11 @@ export const routesV1 = {
         permissionsCatalog: `${rolesRoot}/permissions`,
         updatePermissions: `${rolesRoot}/:id/permissions`,
         employeeAssignment: `${rolesRoot}/:id/employees/:employeeId`,
+        // Раздел 22 tasks.md — назначения роль<->сотрудник для таблицы
+        // «Сотрудники» на админ-странице ролей (frontend раздел 20.7,
+        // useEmployeeRoleAssignment). Литеральный сегмент, не конфликтует с
+        // byId (`GET` на `:id` не зарегистрирован ни одним контроллером).
+        assignments: `${rolesRoot}/assignments`,
     },
     // Справочник отделов/сотрудников Bitrix (Фаза 1,
     // docs/salary-schema-creation-ui) — без гарда, тот же принцип, что и

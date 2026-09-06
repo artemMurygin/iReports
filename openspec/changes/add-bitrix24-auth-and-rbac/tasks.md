@@ -277,10 +277,21 @@
 
 ## 22. Backend: `GET /roles/assignments` — данные о назначениях роль↔сотрудник (добавлено по итогам реализации раздела 20) (TDD)
 
-- [ ] 22.1 Написать тесты: `RolesQueryHandlers.getRoleAssignments()` возвращает `{employeeId, roleIds}[]` по всем сотрудникам, у которых есть хотя бы одна роль (через существующую таблицу `EmployeeRole`, `backend/prisma/schema/auth.prisma`); e2e-тест контроллера `GET /v1/roles/assignments` под `roles:manage` (401/403/200 по образцу раздела 12). Verify: тесты видны раннеру.
-- [ ] 22.2 Прогнать тесты из 22.1, зафиксировать red.
-- [ ] 22.3 Реализовать `RolesQueryHandlers.getRoleAssignments`, эндпоинт `GET /v1/roles/assignments` (`backend/src/modules/roles/interface/http-controllers/`), Zod-схему ответа в `contracts/commands/roles.ts`; обновить `/ENDPOINTS.md` и `@ApiOperation`.
-- [ ] 22.4 Прогнать тесты из 22.1, зафиксировать green, регрессий нет (`npm run test` backend). Обновить `backend/src/modules/roles/permissions-catalog.contract.spec.ts`-проверку при необходимости (раздел 14) — новый контроллер использует уже существующий код `roles:manage`, реестр менять не должно потребоваться.
+- [x] 22.1 Написать тесты: `RolesQueryHandlers.getRoleAssignments()` возвращает `{employeeId, roleIds}[]` по всем сотрудникам, у которых есть хотя бы одна роль (через существующую таблицу `EmployeeRole`, `backend/prisma/schema/auth.prisma`); e2e-тест контроллера `GET /v1/roles/assignments` под `roles:manage` (401/403/200 по образцу раздела 12). Verify: тесты видны раннеру.
+- [x] 22.2 Прогнать тесты из 22.1, зафиксировать red. Результат: `handlers.getRoleAssignments is not a function` — 1 упавший тест в `roles-query-handlers.spec.ts` (остальные 3 в файле проходили, метод ещё не существовал).
+- [x] 22.3 Реализовать `RolesQueryHandlers.getRoleAssignments`, эндпоинт `GET /v1/roles/assignments` (`backend/src/modules/roles/interface/http-controllers/`), Zod-схему ответа в `contracts/commands/roles.ts`; обновить `/ENDPOINTS.md` и `@ApiOperation`.
+- [x] 22.4 Прогнать тесты из 22.1, зафиксировать green, регрессий нет (`npm run test` backend). Обновить `backend/src/modules/roles/permissions-catalog.contract.spec.ts`-проверку при необходимости (раздел 14) — новый контроллер использует уже существующий код `roles:manage`, реестр менять не должно потребоваться.
+  Результат: `roles-query-handlers.spec.ts` — 4/4 green; `roles.e2e.spec.ts` — 15/15 green (3 новых:
+  401/403/200 на `GET /v1/roles/assignments`); `permissions-catalog.contract.spec.ts` — 2/2 green без
+  изменений (регистр `roles:manage` не менялся, новый контроллер переиспользует существующий код).
+  Полный backend suite: 225 test suites / 1281 tests — все зелёные (было 1277, +4 новых теста).
+  `npm run build` backend — без ошибок типов. Реализация: `RoleRepositoryPort.findAllAssignments()` +
+  Prisma-реализация (группировка `EmployeeRole` по `bitrixEmployeeId` в памяти — Prisma `groupBy` не
+  агрегирует список `roleId`), `RolesQueryHandlers.getRoleAssignments()`, маппер
+  `toRoleAssignmentResponse` (`bitrixEmployeeId` → `employeeId` в контракте, как и в остальных
+  контрактах на сотрудника), `ListRoleAssignmentsHttpController` (`GET /v1/roles/assignments`, тот же
+  guard-стек `SessionAuthGuard`+`PermissionsGuard`+`roles:manage`, что и у остальных эндпоинтов
+  модуля), `RoleAssignment`/`ListRoleAssignmentsResponse` в `contracts/commands/roles.ts`.
 
 ## 23. Frontend: OAuth `state` (защита от login-CSRF) + приём OAuth-редиректа (design.md Decision 13) (TDD)
 

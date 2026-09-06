@@ -182,6 +182,10 @@ permission-кодов (`Permission`) наполняется ИСКЛЮЧИТЕЛ
 - `POST /v1/roles/:id/employees/:employeeId` — назначить роль сотруднику (many-to-many `EmployeeRole`);
   список сотрудников для UI — через уже существующий `GET /v1/directory/employees`, не через этот модуль
 - `DELETE /v1/roles/:id/employees/:employeeId` — снять роль с сотрудника (идемпотентно)
+- `GET /v1/roles/assignments` — назначения роль↔сотрудник (`{ employeeId, roleIds }[]`), только
+  сотрудники с хотя бы одной ролью (раздел 22 tasks.md, add-bitrix24-auth-and-rbac); источник таблицы
+  «Сотрудники» на админ-странице ролей — `GET /v1/directory/employees` не несёт информации о назначенных
+  ролях
 
 ## domains/service/modules/sales (`/v1/service/sales/plan`, `/v1/service/sales/plan_template`, `/v1/service/sales/salesPerformance`)
 План продаж (Фаза 3) — вход для всех процентных зарплатных правил. Модели (`SalesPlan`/
