@@ -1,4 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Prisma } from '../../../prisma/generated/prisma/schema/client';
 import { DatabaseService } from '../../infrustructure/database/database.service';
 import { BitrixService } from '../../integrations/bitrix/bitrix.service';
 import { BitrixDealSchema } from '../../integrations/bitrix/schema';
@@ -126,18 +127,35 @@ export class BitrixSyncService {
         if (existing) return;
 
         const department = await this.bitrix.fetchDepartmentById(departmentId);
-        await this.db.bitrixDepartment.upsert({
-            where: { id: departmentId },
-            create: {
-                id: departmentId,
-                // Bitrix24 department.get не должен отдавать пустой результат
-                // для валидного ID отдела сотрудника — запасной вариант
-                // названия на случай гонки/устаревшего ID, чтобы не уронить
-                // логин сотрудника из-за проблемы с самим справочником отделов.
-                name: department?.NAME ?? `Отдел ${departmentId}`,
-            },
-            update: {},
-        });
+        try {
+            await this.db.bitrixDepartment.upsert({
+                where: { id: departmentId },
+                create: {
+                    id: departmentId,
+                    // Bitrix24 department.get не должен отдавать пустой результат
+                    // для валидного ID отдела сотрудника — запасной вариант
+                    // названия на случай гонки/устаревшего ID, чтобы не уронить
+                    // логин сотрудника из-за проблемы с самим справочником отделов.
+                    name: department?.NAME ?? `Отдел ${departmentId}`,
+                },
+                update: {},
+            });
+        } catch (error) {
+            // uploadEmployees() вызывает upsertEmployeeRecord() параллельно
+            // (Promise.all) для всех сотрудников — несколько из них могут
+            // одновременно пройти проверку `existing` выше для одного и того
+            // же ещё не созданного отдела. Строка к этому моменту уже создана
+            // конкурентным вызовом, значит цель (существование отдела для FK)
+            // уже достигнута — тот же приём, что и P2002 →
+            // PayoutCashboxRecordAlreadyExistsException у PayoutCashboxRecordRepository.
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                return;
+            }
+            throw error;
+        }
     }
 
     async uploadDeviceTypes() {
