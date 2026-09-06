@@ -128,6 +128,10 @@ export class BitrixService {
         return departments[0] ?? null;
     }
 
+    async fetchDepartments(): Promise<BitrixDepartment[]> {
+        return await this._fetchData<BitrixDepartment>('/department.get');
+    }
+
     async fetchEnums(): Promise<BitrixUserField[]> {
         return await this._fetchData<BitrixUserField>(
             '/crm.deal.userfield.list',

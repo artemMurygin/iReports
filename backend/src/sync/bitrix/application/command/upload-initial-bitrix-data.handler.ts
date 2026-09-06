@@ -12,6 +12,7 @@ export class UploadInitialBitrixDataHandler implements ICommandHandler<
     async execute(command: UploadInitialBitrixDataCommand): Promise<void> {
         const { fromDate } = command;
 
+        await this.syncService.uploadDepartments();
         await this.syncService.uploadEmployees();
         await this.syncService.uploadStages();
         await this.syncService.uploadDeviceTypes();

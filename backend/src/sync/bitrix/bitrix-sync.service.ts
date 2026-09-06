@@ -70,6 +70,26 @@ export class BitrixSyncService {
         }
     }
 
+    async uploadDepartments() {
+        try {
+            const departments = await this.bitrix.fetchDepartments();
+            await Promise.all(
+                departments.map((d) =>
+                    this.db.bitrixDepartment.upsert({
+                        where: { id: Number(d.ID) },
+                        create: { id: Number(d.ID), name: d.NAME },
+                        update: { name: d.NAME },
+                    }),
+                ),
+            );
+            return departments.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации отделов: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
     async uploadEmployees() {
         try {
             const employees = await this.bitrix.fetchEmployees();
@@ -91,11 +111,13 @@ export class BitrixSyncService {
     // изменения поведения массового вызова выше.
     async upsertEmployeeRecord(e: BitrixUser): Promise<void> {
         const departmentId = Number(e.UF_DEPARTMENT[0]);
-        // BitrixEmployee.departmentId — обязательный FK на bitrix_departments,
-        // а отдельной синхронизации отделов в проекте нет (обнаружено как
-        // реальный баг: первый вход нового сотрудника падал с "Foreign key
-        // constraint violated on ... bitrix_employees_department_fkey", если
-        // его отдел ещё не встречался в БД). Гарантируем существование строки
+        // BitrixEmployee.departmentId — обязательный FK на bitrix_departments.
+        // uploadDepartments() выгружает справочник только при первоначальной
+        // загрузке (upload-initial-bitrix-data.handler.ts) и не запущена по
+        // крону, поэтому отдел, созданный в Bitrix24 позже, ещё не встретится
+        // в локальной БД (обнаружено как реальный баг: первый вход нового
+        // сотрудника падал с "Foreign key constraint violated on ...
+        // bitrix_employees_department_fkey"). Гарантируем существование строки
         // отдела здесь же, тем же self-heal приёмом, что и у сотрудника.
         await this.ensureDepartmentExists(departmentId);
 
