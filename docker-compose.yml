@@ -46,7 +46,7 @@ services:
       PORT: 3000
       # dev-стенд (ветка `dev`, деплой через .github/workflows/deploy-dev.yml) — отдельный домен от
       # прода (ireports.murygin.tech/api.murygin.tech, см. ветку main), не мержить это значение назад.
-      CORS_ORIGIN: https://test.murygin.tech
+      CORS_ORIGIN: https://test.ireports.murygin.tech
       BITRIX24_WEBHOOK_URL: ${BITRIX24_WEBHOOK_URL}
       SECRET_ACCESS: ${SECRET_ACCESS}
       SECRET_REFRESH: ${SECRET_REFRESH}
@@ -58,8 +58,8 @@ services:
         condition: service_healthy
     ports:
       # dev-стенд слушает другие хостовые порты, чтобы не конфликтовать с прод-стеком на том же
-      # сервере (прод — 3000/3001, см. ветку main) — наружу их отдаёт host nginx на test.murygin.tech/
-      # apitest.murygin.tech.
+      # сервере (прод — 3000/3001, см. ветку main) — наружу их отдаёт host nginx на
+      # test.ireports.murygin.tech/test.api.murygin.tech.
       - "3010:3000"
 
   frontend:
@@ -67,7 +67,7 @@ services:
       context: ./frontend
       dockerfile: docker/Dockerfile
       args:
-        VITE_API_URL: https://apitest.murygin.tech
+        VITE_API_URL: https://test.api.murygin.tech
     restart: unless-stopped
     ports:
       - "3011:80"
