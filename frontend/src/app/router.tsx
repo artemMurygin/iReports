@@ -88,8 +88,12 @@ export const router = createBrowserRouter([
                 // Фаза 6 плана "График работы сотрудников" (docs/employee-work-schedule) — путь
                 // задан явно планом задачи ('/work-schedule'), а не переиспользует прежний
                 // плейсхолдер '/schedule' из app/navigation.tsx (см. правку STANDALONE_ITEM там же).
+                // requiredPermission — тот же механизм, что у settings/roles (app/route-guard/ui/
+                // RouteGuard.tsx, раздел 15); work-schedule:view закрывает и сам роут, и
+                // соответствующие GET-эндпоинты бэкенда (backend/src/modules/work-schedule).
                 path: 'work-schedule',
                 element: <WorkSchedulePage />,
+                handle: { requiredPermission: 'work-schedule:view' },
             },
             {
                 // Фаза 9 плана "График работы сотрудников" — мобильный экран «Отдел сегодня»
@@ -99,6 +103,7 @@ export const router = createBrowserRouter([
                 // таблицы «сотрудники × дни месяца».
                 path: 'work-schedule/today',
                 element: <WorkScheduleTodayPage />,
+                handle: { requiredPermission: 'work-schedule:view' },
             },
             {
                 // Фаза 5 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual) —

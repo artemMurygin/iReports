@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROLES_PERMISSIONS } from './roles.permissions';
+import { WORK_SCHEDULE_PERMISSIONS } from '@/modules/work-schedule/work-schedule.permissions';
 import type { PermissionCatalogEntry } from './application/ports/permission-registry.port';
 
 // spec: roles#permission-catalog-from-code — CI-контракт из design.md
@@ -18,6 +19,7 @@ import type { PermissionCatalogEntry } from './application/ports/permission-regi
 // в пользу изменения, видимого на ревью.
 const MODULE_PERMISSION_REGISTRIES: PermissionCatalogEntry[][] = [
     ROLES_PERMISSIONS,
+    WORK_SCHEDULE_PERMISSIONS,
 ];
 
 // backend/src — вычисляется от текущего файла (src/modules/roles/), а не

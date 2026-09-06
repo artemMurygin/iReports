@@ -1,11 +1,16 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { MonthlyWorkScheduleResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { GetMonthlyWorkScheduleQueryDto } from '../dto/get-monthly-work-schedule-query.dto';
 import { GetMonthlyWorkScheduleService } from '../../application/services/get-monthly-work-schedule.service';
 
 @ApiTags('График работы')
+@UseGuards(SessionAuthGuard, PermissionsGuard)
+@RequirePermissions('work-schedule:view')
 @Controller()
 export class GetMonthlyWorkScheduleHttpController {
     constructor(

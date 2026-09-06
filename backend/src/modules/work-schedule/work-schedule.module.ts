@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { DirectoryModule } from '@/modules/directory/directory.module';
+import { SessionModule } from '@/modules/session/session.module';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period.repository';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
@@ -27,7 +28,11 @@ import { GetWorkScheduleShiftHttpController } from './interface/http-controllers
 // список сотрудников отдела через тот же справочник Bitrix, что и
 // AccountingModule (см. комментарий над exports в DirectoryModule).
 @Module({
-    imports: [CqrsModule, DirectoryModule],
+    // SessionModule — ради SessionAuthGuard/CsrfGuard, применённых через
+    // @UseGuards на контроллерах ниже (work-schedule:view/work-schedule:manage,
+    // тот же приём, что RolesModule импортирует SessionModule для тех же
+    // guard'ов на своих контроллерах — см. её комментарий над providers).
+    imports: [CqrsModule, DirectoryModule, SessionModule],
     controllers: [
         UpsertWorkScheduleEntryHttpController,
         DeleteWorkScheduleEntryHttpController,

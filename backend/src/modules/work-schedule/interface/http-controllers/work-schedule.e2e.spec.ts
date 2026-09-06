@@ -20,6 +20,7 @@ import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/dire
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
@@ -156,6 +157,25 @@ describe('WorkSchedule HTTP (e2e)', () => {
         save: () => Promise.resolve(),
     };
 
+    // work-schedule:view/work-schedule:manage (WorkScheduleModule теперь
+    // импортирует SessionModule ради SessionAuthGuard/PermissionsGuard на
+    // контроллерах, см. WHY над @UseGuards в них) — SessionService реальна
+    // только в проде (Redis), здесь подменяется фейком, тем же приёмом, что
+    // roles.e2e.spec.ts, чтобы не поднимать Redis ради проверки бизнес-
+    // логики графика. Фиксированный набор прав включает оба кода сразу —
+    // 403/permissions-специфичные сценарии покрывает отдельный юнит-тест
+    // PermissionsGuard, не этот e2e (он проверяет бизнес-логику графика).
+    const validateSessionAndTouch = jest.fn().mockResolvedValue({
+        bitrixEmployeeId: 1,
+        permissions: ['work-schedule:view', 'work-schedule:manage'],
+    });
+    const fakeSessionService: Partial<SessionService> = {
+        validateSessionAndTouch,
+    };
+
+    const AUTH_HEADER = ['Authorization', 'Bearer test-session'] as const;
+    const authedRequest = () => request(app.getHttpServer());
+
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({
             imports: [WorkScheduleModule],
@@ -166,6 +186,8 @@ describe('WorkSchedule HTTP (e2e)', () => {
             .useValue(fakeDirectory)
             .overrideProvider(ACCOUNTING_PERIOD_REPOSITORY)
             .useValue(fakeAccountingPeriodRepo)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -186,8 +208,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('PUT создаёт запись дня и повторный PUT на ту же пару правит её, а не создаёт вторую', async () => {
-        const createResponse = await request(app.getHttpServer())
+        const createResponse = await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -206,8 +229,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
         });
         expect(store.size).toBe(1);
 
-        const secondResponse = await request(app.getHttpServer())
+        const secondResponse = await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -226,8 +250,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('PUT отклоняет часы вне диапазона 2–16 с 400', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -239,8 +264,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('PUT отклоняет часы, не кратные 0,5, с 400', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -252,8 +278,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('PUT отклоняет часы, переданные с не-WORKING статусом, с 400', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -265,8 +292,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('PUT отклоняет роль, переданную с не-WORKING статусом, с 400', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -278,8 +306,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('PUT с isOnDuty: true на рабочий день отмечает сотрудника дежурным', async () => {
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -300,8 +329,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('PUT отклоняет isOnDuty: true, переданный с не-WORKING статусом, с 400', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -322,22 +352,25 @@ describe('WorkSchedule HTTP (e2e)', () => {
         );
         store.set(entry.id, entry);
 
-        await request(app.getHttpServer())
+        await authedRequest()
             .delete(`/v1/work-schedule/entries/${entry.id}`)
+            .set(...AUTH_HEADER)
             .expect(204);
 
         expect(store.has(entry.id)).toBe(false);
     });
 
     it('DELETE несуществующей записи отклоняется с 404', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .delete('/v1/work-schedule/entries/missing-id')
+            .set(...AUTH_HEADER)
             .expect(404);
     });
 
     it('GET /v1/work-schedule — месяц с данными: 31 ячейка, заполненный день и корректные итоги/агрегаты', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -347,8 +380,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
             })
             .expect(200);
 
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule')
+            .set(...AUTH_HEADER)
             .query({ month: '2026-08', departmentId: 1 })
             .expect(200);
         const body = response.body as MonthlyWorkScheduleResponse;
@@ -377,8 +411,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('GET /v1/work-schedule — isOnDuty из PUT попадает в ячейку дня, остальные дни отдают isOnDuty: false', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 42,
                 date: '2026-08-05',
@@ -389,8 +424,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
             })
             .expect(200);
 
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule')
+            .set(...AUTH_HEADER)
             .query({ month: '2026-08', departmentId: 1 })
             .expect(200);
         const body = response.body as MonthlyWorkScheduleResponse;
@@ -417,8 +453,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('GET /v1/work-schedule — месяц без единой записи отдаёт пустые ячейки и нули, а не ошибку', async () => {
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule')
+            .set(...AUTH_HEADER)
             .query({ month: '2026-09', departmentId: 1 })
             .expect(200);
         const body = response.body as MonthlyWorkScheduleResponse;
@@ -434,8 +471,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('GET /v1/work-schedule?departmentId= — фильтрует сотрудников по отделу', async () => {
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule')
+            .set(...AUTH_HEADER)
             .query({ month: '2026-08', departmentId: 2 })
             .expect(200);
         const body = response.body as MonthlyWorkScheduleResponse;
@@ -445,14 +483,18 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('GET /v1/work-schedule без month отклоняется с 400', async () => {
-        await request(app.getHttpServer()).get('/v1/work-schedule').expect(400);
+        await authedRequest()
+            .get('/v1/work-schedule')
+            .set(...AUTH_HEADER)
+            .expect(400);
     });
 
     it('GET /v1/work-schedule/shift — на смене, не на смене по причинам, счётчики ролей и суммарные часы', async () => {
         // 101 — на смене; 102 — выходной; 103 — без записи на дату
         // («не заполнен», см. PRD, критерий готовности Фазы 4).
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 101,
                 date: '2026-08-05',
@@ -461,8 +503,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
                 role: 'ENGINEER',
             })
             .expect(200);
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 102,
                 date: '2026-08-05',
@@ -470,8 +513,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
             })
             .expect(200);
 
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule/shift')
+            .set(...AUTH_HEADER)
             .query({ date: '2026-08-05', departmentId: 3 })
             .expect(200);
         const body = response.body as WorkScheduleShiftResponse;
@@ -519,8 +563,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('GET /v1/work-schedule/shift — дата без единой записи отдаёт всех сотрудников как «не заполнен»', async () => {
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule/shift')
+            .set(...AUTH_HEADER)
             .query({ date: '2026-09-01', departmentId: 3 })
             .expect(200);
         const body = response.body as WorkScheduleShiftResponse;
@@ -541,8 +586,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('GET /v1/work-schedule/shift без date отклоняется с 400', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .get('/v1/work-schedule/shift')
+            .set(...AUTH_HEADER)
             .query({ departmentId: 3 })
             .expect(400);
     });
@@ -553,8 +599,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     // сотрудников без изменений (сотрудник 104, findServiceAccountEmployeeIds
     // выше отмечает его как служебного).
     it('GET /v1/work-schedule?departmentId= — служебный сотрудник (isServiceAccount: true) остаётся в таблице графика', async () => {
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule')
+            .set(...AUTH_HEADER)
             .query({ month: '2026-08', departmentId: 4 })
             .expect(200);
         const body = response.body as MonthlyWorkScheduleResponse;
@@ -567,8 +614,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
     });
 
     it('GET /v1/work-schedule/shift — служебный сотрудник (isServiceAccount: true) остаётся в составе смены', async () => {
-        await request(app.getHttpServer())
+        await authedRequest()
             .put('/v1/work-schedule/entries')
+            .set(...AUTH_HEADER)
             .send({
                 employeeId: 104,
                 date: '2026-08-05',
@@ -578,8 +626,9 @@ describe('WorkSchedule HTTP (e2e)', () => {
             })
             .expect(200);
 
-        const response = await request(app.getHttpServer())
+        const response = await authedRequest()
             .get('/v1/work-schedule/shift')
+            .set(...AUTH_HEADER)
             .query({ date: '2026-08-05', departmentId: 4 })
             .expect(200);
         const body = response.body as WorkScheduleShiftResponse;

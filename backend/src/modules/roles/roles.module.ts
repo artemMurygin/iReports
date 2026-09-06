@@ -15,6 +15,7 @@ import { BOOTSTRAP_ADMIN_PORT } from './application/ports/bootstrap-admin.port';
 import { BootstrapAdminRoleAssigner } from './application/services/bootstrap-admin-role-assigner.service';
 import { AdministratorRoleSeeder } from './infrastructure/administrator-role.seeder';
 import { ROLES_PERMISSIONS } from './roles.permissions';
+import { WORK_SCHEDULE_PERMISSIONS } from '@/modules/work-schedule/work-schedule.permissions';
 import { ListRolesHttpController } from './interface/http-controllers/list-roles.http.controller';
 import { ListRoleAssignmentsHttpController } from './interface/http-controllers/list-role-assignments.http.controller';
 import { CreateRoleHttpController } from './interface/http-controllers/create-role.http.controller';
@@ -57,7 +58,7 @@ import { RevokeRoleFromEmployeeHttpController } from './interface/http-controlle
         // видимое на ревью (design.md, Decision 12), а не рантайм-магия.
         {
             provide: PERMISSION_REGISTRY,
-            useValue: [ROLES_PERMISSIONS],
+            useValue: [ROLES_PERMISSIONS, WORK_SCHEDULE_PERMISSIONS],
         },
         PermissionsResolverAdapter,
         {
