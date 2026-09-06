@@ -50,6 +50,7 @@ describe('useOAuthCallback', () => {
             expect(axiosInstance.post).toHaveBeenCalledWith('/v1/auth/oauth/callback', {
                 code: 'auth-code',
                 state: 'expected-state',
+                redirectUri: `${window.location.origin}/auth/callback`,
             }),
         )
         expect(sessionStorage.getItem(OAUTH_STATE_STORAGE_KEY)).toBeNull()

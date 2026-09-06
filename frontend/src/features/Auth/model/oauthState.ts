@@ -48,3 +48,15 @@ export function consumeStoredOAuthState(): string | null {
     sessionStorage.removeItem(OAUTH_STATE_STORAGE_KEY)
     return stored
 }
+
+/**
+ * `redirect_uri` для OAuth-редиректа — текущий origin + маршрут `pages/OAuthCallback`
+ * (`/auth/callback`, раздел 23 tasks.md). Не хардкодится под конкретное окружение (localhost/
+ * staging/прод), чтобы одна и та же сборка работала везде — значение должно быть зарегистрировано
+ * как redirect_uri в настройках приложения Bitrix24 для того окружения, где оно используется (шаг
+ * вне кода). Используется и `useBitrixLogin` (в исходном редиректе), и `useOAuthCallback` (при
+ * обмене `code` — обязано совпадать со значением из исходного редиректа, RFC 6749 §4.1.3).
+ */
+export function getOAuthRedirectUri(): string {
+    return `${window.location.origin}/auth/callback`
+}

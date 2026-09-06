@@ -65,7 +65,11 @@ describe('BitrixOAuthLoginHandler', () => {
             },
         });
 
-        const result = await handler.execute('auth-code', 'state-value');
+        const result = await handler.execute(
+            'auth-code',
+            'state-value',
+            'https://app.example/auth/callback',
+        );
 
         expect(axiosGet).toHaveBeenCalledWith(
             'https://oauth.bitrix24.tech/oauth/token/',
@@ -73,6 +77,7 @@ describe('BitrixOAuthLoginHandler', () => {
                 params: expect.objectContaining({
                     grant_type: 'authorization_code',
                     code: 'auth-code',
+                    redirect_uri: 'https://app.example/auth/callback',
                 }),
                 timeout: 5_000,
             },

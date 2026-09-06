@@ -15,4 +15,4 @@ export { RequirePermission } from './ui/RequirePermission.tsx'
 // не путать с одноимённым `api` других фич/страниц у потребителя); `consumeStoredOAuthState` —
 // та же сверка/удаление одноразового `state`, что использует `useBitrixLogin` при генерации.
 export { AUTH_ME_QUERY_KEY, api as authApi } from './model/api.ts'
-export { OAUTH_STATE_STORAGE_KEY, consumeStoredOAuthState } from './model/oauthState.ts'
+export { OAUTH_STATE_STORAGE_KEY, consumeStoredOAuthState, getOAuthRedirectUri } from './model/oauthState.ts'

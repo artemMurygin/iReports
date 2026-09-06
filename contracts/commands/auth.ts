@@ -38,9 +38,15 @@ export type BitrixEmbeddedLoginResponse = z.infer<
 // `code`/`state` — параметры OAuth-редиректа (design.md, спек auth#oauth-
 // authorization-code-flow); один и тот же контракт для standalone-сайта и
 // iOS (spec: auth#ios-oauth — тот же backend-эндпоинт обмена кода на токены).
+// `redirectUri` — тот же `redirect_uri`, что frontend передавал в исходном
+// редиректе на `{portal}/oauth/authorize/` (`useBitrixLogin`); backend
+// обязан передать то же значение при обмене `code` на токены (RFC 6749
+// §4.1.3 — redirect_uri в token-запросе должен совпадать с тем, что был
+// указан при авторизации, если он вообще был указан).
 const bitrixOAuthCallbackRequestSchema = z.object({
     code: z.string().min(1),
     state: z.string().optional(),
+    redirectUri: z.string().min(1),
 });
 export type BitrixOAuthCallbackRequest = z.infer<
     typeof bitrixOAuthCallbackRequestSchema

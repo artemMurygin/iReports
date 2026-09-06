@@ -369,6 +369,22 @@
   (в момент обмена `code` валидной сессии ещё не существует, `RouteGuard` увёл бы на `pages/Login`
   раньше).
 
+  ДОРАБОТКА (найдена пользователем при попытке локального запуска OAuth, исправлена координатором
+  после раздела 23, TDD red→green): `useBitrixLogin().login()` редиректил на `/oauth/authorize/`
+  БЕЗ `client_id`/`redirect_uri` — Bitrix24 физически не может обработать такой запрос ни в каком
+  окружении (это не было описано ни в одном артефакте, открытый вопрос из финального отчёта раздела
+  16). Добавлено: `client_id` — из `VITE_BITRIX24_CLIENT_ID` (не секрет, в отличие от
+  `client_secret` — spec: auth#client-secret-isolation, `frontend/.env.example`); `redirect_uri` —
+  `getOAuthRedirectUri()` (`features/Auth/model/oauthState.ts`, текущий origin + `/auth/callback`),
+  используется и в `useBitrixLogin`, и в `useOAuthCallback` (то же значение обязано попасть в обмен
+  кода — RFC 6749 §4.1.3). Контракт `BitrixOAuthCallbackRequest` (`contracts/commands/auth.ts`)
+  дополнен обязательным полем `redirectUri`; `BitrixOAuthLoginHandler.execute`/
+  `exchangeCodeForTokens` (backend) и `bitrix-oauth-callback.http.controller.ts` прокидывают его в
+  `oauth.bitrix24.tech/oauth/token/`. Тесты: `bitrix-oauth-login.handler.spec.ts`, `auth.e2e.spec.ts`,
+  `useBitrixLogin.spec.ts` (+2), `useOAuthCallback.spec.tsx` — все обновлены/добавлены, red→green
+  подтверждён. Финальный прогон: backend 226/226 test suites (1284 tests), frontend 75/75 файлов
+  (413 tests, было 411) — все зелёные, `tsc -b`/`npm run build` чисты с обеих сторон.
+
 ## 24. Финализация: включить глобальные guard'ы и повторная проверка (Decision 5, Migration Plan)
 
 - [x] 24.1 Раскомментировать регистрацию `SessionAuthGuard`→`PermissionsGuard` (и, где применимо, `CsrfGuard`) как `APP_GUARD` в `backend/src/app.module.ts` — раздел 20 (маршрут `/admin/roles` и вся цепочка frontend-аутентификации) теперь реализован, откладывать больше не нужно (design.md Migration Plan, шаг 6-7).

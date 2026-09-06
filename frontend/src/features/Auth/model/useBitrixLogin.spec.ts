@@ -71,6 +71,41 @@ describe('useBitrixLogin', () => {
         restore()
     })
 
+    // Без client_id Bitrix24 не может определить, какое приложение запрашивает авторизацию —
+    // без него /oauth/authorize/ не сработает независимо от окружения (баг, обнаруженный при
+    // проверке локального запуска OAuth, закрыт вместе с redirect_uri ниже).
+    it('login() включает client_id из VITE_BITRIX24_CLIENT_ID', () => {
+        vi.stubEnv('VITE_BITRIX24_CLIENT_ID', 'local.test.client')
+        const { assignSpy, restore } = stubLocationAssign()
+
+        const { result } = renderHook(() => useBitrixLogin())
+        result.current.login()
+
+        const redirectUrl = new URL(assignSpy.mock.calls[0]?.[0] as string)
+        expect(redirectUrl.searchParams.get('client_id')).toBe('local.test.client')
+        expect(redirectUrl.searchParams.get('response_type')).toBe('code')
+
+        restore()
+    })
+
+    // redirect_uri — текущий origin + /auth/callback (маршрут pages/OAuthCallback, раздел 23) —
+    // не хардкодится под конкретное окружение, чтобы одна и та же сборка работала на
+    // localhost/staging/проде (регистрация именно этого redirect_uri в настройках приложения
+    // Bitrix24 — операционный шаг вне кода).
+    it('login() включает redirect_uri = текущий origin + /auth/callback', () => {
+        const { assignSpy, restore } = stubLocationAssign()
+
+        const { result } = renderHook(() => useBitrixLogin())
+        result.current.login()
+
+        const redirectUrl = new URL(assignSpy.mock.calls[0]?.[0] as string)
+        expect(redirectUrl.searchParams.get('redirect_uri')).toBe(
+            `${window.location.origin}/auth/callback`,
+        )
+
+        restore()
+    })
+
     it('login() генерирует новый случайный state при каждом вызове', () => {
         const first = stubLocationAssign()
         const { result } = renderHook(() => useBitrixLogin())

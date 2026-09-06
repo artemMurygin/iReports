@@ -143,10 +143,18 @@ describe('Auth HTTP (e2e)', () => {
 
         const response = await request(app.getHttpServer())
             .post('/v1/auth/oauth/callback')
-            .send({ code: 'auth-code', state: 'state-value' })
+            .send({
+                code: 'auth-code',
+                state: 'state-value',
+                redirectUri: 'https://app.example/auth/callback',
+            })
             .expect(200);
 
-        expect(oauthExecute).toHaveBeenCalledWith('auth-code', 'state-value');
+        expect(oauthExecute).toHaveBeenCalledWith(
+            'auth-code',
+            'state-value',
+            'https://app.example/auth/callback',
+        );
         expect(response.body).toEqual({ success: true });
         expect(JSON.stringify(response.body)).not.toMatch(/session-xyz/);
 

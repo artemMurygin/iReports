@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
-import { AUTH_ME_QUERY_KEY, authApi, consumeStoredOAuthState } from '@/features/Auth'
+import { AUTH_ME_QUERY_KEY, authApi, consumeStoredOAuthState, getOAuthRedirectUri } from '@/features/Auth'
 
 /**
  * add-bitrix24-auth-and-rbac, раздел 23 tasks.md; architecture.md `useOAuthCallback`:
@@ -43,7 +43,7 @@ export function useOAuthCallback(): { status: OAuthCallbackStatus } {
         }
 
         mutation.mutate(
-            { code, state: urlState },
+            { code, state: urlState ?? undefined, redirectUri: getOAuthRedirectUri() },
             {
                 onSuccess: () => {
                     void queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY })

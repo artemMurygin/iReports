@@ -40,7 +40,11 @@ export class BitrixOAuthCallbackHttpController {
         @Body() body: BitrixOAuthCallbackDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<BitrixOAuthCallbackResponse> {
-        const { sessionId } = await this.handler.execute(body.code, body.state);
+        const { sessionId } = await this.handler.execute(
+            body.code,
+            body.state,
+            body.redirectUri,
+        );
 
         // Доставка через HttpOnly/Secure/SameSite=None cookie (spec:
         // session#cookie-delivery-for-standalone-and-ios) — sessionId

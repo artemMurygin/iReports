@@ -41,13 +41,23 @@ export class BitrixOAuthLoginHandler {
         private readonly credentialsRepository: BitrixEmployeeCredentialsRepositoryPort,
     ) {}
 
-    // `state` — параметр OAuth-редиректа (принимается по сигнатуре
-    // architecture.md); проверка его соответствия значению, выданному перед
-    // редиректом, не описана ни в proposal.md, ни в specs/auth — оставлена
-    // как открытый вопрос для отдельного уточнения (см. финальный отчёт).
-    async execute(code: string, state?: string): Promise<IssuedSession> {
+    // `state` — сверяется ИСКЛЮЧИТЕЛЬНО на frontend (design.md Decision 13,
+    // spec: auth#oauth-login-csrf-state-protection); backend принимает его
+    // только транзитом (для логов/диагностики), поэтому здесь не
+    // используется. `redirectUri` — то же значение `redirect_uri`, что
+    // frontend передавал в исходном редиректе на `{portal}/oauth/authorize/`
+    // (`useBitrixLogin`) — обязателен в обмене кода на токены (RFC 6749
+    // §4.1.3).
+    async execute(
+        code: string,
+        state: string | undefined,
+        redirectUri: string,
+    ): Promise<IssuedSession> {
         void state;
-        const tokenResponse = await this.exchangeCodeForTokens(code);
+        const tokenResponse = await this.exchangeCodeForTokens(
+            code,
+            redirectUri,
+        );
         const clientEndpoint = `https://${tokenResponse.domain}/rest/`;
 
         const { bitrixEmployeeId } =
@@ -75,6 +85,7 @@ export class BitrixOAuthLoginHandler {
 
     private async exchangeCodeForTokens(
         code: string,
+        redirectUri: string,
     ): Promise<BitrixOAuthTokenExchangeResponse> {
         try {
             const { data } = await axios.get<BitrixOAuthTokenExchangeResponse>(
@@ -85,6 +96,7 @@ export class BitrixOAuthLoginHandler {
                         client_id: process.env.BITRIX24_CLIENT_ID,
                         client_secret: process.env.BITRIX24_CLIENT_SECRET,
                         code,
+                        redirect_uri: redirectUri,
                     },
                     timeout: 5_000,
                 },
