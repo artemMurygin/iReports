@@ -1,6 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
-// import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RequestContextMiddleware } from 'nestjs-request-context';
@@ -29,9 +28,9 @@ import { EmployeeBalanceModule } from './modules/employee-balance/employee-balan
 import { AuthModule } from './modules/auth/auth.module';
 import { SessionModule } from './modules/session/session.module';
 import { RolesModule } from './modules/roles/roles.module';
-// import { SessionAuthGuard } from './modules/session/interface/session-auth.guard';
-// import { CsrfGuard } from './modules/session/interface/csrf.guard';
-// import { PermissionsGuard } from './modules/roles/interface/permissions.guard';
+import { SessionAuthGuard } from './modules/session/interface/session-auth.guard';
+import { CsrfGuard } from './modules/session/interface/csrf.guard';
+import { PermissionsGuard } from './modules/roles/interface/permissions.guard';
 // Аналитика услуг и категории услуг (Фаза 5,
 // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
 // новый дом для src/TODO/reports, удалённого этой же фазой целиком.
@@ -80,31 +79,31 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
             useClass: ContextInterceptor,
         },
         // add-bitrix24-auth-and-rbac (design.md, Decision 5 + Migration Plan
-        // шаг 6-7): SessionAuthGuard/CsrfGuard/PermissionsGuard реализованы
-        // и покрыты тестами (разделы 7-8, 13 tasks.md), но НАМЕРЕННО не
-        // зарегистрированы как APP_GUARD здесь — включение делает систему
-        // "закрыто по умолчанию" ОДНОМОМЕНТНО для КАЖДОГО существующего
-        // роута приложения (ни один из них пока не размечен @Public()/
-        // @RequirePermissions). Design.md явно требует переключать это
-        // одним PR/релизом, когда весь frontend уже готов ходить через
-        // сессию (см. features/Auth, разделы 15-21 tasks.md) — до этого
-        // момента преждевременное включение сломает все текущие
-        // эндпоинты продакшена. Новые эндпоинты auth/roles (раздел 12-13)
-        // при этом УЖЕ защищены — гарды применены явно через `@UseGuards`
-        // прямо на их контроллерах (иначе они не смогли бы функционировать:
-        // request.user для них обязателен), это НЕ противоречит отложенному
-        // глобальному включению — то решение только про рёскрытие ВСЕХ
-        // остальных, уже существующих роутов приложения одним движением.
-        // Раскомментировать эти провайдеры (и снять точечные @UseGuards с
-        // auth/roles-контроллеров как избыточные) — финальный шаг перед
-        // релизом (соответствует "Итоговой интеграционной проверке", раздел
-        // 21 tasks.md), по аналогии с уже существующим в проекте паттерном
-        // отложенного включения guard'а (см. PortalAdminGuard,
-        // закомментированный в контроллерах employee-identity, с тем же
-        // обоснованием "раскомментировать одним движением").
-        // { provide: APP_GUARD, useClass: SessionAuthGuard },
-        // { provide: APP_GUARD, useClass: CsrfGuard },
-        // { provide: APP_GUARD, useClass: PermissionsGuard },
+        // шаг 6-7, раздел 24 tasks.md): SessionAuthGuard/CsrfGuard/
+        // PermissionsGuard теперь зарегистрированы глобально — включение
+        // делает систему "закрыто по умолчанию" для КАЖДОГО роута
+        // приложения, не размеченного `@Public()`. Порядок в массиве —
+        // порядок выполнения (SessionAuthGuard первым заполняет
+        // `request.user`, CsrfGuard и PermissionsGuard читают его дальше;
+        // PermissionsGuard последним — permissions уже проверяются против
+        // заполненного `request.user`). Раздел 20 tasks.md (весь frontend
+        // ходит через сессию, включая `/admin/roles`) реализован, откладывать
+        // включение больше не нужно.
+        //
+        // ВАЖНО (раздел 24.2 tasks.md, задокументировано, не исправлено
+        // самостоятельно — см. финальный отчёт этой секции): `POST
+        // /bitrix/install` (`backend/src/integrations/bitrix/
+        // bitrix.controller.ts`) — вызывается САМИМ Bitrix24 при установке/
+        // переустановке приложения (см. JSDoc метода), не может нести
+        // валидную сессию iReports и НЕ размечен `@Public()`. С этим
+        // глобальным включением этот роут возвращает 401 вместо успешной
+        // установки. Не исправлено в рамках этой задачи: правки
+        // `backend/src/integrations/bitrix/**` явно вне мандата агента,
+        // выполнявшего раздел 24 (инструкция "не трогай
+        // backend/src/integrations/bitrix/**").
+        { provide: APP_GUARD, useClass: SessionAuthGuard },
+        { provide: APP_GUARD, useClass: CsrfGuard },
+        { provide: APP_GUARD, useClass: PermissionsGuard },
     ],
 })
 export class AppModule implements NestModule {
