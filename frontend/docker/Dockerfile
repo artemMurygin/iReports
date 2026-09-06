@@ -11,9 +11,11 @@ WORKDIR /repo
 
 # ireports-contracts собирается отдельно от своего собственного package.json — frontend НЕ входит
 # в корневые npm workspaces (frontend/CLAUDE.md: "ставится независимо"), поэтому здесь нет общего
-# `npm ci` в корне, как у backend.
+# `npm ci` в корне, как у backend. `npm install`, а не `npm ci` — у contracts/ нет своего
+# package-lock.json (он часть корневых npm workspaces, лочится в корневом package-lock.json), а
+# `npm ci` требует lock-файл рядом с package.json.
 COPY contracts contracts
-RUN cd contracts && npm ci && npm run build
+RUN cd contracts && npm install && npm run build
 
 COPY frontend frontend
 WORKDIR /repo/frontend
