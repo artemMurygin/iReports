@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { BitrixService } from './bitrix.service';
 import { BitrixAuthService } from './bitrix-auth.service';
 import { BitrixInstallDto } from './dto/bitrix-install.dto';
+import { Public } from '@/shared/decorators/public.decorator';
 
 @Controller('bitrix')
 export class BitrixController {
@@ -21,7 +22,14 @@ export class BitrixController {
      * передавая OAuth-токены через POST (application/x-www-form-urlencoded).
      * В ответ возвращается HTML-страница, которая вызывает BX24.installFinish(),
      * после чего приложение считается установленным и становится доступным всем сотрудникам.
+     *
+     * @Public() — обязателен: Bitrix24 вызывает этот вебхук до появления какой-либо сессии
+     * iReports (это и есть момент установки приложения), поэтому он физически не может нести
+     * `session_id`. Добавлено при включении глобального SessionAuthGuard/PermissionsGuard как
+     * APP_GUARD (add-bitrix24-auth-and-rbac, раздел 24 tasks.md) — без этой пометки установка/
+     * переустановка приложения в маркетплейсе Bitrix24 стала бы отвечать 401.
      */
+    @Public()
     @Post('install')
     async install(
         @Body() body: BitrixInstallDto,
