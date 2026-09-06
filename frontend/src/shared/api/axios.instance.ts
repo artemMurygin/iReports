@@ -8,6 +8,15 @@ export const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
     headers: {
         'Content-Type': 'application/json',
+        // Без этого заголовка ngrok free-tier отдаёт браузерным User-Agent'ам межстраничную
+        // заглушку-предупреждение (ERR_NGROK_6024) вместо ответа backend — без CORS-заголовков,
+        // поэтому браузер видит это как сетевую/CORS-ошибку. Заголовок не имеет эффекта, если
+        // VITE_API_URL не указывает на ngrok-туннель (используется для локального тестирования
+        // OAuth-логина Bitrix24).
+        'ngrok-skip-browser-warning': 'true',
+        // Аналогичный обход для localtunnel (loca.lt) — без него первый запрос от нового
+        // публичного IP получает HTML-страницу "friendly reminder" вместо ответа backend.
+        'bypass-tunnel-reminder': 'true',
     },
     paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
     // Доставка session_id для standalone-сайта/iOS — HttpOnly/Secure/

@@ -26,6 +26,11 @@ export default defineConfig({
         include: ['ireports-contracts'],
     },
     server: {
+        // allowedHosts: true — иначе Vite отклоняет запросы с Host-заголовком, отличным от
+        // localhost ("Blocked request. This host is not allowed"), а именно так приходят запросы
+        // через ngrok-туннель (нужен для локального тестирования OAuth-логина Bitrix24, см. корневой
+        // README/задачу по ngrok) — ограничение только dev-сервера, на билд не влияет.
+        allowedHosts: true,
         proxy: {
             '/api': {
                 target: 'http://localhost:3000',
@@ -33,6 +38,12 @@ export default defineConfig({
                 rewrite: (path) => path.replace(/^\/api/, ''),
             },
         },
+    },
+    // `vite preview` (продакшен-бандл) через localtunnel — тот же host-check, что и у dev-сервера
+    // выше, плюс localtunnel не тянет обилие мелких ES-module запросов дев-режима, поэтому для
+    // тестирования через туннель используется собранный билд, а не `vite dev`.
+    preview: {
+        allowedHosts: true,
     },
     plugins: [react(), tailwindcss()],
     test: {
