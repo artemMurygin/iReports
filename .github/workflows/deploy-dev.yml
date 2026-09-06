@@ -17,7 +17,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd ../iRepair/iReports-dev/
+            cd ../iRepair/iReports-dev/iReports
             git fetch
             git checkout dev
             git pull origin dev
