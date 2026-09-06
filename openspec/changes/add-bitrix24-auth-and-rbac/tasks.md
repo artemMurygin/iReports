@@ -220,10 +220,19 @@
 
 ## 19. Frontend: `features/RoleManagement` (TDD)
 
-- [ ] 19.1 Написать тесты на `model/api.ts`: `useRoles` (CRUD ролей), каталог прав (`GET /roles/permissions`, только чтение — UI не создаёт новые коды, спек `roles`), `useRolePermissionsMatrix` (чтение матрицы + `togglePermission`/`save` → `PATCH /roles/:id/permissions`), `useEmployeeRoleAssignment` (список сотрудников через уже существующий `GET /directory/employees` + мутации назначения/снятия роли). Verify: тесты видны раннеру.
-- [ ] 19.2 Прогнать тесты из 19.1, зафиксировать red.
-- [ ] 19.3 Реализовать `frontend/src/features/RoleManagement/model/api.ts` и хуки, публичный `index.ts` (реэкспорт `RoleManagementPanel`).
-- [ ] 19.4 Прогнать тесты из 19.1, зафиксировать green, регрессий нет.
+- [x] 19.1 Написать тесты на `model/api.ts`: `useRoles` (CRUD ролей), каталог прав (`GET /roles/permissions`, только чтение — UI не создаёт новые коды, спек `roles`), `useRolePermissionsMatrix` (чтение матрицы + `togglePermission`/`save` → `PATCH /roles/:id/permissions`), `useEmployeeRoleAssignment` (список сотрудников через уже существующий `GET /directory/employees` + мутации назначения/снятия роли). Verify: тесты видны раннеру.
+- [x] 19.2 Прогнать тесты из 19.1, зафиксировать red.
+- [x] 19.3 Реализовать `frontend/src/features/RoleManagement/model/api.ts` и хуки, публичный `index.ts`.
+
+  Отступление от буквальной формулировки (см. финальный отчёт раздела 19, не решалось
+  самостоятельно): `index.ts` реэкспортирует хуки/модель, а не `RoleManagementPanel` — такого
+  компонента нет ни в architecture.md на уровне реализации (там только `RoleList`/
+  `RolePermissionMatrix`/`EmployeeRoleAssignment`), ни в tasks.md раздела 20, ни в ui-design.md;
+  использован задокументированный в проекте прецедент "у фичи нет единого корня"
+  (`features/SalesPlan`, `features/AccountingPeriod`, `features/TargetDirectory`,
+  `features/SalaryReportData`) — `index.ts` реэкспортирует модель сейчас и получит реэкспорт UI из
+  раздела 20, когда тот появится.
+- [x] 19.4 Прогнать тесты из 19.1, зафиксировать green, регрессий нет.
 
 ## 20. Frontend: `pages/RolesManagement` — UI по ui-design.md
 
