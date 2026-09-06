@@ -18,7 +18,11 @@ describe('detectRuntimeContext', () => {
 
     it("возвращает 'iframe', когда сайт внутри фрейма И подключён Bitrix24 SDK", () => {
         Object.defineProperty(window, 'top', { value: {}, configurable: true })
-        window.BX24 = {}
+        // Тестам этого файла важно только присутствие window.BX24 (наличие SDK), а не его реальная
+        // форма — детальная типизация BitrixAuthInfo/init/getAuth (см. runtime-context.ts) нужна
+        // только потребителям, реально вызывающим BX24.init()/getAuth() (features/Auth's
+        // useEmbeddedLoginBootstrap), поэтому здесь достаточно минимальной заглушки с приведением типа.
+        window.BX24 = { init: () => {}, getAuth: () => false }
 
         expect(detectRuntimeContext()).toBe('iframe')
     })
@@ -30,7 +34,11 @@ describe('detectRuntimeContext', () => {
     })
 
     it("возвращает 'standalone', когда BX24 SDK подключён, но сайт не внутри фрейма", () => {
-        window.BX24 = {}
+        // Тестам этого файла важно только присутствие window.BX24 (наличие SDK), а не его реальная
+        // форма — детальная типизация BitrixAuthInfo/init/getAuth (см. runtime-context.ts) нужна
+        // только потребителям, реально вызывающим BX24.init()/getAuth() (features/Auth's
+        // useEmbeddedLoginBootstrap), поэтому здесь достаточно минимальной заглушки с приведением типа.
+        window.BX24 = { init: () => {}, getAuth: () => false }
 
         expect(detectRuntimeContext()).toBe('standalone')
     })

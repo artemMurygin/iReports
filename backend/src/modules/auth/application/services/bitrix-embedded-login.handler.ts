@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { BitrixAuthService } from '@/integrations/bitrix/bitrix-auth.service';
 import { BitrixIdentityResolver } from './bitrix-identity-resolver.service';
 import {
     AuthenticatedSessionIssuer,
@@ -14,19 +13,32 @@ import {
 @Injectable()
 export class BitrixEmbeddedLoginHandler {
     constructor(
-        private readonly bitrixAuthService: BitrixAuthService,
         private readonly identityResolver: BitrixIdentityResolver,
         private readonly sessionIssuer: AuthenticatedSessionIssuer,
     ) {}
 
-    async execute(authId: string, memberId: string): Promise<IssuedSession> {
-        const installation = await this.bitrixAuthService.getInstallation(
-            memberId,
-        );
+    async execute(
+        authId: string,
+        memberId: string,
+        domain: string,
+    ): Promise<IssuedSession> {
+        // `clientEndpoint` строится напрямую из `domain`, переданного
+        // фронтендом вместе с AUTH_ID (см. bitrixEmbeddedLoginRequestSchema
+        // в contracts/commands/auth.ts), а не через
+        // `BitrixAuthService.getInstallation(memberId)` — та запись
+        // (`BitrixInstallation`) создаётся только install-вебхуком
+        // (`POST /bitrix/install`), который может не вызываться для
+        // упрощённо зарегистрированного тестового приложения Bitrix24.
+        // `memberId` больше не используется для похода в БД, но остаётся в
+        // сигнатуре — идентификатор портала из того же ответа
+        // `BX24.getAuth()`, пригодится для будущих сценариев (не
+        // задействован в scope этой доработки).
+        void memberId;
+        const clientEndpoint = `https://${domain}/rest/`;
         const { bitrixEmployeeId } =
             await this.identityResolver.resolveBitrixEmployeeId(
                 authId,
-                installation.clientEndpoint,
+                clientEndpoint,
             );
 
         // Доставка session_id для embedded-контекста — заголовок

@@ -13,10 +13,17 @@ import { z } from 'zod';
 // BX24 (spec: auth#embedded-login-success); backend НЕ доверяет им напрямую —
 // обязательная валидация реальным REST-запросом (spec:
 // auth#embedded-token-must-be-verified-via-rest) происходит уже на backend,
-// не на уровне контракта.
+// не на уровне контракта. `domain` — DOMAIN из того же ответа `BX24.getAuth()`
+// (домен портала, например `irepair.bitrix24.ru`); backend строит из него
+// `clientEndpoint` (`https://${domain}/rest/`) для REST-запроса-валидации
+// напрямую, без похода в БД за записью `BitrixInstallation` — той записи
+// может не существовать, если install-вебхук (`POST /bitrix/install`)
+// реально не вызывался (упрощённая регистрация тестового приложения
+// Bitrix24, не создающая install-событие).
 const bitrixEmbeddedLoginRequestSchema = z.object({
     authId: z.string().min(1),
     memberId: z.string().min(1),
+    domain: z.string().min(1),
 });
 export type BitrixEmbeddedLoginRequest = z.infer<
     typeof bitrixEmbeddedLoginRequestSchema

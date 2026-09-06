@@ -120,12 +120,17 @@ describe('Auth HTTP (e2e)', () => {
 
         const response = await request(app.getHttpServer())
             .post('/v1/auth/embedded-login')
-            .send({ authId: 'auth-id-token', memberId: 'member-1' })
+            .send({
+                authId: 'auth-id-token',
+                memberId: 'member-1',
+                domain: 'irepair.bitrix24.ru',
+            })
             .expect(200);
 
         expect(embeddedExecute).toHaveBeenCalledWith(
             'auth-id-token',
             'member-1',
+            'irepair.bitrix24.ru',
         );
         const body = response.body as BitrixEmbeddedLoginResponse;
         expect(body).toEqual({ sessionId: 'session-abc' });

@@ -29,7 +29,9 @@ function mockSession(response: AuthMeResponse | 'unauthenticated') {
 
 function enterIframeContext() {
     Object.defineProperty(window, 'top', { value: {}, configurable: true })
-    window.BX24 = {}
+    // Этому тесту важно только присутствие window.BX24 (наличие SDK) — реальные
+    // init/getAuth не вызываются здесь, поэтому достаточно минимальной заглушки.
+    window.BX24 = { init: () => {}, getAuth: () => false }
 }
 
 const AUTHENTICATED: AuthMeResponse = {

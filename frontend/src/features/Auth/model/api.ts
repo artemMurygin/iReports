@@ -1,6 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
 import type {
     AuthMeResponse,
+    BitrixEmbeddedLoginRequest,
+    BitrixEmbeddedLoginResponse,
     BitrixOAuthCallbackRequest,
     BitrixOAuthCallbackResponse,
     LogoutResponse,
@@ -74,5 +76,20 @@ export const api = {
             .then((r) => r.data)
             .catch((error) => {
                 throw new ApiError('Не удалось войти через Bitrix24 ' + error)
+            }),
+
+    // POST /v1/auth/embedded-login (spec: auth#embedded-login-success,
+    // auth#embedded-token-must-be-verified-via-rest) — embedded/iframe-сценарий входа: вызывается
+    // `useEmbeddedLoginBootstrap` (раздел 15/16 tasks.md) сразу после `window.BX24.getAuth()`.
+    // Backend не доверяет переданным данным напрямую — сам валидирует `authId` реальным REST-
+    // запросом к Bitrix24, поэтому здесь ошибка тоже оборачивается в `ApiError` (обычная мутация,
+    // не "ожидаемое отсутствие сессии", в отличие от `getCurrentUser` выше) — вызывающий хук решает,
+    // что делать при неудаче (fail-closed: не устанавливать sessionId).
+    embeddedLogin: (payload: BitrixEmbeddedLoginRequest): Promise<BitrixEmbeddedLoginResponse> =>
+        apiInstance
+            .post<BitrixEmbeddedLoginResponse>('/v1/auth/embedded-login', payload)
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError('Не удалось войти через Bitrix24 (embedded) ' + error)
             }),
 }

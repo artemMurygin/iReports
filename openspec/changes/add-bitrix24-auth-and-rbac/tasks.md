@@ -36,17 +36,29 @@
 
   Примечание: `BitrixIdentityResolver` дополнительно отклоняет уволенного сотрудника
   (`BitrixEmployee.isActive: false`, design.md Decision 2 — проверка "бесплатно" через
-  существующее поле). `BitrixEmbeddedLoginHandler` получает `clientEndpoint` через
-  переиспользование (read-only) `BitrixAuthService.getInstallation(memberId)` из
-  нетронутой интеграции `integrations/bitrix/**`, а не через данные, присланные фронтендом.
-  Общий "хвост" обоих сценариев логина (посчитать permissions → выдать сессию) вынесен в
-  `AuthenticatedSessionIssuer` — используется этим и (в разделе 6) OAuth-хендлером, чтобы
-  bootstrap первого администратора (раздел 11) правился в одном месте. `SESSION_PORT`
-  (session) и `PERMISSIONS_RESOLVER_PORT` (roles) объявлены как токен+интерфейс во
+  существующее поле). Общий "хвост" обоих сценариев логина (посчитать permissions → выдать
+  сессию) вынесен в `AuthenticatedSessionIssuer` — используется этим и (в разделе 6) OAuth-
+  хендлером, чтобы bootstrap первого администратора (раздел 11) правился в одном месте.
+  `SESSION_PORT` (session) и `PERMISSIONS_RESOLVER_PORT` (roles) объявлены как токен+интерфейс во
   владеющих модулях уже сейчас (нужны для сигнатур), их реализации появляются в разделах
   7 и 8 — `AuthModule`/`SessionModule`/`RolesModule` полностью связываются DI ближе к
   разделу 12, поэтому `npm run start:dev` целиком не проверялся в этом разделе (проверка
   тестами через прямое конструирование классов, как и в разделах 3-4).
+
+  Обновление (реализация фронтенд-вызова embedded-логина — `useEmbeddedLoginBootstrap`,
+  `frontend/src/features/Auth/model/`, довершает раздел 16 ниже; вне TDD-цикла, отдельная задача
+  после раздела 21): изначально `BitrixEmbeddedLoginHandler` получал
+  `clientEndpoint` через переиспользование (read-only) `BitrixAuthService.getInstallation
+  (memberId)` из нетронутой интеграции `integrations/bitrix/**`. На практике эта запись
+  (`BitrixInstallation`) создаётся только install-вебхуком (`POST /bitrix/install`), который не
+  вызывается для упрощённо зарегистрированного тестового приложения Bitrix24 — `execute()` падал
+  бы на любом реальном embedded-входе. `execute(authId, memberId, domain)` теперь принимает
+  `domain` третьим параметром (переданный фронтендом после `BX24.getAuth()`, см.
+  `bitrixEmbeddedLoginRequestSchema` в `contracts/commands/auth.ts`) и строит `clientEndpoint`
+  напрямую (`https://${domain}/rest/`), без похода в БД за `BitrixInstallation`. `BitrixAuthService`
+  удалён из конструктора/импортов `BitrixEmbeddedLoginHandler`, но сам класс,
+  `saveInstallation`/`getInstallation` и `POST /bitrix/install` не тронуты — они остаются нужны
+  для другого сценария (полноценная установка приложения через маркетплейс).
 
 ## 6. `auth`: OAuth-логин + обновление токена (TDD)
 
@@ -204,6 +216,23 @@
     несмотря на явное описание в примечании раздела 13) — без неё `useLogout`'а `POST
     /v1/auth/logout` отклонялся бы `CsrfGuard`'ом 403-м для cookie-сессий (standalone/iOS).
 
+- [x] 16.5 (добавлено позже, вне исходного плана раздела) Реализовать реальный вызов embedded-логина —
+  до этого пункта на фронтенде не было кода, который бы вызывал `window.BX24.getAuth()` и
+  отправлял данные на backend (`shared/api/session-token.ts` использовался только тестами,
+  spec: auth#embedded-login-success фактически не была реализована на клиенте). Добавлены:
+  `api.embeddedLogin` (`features/Auth/model/api.ts`, `POST /v1/auth/embedded-login`),
+  `useEmbeddedLoginBootstrap` (`features/Auth/model/`, экспортирован из `index.ts`) —
+  срабатывает один раз при старте в iframe-контексте (`detectRuntimeContext() === 'iframe'`),
+  вызывает `BX24.init()` → `BX24.getAuth()` → `POST /v1/auth/embedded-login` с
+  `{ authId: access_token, memberId: member_id, domain }`, по успеху — `setSessionToken` +
+  инвалидация `AUTH_ME_QUERY_KEY`, по ошибке — fail-closed (не крашит, просто не выдаёт сессию).
+  Подключено в `app/main.tsx` через `EmbeddedLoginBootstrap` (`app/EmbeddedLoginBootstrap.tsx`),
+  рендерится рядом с `<RouterProvider>`, не блокируя дерево. Контракт
+  `bitrixEmbeddedLoginRequestSchema` (`contracts/commands/auth.ts`) дополнен полем `domain` —
+  см. связанное обновление в разделе 5 выше (backend строит `clientEndpoint` из `domain`, не через
+  `BitrixAuthService.getInstallation`). Юнит-тестов на фронте не заведено — раннер тестов на
+  фронте не настроен для новых файлов (frontend/CLAUDE.md), проверено только `npx tsc -b`/`eslint`.
+
 ## 17. Frontend: `AccessDeniedScreen` + `pages/AccessDenied`
 
 - [x] 17.1 Реализовать `shared/ui-kit/organisms/AccessDeniedScreen` (`title?`, `description?`) по фрейму `WZqMK` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`) — чисто визуальная вёрстка без ветвлений/данных, тесты не заводятся (обоснование: нет логики, только пропсы → разметка). Сверить со скриншотом фрейма `WZqMK`.
@@ -328,6 +357,14 @@
 - [ ] 21.3 Ручной сквозной прогон (или e2e-сценарий) через оба сценария логина: embedded (`BX24.init()` → `AUTH_ID` → сессия) и standalone (`pages/Login` → OAuth-редирект → callback → сессия) — в обоих случаях `GET /auth/me` возвращает корректные `permissions`, `/admin/roles` доступен только с `roles:manage`, изменение прав роли отражается в активной сессии без релогина (спек `roles`), logout инвалидирует сессию в Redis.
   - НЕ ВЫПОЛНЕНО в рамках этой сессии. Ограничение среды: у агента нет доступа к реальному Bitrix24-порталу (нужен для `BX24.init()`/embedded-контекста и для OAuth-редиректа standalone-сценария), нет браузера для интерактивного прохода UI, и нет запущенного Redis/Postgres со staging-данными сотрудника. Автотесты (unit/e2e с моками Bitrix24 и Redis) покрывают эти сценарии на уровне контроллеров и сервисов, но не заменяют сквозную проверку через реальный портал.
   - Что нужно пользователю для финальной верификации вручную: (1) staging-инсталляция Bitrix24-портала с установленным embedded-приложением iReports (или тестовый портал с доступом к маркетплейсу разработчика) для сценария `BX24.init()` → `AUTH_ID`; (2) зарегистрированный тестовый OAuth-клиент Bitrix24 (client_id/secret, redirect_uri на dev/staging-домен iReports) для standalone-сценария `pages/Login` → редирект → callback; (3) поднятые Redis и Postgres (docker-compose) с применёнными миграциями и засеянным каталогом прав/ролью Administrator; (4) сотрудник в `BitrixEmployee` с правами, чтобы проверить как happy path (`GET /auth/me` → `permissions`, доступ к `/admin/roles`), так и live-обновление прав в активной сессии без релогина, и logout с проверкой инвалидации ключа сессии в Redis.
+  - Обновление (см. раздел 16.5): на момент этого примечания embedded-сценарий не мог быть пройден
+    даже теоретически — на фронтенде отсутствовал сам код вызова `BX24.init()`/`getAuth()`
+    (`shared/api/session-token.ts` использовался только тестами). Этот пробел закрыт (раздел 16.5,
+    `useEmbeddedLoginBootstrap`) — также убрана зависимость `BitrixEmbeddedLoginHandler` от
+    `BitrixInstallation`/`BitrixAuthService.getInstallation` (раздел 5, "Обновление"), которая
+    падала бы для тестового приложения Bitrix24 без install-вебхука. Пункт по-прежнему НЕ ВЫПОЛНЕН
+    и остаётся открытым для ручной проверки пользователем — нужен реальный Bitrix24-портал/браузер,
+    недоступные агенту; сокращён только состав того, что нужно доделать до верификации.
 
 ## 22. Backend: `GET /roles/assignments` — данные о назначениях роль↔сотрудник (добавлено по итогам реализации раздела 20) (TDD)
 

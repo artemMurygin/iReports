@@ -29,6 +29,7 @@ export class BitrixEmbeddedLoginHttpController {
         const { sessionId } = await this.handler.execute(
             body.authId,
             body.memberId,
+            body.domain,
         );
         // Доставка через заголовок (spec: session#header-delivery-for-iframe)
         // — sessionId возвращается в теле, cookie не устанавливается.

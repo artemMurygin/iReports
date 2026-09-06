@@ -16,3 +16,9 @@ export { RequirePermission } from './ui/RequirePermission.tsx'
 // та же сверка/удаление одноразового `state`, что использует `useBitrixLogin` при генерации.
 export { AUTH_ME_QUERY_KEY, api as authApi } from './model/api.ts'
 export { OAUTH_STATE_STORAGE_KEY, consumeStoredOAuthState, getOAuthRedirectUri } from './model/oauthState.ts'
+
+// add-bitrix24-auth-and-rbac, разделы 15/16 tasks.md — недостающая часть embedded/iframe-сценария
+// входа (spec: auth#embedded-login-success): реальный вызов `BX24.init()`/`getAuth()` и передача
+// данных на backend. Вызывается один раз из `app/` (`EmbeddedLoginBootstrap`, frontend/CLAUDE.md:
+// импорт фичи только через её `index.ts`), рядом с `<RouterProvider>`, не блокируя дерево.
+export { useEmbeddedLoginBootstrap } from './model/useEmbeddedLoginBootstrap.ts'
