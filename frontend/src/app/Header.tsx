@@ -1,9 +1,10 @@
+import { Percent, Wallet } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
-import { useCurrentUser } from '@/features/Auth'
+import { useCurrentUser, useLogout } from '@/features/Auth'
 import { findMostSpecificNavMatch } from '@/shared/lib/nav.ts'
 import { getEmployeeInitials } from '@/shared/lib/employeeInitials.ts'
-import { Header as UiKitHeader } from '@/shared/ui-kit/organisms/Header'
+import { Header as UiKitHeader, type ProfileMenuData } from '@/shared/ui-kit/organisms/Header'
 
 import { ALL_LEAVES, DRAWER_SECTIONS, isTopLevelNavItemActive, SECTIONS, TOP_LEVEL_NAV_ITEMS } from './navigation.tsx'
 
@@ -13,10 +14,24 @@ export function Header() {
     // — Header не делает повторный сетевой запрос, здесь он уже прогрет к моменту, когда рендерится
     // Header (Layout монтируется только внутри RouteGuard, после подтверждения сессии).
     const { employee } = useCurrentUser()
+    const { logout } = useLogout()
     const user = employee
         ? {
               name: `${employee.firstName} ${employee.lastName}`.trim(),
               initials: getEmployeeInitials(`${employee.firstName} ${employee.lastName}`),
+          }
+        : undefined
+
+    // Профиль-меню (Pencil `FjbRC`/`X2GpSa`, десктоп-поповер + мобильная шторка) — открывается
+    // из блока пользователя в шапке. «Выйти» доступно всегда; «Баланс»/«Зарплатные правила» —
+    // только когда известен id сотрудника (нужен для `/balance/employee/:id`).
+    const profileMenu: ProfileMenuData | undefined = employee
+        ? {
+              items: [
+                  { label: 'Баланс', icon: <Wallet />, to: `/balance/employee/${employee.id}` },
+                  { label: 'Зарплатные правила', icon: <Percent />, to: '/salaries/rules' },
+              ],
+              onLogout: () => logout(),
           }
         : undefined
 
@@ -77,6 +92,8 @@ export function Header() {
             drawerSections={drawerSections}
             user={user}
             mobile={{ section: activeLeaf.section, page: activeLeaf.label }}
+            onLogout={() => logout()}
+            profileMenu={profileMenu}
         />
     )
 }

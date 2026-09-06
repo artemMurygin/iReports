@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui-kit/atoms/Avata
 import { BellBadge } from '@/shared/ui-kit/atoms/BellBadge'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 
+import { ProfileMenuSheet, type ProfileMenuData } from './ProfileMenu'
+
 /**
  * Pencil: design/sallary-first-iteration.pen, reusable component `kXibe` (`ERP/Mobile/App Bar`,
  * 390x52, white fill, 1px hairline bottom border, padding [0,12], gap 10, `space_between`).
@@ -62,6 +64,8 @@ export type HeaderMobileProps = {
     /** Omit while there's no real signed-in user data to show — hides the avatar trigger entirely rather than displaying a placeholder identity. */
     user?: HeaderMobileUser
     onUserClick?: () => void
+    /** Items/logout action for the `ProfileMenuSheet` opened by tapping the profile avatar. Omit to keep the avatar a trigger-only button with no sheet. */
+    profileMenu?: ProfileMenuData
     className?: string
 }
 
@@ -75,8 +79,10 @@ function HeaderMobile({
     onBellClick,
     user,
     onUserClick,
+    profileMenu,
     className,
 }: HeaderMobileProps) {
+    const [profileOpen, setProfileOpen] = React.useState(false)
     return (
         <header
             data-slot="header-mobile"
@@ -128,8 +134,12 @@ function HeaderMobile({
                         type="button"
                         data-slot="header-mobile-profile"
                         aria-label={user.name ?? 'Профиль'}
+                        aria-expanded={profileMenu ? profileOpen : undefined}
                         className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                        onClick={onUserClick}
+                        onClick={() => {
+                            if (profileMenu) setProfileOpen(true)
+                            onUserClick?.()
+                        }}
                     >
                         <Avatar>
                             {user.avatarSrc ? <AvatarImage src={user.avatarSrc} alt={user.name ?? ''} /> : null}
@@ -138,6 +148,16 @@ function HeaderMobile({
                     </button>
                 ) : null}
             </div>
+
+            {user && profileMenu ? (
+                <ProfileMenuSheet
+                    open={profileOpen}
+                    onClose={() => setProfileOpen(false)}
+                    user={{ name: user.name ?? 'Профиль', initials: user.initials, avatarSrc: user.avatarSrc }}
+                    items={profileMenu.items}
+                    onLogout={profileMenu.onLogout}
+                />
+            ) : null}
         </header>
     )
 }

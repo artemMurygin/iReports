@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/tw'
 import { HeaderDesktop, type HeaderDesktopUser } from './HeaderDesktop'
 import { HeaderMobile, type HeaderMobileAction } from './HeaderMobile'
 import { NavDrawer, type NavDrawerSection } from './NavDrawer'
+import type { ProfileMenuData } from './ProfileMenu'
 import { Scrim } from './Scrim'
 import type { NavItem } from './types'
 
@@ -48,6 +49,8 @@ export type HeaderProps = {
     onBellClick?: () => void
     onUserClick?: () => void
     onLogout?: () => void
+    /** Items/logout action for the profile popover (desktop)/sheet (mobile) opened from the user block. Omit to keep the user block a trigger-only button with no menu. */
+    profileMenu?: ProfileMenuData
     /** Controls the mobile menu/drawer's open state from outside. Omit to let `Header` manage it internally (uncontrolled, the default for every existing caller). */
     open?: boolean
     /** Required alongside `open` to actually change it — `Header` calls this instead of an internal setter when controlled. */
@@ -65,6 +68,7 @@ function Header({
     onBellClick,
     onUserClick,
     onLogout,
+    profileMenu,
     open,
     onOpenChange,
     className,
@@ -99,6 +103,7 @@ function Header({
                 hasUnreadNotifications={hasUnreadNotifications}
                 onBellClick={onBellClick}
                 onUserClick={onUserClick}
+                profileMenu={profileMenu}
                 className={cn('sticky top-0 z-30 hidden md:flex', className)}
             />
 
@@ -112,6 +117,7 @@ function Header({
                 onBellClick={onBellClick}
                 user={user}
                 onUserClick={onUserClick}
+                profileMenu={profileMenu}
                 className={cn('sticky top-0 z-50 flex md:hidden', className)}
             />
 

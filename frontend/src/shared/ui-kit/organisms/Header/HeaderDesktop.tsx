@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui-kit/atoms/Avata
 import { BellBadge } from '@/shared/ui-kit/atoms/BellBadge'
 import { Divider } from '@/shared/ui-kit/atoms/Divider'
 
+import { ProfileMenuPopover, type ProfileMenuData } from './ProfileMenu'
 import { Subnav } from './Subnav'
 import type { NavItem } from './types'
 
@@ -29,9 +30,11 @@ import type { NavItem } from './types'
  * - `X8G3zd` Nav Right (gap 10): `l5W7O9` Bell + `f4tNY` Divider + `WNVaX` User (rounded-8,
  *   gap 9, padding [3,6,3,4]: `Avatar` + name/role text block + `chevron-down` "more" icon).
  *
- * The bell and the user block are triggers only — clicking either just flips a local
- * open/closed visual state (`aria-expanded` + a `canvas` highlight); no dropdown menu content
- * is implemented here (out of scope per the rollout plan, a later phase).
+ * The bell trigger only flips a local open/closed visual state (`aria-expanded` + a `canvas`
+ * highlight) — no bell menu content is implemented here (out of scope per the rollout plan, a
+ * later phase). The user block, when `profileMenu` is supplied, opens the `ProfileMenuPopover`
+ * (Pencil node `FjbRC`, `ERP/Organism/Menu Профиль`) anchored below it; without `profileMenu` it
+ * keeps the old trigger-only behavior.
  */
 export type HeaderDesktopUser = {
     /** Full name, e.g. "Артём Мурыгин". */
@@ -57,6 +60,8 @@ export type HeaderDesktopProps = {
     onBellClick?: () => void
     /** Called (in addition to toggling the local visual state) when the user block trigger is clicked. */
     onUserClick?: () => void
+    /** Items/logout action for the `ProfileMenuPopover` opened by the user block. Omit to keep the user block a trigger-only button with no menu. */
+    profileMenu?: ProfileMenuData
     className?: string
 }
 
@@ -67,6 +72,7 @@ function HeaderDesktop({
     hasUnreadNotifications = false,
     onBellClick,
     onUserClick,
+    profileMenu,
     className,
 }: HeaderDesktopProps) {
     const [notificationsOpen, setNotificationsOpen] = React.useState(false)
@@ -135,34 +141,55 @@ function HeaderDesktop({
                         <>
                             <Divider />
 
-                            <button
-                                type="button"
-                                data-slot="header-user"
-                                aria-expanded={userMenuOpen}
-                                className={cn(
-                                    'flex items-center gap-[9px] rounded-lg py-[3px] pr-[6px] pl-[4px] outline-none transition-colors select-none hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand/40',
-                                    userMenuOpen && 'bg-canvas',
-                                )}
-                                onClick={() => {
-                                    setUserMenuOpen((open) => !open)
-                                    onUserClick?.()
-                                }}
-                            >
-                                <Avatar>
-                                    {user.avatarSrc ? <AvatarImage src={user.avatarSrc} alt={user.name} /> : null}
-                                    <AvatarFallback>{user.initials}</AvatarFallback>
-                                </Avatar>
-                                <span className="flex flex-col items-start gap-px">
-                                    <span className="text-[13px] font-medium text-ink">{user.name}</span>
-                                    {user.role ? <span className="text-[11px] text-ink-muted">{user.role}</span> : null}
-                                </span>
-                                <ChevronDown
-                                    className={cn(
-                                        'size-[15px] shrink-0 text-ink-muted transition-transform',
-                                        userMenuOpen && 'rotate-180',
-                                    )}
-                                />
-                            </button>
+                            {(() => {
+                                const trigger = (
+                                    <button
+                                        type="button"
+                                        data-slot="header-user"
+                                        aria-expanded={userMenuOpen}
+                                        className={cn(
+                                            'flex items-center gap-[9px] rounded-lg py-[3px] pr-[6px] pl-[4px] outline-none transition-colors select-none hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand/40',
+                                            userMenuOpen && 'bg-canvas',
+                                        )}
+                                        onClick={() => {
+                                            if (!profileMenu) setUserMenuOpen((open) => !open)
+                                            onUserClick?.()
+                                        }}
+                                    >
+                                        <Avatar>
+                                            {user.avatarSrc ? (
+                                                <AvatarImage src={user.avatarSrc} alt={user.name} />
+                                            ) : null}
+                                            <AvatarFallback>{user.initials}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="flex flex-col items-start gap-px">
+                                            <span className="text-[13px] font-medium text-ink">{user.name}</span>
+                                            {user.role ? (
+                                                <span className="text-[11px] text-ink-muted">{user.role}</span>
+                                            ) : null}
+                                        </span>
+                                        <ChevronDown
+                                            className={cn(
+                                                'size-[15px] shrink-0 text-ink-muted transition-transform',
+                                                userMenuOpen && 'rotate-180',
+                                            )}
+                                        />
+                                    </button>
+                                )
+
+                                return profileMenu ? (
+                                    <ProfileMenuPopover
+                                        open={userMenuOpen}
+                                        onOpenChange={setUserMenuOpen}
+                                        trigger={trigger}
+                                        user={user}
+                                        items={profileMenu.items}
+                                        onLogout={profileMenu.onLogout}
+                                    />
+                                ) : (
+                                    trigger
+                                )
+                            })()}
                         </>
                     ) : null}
                 </div>
