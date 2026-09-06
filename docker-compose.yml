@@ -64,8 +64,13 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: docker/Dockerfile
+      # Контекст — корень репозитория (как и у backend выше): frontend зависит от workspace-пакета
+      # ireports-contracts (../contracts) как значений, не только типов (ruleFormSchema.ts,
+      # salaryRuleRequestSchema), и его нужно собрать (dist/) до `vite build` — при context:
+      # ./frontend каталог contracts/ физически недоступен внутри сборки, и Rolldown не может
+      # разрешить импорт (проявляется, только когда есть хотя бы один такой value-импорт).
+      context: .
+      dockerfile: frontend/docker/Dockerfile
       args:
         VITE_API_URL: https://test.api.murygin.tech
     restart: unless-stopped

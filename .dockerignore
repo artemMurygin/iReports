@@ -1,5 +1,6 @@
-# Используется сборкой backend (docker-compose.yml: backend.build.context: .)
-# Сборка frontend использует свой собственный frontend/.dockerignore (context: ./frontend)
+# Используется и backend, и frontend (оба собираются из корня репозитория, docker-compose.yml:
+# backend.build.context: ., frontend.build.context: .) — оба зависят от workspace-пакета
+# ireports-contracts, который резолвится только относительно корня монорепо.
 
 **/node_modules
 **/dist
@@ -10,9 +11,6 @@
 .idea
 .vscode
 .github
-
-# Не нужен для сборки backend
-frontend
 
 # Старая версия backend, не участвует в сборке
 backend/deprecated
