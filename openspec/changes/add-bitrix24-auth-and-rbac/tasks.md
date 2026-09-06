@@ -263,9 +263,63 @@
 Блокер решён пользователем: раздел 22 добавляет `GET /roles/assignments`. 20.7-20.9 продолжаются
 ПОСЛЕ раздела 22 (нужны его данные), не раньше.
 
-- [ ] 20.7 Реализовать `features/RoleManagement/ui/EmployeeRoleAssignment` (таблица сотрудников с бейджами ролей через `useEmployeeRoleAssignment` — теперь читает `GET /roles/assignments` из раздела 22 — и состоянием «Роль не назначена»: иконка `user-plus` вместо `pencil`) по фрейму `F6d3a` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`).
-- [ ] 20.8 Реализовать `pages/RolesManagement/mediator/RolesManagementPage` — оркестрация хуков `useRoles`/`useRolePermissionsMatrix`/`useEmployeeRoleAssignment`, переключение вкладок «Роли и права»/«Сотрудники» (без условного рендера внутри самого медиатора). Подключить роут `/admin/roles` с защитой `roles:manage` (механизм `handle.requiredPermission` уже готов в `app/route-guard`, раздел 15).
-- [ ] 20.9 Финальная сверка: скриншот полного экрана `s5nMLx` (вкладка «Роли и права») и `F6d3a` (вкладка «Сотрудники») из Pencil сопоставлен с рендером реализованной страницы — layout, тексты и состояния совпадают.
+- [x] 20.7 Реализовать `features/RoleManagement/ui/EmployeeRoleAssignment` (таблица сотрудников с бейджами ролей через `useEmployeeRoleAssignment` — теперь читает `GET /roles/assignments` из раздела 22 — и состоянием «Роль не назначена»: иконка `user-plus` вместо `pencil`) по фрейму `F6d3a` (`design/sallary-first-iteration.pen`, читать через `mcp__pencil__execute`/`Get`).
+
+  Результат: `useEmployeeRoleAssignment` расширен (`employees` теперь несёт `roleIds`
+  из `GET /v1/roles/assignments` и `departmentName` из `GET /v1/directory/departments`; хук также
+  отдаёт `roles` целиком) — тесты обновлены (`useEmployeeRoleAssignment.spec.tsx`, 4/4 green,
+  TDD red зафиксирован: `employees`/`roles` были `undefined`/не содержали `roleIds` до
+  реализации). Новый компонент `ui/EmployeeRoleAssignment` (+ `EmployeeRoleAssignment.spec.tsx`,
+  4/4 green) — таблица «Сотрудник / Отдел / Роли / Действия», бейдж на роль, иконка
+  `pencil`/`user-plus` открывает поповер с чекбоксами ролей (`onAssign`/`onRevoke` — прямые
+  мутации, без черновика/кнопки «Сохранить», в отличие от `RolePermissionMatrix` — макет не
+  специфицирует это взаимодействие за пределами самой иконки).
+
+  Отступления от макета (документированы в JSDoc компонента, не решались самостоятельно за
+  пределами раздела, тот же приём, что и у счётчика «N сотрудников» на карточке роли из 20.1):
+  (1) подпись-должность под именем сотрудника («Генеральный директор» и т.п. на `F6d3a`) не
+  отображается — ни `EmployeeResponse`, ни любой другой доступный этой фиче эндпоинт не
+  возвращает должность; (2) Filter Bar макета (чип «Отдел: Все» + поиск «Поиск сотрудника»,
+  `DyYbl`) не реализован — не входит в приёмку этой задачи (только таблица с ролями/состоянием
+  «Роль не назначена»), а взаимодействие чипа в макете не специфицировано за пределами статичного
+  дефолтного состояния.
+- [x] 20.8 Реализовать `pages/RolesManagement/mediator/RolesManagementPage` — оркестрация хуков `useRoles`/`useRolePermissionsMatrix`/`useEmployeeRoleAssignment`, переключение вкладок «Роли и права»/«Сотрудники» (без условного рендера внутри самого медиатора). Подключить роут `/admin/roles` с защитой `roles:manage` (механизм `handle.requiredPermission` уже готов в `app/route-guard`, раздел 15).
+
+  Результат: `mediator/RolesManagementPage.tsx` — вызывает три хука фичи, хранит только
+  `activeTab` (`useState`, не рендер-ветвление); `useRoles()` и `useEmployeeRoleAssignment()`
+  оба читают `GET /roles` (`ROLES_QUERY_KEY`) — TanStack Query дедуплицирует запрос, `roles.roles`
+  передан в обе вкладки одним пропом. Само переключение "какой JSX показать" (`activeTab ===
+  'roles' ? ... : ...`) и `isEmpty`-ветвление `RolesAndPermissionsTab` вынесены в новый
+  `ui/RolesManagementBody.tsx` (+ `RolesManagementBody.spec.tsx`, 3/3 green, TDD red
+  зафиксирован: файл не существовал) — медиатор остаётся чистой склейкой без условного рендера.
+  `isEmpty` считается в медиаторе как `!roles.isLoading && roles.roles.length === 0` — без гейта
+  на `isLoading` пустое состояние мигнуло бы на экране до первого ответа `GET /roles`. Роут
+  `/admin/roles` зарегистрирован в `app/router.tsx` внутри существующего `<RouteGuard><Layout
+  /></RouteGuard>` дерева с `handle: { requiredPermission: 'roles:manage' }` — механизм раздела 15
+  переиспользован без изменений. `npx tsc -b` и `npm run build` — без ошибок.
+
+  Отступление (не решалось самостоятельно за пределами раздела): пункт меню на страницу
+  `/admin/roles` в `app/navigation.tsx` НЕ добавлен — ни tasks.md (раздел 20.8, только "Подключить
+  роут"), ни architecture.md/ui-design.md не описывают размещение пункта в навигации; страница
+  пока доступна только по прямому URL.
+- [x] 20.9 Финальная сверка: скриншот полного экрана `s5nMLx` (вкладка «Роли и права») и `F6d3a` (вкладка «Сотрудники») из Pencil сопоставлен с рендером реализованной страницы — layout, тексты и состояния совпадают.
+
+  Результат: `npm run start` (vite dev) + Playwright (`browser_run_code_unsafe`, `page.route` для
+  моков `GET /v1/auth/me|roles|roles/permissions|roles/assignments|directory/employees|
+  directory/departments`) — `/admin/roles` отрендерен полностью на реальных данных (не только
+  юнит-тестах компонентов) в вьюпорте 1440×1024, сопоставлен с `TakeScreenshot(['s5nMLx'])` и
+  `TakeScreenshot(['F6d3a'])` из Pencil. Обе вкладки совпадают по структуре: заголовок+подпись,
+  переключатель вкладок, карточки ролей + «Добавить роль», матрица прав с группировкой строк и
+  чекбоксами по колонкам-ролям (вкладка «Роли и права»); таблица «Сотрудник/Отдел/Роли/Действия»
+  с аватарами-инициалами, бейджами ролей, состоянием «Роль не назначена» + иконкой `user-plus`
+  для сотрудника без роли и `pencil` для остальных (вкладка «Сотрудники»). Дополнительно проверено
+  интерактивно: клик по иконке действия открывает поповер с чекбоксами ролей; клик по чекбоксу
+  вызывает мутацию без ошибок в консоли; сотрудник без `roles:manage` в `permissions` получает
+  `pages/AccessDenied` вместо страницы (`RouteGuard`, раздел 15) — сквозная проверка
+  guard-механизма на реальном роуте `/admin/roles`, не только юнит-тестом `RouteGuard.spec.tsx`.
+  Единственное расхождение с макетом — верхний `Topnav`: страница использует уже существующий
+  `app/Header` компонента (переиспользуется всеми страницами `<Layout>`, не специфичен для этого
+  раздела), а не точную копию топнава из .pen-файла — вне области этой задачи.
 
 ## 21. Итоговая интеграционная проверка
 

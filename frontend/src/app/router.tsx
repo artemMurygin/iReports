@@ -18,6 +18,7 @@ import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
 import { UiKitPreview } from '@/pages/UiKitPreview'
 import { OAuthCallbackPage } from '@/pages/OAuthCallback'
+import { RolesManagementPage } from '@/pages/RolesManagement'
 import { queryClient } from '@/shared/api/query-client.ts'
 import { api as funnelReportApi } from '@/pages/FunnelReport/model/api.ts'
 import { defaults as funnelReportDefaultFilters } from '@/pages/FunnelReport/model/useFilters.tsx'
@@ -150,6 +151,16 @@ export const router = createBrowserRouter([
                 // Фаза 4) — второй пункт раздела «Настройки».
                 path: 'settings/service-accounts',
                 element: <ServiceAccountsPage />,
+            },
+            {
+                // add-bitrix24-auth-and-rbac, раздел 20.8 tasks.md; ui-design.md `s5nMLx`/`F6d3a`
+                // — админ-страница управления ролями. `handle.requiredPermission` — механизм
+                // раздела 15 (`app/route-guard/ui/RouteGuard.tsx`), уже готовый и покрытый
+                // тестами до этой задачи; без `roles:manage` у текущего сотрудника `RouteGuard`
+                // рендерит `pages/AccessDenied` вместо этого роута.
+                path: 'admin/roles',
+                element: <RolesManagementPage />,
+                handle: { requiredPermission: 'roles:manage' },
             },
         ],
     },

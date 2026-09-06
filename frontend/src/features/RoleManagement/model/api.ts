@@ -1,8 +1,10 @@
 import { queryOptions } from '@tanstack/react-query'
 import type {
     CreateRoleRequest,
+    ListDepartmentsResponse,
     ListEmployeesResponse,
     ListPermissionsCatalogResponse,
+    ListRoleAssignmentsResponse,
     ListRolesResponse,
     RenameRoleRequest,
     RoleResponse,
@@ -23,9 +25,12 @@ import { ApiError, extractApiErrorMessage } from '@/shared/errors/apiError.ts'
  * `shared/api/axios.instance.ts`, не здесь (тот же приём, что и
  * `features/Auth/model/api.ts`'s `logout`).
  *
- * Все восемь эндпоинтов и их пути — `backend/src/config/app.routes.ts`'s
+ * Восемь из десяти эндпоинтов и их пути — `backend/src/config/app.routes.ts`'s
  * `routesV1.roles`, реализация раздела 12 tasks.md; DTO/ответы — `contracts/
- * commands/roles.ts`.
+ * commands/roles.ts`. `getRoleAssignments` — девятый, `routesV1.roles.assignments`
+ * из раздела 22 tasks.md. `getDepartments` — существующий эндпоинт модуля
+ * `directory` (`routesV1.directory`), не `roles`, переиспользован здесь ради
+ * колонки «Отдел» на вкладке «Сотрудники» (раздел 20.7).
  */
 
 export const ROLES_QUERY_KEY = ['roles', 'list'] as const
@@ -37,6 +42,12 @@ export const ROLES_QUERY_KEY = ['roles', 'list'] as const
 // staleTime длиннее, чем у ROLES_QUERY_KEY: каталог меняется только деплоем
 // кода, а не действиями пользователя в рамках сессии.
 export const PERMISSIONS_CATALOG_QUERY_KEY = ['roles', 'permissions-catalog'] as const
+
+// Раздел 20.7 tasks.md (add-bitrix24-auth-and-rbac) — назначения роль<->сотрудник для вкладки
+// «Сотрудники» (`useEmployeeRoleAssignment`), эндпоинт раздела 22 (`GET /v1/roles/assignments`).
+// Отдельный ключ от `ROLES_QUERY_KEY`: список ролей и назначения ролей сотрудникам меняются
+// независимо (CRUD роли не трогает назначения, assign/revoke не трогает сам список ролей).
+export const ROLE_ASSIGNMENTS_QUERY_KEY = ['roles', 'assignments'] as const
 
 export const api = {
     getRoles: () =>
@@ -81,6 +92,37 @@ export const api = {
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError(extractApiErrorMessage(error, 'Не удалось загрузить список сотрудников'))
+                    }),
+        }),
+
+    // Назначения роль<->сотрудник (раздел 22 tasks.md) — read-only, питает бейджи ролей и
+    // состояние «Роль не назначена» в таблице сотрудников (ui-design.md фрейм `F6d3a`).
+    getRoleAssignments: () =>
+        queryOptions({
+            queryKey: ROLE_ASSIGNMENTS_QUERY_KEY,
+            queryFn: ({ signal }): Promise<ListRoleAssignmentsResponse> =>
+                apiInstance
+                    .get<ListRoleAssignmentsResponse>('/v1/roles/assignments', { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError(extractApiErrorMessage(error, 'Не удалось загрузить назначения ролей'))
+                    }),
+        }),
+
+    // Названия отделов для колонки «Отдел» на вкладке «Сотрудники» — тот же существующий
+    // справочник `directory`, что и `getEmployees` выше (`GET /directory/employees` отдаёт
+    // только `departmentId`, без имени отдела; `pages/EmployeeIdentity/model/api.ts`'s
+    // `getDepartments` уже делает ровно этот же запрос для той же цели).
+    getDepartments: () =>
+        queryOptions({
+            queryKey: ['roles', 'departments'],
+            staleTime: 5 * 60 * 1000,
+            queryFn: ({ signal }): Promise<ListDepartmentsResponse> =>
+                apiInstance
+                    .get<ListDepartmentsResponse>('/v1/directory/departments', { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError(extractApiErrorMessage(error, 'Не удалось загрузить список отделов'))
                     }),
         }),
 
