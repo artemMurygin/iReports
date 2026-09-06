@@ -28,6 +28,22 @@ export class RequestContextService {
         return ctx;
     }
 
+    // undefined вне HTTP-запроса — одноразовые скрипты через
+    // NestFactory.createApplicationContext (например seedPermissions.ts) и
+    // cron-джобы никогда не проходят через RequestContextMiddleware, поэтому
+    // RequestContext.currentContext (AsyncLocalStorage.getStore()) остаётся
+    // undefined. Для транзакционной машинерии ниже (DatabaseService.
+    // withTransaction/getClient, PrismaRepository.write) это легитимный
+    // "нет активного контекста", а не ошибка использования — обнаружено как
+    // реальный баг: AdministratorRoleSeeder падал TypeError'ом при запуске
+    // npm run seed:permissions вне HTTP-контекста, потому что каждый из этих
+    // методов раньше безусловно дёргал getContext(). setRequestId/
+    // getRequestId ниже продолжают использовать строгий getContext() — им
+    // реальный запрос действительно нужен, тот же фолбэк там неуместен.
+    private static tryGetContext(): AppRequestContext | undefined {
+        return RequestContext.currentContext?.req as AppRequestContext;
+    }
+
     static setRequestId(id: string): void {
         const ctx = this.getContext();
         ctx.requestId = id;
@@ -38,24 +54,30 @@ export class RequestContextService {
     }
 
     static getTransactionConnection(): Prisma.TransactionClient | undefined {
-        const ctx = this.getContext();
-        return ctx.transactionConnection;
+        return this.tryGetContext()?.transactionConnection;
     }
 
     static setTransactionConnection(
         transactionConnection?: Prisma.TransactionClient,
     ): void {
-        const ctx = this.getContext();
-        ctx.transactionConnection = transactionConnection;
+        const ctx = this.tryGetContext();
+        if (ctx) {
+            ctx.transactionConnection = transactionConnection;
+        }
     }
 
     static cleanTransactionConnection(): void {
-        const ctx = this.getContext();
-        ctx.transactionConnection = undefined;
+        const ctx = this.tryGetContext();
+        if (ctx) {
+            ctx.transactionConnection = undefined;
+        }
     }
 
     static trackAggregateForEvents(aggregate: AggregateRoot<unknown>): void {
-        const ctx = this.getContext();
+        const ctx = this.tryGetContext();
+        if (!ctx) {
+            return;
+        }
         (ctx.pendingAggregates ??= []).push(aggregate);
     }
 
@@ -63,7 +85,10 @@ export class RequestContextService {
     // успешного коммита (чтобы опубликовать) и при откате/ошибке (чтобы
     // просто отбросить, не публикуя события для данных, которых нет в БД).
     static drainPendingAggregates(): AggregateRoot<unknown>[] {
-        const ctx = this.getContext();
+        const ctx = this.tryGetContext();
+        if (!ctx) {
+            return [];
+        }
         const aggregates = ctx.pendingAggregates ?? [];
         ctx.pendingAggregates = [];
         return aggregates;
