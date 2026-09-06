@@ -44,7 +44,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-iReports}
       REDIS_URL: redis://redis:6379
       PORT: 3000
-      CORS_ORIGIN: https://ireports.murygin.tech
+      # dev-стенд (ветка `dev`, деплой через .github/workflows/deploy-dev.yml) — отдельный домен от
+      # прода (ireports.murygin.tech/api.murygin.tech, см. ветку main), не мержить это значение назад.
+      CORS_ORIGIN: https://test.murygin.tech
       BITRIX24_WEBHOOK_URL: ${BITRIX24_WEBHOOK_URL}
       SECRET_ACCESS: ${SECRET_ACCESS}
       SECRET_REFRESH: ${SECRET_REFRESH}
@@ -55,17 +57,20 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      # dev-стенд слушает другие хостовые порты, чтобы не конфликтовать с прод-стеком на том же
+      # сервере (прод — 3000/3001, см. ветку main) — наружу их отдаёт host nginx на test.murygin.tech/
+      # apitest.murygin.tech.
+      - "3010:3000"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: docker/Dockerfile
       args:
-        VITE_API_URL: https://api.murygin.tech
+        VITE_API_URL: https://apitest.murygin.tech
     restart: unless-stopped
     ports:
-      - "3001:80"
+      - "3011:80"
     depends_on:
       - backend
 

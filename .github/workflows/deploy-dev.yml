@@ -1,0 +1,40 @@
+name: Deploy (dev)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to dev stand
+        id: deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ../iRepair/iReports-dev/
+            git fetch
+            git checkout dev
+            git pull origin dev
+            docker compose -p ireports-dev down
+            docker compose -p ireports-dev build
+            docker compose -p ireports-dev up -d
+
+      - name: Notify Telegram
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            TEXT="✅ *iReports (dev)* задеплоен успешно%0A🌿 Branch: \`${{ github.ref_name }}\`%0A📝 Commit: \`${{ github.sha }}\`%0A👤 Author: ${{ github.actor }}"
+          else
+            TEXT="❌ *iReports (dev)* деплой упал%0A🌿 Branch: \`${{ github.ref_name }}\`%0A📝 Commit: \`${{ github.sha }}\`%0A👤 Author: ${{ github.actor }}"
+          fi
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$TEXT" \
+            -d parse_mode="Markdown"
