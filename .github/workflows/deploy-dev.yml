@@ -22,7 +22,10 @@ jobs:
             git checkout dev
             git pull origin dev
             docker compose -p ireports-dev down
-            docker compose -p ireports-dev build
+            # backend и frontend собираются последовательно, не параллельно (COMPOSE_PARALLEL_LIMIT=1) —
+            # оба билда (nest build/tsc + vite build) вместе упирались в OOM на сервере с ограниченной
+            # памятью, особенно пока рядом уже работает прод-стек.
+            COMPOSE_PARALLEL_LIMIT=1 docker compose -p ireports-dev build
             docker compose -p ireports-dev up -d
 
       - name: Notify Telegram
