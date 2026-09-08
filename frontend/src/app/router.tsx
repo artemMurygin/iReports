@@ -19,6 +19,7 @@ import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
 import { UiKitPreview } from '@/pages/UiKitPreview'
 import { OAuthCallbackPage } from '@/pages/OAuthCallback'
 import { RolesManagementPage } from '@/pages/RolesManagement'
+import { GoodsTurnoverReportPage } from '@/pages/GoodsTurnoverReport'
 import { queryClient } from '@/shared/api/query-client.ts'
 import { api as funnelReportApi } from '@/pages/FunnelReport/model/api.ts'
 import { defaults as funnelReportDefaultFilters } from '@/pages/FunnelReport/model/useFilters.tsx'
@@ -65,6 +66,14 @@ export const router = createBrowserRouter([
             {
                 path: 'sales-plan',
                 element: <SalesPlanPage />,
+            },
+            {
+                // Отчёт по оборачиваемости товаров (openspec/changes/service-turnover-report,
+                // задача 15.2; ui-design.md `WvSO6`/`yDBTb`) — новый модуль `domains/service/
+                // modules/warehouse` на бэкенде. Пока каркас (`GoodsTurnoverReportPage` — только
+                // `Layout` без Filter Row/таблицы, см. её комментарий) — наполняется задачами 16-19.
+                path: 'goods-turnover-report',
+                element: <GoodsTurnoverReportPage />,
             },
             {
                 // Отчёт по зарплате (Pencil: design/sallary-first-iteration.pen, `wLtzp`/`b63e8p`

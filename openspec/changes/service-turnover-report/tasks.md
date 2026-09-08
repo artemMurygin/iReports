@@ -402,16 +402,45 @@
 
 ## 15. Frontend: страница `GoodsTurnoverReport` — каркас
 
-- [ ] 15.1 Создать `pages/GoodsTurnoverReport/{index.ts, model/api.ts, ui/Layout.tsx}` — `api.ts`
+- [x] 15.1 Создать `pages/GoodsTurnoverReport/{index.ts, model/api.ts, ui/Layout.tsx}` — `api.ts`
   через `queryOptions` (`frontend/CLAUDE.md`, Query options factory), `Layout.tsx` с именованными
   слотами `header`/`body` (по образцу `pages/ServicesReport/ui/Layout.tsx`).
-- [ ] 15.2 Зарегистрировать маршрут `goods-turnover-report` в `app/router.tsx`.
-- [ ] 15.3 Написать тесты на `useGoodsTurnoverReportPage` (переключение периода/склада/категории
+  **Выполнено**: `model/api.ts` — три `queryOptions`-фабрики (`getGoodsTurnoverReport(period)`,
+  `getProductCategories()`, `getWarehouses()`) поверх трёх GET-эндпоинтов задачи 10.6.
+  `ui/Layout.tsx` — точная копия паттерна `pages/ServicesReport/ui/Layout.tsx` (слоты
+  `header`/`body`/`error` + `RefreshTransitionLayout`). `index.ts` экспортирует
+  `GoodsTurnoverReportPage` (`ui/GoodsTurnoverReportPage.tsx` — минимальная сборка
+  `useGoodsTurnoverReportPage()` -> `Layout`, без mediator/, см. architecture.md "один основной
+  виджет → один хук"; Filter Row/таблица — задачи 16-19).
+- [x] 15.2 Зарегистрировать маршрут `goods-turnover-report` в `app/router.tsx`.
+  **Выполнено**: маршрут `goods-turnover-report` -> `<GoodsTurnoverReportPage />` рядом с
+  `sales-plan`.
+- [x] 15.3 Написать тесты на `useGoodsTurnoverReportPage` (переключение периода/склада/категории
   инициирует нужные query; `isInitialLoad`/`isRefreshing` вычисляются поверх `useQuery` с
   `placeholderData: keepPreviousData`, как в `useServicesAnalytics`).
-- [ ] 15.4 Прогнать red.
-- [ ] 15.5 Реализовать `model/useGoodsTurnoverReportPage.ts` — плоский объект состояния/обработчиков.
-- [ ] 15.6 Прогнать green.
+  **Выполнено**: `model/useGoodsTurnoverReportPage.spec.tsx` — 4 теста (isInitialLoad до/после
+  первого ответа + автовыбор первого склада; смена периода вызывает новый GET отчёта с новым
+  периодом в URL, isRefreshing вместо схлопывания старых строк; смена склада/смена категории — БЕЗ
+  нового сетевого запроса, только состояние).
+- [x] 15.4 Прогнать red.
+  **Результат**: `Failed to resolve import "./useGoodsTurnoverReportPage.ts"` — зафиксировано перед
+  реализацией.
+- [x] 15.5 Реализовать `model/useGoodsTurnoverReportPage.ts` — плоский объект состояния/обработчиков.
+  **Выполнено**: три независимых `useQuery` (справочники категорий/складов — `staleTime` 30 минут;
+  отчёт — `queryKey` зависит от `period`, `placeholderData: keepPreviousData`). `warehouseId` —
+  производное значение (`selectedWarehouseId ?? warehouses[0]?.id ?? null`), без
+  `useEffect`+`setState` (правило `react-hooks/set-state-in-effect`, ловится линтером проекта) —
+  отличие от буквального образца `useSalaryReportPage`'s дефолта отдела (там `setState` в эффекте
+  проходит линт только потому, что вызывается через `selection.setDepartmentId`, не напрямую
+  локальным `useState`-сеттером; здесь сеттер локальный, поэтому выбран паттерн без эффекта).
+- [x] 15.6 Прогнать green.
+  **Результат**: `npx vitest run src/pages/GoodsTurnoverReport` — 4/4 green. `npx eslint
+  --config eslint.config.js src/pages/GoodsTurnoverReport src/app/router.tsx` — 0 ошибок. `npx tsc
+  -b` — чисто. `npm run build` — успешно (`tsc -b && vite build`). Полный `npx vitest run` —
+  74/77 файлов green (416/423 теста); 3 упавших файла (`RouteGuard.spec.tsx`,
+  `useHasPermission.spec.ts`, `RequirePermission.spec.tsx`) — подтверждённая предсуществующая
+  регрессия (воспроизводится и на `HEAD` без правок этой задачи, `git stash` + повторный прогон
+  теми же 7 тестами), вне диапазона задачи 15, не трогалась.
 
 ## 16. Frontend: `WarehouseSelect` (ui-design.md, узел `M6ZfP` в `WvSO6`)
 
