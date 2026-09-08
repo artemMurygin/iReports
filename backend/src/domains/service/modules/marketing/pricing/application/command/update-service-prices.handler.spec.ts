@@ -62,6 +62,7 @@ describe('UpdateServicePricesHandler', () => {
             fetchServiceBonuses: jest.fn(),
             fetchServiceBonusById: jest.fn(),
             createService: jest.fn(),
+            fetchGoodsFlowReport: jest.fn(),
             async *fetchServices() {
                 await Promise.resolve();
                 yield [

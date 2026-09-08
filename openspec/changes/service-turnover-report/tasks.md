@@ -46,11 +46,13 @@
 
 ## 3. `modules/accounting`: экспорт `ACCOUNTING_PERIOD_REPOSITORY`
 
-- [ ] 3.1 Добавить `ACCOUNTING_PERIOD_REPOSITORY` в `exports: [...]` `accounting.module.ts`
+- [x] 3.1 Добавить `ACCOUNTING_PERIOD_REPOSITORY` в `exports: [...]` `accounting.module.ts`
   (см. design.md D5 — сейчас модуль не экспортирует ничего; аддитивная правка без нового
   поведения, поэтому TDD-шаги пропущены — корректность проверяется косвенно, когда
   `WarehouseModule` (задача 13) успешно инжектит порт). Верификация: существующий тестовый
   набор `accounting` (`npm run test -- accounting`) по-прежнему проходит.
+  **Выполнено**: `exports: [ACCOUNTING_PERIOD_REPOSITORY]` добавлен в `accounting.module.ts` —
+  `npm run test -- accounting` (90 test suites, 490 tests) проходит без регрессий.
 
 ## 4. RoApp: справочник складов
 
@@ -73,16 +75,24 @@
 
 ## 5. RoApp: клиент к `getGoodsFlowReport`
 
-- [ ] 5.1 Написать тест(ы) на `CustomApiRoappService.getGoodsFlowReport` — payload
+- [x] 5.1 Написать тест(ы) на `CustomApiRoappService.getGoodsFlowReport` — payload
   `{startDate, endDate, category_id, warehouses}`, ответ `{outcome:{quantity,sum},
   stock:{quantity,sum}}`, Zod-валидация ответа, `BadGatewayException` при сбое (по образцу
   соседних методов `getServiceBonusById`/`createService`). Верификация:
   `npm run test -- custom-api-roapp` видит тест.
-- [ ] 5.2 Прогнать тест из 5.1, зафиксировать red.
-- [ ] 5.3 Реализовать `getGoodsFlowReport` в `custom-api-roapp.service.ts` +
+- [x] 5.2 Прогнать тест из 5.1, зафиксировать red.
+  **Результат**: `TypeError: service.getGoodsFlowReport is not a function` (4 failing tests) —
+  зафиксировано перед реализацией.
+- [x] 5.3 Реализовать `getGoodsFlowReport` в `custom-api-roapp.service.ts` +
   `schemas/goodsFlowReport.schema.ts`, добавить в `RoappGatewayPort`/`RoappGatewayAdapter`.
-- [ ] 5.4 Прогнать тест из 5.1, зафиксировать green, без регрессий в
+- [x] 5.4 Прогнать тест из 5.1, зафиксировать green, без регрессий в
   `custom-api-roapp.service.spec.ts`.
+  **Результат**: `npm run test -- custom-api-roapp` — 4/4 green. Добавление метода в
+  `RoappGatewayPort` потребовало точечной правки существующего мока в
+  `update-service-prices.handler.spec.ts` (недостающее поле `fetchGoodsFlowReport: jest.fn()`) —
+  без неё `tsc --noEmit` не проходил на этом файле; тест-раннер (`npm run test`) эту ошибку не
+  ловит (не запускает tsc), но зафиксировано как побочная правка вне своего диапазона задач,
+  нужная для типовой согласованности `RoappGateway`.
 
 ## 6. Домен: `GoodsFlowMetric`, `GoodsTurnoverReportLine`, `GoodsTurnoverReport`
 

@@ -22,6 +22,11 @@ import {
     CreateServiceResponse,
     CreateServiceResponseSchema,
 } from './schemas/createService.schema';
+import {
+    GoodsFlowReportRequest,
+    GoodsFlowReportResponse,
+    GoodsFlowReportResponseSchema,
+} from './schemas/goodsFlowReport.schema';
 
 /** TODO: заменить на Zod-схему конверта ошибки CustomApiRoapp */
 interface CustomApiRoappErrorEnvelope {
@@ -105,6 +110,28 @@ export class CustomApiRoappService {
         } catch (error) {
             throw new BadGatewayException(
                 `Failed to create service in CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+    }
+
+    /**
+     * Расход/остаток товара за период по одной категории и набору складов
+     * (spec: service/goods-turnover). Один вызов = один срез
+     * "категория × набор складов" — design.md D2/D4 change
+     * service-turnover-report.
+     */
+    async getGoodsFlowReport(
+        payload: GoodsFlowReportRequest,
+    ): Promise<GoodsFlowReportResponse> {
+        try {
+            const { data } = await this.customApiRoapp.instance.post<unknown>(
+                '/getGoodsFlowReport',
+                payload,
+            );
+            return GoodsFlowReportResponseSchema.parse(data);
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch goods flow report from CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
     }

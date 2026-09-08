@@ -20,6 +20,10 @@ import {
     CreateServiceResponse,
 } from '../custom-api-roapp/schemas/createService.schema';
 import { UpdateServicesResponse } from '../custom-api-roapp/schemas/updateServices.schema';
+import {
+    GoodsFlowReportRequest,
+    GoodsFlowReportResponse,
+} from '../custom-api-roapp/schemas/goodsFlowReport.schema';
 
 @Injectable()
 export class RoappGatewayAdapter implements RoappGateway {
@@ -93,5 +97,11 @@ export class RoappGatewayAdapter implements RoappGateway {
 
     updateServicesFromFile(file: Buffer): Promise<UpdateServicesResponse> {
         return this.customApiRoapp.updateServices(file);
+    }
+
+    fetchGoodsFlowReport(
+        params: GoodsFlowReportRequest,
+    ): Promise<GoodsFlowReportResponse> {
+        return this.customApiRoapp.getGoodsFlowReport(params);
     }
 }
