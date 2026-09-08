@@ -1,15 +1,15 @@
 ## 1. Prisma-схема
 
-- [ ] 1.1 Добавить в `moySklad.prisma` модели `MoySkladStore` (`id`, `name`) и `MoySkladStock`
+- [x] 1.1 Добавить в `moySklad.prisma` модели `MoySkladStore` (`id`, `name`) и `MoySkladStock`
   (`productId`, `warehouseId`, `quantity`, `costSum`, `snapshotAt`, уникальный индекс
   `(productId, warehouseId, snapshotAt)`, индекс по `snapshotAt`); добавить nullable-колонку
   `storeId` в `MoySkladDemand`. Верификация: `prisma validate` проходит, `prisma migrate dev`
   генерирует аддитивную миграцию без ошибок.
-- [ ] 1.2 Добавить модель `MoySkladTurnoverReportLine` (`period`, `categoryId`, `warehouseId`,
+- [x] 1.2 Добавить модель `MoySkladTurnoverReportLine` (`period`, `categoryId`, `warehouseId`,
   `turnoverQuantity`, `turnoverSum`, `stockQuantity`, `stockSum`, уникальный индекс
   `(period, categoryId, warehouseId)`). Верификация: `prisma validate` + миграция применяется на
   тестовой БД.
-- [ ] 1.3 Добавить `SHOP_ACCOUNTING_PERIOD_REPOSITORY` в `exports` `ShopAccountingModule`.
+- [x] 1.3 Добавить `SHOP_ACCOUNTING_PERIOD_REPOSITORY` в `exports` `ShopAccountingModule`.
   Верификация: существующие тесты `ShopAccountingModule` не ломаются; сборка backend проходит.
 
 <!-- Чисто схемные изменения без ветвлений логики — TDD-шаги (red/green) не применимы, верификация
