@@ -137,26 +137,54 @@
 
 ## 7. Application-порты
 
-- [ ] 7.1 Определить `GOODS_TURNOVER_REPORT_LINE_REPOSITORY`/`GoodsTurnoverReportLineRepositoryPort`
+- [x] 7.1 Определить `GOODS_TURNOVER_REPORT_LINE_REPOSITORY`/`GoodsTurnoverReportLineRepositoryPort`
   (`findByPeriod(period)`, `replaceAll(period, lines)`) в `application/ports/`.
   Верификация: `tsc --noEmit` проходит для нового файла.
-- [ ] 7.2 Определить `PRODUCT_CATEGORY_REPOSITORY`/`ProductCategoryRepositoryPort`
+  **Выполнено**: `application/ports/goods-turnover-report/goods-turnover-report-line.port.ts`.
+- [x] 7.2 Определить `PRODUCT_CATEGORY_REPOSITORY`/`ProductCategoryRepositoryPort`
   (`findAll()`, читает существующую `RoappProductCategory`) в `application/ports/`.
-- [ ] 7.3 Определить `WAREHOUSE_REPOSITORY`/`WarehouseRepositoryPort` (`findAll()`, читает
+  **Выполнено**: `application/ports/product-category/product-category.port.ts`, возвращает
+  доменный VO `domain/value-objects/product-category.value-object.ts` (плоская проекция
+  `RoappProductCategory`, по образцу `ServiceCategory`/`OrderType` в `modules/reports`, без
+  `depth` — `RoappProductCategory` его не хранит).
+- [x] 7.3 Определить `WAREHOUSE_REPOSITORY`/`WarehouseRepositoryPort` (`findAll()`, читает
   новую `RoappWarehouse`) в `application/ports/`.
+  **Выполнено**: `application/ports/warehouse/warehouse.port.ts`, VO
+  `domain/value-objects/warehouse.value-object.ts`.
 
 ## 8. Infrastructure: репозитории
 
-- [ ] 8.1 Написать тест(ы) на `GoodsTurnoverReportLineRepository.replaceAll`/`findByPeriod`
+- [x] 8.1 Написать тест(ы) на `GoodsTurnoverReportLineRepository.replaceAll`/`findByPeriod`
   (Prisma, по образцу репозиториев `modules/accounting/infrastructure/repositories/`).
-- [ ] 8.2 Прогнать red.
-- [ ] 8.3 Реализовать `GoodsTurnoverReportLineRepository` (через `UNIT_OF_WORK` там, где нужна
+  **Выполнено**: `infrastructure/repositories/goods-turnover-report/
+  goods-turnover-report-line.repository.spec.ts`, по образцу
+  `AccountingPeriodSnapshotRepository`/`PayoutCashboxRecordRepository.spec.ts` (мок
+  `DatabaseService.getClient/withTransaction`, без реальной БД).
+- [x] 8.2 Прогнать red.
+  **Результат**: `Cannot find module './goods-turnover-report-line.repository'` — зафиксировано
+  перед реализацией.
+- [x] 8.3 Реализовать `GoodsTurnoverReportLineRepository` (через `UNIT_OF_WORK` там, где нужна
   транзакционная согласованность — построение отчёта в событии закрытия, задача 12).
-- [ ] 8.4 Прогнать green.
-- [ ] 8.5 Реализовать `ProductCategoryRepository`/`WarehouseRepository` — простые read-репозитории
+  **Выполнено**: `GoodsTurnoverReportLineRepository` — `PrismaRepository.write()`
+  (delete + createMany в одной транзакции, тот же приём, что
+  `AccountingPeriodSnapshotRepository.saveAll`), маппинг через новый
+  `GoodsTurnoverReportLineMapper` (`infrastructure/mappers/goods-turnover-report/`). Прямое
+  использование `UNIT_OF_WORK` здесь не потребовалось — репозиторий сам себе гарантирует
+  транзакционность через `write()`; `UNIT_OF_WORK` понадобится application-слою в задаче 12,
+  когда пересчёт и сохранение снэпшота при закрытии периода объединят несколько репозиториев в
+  одну транзакцию — как и предполагает design.md.
+- [x] 8.4 Прогнать green.
+  **Результат**: `npm run test -- goods-turnover-report-line.repository` — 4/4 green.
+- [x] 8.5 Реализовать `ProductCategoryRepository`/`WarehouseRepository` — простые read-репозитории
   без бизнес-инвариантов (по объёму тестов сравнимо со справочниками `modules/reports`, напр.
   `ListServiceCategoriesService`). Верификация: репозитории покрыты минимум одним тестом на
   корректный маппинг Prisma-модели в доменный тип.
+  **Выполнено**: `infrastructure/repositories/product-category/product-category.repository.ts`
+  (+`.spec.ts`, 2 теста) и `infrastructure/repositories/warehouse/warehouse.repository.ts`
+  (+`.spec.ts`, 2 теста) — TDD (red подтверждён `Cannot find module` перед реализацией, затем
+  green). `npm run test -- --testPathPatterns=domains/service/modules/warehouse` — 6 suites/33
+  tests green (включая домен из задачи 6); `npm run test -- accounting` — 90 suites/490 tests,
+  без регрессий.
 
 ## 9. Application: построение отчёта
 
