@@ -12,6 +12,7 @@ import { EmployeeSchema } from './schemas/employees.schema';
 import { CounterpartySchema } from './schemas/counterparties.schema';
 import { DemandSchema } from './schemas/demands.schema';
 import { ProductFolderSchema } from './schemas/productFolders.schema';
+import { StoreSchema } from './schemas/stores.schema';
 import { delay } from '../../../../shared/delay';
 
 const PAGE_LIMIT = 1000;
@@ -86,6 +87,12 @@ export class MoyskladService {
 
     async *fetchServices() {
         yield* this._fetchPaged('/entity/service', ServiceSchema);
+    }
+
+    // Справочник складов (D2 shop-turnover-report) — обычная постраничная
+    // выгрузка, как productFolders/services, без async-режима отчётов.
+    async *fetchStores() {
+        yield* this._fetchPaged('/entity/store', StoreSchema);
     }
 
     async fetchEmployees(): Promise<z.infer<typeof EmployeeSchema>[]> {

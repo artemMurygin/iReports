@@ -21,11 +21,16 @@ export class MoySkladSyncCron {
         const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
 
         try {
-            await this.lock.runExclusive('shop', () =>
-                this.syncService.uploadUpdatedDemands(since),
-            );
+            // uploadStores() перед демандами: MoySkladDemand.storeId — реальный
+            // FK на MoySkladStore (см. moySklad.prisma, D3
+            // shop-turnover-report) — апсерт демандов упадёт, если склад ещё
+            // не засинкан.
+            await this.lock.runExclusive('shop', async () => {
+                await this.syncService.uploadStores();
+                await this.syncService.uploadUpdatedDemands(since);
+            });
             this.logger.log(
-                'Successfully synced updated demands from MoySklad',
+                'Successfully synced stores and updated demands from MoySklad',
             );
             this.failedSince = null;
         } catch (error) {

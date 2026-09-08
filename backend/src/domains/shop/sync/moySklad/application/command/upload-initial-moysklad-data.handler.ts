@@ -16,6 +16,9 @@ export class UploadInitialMoySkladDataHandler implements ICommandHandler<
         await this.syncService.uploadProductFolders();
         await this.syncService.uploadProducts();
         await this.syncService.uploadServices();
+        // uploadStores() перед uploadCreatedDemands: MoySkladDemand.storeId —
+        // реальный FK на MoySkladStore (D3 shop-turnover-report).
+        await this.syncService.uploadStores();
         await this.syncService.uploadCreatedDemands(fromDate);
     }
 }

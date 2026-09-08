@@ -118,6 +118,47 @@ function buildDemandFixture() {
     });
 }
 
+// spec: shop-turnover-report D2 — справочник складов синкается тем же
+// способом, что и остальные простые справочники (employees/productFolders):
+// упрощённый апсерт по постраничной выгрузке MoyskladService.
+describe('MoySkladSyncService.uploadStores (D2)', () => {
+    const buildService = () => {
+        const upsert = jest.fn().mockResolvedValue({});
+        const db = {
+            moySkladStore: { upsert },
+        } as unknown as DatabaseService;
+        const moySklad = {
+            fetchStores: jest.fn(function* () {
+                yield [
+                    { id: 'store-1', name: 'Склад на Тверской' },
+                    { id: 'store-2', name: 'Склад на Ленинском' },
+                ];
+            }),
+        } as unknown as MoyskladService;
+
+        const service = new MoySkladSyncService(db, moySklad);
+        return { service, upsert };
+    };
+
+    it('апсертит каждый склад из ответа МойСклад по id', async () => {
+        const { service, upsert } = buildService();
+
+        await service.uploadStores();
+
+        expect(upsert).toHaveBeenCalledTimes(2);
+        expect(upsert).toHaveBeenCalledWith({
+            where: { id: 'store-1' },
+            create: { id: 'store-1', name: 'Склад на Тверской' },
+            update: { name: 'Склад на Тверской' },
+        });
+        expect(upsert).toHaveBeenCalledWith({
+            where: { id: 'store-2' },
+            create: { id: 'store-2', name: 'Склад на Ленинском' },
+            update: { name: 'Склад на Ленинском' },
+        });
+    });
+});
+
 describe('MoySkladSyncService.uploadDemand (Фаза 10)', () => {
     const buildService = () => {
         const createManyPositions = jest.fn().mockResolvedValue({ count: 2 });
@@ -189,5 +230,57 @@ describe('MoySkladSyncService.uploadDemand (Фаза 10)', () => {
         expect(position1?.onlinePurchaserId).not.toBe(
             position2?.onlinePurchaserId,
         );
+    });
+
+    // spec: shop-turnover-report D3 — storeId уже приходит в ответе МойСклад
+    // (demand.store), но раньше отбрасывался при апсерте.
+    it('сохраняет storeId, когда МойСклад отдаёт demand.store', async () => {
+        const { service, tx } = buildService();
+        const demand = buildDemandFixture();
+        demand.store = {
+            meta: {
+                href: 'https://api.moysklad.ru/api/remap/1.2/entity/store/store-1',
+                type: 'store',
+                mediaType: 'application/json',
+            },
+        };
+
+        await (
+            service as unknown as {
+                uploadDemand: (d: typeof demand) => Promise<void>;
+            }
+        ).uploadDemand(demand);
+
+        const upsertCall = tx.moySkladDemand.upsert.mock.calls[0] as [
+            {
+                create: { storeId: string | null };
+                update: { storeId: string | null };
+            },
+        ];
+        expect(upsertCall[0].create.storeId).toBe('store-1');
+        expect(upsertCall[0].update.storeId).toBe('store-1');
+    });
+
+    it('оставляет storeId = null, когда МойСклад не отдаёт demand.store, апсерт не падает', async () => {
+        const { service, tx } = buildService();
+        const demand = buildDemandFixture();
+        // buildDemandFixture не задаёт store — поле nullable/optional.
+
+        await expect(
+            (
+                service as unknown as {
+                    uploadDemand: (d: typeof demand) => Promise<void>;
+                }
+            ).uploadDemand(demand),
+        ).resolves.not.toThrow();
+
+        const upsertCall = tx.moySkladDemand.upsert.mock.calls[0] as [
+            {
+                create: { storeId: string | null };
+                update: { storeId: string | null };
+            },
+        ];
+        expect(upsertCall[0].create.storeId).toBeNull();
+        expect(upsertCall[0].update.storeId).toBeNull();
     });
 });

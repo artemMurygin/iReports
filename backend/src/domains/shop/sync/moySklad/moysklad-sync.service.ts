@@ -188,6 +188,31 @@ export class MoySkladSyncService {
         }
     }
 
+    // spec: shop-turnover-report D2 — справочник складов, тот же паттерн
+    // апсерта, что и uploadEmployees.
+    async uploadStores() {
+        const log = new UploadLogger('МойСклад: Склады');
+        log.start();
+        try {
+            for await (const batch of this.moySklad.fetchStores()) {
+                await Promise.all(
+                    batch.map((s) =>
+                        this.db.moySkladStore.upsert({
+                            where: { id: s.id },
+                            create: { id: s.id, name: s.name },
+                            update: { name: s.name },
+                        }),
+                    ),
+                );
+                log.tick(batch.length);
+            }
+            log.done();
+        } catch (err) {
+            log.error(err instanceof Error ? err : new Error(String(err)));
+            throw err;
+        }
+    }
+
     async uploadCreatedDemands(fromDate?: Date) {
         return this._uploadDemands(fromDate, (d) =>
             this.moySklad.fetchCreatedDemands(d),
@@ -252,6 +277,11 @@ export class MoySkladSyncService {
         const customerOrderId = demand.customerOrder
             ? extractIdFromHref(demand.customerOrder.meta.href)
             : null;
+        // spec: shop-turnover-report D3 — поле уже приходит в ответе
+        // МойСклад, раньше отбрасывалось при апсерте.
+        const storeId = demand.store
+            ? extractIdFromHref(demand.store.meta.href)
+            : null;
 
         const positions = demand.positions.rows ?? [];
 
@@ -274,6 +304,7 @@ export class MoySkladSyncService {
                     onlineManagerId,
                     offlineManagerId,
                     customerOrderId,
+                    storeId,
                     description: demand.description ?? null,
                 },
                 update: {
@@ -287,6 +318,7 @@ export class MoySkladSyncService {
                     onlineManagerId,
                     offlineManagerId,
                     customerOrderId,
+                    storeId,
                     description: demand.description ?? null,
                 },
             });
