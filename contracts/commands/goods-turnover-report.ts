@@ -36,4 +36,18 @@ export type GoodsTurnoverReportResponse = z.infer<
     typeof goodsTurnoverReportResponseSchema
 >;
 
-export { goodsTurnoverReportLineSchema, goodsTurnoverReportResponseSchema };
+// Query-параметр опционального фильтра по складу (симметрично
+// listSalesPlansQuerySchema в sales-plan.ts) — GET .../goods-turnover-
+// report/:period?warehouseId=... .
+const goodsTurnoverReportQuerySchema = z.object({
+    warehouseId: z.string().optional(),
+});
+export type GoodsTurnoverReportQuery = z.infer<
+    typeof goodsTurnoverReportQuerySchema
+>;
+
+export {
+    goodsTurnoverReportLineSchema,
+    goodsTurnoverReportResponseSchema,
+    goodsTurnoverReportQuerySchema,
+};

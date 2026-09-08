@@ -170,20 +170,20 @@
 
 ## 13. HTTP-контроллеры (interface)
 
-- [ ] 13.1 Написать e2e/контроллерный тест на `GET /v1/shop/warehouse/goods-turnover-report/:period`
+- [x] 13.1 Написать e2e/контроллерный тест на `GET /v1/shop/warehouse/goods-turnover-report/:period`
   (успешный ответ по specs, включая случай отсутствующего предыдущего периода → `coefficient: null`
   в ответе, не `0`).
-- [ ] 13.2 Прогнать тест из 13.1 и зафиксировать red.
-- [ ] 13.3 Реализовать `GetGoodsTurnoverReportHttpController` (`@ApiTags('Магазин: склад')`,
+- [x] 13.2 Прогнать тест из 13.1 и зафиксировать red.
+- [x] 13.3 Реализовать `GetGoodsTurnoverReportHttpController` (`@ApiTags('Магазин: склад')`,
   `@ApiOperation`, DTO через `createZodDto`), зарегистрировать модуль в `shopDocument` в
   `src/config/swagger.config.ts`, если ещё не зарегистрирован для `warehouse`.
-- [ ] 13.4 Прогнать тест из 13.1 и зафиксировать green.
+- [x] 13.4 Прогнать тест из 13.1 и зафиксировать green.
 
-- [ ] 13.5 Написать e2e-тест на `GET /v1/shop/warehouse/stores`.
-- [ ] 13.6 Прогнать тест из 13.5 и зафиксировать red.
-- [ ] 13.7 Реализовать `GetShopStoresHttpController`.
-- [ ] 13.8 Прогнать тест из 13.5 и зафиксировать green.
-- [ ] 13.9 Обновить `ENDPOINTS.md` двумя новыми эндпоинтами.
+- [x] 13.5 Написать e2e-тест на `GET /v1/shop/warehouse/stores`.
+- [x] 13.6 Прогнать тест из 13.5 и зафиксировать red.
+- [x] 13.7 Реализовать `GetShopStoresHttpController`.
+- [x] 13.8 Прогнать тест из 13.5 и зафиксировать green.
+- [x] 13.9 Обновить `ENDPOINTS.md` двумя новыми эндпоинтами.
 
 ## 14. Frontend — вынос переиспользуемой инфраструктуры (рефакторинг, без новой логики)
 

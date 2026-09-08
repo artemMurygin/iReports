@@ -355,10 +355,18 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
 ## domains/shop/modules/warehouse (`/v1/shop/warehouse`)
 Каталог (дерево категорий) магазина — сущность `catalog` модуля `warehouse` (docs/shop-warehouse-catalog).
 Читает уже синхронизированную `MoySkladProductFolder` (Фаза 10), без нового синка и без товаров/
-остатков — модуль пока состоит из одной сущности `catalog`, сама сущность "Склад" (МойСклад Store) в
-системе не заведена (см. PRD).
+остатков. Отчёт по оборачиваемости товаров (change `shop-turnover-report`) и справочник складов
+МойСклад (`MoySkladStore`) добавлены поверх той же сущности `catalog`.
 - `GET /v1/shop/warehouse/catalog` — дерево категорий каталога магазина (`id`/`name`/`pathName`/
   `children`, родитель/потомки, не плоский список); архивные категории не отфильтровываются
+- `GET /v1/shop/warehouse/goods-turnover-report/:period` (`period` = `YYYY-MM`, опциональный query
+  `warehouseId`) — отчёт по оборачиваемости товаров за месяц: плоский массив строк «категория ×
+  склад» (`categoryId`/`warehouseId`/`turnoverQuantity`/`turnoverSum`/`stockQuantity`/`stockSum` —
+  денежные поля в копейках — /`coefficient`). `coefficient: null`, если строки за предыдущий период
+  нет или оба сравниваемых остатка нулевые (не `0`, см. design.md D8 change `shop-turnover-report`).
+  `400`, если `period` не в формате `YYYY-MM`
+- `GET /v1/shop/warehouse/stores` — справочный список складов МойСклад (`id`/`name`) для фильтра на
+  странице отчёта по оборачиваемости
 
 ## integrations/bitrix (`/bitrix`)
 - `POST /bitrix/install` — вебхук установки приложения Bitrix24 (возвращает HTML)

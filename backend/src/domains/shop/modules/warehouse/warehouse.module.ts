@@ -5,10 +5,14 @@ import { MoySkladSyncModule } from '@/domains/shop/sync/moySklad/moysklad-sync.m
 import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import { ShopAccountingPeriodRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/accounting-period/accounting-period.repository';
 import { RebuildGoodsTurnoverReportService } from './application/services/goods-turnover-report/rebuild-goods-turnover-report.service';
+import { GetGoodsTurnoverReportService } from './application/services/goods-turnover-report/get-goods-turnover-report.service';
+import { GetShopStoresService } from './application/services/get-stores.service';
 import { GoodsTurnoverReportCron } from './infrastructure/cron/goods-turnover-report.cron';
 import { GoodsTurnoverPeriodClosedHandler } from './application/events/period-closed.handler';
 import { GoodsTurnoverReportRepository } from './infrastructure/repositories/goods-turnover-report/goods-turnover-report.repository';
 import { GOODS_TURNOVER_REPORT_REPOSITORY } from './application/ports/goods-turnover-report/goods-turnover-report.port';
+import { GetGoodsTurnoverReportHttpController } from './interface/http-controllers/get-goods-turnover-report.http.controller';
+import { GetShopStoresHttpController } from './interface/http-controllers/get-shop-stores.http.controller';
 
 // Модуль warehouse (Фаза 1, см.
 // docs/shop-warehouse-catalog/plan-shop-warehouse-catalog.md) — исходно
@@ -44,10 +48,16 @@ import { GOODS_TURNOVER_REPORT_REPOSITORY } from './application/ports/goods-turn
 // ShopSalesModule в TestingModule, где импортирован только ShopWarehouseModule).
 @Module({
     imports: [MoySkladSyncModule],
-    controllers: [GetCatalogHttpController],
+    controllers: [
+        GetCatalogHttpController,
+        GetGoodsTurnoverReportHttpController,
+        GetShopStoresHttpController,
+    ],
     providers: [
         GetCatalogService,
         RebuildGoodsTurnoverReportService,
+        GetGoodsTurnoverReportService,
+        GetShopStoresService,
         GoodsTurnoverReportCron,
         GoodsTurnoverPeriodClosedHandler,
         {
