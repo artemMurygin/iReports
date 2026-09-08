@@ -228,22 +228,63 @@
 
 ## 10. Application/Interface: чтение отчёта и справочников (GET)
 
-- [ ] 10.1 Написать тесты на `GetGoodsTurnoverReportService.get(period)` (строки периода +
+- [x] 10.1 Написать тесты на `GetGoodsTurnoverReportService.get(period)` (строки периода +
   справочники категорий/складов → форма ответа; период без сохранённых строк → пустой список,
   не ошибка — используется фронтендом для состояния «отчёт ещё не пересчитан»).
-- [ ] 10.2 Прогнать red.
-- [ ] 10.3 Реализовать `GetGoodsTurnoverReportService`.
-- [ ] 10.4 Прогнать green.
-- [ ] 10.5 Добавить Zod-схемы в `ireports-contracts` (ответ отчёта, справочники категорий и
+  **Выполнено**: `application/services/goods-turnover-report/get-goods-turnover-report.service.spec.ts`
+  (3 теста: пустой период, денормализованная форма ответа, защитный путь на строку без
+  соответствующей записи в справочнике) — по образцу `list-order-types.service.spec.ts`
+  (`modules/reports`), моки портов через `jest.fn()`. Заодно тесты на два вспомогательных
+  read-side справочника (`list-product-categories.service.spec.ts`,
+  `list-warehouses.service.spec.ts`) — понадобились двум отдельным `GET`-эндпоинтам задачи 10.6.
+- [x] 10.2 Прогнать red.
+  **Результат**: `Cannot find module './get-goods-turnover-report.service'` (и аналогично для двух
+  справочников) — зафиксировано перед реализацией.
+- [x] 10.3 Реализовать `GetGoodsTurnoverReportService`.
+  **Выполнено**: `application/services/goods-turnover-report/get-goods-turnover-report.service.ts` —
+  читает `GOODS_TURNOVER_REPORT_LINE_REPOSITORY.findByPeriod`, при непустом результате
+  дополнительно `PRODUCT_CATEGORY_REPOSITORY`/`WAREHOUSE_REPOSITORY` и денормализует каждую строку
+  именем/`parentId` категории и именем склада (`to-goods-turnover-report-line-response.ts`) —
+  `GoodsTurnoverTable` (задача 18) сможет строить дерево строк прямо из ответа, без отдельного join
+  со справочником категорий на фронтенде; справочные `GET`-эндпоинты (10.6) при этом отдельные —
+  нужны фронтенду для фильтров/селектов (`CategoryTreeSelect`/`WarehouseSelect`, задачи 16-17), а не
+  для сборки самой таблицы. Плюс `ListProductCategoriesService`/`ListWarehousesService`
+  (`application/services/{product-category,warehouse}/`) — простые read-side справочники по образцу
+  `ListOrderTypesService`.
+- [x] 10.4 Прогнать green.
+  **Результат**: `npm run test -- --testPathPatterns="list-product-categories|list-warehouses|get-goods-turnover-report"`
+  — 3 suites/7 tests green.
+- [x] 10.5 Добавить Zod-схемы в `ireports-contracts` (ответ отчёта, справочники категорий и
   складов) — backend и frontend читают из одного места (`backend/CLAUDE.md`, Contracts).
   Верификация: пакет собирается, схемы экспортированы.
-- [ ] 10.6 Реализовать HTTP-контроллеры: `GET /v1/service/warehouse/goods-turnover-report/:period`,
+  **Выполнено**: `contracts/commands/goods-turnover-report.ts` (`getGoodsTurnoverReportResponseSchema`/
+  `GetGoodsTurnoverReportResponse`, `productCategorySchema`/`ListProductCategoriesResponse`,
+  `warehouseSchema`/`ListWarehousesResponse`), зарегистрирован в `contracts/commands/index.ts`.
+  `npm run build` (`contracts/`) — проходит, типы видны из `dist/`.
+- [x] 10.6 Реализовать HTTP-контроллеры: `GET /v1/service/warehouse/goods-turnover-report/:period`,
   `GET /v1/service/warehouse/product-categories`, `GET /v1/service/warehouse/warehouses` —
   каждый с `@ApiTags('Сервис: склад')` и `@ApiOperation({summary: '...'})` (обязательно —
   `backend/CLAUDE.md`, Swagger), DTO запроса через `nestjs-zod`.
-- [ ] 10.7 Написать e2e-тест(ы) на контроллер отчёта (по образцу `*.e2e.spec.ts` в
+  **Выполнено**: `interface/http-controllers/{goods-turnover-report,product-category,warehouse}/*.http.controller.ts`
+  + маршруты `routesV1.service.warehouse.*` в `src/config/app.routes.ts`. `:period` — голый строковый
+  `@Param` (без DTO), тем же приёмом, что `GetAccountingPeriodHttpController` — валидируется доменным
+  VO `Period` внутри сервиса (`ArgumentInvalidException` → `400` через `DomainExceptionFilter`);
+  два справочных эндпоинта без параметров запроса вовсе — отдельного DTO ни одному из трёх не
+  потребовалось (нет query/body, которые стоило бы валидировать `nestjs-zod`-схемой). Модуль
+  `WarehouseModule`, который свяжет эти контроллеры в приложении, — задача 13 (вне диапазона).
+- [x] 10.7 Написать e2e-тест(ы) на контроллер отчёта (по образцу `*.e2e.spec.ts` в
   `modules/accounting/interface/http-controllers/`), прогнать и зафиксировать green.
-- [ ] 10.8 Обновить `ENDPOINTS.md` тремя новыми маршрутами.
+  **Выполнено**: `interface/http-controllers/goods-turnover-report/get-goods-turnover-report.e2e.spec.ts`
+  (3 сценария: денормализованный ответ, пустой период — не ошибка, `400` на невалидный формат
+  периода). `WarehouseModule` ещё не существует (задача 13) — вместо импорта модуля (как в
+  `reports.e2e.spec.ts`) `Test.createTestingModule` регистрирует контроллер и три порта явно
+  (`controllers`/`providers`), тот же приём, что и остальные e2e-тесты этого проекта используют для
+  подмены границы с БД, просто без модуля-обёртки. `npm run test -- --testPathPatterns=warehouse` —
+  14 suites/60 tests green (включая уже реализованные домен/инфраструктуру задач 6-9).
+- [x] 10.8 Обновить `ENDPOINTS.md` тремя новыми маршрутами.
+  **Выполнено**: раздел `## domains/service/modules/warehouse (`/v1/service/warehouse`)` в
+  `ENDPOINTS.md`, между `domains/service/modules/reports`/сделками Bitrix24 и
+  `domains/shop/modules/sales`.
 
 ## 11. Крон: почасовой пересчёт открытого периода
 
