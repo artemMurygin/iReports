@@ -91,21 +91,40 @@ export type RuleDraft = {
      * поэтому черновик всегда несёт значение (never `undefined`), а не отдельное "не задано" состояние.
      * Read only for `OrderPayed`/`ServiceCompleted`; ignored otherwise. */
     orderTypeIds: number[]
-    /** `TaskCompletion.config.taskDescription` (tasks.md раздел 20, node `DcWkE`) — необязательное
-     * описание создаваемой в Bitrix24 задачи. `''` — «не задано» (сериализуется как `undefined` в
-     * `resolveRuleDraft`, не как пустая строка, см. `service/model/ruleFormSchema.ts`). Read only for
+    /**
+     * replace-bitrix-task-integration, design.md решение 2/4 — id уже существующей, ОТДЕЛЬНО
+     * созданной задачи (`POST /v1/tasks`, Шаг 1 мастера `CreateTaskCompletionRuleWizard`,
+     * `pages/SalaryRuleDetail/mediator`). Заполняется ТОЛЬКО мастером (`onCreated` шага 1) —
+     * `TaskCompletionRuleFields.tsx` показывает его readonly, никогда не как текстовый ввод. Для
+     * уже существующего (персистентного) правила — id задачи текущего периода из
+     * `config.taskIdByPeriod` (см. `draftFromRule`'s комментарий), не сам `taskId` ответа (тот в
+     * ответе API вообще отсутствует — design.md решение 2). `''` — «задача ещё не создана»,
+     * единственное состояние, в котором `resolveRuleDraft` отказывает (см. её `errors.taskId`).
+     */
+    taskId: string
+    /** `TaskCompletion.config.taskTitleTemplate` — шаблон заголовка задачи для авто-пересоздания
+     * РЕГУЛЯРНОГО правила на новый период (`EnsureRuleTaskForPeriodService`), НЕ заголовок самой
+     * первой задачи (тот уже произвольно введён на Шаге 1 мастера, см. `taskId`'s комментарий).
+     * Контракт требует непустую строку структурно (`z.string()`), но поле осмысленно только при
+     * `isRecurring === true` — `TaskCompletionRuleFields.tsx` показывает его лишь тогда, и только
+     * тогда `resolveRuleDraft` требует его непустым. Read only for `TaskCompletion`; ignored
+     * otherwise. */
+    taskTitleTemplate: string
+    /** `TaskCompletion.config.taskDescriptionTemplate` — необязательный шаблон описания для того
+     * же авто-пересоздания (см. `taskTitleTemplate`'s комментарий); `''` — «не задано»
+     * (сериализуется как `undefined` в `resolveRuleDraft`, не как пустая строка). Read only for
      * `TaskCompletion`; ignored otherwise. */
-    taskDescription: string
+    taskDescriptionTemplate: string
     /** `TaskCompletion.config.isRecurring` (node `wQOPI`, «Периодичность»: Разовая/Регулярная) — есть
      * ли смысл заново создавать задачу на каждый расчётный период, или она разовая (заведена один
      * раз, никогда не пересоздаётся). Read only for `TaskCompletion`; ignored otherwise. */
     isRecurring: boolean
-    /** `TaskCompletion.config.deadlineTemplate` (node «Field Дедлайн», паттерн `vm91M`) — ISO-дата
-     * (`YYYY-MM-DD`): для разового правила (`isRecurring: false`) берётся буквально как дедлайн
-     * единственной задачи, для регулярного — используется только число месяца (день), см.
-     * `contracts/commands/salary-rule.ts`'s `taskCompletionSalaryConfigSchema`. Хранится как есть,
-     * без парсинга/форматирования на стороне драфта — контракт уже принимает голую строку. Read
-     * only for `TaskCompletion`; ignored otherwise. */
+    /** `TaskCompletion.config.deadlineTemplate` — то же самое разделение, что и у
+     * `taskTitleTemplate`: шаблон дедлайна для авто-пересоздания РЕГУЛЯРНОГО правила (только число
+     * месяца читается бэкендом), а не дедлайн самой первой задачи (тот введён на Шаге 1 мастера
+     * отдельным полем `CreateTaskForm`). Хранится как есть (ISO-дата `YYYY-MM-DD`), без
+     * парсинга/форматирования на стороне драфта. Read only for `TaskCompletion`; ignored
+     * otherwise. */
     deadlineTemplate: string
 }
 
@@ -136,7 +155,9 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
-        taskDescription: '',
+        taskId: '',
+        taskTitleTemplate: '',
+        taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
     }
@@ -159,7 +180,9 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
-        taskDescription: '',
+        taskId: '',
+        taskTitleTemplate: '',
+        taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
     }

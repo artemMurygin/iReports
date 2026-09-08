@@ -30,7 +30,14 @@ export type RuleFieldErrors = Partial<
         | 'category'
         | 'description'
         | 'period'
-        | 'dueDate',
+        | 'dueDate'
+        // replace-bitrix-task-integration, раздел 14 tasks.md — `taskId` приходит от мастера
+        // (Шаг 1) и в норме уже заполнен к моменту, когда форма правила вообще видна; ошибка тут
+        // — защита от регрессии (см. `resolveRuleDraft`'s `case 'TaskCompletion'`), не то, что
+        // пользователь может исправить прямо в этом поле (оно readonly). `taskTitleTemplate` —
+        // обязателен только когда `isRecurring === true` (см. `TaskCompletionRuleFields.tsx`).
+        | 'taskId'
+        | 'taskTitleTemplate',
         string
     >
 >

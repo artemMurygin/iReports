@@ -223,19 +223,22 @@ describe('resolveRuleDraft — OrderPayed award variants', () => {
 })
 
 /**
- * `TaskCompletion` (tasks.md раздел 20, node `wV3fv`/`aS8yc`) — единственный тип правила без
- * "вознаграждения" в обычном смысле: сумма всегда вводится вручную позже (`SalaryAccruals`,
- * раздел 24), форма правила лишь настраивает саму задачу Bitrix24. По решению из фрейма `wV3fv`
- * (см. `u821y`'s hint "Из него формируется заголовок задачи в Bitrix24") отдельного поля «Название
- * задачи» в форме нет — `bitrixTaskTitle` строится из уже существующего `draft.name`.
+ * replace-bitrix-task-integration, раздел 14 tasks.md (14.5) — `TaskCompletion` больше не заводит
+ * задачу через эту форму (design.md решение 2/4): задача уже существует, её `taskId` приходит от
+ * мастера (`CreateTaskCompletionRuleWizard`, Шаг 1), форма правила лишь ссылается на неё и
+ * настраивает ШАБЛОН для авто-пересоздания задачи регулярного правила на новый период
+ * (`taskTitleTemplate`/`taskDescriptionTemplate`/`deadlineTemplate` — не поля самой первой
+ * задачи).
  */
 describe('resolveRuleDraft — TaskCompletion', () => {
-    it('builds bitrixTaskTitle from the rule name and carries the task fields through', () => {
+    it('carries the already-created taskId and the recurrence template fields through', () => {
         const result = resolveRuleDraft(
             baseDraft({
                 type: 'TaskCompletion',
                 name: 'Обновить фото витрины',
-                taskDescription: 'Смотри требования в ТЗ',
+                taskId: 'task-1',
+                taskTitleTemplate: 'Обновить фото витрины ({месяц})',
+                taskDescriptionTemplate: 'Смотри требования в ТЗ',
                 isRecurring: true,
                 deadlineTemplate: '2026-09-25',
                 price: '5000',
@@ -244,8 +247,9 @@ describe('resolveRuleDraft — TaskCompletion', () => {
         expect(result.success).toBe(true)
         if (result.success && result.data.type === 'TaskCompletion') {
             expect(result.data.config).toEqual({
-                bitrixTaskTitle: 'Обновить фото витрины',
-                taskDescription: 'Смотри требования в ТЗ',
+                taskId: 'task-1',
+                taskTitleTemplate: 'Обновить фото витрины ({месяц})',
+                taskDescriptionTemplate: 'Смотри требования в ТЗ',
                 isRecurring: true,
                 deadlineTemplate: '2026-09-25',
                 defaultAmount: 5000,
@@ -253,93 +257,103 @@ describe('resolveRuleDraft — TaskCompletion', () => {
         }
     })
 
-    it('omits taskDescription entirely when left blank (optional in the contract)', () => {
+    it('omits taskDescriptionTemplate entirely when left blank (optional in the contract)', () => {
         const result = resolveRuleDraft(
             baseDraft({
                 type: 'TaskCompletion',
-                deadlineTemplate: '2026-09-25',
-                taskDescription: '   ',
+                taskId: 'task-1',
+                isRecurring: false,
                 price: '5000',
             }),
         )
         expect(result.success).toBe(true)
         if (result.success && result.data.type === 'TaskCompletion') {
-            expect('taskDescription' in result.data.config).toBe(false)
+            expect('taskDescriptionTemplate' in result.data.config).toBe(false)
         }
     })
 
-    it('fails when the deadline is missing', () => {
-        const result = resolveRuleDraft(baseDraft({ type: 'TaskCompletion', deadlineTemplate: '', price: '5000' }))
+    it('fails when the task was never created on Step 1 (empty taskId — regression guard)', () => {
+        const result = resolveRuleDraft(baseDraft({ type: 'TaskCompletion', taskId: '', price: '5000' }))
         expect(result.success).toBe(false)
-        if (!result.success) expect(result.errors.dueDate).toBeTruthy()
+        if (!result.success) expect(result.errors.taskId).toBeTruthy()
     })
 
     it('fails when the default amount is missing', () => {
-        const result = resolveRuleDraft(
-            baseDraft({ type: 'TaskCompletion', deadlineTemplate: '2026-09-25', price: '' }),
-        )
+        const result = resolveRuleDraft(baseDraft({ type: 'TaskCompletion', taskId: 'task-1', price: '' }))
         expect(result.success).toBe(false)
         if (!result.success) expect(result.errors.price).toBeTruthy()
     })
 
-    it('defaults isRecurring to false for a one-off task', () => {
-        const result = resolveRuleDraft(
-            baseDraft({ type: 'TaskCompletion', deadlineTemplate: '2026-09-25', isRecurring: false, price: '5000' }),
+    it('requires the template title/deadline only for a recurring rule', () => {
+        const notRecurring = resolveRuleDraft(
+            baseDraft({ type: 'TaskCompletion', taskId: 'task-1', isRecurring: false, price: '5000' }),
         )
-        expect(result.success).toBe(true)
-        if (result.success && result.data.type === 'TaskCompletion') {
-            expect(result.data.config.isRecurring).toBe(false)
+        expect(notRecurring.success).toBe(true)
+
+        const recurring = resolveRuleDraft(
+            baseDraft({ type: 'TaskCompletion', taskId: 'task-1', isRecurring: true, price: '5000' }),
+        )
+        expect(recurring.success).toBe(false)
+        if (!recurring.success) {
+            expect(recurring.errors.taskTitleTemplate).toBeTruthy()
+            expect(recurring.errors.dueDate).toBeTruthy()
         }
     })
 })
 
 describe('draftFromRule — TaskCompletion', () => {
     it('round-trips a persisted rule back into a draft usable by resolveRuleDraft', () => {
-        const created = resolveRuleDraft(
-            baseDraft({
-                type: 'TaskCompletion',
-                name: 'Обновить фото витрины',
-                taskDescription: 'Смотри требования в ТЗ',
-                isRecurring: false,
+        const draft = draftFromRule({
+            id: 'rule-1',
+            type: 'TaskCompletion',
+            name: 'Обновить фото витрины',
+            targetRole: 'ENGINEER',
+            config: {
+                taskTitleTemplate: 'Обновить фото витрины ({месяц})',
+                taskDescriptionTemplate: 'Смотри требования в ТЗ',
+                isRecurring: true,
                 deadlineTemplate: '2026-09-25',
-                price: '5000',
-            }),
-        )
-        expect(created.success).toBe(true)
-        if (!created.success) return
-
-        const draft = draftFromRule({ ...created.data, id: 'rule-1' })
+                defaultAmount: 5000,
+                taskIdByPeriod: { '2026-08': 'task-old', '2026-09': 'task-1' },
+            },
+        })
         expect(draft.type).toBe('TaskCompletion')
         expect(draft.name).toBe('Обновить фото витрины')
-        expect(draft.taskDescription).toBe('Смотри требования в ТЗ')
-        expect(draft.isRecurring).toBe(false)
+        // Последний период в карте — id задачи, актуальной для формы редактирования (см.
+        // `latestTaskId`'s комментарий в `ruleFormSchema.ts`).
+        expect(draft.taskId).toBe('task-1')
+        expect(draft.taskTitleTemplate).toBe('Обновить фото витрины ({месяц})')
+        expect(draft.taskDescriptionTemplate).toBe('Смотри требования в ТЗ')
+        expect(draft.isRecurring).toBe(true)
         expect(draft.deadlineTemplate).toBe('2026-09-25')
         expect(draft.price).toBe('5000')
 
         const resolvedAgain = resolveRuleDraft(draft)
         expect(resolvedAgain.success).toBe(true)
         if (resolvedAgain.success && resolvedAgain.data.type === 'TaskCompletion') {
-            expect(resolvedAgain.data.config.taskDescription).toBe('Смотри требования в ТЗ')
+            expect(resolvedAgain.data.config.taskId).toBe('task-1')
+            expect(resolvedAgain.data.config.taskDescriptionTemplate).toBe('Смотри требования в ТЗ')
             expect(resolvedAgain.data.config.defaultAmount).toBe(5000)
         }
     })
 
-    it('defaults taskDescription to an empty string when the persisted rule has none', () => {
+    it('defaults taskDescriptionTemplate to an empty string and taskId to "" when the map is empty', () => {
         const draft = draftFromRule({
             id: 'rule-2',
             type: 'TaskCompletion',
             name: 'Проверка склада',
             targetRole: 'ENGINEER',
             config: {
-                bitrixTaskTitle: 'Проверка склада',
-                isRecurring: true,
-                deadlineTemplate: '2026-09-05',
+                taskTitleTemplate: '',
+                isRecurring: false,
+                deadlineTemplate: '',
                 defaultAmount: 3000,
+                taskIdByPeriod: {},
             },
         })
-        expect(draft.taskDescription).toBe('')
-        expect(draft.isRecurring).toBe(true)
-        expect(draft.deadlineTemplate).toBe('2026-09-05')
+        expect(draft.taskId).toBe('')
+        expect(draft.taskDescriptionTemplate).toBe('')
+        expect(draft.isRecurring).toBe(false)
         expect(draft.price).toBe('3000')
     })
 })
