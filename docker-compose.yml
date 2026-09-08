@@ -44,6 +44,11 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-iReports}
       REDIS_URL: redis://redis:6379
       PORT: 3000
+      # Захардкожено (не читается из .env) — блокирует dev-only байпас
+      # авторизации (AUTH_DISABLED, см. backend/src/shared/config/dev-auth-bypass.ts)
+      # на любом docker-compose-развёртывании этого файла (и прод, и dev-стенд),
+      # даже если AUTH_DISABLED случайно попадёт в серверный .env.
+      NODE_ENV: production
       # dev-стенд (ветка `dev`, деплой через .github/workflows/deploy-dev.yml) — отдельный домен от
       # прода (ireports.murygin.tech/api.murygin.tech, см. ветку main), не мержить это значение назад.
       CORS_ORIGIN: https://test.ireports.murygin.tech

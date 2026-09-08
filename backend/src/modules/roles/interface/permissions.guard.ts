@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '@/shared/decorators/public.decorator';
 import { PERMISSIONS_KEY } from '@/shared/decorators/require-permissions.decorator';
 import type { AuthenticatedRequestUser } from '@/modules/session/interface/session-auth.guard';
+import { isDevAuthBypassEnabled } from '@/shared/config/dev-auth-bypass';
 
 // spec: roles#permission-check-on-route /
 // roles#route-without-permissions-open-to-any-authenticated. Guard'ы
@@ -19,6 +20,10 @@ export class PermissionsGuard implements CanActivate {
     constructor(private readonly reflector: Reflector) {}
 
     canActivate(context: ExecutionContext): boolean {
+        if (isDevAuthBypassEnabled()) {
+            return true;
+        }
+
         const isPublic = this.reflector.getAllAndOverride<boolean>(
             IS_PUBLIC_KEY,
             [context.getHandler(), context.getClass()],

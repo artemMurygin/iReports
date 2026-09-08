@@ -9,6 +9,9 @@ import type { Request } from 'express';
 import { SessionService } from '../infrastructure/session.service';
 import { IS_PUBLIC_KEY } from '@/shared/decorators/public.decorator';
 import { extractSessionId } from './session-request.util';
+import { isDevAuthBypassEnabled } from '@/shared/config/dev-auth-bypass';
+
+const DEFAULT_DEV_EMPLOYEE_ID = 24018;
 
 export interface AuthenticatedRequestUser {
     employeeId: number;
@@ -29,6 +32,18 @@ export class SessionAuthGuard implements CanActivate {
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        const request = context.switchToHttp().getRequest<Request>();
+
+        if (isDevAuthBypassEnabled()) {
+            (request as Request & { user: AuthenticatedRequestUser }).user = {
+                employeeId:
+                    Number(process.env.DEV_EMPLOYEE_ID) ||
+                    DEFAULT_DEV_EMPLOYEE_ID,
+                permissions: [],
+            };
+            return true;
+        }
+
         const isPublic = this.reflector.getAllAndOverride<boolean>(
             IS_PUBLIC_KEY,
             [context.getHandler(), context.getClass()],
@@ -37,7 +52,6 @@ export class SessionAuthGuard implements CanActivate {
             return true;
         }
 
-        const request = context.switchToHttp().getRequest<Request>();
         const sessionId = extractSessionId(request);
 
         if (!sessionId) {

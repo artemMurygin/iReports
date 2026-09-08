@@ -9,6 +9,7 @@ import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '@/shared/decorators/public.decorator';
 import { CSRF_HEADER_NAME, SESSION_COOKIE_NAME } from '../session.config';
 import { isValidCsrfToken } from './session-request.util';
+import { isDevAuthBypassEnabled } from '@/shared/config/dev-auth-bypass';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -24,6 +25,10 @@ export class CsrfGuard implements CanActivate {
     constructor(private readonly reflector: Reflector) {}
 
     canActivate(context: ExecutionContext): boolean {
+        if (isDevAuthBypassEnabled()) {
+            return true;
+        }
+
         const isPublic = this.reflector.getAllAndOverride<boolean>(
             IS_PUBLIC_KEY,
             [context.getHandler(), context.getClass()],

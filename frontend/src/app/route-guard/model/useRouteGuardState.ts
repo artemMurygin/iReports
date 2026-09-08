@@ -14,13 +14,22 @@ export type RouteHandle = {
     requiredPermission?: string
 }
 
+// Dev-only байпас авторизации (тестирование функциональности без Bitrix24
+// OAuth/embedded-логина) — активен только при `vite dev` (`import.meta.env.DEV`
+// всегда `false` в любой сборке `vite build`, в т.ч. Docker-сборках
+// прод/dev-стенда), см. backend/src/shared/config/dev-auth-bypass.ts за
+// симметричным backend-байпасом.
+const isAuthBypassed = import.meta.env.DEV && import.meta.env.VITE_AUTH_DISABLED === 'true'
+
 export function useRouteGuardState(requiredPermission?: string) {
     const context = detectRuntimeContext()
     const { data: session, isLoading } = useQuery(routeGuardApi.getCurrentSession())
 
-    const hasSession = session != null
+    const hasSession = isAuthBypassed || session != null
     const hasRequiredPermission =
-        requiredPermission === undefined || (session?.permissions.includes(requiredPermission) ?? false)
+        isAuthBypassed ||
+        requiredPermission === undefined ||
+        (session?.permissions.includes(requiredPermission) ?? false)
 
     return {
         context,
