@@ -21,3 +21,5 @@ export * from './work-schedule';
 export * from './auth';
 export * from './session';
 export * from './roles';
+export * from './goods-turnover-report';
+export * from './shop-store';

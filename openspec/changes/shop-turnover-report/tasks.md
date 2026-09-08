@@ -163,7 +163,7 @@
 
 ## 12. Contracts (`ireports-contracts`)
 
-- [ ] 12.1 Добавить Zod-схемы `GoodsTurnoverReportLine`/`GoodsTurnoverReportResponse` (с
+- [x] 12.1 Добавить Zod-схемы `GoodsTurnoverReportLine`/`GoodsTurnoverReportResponse` (с
   `coefficient: number | null`) и `ShopStore` в `contracts/commands/` (по образцу
   `catalog.ts`/`sales-plan.ts`). Верификация: `tsc`/сборка `contracts` проходит, типы
   экспортируются из `ireports-contracts`.
