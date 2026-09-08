@@ -75,44 +75,44 @@
 
 ## 7. Sync — почасовой снимок остатков (D5, TDD)
 
-- [ ] 7.1 Написать тесты на `MoyskladService`-метод асинхронного отчёта об остатках
+- [x] 7.1 Написать тесты на `MoyskladService`-метод асинхронного отчёта об остатках
   (`GET /report/stock/bystore?async=true&groupBy=product`, без `limit`/`offset`): запуск задачи,
   опрос статуса до готовности, получение и парсинг итогового результата; обработка ошибки/таймаута
   опроса.
-- [ ] 7.2 Прогнать тесты из 7.1 и зафиксировать red.
-- [ ] 7.3 Реализовать метод (сверить контракт опроса асинхронной задачи МойСклад вручную перед
+- [x] 7.2 Прогнать тесты из 7.1 и зафиксировать red.
+- [x] 7.3 Реализовать метод (сверить контракт опроса асинхронной задачи МойСклад вручную перед
   реализацией — см. design.md «Открытые вопросы»; при недоступности/нестабильности — синхронный
   fallback с постраничной выгрузкой, см. design.md Risks).
-- [ ] 7.4 Прогнать тесты из 7.1 и зафиксировать green.
+- [x] 7.4 Прогнать тесты из 7.1 и зафиксировать green.
 
-- [ ] 7.5 Написать тесты на `MoySkladSyncService.uploadStockSnapshot()`: пишет новый набор строк
+- [x] 7.5 Написать тесты на `MoySkladSyncService.uploadStockSnapshot()`: пишет новый набор строк
   `MoySkladStock` с общим `snapshotAt`, не перезаписывая (не трогая) строки предыдущих прогонов.
-- [ ] 7.6 Прогнать тесты из 7.5 и зафиксировать red.
-- [ ] 7.7 Реализовать `uploadStockSnapshot()` + новую крон-задачу `MoySkladStockSyncCron`
+- [x] 7.6 Прогнать тесты из 7.5 и зафиксировать red.
+- [x] 7.7 Реализовать `uploadStockSnapshot()` + новую крон-задачу `MoySkladStockSyncCron`
   (`@ProdCron(CronExpression.EVERY_HOUR)`, обёрнута в `runInSystemRequestContext`, по аналогии с
   `RoappSyncCron`/`SalesPlanAutoCreationCron`).
-- [ ] 7.8 Прогнать тесты из 7.5 и зафиксировать green, регрессий нет.
+- [x] 7.8 Прогнать тесты из 7.5 и зафиксировать green, регрессий нет.
 
 ## 8. Sync — бэкфилл истории остатков (D5.1, TDD)
 
-- [ ] 8.1 Написать тесты на `MoyskladService`-метод легаси `GET /entity/assortment` с фильтром
+- [x] 8.1 Написать тесты на `MoyskladService`-метод легаси `GET /entity/assortment` с фильтром
   `stockMoment`/`stockStore`: корректный запрос фильтра на конец месяца для конкретного склада,
   парсинг остатка/себестоимости из ответа (сверить точные имена полей вручную перед реализацией —
   см. design.md «Открытые вопросы»).
-- [ ] 8.2 Прогнать тесты из 8.1 и зафиксировать red.
-- [ ] 8.3 Реализовать метод.
-- [ ] 8.4 Прогнать тесты из 8.1 и зафиксировать green.
+- [x] 8.2 Прогнать тесты из 8.1 и зафиксировать red.
+- [x] 8.3 Реализовать метод.
+- [x] 8.4 Прогнать тесты из 8.1 и зафиксировать green.
 
-- [ ] 8.5 Написать тесты на `MoySkladSyncService.backfillHistoricalStockSnapshots(fromDate)`: для
+- [x] 8.5 Написать тесты на `MoySkladSyncService.backfillHistoricalStockSnapshots(fromDate)`: для
   каждого месяца от `fromDate` до текущего и каждого склада пишет ровно один снимок
   `MoySkladStock` с `snapshotAt` = конец месяца; повторный запуск идемпотентен (upsert по
   `(productId, warehouseId, snapshotAt)`, не дублирует строки).
-- [ ] 8.6 Прогнать тесты из 8.5 и зафиксировать red.
-- [ ] 8.7 Реализовать метод; подключить его и `uploadStores()` в `UploadInitialMoySkladDataHandler`
+- [x] 8.6 Прогнать тесты из 8.5 и зафиксировать red.
+- [x] 8.7 Реализовать метод; подключить его и `uploadStores()` в `UploadInitialMoySkladDataHandler`
   (`backend/src/domains/shop/sync/moySklad/application/command/
   upload-initial-moysklad-data.handler.ts`), вызываемый из `backend/src/scripts/
   initialUploadData.ts` (`npm run initial`/`npm run initialProd <date> M`).
-- [ ] 8.8 Прогнать тесты из 8.5 и зафиксировать green, регрессий в существующем
+- [x] 8.8 Прогнать тесты из 8.5 и зафиксировать green, регрессий в существующем
   `UploadInitialMoySkladDataHandler` (синк сотрудников/категорий/товаров/услуг/`Demand`) нет.
 
 ## 9. Application — построение отчёта (D4/D6/D7.2, TDD)

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../../infrustructure/database/database.service';
 import { UploadLogger } from '../../../../shared/logger';
@@ -211,6 +212,145 @@ export class MoySkladSyncService {
             log.error(err instanceof Error ? err : new Error(String(err)));
             throw err;
         }
+    }
+
+    // spec: shop-turnover-report D5/D7.1 — почасовой снимок остатков.
+    // Накопительная (append-only) таблица: каждый прогон пишет НОВЫЙ набор
+    // строк с ОБЩИМ snapshotAt (один Date на весь прогон), не трогая
+    // (не удаляя, не перезаписывая) строки предыдущих прогонов — обычный
+    // upsert-паттерн справочников здесь сознательно не используется.
+    async uploadStockSnapshot() {
+        const log = new UploadLogger('МойСклад: Остатки (снимок)');
+        log.start();
+        const snapshotAt = new Date();
+        try {
+            for await (const batch of this.moySklad.fetchStockByStore()) {
+                const data: {
+                    id: string;
+                    productId: string;
+                    warehouseId: string;
+                    quantity: number;
+                    costSum: number;
+                    snapshotAt: Date;
+                }[] = [];
+
+                for (const row of batch) {
+                    const productId = extractIdFromHref(row.meta.href);
+                    if (!productId) continue;
+
+                    for (const entry of row.stockByStore) {
+                        const warehouseId = extractIdFromHref(entry.meta.href);
+                        if (!warehouseId) continue;
+
+                        data.push({
+                            id: randomUUID(),
+                            productId,
+                            warehouseId,
+                            quantity: entry.stock,
+                            costSum: Math.round(entry.price),
+                            snapshotAt,
+                        });
+                    }
+                }
+
+                if (data.length) {
+                    await this.db.moySkladStock.createMany({
+                        data,
+                        skipDuplicates: true,
+                    });
+                }
+                log.tick(batch.length);
+            }
+            log.done();
+        } catch (err) {
+            log.error(err instanceof Error ? err : new Error(String(err)));
+            throw err;
+        }
+    }
+
+    // spec: shop-turnover-report D5.1 — разовый бэкфилл истории остатков
+    // (`npm run initialProd <date> M`, см. UploadInitialMoySkladDataHandler)
+    // за каждый календарный месяц от fromDate до текущего, для каждого уже
+    // засинканного склада (MoySkladStore) — по одному снимку на конец
+    // месяца. Идемпотентен: upsert по (productId, warehouseId, snapshotAt),
+    // повторный запуск с тем же диапазоном не создаёт дублей.
+    async backfillHistoricalStockSnapshots(fromDate: Date) {
+        const log = new UploadLogger('МойСклад: Остатки (бэкфилл истории)');
+        log.start();
+        try {
+            const stores = await this.db.moySkladStore.findMany({
+                select: { id: true },
+            });
+            const monthEnds = this._monthEndsFrom(fromDate);
+
+            for (const monthEnd of monthEnds) {
+                for (const store of stores) {
+                    for await (const batch of this.moySklad.fetchAssortmentStockAt(
+                        monthEnd,
+                        store.id,
+                    )) {
+                        for (const row of batch) {
+                            const productId = extractIdFromHref(
+                                row.productHref,
+                            );
+                            if (!productId) continue;
+
+                            await this.db.moySkladStock.upsert({
+                                where: {
+                                    productId_warehouseId_snapshotAt: {
+                                        productId,
+                                        warehouseId: store.id,
+                                        snapshotAt: monthEnd,
+                                    },
+                                },
+                                create: {
+                                    id: randomUUID(),
+                                    productId,
+                                    warehouseId: store.id,
+                                    quantity: row.quantity,
+                                    costSum: row.costSum,
+                                    snapshotAt: monthEnd,
+                                },
+                                update: {
+                                    quantity: row.quantity,
+                                    costSum: row.costSum,
+                                },
+                            });
+                        }
+                        log.tick(batch.length);
+                    }
+                }
+            }
+            log.done();
+        } catch (err) {
+            log.error(err instanceof Error ? err : new Error(String(err)));
+            throw err;
+        }
+    }
+
+    // Календарные месяцы от fromDate до текущего (включительно), каждый
+    // представлен последним моментом месяца в UTC (23:59:59.999) — момент,
+    // на который легаси /entity/assortment считает исторический остаток
+    // (D5.1).
+    private _monthEndsFrom(fromDate: Date): Date[] {
+        const ends: Date[] = [];
+        let year = fromDate.getUTCFullYear();
+        let month = fromDate.getUTCMonth();
+        const now = new Date();
+
+        while (
+            year < now.getUTCFullYear() ||
+            (year === now.getUTCFullYear() && month <= now.getUTCMonth())
+        ) {
+            ends.push(new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)));
+            month += 1;
+            if (month > 11) {
+                month = 0;
+                year += 1;
+            }
+        }
+
+        return ends;
     }
 
     async uploadCreatedDemands(fromDate?: Date) {
