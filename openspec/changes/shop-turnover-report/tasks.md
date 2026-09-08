@@ -17,31 +17,31 @@
 
 ## 2. Domain — Value Objects (TDD)
 
-- [ ] 2.1 Написать тесты на `Money` (`domains/shop/modules/warehouse/domain/value-objects/
+- [x] 2.1 Написать тесты на `Money` (`domains/shop/modules/warehouse/domain/value-objects/
   money.value-object.ts`): создание из неотрицательного числа копеек, ошибка/исключение на
   отрицательное значение, сравнение по значению.
-- [ ] 2.2 Прогнать тесты из 2.1 и зафиксировать red (класса ещё нет).
-- [ ] 2.3 Реализовать `Money` (наследник `ValueObject` из `src/shared/domain/`).
-- [ ] 2.4 Прогнать тесты из 2.1 и зафиксировать green, регрессий в соседних тестах нет.
+- [x] 2.2 Прогнать тесты из 2.1 и зафиксировать red (класса ещё нет).
+- [x] 2.3 Реализовать `Money` (наследник `ValueObject` из `src/shared/domain/`).
+- [x] 2.4 Прогнать тесты из 2.1 и зафиксировать green, регрессий в соседних тестах нет.
 
-- [ ] 2.5 Написать тесты на `TurnoverCoefficient.calculate` (`domains/shop/modules/warehouse/
+- [x] 2.5 Написать тесты на `TurnoverCoefficient.calculate` (`domains/shop/modules/warehouse/
   domain/value-objects/turnover-coefficient.value-object.ts`) по D8/specs: обычный расчёт по
   формуле `turnoverSum / ((prevStockSum + currStockSum) / 2)`; `previousStockSum === null` →
   `isAvailable() === false` (не `0`); оба остатка нулевые → `isAvailable() === false` без деления
   на ноль.
-- [ ] 2.6 Прогнать тесты из 2.5 и зафиксировать red.
-- [ ] 2.7 Реализовать `TurnoverCoefficient`.
-- [ ] 2.8 Прогнать тесты из 2.5 и зафиксировать green, регрессий нет.
+- [x] 2.6 Прогнать тесты из 2.5 и зафиксировать red.
+- [x] 2.7 Реализовать `TurnoverCoefficient`.
+- [x] 2.8 Прогнать тесты из 2.5 и зафиксировать green, регрессий нет.
 
 ## 3. Domain — Aggregate `GoodsTurnoverReportLine` (TDD)
 
-- [ ] 3.1 Написать тесты на создание `GoodsTurnoverReportLine`: валидный `Period` (переиспользуется
+- [x] 3.1 Написать тесты на создание `GoodsTurnoverReportLine`: валидный `Period` (переиспользуется
   `src/shared/domain/period.value-object.ts`), неотрицательные `turnoverQuantity`/`stockQuantity`,
   обязательные `categoryId`/`warehouseId`.
-- [ ] 3.2 Прогнать тесты из 3.1 и зафиксировать red.
-- [ ] 3.3 Реализовать сущность `GoodsTurnoverReportLine` (наследник `Entity`/`AggregateRoot` из
+- [x] 3.2 Прогнать тесты из 3.1 и зафиксировать red.
+- [x] 3.3 Реализовать сущность `GoodsTurnoverReportLine` (наследник `Entity`/`AggregateRoot` из
   `src/shared/domain/`).
-- [ ] 3.4 Прогнать тесты из 3.1 и зафиксировать green, регрессий нет.
+- [x] 3.4 Прогнать тесты из 3.1 и зафиксировать green, регрессий нет.
 
 ## 4. Application — порт и репозиторий отчёта (TDD)
 
