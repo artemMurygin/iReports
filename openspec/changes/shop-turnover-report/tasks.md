@@ -154,12 +154,12 @@
 
 ## 11. Application — чтение отчёта (TDD)
 
-- [ ] 11.1 Написать тесты на `GetGoodsTurnoverReportService.getReport(period, warehouseId?)`:
+- [x] 11.1 Написать тесты на `GetGoodsTurnoverReportService.getReport(period, warehouseId?)`:
   читает строки текущего и предыдущего периода, считает `TurnoverCoefficient` по каждой строке,
   фильтрует по складу при указании `warehouseId`, маппит в DTO ответа.
-- [ ] 11.2 Прогнать тесты из 11.1 и зафиксировать red.
-- [ ] 11.3 Реализовать `GetGoodsTurnoverReportService` и маппер в DTO.
-- [ ] 11.4 Прогнать тесты из 11.1 и зафиксировать green.
+- [x] 11.2 Прогнать тесты из 11.1 и зафиксировать red.
+- [x] 11.3 Реализовать `GetGoodsTurnoverReportService` и маппер в DTO.
+- [x] 11.4 Прогнать тесты из 11.1 и зафиксировать green.
 
 ## 12. Contracts (`ireports-contracts`)
 
