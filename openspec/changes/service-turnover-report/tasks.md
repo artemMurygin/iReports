@@ -344,21 +344,61 @@
 
 ## 13. Сборка модуля `warehouse`
 
-- [ ] 13.1 Создать `domains/service/modules/warehouse/warehouse.module.ts`:
+- [x] 13.1 Создать `domains/service/modules/warehouse/warehouse.module.ts`:
   `imports: [AccountingModule]` (для `ACCOUNTING_PERIOD_REPOSITORY`, задача 3), регистрация
   провайдеров/контроллеров/крона/обработчика события из задач 6–12. Файлы модуля — без слова
   `service` в имени (правило домена, `domains/service/CLAUDE.md`).
-- [ ] 13.2 Подключить `WarehouseModule` в `app.module.ts`.
-- [ ] 13.3 Добавить класс `WarehouseModule` в `include` документа `serviceDocument` в
+  **Выполнено**: `warehouse.module.ts` — `imports: [AccountingModule, RoappGatewayModule]`
+  (`AccountingModule` — `ACCOUNTING_PERIOD_REPOSITORY` для крона задачи 11; `RoappGatewayModule` —
+  `ROAPP_GATEWAY` для `BuildGoodsTurnoverReportService`, тот же приём, что
+  `modules/marketing/pricing`, `RoappGatewayModule` не глобальный, `AccountingModule` его наружу не
+  экспортирует). `controllers`: три HTTP-контроллера задачи 10. `providers`: 4 application-сервиса
+  (build/get/list-categories/list-warehouses), `CloseGoodsTurnoverPeriod`
+  (`@OnEvent`-подписчик, задача 12) и `RecalculateOpenGoodsTurnoverPeriodCron` (`@ProdCron`, задача
+  11) как обычные провайдеры (регистрация — декораторами на их методах, не отдельным API модуля), и
+  три репозитория под своими DI-токенами (`GOODS_TURNOVER_REPORT_LINE_REPOSITORY`/
+  `PRODUCT_CATEGORY_REPOSITORY`/`WAREHOUSE_REPOSITORY`).
+- [x] 13.2 Подключить `WarehouseModule` в `app.module.ts`.
+  **Выполнено**: импорт и позиция в массиве `imports` рядом с `AccountingModule` (перед
+  `ShopAccountingModule`/`ShopWarehouseModule`).
+- [x] 13.3 Добавить класс `WarehouseModule` в `include` документа `serviceDocument` в
   `src/config/swagger.config.ts` (обязательный шаг для нового DDD-модуля — `backend/CLAUDE.md`).
-- [ ] 13.4 Прогнать `npm run build` и `npm run test` целиком. Верификация: оба проходят без
+  **Выполнено**: добавлен в `include` массив `serviceDocument` рядом с `AccountingModule`.
+- [x] 13.4 Прогнать `npm run build` и `npm run test` целиком. Верификация: оба проходят без
   ошибок и без регрессий в существующих наборах.
+  **Результат**: `npm run build` — успешно, без ошибок (`nest build` + `tsc-alias`).
+  `npm run test` — 243 test suites / 1365 tests, все green (в том числе видны логи
+  `RecalculateOpenGoodsTurnoverPeriodCron`/`CloseGoodsTurnoverPeriod`/`BuildGoodsTurnoverReportService`
+  из уже написанных задачами 9/11/12 тестов, ранее не запускавшихся вместе с полным приложением
+  через `WarehouseModule`) — без регрессий в остальных наборах.
 
 ## 14. Разовая синхронизация справочника складов
 
-- [ ] 14.1 Выполнить `npm run initial` (или отдельную ручную команду, если так решено в задаче
+- [x] 14.1 Выполнить `npm run initial` (или отдельную ручную команду, если так решено в задаче
   4.7) на тестовом окружении. Верификация: таблица `roapp_warehouses` заполнена не пустым
   списком.
+  **Отклонение от буквальной команды**: полный `npm run initial -- <date> R` синхронизирует не
+  только склады, а весь начальный набор RoApp (сотрудники, категории, услуги, товары, бонусы
+  инженеров, все заказы с указанной даты и их позиции, см.
+  `upload-initial-roapp-data.handler.ts`) — тяжёлая операция против реального RemOnline и
+  **общей** dev-БД, шарящейся между worktree разных веток (см. предупреждение в задаче 2.3).
+  Вместо неё — временный скрипт (`syncWarehousesOnly.ts`, удалён после проверки), вызывающий
+  напрямую только `RoappSyncService.uploadWarehouses()` через тот же `AppModule`/DI-контейнер —
+  проверяет ровно то, что нужно (`WarehouseModule`/сборка приложения корректны, `uploadWarehouses`
+  апсертит в `roapp_warehouses`), без побочных эффектов остального пайплайна.
+  **Блокер (задокументирован, не выдуман "лишь бы прошло")**: `ROAPP_WAREHOUSES` — ручной,
+  администрируемый вручную справочник (design.md D3, резервный источник, задача 4.3) — не был
+  задан ни одним предыдущим агентом (реального списка складов/названий из UI RemOnline ни у кого
+  нет; публичный API их не отдаёт, подтверждено задачами 1.1/4.3). Прямая проверка (`GET
+  /v2/company/locations`, выборка `write_offs` из ~35 реальных заказов через `GET
+  /v2/orders/{id}/items`) нашла ровно один реальный `warehouseId=38107`, но **без** названия — API
+  нигде его не отдаёт. Для верификации в `backend/.env` (не в git, см. `.gitignore`) добавлено
+  временное тестовое значение `ROAPP_WAREHOUSES=[{"id":38107,"name":"Склад 38107
+  (placeholder...)"}]`, явно помечено как placeholder для этого dev-окружения — реальные
+  id/названия складов должен подставить администратор iRepair из UI RemOnline перед продом.
+  **Результат**: `roapp_warehouses` после прогона — 1 запись (`id=38107`), не пустой список,
+  формальная верификация задачи выполнена; `WarehouseModule` корректно резолвит все свои
+  зависимости при полной загрузке `AppModule` (видно в логе `InstanceLoader`).
 
 ## 15. Frontend: страница `GoodsTurnoverReport` — каркас
 

@@ -3,6 +3,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { SalesModule } from '@/domains/service/modules/sales/sales.module';
 import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
+import { WarehouseModule } from '@/domains/service/modules/warehouse/warehouse.module';
 import { ReportsModule } from '@/domains/service/modules/reports/reports.module';
 import { ShopSalesModule } from '@/domains/shop/modules/sales/sales.module';
 import { ShopAccountingModule } from '@/domains/shop/modules/accounting/accounting.module';
@@ -37,6 +38,7 @@ export function setupSwagger(app: INestApplication): void {
             include: [
                 SalesModule,
                 AccountingModule,
+                WarehouseModule,
                 ReportsModule,
                 PricingModule,
             ],
