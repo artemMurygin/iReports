@@ -10,11 +10,9 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { TaskCompletion } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completion.entity';
-import type { BitrixTasksGatewayPort } from '@/integrations/bitrix/ports/bitrix-tasks-gateway.port';
-import type { SalaryTaskRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
-import { SalaryTask } from '@/domains/service/modules/accounting/domain/entities/salary-task/salary-task.entity';
-import { TaskStatus } from '@/domains/service/modules/accounting/domain/value-objects/task-status.value-object';
+import type { CancelTaskForRuleDeletionService } from '@/modules/tasks/application/services/cancel-task-for-rule-deletion.service';
 import type { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import { Period } from '@/shared/domain/period.value-object';
 
 describe('UpdateMotivationSchemaHandler', () => {
     const buildExistingSchema = (ruleCount = 1) => {
@@ -38,8 +36,7 @@ describe('UpdateMotivationSchemaHandler', () => {
     const buildHandler = (
         existingSchema: MotivationSchema | null,
         overrides?: {
-            closeTaskImpl?: () => Promise<void>;
-            findActiveByRuleImpl?: (ruleId: string) => Promise<SalaryTask[]>;
+            cancelImpl?: (taskId: string) => Promise<void>;
         },
     ) => {
         const findById = jest
@@ -84,38 +81,21 @@ describe('UpdateMotivationSchemaHandler', () => {
             .mockResolvedValue({ id: 'rule-id' });
         const commandBus = { execute } as unknown as CommandBus;
 
-        const closeTask = jest
-            .fn()
+        const cancel = jest
+            .fn<Promise<void>, [string]>()
             .mockImplementation(
-                overrides?.closeTaskImpl ?? (() => Promise.resolve()),
+                overrides?.cancelImpl ?? (() => Promise.resolve()),
             );
-        const tasksGateway: BitrixTasksGatewayPort = {
-            createTask: jest.fn(),
-            closeTask,
-            updateDeadline: jest.fn(),
-        };
-
-        const findActiveByRule = jest
-            .fn()
-            .mockImplementation(
-                overrides?.findActiveByRuleImpl ?? (() => Promise.resolve([])),
-            );
-        const salaryTaskRepo: SalaryTaskRepositoryPort = {
-            findByRuleAndPeriod: jest.fn(),
-            findActiveForDirection: jest.fn(),
-            insert: jest.fn(),
-            save: jest.fn(),
-            findManyByRulesAndPeriod: jest.fn().mockResolvedValue([]),
-            findActiveByRule,
-        };
+        const cancelTaskForRuleDeletion = {
+            cancel,
+        } as unknown as CancelTaskForRuleDeletionService;
 
         const handler = new UpdateMotivationSchemaHandler(
             motivationSchemaRepo,
             salaryRuleRepo,
             unitOfWork,
             commandBus,
-            tasksGateway,
-            salaryTaskRepo,
+            cancelTaskForRuleDeletion,
         );
 
         return {
@@ -126,8 +106,7 @@ describe('UpdateMotivationSchemaHandler', () => {
             updateRule,
             run,
             execute,
-            closeTask,
-            findActiveByRule,
+            cancel,
         };
     };
 
@@ -335,23 +314,29 @@ describe('UpdateMotivationSchemaHandler', () => {
         });
     });
 
-    // Раздел 12 tasks.md (add-task-based-salary-rule), design.md Decision 6 —
-    // при исключении правила TaskCompletion из нового набора (diff по id —
-    // rules: [] означает удаление всех старых правил) связанная задача
-    // закрывается в Bitrix24 ДО удаления записи правила; сбой Bitrix24 не
-    // блокирует удаление (внешняя система, расхождение обнаружит крон
-    // синхронизации статуса, раздел 8).
+    // replace-bitrix-task-integration, design.md решение 3 «Отмена при
+    // удалении правила» — при исключении правила TaskCompletion из нового
+    // набора (diff по id — rules: [] означает удаление всех старых правил)
+    // связанные задачи (по ВСЕМ периодам config.taskIdByPeriod) отменяются
+    // (CancelTaskForRuleDeletionService.cancel()) ДО удаления записи
+    // правила; сбой отмены не блокирует удаление.
     describe('правило TaskCompletion в старом наборе', () => {
-        const buildSchemaWithTaskRule = () => {
-            const taskRule = TaskCompletion.create({
-                type: 'TaskCompletion',
-                name: 'Сдать отчёт',
-                targetRole: 'ENGINEER',
-                config: {
-                    bitrixTaskTitle: 'Сдать отчёт по браку',
-                    isRecurring: true,
-                    deadlineTemplate: '2026-08-05',
-                    defaultAmount: 5000,
+        const buildSchemaWithTaskRule = (
+            taskIdByPeriod: Record<string, string> = { '2026-08': 'task-9' },
+        ) => {
+            const taskRule = new TaskCompletion({
+                id: 'task-rule-1',
+                props: {
+                    name: 'Сдать отчёт',
+                    type: 'TaskCompletion',
+                    targetRole: 'ENGINEER',
+                    config: {
+                        taskIdByPeriod,
+                        taskTitleTemplate: 'Сдать отчёт по браку',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-08-05',
+                        defaultAmount: 5000,
+                    },
                 },
             });
             const schema = MotivationSchema.create({
@@ -363,29 +348,16 @@ describe('UpdateMotivationSchemaHandler', () => {
             return { schema, taskRule };
         };
 
-        it('закрывает связанную активную задачу Bitrix24 ДО удаления правил', async () => {
+        it('отменяет связанную задачу ДО удаления правил', async () => {
             await withRequestContext(async () => {
                 const { schema, taskRule } = buildSchemaWithTaskRule();
-                const activeTask = SalaryTask.create({
-                    salaryRuleId: taskRule.id,
-                    period: '2026-08',
-                    deadline: new Date('2026-08-05T00:00:00.000Z'),
-                    isRecurring: true,
-                    bitrixTaskId: 'bx-9',
-                    taskStatus: TaskStatus.fromRaw('2'),
-                });
                 const calls: string[] = [];
-                const { handler, closeTask, findActiveByRule, deleteByIds } =
-                    buildHandler(schema, {
-                        findActiveByRuleImpl: (ruleId) => {
-                            expect(ruleId).toBe(taskRule.id);
-                            return Promise.resolve([activeTask]);
-                        },
-                        closeTaskImpl: () => {
-                            calls.push('closeTask');
-                            return Promise.resolve();
-                        },
-                    });
+                const { handler, cancel, deleteByIds } = buildHandler(schema, {
+                    cancelImpl: () => {
+                        calls.push('cancel');
+                        return Promise.resolve();
+                    },
+                });
                 deleteByIds.mockImplementation(() => {
                     calls.push('deleteByIds');
                     return Promise.resolve();
@@ -398,28 +370,38 @@ describe('UpdateMotivationSchemaHandler', () => {
 
                 await handler.execute(command);
 
-                expect(findActiveByRule).toHaveBeenCalledWith(taskRule.id);
-                expect(closeTask).toHaveBeenCalledWith('bx-9');
+                expect(cancel).toHaveBeenCalledWith('task-9');
                 expect(deleteByIds).toHaveBeenCalledWith([taskRule.id]);
-                expect(calls).toEqual(['closeTask', 'deleteByIds']);
+                expect(calls).toEqual(['cancel', 'deleteByIds']);
             });
         });
 
-        it('ошибка closeTask НЕ блокирует удаление правила — только логируется', async () => {
+        it('регулярное правило с несколькими периодами — отменяет ВСЕ задачи, не только последнего периода', async () => {
             await withRequestContext(async () => {
-                const { schema, taskRule } = buildSchemaWithTaskRule();
-                const activeTask = SalaryTask.create({
-                    salaryRuleId: taskRule.id,
-                    period: '2026-08',
-                    deadline: new Date('2026-08-05T00:00:00.000Z'),
-                    isRecurring: true,
-                    bitrixTaskId: 'bx-9',
-                    taskStatus: TaskStatus.fromRaw('2'),
+                const { schema } = buildSchemaWithTaskRule({
+                    '2026-07': 'task-7',
+                    '2026-08': 'task-8',
                 });
+                const { handler, cancel } = buildHandler(schema);
+                const command = new UpdateMotivationSchemaCommand({
+                    motivationSchemaId: schema.id,
+                    name: 'Новое имя',
+                    rules: [],
+                });
+
+                await handler.execute(command);
+
+                expect(cancel).toHaveBeenCalledWith('task-7');
+                expect(cancel).toHaveBeenCalledWith('task-8');
+                expect(cancel).toHaveBeenCalledTimes(2);
+            });
+        });
+
+        it('ошибка отмены НЕ блокирует удаление правила — только логируется', async () => {
+            await withRequestContext(async () => {
+                const { schema } = buildSchemaWithTaskRule();
                 const { handler, deleteByIds } = buildHandler(schema, {
-                    findActiveByRuleImpl: () => Promise.resolve([activeTask]),
-                    closeTaskImpl: () =>
-                        Promise.reject(new Error('bitrix close down')),
+                    cancelImpl: () => Promise.reject(new Error('cancel down')),
                 });
                 const command = new UpdateMotivationSchemaCommand({
                     motivationSchemaId: schema.id,
@@ -435,11 +417,10 @@ describe('UpdateMotivationSchemaHandler', () => {
             });
         });
 
-        it('схема без правил TaskCompletion — closeTask вовсе не вызывается (регрессия)', async () => {
+        it('схема без правил TaskCompletion — cancel вовсе не вызывается (регрессия)', async () => {
             await withRequestContext(async () => {
                 const existingSchema = buildExistingSchema();
-                const { handler, closeTask, findActiveByRule } =
-                    buildHandler(existingSchema);
+                const { handler, cancel } = buildHandler(existingSchema);
                 const command = new UpdateMotivationSchemaCommand({
                     motivationSchemaId: existingSchema.id,
                     name: 'Новое имя',
@@ -448,26 +429,22 @@ describe('UpdateMotivationSchemaHandler', () => {
 
                 await handler.execute(command);
 
-                expect(findActiveByRule).not.toHaveBeenCalled();
-                expect(closeTask).not.toHaveBeenCalled();
+                expect(cancel).not.toHaveBeenCalled();
             });
         });
 
         // Регрессия бага: правка TaskCompletion-правила (id сохранился в
-        // payload) не должна закрывать/пересоздавать привязанную задачу
-        // Bitrix24 — только PATCH, реально исключающий правило из набора,
-        // закрывает задачу (см. тест выше).
-        it('правило TaskCompletion сохранилось в новом наборе (тот же id) — задача Bitrix24 НЕ закрывается и правило не пересоздаётся', async () => {
+        // payload) не должна отменять/пересоздавать привязанную задачу —
+        // только PATCH, реально исключающий правило из набора, отменяет
+        // задачу (см. тест выше). Старая привязка (прошлые периоды)
+        // сохраняется, текущий period.taskId запроса мержится поверх.
+        it('правило TaskCompletion сохранилось в новом наборе (тот же id) — задача НЕ отменяется, taskIdByPeriod прошлых периодов сохраняется', async () => {
             await withRequestContext(async () => {
-                const { schema, taskRule } = buildSchemaWithTaskRule();
-                const {
-                    handler,
-                    closeTask,
-                    findActiveByRule,
-                    deleteByIds,
-                    updateRule,
-                    execute,
-                } = buildHandler(schema);
+                const { schema, taskRule } = buildSchemaWithTaskRule({
+                    '2026-07': 'task-old',
+                });
+                const { handler, cancel, deleteByIds, updateRule, execute } =
+                    buildHandler(schema);
                 const command = new UpdateMotivationSchemaCommand({
                     motivationSchemaId: schema.id,
                     name: 'Новое имя',
@@ -478,7 +455,8 @@ describe('UpdateMotivationSchemaHandler', () => {
                             name: 'Сдать отчёт (правка)',
                             targetRole: 'ENGINEER',
                             config: {
-                                bitrixTaskTitle: 'Сдать отчёт по браку',
+                                taskId: 'task-current',
+                                taskTitleTemplate: 'Сдать отчёт по браку',
                                 isRecurring: true,
                                 deadlineTemplate: '2026-08-05',
                                 defaultAmount: 6000,
@@ -489,14 +467,19 @@ describe('UpdateMotivationSchemaHandler', () => {
 
                 await handler.execute(command);
 
-                expect(findActiveByRule).not.toHaveBeenCalled();
-                expect(closeTask).not.toHaveBeenCalled();
+                expect(cancel).not.toHaveBeenCalled();
                 expect(deleteByIds).toHaveBeenCalledWith([]);
                 expect(execute).not.toHaveBeenCalled();
                 expect(updateRule).toHaveBeenCalledTimes(1);
                 const [entity] = updateRule.mock.calls[0];
                 expect(entity.id).toBe(taskRule.id);
                 expect(entity.name).toBe('Сдать отчёт (правка)');
+                expect(entity.config).toMatchObject({
+                    taskIdByPeriod: {
+                        '2026-07': 'task-old',
+                        [Period.current().getValue()]: 'task-current',
+                    },
+                });
             });
         });
     });

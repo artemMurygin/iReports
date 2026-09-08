@@ -67,11 +67,9 @@ import { ReopenShopAccountingPeriodHandler } from '@/domains/shop/modules/accoun
 import { RecalculateShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/accounting-period/recalculate-accounting-period.handler';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
-import { SHOP_SALARY_TASK_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
 import { ShopMotivationSchemaRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/motivation-schema/motivation-schema.repository';
 import { ShopSalaryRuleRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/motivation-schema/salary-rule.repository';
-import { ShopSalaryTaskRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/salary-task/salary-task.repository';
 import { ShopCalculationDataRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/calculation/calculation-data.repository';
 import { GetShopAccountingPeriodService } from '@/domains/shop/modules/accounting/application/services/accounting-period/get-accounting-period.service';
 import { GetShopErpCashConfigService } from '@/domains/shop/modules/accounting/application/services/cashbox/get-cashbox-config.service';
@@ -101,9 +99,8 @@ import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/applic
 import { EmployeeIdentityRepository } from '@/modules/employee-identity/infrastructure/repositories/employee-identity.repository';
 import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
 import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySklad/moysklad-cash-document.adapter';
-import { BitrixModule } from '@/integrations/bitrix/bitrix.module';
+import { TasksModule } from '@/modules/tasks/tasks.module';
 import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
-import { ShopTaskCompletionAutoCreationCron } from '@/domains/shop/modules/accounting/infrastructure/cron/task-completion-auto-creation.cron';
 
 // Модуль accounting магазина (Фазы 12/13, issue #57/#64, персистентность и
 // оркестратор — Фаза 13.5, см.
@@ -206,14 +203,16 @@ import { ShopTaskCompletionAutoCreationCron } from '@/domains/shop/modules/accou
         EmployeeOperationLockModule,
         // BALANCE_TRANSACTION_REPOSITORY — см. WHY у импорта выше.
         EmployeeBalanceModule,
-        // BITRIX_TASKS_GATEWAY (раздел 6 tasks.md add-task-based-salary-rule)
-        // — нужен EnsureShopSalaryTaskForPeriodService (раздел 16) для
-        // createTask() при пересоздании задачи регулярного правила
-        // TaskCompletion на новый период. Тот же импорт, что и у
+        // openspec/changes/replace-bitrix-task-integration, design.md
+        // решение 1/4 — сквозной модуль src/modules/tasks: TASK_REPOSITORY
+        // нужен task-completion-statuses.builder.ts/
+        // BuildShopCalculationContextService/GetShopDepartmentSalaryReportService
+        // (напрямую, без Port/Adapter), CommandBus.execute(CreateTaskCommand)
+        // — EnsureShopSalaryTaskForPeriodService, CancelTaskForRuleDeletionService
+        // — UpdateShopMotivationSchemaHandler. Тот же импорт, что и у
         // AccountingModule направления service (issue #57: общая
-        // инфраструктура интеграции с Bitrix24 не дублируется, см.
-        // design.md Decision 1/2).
-        BitrixModule,
+        // инфраструктура задачи не дублируется, см. design.md решение 1).
+        TasksModule,
     ],
     controllers: [
         ListShopSalaryRuleTypesHttpController,
@@ -337,16 +336,6 @@ import { ShopTaskCompletionAutoCreationCron } from '@/domains/shop/modules/accou
             provide: SHOP_SALARY_RULE_REPOSITORY,
             useClass: ShopSalaryRuleRepository,
         },
-        // Задача Bitrix24 зарплатного правила TaskCompletionShop (раздел 14
-        // tasks.md add-task-based-salary-rule, design.md Decision 1) —
-        // общая таблица salary_tasks с direction, независимый от
-        // domains/service класс/токен (issue #57). Используется разделами
-        // 15–18 (сама сущность правила, автосоздание задачи на период,
-        // ручной ввод суммы начисления).
-        {
-            provide: SHOP_SALARY_TASK_REPOSITORY,
-            useClass: ShopSalaryTaskRepository,
-        },
         {
             provide: SHOP_CALCULATION_DATA,
             useClass: ShopCalculationDataRepository,
@@ -436,17 +425,16 @@ import { ShopTaskCompletionAutoCreationCron } from '@/domains/shop/modules/accou
             provide: EMPLOYEE_DISMISSAL,
             useClass: EmployeeDismissalRepository,
         },
-        // Раздел 16 tasks.md (add-task-based-salary-rule) — автосоздание/
-        // пересоздание ShopSalaryTask на период (design.md Decision 4):
+        // Автосоздание/пересоздание задачи регулярного правила
+        // TaskCompletion на период (design.md решение 4) —
         // EnsureShopSalaryTaskForPeriodService — обычный провайдер (не за
         // токеном, инжектится по конкретному классу — тот же приём, что
         // BuildShopCalculationContextService/ResolveShopEmployeeSalaryRulesService
-        // выше), используется и ShopTaskCompletionAutoCreationCron (крон
-        // первого числа), и лениво из GetShopEmployeeSalaryReportService/
-        // GetShopDepartmentSalaryReportService (см. их конструкторы —
-        // @ProdCron не тикает в dev).
+        // выше), вызывается лениво из GetShopEmployeeSalaryReportService/
+        // GetShopDepartmentSalaryReportService при открытии отчёта
+        // ("@ProdCron не тикает в dev" — отдельного крона автосоздания
+        // больше нет, design.md Migration Plan).
         EnsureShopSalaryTaskForPeriodService,
-        ShopTaskCompletionAutoCreationCron,
     ],
     exports: [
         SHOP_MOTIVATION_SCHEMA_REPOSITORY,

@@ -1,28 +1,26 @@
 import { TaskCompletionShop } from './task-completion.entity';
-import { ShopTaskStatus } from '@/domains/shop/modules/accounting/domain/value-objects/task-status.value-object';
-import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix-task-link-builder';
+import { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
 import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 
-// Раздел 15 tasks.md (add-task-based-salary-rule) — зеркало раздела 10
-// (domains/service/modules/accounting/domain/entities/salary-rules/
-// task-completion.entity.spec.ts), независимая копия для направления shop
+// openspec/changes/replace-bitrix-task-integration — зеркало раздела теста
+// domains/service/modules/accounting/domain/entities/salary-rules/
+// task-completion.entity.spec.ts, независимая копия для направления shop
 // (issue #57): TaskCompletionShop.calculate() —
 // spec shop/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
-// (строка отсутствует в отчёте, пока задача не выполнена) и
-// #requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
-// (amount всегда равен config.defaultAmount — сумме по умолчанию, заданной
-// при создании правила; requiresManualInput всегда true, руководитель может
-// изменить сумму и обязан указать комментарий при проведении, design.md
-// Decision 5).
+// (строка отсутствует в отчёте, пока задача не в статусе «Закрыта успешно»)
+// и #requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
+// (amount всегда равен config.defaultAmount; requiresManualInput всегда
+// true, design.md Decision 5).
 const buildRule = () =>
     TaskCompletionShop.create({
         type: 'TaskCompletion',
         name: 'Сверить остатки склада',
         targetRole: 'ONLINE_MANAGER',
         config: {
-            bitrixTaskTitle: 'Сверить остатки склада за месяц',
-            taskDescription: 'Свериться с МойСклад',
+            taskId: 'task-1',
+            taskTitleTemplate: 'Сверить остатки склада за месяц',
+            taskDescriptionTemplate: 'Свериться с МойСклад',
             isRecurring: true,
             deadlineTemplate: '2026-08-05',
             defaultAmount: 5000,
@@ -49,27 +47,13 @@ const buildContext = (
 });
 
 describe('TaskCompletionShop', () => {
-    // buildBitrixTaskLink (раздел 7, общая инфраструктура) читает портал из
-    // process.env.BITRIX24_WEBHOOK_URL — jest не подгружает .env
-    // автоматически для юнит-тестов (см. bitrix-task-link-builder.spec.ts),
-    // выставляем/чистим сами.
-    const originalWebhookUrl = process.env.BITRIX24_WEBHOOK_URL;
-
-    beforeEach(() => {
-        process.env.BITRIX24_WEBHOOK_URL =
-            'https://irepair.bitrix24.ru/rest/12/8b659pktudu7xlqu/';
-    });
-
-    afterEach(() => {
-        if (originalWebhookUrl === undefined) {
-            delete process.env.BITRIX24_WEBHOOK_URL;
-        } else {
-            process.env.BITRIX24_WEBHOOK_URL = originalWebhookUrl;
-        }
-    });
-
     describe('create', () => {
-        it('создаёт правило с генерируемым id и типом TaskCompletion', () => {
+        // design.md решение 4 — CreateShopSalaryRuleHandler больше не
+        // вызывает tasks вообще: taskId приходит в теле запроса и
+        // сохраняется как taskIdByPeriod[текущийПериод] прямо здесь, в
+        // фабрике правила (единственное место, где домен-объект строится
+        // из wire-формы запроса).
+        it('создаёт правило с генерируемым id, типом TaskCompletion и taskId в taskIdByPeriod текущего периода', () => {
             const rule = buildRule();
 
             expect(rule).toBeInstanceOf(TaskCompletionShop);
@@ -77,9 +61,12 @@ describe('TaskCompletionShop', () => {
             expect(rule.id).toEqual(expect.any(String));
             expect(rule.name).toBe('Сверить остатки склада');
             expect(rule.targetRole).toBe('ONLINE_MANAGER');
-            expect(rule.config.bitrixTaskTitle).toBe(
+            expect(rule.config.taskTitleTemplate).toBe(
                 'Сверить остатки склада за месяц',
             );
+            expect(Object.values(rule.config.taskIdByPeriod)).toEqual([
+                'task-1',
+            ]);
         });
     });
 
@@ -103,17 +90,17 @@ describe('TaskCompletionShop', () => {
             expect(rule.calculate(buildContext(undefined))).toBeNull();
         });
 
-        it('возвращает null, когда статус связанной задачи не Done', () => {
+        it('возвращает null, когда статус связанной задачи не CLOSED_SUCCESSFULLY (в т.ч. DONE)', () => {
             const rule = buildRule();
 
             const line = rule.calculate(
                 buildContext({
                     productSoldItems: [],
                     taskCompletionStatuses: {
-                        [rule.id]: {
-                            bitrixTaskId: '4821',
-                            status: ShopTaskStatus.fromRaw('2'), // "Новая", не Done
-                        },
+                        [rule.id]: ShopSalaryTask.create({
+                            taskId: 'task-1',
+                            status: 'DONE',
+                        }),
                     },
                 }),
             );
@@ -121,17 +108,17 @@ describe('TaskCompletionShop', () => {
             expect(line).toBeNull();
         });
 
-        it('возвращает CalculationLine с amount из config.defaultAmount и requiresManualInput true, когда статус Done', () => {
+        it('возвращает CalculationLine с amount из config.defaultAmount и requiresManualInput true, когда статус CLOSED_SUCCESSFULLY', () => {
             const rule = buildRule();
 
             const line = rule.calculate(
                 buildContext({
                     productSoldItems: [],
                     taskCompletionStatuses: {
-                        [rule.id]: {
-                            bitrixTaskId: '4821',
-                            status: ShopTaskStatus.fromRaw('5'), // "Завершена"
-                        },
+                        [rule.id]: ShopSalaryTask.create({
+                            taskId: 'task-1',
+                            status: 'CLOSED_SUCCESSFULLY',
+                        }),
                     },
                 }),
             );
@@ -143,28 +130,27 @@ describe('TaskCompletionShop', () => {
             expect(line?.sources).toEqual([
                 {
                     type: 'taskCompletion',
-                    id: '4821',
+                    id: 'task-1',
                     label: 'Сверить остатки склада за месяц',
-                    link: buildBitrixTaskLink('4821'),
+                    link: '/tasks/task-1',
                 },
             ]);
         });
 
-        // Раздел 10.1/15.1 — amount/requiresManualInput не зависят от того,
-        // была ли уже когда-то введена сумма в документе начисления: сумма
-        // живёт только на ShopSalaryAccrualLine (design.md Decision 5),
-        // calculate() её не читает и не пересчитывает вовсе — статус Done
-        // всегда даёт один и тот же результат (config.defaultAmount/true),
-        // независимо от количества прошлых вызовов.
-        it('всегда возвращает amount из config.defaultAmount и requiresManualInput true при повторных вызовах со статусом Done', () => {
+        // Раздел 10.1/15.1 (проектная нумерация add-task-based-salary-rule) —
+        // amount/requiresManualInput не зависят от того, была ли уже введена
+        // сумма в документе начисления: сумма живёт только на
+        // ShopSalaryAccrualLine (design.md Decision 5), calculate() её не
+        // читает и не пересчитывает вовсе.
+        it('всегда возвращает amount из config.defaultAmount и requiresManualInput true при повторных вызовах со статусом CLOSED_SUCCESSFULLY', () => {
             const rule = buildRule();
             const context = buildContext({
                 productSoldItems: [],
                 taskCompletionStatuses: {
-                    [rule.id]: {
-                        bitrixTaskId: '4821',
-                        status: ShopTaskStatus.fromRaw('5'),
-                    },
+                    [rule.id]: ShopSalaryTask.create({
+                        taskId: 'task-1',
+                        status: 'CLOSED_SUCCESSFULLY',
+                    }),
                 },
             });
 

@@ -179,37 +179,64 @@ const orderPayedSalaryRuleSchema = z.object({
     config: orderPayedSalaryConfigSchema,
 });
 
-// ========================== За выполнение задачи Bitrix24 ========================== //
+// ========================== За выполнение задачи ========================== //
 
-// Задача создаётся/сопровождается автоматически (см. design.md Decision 1/4):
-// bitrixTaskTitle — название создаваемой в Bitrix24 задачи, taskDescription —
-// её необязательное описание (сама задача формирует описание диагностической
-// информацией сверх этого поля, см. tasks.md 12.3 — здесь только то, что
-// вводит пользователь в форме правила). isRecurring — разовая задача (заведена
-// один раз, никогда не пересоздаётся на новый период) либо регулярная
-// (пересоздаётся на каждый расчётный период, design.md Decision 4).
-// deadlineTemplate — ISO-дата (`YYYY-MM-DD`): для разового правила берётся
-// буквально как дедлайн единственной задачи, для регулярного используется
-// только число месяца (день) — дедлайн каждой новой задачи периода строится
-// из периода + этого дня (см. tasks.md 10.3/11.3).
-const taskCompletionSalaryConfigSchema = z.object({
-    bitrixTaskTitle: z.string(),
-    taskDescription: z.string().optional(),
+// Задача (`ireports-contracts` `task.ts`, модуль `tasks`) — самостоятельная сущность,
+// создаваемая ОТДЕЛЬНЫМ, предшествующим запросом `POST /v1/tasks`
+// (replace-bitrix-task-integration, design.md решение 4, specs/tasks/spec.md «Зарплатное правило
+// ссылается на уже существующую задачу»). Правило само хранит связь «период → задача» — модуль
+// `tasks` о правилах не знает вообще.
+//
+// taskId (только запрос, см. taskCompletionSalaryConfigRequestSchema) — id уже созданной задачи,
+// backend сохраняет его как config.taskIdByPeriod[текущийПериод] обычным локальным insert(rule),
+// без обращения к `tasks`; это одноразовый вход при создании, не персистентное поле само по себе —
+// в ответе API его нет, есть только taskIdByPeriod (см. ниже).
+//
+// taskTitleTemplate/taskDescriptionTemplate/deadlineTemplate — используются ТОЛЬКО для
+// авто-пересоздания задачи регулярного правила на новый период
+// (`EnsureRuleTaskForPeriodService`, design.md решение 4), не для самой первой задачи (та уже
+// создана вручную, с произвольными заголовком/описанием, на шаге 1 мастера) — расхождение между
+// шаблоном и фактическим содержанием первой задачи осознанно допустимо. deadlineTemplate —
+// ISO-дата (`YYYY-MM-DD`): для разового правила не используется (задача не пересоздаётся), для
+// регулярного используется только число месяца — дедлайн каждой новой задачи периода строится из
+// периода + этого дня.
+const taskCompletionSalaryConfigRequestSchema = z.object({
+    taskId: z.string(),
+    taskTitleTemplate: z.string(),
+    taskDescriptionTemplate: z.string().optional(),
     isRecurring: z.boolean(),
     deadlineTemplate: z.string(),
     // Сумма начисления по умолчанию — подставляется в строку начисления,
-    // когда задача переходит в «Выполнено» (TaskCompletion.calculate()),
-    // руководитель может изменить её при проведении (см.
+    // когда задача закрыта успешно (TaskCompletion.calculate()), руководитель
+    // может изменить её при проведении (см.
     // setTaskCompletionLineRewardRequestSchema в salary-accrual.ts).
     defaultAmount: z.number().int().nonnegative(),
 });
+
+export type TaskCompletionSalaryConfigRequest = z.infer<
+    typeof taskCompletionSalaryConfigRequestSchema
+>;
+
+// Ответ API — то же, что и запрос, но БЕЗ taskId (одноразовый вход при создании, не персистируется
+// как самостоятельное поле) и С taskIdByPeriod: Record<период, taskId> (design.md решение 2) —
+// картой "расчётный период → задача", которую ведёт само правило. Читается для отображения (карточка
+// уже созданной задачи, ссылка на задачу текущего периода), но НЕ выставляется наружу как
+// редактируемое поле формы правила (см. TaskCompletionRuleFields.tsx, architecture.md).
+const taskCompletionSalaryConfigResponseSchema =
+    taskCompletionSalaryConfigRequestSchema.omit({ taskId: true }).extend({
+        taskIdByPeriod: z.record(z.string(), z.string()),
+    });
+
+export type TaskCompletionSalaryConfigResponse = z.infer<
+    typeof taskCompletionSalaryConfigResponseSchema
+>;
 
 const taskCompletionSalaryRuleSchema = z.object({
     id: z.string().optional(),
     type: z.literal('TaskCompletion'),
     name: z.string(),
     targetRole: targetRoleSchema,
-    config: taskCompletionSalaryConfigSchema,
+    config: taskCompletionSalaryConfigRequestSchema,
 });
 
 const salaryRuleRequestSchema = z.discriminatedUnion('type', [
@@ -236,8 +263,16 @@ const serviceCompletedSalaryRuleResponseSchema =
 const orderPayedSalaryRuleResponseSchema = orderPayedSalaryRuleSchema.extend({
     id: z.string(),
 });
-const taskCompletionSalaryRuleResponseSchema =
-    taskCompletionSalaryRuleSchema.extend({ id: z.string() });
+// Не taskCompletionSalaryRuleSchema.extend({ id }) — config различается между запросом и ответом
+// (taskId vs taskIdByPeriod, см. taskCompletionSalaryConfigResponseSchema выше), поэтому вся форма
+// строится заново с config-схемой ответа, а не расширяется поверх request-схемы.
+const taskCompletionSalaryRuleResponseSchema = z.object({
+    id: z.string(),
+    type: z.literal('TaskCompletion'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: taskCompletionSalaryConfigResponseSchema,
+});
 
 const salaryRuleResponseSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleResponseSchema,
@@ -489,7 +524,8 @@ export {
     payPerHourSalaryConfigSchema,
     serviceCompletedSalaryConfigSchema,
     orderPayedSalaryConfigSchema,
-    taskCompletionSalaryConfigSchema,
+    taskCompletionSalaryConfigRequestSchema,
+    taskCompletionSalaryConfigResponseSchema,
     percentBorderSchema,
     percentBordersSchema,
     salaryBasisSchema,

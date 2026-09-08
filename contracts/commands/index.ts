@@ -24,3 +24,4 @@ export * from './session';
 export * from './roles';
 export * from './shop-goods-turnover-report';
 export * from './shop-store';
+export * from './task';

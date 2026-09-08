@@ -25,8 +25,8 @@ import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { ShopSalaryAccrualRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import type { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import type { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
+import type { Task } from '@/modules/tasks/domain/entities/task.entity';
 
 // Отчёт по зарплате сотрудника магазина (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит
@@ -72,11 +72,11 @@ describe('GetShopEmployeeSalaryReportService', () => {
             identifierType: string;
             externalId: string;
         }[];
-        // Раздел 12 tasks.md (add-task-based-salary-rule) — задачи
-        // TaskCompletion-правил, читаемые для штампа свежести кэша
-        // (taskCompletionFreshnessStamp). По умолчанию [] — большинство
-        // тестов этого файла TaskCompletion-правил не заводят.
-        taskCompletionTasks?: ShopSalaryTask[];
+        // Задачи TaskCompletion-правил (src/modules/tasks), читаемые для
+        // штампа свежести кэша (taskCompletionFreshnessStamp). По умолчанию
+        // [] — большинство тестов этого файла TaskCompletion-правил не
+        // заводят.
+        taskCompletionTasks?: Task[];
     }) => {
         const findShopByEmployee = jest
             .fn<Promise<ShopMotivationSchema | null>, [number]>()
@@ -231,10 +231,10 @@ describe('GetShopEmployeeSalaryReportService', () => {
             save: jest.fn(),
         };
 
-        // Раздел 16 tasks.md (add-task-based-salary-rule) — ленивое
-        // достраивание задачи Bitrix24 регулярных TaskCompletion-правил
-        // (см. WHY в самом сервисе). Фейк по умолчанию ничего не делает —
-        // большинство тестов этого файла не заводят TaskCompletion-правил.
+        // openspec/changes/replace-bitrix-task-integration — ленивое
+        // достраивание задачи регулярных TaskCompletion-правил (см. WHY в
+        // самом сервисе). Фейк по умолчанию ничего не делает — большинство
+        // тестов этого файла не заводят TaskCompletion-правил.
         const ensure = jest
             .fn<Promise<unknown>, [string, string]>()
             .mockResolvedValue(null);
@@ -243,10 +243,10 @@ describe('GetShopEmployeeSalaryReportService', () => {
         } as unknown as EnsureShopSalaryTaskForPeriodService;
 
         const taskRepo = {
-            findManyByRulesAndPeriod: jest
+            findManyByIds: jest
                 .fn()
                 .mockResolvedValue(overrides?.taskCompletionTasks ?? []),
-        } as unknown as ShopSalaryTaskRepositoryPort;
+        } as unknown as TaskRepositoryPort;
 
         const service = new GetShopEmployeeSalaryReportService(
             periodRepo,
@@ -599,7 +599,8 @@ describe('GetShopEmployeeSalaryReportService', () => {
                     name: 'Собрать отчёт',
                     targetRole: 'OFFLINE_MANAGER',
                     config: {
-                        bitrixTaskTitle: 'Собрать отчёт',
+                        taskId: 'task-initial',
+                        taskTitleTemplate: 'Собрать отчёт',
                         isRecurring: true,
                         deadlineTemplate: '2026-01-25T18:00:00.000Z',
                         defaultAmount: 5000,
@@ -643,7 +644,8 @@ describe('GetShopEmployeeSalaryReportService', () => {
                     name: 'Собрать отчёт',
                     targetRole: 'OFFLINE_MANAGER',
                     config: {
-                        bitrixTaskTitle: 'Собрать отчёт',
+                        taskId: 'task-initial',
+                        taskTitleTemplate: 'Собрать отчёт',
                         isRecurring: true,
                         deadlineTemplate: '2026-01-25T18:00:00.000Z',
                         defaultAmount: 5000,

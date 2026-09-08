@@ -94,6 +94,22 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
 - `GET /v1/employee-identity/employee/:employeeId` — связи конкретного сотрудника
 - `GET /v1/employee-identity/unmatched` — сотрудники Bitrix без единой связи ни в одной системе
 
+## modules/tasks (`/v1/tasks`)
+Собственная сущность «Задача» iReports (`replace-bitrix-task-integration`) — общая для всех
+направлений бизнеса, полностью самостоятельная (не знает про зарплатные правила, `salaryRuleId`
+или период). Заменяет прежнюю интеграцию с Bitrix24 Tasks API. Права `tasks:view`/`tasks:manage`
+намеренно не подключены в этом change — эндпоинты пока не требуют permission-гардов (см.
+`openspec/changes/replace-bitrix-task-integration/design.md`, решение 6 и Open Questions).
+- `GET /v1/tasks` — список задач с фильтрами `status?`/`direction?` — питает страницу `/tasks`
+- `POST /v1/tasks` — создать самостоятельную задачу (заголовок/описание/дедлайн/ответственный/
+  направление) — единственный вход создания задачи, используется и с фронта напрямую, и
+  `EnsureRuleTaskForPeriodService` (`domains/{service,shop}/modules/accounting`) при автосоздании
+  задачи регулярного правила `TaskCompletion` на новый период (через `CommandBus`)
+- `GET /v1/tasks/:id` — карточка одной задачи
+- `PATCH /v1/tasks/:id/status` — перевод задачи в допустимый по графу статус (см.
+  `openspec/changes/replace-bitrix-task-integration/specs/tasks/spec.md`) — единственное место
+  проверки графа переходов (`Task.transitionTo`)
+
 ## modules/work-schedule (`/v1/work-schedule`)
 График работы сотрудников (Фаза 1, `docs/employee-work-schedule`) — общая на компанию модель
 `WorkScheduleEntry` (пара «сотрудник × календарный день» → статус дня, часы смены, роль дня), модуль

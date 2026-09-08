@@ -7,7 +7,7 @@ import { RoappSyncModule } from '@/domains/service/sync/roapp/roapp-sync.module'
 import { RoappModule } from '@/domains/service/integrations/roapp/roapp.module';
 import { RoappCashDocumentAdapter } from '@/domains/service/integrations/roapp/roapp-cash-document.adapter';
 import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/employee-operation-lock.module';
-import { BitrixModule } from '@/integrations/bitrix/bitrix.module';
+import { TasksModule } from '@/modules/tasks/tasks.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/update-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-salary-rule.handler';
@@ -38,8 +38,7 @@ import { GetClosePeriodPreviewService } from '@/domains/service/modules/accounti
 import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/accounting/application/services/calculation/calculate-service-snapshot-rows.service';
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
-import { EnsureSalaryTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
-import { TaskCompletionAutoCreationCron } from '@/domains/service/modules/accounting/infrastructure/cron/task-completion-auto-creation.cron';
+import { EnsureRuleTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/create-motivation-schema.http.controller';
@@ -80,7 +79,6 @@ import { PAYOUT_CASHBOX_RECORD_REPOSITORY } from '@/domains/service/modules/acco
 import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accounting/application/ports/erp-cash/erp-cash-document.port';
 import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/calculation/snapshot-rows-calculator.port';
-import { SALARY_TASK_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
 import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/motivation-schema.repository';
 import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/salary-rule.repository';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period.repository';
@@ -92,7 +90,6 @@ import { BalanceTransactionRepository } from '@/modules/employee-balance/infrast
 import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infrastructure/repositories/employee-dismissal.repository';
 import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/erp-cash-config.repository';
 import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';
-import { SalaryTaskRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-task/salary-task.repository';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period/accounting-period-closed.event-handler';
@@ -167,10 +164,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         // на процесс, тот же приём, что DirectionSyncLockModule у
         // RoappSyncModule/MoySkladSyncModule.
         EmployeeOperationLockModule,
-        // Раздел 11 tasks.md (add-task-based-salary-rule) — BITRIX_TASKS_GATEWAY
-        // для EnsureSalaryTaskForPeriodService (создание/пересоздание задачи
-        // Bitrix24 регулярного правила TaskCompletion на новый период).
-        BitrixModule,
+        // replace-bitrix-task-integration, design.md решение 1/5 — сквозной
+        // модуль src/modules/tasks: TASK_REPOSITORY (для
+        // task-completion-statuses.builder.ts/BuildServiceCalculationContextService,
+        // напрямую, без Port/Adapter) и CancelTaskForRuleDeletionService
+        // (для UpdateMotivationSchemaHandler); CreateTaskCommand
+        // диспатчится через общий CommandBus (EnsureRuleTaskForPeriodService)
+        // без отдельного импорта — CqrsModule уже общий.
+        TasksModule,
     ],
     controllers: [
         CreateMotivationSchemaHttpController,
@@ -260,15 +261,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         GetAccountingPeriodService,
         BuildServiceCalculationContextService,
         ResolveEmployeeSalaryRulesService,
-        // Раздел 11 tasks.md (add-task-based-salary-rule), design.md
-        // Decision 4 — идемпотентное автосоздание/пересоздание задачи
-        // Bitrix24 регулярного правила TaskCompletion на новый расчётный
-        // период. Два входа: TaskCompletionAutoCreationCron (первого числа
-        // месяца) и ленивый вызов из GetEmployeeSalaryReportService/
-        // GetDepartmentSalaryReportService (см. там) — @ProdCron не тикает
-        // в dev.
-        EnsureSalaryTaskForPeriodService,
-        TaskCompletionAutoCreationCron,
+        // replace-bitrix-task-integration, design.md решение 4 —
+        // идемпотентное автосоздание/пересоздание задачи регулярного
+        // правила TaskCompletion на новый расчётный период. Единственный
+        // вход — ленивый вызов из GetEmployeeSalaryReportService/
+        // GetDepartmentSalaryReportService (см. там) при открытии отчёта;
+        // прежний отдельный @ProdCron (TaskCompletionAutoCreationCron)
+        // удалён — его функцию полностью заменяет этот ленивый вызов.
+        EnsureRuleTaskForPeriodService,
         ListSalaryRuleTypesService,
         ListSalaryAccrualsService,
         GetSalaryAccrualService,
@@ -344,17 +344,6 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         {
             provide: PAYOUT_CASHBOX_RECORD_REPOSITORY,
             useClass: PayoutCashboxRecordRepository,
-        },
-        // Раздел 9 tasks.md (add-task-based-salary-rule): задача Bitrix24
-        // правила TaskCompletion (design.md Decision 1) — общая таблица
-        // salary_tasks, но НЕ direction-агностичная реализация (в отличие
-        // от PAYOUT_CASHBOX_RECORD_REPOSITORY/BALANCE_TRANSACTION_REPOSITORY
-        // выше): SalaryTaskRepository всегда подставляет/фильтрует
-        // direction='service'; у shop с раздела 14 собственный независимый
-        // токен SHOP_SALARY_TASK_REPOSITORY в ShopAccountingModule.
-        {
-            provide: SALARY_TASK_REPOSITORY,
-            useClass: SalaryTaskRepository,
         },
         // Адаптер записи в кассу RemOnline (PRD 3, Фаза 11) — НЕ
         // direction-агностичен, в отличие от ERP_CASH_CONFIG_REPOSITORY/

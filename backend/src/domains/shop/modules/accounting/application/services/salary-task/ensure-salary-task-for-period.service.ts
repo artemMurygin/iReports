@@ -1,83 +1,57 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import {
     ArgumentInvalidException,
     NotFoundException,
 } from '@/shared/exceptions';
 import { Period } from '@/shared/domain/period.value-object';
-import { SHOP_SALARY_TASK_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import type { ShopSalaryRuleRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
-import { BITRIX_TASKS_GATEWAY } from '@/integrations/bitrix/ports/bitrix-tasks-gateway.port';
-import type { BitrixTasksGatewayPort } from '@/integrations/bitrix/ports/bitrix-tasks-gateway.port';
-import { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
-import { ShopTaskStatus } from '@/domains/shop/modules/accounting/domain/value-objects/task-status.value-object';
+import { CreateTaskCommand } from '@/modules/tasks/application/command/create-task/create-task.command';
 import type {
     ShopSalaryRule,
     TaskCompletionShopSalaryConfig,
 } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import { computeRecurringTaskDeadline } from '@/domains/shop/modules/accounting/domain/services/task-deadline';
 
-// Раздел 16 tasks.md (add-task-based-salary-rule), design.md Decision 4 —
-// зеркало EnsureSalaryTaskForPeriodService направления service (раздел 11,
-// issue #57 — независимая копия), по прямому образцу
-// EnsureSalesPlansForPeriodService/SalesPlanAutoCreationCron. Идемпотентность
-// ключуется по ОДНОМУ правилу (salaryRuleId, period) — у ShopSalaryTask
-// свой естественный ключ (@@unique в salary-task.prisma, задача 1.1), а не
-// по совокупности scope-ключей, как у планов продаж.
+// openspec/changes/replace-bitrix-task-integration, design.md решение 4 /
+// architecture.md (EnsureRuleTaskForPeriodService) — зеркало одноимённого
+// сервиса направления service (issue #57 — независимая копия), по прямому
+// образцу EnsureSalesPlansForPeriodService/SalesPlanAutoCreationCron.
+// Переехал сюда, в accounting, из tasks (design.md решение 1/4) — именно
+// потому что идемпотентность "одна задача на правило за период" теперь
+// описывается картой в самом SalaryRule.config, которую знает только
+// accounting; tasks про эту связь не знает вовсе.
 //
-// responsibleBitrixUserId передаётся ВЫЗЫВАЮЩИМ кодом (report-сервисы уже
-// знают Bitrix-сотрудника, для которого считают отчёт — см.
-// CalculationEmployee.id в calculation-context.ts, единственный источник
-// истины о человеке в расчёте), а не резолвится здесь — этот сервис не
-// инжектит ShopMotivationSchemaRepository и не обходит схемы:
-// SHOP_SALARY_RULE_REPOSITORY нужен только для чтения
-// TaskCompletionShopSalaryConfig конкретного правила.
+// responsibleEmployeeId (assigneeEmployeeId) передаётся ВЫЗЫВАЮЩИМ кодом
+// (report-сервисы уже знают сотрудника, для которого считают отчёт, см.
+// CalculationEmployee.id в calculation-context.ts) — этот сервис не
+// резолвит его сам.
 //
-// ⚠️ Открытый вопрос (унаследован от зеркального сервиса направления
-// service, не решён design.md/tasks.md явно): если правило TaskCompletion
-// заведено на схему ОТДЕЛА (а не личную), у него один и тот же salaryRuleId
-// для всех сотрудников отдела — уникальный индекс (salaryRuleId, period)
-// физически допускает только ОДНУ задачу Bitrix24 на правило за период,
-// значит только ПЕРВЫЙ обработанный сотрудник станет реальным
-// RESPONSIBLE_ID; остальные обращения ensure() для того же правила в этом
-// периоде просто найдут уже существующую запись (идемпотентно, без ошибки),
-// но с "чужим" ответственным. Решение оставлено как есть, тем же приёмом,
-// что и у зеркального сервиса — затронуто только department-scoped
-// TaskCompletion, если он вообще используется на практике.
+// ⚠️ Открытый вопрос (унаследован из design.md Risks, не решён явно): если
+// правило TaskCompletion заведено на схему ОТДЕЛА (а не личную), у него
+// один и тот же salaryRuleId для всех сотрудников отдела — идемпотентность
+// по (salaryRuleId, period) в config.taskIdByPeriod физически допускает
+// только ОДНУ задачу на правило за период, значит только ПЕРВЫЙ
+// обработанный сотрудник станет реальным assigneeEmployeeId; остальные
+// обращения ensure() для того же правила в этом периоде просто найдут уже
+// существующую запись (идемпотентно, без ошибки), но с "чужим"
+// ответственным.
 //
 // spec: shop/accounting#requirement-разовое-и-регулярное-правило-за-выполнение-задачи
 @Injectable()
 export class EnsureShopSalaryTaskForPeriodService {
     constructor(
-        @Inject(SHOP_SALARY_TASK_REPOSITORY)
-        private readonly taskRepo: ShopSalaryTaskRepositoryPort,
-        @Inject(BITRIX_TASKS_GATEWAY)
-        private readonly bitrixTasksGateway: BitrixTasksGatewayPort,
         @Inject(SHOP_SALARY_RULE_REPOSITORY)
         private readonly ruleRepo: ShopSalaryRuleRepositoryPort,
+        private readonly commandBus: CommandBus,
     ) {}
 
     async ensure(
         salaryRuleId: string,
         period: string,
-        responsibleBitrixUserId: number,
-    ): Promise<ShopSalaryTask | null> {
-        // Строка уже есть за этот период (в любом статусе) — не
-        // пересоздаём: идемпотентность именно в этом. Уникальный индекс
-        // (salaryRuleId, period) в Prisma — последняя линия защиты от
-        // гонки параллельных вызовов (крон + ленивый триггер), отдельно её
-        // здесь не ловим (тот же приём, что и в
-        // EnsureShopSalesPlansForPeriodService/зеркальном сервисе
-        // направления service).
-        const existing = await this.taskRepo.findByRuleAndPeriod(
-            salaryRuleId,
-            period,
-        );
-        if (existing) {
-            return existing;
-        }
-
+        assigneeEmployeeId: number,
+    ): Promise<string | null> {
         const rule = await this.ruleRepo.findById(salaryRuleId);
         if (!rule) {
             throw new NotFoundException(
@@ -91,12 +65,18 @@ export class EnsureShopSalaryTaskForPeriodService {
         }
         const config = rule.config as TaskCompletionShopSalaryConfig;
 
+        // Идемпотентность — карта config.taskIdByPeriod, а не отдельный
+        // unique-индекс (design.md решение 2): запись за этот период уже
+        // есть (в любом статусе) — не пересоздаём.
+        const existingTaskId = config.taskIdByPeriod[period];
+        if (existingTaskId) {
+            return existingTaskId;
+        }
+
         // Разовое правило создаёт РОВНО одну задачу — при создании самого
-        // правила (CreateShopSalaryRuleHandler, раздел 17), не через
-        // ensure(). Если к этому моменту существующей записи за period нет
-        // (проверено выше), значит запрошенный period — не период создания
-        // разового правила: спека требует, что оно "больше не создаёт
-        // новую задачу и не участвует в начислении следующего периода".
+        // правила (TaskCompletionShop.create(), не через ensure()). Если к
+        // этому моменту записи за period нет (проверено выше), значит
+        // запрошенный period — не период создания разового правила.
         if (!config.isRecurring) {
             return null;
         }
@@ -107,34 +87,53 @@ export class EnsureShopSalaryTaskForPeriodService {
             config.deadlineTemplate,
         );
 
-        const { bitrixTaskId } = await this.bitrixTasksGateway.createTask({
-            responsibleBitrixUserId,
-            title: config.bitrixTaskTitle,
-            description: config.taskDescription,
-            deadline,
-        });
+        // Единственное оставшееся межмодульное обращение accounting → tasks
+        // (design.md решение 4) — публичный use-case tasks через общий
+        // CommandBus, тот же, что и HTTP POST /v1/tasks, не приватный
+        // "бэкдор" для accounting.
+        const { id: taskId } = await this.commandBus.execute<
+            CreateTaskCommand,
+            { id: string }
+        >(
+            new CreateTaskCommand({
+                title: config.taskTitleTemplate,
+                description: config.taskDescriptionTemplate,
+                deadline,
+                assigneeEmployeeId,
+                direction: 'shop',
+            }),
+        );
 
-        const task = ShopSalaryTask.create({
-            salaryRuleId,
-            period: periodVO,
-            deadline,
-            isRecurring: true,
-            bitrixTaskId,
-            taskStatus: ShopTaskStatus.newlyCreated(),
-        });
+        // Свежий объект, структурно удовлетворяющий ShopSalaryRule (а не
+        // мутация уже полученного rule "на месте") — тот же приём, что и у
+        // ShopSalaryRuleFactory.restore()/mapper.toDomain(): repository.
+        // update() читает только id/type/name/targetRole/config через
+        // ShopSalaryRuleMapper.toPersistence(), поэтому плоский объект
+        // достаточен и не зависит от того, какой конкретный класс вернул
+        // findById().
+        const updatedRule: ShopSalaryRule = {
+            id: rule.id,
+            name: rule.name,
+            type: rule.type,
+            targetRole: rule.targetRole,
+            config: {
+                ...config,
+                taskIdByPeriod: { ...config.taskIdByPeriod, [period]: taskId },
+            },
+            updatedAt: rule.updatedAt,
+            calculate: (context) => rule.calculate(context),
+        };
+        await this.ruleRepo.update(updatedRule);
 
-        await this.taskRepo.insert(task);
-
-        return task;
+        return taskId;
     }
 }
 
-// Раздел 16 tasks.md — экспортируется для переиспользования вызывающими
-// (GetShopEmployeeSalaryReportService/GetShopDepartmentSalaryReportService/
-// ShopTaskCompletionAutoCreationCron) — единое определение "какие правила
-// ensure() вообще касается", чтобы три места не разошлись в критерии
-// фильтрации (зеркало filterRecurringTaskCompletionRules направления
-// service).
+// Экспортируется для переиспользования вызывающими
+// (GetShopEmployeeSalaryReportService/GetShopDepartmentSalaryReportService)
+// — единое определение "какие правила ensure() вообще касается", чтобы
+// места не разошлись в критерии фильтрации (зеркало
+// filterRecurringTaskCompletionRules направления service).
 export function filterRecurringTaskCompletionShopRules(
     rules: ShopSalaryRule[],
 ): ShopSalaryRule[] {
@@ -143,26 +142,4 @@ export function filterRecurringTaskCompletionShopRules(
             rule.type === 'TaskCompletion' &&
             (rule.config as TaskCompletionShopSalaryConfig).isRecurring,
     );
-}
-
-// Раздел 17 tasks.md (add-task-based-salary-rule) — зеркало
-// resolveTaskDeadlineForCreation направления service (раздел 12,
-// application/services/salary-task/ensure-salary-task-for-period.service.ts,
-// issue #57 — независимая копия). Дедлайн задачи, создаваемой ПРИ
-// ЗАВЕДЕНИИ правила TaskCompletion (CreateShopSalaryRuleHandler, раздел
-// 17) — в отличие от ensure() выше (только регулярные правила на СЛЕДУЮЩИЙ
-// период), здесь правило может быть и разовым: deadlineTemplate берётся
-// буквально (разовое) или переносится на день месяца текущего периода
-// (регулярное, computeRecurringTaskDeadline) — та же развилка, что и в
-// TaskCompletionShopSalaryConfig.deadlineTemplate (задача 15.3/2.1).
-export function resolveTaskDeadlineForCreation(
-    config: TaskCompletionShopSalaryConfig,
-    period: string,
-): Date {
-    return config.isRecurring
-        ? computeRecurringTaskDeadline(
-              Period.create(period),
-              config.deadlineTemplate,
-          )
-        : new Date(config.deadlineTemplate);
 }

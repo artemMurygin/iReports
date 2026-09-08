@@ -46,7 +46,8 @@ describe('SalaryRuleFactory', () => {
             name: 'За выполнение задачи',
             targetRole: 'ENGINEER',
             config: {
-                bitrixTaskTitle: 'Проверить остатки',
+                taskId: 'a1b2c3d4-0000-4000-8000-000000000001',
+                taskTitleTemplate: 'Проверить остатки',
                 isRecurring: false,
                 deadlineTemplate: '2026-08-15',
                 defaultAmount: 5000,

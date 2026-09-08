@@ -1,114 +1,64 @@
-import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { ArgumentInvalidException } from '@/shared/exceptions';
-import { TaskStatus } from '@/domains/service/modules/accounting/domain/value-objects/task-status.value-object';
 
-// Раздел 9 tasks.md (add-task-based-salary-rule): доменная сущность поверх
-// Prisma-модели SalaryTask (salary-task.prisma, задача 1.1) — общей для
-// service/shop таблицы salary_tasks (design.md Decision 1, backend/CLAUDE.md
-// "Общие таблицы между service и shop"). Направление НЕ хранится в props —
-// этот класс физически определён в domains/service и всегда представляет
-// строку direction='service' (изоляция на уровне кода: маппер/репозиторий
-// этого же раздела фиксируют direction='service' при персистентности, а не
-// принимают его параметром). Зеркало — ShopSalaryTask (раздел 14),
-// независимый класс в domains/shop.
-//
-// Одна запись на (salaryRuleId, period) — разовое правило (isRecurring =
-// false) заводит ровно одну запись за всё время жизни, регулярное — по
-// одной на период (design.md Decision 1/4, @@unique([salaryRuleId, period])
-// в Prisma-модели — последний рубеж защиты от гонки при автосоздании,
-// раздел 11).
+// replace-bitrix-task-integration, design.md решение 5 (пересмотрено
+// пользователем дважды — Port/Adapter поверх этого признан избыточной
+// церемонией): доменная Entity accounting поверх сырых данных
+// src/modules/tasks, БЕЗ Port/Adapter. Создаётся ПРЯМО в момент получения
+// Task[] от TASK_REPOSITORY.findManyByIds() (task-completion-statuses.builder.ts,
+// без промежуточного класса-переводчика) — не персистентная, таблицы под
+// неё нет, пересоздаётся заново на каждый расчёт (в т.ч. при пересчёте
+// открытого периода).
 export interface CreateSalaryTaskProps {
-    salaryRuleId: string;
-    period: string;
-    deadline: Date;
-    isRecurring: boolean;
-    bitrixTaskId: string;
-    taskStatus: TaskStatus;
-    lastSyncedAt?: Date | null;
+    taskId: string;
+    status: string;
 }
 
 export interface SalaryTaskProps {
-    salaryRuleId: string;
-    period: string;
-    deadline: Date;
-    isRecurring: boolean;
-    bitrixTaskId: string;
-    taskStatus: TaskStatus;
-    lastSyncedAt: Date | null;
+    status: string;
 }
 
 export class SalaryTask extends Entity<SalaryTaskProps> {
     declare protected readonly _id: AggregateID;
 
+    // identity — сам taskId (id связанной Task модуля tasks), а не
+    // сгенерированный uuid: SalaryTask не самостоятельная сущность, а
+    // локальное представление одной конкретной Task для нужд accounting.
     static create(props: CreateSalaryTaskProps): SalaryTask {
         return new SalaryTask({
-            id: randomUUID(),
-            props: {
-                ...props,
-                lastSyncedAt: props.lastSyncedAt ?? null,
-            },
+            id: props.taskId,
+            props: { status: props.status },
         });
     }
 
-    get salaryRuleId(): string {
-        return this.props.salaryRuleId;
+    get taskId(): string {
+        return this.id;
     }
 
-    get period(): string {
-        return this.props.period;
+    // Сырой код статуса ('NEW'/'IN_PROGRESS'/'DONE'/'CLOSED_SUCCESSFULLY'/
+    // 'CLOSED_UNSUCCESSFULLY'/'REWORK'), ПОЛУЧЕННЫЙ из данных tasks — не
+    // через TaskStatus VO модуля tasks (design.md решение 5: accounting сам,
+    // локально, знает и проверяет нужный код статуса).
+    get status(): string {
+        return this.props.status;
     }
 
-    get deadline(): Date {
-        return this.props.deadline;
-    }
-
-    get isRecurring(): boolean {
-        return this.props.isRecurring;
-    }
-
-    get bitrixTaskId(): string {
-        return this.props.bitrixTaskId;
-    }
-
-    get taskStatus(): TaskStatus {
-        return this.props.taskStatus;
-    }
-
-    get lastSyncedAt(): Date | null {
-        return this.props.lastSyncedAt;
-    }
-
-    // Обновление статуса задачи через доменный метод (а не прямое присвоение
-    // поля извне) — SalaryTaskStatusSyncCron (раздел 8) сознательно
-    // обходит домен и пишет напрямую в БД (см. WHY в
-    // salary-task-status-sync.service.ts, «обновление taskStatus/
-    // lastSyncedAt не несёт доменной бизнес-логики»); этот метод обслуживает
-    // остальные пути, идущие через домен/репозиторий этого модуля (создание/
-    // закрытие задачи из правила, раздел 12).
-    markStatus(status: TaskStatus): void {
-        this.props.taskStatus = status;
+    // Бизнес-правило accounting «что считается выполненным для целей
+    // начисления» — описано ЗДЕСЬ, локально, не делегируется в
+    // TaskStatus.isTerminal()/чужой код модуля tasks (design.md решение 3:
+    // только «Закрыта успешно» запускает начисление правила TaskCompletion,
+    // НЕ «Выполнена» и не любой другой терминальный статус).
+    isCompleted(): boolean {
+        return this.props.status === 'CLOSED_SUCCESSFULLY';
     }
 
     validate(): void {
-        if (!this.props.salaryRuleId) {
-            throw new ArgumentInvalidException(
-                'Задача Bitrix24 должна ссылаться на зарплатное правило (salaryRuleId)',
-            );
+        if (!this.id) {
+            throw new ArgumentInvalidException('Задача должна иметь taskId');
         }
-        if (!this.props.period) {
+        if (!this.props.status) {
             throw new ArgumentInvalidException(
-                'Задача Bitrix24 должна ссылаться на расчётный период (period)',
-            );
-        }
-        if (!this.props.bitrixTaskId) {
-            throw new ArgumentInvalidException(
-                'Задача Bitrix24 должна иметь bitrixTaskId',
-            );
-        }
-        if (!this.props.deadline) {
-            throw new ArgumentInvalidException(
-                'Задача Bitrix24 должна иметь дедлайн (deadline)',
+                'Задача должна иметь статус (status)',
             );
         }
     }

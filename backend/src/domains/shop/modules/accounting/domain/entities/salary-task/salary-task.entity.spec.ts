@@ -1,78 +1,50 @@
 import { ShopSalaryTask } from './salary-task.entity';
-import { ShopTaskStatus } from '../../value-objects/task-status.value-object';
-import { Period } from '@/shared/domain/period.value-object';
-import { withRequestContext } from '@/shared/testing/with-request-context';
 
-// Раздел 14 tasks.md (add-task-based-salary-rule) — независимая копия
-// теста (зеркало domains/service/modules/accounting/domain/entities/
-// salary-task/salary-task.entity.spec.ts, раздел 9, issue #57).
+// openspec/changes/replace-bitrix-task-integration, design.md решение 5 /
+// architecture.md (Entities: SalaryTask) — независимая копия для
+// направления shop (issue #57, зеркало domains/service/modules/accounting/
+// domain/entities/salary-task/salary-task.entity.spec.ts, не
+// переиспользует ни класс, ни тест сервиса). Заменяет прежний
+// ShopSalaryTask (задача Bitrix24 salary_tasks) — теперь это эфемерная
+// (не персистентная) Entity поверх сырых данных Task (src/modules/tasks),
+// созданная прямо в task-completion-statuses.builder.ts.
 describe('ShopSalaryTask', () => {
-    const validProps = () => ({
-        salaryRuleId: 'rule-1',
-        period: Period.create('2026-09'),
-        deadline: new Date('2026-09-25T00:00:00.000Z'),
-        isRecurring: true,
-        bitrixTaskId: 'bx-task-1',
-        taskStatus: ShopTaskStatus.done(),
-    });
-
     describe('create', () => {
-        it('создаёт задачу с валидными обязательными полями', () => {
-            withRequestContext(() => {
-                const task = ShopSalaryTask.create(validProps());
-
-                expect(task.salaryRuleId).toBe('rule-1');
-                expect(task.bitrixTaskId).toBe('bx-task-1');
-                expect(task.isRecurring).toBe(true);
-                expect(task.lastSyncedAt).toBeNull();
+        it('создаёт сущность с identity = taskId и заданным статусом', () => {
+            const task = ShopSalaryTask.create({
+                taskId: 'task-1',
+                status: 'IN_PROGRESS',
             });
-        });
 
-        it('требует bitrixTaskId — падает без него', () => {
-            withRequestContext(() => {
-                expect(() =>
-                    ShopSalaryTask.create({
-                        ...validProps(),
-                        bitrixTaskId: '',
-                    }),
-                ).toThrow();
-            });
-        });
-
-        it('требует deadline — падает без него', () => {
-            withRequestContext(() => {
-                expect(() =>
-                    ShopSalaryTask.create({
-                        ...validProps(),
-                        deadline: undefined as unknown as Date,
-                    }),
-                ).toThrow();
-            });
-        });
-
-        it('требует salaryRuleId — падает без него', () => {
-            withRequestContext(() => {
-                expect(() =>
-                    ShopSalaryTask.create({
-                        ...validProps(),
-                        salaryRuleId: '',
-                    }),
-                ).toThrow();
-            });
+            expect(task.taskId).toBe('task-1');
+            expect(task.id).toBe('task-1');
+            expect(task.status).toBe('IN_PROGRESS');
         });
     });
 
-    describe('markStatus', () => {
-        it('обновляет taskStatus и lastSyncedAt', () => {
-            withRequestContext(() => {
-                const task = ShopSalaryTask.create(validProps());
-                const syncedAt = new Date('2026-09-10T12:00:00.000Z');
-
-                task.markStatus(ShopTaskStatus.fromRaw('3'), syncedAt);
-
-                expect(task.taskStatus.getValue()).toBe('3');
-                expect(task.lastSyncedAt).toEqual(syncedAt);
+    describe('isCompleted', () => {
+        // design.md Decision 3/5 — только CLOSED_SUCCESSFULLY запускает
+        // начисление правила TaskCompletion, НЕ DONE и не любой другой
+        // терминальный статус.
+        it('true только для статуса CLOSED_SUCCESSFULLY', () => {
+            const task = ShopSalaryTask.create({
+                taskId: 'task-1',
+                status: 'CLOSED_SUCCESSFULLY',
             });
+
+            expect(task.isCompleted()).toBe(true);
+        });
+
+        it.each([
+            'NEW',
+            'IN_PROGRESS',
+            'DONE',
+            'REWORK',
+            'CLOSED_UNSUCCESSFULLY',
+        ])('false для статуса %s', (status) => {
+            const task = ShopSalaryTask.create({ taskId: 'task-1', status });
+
+            expect(task.isCompleted()).toBe(false);
         });
     });
 });

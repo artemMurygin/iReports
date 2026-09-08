@@ -8,8 +8,8 @@ import type { ServiceCalculationErpData } from '@/domains/service/modules/accoun
 import { SALES_PERFORMANCE_READER } from '@/domains/service/modules/sales/application/ports/sales-performance.port';
 import type { SalesPerformanceReaderPort } from '@/domains/service/modules/sales/application/ports/sales-performance.port';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
-import { SALARY_TASK_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
-import type { SalaryTaskRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
+import { TASK_REPOSITORY } from '@/modules/tasks/application/ports/task.repository.port';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
 import type { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { buildTaskCompletionStatuses } from '@/domains/service/modules/accounting/application/services/calculation/task-completion-statuses.builder';
 
@@ -47,18 +47,18 @@ export class BuildServiceCalculationContextService {
         private readonly dataSource: ServiceCalculationDataPort,
         @Inject(SALES_PERFORMANCE_READER)
         private readonly salesPerformanceReader: SalesPerformanceReaderPort,
-        @Inject(SALARY_TASK_REPOSITORY)
-        private readonly taskRepo: SalaryTaskRepositoryPort,
+        @Inject(TASK_REPOSITORY)
+        private readonly taskRepo: TaskRepositoryPort,
     ) {}
 
-    // Раздел 12 tasks.md (add-task-based-salary-rule) — rules: уже
+    // replace-bitrix-task-integration, design.md решение 5 — rules: уже
     // разрешённый набор правил сотрудника (личных + отдела, см.
     // ResolveEmployeeSalaryRulesService), нужен только чтобы вычленить
-    // TaskCompletion-правила и подтянуть их SalaryTask.taskStatus текущего
-    // периода (erpData.taskCompletionStatuses, design.md Decision 7).
-    // Вызывающий (GetEmployeeSalaryReportService) уже резолвит rules ДО
-    // построения контекста — не дублируем поход в MotivationSchemaRepository
-    // здесь.
+    // TaskCompletion-правила и подтянуть SalaryTask текущего периода
+    // (erpData.taskCompletionStatuses) через TASK_REPOSITORY.findManyByIds()
+    // напрямую. Вызывающий (GetEmployeeSalaryReportService) уже резолвит
+    // rules ДО построения контекста — не дублируем поход в
+    // MotivationSchemaRepository здесь.
     async build(
         period: Period,
         employeeId: number,

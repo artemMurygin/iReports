@@ -15,9 +15,10 @@ export interface ShopSalaryRuleRepositoryPort {
     // PATCH /v1/shop/accounting/motivation-schema/:id (редактирование
     // схемы) — удаляет ТОЛЬКО правила, которых нет в новом наборе из тела
     // запроса (diff по id, см. UpdateShopMotivationSchemaHandler) — не
-    // полная замена, иначе TaskCompletion теряет привязанную задачу
-    // Bitrix24 при каждом PATCH, даже когда правило не менялось (design.md
-    // Decision 6, add-task-based-salary-rule). Реализация фиксирует
+    // полная замена, иначе TaskCompletion теряет привязку к своим задачам
+    // при каждом PATCH, даже когда правило не менялось (openspec/changes/
+    // replace-bitrix-task-integration, design.md решение 3/5). Реализация
+    // фиксирует
     // direction='shop' в WHERE — критично: у одной строки motivation_schemas
     // может быть смешанный набор правил service+shop (сотрудник с
     // идентичностями в обеих ERP, см. комментарий у SalaryRule.direction в
@@ -28,19 +29,19 @@ export interface ShopSalaryRuleRepositoryPort {
     // Персист правила ПОСЛЕ создания (не insert — сущность уже существует в
     // БД), для точечных мутаций props правила in-place — используется
     // UpdateShopMotivationSchemaHandler для правил, сохранившихся между
-    // PATCH (совпали по id), чтобы id/связанные сущности (SalaryTask у
-    // TaskCompletion) не терялись при правке содержимого правила.
+    // PATCH (совпали по id), чтобы id/config.taskIdByPeriod (у
+    // TaskCompletion) не терялись при правке содержимого правила, и
+    // EnsureShopSalaryTaskForPeriodService.ensure() для сохранения нового
+    // taskId периода.
     update(entity: ShopSalaryRule): Promise<void>;
 
-    // Раздел 16 tasks.md (add-task-based-salary-rule) — правило по id, для
-    // чтения TaskCompletionShopSalaryConfig в EnsureShopSalaryTaskForPeriodService.
-    // ensure() (раздел 16). null, если правила с таким id нет либо оно
-    // принадлежит направлению service (та же фильтрация direction='shop' в
-    // WHERE, что и у остальных методов этого порта) — тот же плоский тип
-    // ShopSalaryRule, что и у зеркального метода направления service
-    // (application/ports/motivation-schema/salary-rule.port.ts, раздел 11).
-    // responsibleBitrixUserId для createTask() — забота ВЫЗЫВАЮЩЕГО кода
-    // (report-сервисы/крон уже знают employeeId, см.
+    // Правило по id, для чтения TaskCompletionShopSalaryConfig в
+    // EnsureShopSalaryTaskForPeriodService.ensure(). null, если правила с
+    // таким id нет либо оно принадлежит направлению service (та же
+    // фильтрация direction='shop' в WHERE, что и у остальных методов этого
+    // порта) — тот же плоский тип ShopSalaryRule, что и у зеркального
+    // метода направления service. assigneeEmployeeId для CreateTaskCommand
+    // — забота ВЫЗЫВАЮЩЕГО кода (report-сервисы уже знают employeeId, см.
     // EnsureShopSalaryTaskForPeriodService.ensure()), этот метод не
     // обходит мотивационные схемы и не резолвит ответственного.
     findById(ruleId: string): Promise<ShopSalaryRule | null>;

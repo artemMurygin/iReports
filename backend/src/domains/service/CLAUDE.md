@@ -122,6 +122,17 @@ domains/service/
   /v1/service/accounting/salary_report/employee/:id/:period`),
   `GetDepartmentSalaryReportService` (`GET .../department/:id/:period`), оба поверх
   `PeriodCalculationOrchestrator` + `rule.calculate()`.
+- **Правило `TaskCompletion`** (`replace-bitrix-task-integration`) не хранит и не синкает задачу
+  само — задача (общая для `service`/`shop` сущность `Task`) живёт в сквозном модуле
+  `src/modules/tasks` (см. `backend/CLAUDE.md`, раздел «Integrations»). `config.taskIdByPeriod`
+  хранит только `id` задачи по периоду; `SalaryTask` (`domain/entities/salary-task/`) — локальная,
+  НЕ персистентная Entity этого домена, конструируется прямо в
+  `task-completion-statuses.builder.ts` из данных, прочитанных через `TASK_REPOSITORY` (без
+  Port/Adapter), и инкапсулирует бизнес-правило `isCompleted()` (только статус «Закрыта успешно»
+  запускает начисление). `EnsureRuleTaskForPeriodService` (`application/services/salary-task/`) —
+  идемпотентное автосоздание задачи регулярного правила на новый период, вызывается из
+  `GetEmployeeSalaryReportService`/`GetDepartmentSalaryReportService`; это единственное оставшееся
+  межмодульное обращение `accounting → tasks` (через `CommandBus`, не приватный сервис).
 
 ### `modules/sales` — план/факт/прогноз продаж (Фазы 3–5) + сделки/лиды (в разработке, read-only)
 

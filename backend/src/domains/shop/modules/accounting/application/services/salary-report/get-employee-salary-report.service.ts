@@ -31,8 +31,8 @@ import {
     EnsureShopSalaryTaskForPeriodService,
     filterRecurringTaskCompletionShopRules,
 } from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
-import { SHOP_SALARY_TASK_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import { TASK_REPOSITORY } from '@/modules/tasks/application/ports/task.repository.port';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
 import {
     findTaskCompletionTasks,
     taskCompletionFreshnessStamp,
@@ -91,13 +91,13 @@ export class GetShopEmployeeSalaryReportService {
         private readonly salesPlanRepo: ShopSalesPlanRepositoryPort,
         private readonly shopContextBuilder: BuildShopCalculationContextService,
         private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
-        // Раздел 16 tasks.md (add-task-based-salary-rule) — ленивое
-        // достраивание задачи Bitrix24 регулярного правила TaskCompletion
-        // на текущий период (design.md Decision 4: "@ProdCron не тикает
-        // вне prod", см. ShopTaskCompletionAutoCreationCron).
+        // openspec/changes/replace-bitrix-task-integration, design.md
+        // решение 4 — ленивое достраивание задачи регулярного правила
+        // TaskCompletion на текущий период ("@ProdCron не тикает вне
+        // prod" — отдельного крона больше нет, только этот ленивый вызов).
         private readonly ensureSalaryTask: EnsureShopSalaryTaskForPeriodService,
-        @Inject(SHOP_SALARY_TASK_REPOSITORY)
-        private readonly taskRepo: ShopSalaryTaskRepositoryPort,
+        @Inject(TASK_REPOSITORY)
+        private readonly taskRepo: TaskRepositoryPort,
     ) {}
 
     async execute(
@@ -181,10 +181,10 @@ export class GetShopEmployeeSalaryReportService {
         const { rules, schemasVersion } =
             await this.salaryRulesResolver.forEmployee(employeeId);
 
-        // Раздел 16 tasks.md — ленивый вызов ensure() ДО кэша: он не
-        // участвует в freshnessStamp расчёта (создание/пересоздание задачи
-        // Bitrix24 не влияет на уже посчитанные суммы, см. design.md
-        // Decision 5 — сумма правила TaskCompletion живёт на
+        // Ленивый вызов ensure() ДО кэша: он не участвует в freshnessStamp
+        // расчёта (создание/пересоздание задачи не влияет на уже
+        // посчитанные суммы, см. design.md решение 5 — сумма правила
+        // TaskCompletion живёт на
         // SalaryAccrualLine, не пересчитывается) и должен выполняться
         // независимо от того, есть ли валидный кэш.
         await this.ensureRecurringTaskCompletionTasks(
@@ -281,18 +281,16 @@ export class GetShopEmployeeSalaryReportService {
         );
     }
 
-    // Раздел 16 tasks.md (add-task-based-salary-rule) — по всем активным
-    // регулярным TaskCompletion-правилам запрашиваемого сотрудника
-    // (личная схема + схема отдела, см. ResolveShopEmployeeSalaryRulesService)
-    // за ТЕКУЩИЙ период обеспечивает существование задачи Bitrix24 (см.
-    // EnsureShopSalaryTaskForPeriodService — идемпотентно, не создаёт
-    // дублей). employeeId — тот же Bitrix ID, что уже пришёл параметром
-    // execute() (CalculationEmployee.id — единственный источник истины о
-    // человеке в расчёте, см. calculation-context.ts), передаётся как
-    // responsibleBitrixUserId. Ошибка одного правила (например, недоступен
-    // Bitrix24 REST) не должна ронять просмотр отчёта — логируется и
-    // пропускается, тот же fail-safe принцип, что и у
-    // ShopTaskCompletionAutoCreationCron.
+    // По всем активным регулярным TaskCompletion-правилам запрашиваемого
+    // сотрудника (личная схема + схема отдела, см.
+    // ResolveShopEmployeeSalaryRulesService) за ТЕКУЩИЙ период обеспечивает
+    // существование задачи (см. EnsureShopSalaryTaskForPeriodService —
+    // идемпотентно, не создаёт дублей). employeeId — тот же Bitrix ID, что
+    // уже пришёл параметром execute() (CalculationEmployee.id —
+    // единственный источник истины о человеке в расчёте, см.
+    // calculation-context.ts), передаётся как assigneeEmployeeId. Ошибка
+    // одного правила не должна ронять просмотр отчёта — логируется и
+    // пропускается.
     private async ensureRecurringTaskCompletionTasks(
         rules: ShopSalaryRule[],
         period: string,
@@ -311,7 +309,7 @@ export class GetShopEmployeeSalaryReportService {
                                 ? error.message
                                 : String(error);
                         this.logger.error(
-                            `Не удалось обеспечить задачу Bitrix24 для правила ${rule.id}: ${message}`,
+                            `Не удалось обеспечить задачу для правила ${rule.id}: ${message}`,
                         );
                     }),
             ),

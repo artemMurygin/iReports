@@ -47,7 +47,7 @@ npm run test -- deals.service    # jest, filter by filename/testname pattern
 npm run test -- --testPathPatterns=domains/service/modules/sales
 npm run test:watch
 npm run test:cov
-npm run test:e2e                # separate jest config: test/jest-e2e.json
+npm run test:e2e                # same jest config, filtered to *.e2e.spec.ts (colocated in src/)
 ```
 
 Prisma (schema lives in `prisma/schema/*.prisma`, config in `prisma.config.ts`):
@@ -197,7 +197,12 @@ Prisma-репозиторий, импортированный напрямую �
 правила в обе стороны: они физически не привязаны к одному направлению (баланс — единый на
 сотрудника, увольнение — общекорпоративные данные Bitrix24), поэтому и код, и данные для них живут
 в сквозных модулях `src/modules/employee-balance/`/`src/modules/employee-dismissal/`, а не
-дублируются по доменам.
+дублируются по доменам. По тому же прецеденту (полноценный модуль, зеркалирующий `employee-balance`,
+а не пустышка вроде `employee-dismissal`) устроен `src/modules/tasks/` — общая для `service`/`shop`
+сущность «Задача» (`replace-bitrix-task-integration`), полностью самостоятельная и не знающая о
+зарплатных правилах; `domains/{service,shop}/modules/accounting` ссылаются на неё через
+`TASK_REPOSITORY`/`CommandBus`, не дублируя реализацию — см. `domains/service/CLAUDE.md`/
+`domains/shop/CLAUDE.md`, раздел `modules/accounting`, за тем, как именно.
 
 ### Contracts
 

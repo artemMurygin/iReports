@@ -1,14 +1,11 @@
 import { ShopSalaryRuleRepository } from './salary-rule.repository';
 import type { DatabaseService } from '@/infrustructure/database/database.service';
 
-// Раздел 16 tasks.md (add-task-based-salary-rule) — тест ДО реализации
-// (TDD) для нового метода findById, добавленного ShopSalaryRuleRepositoryPort
-// ради EnsureShopSalaryTaskForPeriodService (зеркало findById направления
-// service, раздел 11). Юнит-тест мокает DatabaseService/Prisma-клиент (тот
-// же приём, что и у ShopSalaryTaskRepository.spec.ts) — insert/
-// deleteByIds/update этого репозитория уже покрыты только
-// косвенно через хендлеры, новый read-метод получает собственное покрытие
-// здесь.
+// Тест метода findById, добавленного ShopSalaryRuleRepositoryPort ради
+// EnsureShopSalaryTaskForPeriodService (зеркало findById направления
+// service). Юнит-тест мокает DatabaseService/Prisma-клиент — insert/
+// deleteByIds/update этого репозитория уже покрыты только косвенно через
+// хендлеры, новый read-метод получает собственное покрытие здесь.
 describe('ShopSalaryRuleRepository', () => {
     const buildRuleRecord = (overrides: Record<string, unknown> = {}) => ({
         id: 'rule-1',
@@ -18,8 +15,9 @@ describe('ShopSalaryRuleRepository', () => {
         targetRole: 'OFFLINE_MANAGER',
         direction: 'shop',
         props: {
-            bitrixTaskTitle: 'Собрать отчёт по продажам',
-            taskDescription: 'Описание задачи',
+            taskIdByPeriod: { '2026-01': 'task-1' },
+            taskTitleTemplate: 'Собрать отчёт по продажам',
+            taskDescriptionTemplate: 'Описание задачи',
             isRecurring: true,
             deadlineTemplate: '2026-01-25T18:00:00.000Z',
             defaultAmount: 5000,

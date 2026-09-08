@@ -33,12 +33,12 @@ import {
     EnsureShopSalaryTaskForPeriodService,
     filterRecurringTaskCompletionShopRules,
 } from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
-import { SHOP_SALARY_TASK_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import { TASK_REPOSITORY } from '@/modules/tasks/application/ports/task.repository.port';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
 import {
     findTaskCompletionTasks,
     taskCompletionFreshnessStamp,
-    taskCompletionStatusesFromTasks,
+    taskCompletionStatusesByRuleId,
 } from '@/domains/shop/modules/accounting/application/services/calculation/task-completion-statuses.builder';
 
 interface EmployeeCalculationResult {
@@ -108,16 +108,15 @@ export class GetShopDepartmentSalaryReportService {
         @Inject(SHOP_SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: ShopSalesPlanRepositoryPort,
         private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
-        // Раздел 16 tasks.md (add-task-based-salary-rule) — ленивое
-        // достраивание задачи Bitrix24 регулярного правила TaskCompletion
-        // на текущий период (design.md Decision 4), см. WHY в
+        // openspec/changes/replace-bitrix-task-integration, design.md
+        // решение 4 — ленивое достраивание задачи регулярного правила
+        // TaskCompletion на текущий период, см. WHY в
         // GetShopEmployeeSalaryReportService (зеркальный приём).
         private readonly ensureSalaryTask: EnsureShopSalaryTaskForPeriodService,
-        // Раздел 17 tasks.md (add-task-based-salary-rule) —
-        // erpData.taskCompletionStatuses отдела (design.md Decision 7), см.
+        // erpData.taskCompletionStatuses отдела (design.md решение 5), см.
         // WHY в buildOpenShopContributions ниже.
-        @Inject(SHOP_SALARY_TASK_REPOSITORY)
-        private readonly taskRepo: ShopSalaryTaskRepositoryPort,
+        @Inject(TASK_REPOSITORY)
+        private readonly taskRepo: TaskRepositoryPort,
     ) {}
 
     async execute(
@@ -265,9 +264,8 @@ export class GetShopDepartmentSalaryReportService {
             this.salesPlanRepo.findByPeriod(period),
         ]);
 
-        // Раздел 16 tasks.md (add-task-based-salary-rule) — ленивое
-        // достраивание задачи Bitrix24 для каждого активного регулярного
-        // TaskCompletion-правила отдела (design.md Decision 4). Ошибки по
+        // Ленивое достраивание задачи для каждого активного регулярного
+        // TaskCompletion-правила отдела (design.md решение 4). Ошибки по
         // отдельным правилам логируются и не прерывают построение отчёта
         // (см. WHY в GetShopEmployeeSalaryReportService, зеркальный приём).
         await this.ensureRecurringTaskCompletionTasks(
@@ -275,14 +273,13 @@ export class GetShopDepartmentSalaryReportService {
             period,
         );
 
-        // Раздел 17 tasks.md (add-task-based-salary-rule) —
         // erpData.taskCompletionStatuses ОДИН батч-запрос на весь отдел
         // (тот же принцип "не должно быть N+1", что и у остальных полей
         // выше), а не по одному на сотрудника внутри цикла ниже: все
         // TaskCompletion-правила ВСЕХ сотрудников отдела (личные + правило
         // отдела, уже развёрнутое ResolveShopEmployeeSalaryRulesService на
         // каждого) собираются в один список ДО цикла (зеркало
-        // GetDepartmentSalaryReportService направления service, раздел 12).
+        // GetDepartmentSalaryReportService направления service).
         const allRules = [...salaryRulesByEmployee.values()].flatMap(
             (resolved) => resolved.rules,
         );
@@ -291,14 +288,14 @@ export class GetShopDepartmentSalaryReportService {
             allRules,
             period,
         );
-        const taskCompletionStatuses =
-            taskCompletionStatusesFromTasks(taskCompletionTasks);
-        // Раздел 12 tasks.md (add-task-based-salary-rule) — штамп свежести на
-        // каждого сотрудника отдельно (см. WHY у taskCompletionFreshnessStamp),
-        // а не общий на весь отдел: иначе завершение чьей-то одной задачи
-        // инвалидировало бы кэш всех сотрудников отдела разом.
-        const taskCompletionTasksByRuleId = new Map(
-            taskCompletionTasks.map((task) => [task.salaryRuleId, task]),
+        // Ключ — ruleId (Task не хранит salaryRuleId вовсе, design.md
+        // решение 2): та же карта используется и как erpData.
+        // taskCompletionStatuses, и ниже, per-сотрудник, для штампа
+        // свежести (см. WHY у taskCompletionFreshnessStamp).
+        const taskCompletionStatuses = taskCompletionStatusesByRuleId(
+            allRules,
+            period,
+            taskCompletionTasks,
         );
 
         const salesPerformanceDetail =
@@ -349,7 +346,7 @@ export class GetShopDepartmentSalaryReportService {
 
             const employeeTaskCompletionTasks = rules
                 .filter((rule) => rule.type === 'TaskCompletion')
-                .map((rule) => taskCompletionTasksByRuleId.get(rule.id))
+                .map((rule) => taskCompletionStatuses[rule.id])
                 .filter((task) => task !== undefined);
 
             const freshnessStamp = AccountingCacheFreshness.buildStamp({
@@ -422,20 +419,18 @@ export class GetShopDepartmentSalaryReportService {
     // shop-sales-performance-by-category), зеркало collectProductCategoryIds
     // BuildShopCalculationContextService, но на весь список схем отдела, а
     // не одной схемы сотрудника.
-    // Раздел 16 tasks.md (add-task-based-salary-rule) — по всем активным
-    // регулярным TaskCompletion-правилам ВСЕХ сотрудников отдела (личная
-    // схема + схема отдела) за текущий период обеспечивает существование
-    // задачи Bitrix24 (см. EnsureShopSalaryTaskForPeriodService —
-    // идемпотентно, responsibleBitrixUserId — тот же Bitrix employeeId, что
-    // уже используется расчётом, см. WHY в GetShopEmployeeSalaryReportService).
+    // По всем активным регулярным TaskCompletion-правилам ВСЕХ сотрудников
+    // отдела (личная схема + схема отдела) за текущий период обеспечивает
+    // существование задачи (см. EnsureShopSalaryTaskForPeriodService —
+    // идемпотентно, assigneeEmployeeId — тот же Bitrix employeeId, что уже
+    // используется расчётом, см. WHY в GetShopEmployeeSalaryReportService).
     // Dedup по id правила: одно и то же правило схемы отдела встречается у
     // каждого сотрудника отдела в salaryRulesByEmployee — вызывать ensure()
     // для него один раз (по первому встреченному сотруднику — тот же
     // открытый вопрос про department-scoped правило, что и у зеркального
     // сервиса направления service, см. EnsureShopSalaryTaskForPeriodService),
     // а не employees.length раз. Ошибка одного правила не должна ронять
-    // построение отчёта — логируется и пропускается (тот же fail-safe
-    // принцип, что и у ShopTaskCompletionAutoCreationCron).
+    // построение отчёта — логируется и пропускается.
     private async ensureRecurringTaskCompletionTasks(
         salaryRulesByEmployee: Map<number, ResolvedShopEmployeeSalaryRules>,
         period: string,
@@ -461,7 +456,7 @@ export class GetShopDepartmentSalaryReportService {
                                 ? error.message
                                 : String(error);
                         this.logger.error(
-                            `Не удалось обеспечить задачу Bitrix24 для правила ${salaryRuleId}: ${message}`,
+                            `Не удалось обеспечить задачу для правила ${salaryRuleId}: ${message}`,
                         );
                     }),
             ),

@@ -12,6 +12,7 @@ import { EmployeeIdentityModule } from '@/modules/employee-identity/employee-ide
 import { DirectoryModule } from '@/modules/directory/directory.module';
 import { WorkScheduleModule } from '@/modules/work-schedule/work-schedule.module';
 import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balance.module';
+import { TasksModule } from '@/modules/tasks/tasks.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { RolesModule } from '@/modules/roles/roles.module';
 import { PricingModule } from '@/domains/service/modules/marketing/pricing/pricing.module';
@@ -79,6 +80,7 @@ export function setupSwagger(app: INestApplication): void {
                 DirectoryModule,
                 WorkScheduleModule,
                 EmployeeBalanceModule,
+                TasksModule,
                 // add-bitrix24-auth-and-rbac (раздел 12 tasks.md).
                 // SessionModule намеренно не включён — не заводит
                 // собственных HTTP-контроллеров в этом change (см.
