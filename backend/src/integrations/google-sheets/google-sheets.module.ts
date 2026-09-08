@@ -3,7 +3,7 @@ import { GoogleSheetsService } from './google-sheets.service';
 import { GoogleSheetsHttpService } from './google-sheets.instance';
 
 @Module({
-  providers: [GoogleSheetsHttpService, GoogleSheetsService],
-  exports: [GoogleSheetsService],
+    providers: [GoogleSheetsHttpService, GoogleSheetsService],
+    exports: [GoogleSheetsService],
 })
 export class GoogleSheetsModule {}

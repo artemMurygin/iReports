@@ -1,0 +1,662 @@
+[
+  {
+    "id": "d6443283-3d2e-480c-992e-0d1f792a3595",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Смартфоны | Онлайн-менеджер",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "76290088-b1d5-11ee-0a80-02a00018ce16"
+    },
+    "createdAt": "2026-08-24T11:48:51.777Z",
+    "updatedAt": "2026-08-24T11:48:51.777Z"
+  },
+  {
+    "id": "2803454a-260a-42f9-ada4-9b83b45eddf4",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Смартфоны | Офлайн-менеджер",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "76290088-b1d5-11ee-0a80-02a00018ce16"
+    },
+    "createdAt": "2026-08-24T11:48:51.779Z",
+    "updatedAt": "2026-08-24T11:48:51.779Z"
+  },
+  {
+    "id": "e8cc810a-1f53-4560-b6ca-45ab97e6ab78",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Б/У | Онлайн-менеджер",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "5054100f-e887-11ef-0a80-116300122daa"
+    },
+    "createdAt": "2026-08-24T11:48:51.780Z",
+    "updatedAt": "2026-08-24T11:48:51.780Z"
+  },
+  {
+    "id": "99f16765-4502-4421-b9d2-c0f829b9827b",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Б/У | Офлайн-менеджер",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "5054100f-e887-11ef-0a80-116300122daa"
+    },
+    "createdAt": "2026-08-24T11:48:51.781Z",
+    "updatedAt": "2026-08-24T11:48:51.781Z"
+  },
+  {
+    "id": "34394982-6b62-4748-adcd-b0bc36c5c82f",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Компьютеры / Планшеты | Онлайн-менеджер",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "bf091352-95de-11ee-0a80-09df0014cbab"
+    },
+    "createdAt": "2026-08-24T11:48:51.782Z",
+    "updatedAt": "2026-08-24T11:48:51.782Z"
+  },
+  {
+    "id": "c29a7c19-5be7-475d-b157-30fbd4f9cbad",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Компьютеры / Планшеты | Онлайн-менеджер",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": null
+    },
+    "createdAt": "2026-08-24T11:48:51.783Z",
+    "updatedAt": "2026-08-24T11:48:51.783Z"
+  },
+  {
+    "id": "13426f66-ba37-4ef7-9e87-9bbc4cb85af5",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Гаджеты | Онлайн-менеджер",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 8,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "6950aaba-95de-11ee-0a80-0cca00152091"
+    },
+    "createdAt": "2026-08-24T11:48:51.785Z",
+    "updatedAt": "2026-08-24T11:48:51.785Z"
+  },
+  {
+    "id": "1562eb1f-9b4f-45e6-8252-95f8469731b9",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Гаджеты | Офлайн-менеджер",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 8,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "6950aaba-95de-11ee-0a80-0cca00152091"
+    },
+    "createdAt": "2026-08-24T11:48:51.786Z",
+    "updatedAt": "2026-08-24T11:48:51.786Z"
+  },
+  {
+    "id": "d7068498-c801-4e1b-9506-17228af1543c",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Аксессуары | Онлайн-менеджер",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 10,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "f6407351-95d8-11ee-0a80-139800143030"
+    },
+    "createdAt": "2026-08-24T11:48:51.787Z",
+    "updatedAt": "2026-08-24T11:48:51.787Z"
+  },
+  {
+    "id": "87141e90-d540-4ece-a7a0-50daabea7a41",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Аксессуары | Офлайн-менеджер",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 10,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "f6407351-95d8-11ee-0a80-139800143030"
+    },
+    "createdAt": "2026-08-24T11:48:51.788Z",
+    "updatedAt": "2026-08-24T11:48:51.788Z"
+  },
+  {
+    "id": "0698baaf-51f9-48d6-85b0-9c3137cdd7dd",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "PayPerHour",
+    "name": "Оплата за час",
+    "targetRole": "ENGINEER",
+    "direction": "service",
+    "props": {
+      "price": 150
+    },
+    "createdAt": "2026-08-24T17:37:01.868Z",
+    "updatedAt": "2026-08-24T17:37:01.868Z"
+  },
+  {
+    "id": "d03294c5-b358-47be-8eb4-090ede0ce04e",
+    "motivationSchemaId": "d7b003c9-c075-48f7-84d0-5776589daf20",
+    "type": "PayPerHour",
+    "name": "123123",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "service",
+    "props": {
+      "price": 10
+    },
+    "createdAt": "2026-08-26T08:29:18.320Z",
+    "updatedAt": "2026-08-26T08:29:18.320Z"
+  },
+  {
+    "id": "256bb8d5-2626-4c82-a53a-835b52efdad9",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Услуги | Онлайн-менеджер",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 15,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "a2923398-9f4e-11ee-0a80-026e0017039e"
+    },
+    "createdAt": "2026-08-24T11:48:51.789Z",
+    "updatedAt": "2026-08-24T11:48:51.789Z"
+  },
+  {
+    "id": "dc11d71b-bb0f-4670-bd48-8f289eedd2e8",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Услуги | Офлайн-менеджер",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 15,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "a2923398-9f4e-11ee-0a80-026e0017039e"
+    },
+    "createdAt": "2026-08-24T11:48:51.789Z",
+    "updatedAt": "2026-08-24T11:48:51.789Z"
+  },
+  {
+    "id": "8130198c-6a19-4945-a02b-5981efd32ca4",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Джеки Чан | Онлайн-менеджер",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "5a339fd6-54cb-11ef-0a80-0da50017a51a"
+    },
+    "createdAt": "2026-08-24T11:48:51.790Z",
+    "updatedAt": "2026-08-24T11:48:51.790Z"
+  },
+  {
+    "id": "7d2da1d7-21f5-4d20-b621-6b62556f4cf6",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ProductSold",
+    "name": "Джеки Чан | Офлайн-менеджер",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "shop",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "MARGIN",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 1,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "category": "5a339fd6-54cb-11ef-0a80-0da50017a51a"
+    },
+    "createdAt": "2026-08-24T11:48:51.790Z",
+    "updatedAt": "2026-08-24T11:48:51.790Z"
+  },
+  {
+    "id": "efd036c9-c8dc-4bd1-a969-1d59b1b35b63",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "OrderPayed",
+    "name": "Начисление онлайн-менеджеру",
+    "targetRole": "ONLINE_MANAGER",
+    "direction": "service",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "SALARY_MINUS_ENGINEER_SALARY",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 0.7,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "orderTypeIds": [
+        270687,
+        17199,
+        352969
+      ]
+    },
+    "createdAt": "2026-08-24T17:37:01.872Z",
+    "updatedAt": "2026-08-24T17:37:01.872Z"
+  },
+  {
+    "id": "fbca186f-044d-4a84-94b5-37cb728f0d7d",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "OrderPayed",
+    "name": "Начисление офлайн-менеджеру",
+    "targetRole": "OFFLINE_MANAGER",
+    "direction": "service",
+    "props": {
+      "award": {
+        "type": "FloatPercent",
+        "basePercent": 5,
+        "salaryBasis": "SALARY_MINUS_ENGINEER_SALARY",
+        "percentBorders": [
+          {
+            "mode": "FIX",
+            "name": "Ниже плана",
+            "multiplier": 0.5,
+            "fromPlanPercent": 0
+          },
+          {
+            "mode": "LINEAR",
+            "name": "Выполнение плана",
+            "multiplier": 0.7,
+            "fromPlanPercent": 70
+          },
+          {
+            "mode": "FIX",
+            "name": "Перевыполнение",
+            "multiplier": 1.2,
+            "fromPlanPercent": 120
+          }
+        ]
+      },
+      "orderTypeIds": [
+        17199,
+        270687,
+        270674,
+        74279,
+        352969
+      ]
+    },
+    "createdAt": "2026-08-24T17:37:01.873Z",
+    "updatedAt": "2026-08-24T17:37:01.873Z"
+  },
+  {
+    "id": "9d72bfcc-6931-487e-8628-9e90129a92ce",
+    "motivationSchemaId": "2be01636-ec3d-4753-b73d-c9f0ef0fefcd",
+    "type": "ServiceCompleted",
+    "name": "Начисление мастеру за выполнение услуг",
+    "targetRole": "ENGINEER",
+    "direction": "service",
+    "props": {
+      "award": {
+        "type": "ServiceFixed"
+      },
+      "orderTypeIds": []
+    },
+    "createdAt": "2026-08-24T17:37:01.873Z",
+    "updatedAt": "2026-08-24T17:37:01.873Z"
+  }
+]

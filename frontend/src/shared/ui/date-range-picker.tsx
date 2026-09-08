@@ -41,7 +41,7 @@ export function DateRangePicker({ value, onChange }: Props) {
                             setFromOpen(false)
                             if (!to) setToOpen(true)
                         }}
-                        disabled={(date) => value?.to ? date > value.to : false}
+                        disabled={(date) => (value?.to ? date > value.to : false)}
                         locale={ru}
                     />
                 </PopoverContent>
@@ -65,7 +65,7 @@ export function DateRangePicker({ value, onChange }: Props) {
                             onChange({ from: value?.from, to })
                             setToOpen(false)
                         }}
-                        disabled={(date) => value?.from ? date < value.from : false}
+                        disabled={(date) => (value?.from ? date < value.from : false)}
                         locale={ru}
                     />
                 </PopoverContent>

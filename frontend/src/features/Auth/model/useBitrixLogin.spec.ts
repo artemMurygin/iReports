@@ -1,0 +1,121 @@
+import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
+
+import { useBitrixLogin } from './useBitrixLogin.ts'
+import { OAUTH_STATE_STORAGE_KEY } from './oauthState.ts'
+
+/**
+ * add-bitrix24-auth-and-rbac, раздел 16 tasks.md; architecture.md `useBitrixLogin`:
+ * "обычный хук (без запроса — формирует URL и делает redirect)" -> "генерирует `state`, сохраняет
+ * в `sessionStorage` (design.md Decision 13), редиректит на `{portal}/oauth/authorize/`" (spec:
+ * auth#oauth-authorization-code-flow, auth#oauth-login-csrf-state-protection). Домен портала
+ * захардкожен (design.md — приложение single-tenant, тот же приём, что
+ * `BitrixAuthService.saveInstallation` на backend).
+ *
+ * ОТКРЫТЫЙ ВОПРОС (не решался самостоятельно, см. финальный отчёт раздела 16): ни
+ * proposal.md/specs/design.md/architecture.md не описывают `client_id`/`redirect_uri` —
+ * реализация ниже добавляет только `state` (раздел 23 tasks.md, design.md Decision 13), не
+ * домысливая остальные параметры редиректа.
+ */
+describe('useBitrixLogin', () => {
+    beforeEach(() => {
+        sessionStorage.clear()
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+        sessionStorage.clear()
+    })
+
+    function stubLocationAssign() {
+        const assignSpy = vi.fn()
+        const original = window.location
+        Object.defineProperty(window, 'location', {
+            value: { ...original, assign: assignSpy },
+            writable: true,
+            configurable: true,
+        })
+        return {
+            assignSpy,
+            restore: () => Object.defineProperty(window, 'location', { value: original, writable: true, configurable: true }),
+        }
+    }
+
+    it('login() редиректит на https://irepair.bitrix24.ru/oauth/authorize/', () => {
+        const { assignSpy, restore } = stubLocationAssign()
+
+        const { result } = renderHook(() => useBitrixLogin())
+        result.current.login()
+
+        expect(assignSpy).toHaveBeenCalledTimes(1)
+        expect(assignSpy.mock.calls[0]?.[0]).toContain('https://irepair.bitrix24.ru/oauth/authorize/')
+
+        restore()
+    })
+
+    // spec: auth#oauth-login-csrf-state-protection — state генерируется перед редиректом,
+    // сохраняется в sessionStorage и передаётся тем же значением в query-параметре `state`,
+    // чтобы страница приёма callback (раздел 23) могла сверить их до отправки code на backend.
+    it('login() генерирует state, сохраняет его в sessionStorage и включает то же значение в query-параметр state редиректа', () => {
+        const { assignSpy, restore } = stubLocationAssign()
+
+        const { result } = renderHook(() => useBitrixLogin())
+        result.current.login()
+
+        const redirectUrl = new URL(assignSpy.mock.calls[0]?.[0] as string)
+        const stateParam = redirectUrl.searchParams.get('state')
+
+        expect(stateParam).toBeTruthy()
+        expect(sessionStorage.getItem(OAUTH_STATE_STORAGE_KEY)).toBe(stateParam)
+
+        restore()
+    })
+
+    // Без client_id Bitrix24 не может определить, какое приложение запрашивает авторизацию —
+    // без него /oauth/authorize/ не сработает независимо от окружения (баг, обнаруженный при
+    // проверке локального запуска OAuth, закрыт вместе с redirect_uri ниже).
+    it('login() включает client_id из VITE_BITRIX24_CLIENT_ID', () => {
+        vi.stubEnv('VITE_BITRIX24_CLIENT_ID', 'local.test.client')
+        const { assignSpy, restore } = stubLocationAssign()
+
+        const { result } = renderHook(() => useBitrixLogin())
+        result.current.login()
+
+        const redirectUrl = new URL(assignSpy.mock.calls[0]?.[0] as string)
+        expect(redirectUrl.searchParams.get('client_id')).toBe('local.test.client')
+        expect(redirectUrl.searchParams.get('response_type')).toBe('code')
+
+        restore()
+    })
+
+    // redirect_uri — голый текущий origin, БЕЗ пути (см. oauthState.ts): Bitrix24 для локальных
+    // приложений игнорирует этот параметр и всегда редиректит на "Путь вашего обработчика" из
+    // настроек приложения, поэтому значение должно буквально совпадать с этим полем — origin, а
+    // не origin + /auth/callback.
+    it('login() включает redirect_uri = текущий origin', () => {
+        const { assignSpy, restore } = stubLocationAssign()
+
+        const { result } = renderHook(() => useBitrixLogin())
+        result.current.login()
+
+        const redirectUrl = new URL(assignSpy.mock.calls[0]?.[0] as string)
+        expect(redirectUrl.searchParams.get('redirect_uri')).toBe(window.location.origin)
+
+        restore()
+    })
+
+    it('login() генерирует новый случайный state при каждом вызове', () => {
+        const first = stubLocationAssign()
+        const { result } = renderHook(() => useBitrixLogin())
+        result.current.login()
+        const firstState = new URL(first.assignSpy.mock.calls[0]?.[0] as string).searchParams.get('state')
+        first.restore()
+
+        const second = stubLocationAssign()
+        result.current.login()
+        const secondState = new URL(second.assignSpy.mock.calls[0]?.[0] as string).searchParams.get('state')
+        second.restore()
+
+        expect(firstState).not.toBe(secondState)
+    })
+})

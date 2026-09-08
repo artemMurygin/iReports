@@ -1,0 +1,1862 @@
+[
+  {
+    "id": "CALL",
+    "name": "Звонок c iRepair.ru",
+    "sort": 80,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "EMPLOYEES_1",
+    "name": "менее 50",
+    "sort": 10,
+    "color": "#",
+    "systemType": "",
+    "entityId": "EMPLOYEES",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "NEW",
+    "name": "Не обработан",
+    "sort": 10,
+    "color": "#DBF199",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DELIVERY",
+    "name": "Доставка",
+    "sort": 80,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "HNR_RU_1",
+    "name": "г-н",
+    "sort": 10,
+    "color": "#",
+    "systemType": "",
+    "entityId": "HONORIFIC",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_2SD91N",
+    "name": "Связаться сегодня",
+    "sort": 80,
+    "color": "#ACD372",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "inWork",
+    "stageGroupName": "В работе"
+  },
+  {
+    "id": "DT36_2:DRAFT",
+    "name": "Черновик",
+    "sort": 10,
+    "color": "#00A9F4",
+    "systemType": "",
+    "entityId": "SMART_DOCUMENT_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT31_8:N",
+    "name": "Новый",
+    "sort": 10,
+    "color": "#39A8EF",
+    "systemType": "",
+    "entityId": "SMART_INVOICE_STAGE_8",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C16:NEW",
+    "name": "Поступило",
+    "sort": 10,
+    "color": "#39a8ef",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_16",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:UC_VYCAQ9",
+    "name": "Создать заказ в МС",
+    "sort": 80,
+    "color": "#47d1e2",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C18:LOSE",
+    "name": "Отказ потребителю",
+    "sort": 80,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C18:NEW",
+    "name": "Новый запрос",
+    "sort": 10,
+    "color": "#39A8EF",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "PHONE",
+    "name": "Телефонный звонок",
+    "sort": 20,
+    "color": "",
+    "systemType": "",
+    "entityId": "EVENT_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "17",
+    "name": "Звонок с основной номер сайта",
+    "sort": 90,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:UC_DBOZPE",
+    "name": "На авито доставке",
+    "sort": 90,
+    "color": "#bfc5cd",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "SENT",
+    "name": "Отправлено клиенту",
+    "sort": 20,
+    "color": "#2FC6F6",
+    "systemType": "",
+    "entityId": "QUOTE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_U52J7C",
+    "name": "Авито (NEW)",
+    "sort": 20,
+    "color": "#C6DF9C",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "new",
+    "stageGroupName": "Новые"
+  },
+  {
+    "id": "JUNK",
+    "name": "Некачественный лид",
+    "sort": 90,
+    "color": "#9AE1DD",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "N",
+    "name": "Новый",
+    "sort": 100,
+    "color": "#39A8EF",
+    "systemType": "",
+    "entityId": "INVOICE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "WON",
+    "name": "Сделка успешна",
+    "sort": 130,
+    "color": "#005824",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "won",
+    "stageGroupName": "Успешная сделка"
+  },
+  {
+    "id": "23",
+    "name": "Звонок с 2GIS",
+    "sort": 140,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_12:EMPLOYEE_COORDINATION",
+    "name": "Согласование",
+    "sort": 20,
+    "color": "#00C9FA",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_12",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "COMPETITOR",
+    "name": "Конкурент",
+    "sort": 30,
+    "color": "#",
+    "systemType": "",
+    "entityId": "COMPANY_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT36_2:SENT",
+    "name": "Отправлен",
+    "sort": 30,
+    "color": "#00D3E2",
+    "systemType": "",
+    "entityId": "SMART_DOCUMENT_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "16|ANK_CHATS_APP24_WHATSAPP",
+    "name": "WhatsApp (Номерной)",
+    "sort": 30,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C18:PREPAYMENT_INVOIC",
+    "name": "Товар в пути на ремонт",
+    "sort": 30,
+    "color": "#55D0E0",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "EMPLOYEES_4",
+    "name": "более 500",
+    "sort": 40,
+    "color": "#",
+    "systemType": "",
+    "entityId": "EMPLOYEES",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:PREPARATION",
+    "name": "Записаны на обслуживание",
+    "sort": 40,
+    "color": "#2fc6f6",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_OXPWDQ",
+    "name": "Заявка неактуальна",
+    "sort": 150,
+    "color": "#ff5b55",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "1",
+    "name": "Перестал отвечать | брать трубку",
+    "sort": 180,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "DEAL_TYPE",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "32",
+    "name": "Звонок с Avito (Сервис)",
+    "sort": 180,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "7",
+    "name": "Далеко ехать, нашел ближе",
+    "sort": 200,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "C2:8",
+    "name": "Джекки | заказали напрямую в авито",
+    "sort": 210,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "14|AVITO",
+    "name": "Чат Avito (Магазин)",
+    "sort": 200,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "13",
+    "name": "Отказ после визита в сервис",
+    "sort": 240,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "BOOKING",
+    "name": "Онлайн-запись",
+    "sort": 280,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_12:EMPLOYEE_COMPLETED",
+    "name": "Результат",
+    "sort": 40,
+    "color": "#FEA300",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_12",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C20:WON",
+    "name": "Юр.лицо прошло проверку",
+    "sort": 40,
+    "color": "#7bd500",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_20",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:PREPAYMENT_INVOIC",
+    "name": "Создать заказ в сервис",
+    "sort": 50,
+    "color": "#55d0e0",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "REPEAT_SALE",
+    "name": "Сообщение в Telegram бот с Лендинга (Яндекс.Директ)",
+    "sort": 50,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_10:FAILURE",
+    "name": "Не подписано",
+    "sort": 60,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_12:FAILURE",
+    "name": "Не подписано",
+    "sort": 60,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_12",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:WON",
+    "name": "Сделка успешна",
+    "sort": 70,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_7FXM5Z",
+    "name": "Пропущенный звонок",
+    "sort": 70,
+    "color": "#ACD372",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "inWork",
+    "stageGroupName": "В работе"
+  },
+  {
+    "id": "IT",
+    "name": "Информационные технологии",
+    "sort": 10,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_H68I20",
+    "name": "Прочее",
+    "sort": 60,
+    "color": "#c5e099",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:UC_QQZNSX",
+    "name": "Обслуживаются",
+    "sort": 60,
+    "color": "#75d900",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "MANUFACTURING",
+    "name": "Производство",
+    "sort": 30,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_HS509F",
+    "name": "Входящий звонок",
+    "sort": 30,
+    "color": "#C6DF9C",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "new",
+    "stageGroupName": "Новые"
+  },
+  {
+    "id": "GOODS",
+    "name": "Гарантия Сервис",
+    "sort": 40,
+    "color": "#",
+    "systemType": "",
+    "entityId": "DEAL_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:PREPAYMENT_INVOICE",
+    "name": "Дожать",
+    "sort": 60,
+    "color": "#55d0e0",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "CANCELED",
+    "name": "Отменена",
+    "sort": 40,
+    "color": "",
+    "systemType": "",
+    "entityId": "DEAL_STATE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DECLAINED",
+    "name": "Отклонено",
+    "sort": 40,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "QUOTE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT36_2:SEMISIGNED",
+    "name": "Частично подписан",
+    "sort": 40,
+    "color": "#FEA300",
+    "systemType": "",
+    "entityId": "SMART_DOCUMENT_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT31_8:D",
+    "name": "Не оплачен",
+    "sort": 40,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "SMART_INVOICE_STAGE_8",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_UMJ2D6",
+    "name": "Мессенджеры",
+    "sort": 40,
+    "color": "#C6DF9C",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "new",
+    "stageGroupName": "Новые"
+  },
+  {
+    "id": "DT39_10:COMPLETED",
+    "name": "Результат",
+    "sort": 40,
+    "color": "#FEA300",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_ZR6PTH",
+    "name": "Заявка с сайта (NEW)",
+    "sort": 40,
+    "color": "#C6DF9C",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "new",
+    "stageGroupName": "Новые"
+  },
+  {
+    "id": "DT36_2:SIGNED",
+    "name": "Полностью подписан",
+    "sort": 50,
+    "color": "#47E4C2",
+    "systemType": "",
+    "entityId": "SMART_DOCUMENT_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C16:LOSE",
+    "name": "Сделка провалена",
+    "sort": 60,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_16",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_10:ARCHIVE",
+    "name": "В архиве",
+    "sort": 50,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_10:SIGNING",
+    "name": "Подписание",
+    "sort": 30,
+    "color": "#00D3E2",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_HML04K",
+    "name": "Мессенджеры (NEW)",
+    "sort": 30,
+    "color": "#C6DF9C",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "new",
+    "stageGroupName": "Новые"
+  },
+  {
+    "id": "DT39_12:EMPLOYEE_SIGNING",
+    "name": "Подписание",
+    "sort": 30,
+    "color": "#00D3E2",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_12",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C16:UC_MHN7TS",
+    "name": "Ошибки Гоша",
+    "sort": 30,
+    "color": "#00c4fb",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_16",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C20:UC_3OCQ4W",
+    "name": "Проверка завершена",
+    "sort": 30,
+    "color": "#00c4fb",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_20",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "PARTNER",
+    "name": "Партнер",
+    "sort": 40,
+    "color": "#",
+    "systemType": "",
+    "entityId": "COMPANY_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:UC_93EKCE",
+    "name": "Магазин",
+    "sort": 30,
+    "color": "#47d1e2",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "STOP_CALLING",
+    "name": "Больше не звонить",
+    "sort": 40,
+    "color": "#",
+    "systemType": "",
+    "entityId": "CALL_LIST",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "BANKING",
+    "name": "Банковские услуги",
+    "sort": 40,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C16:UC_2XM1E5",
+    "name": "Ошибки Олег",
+    "sort": 40,
+    "color": "#47d1e2",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_16",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "29",
+    "name": "Сообщение в WhatsApp с Лендинга (Яндекс.Директ)",
+    "sort": 60,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "APOLOGY",
+    "name": "Анализ причины отклонения",
+    "sort": 50,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "QUOTE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "28",
+    "name": "Заполнена форма на Лендинге (Яндекс.Директ)",
+    "sort": 40,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:UC_WCRH0I",
+    "name": "Входящий звонок (NEW)",
+    "sort": 10,
+    "color": "#ffab00",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C20:NEW",
+    "name": "Подача заявки на проверку юр лица",
+    "sort": 10,
+    "color": "#39a8ef",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_20",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "TELECOM",
+    "name": "Телекоммуникации и связь",
+    "sort": 20,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "HNR_RU_2",
+    "name": "г-жа",
+    "sort": 20,
+    "color": "#",
+    "systemType": "",
+    "entityId": "HONORIFIC",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT31_8:S",
+    "name": "Отправлен клиенту",
+    "sort": 20,
+    "color": "#2FC6F6",
+    "systemType": "",
+    "entityId": "SMART_INVOICE_STAGE_8",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:NEW",
+    "name": "Авито (NEW)",
+    "sort": 20,
+    "color": "#39a8ef",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:UC_6KB5A5",
+    "name": "В работе",
+    "sort": 40,
+    "color": "#75d900",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT36_2:PROCESSING",
+    "name": "На согласовании",
+    "sort": 20,
+    "color": "#00C9FA",
+    "systemType": "",
+    "entityId": "SMART_DOCUMENT_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_UZ3N9V",
+    "name": "Заявка с сайта",
+    "sort": 20,
+    "color": "#C6DF9C",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "new",
+    "stageGroupName": "Новые"
+  },
+  {
+    "id": "18|TELEGRAM",
+    "name": "Telegram (Бот)",
+    "sort": 20,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:UC_GNJCGY",
+    "name": "Джеки Чан",
+    "sort": 20,
+    "color": "#00c4fb",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C16:FINAL_INVOICE",
+    "name": "В работе",
+    "sort": 20,
+    "color": "#ffa900",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_16",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C18:PREPARATION",
+    "name": "Обращение в работе",
+    "sort": 20,
+    "color": "#2FC6F6",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C18:EXECUTING",
+    "name": "Товар в СЦ",
+    "sort": 40,
+    "color": "#47E4C2",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_12:ARCHIVE",
+    "name": "В архиве",
+    "sort": 50,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_12",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:UC_3TRWCU",
+    "name": "Связаться сегодня",
+    "sort": 50,
+    "color": "#75d900",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "CONSULTING",
+    "name": "Консалтинг",
+    "sort": 50,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_81G599",
+    "name": "Авито",
+    "sort": 50,
+    "color": "#C6DF9C",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "new",
+    "stageGroupName": "Новые"
+  },
+  {
+    "id": "UC_E2KAHD",
+    "name": "В работе (свежие)",
+    "sort": 50,
+    "color": "#ACD372",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "inWork",
+    "stageGroupName": "В работе"
+  },
+  {
+    "id": "C16:WON",
+    "name": "Сделка успешна",
+    "sort": 50,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_16",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C20:LOSE",
+    "name": "Юр.лицо не прошло проверку",
+    "sort": 50,
+    "color": "#ff5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_20",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C18:UC_H3C5QM",
+    "name": "На удаление",
+    "sort": 50,
+    "color": "#a0005c",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "FINANCE",
+    "name": "Финансы",
+    "sort": 60,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT36_2:ARCHIVE",
+    "name": "В архив",
+    "sort": 60,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "SMART_DOCUMENT_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_X5VJM9",
+    "name": "В работе (старые)",
+    "sort": 60,
+    "color": "#ACD372",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "inWork",
+    "stageGroupName": "В работе"
+  },
+  {
+    "id": "C18:FINAL_INVOICE",
+    "name": "Возврат ДС клиенту",
+    "sort": 60,
+    "color": "#FFA900",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_5UAB6Z",
+    "name": "Спам",
+    "sort": 70,
+    "color": "#FF0000",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "nonTarget",
+    "stageGroupName": "нецелевой лид"
+  },
+  {
+    "id": "2",
+    "name": "Не связались | связались поздно",
+    "sort": 210,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "CONTACT_TYPE",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "MESSAGE",
+    "name": "Отправлен email",
+    "sort": 30,
+    "color": "",
+    "systemType": "",
+    "entityId": "EVENT_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "STORE",
+    "name": "Звонок с Лендинга (Яндекс.Директ)",
+    "sort": 70,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "ENTERTAINMENT",
+    "name": "Развлечения",
+    "sort": 90,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "NOTPROFIT",
+    "name": "Не для получения прибыли",
+    "sort": 100,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_EWM3W9",
+    "name": "СОЗДАТЬ ЗАКАЗ В РЕМ",
+    "sort": 110,
+    "color": "#3E6617",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "repairing",
+    "stageGroupName": "Ремонтируются"
+  },
+  {
+    "id": "C2:1",
+    "name": "Не было в наличии",
+    "sort": 130,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "24",
+    "name": "Звонок с Вконтакте",
+    "sort": 150,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "21",
+    "name": "Звонок с Avito (Магазин)",
+    "sort": 170,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "10|AVITO",
+    "name": "Чат Avito (Сервис)",
+    "sort": 210,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "RC_GENERATOR",
+    "name": "Генератор продаж",
+    "sort": 250,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "PLANNED",
+    "name": "В планах",
+    "sort": 10,
+    "color": "",
+    "systemType": "",
+    "entityId": "DEAL_STATE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_10:FILLING",
+    "name": "Заполнение",
+    "sort": 10,
+    "color": "#00C4FB",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT31_8:P",
+    "name": "Оплачен",
+    "sort": 30,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "SMART_INVOICE_STAGE_8",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_10:COORDINATION",
+    "name": "Согласование",
+    "sort": 10,
+    "color": "#00C9FA",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:PREPARATION",
+    "name": "Мессенджеры (NEW)",
+    "sort": 30,
+    "color": "#2fc6f6",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DRAFT",
+    "name": "Новое",
+    "sort": 10,
+    "color": "#39A8EF",
+    "systemType": "",
+    "entityId": "QUOTE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "EMPLOYEES_2",
+    "name": "50-250",
+    "sort": 20,
+    "color": "#",
+    "systemType": "",
+    "entityId": "EMPLOYEES",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "EMPLOYEES_3",
+    "name": "250-500",
+    "sort": 30,
+    "color": "#",
+    "systemType": "",
+    "entityId": "EMPLOYEES",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "CUSTOMER",
+    "name": "Клиент",
+    "sort": 10,
+    "color": "#",
+    "systemType": "",
+    "entityId": "COMPANY_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "COMPLETE",
+    "name": "Выполнена",
+    "sort": 30,
+    "color": "",
+    "systemType": "",
+    "entityId": "DEAL_STATE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "INFO",
+    "name": "Информация",
+    "sort": 10,
+    "color": "",
+    "systemType": "",
+    "entityId": "EVENT_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "APPROVED",
+    "name": "Принято",
+    "sort": 30,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "QUOTE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "WRONG_NUMBER",
+    "name": "Неверный номер",
+    "sort": 30,
+    "color": "#",
+    "systemType": "",
+    "entityId": "CALL_LIST",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:EXECUTING",
+    "name": "Ожидаем в магазине",
+    "sort": 70,
+    "color": "#bfc5cd",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:APOLOGY",
+    "name": "Анализ причины провала",
+    "sort": 90,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "19",
+    "name": "Звонок на старый номер сервиса",
+    "sort": 100,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:APOLOGY",
+    "name": "Анализ причины провала",
+    "sort": 120,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:2",
+    "name": "Дубль",
+    "sort": 140,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:4",
+    "name": "Хотел рассрочку, не гражданин РФ",
+    "sort": 160,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "26",
+    "name": "Чат Avito (Джеки Чан)",
+    "sort": 190,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:9",
+    "name": "НЦ | Спросили как пройти",
+    "sort": 220,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "WEBFORM",
+    "name": "CRM-форма",
+    "sort": 260,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "IN_WORK",
+    "name": "В работе",
+    "sort": 10,
+    "color": "#",
+    "systemType": "",
+    "entityId": "CALL_LIST",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "SUCCESS",
+    "name": "Успешно",
+    "sort": 20,
+    "color": "#",
+    "systemType": "",
+    "entityId": "CALL_LIST",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "COMPLEX",
+    "name": "Гарантия Джеки Чан",
+    "sort": 30,
+    "color": "#",
+    "systemType": "",
+    "entityId": "DEAL_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "12|ANK_CHATS_APP24_TELEGRAM",
+    "name": "Telegram (Номерной)",
+    "sort": 10,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C20:PREPARATION",
+    "name": "Проведение проверки",
+    "sort": 20,
+    "color": "#2fc6f6",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_20",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_12:EMPLOYEE_DRAFT",
+    "name": "Черновик",
+    "sort": 10,
+    "color": "#00A9F4",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_12",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "SALE",
+    "name": "Гарантия Магазин",
+    "sort": 20,
+    "color": "#",
+    "systemType": "",
+    "entityId": "DEAL_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "OTHER",
+    "name": "Другое",
+    "sort": 110,
+    "color": "#",
+    "systemType": "",
+    "entityId": "CONTACT_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:NEW",
+    "name": "Оставили заявку",
+    "sort": 10,
+    "color": "#39a8ef",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "PROCESS",
+    "name": "В работе",
+    "sort": 20,
+    "color": "",
+    "systemType": "",
+    "entityId": "DEAL_STATE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C10:LOSE",
+    "name": "Сделка провалена",
+    "sort": 80,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_CDLDG7",
+    "name": "Дожать (актуально)",
+    "sort": 90,
+    "color": "#ACD372",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "inWork",
+    "stageGroupName": "В работе"
+  },
+  {
+    "id": "C2:LOSE",
+    "name": "Сделка провалена",
+    "sort": 110,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "5",
+    "name": "Не устроили сроки ремонта",
+    "sort": 160,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "UC_6NHK6F",
+    "name": "Отложенный спрос",
+    "sort": 230,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "6",
+    "name": "Другое (прописать в комментарии)",
+    "sort": 250,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "20|OPENLINE",
+    "name": "Онлайн-чат - Онлайн чат",
+    "sort": 270,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT39_10:DRAFT",
+    "name": "Черновик",
+    "sort": 10,
+    "color": "#00A9F4",
+    "systemType": "",
+    "entityId": "SMART_B2E_DOC_STAGE_10",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "SUPPLIER",
+    "name": "Поставщик",
+    "sort": 20,
+    "color": "#",
+    "systemType": "",
+    "entityId": "COMPANY_TYPE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C20:UC_9GDZ2K",
+    "name": "На удаление",
+    "sort": 60,
+    "color": "#a0005c",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_20",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "EXECUTING",
+    "name": "Ожидаем на ремонт",
+    "sort": 100,
+    "color": "#588528",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "waitingForVisit",
+    "stageGroupName": "Записан на ремонт"
+  },
+  {
+    "id": "P",
+    "name": "Оплачен",
+    "sort": 120,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "INVOICE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "8",
+    "name": "Решили не ремонтировать, оставить как есть",
+    "sort": 190,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "C2:11",
+    "name": "Другое",
+    "sort": 200,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "CALLBACK",
+    "name": "Обратный звонок",
+    "sort": 240,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "9",
+    "name": "Не лид  |  Курьер / клиент спросил как пройти",
+    "sort": 280,
+    "color": "#FBAD82",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "GOVERNMENT",
+    "name": "Правительство",
+    "sort": 70,
+    "color": "#",
+    "systemType": "",
+    "entityId": "INDUSTRY",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "S",
+    "name": "Отправлен клиенту",
+    "sort": 110,
+    "color": "#2FC6F6",
+    "systemType": "",
+    "entityId": "INVOICE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "22",
+    "name": "Звонок с Яндекс.Карт",
+    "sort": 120,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:3",
+    "name": "Перестал отвечать на сообщения / звонки",
+    "sort": 150,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:5",
+    "name": "Не одобрили рассрочку",
+    "sort": 170,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "30",
+    "name": "Заполнена форма на iRepair.ru",
+    "sort": 230,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "DT36_2:NOTSIGNED",
+    "name": "Не подписано",
+    "sort": 70,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "SMART_DOCUMENT_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:WON",
+    "name": "Сделка успешна",
+    "sort": 100,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "UC_UPDA02",
+    "name": "РЕМОНТИРУЮТСЯ",
+    "sort": 120,
+    "color": "#3E6617",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "repairing",
+    "stageGroupName": "Ремонтируются"
+  },
+  {
+    "id": "LOSE",
+    "name": "Не устроила цена",
+    "sort": 140,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "4",
+    "name": "Не оказалось в наличии",
+    "sort": 170,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "C2:7",
+    "name": "Долго отправляли",
+    "sort": 190,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:10",
+    "name": "НЦ | Дубль",
+    "sort": 230,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "11",
+    "name": "Не лид | Спам",
+    "sort": 290,
+    "color": "#FBAD82",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "CONVERTED",
+    "name": "Качественный лид",
+    "sort": 80,
+    "color": "#3E6617",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": "repairing",
+    "stageGroupName": "Ремонтируются"
+  },
+  {
+    "id": "UC_D2FU2R",
+    "name": "Не взял трубку / перестал отвечать",
+    "sort": 110,
+    "color": "#9AE1DD",
+    "systemType": "",
+    "entityId": "STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "D",
+    "name": "Не оплачен",
+    "sort": 130,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "INVOICE_STATUS",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "12",
+    "name": "Устройство выкуплено",
+    "sort": 220,
+    "color": "#FE5957",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "lose",
+    "stageGroupName": "Проигранная сделка"
+  },
+  {
+    "id": "3",
+    "name": "НЕЦЕЛЕВЫЕ",
+    "sort": 260,
+    "color": "#FF0000",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": "nonTarget",
+    "stageGroupName": "нецелевой лид"
+  },
+  {
+    "id": "C18:WON",
+    "name": "Решение в пользу потребителя",
+    "sort": 70,
+    "color": "#7BD500",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_18",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "20",
+    "name": "Звонок на мобильный телефон (Рабочий)",
+    "sort": 110,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "31",
+    "name": "Звонок с Google Карт",
+    "sort": 130,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "27",
+    "name": "Звонок с Avito (Джеки Чан)",
+    "sort": 160,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "C2:6",
+    "name": "Перекуп, хотел купить за дешево",
+    "sort": 180,
+    "color": "#FF5752",
+    "systemType": "",
+    "entityId": "DEAL_STAGE_2",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "25",
+    "name": "Чат в Вконтакте",
+    "sort": 220,
+    "color": "#",
+    "systemType": "",
+    "entityId": "SOURCE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  },
+  {
+    "id": "10",
+    "name": "Не лид | Дубль или Звонок по текущему заказу",
+    "sort": 270,
+    "color": "#FBAD82",
+    "systemType": "",
+    "entityId": "DEAL_STAGE",
+    "stageGroupId": null,
+    "stageGroupName": null
+  }
+]

@@ -1,0 +1,525 @@
+const employeeIdentityRoot = 'employee-identity';
+
+// Api Versions
+const v1 = 'v1';
+
+// Аутентификация Bitrix24 + сессии (add-bitrix24-auth-and-rbac, раздел 12
+// tasks.md) — сквозной модуль, вне доменов service/shop, тем же приёмом, что
+// и directoryRoot/workScheduleRoot ниже. embeddedLogin/oauthCallback —
+// @Public() (спек auth), me/logout — требуют валидной сессии
+// (SessionAuthGuard, применён напрямую на этих контроллерах — см. WHY в
+// app.module.ts про отложенную ГЛОБАЛЬНУЮ регистрацию APP_GUARD).
+const authRoot = `/${v1}/auth`;
+
+// Управление ролями/правами (add-bitrix24-auth-and-rbac, раздел 12
+// tasks.md) — сквозной модуль. Все маршруты требуют permission roles:manage
+// (спек roles#admin-page-requires-roles-manage — вся страница управления
+// ролями, включая read-only список/каталог, гардируется одним и тем же
+// permission).
+const rolesRoot = `/${v1}/roles`;
+
+// Справочник отделов/сотрудников Bitrix (Фаза 1,
+// docs/salary-schema-creation-ui) — общий, не привязанный к домену
+// service/shop модуль (см. modules/directory), питает селекты «Отдел»/
+// «Сотрудник» на Шаге 1 формы создания зарплатной схемы. Путь под /v1, как
+// и все не-legacy маршруты, но не под employeeIdentityRoot — разные модули.
+const directoryRoot = `/${v1}/directory`;
+
+// График работы сотрудников (Фаза 1, docs/employee-work-schedule) — общий
+// на компанию модуль (см. modules/work-schedule), не вложенный ни в
+// domains/service, ни в domains/shop: сущность не имеет дискриминатора
+// direction, её будут читать контексты расчёта обоих направлений (см. PRD,
+// "Технические ограничения"). Путь под /v1, тем же приёмом, что и
+// directoryRoot выше.
+const workScheduleRoot = `/${v1}/work-schedule`;
+
+// Баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual, Фаза 8b) —
+// баланс ОБЩИЙ по сотруднику: один остаток и одна лента на employeeId, без
+// деления на направления, поэтому и эндпоинты общие — под /v1/accounting,
+// вне префиксов /v1/service и /v1/shop (тот же приём, что directoryRoot/
+// workScheduleRoot выше). direction движения — лишь атрибут происхождения,
+// в путь он не входит.
+const accountingBalanceRoot = `/${v1}/accounting/balance`;
+
+// Направление service — все маршруты домена domains/service под общим
+// префиксом /v1/service, чтобы направление было видно уже в пути, а не
+// только в query/имени модуля (см. shopAccounting/shopWarehouse ниже,
+// откуда взят этот приём).
+const serviceRoot = `/${v1}/service`;
+const serviceMotivationSchemaRoot = `${serviceRoot}/motivation-schema`;
+const serviceAccountingRoot = `${serviceRoot}/accounting`;
+const serviceSalesPerformanceRoot = `${serviceRoot}/sales/salesPerformance`;
+// План продаж (Фаза 3, см. docs/payroll/plan-payroll-calculation.md) —
+// раньше жил на общем для всех направлений пути /v1/sales/plan* с
+// direction в теле/query запроса; переведён под /v1/service под тем же
+// приёмом, что и salesPerformance выше — направление подставляется
+// контроллером (direction: 'service'), а не читается из запроса клиента.
+// Для shop аналогичный CRUD пока не заведён (см. domains/shop/CLAUDE.md).
+const serviceSalesPlanRoot = `${serviceRoot}/sales/plan`;
+const serviceSalesPlanTemplateRoot = `${serviceRoot}/sales/plan_template`;
+// Список сделок Bitrix24 за диапазон дат создания + пять справочников
+// (Фазы 1-2, см. docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// — новый дом для GET /deals(+/stages,/managers,/sources,/stage-groups,
+// /models) из backend/src/TODO/deals, тем же приёмом, что и
+// salesPlan/salesPlanTemplate выше: путь под /v1/service/sales, диапазон
+// дат в query (см. listDealsQuerySchema). Фаза 2 удаляет
+// backend/src/TODO/deals целиком — это уже не параллельный, а
+// единственный (заменяющий) маршрут.
+const serviceDealsRoot = `${serviceRoot}/sales/deals`;
+// Отчёт по воронке сервисных сделок (Фаза 4,
+// см. docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// — новый дом для GET /reports/service-funnel из backend/src/TODO/reports,
+// тем же приёмом, что и serviceDealsRoot выше: путь под /v1/service/sales,
+// читает те же bitrix_deals. Легаси-эндпоинт /reports/service-funnel при
+// этом не удаляется — параллельный маршрут на время миграции (TODO/reports
+// целиком выводится из эксплуатации отдельной фазой этого же трека).
+const serviceFunnelReportRoot = `${serviceRoot}/sales/funnel-report`;
+// Аналитика услуг и категории услуг (Фаза 5,
+// см. docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+// — новый дом для GET /reports/services-analytics и /reports/service-categories
+// из backend/src/TODO/reports (модуль domains/service/modules/reports,
+// каталог TODO/reports целиком удалён этой же фазой). В отличие от
+// serviceFunnelReportRoot выше (тот же источник bitrix_deals, что и
+// serviceDealsRoot) — это отдельный модуль и отдельный корень пути, читает
+// roapp_service_orders/roapp_service_categories, а не bitrix_deals.
+const serviceReportsRoot = `${serviceRoot}/reports`;
+// Обновление цен услуг RoApp (Фаза 7,
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом сервисной половины `POST /price-monitoring/update-service-price`
+// из backend/src/TODO/priceMonitoring (см. PRD, раздел 3б). Саб-группа
+// `marketing` внутри service — см. domains/service/CLAUDE.md, раздел
+// "Целевой набор модулей домена". Легаси-`priceMonitoring` (обе половины —
+// service и shop, см. shopMarketingPricingRoot ниже) удалён целиком в
+// Фазе 10 того же трека.
+const serviceMarketingPricingRoot = `${serviceRoot}/marketing/pricing`;
+
+// Направление shop — все маршруты домена domains/shop под общим префиксом
+// /v1/shop.
+const shopRoot = `/${v1}/shop`;
+const shopAccountingRoot = `${shopRoot}/accounting`;
+const shopWarehouseRoot = `${shopRoot}/warehouse`;
+// Направление shop (Фаза 11) обслуживается отдельным эндпоинтом, а не тем
+// же /sales/salesPerformance/:period с direction=shop в query: читатель
+// SalesPerformance направления service (GetSalesPerformanceService) и его
+// ERP-источник (RoappSalesFactSourceRepository) жёстко привязаны к
+// RoappOrder, поэтому единственный контроллер не может обслужить оба
+// направления без домена service, знающего о домене shop (или наоборот) —
+// см. отчёт Фазы 11. shopSalesPerformanceRoot — отдельный путь, не query-
+// параметр на общем пути, чтобы не создавать двух контроллеров на один и
+// тот же путь+метод (Nest/Express однозначно не резолвят такую коллизию).
+const shopSalesPerformanceRoot = `${shopRoot}/sales/salesPerformance`;
+// SalesPlan/SalesPlanTemplate направления shop — с переходом direction
+// команд application/command из query/body в обязательное поле,
+// подставляемое контроллером (см. domains/shop/modules/sales/interface/
+// http-controllers), CRUD плана/шаблона перестал быть общим маршрутом на
+// оба направления (в отличие от Фазы 11) и получил собственный путь под
+// /v1/shop, зеркалящий /v1/sales/plan* сервиса — тот же приём, что уже
+// применён для shopSalesPerformanceRoot выше.
+const shopSalesPlanRoot = `${shopRoot}/sales/plan`;
+const shopSalesPlanTemplateRoot = `${shopRoot}/sales/plan_template`;
+// Импорт закупочных цен магазина из XLSX-прайса поставщика (Фаза 10,
+// docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
+// новый дом `POST /price-monitoring/update-shop-products-costs` +
+// `GET /price-monitoring/:uuid[/status]` из backend/src/TODO/priceMonitoring
+// (см. PRD, раздел 3а). Саб-группа `marketing` внутри shop — зеркалит
+// serviceMarketingPricingRoot выше, своя (см. domains/shop/CLAUDE.md о
+// независимости modules/accounting/sales — тот же принцип для marketing).
+// Легаси-эндпоинт удалён целиком в этой же фазе (обе половины уже
+// перенесены — сервисная в Фазе 7, эта, магазинная, — здесь).
+const shopMarketingPricingRoot = `${shopRoot}/marketing/pricing`;
+
+export const routesV1 = {
+    version: v1,
+    // add-bitrix24-auth-and-rbac, раздел 12 — см. комментарий у authRoot выше.
+    auth: {
+        embeddedLogin: `${authRoot}/embedded-login`,
+        oauthCallback: `${authRoot}/oauth/callback`,
+        me: `${authRoot}/me`,
+        logout: `${authRoot}/logout`,
+    },
+    // add-bitrix24-auth-and-rbac, раздел 12 — см. комментарий у rolesRoot
+    // выше. employees/:employeeId — назначение/снятие роли сотруднику
+    // (many-to-many EmployeeRole), не CRUD над самим сотрудником (тот уже
+    // существует в directory).
+    roles: {
+        root: rolesRoot,
+        byId: `${rolesRoot}/:id`,
+        permissionsCatalog: `${rolesRoot}/permissions`,
+        updatePermissions: `${rolesRoot}/:id/permissions`,
+        employeeAssignment: `${rolesRoot}/:id/employees/:employeeId`,
+        // Раздел 22 tasks.md — назначения роль<->сотрудник для таблицы
+        // «Сотрудники» на админ-странице ролей (frontend раздел 20.7,
+        // useEmployeeRoleAssignment). Литеральный сегмент, не конфликтует с
+        // byId (`GET` на `:id` не зарегистрирован ни одним контроллером).
+        assignments: `${rolesRoot}/assignments`,
+    },
+    // Справочник отделов/сотрудников Bitrix (Фаза 1,
+    // docs/salary-schema-creation-ui) — без гарда, тот же принцип, что и
+    // остальные внутренние read-only справочники (deals.managers,
+    // shop.warehouse.catalog): данные не чувствительнее списка сделок,
+    // уже доступного без гарда.
+    directory: {
+        departments: `${directoryRoot}/departments`,
+        employees: `${directoryRoot}/employees`,
+        // Сохранение нового порядка сотрудников (docs/employee-ordering-and-salary-filter,
+        // Фаза 1) — тот же литеральный сегмент "order" на своём собственном
+        // PATCH-методе, что и у sales.plan.order/shopSalesPlan.order (см.
+        // комментарий там про регистрацию до маршрутов с :id) — здесь
+        // конфликта нет, employees не имеет соседнего PATCH .../:id.
+        reorderEmployees: `${directoryRoot}/employees/order`,
+        // Включение/выключение признака «служебный аккаунт» у сотрудника
+        // (docs/employee-ordering-and-salary-filter, Фаза 3) — :id/service-
+        // account, а не литеральный сегмент вроде order выше: это правка
+        // ОДНОГО сотрудника по его id, а не батч-операция над всем
+        // справочником.
+        setServiceAccount: `${directoryRoot}/employees/:id/service-account`,
+        // Полный справочник (ВСЕ сотрудники, включая служебные аккаунты) с
+        // их текущим isServiceAccount (docs/employee-ordering-and-salary-filter,
+        // Фаза 4) — питает список с переключателем «исключить из зарплаты»
+        // на странице настроек и справочник сотрудников на странице «Связи
+        // сотрудников» (последняя обязана продолжать видеть служебные
+        // аккаунты, см. WHY в contracts/commands/directory.ts). Отдельный
+        // литеральный сегмент, а не query-параметр у employees выше:
+        // employees намеренно и без исключений фильтрует служебные аккаунты
+        // для всех своих потребителей (зарплатные списки).
+        employeesWithServiceAccount: `${directoryRoot}/employees/service-accounts`,
+    },
+    // График работы сотрудников (Фаза 1, docs/employee-work-schedule) —
+    // без гарда, тот же принцип, что и directory выше (модель прав в
+    // проекте не введена, см. "Не в скоупе" PRD). entries — маршруты
+    // Фазы 1: PUT — идемпотентный upsert записи дня по (employeeId, date),
+    // DELETE — возврат дня в «не заполнен». month — Фаза 3: GET всей
+    // таблицы «сотрудники × дни месяца» на корне модуля (как и
+    // documentation в PRD: `GET /v1/work-schedule?month=&departmentId=`,
+    // без вложенного сегмента пути — фильтры только в query).
+    workSchedule: {
+        entries: `${workScheduleRoot}/entries`,
+        entryById: `${workScheduleRoot}/entries/:id`,
+        month: workScheduleRoot,
+        // Состав смены на дату (Фаза 4, docs/employee-work-schedule) —
+        // источник данных мобильного экрана «Отдел сегодня».
+        shift: `${workScheduleRoot}/shift`,
+    },
+    // Общий баланс сотрудника (PRD 2, Фаза 8b, см. комментарий у
+    // accountingBalanceRoot выше): остаток и лента по employeeId,
+    // ручные движения (employeeTransactions), удаление ошибочного ручного
+    // движения (transactionById — DELETE; PATCH движения не существует),
+    // сводка по отделу (department) и сквозной (без department в пути —
+    // сам departmentId необязательный query-фильтр) список взаиморасчётов
+    // по всем сотрудникам компании (summary, docs/employee-settlements-page-redesign,
+    // Фаза 1) — :period в пути тем же приёмом, что у department выше, хотя
+    // сам остаток от периода не зависит (см. WHY в GetBalanceSummaryService).
+    accounting: {
+        balance: {
+            employee: `${accountingBalanceRoot}/employee/:id`,
+            employeeTransactions: `${accountingBalanceRoot}/employee/:id/transactions`,
+            transactionById: `${accountingBalanceRoot}/transactions/:id`,
+            department: `${accountingBalanceRoot}/department/:id/:period`,
+            summary: `${accountingBalanceRoot}/summary/:period`,
+        },
+    },
+    // Маршруты этого блока были закрыты PortalAdminGuard (Фаза 2,
+    // docs/payroll/prd-payroll-calculation.md, раздел 1), но ограничение снято
+    // по решению пользователя — гард закомментирован на контроллерах, см.
+    // пояснение в create-employee-identity.http.controller.ts.
+    employeeIdentity: {
+        root: employeeIdentityRoot,
+        byId: `/${employeeIdentityRoot}/:id`,
+        byEmployee: `/${employeeIdentityRoot}/employee/:employeeId`,
+        unmatched: `/${employeeIdentityRoot}/unmatched`,
+    },
+    // Маршруты направления service (domains/service) — под префиксом
+    // /v1/service. Модели прав в проекте нет, гардом эндпоинты не закрыты (см.
+    // "неблокирующие вопросы" PRD).
+    service: {
+        motivationSchema: {
+            root: serviceMotivationSchemaRoot,
+            byId: `${serviceMotivationSchemaRoot}/:id`,
+        },
+        accounting: {
+            salaryRuleTypes: `${serviceAccountingRoot}/salary_role_types`,
+            // Расчётный период направления service (Фаза 3) — раньше жил на
+            // общем для service/shop пути /accounting/period/:direction/:period
+            // с direction, читаемым из route-параметра (см.
+            // parseAccountingDirection); переведён под /v1/service тем же
+            // приёмом, что и остальные разделы service выше — direction
+            // подставляется контроллером (direction: 'service'), а не
+            // читается из запроса клиента. Зеркало — shop.accounting.period
+            // ниже.
+            period: {
+                byPeriod: `${serviceAccountingRoot}/period/:period`,
+                close: `${serviceAccountingRoot}/period/:period/close`,
+                // Сводка окна подтверждения закрытия (PRD 1
+                // docs/payroll-closing-and-accrual, Фаза 2).
+                closePreview: `${serviceAccountingRoot}/period/:period/close-preview`,
+                reopen: `${serviceAccountingRoot}/period/:period/reopen`,
+                recalculate: `${serviceAccountingRoot}/period/:period/recalculate`,
+            },
+            // Отчёты по зарплате (Фаза 9) — раньше жили на общем для
+            // service/shop пути /accounting/salary_report/*; переведены под
+            // /v1/service тем же приёмом, что и остальные разделы service
+            // выше. Оба отчёта — по сотруднику (Фаза 13.5) и по отделу —
+            // ответ односторонний, только по направлению service (см.
+            // GetEmployeeSalaryReportService/GetDepartmentSalaryReportService).
+            salaryReport: {
+                employee: `${serviceAccountingRoot}/salary_report/employee/:id/:period`,
+                department: `${serviceAccountingRoot}/salary_report/department/:id/:period`,
+            },
+            // Документы начисления зарплаты (PRD 1
+            // docs/payroll-closing-and-accrual, Фаза 1) — рождаются
+            // закрытием периода, чтение списка за месяц (?period) и
+            // карточки. Зеркало — shop.accounting.salaryAccruals ниже.
+            salaryAccruals: {
+                root: `${serviceAccountingRoot}/salary_accruals`,
+                byId: `${serviceAccountingRoot}/salary_accruals/:id`,
+                // Массовое проведение (PRD 2, Фаза 7): «Начислить все
+                // документы месяца» (?period) и «Начислить всё» по
+                // документу — построчно, каждая строка в своей транзакции.
+                accrueAll: `${serviceAccountingRoot}/salary_accruals/accrue`,
+                accrueDocument: `${serviceAccountingRoot}/salary_accruals/:id/accrue`,
+                // Действия над строкой документа (PRD 2, Фаза 6):
+                // проведение на баланс, отмена начисления, корректировка
+                // (PATCH lineById). Зеркало — shop.accounting.salaryAccruals.
+                lineById: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId`,
+                lineAccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
+                lineUnaccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
+                // Первичный ручной ввод суммы+комментария строки TaskCompletion
+                // (раздел 13 tasks.md add-task-based-salary-rule, design.md
+                // Decision 5) — только для строк requiresManualInput === true.
+                lineTaskReward: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/task-reward`,
+            },
+            // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
+            // маршруты живут вне направления: см. routesV1.accounting.balance.
+            // Конфигурация кассы ERP направления (PRD 3
+            // docs/payroll-closing-and-accrual, Фаза 11) — read-only GET;
+            // значения задаются файловым конфигом модуля на основе
+            // env-переменных, не через API (правка пользователя от
+            // 2026-08-24, см. заметку в конце Фазы 11 плана — исходно был
+            // ещё и PUT на этом же пути, теперь убран).
+            // Зеркало — shop.accounting.erpCashConfig ниже.
+            erpCashConfig: `${serviceAccountingRoot}/erp_cash_config`,
+            // Выплата направления service (PRD 3
+            // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
+            // Фаза 12): root — POST создания на одного сотрудника (employeeId
+            // в теле, не в пути — форма PRD 3, «Контракты»), batch —
+            // массовая выплата (Фаза 6 docs/employee-settlements-page-redesign:
+            // эндпоинт остаётся рабочим, но без входа в UI — см. WHY в
+            // create-payout-batch.handler.ts), byId — DELETE удаления выплаты
+            // (id — BalanceTransaction.id, не путать с общим
+            // routesV1.accounting.balance.transactionById, который для
+            // выплаты отклоняет запрос 409, см.
+            // BalanceTransactionNotPayoutException). byPeriod (GET таблицы
+            // сотрудников периода — старая страница-отчёт «Выплата») удалён
+            // той же Фазой 6 — заменён сквозным
+            // routesV1.accounting.balance.summary. Разные HTTP-методы на
+            // пересекающиеся сегменты пути (:id/batch) не конфликтуют —
+            // Express/Nest резолвят маршрут по методу+пути независимо.
+            payout: {
+                root: `${serviceAccountingRoot}/payout`,
+                batch: `${serviceAccountingRoot}/payout/batch`,
+                byId: `${serviceAccountingRoot}/payout/:id`,
+            },
+        },
+        // SalesFact/SalesPrognose/SalesPerformance (Фаза 5) — период в пути,
+        // направление в query (см. listSalesPerformanceQuerySchema).
+        salesPerformance: {
+            byPeriod: `${serviceSalesPerformanceRoot}/:period`,
+        },
+        // План продаж (Фаза 3, см. docs/payroll/plan-payroll-calculation.md,
+        // см. также комментарий у serviceSalesPlanRoot выше).
+        salesPlan: {
+            root: serviceSalesPlanRoot,
+            byId: `${serviceSalesPlanRoot}/:id`,
+            approve: `${serviceSalesPlanRoot}/approve`,
+            // Батч-обновление глобального порядка строк-категорий плана
+            // (Фаза 1, docs/sales-plan-row-drag-and-drop-reorder) — PATCH,
+            // как и byId (тоже частичное изменение уже существующих
+            // строк), но на уровне отдела, а не одной строки плана.
+            order: `${serviceSalesPlanRoot}/order`,
+        },
+        salesPlanTemplate: {
+            root: serviceSalesPlanTemplateRoot,
+        },
+        // Список сделок (Фаза 3, см. комментарий у serviceDealsRoot выше) —
+        // отдельный подобъект deals, а не плоский ключ на уровне service
+        // (как salesPerformance/salesPlan/salesPlanTemplate), потому что имя
+        // "deals" уже занято сущностью предметной области (DealEntity,
+        // DealListItem) и по аналогии с accounting.period/accounting.salaryReport
+        // выше группировка в подобъект читается яснее одного плоского пути.
+        //
+        // stages/managers/sources/stageGroups/models (Фаза 2, см.
+        // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md)
+        // — пять справочников сделок, новый дом для GET /deals/{stages,
+        // managers,sources,stage-groups,models} из src/TODO/deals; путь
+        // /models сохранён как есть (легаси-имя для getDeviceTypes), не
+        // переименован в /device-types, чтобы не расходиться с уже
+        // задокументированным в ENDPOINTS.md именем маршрута.
+        deals: {
+            root: serviceDealsRoot,
+            stages: `${serviceDealsRoot}/stages`,
+            managers: `${serviceDealsRoot}/managers`,
+            sources: `${serviceDealsRoot}/sources`,
+            stageGroups: `${serviceDealsRoot}/stage-groups`,
+            models: `${serviceDealsRoot}/models`,
+        },
+        // Отчёт по воронке сервисных сделок (Фаза 4, см. комментарий у
+        // serviceFunnelReportRoot выше) — отдельный подобъект по тому же
+        // принципу, что и deals выше.
+        funnelReport: {
+            root: serviceFunnelReportRoot,
+        },
+        // Аналитика услуг и категории услуг (Фаза 5, см. комментарий у
+        // serviceReportsRoot выше) — новый модуль domains/service/modules/reports,
+        // не modules/sales (иной источник данных: roapp_service_orders, а не
+        // bitrix_deals).
+        reports: {
+            services: `${serviceReportsRoot}/services`,
+            serviceCategories: `${serviceReportsRoot}/service-categories`,
+            // Справочник типов заказов RoApp (Фаза 1, docs/
+            // service-plan-salary-rule-order-category-filter/
+            // plan-service-plan-salary-rule-order-category-filter.md) —
+            // "категория заказа" в терминах этой фичи (RoappOrderType, не
+            // SalesPlan.category и не Roapp*Category).
+            orderType: `${serviceReportsRoot}/order-type`,
+        },
+        // Маркетинг (Фаза 7, см. комментарий у serviceMarketingPricingRoot
+        // выше) — единственный поднабор саб-группы marketing на сегодня.
+        marketing: {
+            pricing: {
+                updateServicePrices: `${serviceMarketingPricingRoot}/update-service-prices`,
+            },
+        },
+    },
+    // Маршруты направления shop (domains/shop) — под префиксом /v1/shop.
+    shop: {
+        // Зарплатные правила магазина (Фаза 12, см. domains/shop/modules/accounting).
+        accounting: {
+            salaryRuleTypes: `${shopAccountingRoot}/salary_role_types`,
+            // Схема мотивации магазина (Фаза 13.5, см.
+            // docs/payroll/phase-13.5-shop-report-integration.md) — зеркалит
+            // одноимённые маршруты accounting сервиса, но в своём namespace
+            // shopAccountingRoot, а не через общие константы сервиса (см.
+            // запрет на импорт между domains/service и domains/shop в
+            // backend/CLAUDE.md и src/domains/service/CLAUDE.md).
+            // motivationSchema: { root, byId } — Фаза "Редактирование
+            // зарплатных схем" добавила GET-список/GET-по-id/PATCH к уже
+            // существующему POST; byId используется всеми тремя новыми
+            // маршрутами (GET/PATCH .../motivation-schema/:id), root — и
+            // старым POST, и новым GET-списком. Зеркалит
+            // service.motivationSchema (см. выше).
+            motivationSchema: {
+                root: `${shopAccountingRoot}/motivation-schema`,
+                byId: `${shopAccountingRoot}/motivation-schema/:id`,
+            },
+            // Расчётный период направления shop (Фаза 3) — зеркалит
+            // service.accounting.period выше, в своём namespace
+            // shopAccountingRoot (см. запрет на импорт между
+            // domains/service и domains/shop в backend/CLAUDE.md).
+            period: {
+                byPeriod: `${shopAccountingRoot}/period/:period`,
+                close: `${shopAccountingRoot}/period/:period/close`,
+                closePreview: `${shopAccountingRoot}/period/:period/close-preview`,
+                reopen: `${shopAccountingRoot}/period/:period/reopen`,
+                recalculate: `${shopAccountingRoot}/period/:period/recalculate`,
+            },
+            // Отчёт по зарплате сотрудника магазина — зеркалит
+            // .../accounting/salary_report/employee/:id/:period сервиса
+            // (см. GetEmployeeSalaryReportHttpController), но в своём
+            // namespace shopAccountingRoot и с собственным (не
+            // direction-aware) сервисом GetShopEmployeeSalaryReportService,
+            // так как ответ односторонний — один отчёт одного направления
+            // (см. employeeSalaryReportResponseSchema в contracts).
+            //
+            // department — тот же приём для отчёта по отделу
+            // (GetShopDepartmentSalaryReportService): в отличие от
+            // объединённого .../accounting/salary_report/department/:id/:period
+            // сервиса (GetDepartmentSalaryReportService, сводит service и
+            // shop в один ответ с комбинированным isClosed), этот отчёт
+            // ограничен одним направлением shop — isClosed берётся как есть,
+            // без combine-шага по двум направлениям.
+            salaryReport: {
+                employee: `${shopAccountingRoot}/salary_report/employee/:id/:period`,
+                department: `${shopAccountingRoot}/salary_report/department/:id/:period`,
+            },
+            // Документы начисления магазина (PRD 1
+            // docs/payroll-closing-and-accrual) — зеркалит
+            // service.accounting.salaryAccruals в своём namespace.
+            salaryAccruals: {
+                root: `${shopAccountingRoot}/salary_accruals`,
+                byId: `${shopAccountingRoot}/salary_accruals/:id`,
+                // Массовое проведение (PRD 2, Фаза 7) — зеркало
+                // service.accounting.salaryAccruals в своём namespace.
+                accrueAll: `${shopAccountingRoot}/salary_accruals/accrue`,
+                accrueDocument: `${shopAccountingRoot}/salary_accruals/:id/accrue`,
+                // Действия над строкой документа (PRD 2, Фаза 6) — зеркалят
+                // service.accounting.salaryAccruals в своём namespace.
+                lineById: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId`,
+                lineAccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
+                lineUnaccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
+                // Первичный ручной ввод суммы+комментария строки TaskCompletion
+                // (раздел 18 tasks.md add-task-based-salary-rule, design.md
+                // Decision 5) — зеркало service.accounting.salaryAccruals.lineTaskReward.
+                lineTaskReward: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/task-reward`,
+            },
+            // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
+            // маршруты живут вне направления: см. routesV1.accounting.balance.
+            // Конфигурация кассы ERP направления shop (PRD 3
+            // docs/payroll-closing-and-accrual, Фаза 11) — read-only, зеркалит
+            // service.accounting.erpCashConfig выше, в своём namespace
+            // shopAccountingRoot.
+            erpCashConfig: `${shopAccountingRoot}/erp_cash_config`,
+            // Выплата направления shop (PRD 3
+            // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
+            // Фаза 12) — зеркалит service.accounting.payout выше, в своём
+            // namespace shopAccountingRoot (см. запрет на импорт между
+            // domains/service и domains/shop в backend/CLAUDE.md). byPeriod
+            // (старая страница-отчёт «Выплата») удалён Фазой 6
+            // docs/employee-settlements-page-redesign — см. WHY у
+            // service.accounting.payout выше.
+            payout: {
+                root: `${shopAccountingRoot}/payout`,
+                batch: `${shopAccountingRoot}/payout/batch`,
+                byId: `${shopAccountingRoot}/payout/:id`,
+            },
+        },
+        // Каталог (дерево категорий) магазина (Фаза 1, см.
+        // domains/shop/modules/warehouse) — читает уже синхронизированную
+        // MoySkladProductFolder, без товаров/остатков.
+        warehouse: {
+            catalog: `${shopWarehouseRoot}/catalog`,
+        },
+        // SalesFact/SalesPrognose/SalesPerformance магазина (Фаза 11, см.
+        // domains/shop/modules/sales) — свой путь, направление не query-
+        // параметр (оно и так подразумевается путём), см. комментарий у
+        // shopSalesPerformanceRoot выше.
+        salesPerformance: {
+            byPeriod: `${shopSalesPerformanceRoot}/:period`,
+        },
+        // План/шаблон плана продаж направления shop — см. комментарий у
+        // shopSalesPlanRoot выше.
+        salesPlan: {
+            root: shopSalesPlanRoot,
+            byId: `${shopSalesPlanRoot}/:id`,
+            approve: `${shopSalesPlanRoot}/approve`,
+            // Батч-обновление глобального порядка строк-категорий плана
+            // (Фаза 4, docs/sales-plan-row-drag-and-drop-reorder) — зеркало
+            // service.salesPlan.order выше.
+            order: `${shopSalesPlanRoot}/order`,
+        },
+        salesPlanTemplate: {
+            root: shopSalesPlanTemplateRoot,
+        },
+        // Маркетинг (Фаза 10, см. комментарий у shopMarketingPricingRoot
+        // выше) — импорт закупочных цен магазина, единственный поднабор
+        // саб-группы marketing направления shop на сегодня.
+        // importCostsProgress (SSE) и importCostsStatus (поллинг) делят
+        // общий путь-параметр `:id`, различаясь только суффиксом `/status`.
+        marketing: {
+            pricing: {
+                importCosts: `${shopMarketingPricingRoot}/import-costs`,
+                importCostsStatus: `${shopMarketingPricingRoot}/import-costs/:id/status`,
+                importCostsProgress: `${shopMarketingPricingRoot}/import-costs/:id`,
+            },
+        },
+    },
+};

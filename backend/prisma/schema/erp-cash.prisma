@@ -1,0 +1,64 @@
+// Кассовые документы ERP и конфигурация кассы по направлению — PRD 3
+// (docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md),
+// Фаза 11. Таблица erp_cash_documents ОДНА общая на оба направления
+// (пользовательское решение — см. backend/CLAUDE.md, "Общие таблицы между
+// service и shop"; физические таблицы не разбиваются по доменам) — но с
+// Фазы 4 docs/service-shop-boundary-violations-fix у service и shop
+// СОБСТВЕННЫЕ независимые Entity/Port/Repository-классы поверх неё
+// (ErpCashDocument в domains/service, ShopErpCashDocument в domains/shop),
+// каждый обращается к той же таблице через свой Prisma-делегат, но
+// фильтрует/подставляет свой фиксированный direction — это и разрывает
+// прежний цикл Shop.moysklad-cash-document.adapter → domains/service.
+//
+// direction — добавлена этой же фазой простой аддитивной миграцией
+// (backfill из уже существующего system: ROAPP → service, MOY_SKLAD →
+// shop), nullable: единственный оставшийся ПОСЛЕ Фазы 4 общий (не
+// разделённый по доменам) писатель этой таблицы — CreateBalanceTransactionHandler
+// в src/modules/employee-balance/ (ручное движение баланса, PRD 2/3,
+// сквозной модуль вне доменов, см. WHY на BalanceTransaction в
+// backend/CLAUDE.md) — по-прежнему пишет через direction-агностичный
+// ErpCashDocumentRepository (domains/service) для ОБОИХ направлений и не
+// заполняет direction (не бизнес-логика ни одного домена, вне скоупа Фазы
+// 4). NOT NULL не ставим намеренно: не все писатели таблицы гарантированно
+// заполняют колонку.
+enum ErpCashDocumentKind {
+  INCOME
+  OUTCOME
+
+  @@map("erp_cash_document_kind")
+}
+
+// Связка «движение баланса → документ ERP» (PRD 3: «либо есть оба, либо нет
+// ни одного»). transactionId уникален на ВСЮ таблицу (не по direction) — он
+// и так уникален в разрезе всей компании, это и есть защита от задвоения на
+// уровне БД, на которую опирается ErpCashDocumentPort.findByKey (см. порт):
+// повторная попытка создать документ для уже обработанного движения обязана
+// упасть на уникальном индексе, а не молча создать второй документ в ERP.
+model ErpCashDocument {
+  id            String              @id
+  transactionId String              @unique @map("transaction_id")
+  system        ExternalSystem
+  kind          ErpCashDocumentKind
+  // Целые рубли, без знака — знак направления несёт kind (см. amount в
+  // contracts/commands/erp-cash.ts).
+  amount        Int
+  externalId    String              @map("external_id")
+  // Фаза 4 docs/service-shop-boundary-violations-fix — см. WHY в шапке
+  // файла. Nullable и без @default: не переносим сюда обязательность,
+  // которую не могут гарантировать все писатели таблицы.
+  direction     SalesDirection?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("erp_cash_documents")
+}
+
+// Конфигурация кассы по направлению (roappCashboxId направления service;
+// moySkladExpenseItemId/moySkladIncomeItemId/organizationId направления
+// shop) БОЛЬШЕ НЕ Prisma-модель — правка пользователя от 2026-08-24 (см.
+// заметку в конце Фазы 11 плана docs/payroll-closing-and-accrual/
+// plan-payroll-closing-and-accrual.md): перенесена в файловый конфиг модуля
+// на основе env-переменных (backend/src/domains/{service,shop}/modules/
+// accounting/config/erp-cash.config.ts, читается ErpCashConfigProvider,
+// application/ports/erp-cash-config.port.ts). Таблица erp_cash_configs
+// удалена миграцией remove_erp_cash_config_table.

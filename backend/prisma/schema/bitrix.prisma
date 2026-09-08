@@ -25,12 +25,93 @@ model BitrixDeal {
   @@map("bitrix_deals")
 }
 
+model BitrixDepartment {
+  id   Int    @id
+  name String
+
+  employees BitrixEmployee[]
+  // См. sales.prisma (Фаза 3, docs/payroll/plan-payroll-calculation.md) —
+  // план продаж и его дефолтный шаблон всегда привязаны к отделу.
+  salesPlanTemplates SalesPlanTemplate[]
+  salesPlans         SalesPlan[]
+
+  @@map("bitrix_departments")
+}
+
 model BitrixEmployee {
-  id         Int          @id
-  firstName  String
-  lastName   String
-  department Int
+  id           Int    @id
+  firstName    String
+  lastName     String
+  departmentId Int    @map("department")
+
+  /// Активность пользователя в Bitrix24 (поле ACTIVE user.get) — false у уволенного
+  /// сотрудника. Синхронизируется BitrixSyncService.uploadEmployees(); читается
+  /// при закрытии расчётного периода для признака isDismissed документа
+  /// начисления (PRD 1 docs/payroll-closing-and-accrual).
+  isActive Boolean @default(true) @map("is_active")
+
+  /// Должность сотрудника (Bitrix24 WORK_POSITION) — для карточки сотрудника
+  /// в сквозном списке взаиморасчётов (docs/employee-settlements-page-redesign,
+  /// Фаза 1). NULL — должность ещё не подтянута синхронизацией.
+  /// TODO(employee-settlements-page-redesign): BitrixSyncService.uploadEmployees()
+  /// пока не читает WORK_POSITION из user.get — поле лежит незаполненным,
+  /// пока не появится отдельная задача на доработку синхронизации.
+  position String? @map("position")
+
+  /// Локальный, независимый от Bitrix24-синхронизации порядок отображения
+  /// сотрудника (docs/employee-ordering-and-salary-filter, Фаза 1) — единый
+  /// для всех списков/справочников сотрудников (справочник, отчёт по
+  /// зарплате, взаиморасчёты/баланс, зарплатные схемы, график работы,
+  /// связи сотрудников). Меняется только через reorder-эндпоинт
+  /// (modules/directory), НЕ читается и НЕ пишется BitrixSyncService.
+  /// uploadEmployees() — сознательно исключено из цикла синхронизации.
+  /// Начальные значения (миграция) — по прежнему алфавитному порядку
+  /// (lastName, firstName), которым раньше сортировался справочник по
+  /// умолчанию; новые сотрудники, засинканные позже, получают DEFAULT 0
+  /// (осмысленное упорядочивание для них — вручную через reorder).
+  order Int @default(0) @map("order")
+
+  /// Локальный, независимый от Bitrix24-синхронизации признак «служебный
+  /// аккаунт» (docs/employee-ordering-and-salary-filter, Фаза 3) — заводится
+  /// частью отделов для технических целей, не обозначает реального
+  /// сотрудника. Независим от isActive (тот означает «уволен») — служебный
+  /// аккаунт при этом обычно isActive: true. Сотрудник с isServiceAccount:
+  /// true исключается из ВСЕХ зарплатных выборок (отчёт по зарплате,
+  /// взаиморасчёты/баланс, зарплатные схемы, справочник выбора сотрудника
+  /// при создании отчёта) — из списков, расчётов и итоговых сумм
+  /// (DirectoryRepository.findEmployees default-фильтрует
+  /// isServiceAccount: false; см. FindEmployeesOptions.includeServiceAccounts
+  /// для явных исключений: график работы и связи сотрудников (EmployeeIdentity)
+  /// продолжают видеть служебных сотрудников без изменений — PRD, "Не в
+  /// скоупе": "Скрытие служебных сотрудников за пределами зарплатного
+  /// раздела"). Меняется только через PATCH .../employees/:id/service-account
+  /// (modules/directory), НЕ читается и НЕ пишется BitrixSyncService.
+  /// uploadEmployees() — сознательно исключено из цикла синхронизации, тем
+  /// же приёмом, что и order выше.
+  isServiceAccount Boolean @default(false) @map("is_service_account")
+
+  /// @deprecated Заменено на EmployeeIdentity(system: ROAPP, identifierType: EMPLOYEE_ID)
+  /// — см. employee-identity.prisma и Фазу 2 docs/payroll/plan-payroll-calculation.md.
+  /// Поле оставлено для истории/переходного периода, новые связи сюда не пишутся.
+  roappId Int? @unique @map("roapp_id")
+  /// @deprecated Заменено на EmployeeIdentity(system: MOY_SKLAD, identifierType: EMPLOYEE_ID).
+  moySkladId String? @unique @map("moy_sklad_id")
+  /// @deprecated Заменено на EmployeeIdentity(system: ROAPP, identifierType: ONLINE_MANAGER_FIELD).
+  roappOnlineName String? @unique @map("roapp_online_name")
+
+  department       BitrixDepartment   @relation(fields: [departmentId], references: [id])
+  roappEmployee    RoappEmployee?     @relation(fields: [roappId], references: [id], onDelete: SetNull)
+  moySkladEmployee MoySkladEmployee?  @relation(fields: [moySkladId], references: [id], onDelete: SetNull)
+  identities       EmployeeIdentity[]
+
   bitrixDeal BitrixDeal[]
+
+  /// Токены Bitrix24 сотрудника (add-bitrix24-auth-and-rbac, auth.prisma) —
+  /// 1:1, отсутствует до первого входа сотрудника в iReports.
+  credentials BitrixEmployeeCredentials?
+  /// Роли iReports, назначенные сотруднику (add-bitrix24-auth-and-rbac,
+  /// auth.prisma) — независимо от должности/отдела в Bitrix24.
+  employeeRoles EmployeeRole[]
 
   @@map("bitrix_employees")
 }

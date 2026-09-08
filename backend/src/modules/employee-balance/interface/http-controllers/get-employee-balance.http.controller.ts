@@ -1,0 +1,37 @@
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { EmployeeBalanceResponse } from 'ireports-contracts';
+import { routesV1 } from '@/config/app.routes';
+import { GetEmployeeBalanceService } from '@/modules/employee-balance/application/services/get-employee-balance.service';
+import { GetEmployeeBalanceQueryDto } from '../dto/get-employee-balance-query.dto';
+
+@ApiTags('Бухгалтерия: баланс сотрудника')
+@Controller()
+export class GetEmployeeBalanceHttpController {
+    constructor(
+        private readonly getEmployeeBalance: GetEmployeeBalanceService,
+    ) {}
+
+    @Get(routesV1.accounting.balance.employee)
+    @ApiOperation({
+        summary:
+            'Общий баланс сотрудника: остаток (SUM всей ленты по employeeId, без деления на направления), страница движений с фильтрами (курсорная пагинация, по умолчанию 20 последних «за всё время») и selectionTotal — сумма ВСЕЙ отфильтрованной выборки',
+    })
+    async get(
+        @Param('id', ParseIntPipe) id: number,
+        @Query() query: GetEmployeeBalanceQueryDto,
+    ): Promise<EmployeeBalanceResponse> {
+        // Даты в query — ISO-строки (см. getEmployeeBalanceQuerySchema:
+        // z.coerce.date() ломает генерацию OpenAPI), в фильтр порта — Date.
+        // cursor/limit (Фаза 7) — пробрасываются как есть; дефолт лимита —
+        // ответственность репозитория (DEFAULT_BALANCE_TRANSACTIONS_PAGE_LIMIT
+        // в balance-transaction.port.ts), не этого контроллера.
+        return this.getEmployeeBalance.execute(id, {
+            from: query.from ? new Date(query.from) : undefined,
+            to: query.to ? new Date(query.to) : undefined,
+            types: query.types,
+            cursor: query.cursor,
+            limit: query.limit,
+        });
+    }
+}

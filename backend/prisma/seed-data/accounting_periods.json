@@ -1,0 +1,32 @@
+[
+  {
+    "id": "c76871be-32b9-482b-b0a1-465b7b6b7f5a",
+    "direction": "service",
+    "period": "2026-06",
+    "status": "CLOSED",
+    "closedBy": 1,
+    "closedAt": "2026-08-24T17:48:48.071Z",
+    "createdAt": "2026-08-22T01:15:18.797Z",
+    "updatedAt": "2026-08-22T01:15:18.797Z"
+  },
+  {
+    "id": "0ce75463-90f9-407f-bdbd-06991ff73dd3",
+    "direction": "shop",
+    "period": "2026-06",
+    "status": "CLOSED",
+    "closedBy": 1,
+    "closedAt": "2026-08-24T19:07:22.719Z",
+    "createdAt": "2026-08-24T19:07:15.837Z",
+    "updatedAt": "2026-08-24T19:07:15.837Z"
+  },
+  {
+    "id": "34a256a6-9fc1-43a7-9329-a1757cd2a873",
+    "direction": "service",
+    "period": "2026-07",
+    "status": "CLOSED",
+    "closedBy": 1,
+    "closedAt": "2026-08-26T13:26:51.728Z",
+    "createdAt": "2026-08-26T09:00:03.429Z",
+    "updatedAt": "2026-08-26T09:00:03.429Z"
+  }
+]

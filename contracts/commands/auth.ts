@@ -1,0 +1,109 @@
+import { z } from 'zod';
+
+// Контракты аутентификации Bitrix24 (add-bitrix24-auth-and-rbac,
+// openspec/changes/add-bitrix24-auth-and-rbac/specs/auth/spec.md) — оба
+// сценария входа (embedded/iframe и OAuth 2.0 authorization code flow)
+// сходятся к единой внутренней модели (существующий BitrixEmployee, design.md
+// Decision 2), поэтому у обоих сценариев единая форма ответа
+// authenticatedSessionResponseSchema, отличается только набор полей запроса.
+
+// ========================== Embedded/iframe-сценарий ========================== //
+
+// AUTH_ID/member_id — переданные фронтендом после BX24.init() данные сессии
+// BX24 (spec: auth#embedded-login-success); backend НЕ доверяет им напрямую —
+// обязательная валидация реальным REST-запросом (spec:
+// auth#embedded-token-must-be-verified-via-rest) происходит уже на backend,
+// не на уровне контракта. `domain` — DOMAIN из того же ответа `BX24.getAuth()`
+// (домен портала, например `irepair.bitrix24.ru`); backend строит из него
+// `clientEndpoint` (`https://${domain}/rest/`) для REST-запроса-валидации
+// напрямую, без похода в БД за записью `BitrixInstallation` — той записи
+// может не существовать, если install-вебхук (`POST /bitrix/install`)
+// реально не вызывался (упрощённая регистрация тестового приложения
+// Bitrix24, не создающая install-событие).
+const bitrixEmbeddedLoginRequestSchema = z.object({
+    authId: z.string().min(1),
+    memberId: z.string().min(1),
+    domain: z.string().min(1),
+});
+export type BitrixEmbeddedLoginRequest = z.infer<
+    typeof bitrixEmbeddedLoginRequestSchema
+>;
+
+// Доставка session_id для embedded-контекста — заголовок Authorization
+// (spec: session#header-delivery-for-iframe), поэтому sessionId возвращается
+// в теле ответа: frontend хранит его только в памяти (не
+// localStorage/sessionStorage) и подставляет сам в каждый запрос.
+const bitrixEmbeddedLoginResponseSchema = z.object({
+    sessionId: z.string().min(1),
+});
+export type BitrixEmbeddedLoginResponse = z.infer<
+    typeof bitrixEmbeddedLoginResponseSchema
+>;
+
+// ========================== OAuth 2.0 authorization code flow ========================== //
+
+// `code`/`state` — параметры OAuth-редиректа (design.md, спек auth#oauth-
+// authorization-code-flow); один и тот же контракт для standalone-сайта и
+// iOS (spec: auth#ios-oauth — тот же backend-эндпоинт обмена кода на токены).
+// `redirectUri` — тот же `redirect_uri`, что frontend передавал в исходном
+// редиректе на `{portal}/oauth/authorize/` (`useBitrixLogin`); backend
+// обязан передать то же значение при обмене `code` на токены (RFC 6749
+// §4.1.3 — redirect_uri в token-запросе должен совпадать с тем, что был
+// указан при авторизации, если он вообще был указан).
+const bitrixOAuthCallbackRequestSchema = z.object({
+    code: z.string().min(1),
+    state: z.string().optional(),
+    redirectUri: z.string().min(1),
+});
+export type BitrixOAuthCallbackRequest = z.infer<
+    typeof bitrixOAuthCallbackRequestSchema
+>;
+
+// Доставка session_id для standalone-сайта/iOS — HttpOnly/Secure/
+// SameSite=None cookie (spec: session#cookie-delivery-for-standalone-and-ios),
+// устанавливаемая backend'ом через Set-Cookie — тело ответа НЕ содержит
+// sessionId (иначе HttpOnly cookie теряла бы смысл: значение было бы всё
+// равно доступно JS через тело ответа).
+const bitrixOAuthCallbackResponseSchema = z.object({
+    success: z.literal(true),
+});
+export type BitrixOAuthCallbackResponse = z.infer<
+    typeof bitrixOAuthCallbackResponseSchema
+>;
+
+// ========================== Текущий пользователь ========================== //
+
+// spec: roles#get-current-user — идентификатор пользователя и полный список
+// его текущих permissions, для инициализации клиентского состояния после
+// входа (useCurrentUser).
+const authenticatedEmployeeSchema = z.object({
+    id: z.number(),
+    firstName: z.string(),
+    lastName: z.string(),
+});
+export type AuthenticatedEmployee = z.infer<typeof authenticatedEmployeeSchema>;
+
+const authMeResponseSchema = z.object({
+    employee: authenticatedEmployeeSchema,
+    permissions: z.array(z.string()),
+});
+export type AuthMeResponse = z.infer<typeof authMeResponseSchema>;
+
+// ========================== Logout ========================== //
+
+// spec: session#logout-deletes-session-server-side — удаляет сессию из
+// Redis, а не только cookie/состояние на клиенте.
+const logoutResponseSchema = z.object({
+    success: z.literal(true),
+});
+export type LogoutResponse = z.infer<typeof logoutResponseSchema>;
+
+export {
+    bitrixEmbeddedLoginRequestSchema,
+    bitrixEmbeddedLoginResponseSchema,
+    bitrixOAuthCallbackRequestSchema,
+    bitrixOAuthCallbackResponseSchema,
+    authenticatedEmployeeSchema,
+    authMeResponseSchema,
+    logoutResponseSchema,
+};

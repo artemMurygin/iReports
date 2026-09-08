@@ -1,0 +1,32 @@
+{
+  "name": "ireports",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iReports monorepo — корневой package.json нужен для npm workspace (backend + contracts, см. ../CLAUDE.md) и git-хуков. frontend в workspace не входит и ставится независимо (см. frontend/CLAUDE.md).",
+  "workspaces": [
+    "backend",
+    "contracts",
+    "sheets-app"
+  ],
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "shadcn": "^4.16.2"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "validate:specs": "node openspec/scripts/validate-spec-refs.mjs",
+    "backend:dev": "npm run start:dev --workspace=backend",
+    "backend:build": "npm run build --workspace=backend",
+    "backend:lint": "npm run lint --workspace=backend",
+    "backend:test": "npm run test --workspace=backend",
+    "frontend:dev": "npm --prefix frontend run start",
+    "frontend:build": "npm --prefix frontend run build",
+    "frontend:lint": "npm --prefix frontend run lint",
+    "contracts:build": "npm run build --workspace=contracts",
+    "sheets-app:dev": "npm run dev --workspace=sheets-app",
+    "sheets-app:build": "npm run build --workspace=sheets-app",
+    "sheets-app:push": "npm run push --workspace=sheets-app",
+    "sheets-app:lint": "npm run lint --workspace=sheets-app",
+    "sheets-app:test": "npm run test --workspace=sheets-app"
+  }
+}

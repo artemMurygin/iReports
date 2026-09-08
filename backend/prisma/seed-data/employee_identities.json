@@ -1,0 +1,74 @@
+[
+  {
+    "id": "5f1d7ec0-6877-44a6-8c5a-e3395c6940bd",
+    "bitrixEmployeeId": 14,
+    "system": "ROAPP",
+    "identifierType": "EMPLOYEE_ID",
+    "externalId": "70751",
+    "createdAt": "2026-08-18T13:37:22.879Z",
+    "updatedAt": "2026-08-18T13:37:22.879Z"
+  },
+  {
+    "id": "d57e9003-6609-407a-a30a-d566eec5fa42",
+    "bitrixEmployeeId": 14,
+    "system": "ROAPP",
+    "identifierType": "ONLINE_MANAGER_FIELD",
+    "externalId": "Олег Фадеев",
+    "createdAt": "2026-08-18T13:40:30.907Z",
+    "updatedAt": "2026-08-18T13:40:30.907Z"
+  },
+  {
+    "id": "78d15a39-bad1-41d5-b847-e56b9b7e924f",
+    "bitrixEmployeeId": 14,
+    "system": "MOY_SKLAD",
+    "identifierType": "EMPLOYEE_ID",
+    "externalId": "e326ad6c-9cde-11ee-0a80-10c700117afb",
+    "createdAt": "2026-08-18T13:41:02.974Z",
+    "updatedAt": "2026-08-18T13:41:02.974Z"
+  },
+  {
+    "id": "b10d4be5-8706-4871-a01f-f05395235552",
+    "bitrixEmployeeId": 5504,
+    "system": "ROAPP",
+    "identifierType": "ONLINE_MANAGER_FIELD",
+    "externalId": "Георгий Прохоров",
+    "createdAt": "2026-08-19T05:31:46.128Z",
+    "updatedAt": "2026-08-19T05:31:46.128Z"
+  },
+  {
+    "id": "4c22a863-474b-4919-adf0-16bb04bf5e5f",
+    "bitrixEmployeeId": 5504,
+    "system": "MOY_SKLAD",
+    "identifierType": "EMPLOYEE_ID",
+    "externalId": "c19dfb22-69d0-11ef-0a80-186e000a9859",
+    "createdAt": "2026-08-24T11:56:14.402Z",
+    "updatedAt": "2026-08-24T11:56:14.402Z"
+  },
+  {
+    "id": "69fa098d-5c8a-4428-b550-225f9492ba19",
+    "bitrixEmployeeId": 5504,
+    "system": "MOY_SKLAD",
+    "identifierType": "MOY_SKLAD_ONLINE_PURCHASER_FIELD",
+    "externalId": "c19dfb22-69d0-11ef-0a80-186e000a9859",
+    "createdAt": "2026-08-24T11:56:18.914Z",
+    "updatedAt": "2026-08-24T11:56:18.914Z"
+  },
+  {
+    "id": "205bff65-8327-4342-817a-ae6e4342b76f",
+    "bitrixEmployeeId": 5504,
+    "system": "MOY_SKLAD",
+    "identifierType": "MOY_SKLAD_OFFLINE_PURCHASER_FIELD",
+    "externalId": "c19dfb22-69d0-11ef-0a80-186e000a9859",
+    "createdAt": "2026-08-24T11:56:23.527Z",
+    "updatedAt": "2026-08-24T11:56:23.527Z"
+  },
+  {
+    "id": "98d1861e-d185-4976-ab86-7f36878066c6",
+    "bitrixEmployeeId": 5504,
+    "system": "ROAPP",
+    "identifierType": "EMPLOYEE_ID",
+    "externalId": "259738",
+    "createdAt": "2026-08-24T11:57:37.962Z",
+    "updatedAt": "2026-08-24T11:57:37.962Z"
+  }
+]

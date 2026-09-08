@@ -1,0 +1,2222 @@
+[
+  {
+    "id": 1064211,
+    "name": "11 | Доставка",
+    "parentId": null
+  },
+  {
+    "id": 281216,
+    "name": "12 | Обмен",
+    "parentId": null
+  },
+  {
+    "id": 1190703,
+    "name": "14 | Оборудование",
+    "parentId": null
+  },
+  {
+    "id": 1794486,
+    "name": "Шлефа",
+    "parentId": 690985
+  },
+  {
+    "id": 291571,
+    "name": "06 | Замена шлейфов",
+    "parentId": 1794486
+  },
+  {
+    "id": 293412,
+    "name": "07 | Динамики",
+    "parentId": 1794486
+  },
+  {
+    "id": 1063648,
+    "name": "Android",
+    "parentId": 1063647
+  },
+  {
+    "id": 1703311,
+    "name": "One Plus",
+    "parentId": 1063648
+  },
+  {
+    "id": 1703312,
+    "name": "Дисплеи",
+    "parentId": 1703311
+  },
+  {
+    "id": 284519,
+    "name": "06 | Замена тачпада",
+    "parentId": 690987
+  },
+  {
+    "id": 1703285,
+    "name": "01 | Тачпады",
+    "parentId": 284519
+  },
+  {
+    "id": 627754,
+    "name": "01 | MacBook Pro 16",
+    "parentId": 1703285
+  },
+  {
+    "id": 627753,
+    "name": "02 | MacBook Pro 15",
+    "parentId": 1703285
+  },
+  {
+    "id": 691015,
+    "name": "03 | MacBook Pro 14",
+    "parentId": 1703285
+  },
+  {
+    "id": 627752,
+    "name": "04 | MacBook Pro 13",
+    "parentId": 1703285
+  },
+  {
+    "id": 627749,
+    "name": "06 | MacBook Air 11",
+    "parentId": 1703285
+  },
+  {
+    "id": 627747,
+    "name": "07 | MacBook 12",
+    "parentId": 1703285
+  },
+  {
+    "id": 284518,
+    "name": "04 | Замены клавиатуры",
+    "parentId": 690987
+  },
+  {
+    "id": 1703282,
+    "name": "Клавиатуры",
+    "parentId": 284518
+  },
+  {
+    "id": 625616,
+    "name": "2. MacBook Pro 16",
+    "parentId": 1703282
+  },
+  {
+    "id": 625614,
+    "name": "3. MacBook Pro 15",
+    "parentId": 1703282
+  },
+  {
+    "id": 690933,
+    "name": "4. MacBook Pro 14",
+    "parentId": 1703282
+  },
+  {
+    "id": 625615,
+    "name": "5. MacBook Pro 13",
+    "parentId": 1703282
+  },
+  {
+    "id": 625618,
+    "name": "6. MacBook Air 13 / 15",
+    "parentId": 1703282
+  },
+  {
+    "id": 625620,
+    "name": "7. MacBook 12",
+    "parentId": 1703282
+  },
+  {
+    "id": 625619,
+    "name": "8. MacBook Air 11",
+    "parentId": 1703282
+  },
+  {
+    "id": 1703231,
+    "name": "02 | Macbook",
+    "parentId": 631167
+  },
+  {
+    "id": 1703280,
+    "name": "01 | Скотч для Матриц",
+    "parentId": 1703231
+  },
+  {
+    "id": 1626681,
+    "name": "02 | Услуги",
+    "parentId": 763166
+  },
+  {
+    "id": 1661663,
+    "name": "Macbook",
+    "parentId": 1626681
+  },
+  {
+    "id": 1661665,
+    "name": "01 | Macbook Pro 16",
+    "parentId": 1661663
+  },
+  {
+    "id": 1661666,
+    "name": "02 | Macbook Pro 15",
+    "parentId": 1661663
+  },
+  {
+    "id": 1661668,
+    "name": "04 | Macbook Pro 13",
+    "parentId": 1661663
+  },
+  {
+    "id": 1661669,
+    "name": "05 | Macbook Air 15",
+    "parentId": 1661663
+  },
+  {
+    "id": 1661670,
+    "name": "06 | Macbook Air 13",
+    "parentId": 1661663
+  },
+  {
+    "id": 1661671,
+    "name": "07 | Macbook Air 11",
+    "parentId": 1661663
+  },
+  {
+    "id": 1661672,
+    "name": "08 | Macbook 12",
+    "parentId": 1661663
+  },
+  {
+    "id": 1661662,
+    "name": "iPhone",
+    "parentId": 1626681
+  },
+  {
+    "id": 1661815,
+    "name": "01 | 5 - 8 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661816,
+    "name": "02 | 10 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661817,
+    "name": "03 | 11 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661818,
+    "name": "04 | 12 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661819,
+    "name": "05 | 13 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661820,
+    "name": "06 | 14 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661821,
+    "name": "07 | 15 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661822,
+    "name": "08 | 16 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1661661,
+    "name": "iPad",
+    "parentId": 1626681
+  },
+  {
+    "id": 1661757,
+    "name": "01 | iPad",
+    "parentId": 1661661
+  },
+  {
+    "id": 1661758,
+    "name": "02 | iPad Air",
+    "parentId": 1661661
+  },
+  {
+    "id": 1661759,
+    "name": "03 | iPad Mini",
+    "parentId": 1661661
+  },
+  {
+    "id": 1661760,
+    "name": "04 | iPad Pro 9,7\" / 10,5\"",
+    "parentId": 1661661
+  },
+  {
+    "id": 1661761,
+    "name": "05 | iPad Pro 11\"",
+    "parentId": 1661661
+  },
+  {
+    "id": 1661762,
+    "name": "06 | iPad Pro 12,9\"",
+    "parentId": 1661661
+  },
+  {
+    "id": 1655409,
+    "name": "07 | Шлейфа АКБ",
+    "parentId": 291571
+  },
+  {
+    "id": 754803,
+    "name": "Шлейф аккумулятора",
+    "parentId": 1655409
+  },
+  {
+    "id": 1655389,
+    "name": "02 | Комплектующие для дисплеев",
+    "parentId": 690987
+  },
+  {
+    "id": 1663862,
+    "name": "01 | Нижние рамки",
+    "parentId": 1655389
+  },
+  {
+    "id": 1663863,
+    "name": "02 | Уплотнители дисплея",
+    "parentId": 1655389
+  },
+  {
+    "id": 1663864,
+    "name": "03 | Крепление шлейфов матрицы",
+    "parentId": 1655389
+  },
+  {
+    "id": 1703281,
+    "name": "04 | Подсветки дисплея",
+    "parentId": 1655389
+  },
+  {
+    "id": 1655372,
+    "name": "01 | iPhone",
+    "parentId": 631167
+  },
+  {
+    "id": 938022,
+    "name": "Проклейка | Аккумулятор",
+    "parentId": 1655372
+  },
+  {
+    "id": 911825,
+    "name": "Проклейка | Дисплей",
+    "parentId": 1655372
+  },
+  {
+    "id": 1139801,
+    "name": "Проклейка | Корпус",
+    "parentId": 1655372
+  },
+  {
+    "id": 1643941,
+    "name": "08 | Прочие",
+    "parentId": 291571
+  },
+  {
+    "id": 1651452,
+    "name": "02 | Кнопка HOME",
+    "parentId": 1643941
+  },
+  {
+    "id": 1651478,
+    "name": "4 серия",
+    "parentId": 1651452
+  },
+  {
+    "id": 1651479,
+    "name": "5 серия",
+    "parentId": 1651452
+  },
+  {
+    "id": 1651481,
+    "name": "6 серия",
+    "parentId": 1651452
+  },
+  {
+    "id": 1651483,
+    "name": "7 серия",
+    "parentId": 1651452
+  },
+  {
+    "id": 1651431,
+    "name": "01 | Вибромотор",
+    "parentId": 1643941
+  },
+  {
+    "id": 1651485,
+    "name": "10 серия",
+    "parentId": 1651431
+  },
+  {
+    "id": 1651476,
+    "name": "11 серия",
+    "parentId": 1651431
+  },
+  {
+    "id": 1651486,
+    "name": "12 серия",
+    "parentId": 1651431
+  },
+  {
+    "id": 1651477,
+    "name": "13 серия",
+    "parentId": 1651431
+  },
+  {
+    "id": 1651480,
+    "name": "5 серия",
+    "parentId": 1651431
+  },
+  {
+    "id": 1651482,
+    "name": "6 серия",
+    "parentId": 1651431
+  },
+  {
+    "id": 1651484,
+    "name": "7 серия",
+    "parentId": 1651431
+  },
+  {
+    "id": 1662169,
+    "name": "03 | Лидар",
+    "parentId": 1643941
+  },
+  {
+    "id": 1662170,
+    "name": "04 | Вспышки",
+    "parentId": 1643941
+  },
+  {
+    "id": 291742,
+    "name": "05 | Замена камеры",
+    "parentId": 690985
+  },
+  {
+    "id": 527123,
+    "name": "03 | Глазок камеры",
+    "parentId": 291742
+  },
+  {
+    "id": 1643896,
+    "name": "15 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 926974,
+    "name": "iPhone 15 / 15 Plus",
+    "parentId": 1643896
+  },
+  {
+    "id": 926976,
+    "name": "iPhone 15 Pro",
+    "parentId": 1643896
+  },
+  {
+    "id": 926977,
+    "name": "iPhone 15 Pro max",
+    "parentId": 1643896
+  },
+  {
+    "id": 1643895,
+    "name": "14 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 824597,
+    "name": "iPhone 14",
+    "parentId": 1643895
+  },
+  {
+    "id": 1643919,
+    "name": "iPhone 14 Plus",
+    "parentId": 1643895
+  },
+  {
+    "id": 762128,
+    "name": "iPhone 14 Pro / 14 Pro Max",
+    "parentId": 1643895
+  },
+  {
+    "id": 1643894,
+    "name": "13 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 661241,
+    "name": "iPhone 13",
+    "parentId": 1643894
+  },
+  {
+    "id": 1643900,
+    "name": "iPhone 13 Mini",
+    "parentId": 1643894
+  },
+  {
+    "id": 667535,
+    "name": "iPhone 13 Pro",
+    "parentId": 1643894
+  },
+  {
+    "id": 1643917,
+    "name": "iPhone 13 Pro Max",
+    "parentId": 1643894
+  },
+  {
+    "id": 1643892,
+    "name": "12 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 661243,
+    "name": "iPhone 12",
+    "parentId": 1643892
+  },
+  {
+    "id": 668065,
+    "name": "iPhone 12 mini",
+    "parentId": 1643892
+  },
+  {
+    "id": 661239,
+    "name": "iPhone 12 Pro",
+    "parentId": 1643892
+  },
+  {
+    "id": 1643891,
+    "name": "11 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 661237,
+    "name": "iPhone 11",
+    "parentId": 1643891
+  },
+  {
+    "id": 667551,
+    "name": "iPhone 11 Pro",
+    "parentId": 1643891
+  },
+  {
+    "id": 1643899,
+    "name": "iPhone 11 Pro Max",
+    "parentId": 1643891
+  },
+  {
+    "id": 1643890,
+    "name": "10 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 661233,
+    "name": "iPhone X",
+    "parentId": 1643890
+  },
+  {
+    "id": 661236,
+    "name": "iPhone XR",
+    "parentId": 1643890
+  },
+  {
+    "id": 661234,
+    "name": "iPhone XS",
+    "parentId": 1643890
+  },
+  {
+    "id": 661235,
+    "name": "iPhone XS Max",
+    "parentId": 1643890
+  },
+  {
+    "id": 1643889,
+    "name": "08 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 661231,
+    "name": "iPhone 8",
+    "parentId": 1643889
+  },
+  {
+    "id": 661232,
+    "name": "iPhone 8+",
+    "parentId": 1643889
+  },
+  {
+    "id": 1643888,
+    "name": "07 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 661229,
+    "name": "iPhone 7",
+    "parentId": 1643888
+  },
+  {
+    "id": 661230,
+    "name": "iPhone 7+",
+    "parentId": 1643888
+  },
+  {
+    "id": 1643680,
+    "name": "07 | 15 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 926965,
+    "name": "iPhone 15",
+    "parentId": 1643680
+  },
+  {
+    "id": 926966,
+    "name": "iPhone 15 Plus",
+    "parentId": 1643680
+  },
+  {
+    "id": 926967,
+    "name": "iPhone 15 Pro",
+    "parentId": 1643680
+  },
+  {
+    "id": 926968,
+    "name": "iPhone 15 Pro Max",
+    "parentId": 1643680
+  },
+  {
+    "id": 690987,
+    "name": "02 | Запчасти MacBook",
+    "parentId": null
+  },
+  {
+    "id": 690988,
+    "name": "03 | Запчасти Watch",
+    "parentId": null
+  },
+  {
+    "id": 690985,
+    "name": "04 | Запчасти iPhone",
+    "parentId": null
+  },
+  {
+    "id": 690986,
+    "name": "05 | Запчасти iPad",
+    "parentId": null
+  },
+  {
+    "id": 1655384,
+    "name": "06 | Комплектация БУ",
+    "parentId": null
+  },
+  {
+    "id": 1063647,
+    "name": "07 | Прочие Устройства",
+    "parentId": null
+  },
+  {
+    "id": 763166,
+    "name": "08 | BGA Пайка",
+    "parentId": null
+  },
+  {
+    "id": 631167,
+    "name": "09 | Расходники",
+    "parentId": null
+  },
+  {
+    "id": 723443,
+    "name": "10 | Уценка",
+    "parentId": null
+  },
+  {
+    "id": 824704,
+    "name": "iPhone 12",
+    "parentId": 1643674
+  },
+  {
+    "id": 824703,
+    "name": "iPhone 12 Mini",
+    "parentId": 1643674
+  },
+  {
+    "id": 824702,
+    "name": "iPhone 12 Pro",
+    "parentId": 1643674
+  },
+  {
+    "id": 824701,
+    "name": "iPhone 12 Pro Max",
+    "parentId": 1643674
+  },
+  {
+    "id": 1643673,
+    "name": "03 | 11 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 824707,
+    "name": "iPhone 11",
+    "parentId": 1643673
+  },
+  {
+    "id": 824706,
+    "name": "IPhone 11 Pro",
+    "parentId": 1643673
+  },
+  {
+    "id": 824705,
+    "name": "iPhone 11 Pro Max",
+    "parentId": 1643673
+  },
+  {
+    "id": 1643666,
+    "name": "02 | 10 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 824711,
+    "name": "iPhone X",
+    "parentId": 1643666
+  },
+  {
+    "id": 824710,
+    "name": "iPhone XR",
+    "parentId": 1643666
+  },
+  {
+    "id": 824708,
+    "name": "iPhone XS Max",
+    "parentId": 1643666
+  },
+  {
+    "id": 1643658,
+    "name": "01 | 8 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 824722,
+    "name": "iPhone 8",
+    "parentId": 1643658
+  },
+  {
+    "id": 824721,
+    "name": "iPhone 8 Plus",
+    "parentId": 1643658
+  },
+  {
+    "id": 824718,
+    "name": "iPhone SE 2",
+    "parentId": 1643658
+  },
+  {
+    "id": 287220,
+    "name": "04 | Замена корпуса",
+    "parentId": 690985
+  },
+  {
+    "id": 1643650,
+    "name": "15 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 1117438,
+    "name": "iPhone 15",
+    "parentId": 1643650
+  },
+  {
+    "id": 1117437,
+    "name": "iPhone 15 Plus",
+    "parentId": 1643650
+  },
+  {
+    "id": 1117436,
+    "name": "iPhone 15 Pro",
+    "parentId": 1643650
+  },
+  {
+    "id": 1643649,
+    "name": "14 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 825947,
+    "name": "iPhone 14",
+    "parentId": 1643649
+  },
+  {
+    "id": 825946,
+    "name": "iPhone 14 Plus",
+    "parentId": 1643649
+  },
+  {
+    "id": 825945,
+    "name": "iPhone 14 Pro",
+    "parentId": 1643649
+  },
+  {
+    "id": 825944,
+    "name": "iPhone 14 Pro Max",
+    "parentId": 1643649
+  },
+  {
+    "id": 1643648,
+    "name": "13 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 673335,
+    "name": "iPhone 13",
+    "parentId": 1643648
+  },
+  {
+    "id": 673337,
+    "name": "iPhone 13 mini",
+    "parentId": 1643648
+  },
+  {
+    "id": 673334,
+    "name": "iPhone 13 Pro",
+    "parentId": 1643648
+  },
+  {
+    "id": 673332,
+    "name": "iPhone 13 Pro Max",
+    "parentId": 1643648
+  },
+  {
+    "id": 1643647,
+    "name": "12 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 661276,
+    "name": "iPhone 12",
+    "parentId": 1643647
+  },
+  {
+    "id": 661277,
+    "name": "iPhone 12 mini",
+    "parentId": 1643647
+  },
+  {
+    "id": 661278,
+    "name": "iPhone 12 Pro",
+    "parentId": 1643647
+  },
+  {
+    "id": 1643646,
+    "name": "11 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 661273,
+    "name": "iPhone 11",
+    "parentId": 1643646
+  },
+  {
+    "id": 661274,
+    "name": "iPhone 11 Pro",
+    "parentId": 1643646
+  },
+  {
+    "id": 661275,
+    "name": "iPhone 11 Pro Max",
+    "parentId": 1643646
+  },
+  {
+    "id": 1643637,
+    "name": "10 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 661268,
+    "name": "iPhone X",
+    "parentId": 1643637
+  },
+  {
+    "id": 661271,
+    "name": "iPhone XR",
+    "parentId": 1643637
+  },
+  {
+    "id": 661269,
+    "name": "iPhone XS",
+    "parentId": 1643637
+  },
+  {
+    "id": 661270,
+    "name": "iPhone XS Max",
+    "parentId": 1643637
+  },
+  {
+    "id": 1643636,
+    "name": "08 Серия",
+    "parentId": 287220
+  },
+  {
+    "id": 661266,
+    "name": "iPhone 8",
+    "parentId": 1643636
+  },
+  {
+    "id": 661267,
+    "name": "iPhone 8 Plus",
+    "parentId": 1643636
+  },
+  {
+    "id": 661272,
+    "name": "iPhone SE 2020",
+    "parentId": 1643636
+  },
+  {
+    "id": 1643635,
+    "name": "07 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 661264,
+    "name": "iPhone 7",
+    "parentId": 1643635
+  },
+  {
+    "id": 661265,
+    "name": "iPhone 7 Plus",
+    "parentId": 1643635
+  },
+  {
+    "id": 661260,
+    "name": "iPhone 6",
+    "parentId": 1643634
+  },
+  {
+    "id": 661261,
+    "name": "iPhone 6 Plus",
+    "parentId": 1643634
+  },
+  {
+    "id": 661262,
+    "name": "iPhone 6S",
+    "parentId": 1643634
+  },
+  {
+    "id": 661263,
+    "name": "iPhone 6S Plus",
+    "parentId": 1643634
+  },
+  {
+    "id": 1643632,
+    "name": "05 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 661249,
+    "name": "iPhone 5",
+    "parentId": 1643632
+  },
+  {
+    "id": 661258,
+    "name": "iPhone 5S",
+    "parentId": 1643632
+  },
+  {
+    "id": 661259,
+    "name": "iPhone SE",
+    "parentId": 1643632
+  },
+  {
+    "id": 1626685,
+    "name": "MacBook",
+    "parentId": 1626682
+  },
+  {
+    "id": 690912,
+    "name": "02 | MacBook Pro 16",
+    "parentId": 1626685
+  },
+  {
+    "id": 690909,
+    "name": "03 | MacBook Pro 15",
+    "parentId": 1626685
+  },
+  {
+    "id": 690913,
+    "name": "04 | MacBook Pro 14",
+    "parentId": 1626685
+  },
+  {
+    "id": 690914,
+    "name": "05 | MacBook Pro 13",
+    "parentId": 1626685
+  },
+  {
+    "id": 1661659,
+    "name": "06 | Macbook Air 15",
+    "parentId": 1626685
+  },
+  {
+    "id": 690916,
+    "name": "07 | MacBook Air 13",
+    "parentId": 1626685
+  },
+  {
+    "id": 690910,
+    "name": "08 | MacBook 12",
+    "parentId": 1626685
+  },
+  {
+    "id": 690915,
+    "name": "08 | MacBook Air 11",
+    "parentId": 1626685
+  },
+  {
+    "id": 1626684,
+    "name": "iPhone",
+    "parentId": 1626682
+  },
+  {
+    "id": 1661806,
+    "name": "01 | 5 - 8 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661807,
+    "name": "02 | 10 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661808,
+    "name": "03 | 11 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661809,
+    "name": "04 | 12 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661810,
+    "name": "05 | 13 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661811,
+    "name": "06 | 14 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661812,
+    "name": "07 | 15 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661813,
+    "name": "08 | 16 серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1626683,
+    "name": "iPad",
+    "parentId": 1626682
+  },
+  {
+    "id": 691249,
+    "name": "01 | iPad",
+    "parentId": 1626683
+  },
+  {
+    "id": 628225,
+    "name": "03 | iPad Mini",
+    "parentId": 1626683
+  },
+  {
+    "id": 1661747,
+    "name": "04 | iPad Pro 11\"",
+    "parentId": 1626683
+  },
+  {
+    "id": 1661749,
+    "name": "04 | iPad Pro 9,7\" / 10,9\"",
+    "parentId": 1626683
+  },
+  {
+    "id": 1661748,
+    "name": "05 | iPad Pro 12,9\"",
+    "parentId": 1626683
+  },
+  {
+    "id": 1703303,
+    "name": "AirPods Max",
+    "parentId": 1626682
+  },
+  {
+    "id": 1626686,
+    "name": "iMac",
+    "parentId": 1626682
+  },
+  {
+    "id": 1626687,
+    "name": "Watch",
+    "parentId": 1626682
+  },
+  {
+    "id": 1703302,
+    "name": "AIrPods Max",
+    "parentId": 1626681
+  },
+  {
+    "id": 1661660,
+    "name": "iMac",
+    "parentId": 1626681
+  },
+  {
+    "id": 1661664,
+    "name": "Watch",
+    "parentId": 1626681
+  },
+  {
+    "id": 1643852,
+    "name": "iPhone 16",
+    "parentId": 1197687
+  },
+  {
+    "id": 1643860,
+    "name": "iPhone 16 Pro",
+    "parentId": 1197687
+  },
+  {
+    "id": 1643861,
+    "name": "iPhone 16 Pro Max",
+    "parentId": 1197687
+  },
+  {
+    "id": 1063649,
+    "name": "Windows",
+    "parentId": 1063647
+  },
+  {
+    "id": 1104621,
+    "name": "Acer",
+    "parentId": 1063649
+  },
+  {
+    "id": 510148,
+    "name": "Asus",
+    "parentId": 1063649
+  },
+  {
+    "id": 361172,
+    "name": "Dell",
+    "parentId": 1063649
+  },
+  {
+    "id": 1597450,
+    "name": "Gigabyte",
+    "parentId": 1063649
+  },
+  {
+    "id": 377024,
+    "name": "HP",
+    "parentId": 1063649
+  },
+  {
+    "id": 959687,
+    "name": "Lenovo",
+    "parentId": 1063649
+  },
+  {
+    "id": 1738758,
+    "name": "MSI",
+    "parentId": 1063649
+  },
+  {
+    "id": 1678431,
+    "name": "Razer",
+    "parentId": 1063649
+  },
+  {
+    "id": 929398,
+    "name": "Sony",
+    "parentId": 1063649
+  },
+  {
+    "id": 1128069,
+    "name": "Xiaomi Redmi",
+    "parentId": 1063649
+  },
+  {
+    "id": 1703320,
+    "name": "Google Pixel",
+    "parentId": 1063648
+  },
+  {
+    "id": 354221,
+    "name": "Huawei",
+    "parentId": 1063648
+  },
+  {
+    "id": 519341,
+    "name": "Samsung",
+    "parentId": 1063648
+  },
+  {
+    "id": 519347,
+    "name": "Sony",
+    "parentId": 1063648
+  },
+  {
+    "id": 1703322,
+    "name": "DJI",
+    "parentId": 1063647
+  },
+  {
+    "id": 1720629,
+    "name": "iPod",
+    "parentId": 1063647
+  },
+  {
+    "id": 959688,
+    "name": "Матрицы",
+    "parentId": 959687
+  },
+  {
+    "id": 691193,
+    "name": "06 | Антенны",
+    "parentId": 291571
+  },
+  {
+    "id": 1651456,
+    "name": "05 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 1651459,
+    "name": "06 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 1651465,
+    "name": "08 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 1651472,
+    "name": "10 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 1651429,
+    "name": "11 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 1651473,
+    "name": "12 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 1651474,
+    "name": "13 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 1651445,
+    "name": "14 серия",
+    "parentId": 691193
+  },
+  {
+    "id": 691078,
+    "name": "04 | Шлейфа кнопок громкости",
+    "parentId": 291571
+  },
+  {
+    "id": 1651457,
+    "name": "05 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651461,
+    "name": "06 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651467,
+    "name": "08 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651471,
+    "name": "10 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651434,
+    "name": "11 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651437,
+    "name": "12 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651443,
+    "name": "13 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651448,
+    "name": "14 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1651475,
+    "name": "15 серия",
+    "parentId": 691078
+  },
+  {
+    "id": 1703233,
+    "name": "01 | HDD и SSD",
+    "parentId": 690989
+  },
+  {
+    "id": 824692,
+    "name": "iPhone 14 Plus",
+    "parentId": 1643679
+  },
+  {
+    "id": 824691,
+    "name": "iPhone 14 Pro",
+    "parentId": 1643679
+  },
+  {
+    "id": 824689,
+    "name": "iPhone 14 Pro Max",
+    "parentId": 1643679
+  },
+  {
+    "id": 824700,
+    "name": "iPhone 13",
+    "parentId": 1643677
+  },
+  {
+    "id": 824699,
+    "name": "iPhone 13 Mini",
+    "parentId": 1643677
+  },
+  {
+    "id": 824698,
+    "name": "iPhone 13 Pro",
+    "parentId": 1643677
+  },
+  {
+    "id": 824697,
+    "name": "iPhone 13 Pro Max",
+    "parentId": 1643677
+  },
+  {
+    "id": 1643674,
+    "name": "04 | 12 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 1703300,
+    "name": "07 | Материнская плата",
+    "parentId": 690988
+  },
+  {
+    "id": 378162,
+    "name": "01 | Матрицы",
+    "parentId": 690987
+  },
+  {
+    "id": 219432,
+    "name": "03 | Аккумуляторы",
+    "parentId": 690987
+  },
+  {
+    "id": 379496,
+    "name": "05 | Шлейфа",
+    "parentId": 690987
+  },
+  {
+    "id": 625379,
+    "name": "07 | Тачбары",
+    "parentId": 690987
+  },
+  {
+    "id": 625387,
+    "name": "08 | Динамики",
+    "parentId": 690987
+  },
+  {
+    "id": 631207,
+    "name": "10 | Кулеры",
+    "parentId": 690987
+  },
+  {
+    "id": 922575,
+    "name": "11 | Корпусные детали",
+    "parentId": 690987
+  },
+  {
+    "id": 516692,
+    "name": "12 | Блок питания",
+    "parentId": 690987
+  },
+  {
+    "id": 362109,
+    "name": "13 | Накопители",
+    "parentId": 690987
+  },
+  {
+    "id": 219429,
+    "name": "Аккумуляторы",
+    "parentId": 690986
+  },
+  {
+    "id": 296810,
+    "name": "Замена дисплея",
+    "parentId": 690986
+  },
+  {
+    "id": 296809,
+    "name": "Замена стекла",
+    "parentId": 690986
+  },
+  {
+    "id": 631111,
+    "name": "Корпус",
+    "parentId": 690986
+  },
+  {
+    "id": 1703304,
+    "name": "Материнская плата",
+    "parentId": 690986
+  },
+  {
+    "id": 219396,
+    "name": "Шлейфа",
+    "parentId": 690986
+  },
+  {
+    "id": 661317,
+    "name": "01 | Замена аккумулятора",
+    "parentId": 690985
+  },
+  {
+    "id": 461587,
+    "name": "02 | Замена дисплея",
+    "parentId": 690985
+  },
+  {
+    "id": 1123198,
+    "name": "08 | Битые Дисплеи",
+    "parentId": 690985
+  },
+  {
+    "id": 569763,
+    "name": "1. AASP",
+    "parentId": 661317
+  },
+  {
+    "id": 280570,
+    "name": "2. OEM",
+    "parentId": 661317
+  },
+  {
+    "id": 1748548,
+    "name": "4. OEM New (без ошибки-повыш ёмкости)",
+    "parentId": 661317
+  },
+  {
+    "id": 631261,
+    "name": "Подсветки клавиатуры",
+    "parentId": 284518
+  },
+  {
+    "id": 691008,
+    "name": "01 | MacBook Pro 16",
+    "parentId": 631261
+  },
+  {
+    "id": 691009,
+    "name": "02 | MacBook Pro 15",
+    "parentId": 631261
+  },
+  {
+    "id": 691010,
+    "name": "03 | MacBook Pro 14",
+    "parentId": 631261
+  },
+  {
+    "id": 631263,
+    "name": "04 | Macbook Pro 13",
+    "parentId": 631261
+  },
+  {
+    "id": 691011,
+    "name": "05 | MacBook Air 13 / 15",
+    "parentId": 631261
+  },
+  {
+    "id": 691013,
+    "name": "06 | MacBook Air 11",
+    "parentId": 631261
+  },
+  {
+    "id": 691012,
+    "name": "07 | MacBook 12",
+    "parentId": 631261
+  },
+  {
+    "id": 1703232,
+    "name": "03 | iMac",
+    "parentId": 631167
+  },
+  {
+    "id": 531422,
+    "name": "03 | Шлейф кнопки включения",
+    "parentId": 291571
+  },
+  {
+    "id": 1651470,
+    "name": "10 серия",
+    "parentId": 531422
+  },
+  {
+    "id": 1651433,
+    "name": "11 серия",
+    "parentId": 531422
+  },
+  {
+    "id": 1651436,
+    "name": "12 серия",
+    "parentId": 531422
+  },
+  {
+    "id": 1651442,
+    "name": "13 серия",
+    "parentId": 531422
+  },
+  {
+    "id": 1651447,
+    "name": "14 серия",
+    "parentId": 531422
+  },
+  {
+    "id": 1651450,
+    "name": "15 серия",
+    "parentId": 531422
+  },
+  {
+    "id": 531421,
+    "name": "02 | Слуховой динамик",
+    "parentId": 293412
+  },
+  {
+    "id": 1651499,
+    "name": "05 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651501,
+    "name": "06 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651503,
+    "name": "07 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651505,
+    "name": "08 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651507,
+    "name": "10 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651492,
+    "name": "11 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651493,
+    "name": "12 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651496,
+    "name": "13 серия",
+    "parentId": 531421
+  },
+  {
+    "id": 1651453,
+    "name": "04 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651455,
+    "name": "05 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651460,
+    "name": "06 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651463,
+    "name": "07 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651466,
+    "name": "08 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651469,
+    "name": "10 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651430,
+    "name": "11 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651439,
+    "name": "12 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651440,
+    "name": "13 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1651446,
+    "name": "14 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 1665503,
+    "name": "15 серия",
+    "parentId": 527183
+  },
+  {
+    "id": 527182,
+    "name": "01 | Нижний шлейф",
+    "parentId": 291571
+  },
+  {
+    "id": 1651454,
+    "name": "05 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651458,
+    "name": "06 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651462,
+    "name": "07 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651464,
+    "name": "08 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651468,
+    "name": "10 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651432,
+    "name": "11 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651441,
+    "name": "13 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651444,
+    "name": "14 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651449,
+    "name": "15 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651451,
+    "name": "16 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1651498,
+    "name": "05 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651500,
+    "name": "06 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651502,
+    "name": "07 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651504,
+    "name": "08 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651506,
+    "name": "10 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651491,
+    "name": "11 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651494,
+    "name": "12 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651495,
+    "name": "13 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1651497,
+    "name": "14 серия",
+    "parentId": 527136
+  },
+  {
+    "id": 1643897,
+    "name": "16 серия",
+    "parentId": 527123
+  },
+  {
+    "id": 519349,
+    "name": "Аккумуляторы",
+    "parentId": 519341
+  },
+  {
+    "id": 519342,
+    "name": "Дисплеи",
+    "parentId": 519341
+  },
+  {
+    "id": 1703323,
+    "name": "Замена стекла",
+    "parentId": 519341
+  },
+  {
+    "id": 527363,
+    "name": "Стекло корпуса",
+    "parentId": 519341
+  },
+  {
+    "id": 527360,
+    "name": "Шлейфа",
+    "parentId": 519341
+  },
+  {
+    "id": 519334,
+    "name": "LCD ORIGINAL",
+    "parentId": 519333
+  },
+  {
+    "id": 519337,
+    "name": "Аккумулятор",
+    "parentId": 519333
+  },
+  {
+    "id": 519336,
+    "name": "Замена стекла",
+    "parentId": 519333
+  },
+  {
+    "id": 519335,
+    "name": "Шлейфа",
+    "parentId": 519333
+  },
+  {
+    "id": 625400,
+    "name": "01 | AASP",
+    "parentId": 461587
+  },
+  {
+    "id": 625389,
+    "name": "02 | OEM",
+    "parentId": 461587
+  },
+  {
+    "id": 625401,
+    "name": "03 | Oled HQ",
+    "parentId": 461587
+  },
+  {
+    "id": 256627,
+    "name": "04 | HQ",
+    "parentId": 461587
+  },
+  {
+    "id": 625395,
+    "name": "05 | LQ",
+    "parentId": 461587
+  },
+  {
+    "id": 691023,
+    "name": "01 | MacBook Pro 16",
+    "parentId": 379496
+  },
+  {
+    "id": 627770,
+    "name": "02 | MacBook Pro 15",
+    "parentId": 379496
+  },
+  {
+    "id": 691024,
+    "name": "03 | MacBook Pro 14",
+    "parentId": 379496
+  },
+  {
+    "id": 627769,
+    "name": "04 | MacBook Pro 13",
+    "parentId": 379496
+  },
+  {
+    "id": 627767,
+    "name": "06 | MacBook 12",
+    "parentId": 379496
+  },
+  {
+    "id": 690942,
+    "name": "01 | MacBook Pro 16",
+    "parentId": 378162
+  },
+  {
+    "id": 625624,
+    "name": "02 | MacBook Pro 15",
+    "parentId": 378162
+  },
+  {
+    "id": 690943,
+    "name": "03 | MacBook Pro 14",
+    "parentId": 378162
+  },
+  {
+    "id": 625622,
+    "name": "04 | MacBook Pro 13",
+    "parentId": 378162
+  },
+  {
+    "id": 625623,
+    "name": "05 | MacBook Air 13",
+    "parentId": 378162
+  },
+  {
+    "id": 1113564,
+    "name": "06 | MacBook Air 15",
+    "parentId": 378162
+  },
+  {
+    "id": 625625,
+    "name": "07 | MacBook 12",
+    "parentId": 378162
+  },
+  {
+    "id": 377025,
+    "name": "Шлейфы",
+    "parentId": 377024
+  },
+  {
+    "id": 361173,
+    "name": "Матрица",
+    "parentId": 361172
+  },
+  {
+    "id": 527362,
+    "name": "Аккумуляторы",
+    "parentId": 354221
+  },
+  {
+    "id": 527361,
+    "name": "Дисплеи",
+    "parentId": 354221
+  },
+  {
+    "id": 1703319,
+    "name": "Шлейфа",
+    "parentId": 354221
+  },
+  {
+    "id": 527124,
+    "name": "02 | Передняя камера",
+    "parentId": 291742
+  },
+  {
+    "id": 1099562,
+    "name": "04 | Шлейфа камеры - JCID",
+    "parentId": 291571
+  },
+  {
+    "id": 844941,
+    "name": "05 | Шлейфа Face-id - JCID",
+    "parentId": 291571
+  },
+  {
+    "id": 1649503,
+    "name": "16 Серия",
+    "parentId": 287220
+  },
+  {
+    "id": 625380,
+    "name": "02 | Шлейфа тачпадов",
+    "parentId": 284519
+  },
+  {
+    "id": 1703284,
+    "name": "Комплект клавиш",
+    "parentId": 284518
+  },
+  {
+    "id": 625453,
+    "name": "01 | MacBook Pro 16",
+    "parentId": 219432
+  },
+  {
+    "id": 625454,
+    "name": "02 | MacBook Pro 15",
+    "parentId": 219432
+  },
+  {
+    "id": 690927,
+    "name": "03 | MacBook Pro 14",
+    "parentId": 219432
+  },
+  {
+    "id": 1703237,
+    "name": "05 | Материнские платы",
+    "parentId": 690989
+  },
+  {
+    "id": 1703236,
+    "name": "06 | Шлейфа",
+    "parentId": 690989
+  },
+  {
+    "id": 1703239,
+    "name": "07 | Куллеры",
+    "parentId": 690989
+  },
+  {
+    "id": 627676,
+    "name": "01 | Стекло",
+    "parentId": 690988
+  },
+  {
+    "id": 531404,
+    "name": "02 | Стекло ТР",
+    "parentId": 690988
+  },
+  {
+    "id": 293447,
+    "name": "03 | Дисплеи",
+    "parentId": 690988
+  },
+  {
+    "id": 219427,
+    "name": "04 | Аккумуляторы",
+    "parentId": 690988
+  },
+  {
+    "id": 1703293,
+    "name": "05 | Стекла корпуса",
+    "parentId": 690988
+  },
+  {
+    "id": 219428,
+    "name": "06 | Шлейфа",
+    "parentId": 690988
+  },
+  {
+    "id": 690989,
+    "name": "01 | Запчасти iMac",
+    "parentId": null
+  },
+  {
+    "id": 354222,
+    "name": "13 | Подменки",
+    "parentId": null
+  },
+  {
+    "id": 285646,
+    "name": "03 | Замена заднего стекла",
+    "parentId": 690985
+  },
+  {
+    "id": 1874351,
+    "name": "09 | 17 Серия",
+    "parentId": 285646
+  },
+  {
+    "id": 1874352,
+    "name": "iPhone 17",
+    "parentId": 1874351
+  },
+  {
+    "id": 1874353,
+    "name": "iPhone 17 Pro",
+    "parentId": 1874351
+  },
+  {
+    "id": 1874354,
+    "name": "iPhone 17 Pro Max",
+    "parentId": 1874351
+  },
+  {
+    "id": 627750,
+    "name": "05 | MacBook Air 13 / 15",
+    "parentId": 1703285
+  },
+  {
+    "id": 1661667,
+    "name": "03 | Macbook Pro 14",
+    "parentId": 1661663
+  },
+  {
+    "id": 1843029,
+    "name": "09 | 17 серия",
+    "parentId": 1661662
+  },
+  {
+    "id": 1569641,
+    "name": "Шлейфа для ОЕМ акб (без шлейфа)",
+    "parentId": 1655409
+  },
+  {
+    "id": 1662171,
+    "name": "06 | Сим - лоток",
+    "parentId": 1643941
+  },
+  {
+    "id": 661240,
+    "name": "iPhone 12 Pro Max",
+    "parentId": 1643892
+  },
+  {
+    "id": 1643679,
+    "name": "06 | 14 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 824694,
+    "name": "iPhone 14",
+    "parentId": 1643679
+  },
+  {
+    "id": 1643677,
+    "name": "05 | 13 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 824709,
+    "name": "iPhone XS",
+    "parentId": 1643666
+  },
+  {
+    "id": 1117435,
+    "name": "iPhone 15 Pro Max",
+    "parentId": 1643650
+  },
+  {
+    "id": 661279,
+    "name": "iPhone 12 Pro Max",
+    "parentId": 1643647
+  },
+  {
+    "id": 1643634,
+    "name": "06 серия",
+    "parentId": 287220
+  },
+  {
+    "id": 1626682,
+    "name": "01 | Микросхемы",
+    "parentId": 763166
+  },
+  {
+    "id": 1889625,
+    "name": "08 | 17 Серия",
+    "parentId": 1626684
+  },
+  {
+    "id": 1661746,
+    "name": "02 | iPad Air",
+    "parentId": 1626683
+  },
+  {
+    "id": 1197687,
+    "name": "08 | 16 серия",
+    "parentId": 285646
+  },
+  {
+    "id": 519333,
+    "name": "Xiaomi",
+    "parentId": 1063648
+  },
+  {
+    "id": 1703321,
+    "name": "Кнопочные телефоны",
+    "parentId": 1063647
+  },
+  {
+    "id": 1703234,
+    "name": "02 | Блоки питания",
+    "parentId": 690989
+  },
+  {
+    "id": 1703235,
+    "name": "03 | Матрицы",
+    "parentId": 690989
+  },
+  {
+    "id": 1703238,
+    "name": "04 | Оперативная память",
+    "parentId": 690989
+  },
+  {
+    "id": 1703286,
+    "name": "09 | Материнские платы",
+    "parentId": 690987
+  },
+  {
+    "id": 938120,
+    "name": "3. OEM повышенной емкости",
+    "parentId": 661317
+  },
+  {
+    "id": 1883886,
+    "name": "16 Серия",
+    "parentId": 531421
+  },
+  {
+    "id": 527183,
+    "name": "02 | Верхний шлейф",
+    "parentId": 291571
+  },
+  {
+    "id": 1651488,
+    "name": "12 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 1884006,
+    "name": "17 серия",
+    "parentId": 527182
+  },
+  {
+    "id": 527136,
+    "name": "01 | Полифонический динамик",
+    "parentId": 293412
+  },
+  {
+    "id": 627768,
+    "name": "05 | MacBook Air 11 / 13 / 15",
+    "parentId": 379496
+  },
+  {
+    "id": 1888926,
+    "name": "08 | MacBook Neo",
+    "parentId": 378162
+  },
+  {
+    "id": 531415,
+    "name": "01 | Основная камера",
+    "parentId": 291742
+  },
+  {
+    "id": 625433,
+    "name": "04 | MacBook Pro 13",
+    "parentId": 219432
+  },
+  {
+    "id": 1703248,
+    "name": "05 | MacBook Air 15",
+    "parentId": 219432
+  },
+  {
+    "id": 625434,
+    "name": "06 | MacBook Air 13",
+    "parentId": 219432
+  },
+  {
+    "id": 625432,
+    "name": "07 | MacBook Air 11",
+    "parentId": 219432
+  },
+  {
+    "id": 625452,
+    "name": "08 | MacBook 12",
+    "parentId": 219432
+  },
+  {
+    "id": 692607,
+    "name": "01 | iPad Pro 12,9 / 13",
+    "parentId": 219396
+  },
+  {
+    "id": 692613,
+    "name": "02 | iPad Pro 11",
+    "parentId": 219396
+  },
+  {
+    "id": 628283,
+    "name": "03 | iPad Pro 10,5 / 9,7",
+    "parentId": 219396
+  },
+  {
+    "id": 692612,
+    "name": "05 | iPad Air",
+    "parentId": 219396
+  },
+  {
+    "id": 628280,
+    "name": "06 | iPad Mini",
+    "parentId": 219396
+  },
+  {
+    "id": 628284,
+    "name": "07 | iPad",
+    "parentId": 219396
+  }
+]

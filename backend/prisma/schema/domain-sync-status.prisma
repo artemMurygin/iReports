@@ -1,0 +1,15 @@
+// Штамп последней успешной синхронизации домена с ERP — singleton-запись на
+// направление (не более двух строк: service/shop). Вход ленивого кэша
+// расчёта зарплаты (Фаза 6, см. docs/payroll/plan-payroll-calculation.md):
+// расхождение штампа с сохранённым в AccountingCalculationCache — повод для
+// пересчёта. Обновляется в конце успешного прохода RoappSyncCron (service);
+// синхронизация магазина обновит свою строку тем же способом, когда
+// появится (Фаза 11+) — сама синхронизация не переписывается, только
+// фиксация штампа по её завершении (см. RoappSyncCron.run()).
+model DomainSyncStatus {
+  direction            SalesDirection @id
+  lastSuccessfulSyncAt DateTime       @map("last_successful_sync_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+
+  @@map("domain_sync_status")
+}

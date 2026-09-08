@@ -1,0 +1,349 @@
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Prisma } from '../../../prisma/generated/prisma/schema/client';
+import { DatabaseService } from '../../infrustructure/database/database.service';
+import { BitrixService } from '../../integrations/bitrix/bitrix.service';
+import { BitrixDealSchema } from '../../integrations/bitrix/schema';
+import { UploadLogger } from '../../shared/logger';
+import type { BitrixUser } from '../../integrations/bitrix/bitrix-api.types';
+
+type BitrixDealInput = ReturnType<typeof BitrixDealSchema.parse>;
+
+@Injectable()
+export class BitrixSyncService {
+    constructor(
+        private readonly db: DatabaseService,
+        private readonly bitrix: BitrixService,
+    ) {}
+
+    async uploadCreatedDeals(fromDate: undefined | Date = undefined) {
+        return this._uploadDeals(fromDate, (d) =>
+            this.bitrix.fetchCreatedDeals(d),
+        );
+    }
+
+    async uploadModifiedDeals(fromDate: Date) {
+        return this._uploadDeals(fromDate, (d) =>
+            this.bitrix.fetchModifiedDeals(d),
+        );
+    }
+
+    private async _uploadDeals(
+        fromDate: Date | undefined = undefined,
+        fetcher: (
+            fromDate: Date | undefined,
+        ) => AsyncGenerator<BitrixDealInput[]>,
+    ) {
+        const label = fromDate
+            ? `Сделки с ${fromDate.toLocaleDateString('ru')}`
+            : 'Все сделки';
+        const log = new UploadLogger(label);
+        log.start();
+
+        const sources = await this.db.bitrixPointOfContact.findMany({
+            select: { id: true },
+        });
+        const validSourceIds = new Set(sources.map((s) => s.id));
+
+        try {
+            for await (const deals of fetcher(fromDate)) {
+                await Promise.all(
+                    deals.map((deal) => {
+                        if (
+                            deal.pointOfContactId &&
+                            !validSourceIds.has(deal.pointOfContactId)
+                        ) {
+                            deal.pointOfContactId = null;
+                        }
+                        return this.db.bitrixDeal.upsert({
+                            where: { id: deal.id },
+                            create: deal,
+                            update: deal,
+                        });
+                    }),
+                );
+                log.tick(deals.length);
+            }
+            log.done();
+        } catch (err) {
+            log.error(err instanceof Error ? err : new Error(String(err)));
+            throw err;
+        }
+    }
+
+    async uploadDepartments() {
+        try {
+            const departments = await this.bitrix.fetchDepartments();
+            await Promise.all(
+                departments.map((d) =>
+                    this.db.bitrixDepartment.upsert({
+                        where: { id: Number(d.ID) },
+                        create: { id: Number(d.ID), name: d.NAME },
+                        update: { name: d.NAME },
+                    }),
+                ),
+            );
+            return departments.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации отделов: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
+    async uploadEmployees() {
+        try {
+            const employees = await this.bitrix.fetchEmployees();
+            await Promise.all(
+                employees.map((e) => this.upsertEmployeeRecord(e)),
+            );
+            return employees.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации сотрудников: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
+    // Извлечено из тела uploadEmployees() (add-bitrix24-auth-and-rbac,
+    // design.md Decision 11/Migration Plan шаг 2) — переиспользуется
+    // BitrixEmployeeUpsertAdapter (BITRIX_EMPLOYEE_UPSERT_PORT) для
+    // самовосстановления ОДНОЙ строки BitrixEmployee на пути логина, без
+    // изменения поведения массового вызова выше.
+    async upsertEmployeeRecord(e: BitrixUser): Promise<void> {
+        const departmentId = Number(e.UF_DEPARTMENT[0]);
+        // BitrixEmployee.departmentId — обязательный FK на bitrix_departments.
+        // uploadDepartments() выгружает справочник только при первоначальной
+        // загрузке (upload-initial-bitrix-data.handler.ts) и не запущена по
+        // крону, поэтому отдел, созданный в Bitrix24 позже, ещё не встретится
+        // в локальной БД (обнаружено как реальный баг: первый вход нового
+        // сотрудника падал с "Foreign key constraint violated on ...
+        // bitrix_employees_department_fkey"). Гарантируем существование строки
+        // отдела здесь же, тем же self-heal приёмом, что и у сотрудника.
+        await this.ensureDepartmentExists(departmentId);
+
+        await this.db.bitrixEmployee.upsert({
+            where: { id: Number(e.ID) },
+            create: {
+                id: Number(e.ID),
+                firstName: e.NAME ?? '',
+                lastName: e.LAST_NAME ?? '',
+                departmentId,
+                isActive: e.ACTIVE !== false,
+            },
+            // isActive — признак увольнения для документов начисления
+            // (PRD 1 docs/payroll-closing-and-accrual); отсутствие поля в
+            // ответе трактуется как «активен».
+            update: {
+                firstName: e.NAME ?? '',
+                lastName: e.LAST_NAME ?? '',
+                isActive: e.ACTIVE !== false,
+            },
+        });
+    }
+
+    private async ensureDepartmentExists(departmentId: number): Promise<void> {
+        const existing = await this.db.bitrixDepartment.findUnique({
+            where: { id: departmentId },
+            select: { id: true },
+        });
+        if (existing) return;
+
+        const department = await this.bitrix.fetchDepartmentById(departmentId);
+        try {
+            await this.db.bitrixDepartment.upsert({
+                where: { id: departmentId },
+                create: {
+                    id: departmentId,
+                    // Bitrix24 department.get не должен отдавать пустой результат
+                    // для валидного ID отдела сотрудника — запасной вариант
+                    // названия на случай гонки/устаревшего ID, чтобы не уронить
+                    // логин сотрудника из-за проблемы с самим справочником отделов.
+                    name: department?.NAME ?? `Отдел ${departmentId}`,
+                },
+                update: {},
+            });
+        } catch (error) {
+            // uploadEmployees() вызывает upsertEmployeeRecord() параллельно
+            // (Promise.all) для всех сотрудников — несколько из них могут
+            // одновременно пройти проверку `existing` выше для одного и того
+            // же ещё не созданного отдела. Строка к этому моменту уже создана
+            // конкурентным вызовом, значит цель (существование отдела для FK)
+            // уже достигнута — тот же приём, что и P2002 →
+            // PayoutCashboxRecordAlreadyExistsException у PayoutCashboxRecordRepository.
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                return;
+            }
+            throw error;
+        }
+    }
+
+    async uploadDeviceTypes() {
+        try {
+            const [{ LIST: deviceTypes }] =
+                await this.bitrix.fetchDeviceTypes();
+            deviceTypes.push({ ID: 0, VALUE: 'Не заполнено' });
+            await Promise.all(
+                deviceTypes.map((source) =>
+                    this.db.bitrixDeviceTypes.upsert({
+                        where: { id: Number(source.ID) },
+                        create: { id: Number(source.ID), name: source.VALUE },
+                        update: { name: source.VALUE },
+                    }),
+                ),
+            );
+            return deviceTypes.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации типов устройств: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
+    async uploadLeadSources() {
+        try {
+            const [{ LIST: leadSources }] =
+                await this.bitrix.fetchLeadSources();
+            leadSources.push({ ID: 0, VALUE: 'Не заполнено' });
+            await Promise.all(
+                leadSources.map((source) =>
+                    this.db.bitrixLeadSources.upsert({
+                        where: { id: Number(source.ID) },
+                        create: { id: Number(source.ID), name: source.VALUE },
+                        update: { name: source.VALUE },
+                    }),
+                ),
+            );
+            return leadSources.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации источников лидов: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
+    async uploadEnums() {
+        try {
+            const fields = await this.bitrix.fetchEnums();
+            const enumValues = fields.flatMap((f) =>
+                (f.LIST ?? []).map((item) => ({
+                    id: Number(item.ID),
+                    fieldName: f.FIELD_NAME,
+                    value: item.VALUE,
+                    sort: Number(item.SORT),
+                })),
+            );
+            await Promise.all(
+                enumValues.map(
+                    (ev: {
+                        id: number;
+                        fieldName: string;
+                        value: string;
+                        sort: number;
+                    }) =>
+                        this.db.bitrixEnumValue.upsert({
+                            where: { id: ev.id },
+                            create: ev,
+                            update: {
+                                fieldName: ev.fieldName,
+                                value: ev.value,
+                                sort: ev.sort,
+                            },
+                        }),
+                ),
+            );
+            return enumValues.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации enum-значений: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
+    async uploadStages() {
+        try {
+            const stages = await this.bitrix.fetchStages();
+            await Promise.all(
+                stages.map((s) => {
+                    const { stageGroupId, stageGroupName } =
+                        this.resolveStageGroup(s.ENTITY_ID, s.COLOR ?? '');
+                    return this.db.bitrixStage.upsert({
+                        where: { id: s.STATUS_ID },
+                        create: {
+                            id: s.STATUS_ID,
+                            name: s.NAME,
+                            sort: Number(s.SORT),
+                            color: s.COLOR ?? '',
+                            systemType: s.SYSTEM_TYPE ?? '',
+                            entityId: s.ENTITY_ID,
+                            stageGroupId,
+                            stageGroupName,
+                        },
+                        update: {
+                            name: s.NAME,
+                            sort: Number(s.SORT),
+                            color: s.COLOR ?? '',
+                            systemType: s.SYSTEM_TYPE ?? '',
+                            stageGroupId,
+                            stageGroupName,
+                        },
+                    });
+                }),
+            );
+            return stages.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации стейджей: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+
+    private resolveStageGroup(
+        entityId: string,
+        color: string,
+    ): { stageGroupId: string | null; stageGroupName: string | null } {
+        if (entityId !== 'DEAL_STAGE' && entityId !== 'STATUS')
+            return { stageGroupId: null, stageGroupName: null };
+
+        const map: Record<string, { id: string; name: string }> = {
+            '#C6DF9C': { id: 'new', name: 'Новые' },
+            '#ACD372': { id: 'inWork', name: 'В работе' },
+            '#588528': { id: 'waitingForVisit', name: 'Записан на ремонт' },
+            '#3E6617': { id: 'repairing', name: 'Ремонтируются' },
+            '#005824': { id: 'won', name: 'Успешная сделка' },
+            '#FE5957': { id: 'lose', name: 'Проигранная сделка' },
+            '#FF0000': { id: 'nonTarget', name: 'нецелевой лид' },
+        };
+
+        const entry = map[color.toUpperCase()];
+        return entry
+            ? { stageGroupId: entry.id, stageGroupName: entry.name }
+            : { stageGroupId: null, stageGroupName: null };
+    }
+
+    async uploadSources() {
+        try {
+            const sources = await this.bitrix.fetchSources();
+            await Promise.all(
+                sources.map((s) =>
+                    this.db.bitrixPointOfContact.upsert({
+                        where: { id: s.STATUS_ID },
+                        create: {
+                            id: s.STATUS_ID,
+                            name: s.NAME,
+                            sort: Number(s.SORT),
+                        },
+                        update: { name: s.NAME, sort: Number(s.SORT) },
+                    }),
+                ),
+            );
+            return sources.length;
+        } catch (err) {
+            throw new InternalServerErrorException(
+                `Ошибка синхронизации источников: ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
+}

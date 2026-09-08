@@ -1,0 +1,1542 @@
+[
+  {
+    "id": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "name": "Чехлы iPhone",
+    "pathName": "Аксессуары/Чехлы",
+    "parentId": "4c5f37a2-95d9-11ee-0a80-146900146119",
+    "archived": false
+  },
+  {
+    "id": "9fb45a6a-96f8-11f0-0a80-07290023a4c3",
+    "name": "14 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "02d0c329-96fa-11f0-0a80-0159002376a8",
+    "name": "iPhone 14 Pro Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/14 серия",
+    "parentId": "9fb45a6a-96f8-11f0-0a80-07290023a4c3",
+    "archived": false
+  },
+  {
+    "id": "02f57bc6-95d9-11ee-0a80-0e9e0014d007",
+    "name": "Аксессуары для Авто",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "481e5fb7-95d9-11ee-0a80-0397001463e0",
+    "name": "СЗУ",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "03b9bb0f-95dc-11ee-0a80-0cca0014db55",
+    "name": "СЗУ и адаптеры",
+    "pathName": "Аксессуары/СЗУ",
+    "parentId": "481e5fb7-95d9-11ee-0a80-0397001463e0",
+    "archived": false
+  },
+  {
+    "id": "5054100f-e887-11ef-0a80-116300122daa",
+    "name": "БУ",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "211911bc-3f73-11ef-0a80-0f75000ebbf9",
+    "name": "БУ Телефоны",
+    "pathName": "БУ",
+    "parentId": "5054100f-e887-11ef-0a80-116300122daa",
+    "archived": false
+  },
+  {
+    "id": "915be390-95de-11ee-0a80-13980014d6ac",
+    "name": "Apple iPhone БУ",
+    "pathName": "БУ/БУ Телефоны",
+    "parentId": "211911bc-3f73-11ef-0a80-0f75000ebbf9",
+    "archived": false
+  },
+  {
+    "id": "04aaf45d-afd4-11ee-0a80-0e9400186027",
+    "name": "Apple iPhone 7",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "a50e03c6-96f8-11f0-0a80-08440022eccb",
+    "name": "15 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "076b9108-96fa-11f0-0a80-006600236a17",
+    "name": "iPhone 15",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/15 серия",
+    "parentId": "a50e03c6-96f8-11f0-0a80-08440022eccb",
+    "archived": false
+  },
+  {
+    "id": "5a339fd6-54cb-11ef-0a80-0da50017a51a",
+    "name": "ДжекиЧан Авито",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "c534b869-bc8f-11ef-0a80-056500143d26",
+    "name": "Dyson",
+    "pathName": "ДжекиЧан Авито",
+    "parentId": "5a339fd6-54cb-11ef-0a80-0da50017a51a",
+    "archived": false
+  },
+  {
+    "id": "0785253f-bc90-11ef-0a80-0c920013fd57",
+    "name": "Стайлер",
+    "pathName": "ДжекиЧан Авито/Dyson",
+    "parentId": "c534b869-bc8f-11ef-0a80-056500143d26",
+    "archived": false
+  },
+  {
+    "id": "090b7102-95dc-11ee-0a80-0834001571d8",
+    "name": "Apple OEM",
+    "pathName": "Аксессуары/СЗУ/СЗУ и адаптеры",
+    "parentId": "03b9bb0f-95dc-11ee-0a80-0cca0014db55",
+    "archived": false
+  },
+  {
+    "id": "0964fa13-95d9-11ee-0a80-0e9e0014d1c2",
+    "name": "Авто (АЗУ)",
+    "pathName": "Аксессуары/Аксессуары для Авто",
+    "parentId": "02f57bc6-95d9-11ee-0a80-0e9e0014d007",
+    "archived": false
+  },
+  {
+    "id": "0a8ff2d9-b9ed-11ef-0a80-0f570015ddb0",
+    "name": "Apple iPhone 16 Pro Max",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "c4bad1a5-95de-11ee-0a80-14690015014c",
+    "name": "iPad",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "7ead5d1f-178e-11f1-0a80-00e70003ed80",
+    "name": "iPad Air",
+    "pathName": "Планшеты. Компьютеры. ТВ/iPad",
+    "parentId": "c4bad1a5-95de-11ee-0a80-14690015014c",
+    "archived": false
+  },
+  {
+    "id": "0c386418-33f9-11f1-0a80-0ee2000b193a",
+    "name": "iPad Air M3",
+    "pathName": "Планшеты. Компьютеры. ТВ/iPad/iPad Air",
+    "parentId": "7ead5d1f-178e-11f1-0a80-00e70003ed80",
+    "archived": false
+  },
+  {
+    "id": "14af41e0-95df-11ee-0a80-04d800150011",
+    "name": "БУ Техника",
+    "pathName": "БУ",
+    "parentId": "5054100f-e887-11ef-0a80-116300122daa",
+    "archived": false
+  },
+  {
+    "id": "0d6107e9-9f45-11ee-0a80-08a8001648d2",
+    "name": "Apple Гаджеты БУ",
+    "pathName": "БУ/БУ Техника",
+    "parentId": "14af41e0-95df-11ee-0a80-04d800150011",
+    "archived": false
+  },
+  {
+    "id": "0de5127c-95dc-11ee-0a80-01790014c1ab",
+    "name": "Apple AASP",
+    "pathName": "Аксессуары/СЗУ/СЗУ и адаптеры",
+    "parentId": "03b9bb0f-95dc-11ee-0a80-0cca0014db55",
+    "archived": false
+  },
+  {
+    "id": "102cc8a3-b9ed-11ef-0a80-16340016260e",
+    "name": "Apple iPhone 16 Pro",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "10889b40-1605-11f1-0a80-07be002ff9d4",
+    "name": "MacBook Pro",
+    "pathName": "Планшеты. Компьютеры. ТВ/MacBook",
+    "parentId": "df3100bc-95de-11ee-0a80-1469001506e0",
+    "archived": false
+  },
+  {
+    "id": "10b2c240-95d9-11ee-0a80-09df00141dcc",
+    "name": "Baseus",
+    "pathName": "Аксессуары/Аксессуары для Авто/Авто (АЗУ)",
+    "parentId": "0964fa13-95d9-11ee-0a80-0e9e0014d1c2",
+    "archived": false
+  },
+  {
+    "id": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "name": "Гаджеты",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "111b1d59-95e2-11ee-0a80-017900156b88",
+    "name": "Игровые приставки",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "126abb50-96fa-11f0-0a80-07290023b9a4",
+    "name": "iPhone 15 Pro",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/15 серия",
+    "parentId": "a50e03c6-96f8-11f0-0a80-08440022eccb",
+    "archived": false
+  },
+  {
+    "id": "14f4152c-33f9-11f1-0a80-09ec000afbdc",
+    "name": "iPad Air M4",
+    "pathName": "Планшеты. Компьютеры. ТВ/iPad/iPad Air",
+    "parentId": "7ead5d1f-178e-11f1-0a80-00e70003ed80",
+    "archived": false
+  },
+  {
+    "id": "178868fd-96fa-11f0-0a80-16d90023a2a6",
+    "name": "iPhone 15 Pro Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/15 серия",
+    "parentId": "a50e03c6-96f8-11f0-0a80-08440022eccb",
+    "archived": false
+  },
+  {
+    "id": "17e7d340-95d9-11ee-0a80-139800143592",
+    "name": "Держатели",
+    "pathName": "Аксессуары/Аксессуары для Авто",
+    "parentId": "02f57bc6-95d9-11ee-0a80-0e9e0014d007",
+    "archived": false
+  },
+  {
+    "id": "1948c9c5-afd4-11ee-0a80-0c410017162d",
+    "name": "Apple iPhone 8 Plus",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "c8e5b556-01b1-11f1-0a80-0bb9000915eb",
+    "name": "Я.ИСКЛЮЧЕНИЕ",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "1a9cd5a6-b5fd-11ee-0a80-02a9002a8b25",
+    "name": "Опт",
+    "pathName": "Я.ИСКЛЮЧЕНИЕ",
+    "parentId": "c8e5b556-01b1-11f1-0a80-0bb9000915eb",
+    "archived": false
+  },
+  {
+    "id": "1aa868b9-95e2-11ee-0a80-083400163888",
+    "name": "Пылесосы",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "1b870816-bc90-11ef-0a80-0ddf001458c6",
+    "name": "Стилусы",
+    "pathName": "ДжекиЧан Авито",
+    "parentId": "5a339fd6-54cb-11ef-0a80-0da50017a51a",
+    "archived": false
+  },
+  {
+    "id": "1c815a47-95d9-11ee-0a80-024600145e11",
+    "name": "Baseus",
+    "pathName": "Аксессуары/Аксессуары для Авто/Держатели",
+    "parentId": "17e7d340-95d9-11ee-0a80-139800143592",
+    "archived": false
+  },
+  {
+    "id": "275dc97a-3f73-11ef-0a80-0bd2000e6e7b",
+    "name": "БУ ПК",
+    "pathName": "БУ",
+    "parentId": "5054100f-e887-11ef-0a80-116300122daa",
+    "archived": false
+  },
+  {
+    "id": "d4a0b4a4-ff48-11ef-0a80-06c8001050ef",
+    "name": "Другие ПК",
+    "pathName": "БУ/БУ ПК",
+    "parentId": "275dc97a-3f73-11ef-0a80-0bd2000e6e7b",
+    "archived": false
+  },
+  {
+    "id": "1e555391-49c3-11ef-0a80-038c0014a722",
+    "name": "Игровые ПК",
+    "pathName": "БУ/БУ ПК/Другие ПК",
+    "parentId": "d4a0b4a4-ff48-11ef-0a80-06c8001050ef",
+    "archived": false
+  },
+  {
+    "id": "1ead2ea5-afd4-11ee-0a80-14a10015da0a",
+    "name": "Apple iPhone X",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "abdd46e2-96f8-11f0-0a80-1bbe00223b19",
+    "name": "16 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "01339dd7-2e59-11f1-0a80-01ac00040a08",
+    "name": "MacBook Neo",
+    "pathName": "Планшеты. Компьютеры. ТВ/MacBook",
+    "parentId": "df3100bc-95de-11ee-0a80-1469001506e0",
+    "archived": false
+  },
+  {
+    "id": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "name": "iPhone и Смартфоны",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "dfabd620-992a-11f0-0a80-085200099667",
+    "name": "iPhone 17",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "02898825-114d-11f1-0a80-04d10036320b",
+    "name": "iPhone 17 Pro Max",
+    "pathName": "iPhone и Смартфоны/iPhone 17",
+    "parentId": "dfabd620-992a-11f0-0a80-085200099667",
+    "archived": false
+  },
+  {
+    "id": "f6407351-95d8-11ee-0a80-139800143030",
+    "name": "Аксессуары",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "4c5f37a2-95d9-11ee-0a80-146900146119",
+    "name": "Чехлы",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "23c9dec6-96fa-11f0-0a80-0159002379b5",
+    "name": "iPhone 16 Plus",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/16 серия",
+    "parentId": "abdd46e2-96f8-11f0-0a80-1bbe00223b19",
+    "archived": false
+  },
+  {
+    "id": "264dc4aa-afd4-11ee-0a80-0b870016ef88",
+    "name": "Apple iPhone XR",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "97c781a5-95de-11ee-0a80-09df0014c8d1",
+    "name": "Часы",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "267c0bdf-127f-11f1-0a80-169000014358",
+    "name": "Apple Watch Ultra 3",
+    "pathName": "Гаджеты/Часы",
+    "parentId": "97c781a5-95de-11ee-0a80-09df0014c8d1",
+    "archived": false
+  },
+  {
+    "id": "28ccf52a-b9ed-11ef-0a80-107100170253",
+    "name": "Apple iPhone 16 Plus",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "297e762f-95dc-11ee-0a80-0cca0014e144",
+    "name": "Baseus",
+    "pathName": "Аксессуары/СЗУ/СЗУ и адаптеры",
+    "parentId": "03b9bb0f-95dc-11ee-0a80-0cca0014db55",
+    "archived": false
+  },
+  {
+    "id": "29f84b37-b2a3-11ee-0a80-0b8f0023579c",
+    "name": "iPhone 13",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "2a19a9e6-96fa-11f0-0a80-17d5002396b4",
+    "name": "iPhone 16 Pro",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/16 серия",
+    "parentId": "abdd46e2-96f8-11f0-0a80-1bbe00223b19",
+    "archived": false
+  },
+  {
+    "id": "2a36cf4d-96f8-11f0-0a80-187f0023e43b",
+    "name": "Чехлы Macbook",
+    "pathName": "Аксессуары/Чехлы",
+    "parentId": "4c5f37a2-95d9-11ee-0a80-146900146119",
+    "archived": false
+  },
+  {
+    "id": "2c173f76-afd4-11ee-0a80-08d40015be32",
+    "name": "Apple iPhone XS",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "2c959260-95d9-11ee-0a80-146900145dfc",
+    "name": "Пленки Mietubl",
+    "pathName": "Аксессуары/Защитные пленки (плоттер)",
+    "parentId": "22dc6848-95d9-11ee-0a80-11fb0014ca0e",
+    "archived": false
+  },
+  {
+    "id": "2df1a540-95dc-11ee-0a80-02460014bf09",
+    "name": "Hoco",
+    "pathName": "Аксессуары/СЗУ/СЗУ и адаптеры",
+    "parentId": "03b9bb0f-95dc-11ee-0a80-0cca0014db55",
+    "archived": false
+  },
+  {
+    "id": "2e55f781-b9ed-11ef-0a80-17d30016be4b",
+    "name": "Apple iPhone 15 Plus",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "2e7a176d-b2a3-11ee-0a80-0d180023d431",
+    "name": "iPhone 12",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "name": "Установка Пленок",
+    "pathName": "Услуги",
+    "parentId": "a2923398-9f4e-11ee-0a80-026e0017039e",
+    "archived": false
+  },
+  {
+    "id": "2faf017f-aec5-11ee-0a80-117b00793838",
+    "name": "Power Bank",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "2fb2aae9-96fa-11f0-0a80-0df4002338a9",
+    "name": "iPhone 16 Pro Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/16 серия",
+    "parentId": "abdd46e2-96f8-11f0-0a80-1bbe00223b19",
+    "archived": false
+  },
+  {
+    "id": "30ce9972-21b1-11ef-0a80-15d5005ce43d",
+    "name": "Apple iPhone 12 Mini",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "33a87679-95dc-11ee-0a80-0cca0014e1ff",
+    "name": "Xiaomi",
+    "pathName": "Аксессуары/СЗУ/СЗУ и адаптеры",
+    "parentId": "03b9bb0f-95dc-11ee-0a80-0cca0014db55",
+    "archived": false
+  },
+  {
+    "id": "3558b0ed-127e-11f1-0a80-093000012470",
+    "name": "Apple Watch 11",
+    "pathName": "Гаджеты/Часы",
+    "parentId": "97c781a5-95de-11ee-0a80-09df0014c8d1",
+    "archived": false
+  },
+  {
+    "id": "357e0a0b-d487-11ee-0a80-0cba0042bac8",
+    "name": "Apple Airpods БУ",
+    "pathName": "БУ/БУ Техника",
+    "parentId": "14af41e0-95df-11ee-0a80-04d800150011",
+    "archived": false
+  },
+  {
+    "id": "36b3db88-ff47-11ef-0a80-01c0000fea15",
+    "name": "Мульти-Бренд ПК",
+    "pathName": "БУ/БУ ПК/Другие ПК",
+    "parentId": "d4a0b4a4-ff48-11ef-0a80-06c8001050ef",
+    "archived": false
+  },
+  {
+    "id": "b1cfa704-96f8-11f0-0a80-0f420023512d",
+    "name": "17 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "37b8ba5e-96fa-11f0-0a80-16d90023a3fa",
+    "name": "iPhone 17",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/17 серия",
+    "parentId": "b1cfa704-96f8-11f0-0a80-0f420023512d",
+    "archived": false
+  },
+  {
+    "id": "39fa4ce4-95e2-11ee-0a80-017900156eb4",
+    "name": "Mac Mini",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "7dc681c5-767e-11ef-0a80-143f001341be",
+    "name": "iPhone 16",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "3b2f29cc-127c-11f1-0a80-141300012721",
+    "name": "iPhone 16 Plus",
+    "pathName": "iPhone и Смартфоны/iPhone 16",
+    "parentId": "7dc681c5-767e-11ef-0a80-143f001341be",
+    "archived": false
+  },
+  {
+    "id": "3ca4b2ed-58d7-11f0-0a80-0bd0000e99c7",
+    "name": "Apple Studio Display Монитор",
+    "pathName": "БУ/БУ Техника",
+    "parentId": "14af41e0-95df-11ee-0a80-04d800150011",
+    "archived": false
+  },
+  {
+    "id": "696754e1-95db-11ee-0a80-083400156258",
+    "name": "Защитное стекло iPhone",
+    "pathName": "Аксессуары/Защитные стекла",
+    "parentId": "32169833-95d9-11ee-0a80-017900146640",
+    "archived": false
+  },
+  {
+    "id": "3caff670-0982-11f0-0a80-198c00128a49",
+    "name": "SUPGLASS",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone",
+    "parentId": "696754e1-95db-11ee-0a80-083400156258",
+    "archived": false
+  },
+  {
+    "id": "3ec00e15-b2a3-11ee-0a80-07b70023d3a3",
+    "name": "iPhone 11",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "3ee52db0-1c40-11ef-0a80-08aa0048aa36",
+    "name": "Apple iPhone 15",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "3f1e0c45-9faa-11f0-0a80-09940013dd03",
+    "name": "Доставка",
+    "pathName": "Я.ИСКЛЮЧЕНИЕ",
+    "parentId": "c8e5b556-01b1-11f1-0a80-0bb9000915eb",
+    "archived": false
+  },
+  {
+    "id": "3fbff2cf-96fa-11f0-0a80-1bbe002259bb",
+    "name": "iPhone Air",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/17 серия",
+    "parentId": "b1cfa704-96f8-11f0-0a80-0f420023512d",
+    "archived": false
+  },
+  {
+    "id": "405d0c53-95d9-11ee-0a80-0cca00147ade",
+    "name": "Ремешки",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "ca7bde71-ff48-11ef-0a80-1a2300100975",
+    "name": "Apple ПК",
+    "pathName": "БУ/БУ ПК",
+    "parentId": "275dc97a-3f73-11ef-0a80-0bd2000e6e7b",
+    "archived": false
+  },
+  {
+    "id": "419b7494-f039-11ee-0a80-09be0047f496",
+    "name": "Apple Mac Mini Pro Studio",
+    "pathName": "БУ/БУ ПК/Apple ПК",
+    "parentId": "ca7bde71-ff48-11ef-0a80-1a2300100975",
+    "archived": false
+  },
+  {
+    "id": "42dffa97-007f-11ef-0a80-02260036b41d",
+    "name": "VPN",
+    "pathName": "Услуги",
+    "parentId": "a2923398-9f4e-11ee-0a80-026e0017039e",
+    "archived": false
+  },
+  {
+    "id": "458ab837-96fa-11f0-0a80-084400230493",
+    "name": "iPhone 17 Pro",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/17 серия",
+    "parentId": "b1cfa704-96f8-11f0-0a80-0f420023512d",
+    "archived": false
+  },
+  {
+    "id": "47049413-b2a3-11ee-0a80-07b70023d3e0",
+    "name": "iPhone SE 3",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "47ef2e0c-6efe-11f1-0a80-1d560049029f",
+    "name": "Apple Watch Hermes",
+    "pathName": "Гаджеты/Часы",
+    "parentId": "97c781a5-95de-11ee-0a80-09df0014c8d1",
+    "archived": false
+  },
+  {
+    "id": "32169833-95d9-11ee-0a80-017900146640",
+    "name": "Защитные стекла",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "1f73329f-b3bf-11ee-0a80-07b70043286a",
+    "name": "БУ Мульти бренд (кроме ПК)",
+    "pathName": "БУ/БУ Техника",
+    "parentId": "14af41e0-95df-11ee-0a80-04d800150011",
+    "archived": false
+  },
+  {
+    "id": "1f861f7d-b9ed-11ef-0a80-099c001657db",
+    "name": "Apple iPhone 16",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "22dc6848-95d9-11ee-0a80-11fb0014ca0e",
+    "name": "Защитные пленки (плоттер)",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "a2923398-9f4e-11ee-0a80-026e0017039e",
+    "name": "Услуги",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "23c77276-b47d-11ee-0a80-139e0016688f",
+    "name": "Установка Стёкол",
+    "pathName": "Услуги",
+    "parentId": "a2923398-9f4e-11ee-0a80-026e0017039e",
+    "archived": false
+  },
+  {
+    "id": "549b663b-afd3-11ee-0a80-01b80017670d",
+    "name": "Apple iPhone 11",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "58278223-114a-11f1-0a80-13ad003581a4",
+    "name": "iPhone 17",
+    "pathName": "iPhone и Смартфоны/iPhone 17",
+    "parentId": "dfabd620-992a-11f0-0a80-085200099667",
+    "archived": false
+  },
+  {
+    "id": "6112cfe2-95db-11ee-0a80-0e9e00152b38",
+    "name": "Защита для MacBook",
+    "pathName": "Аксессуары/Защитные стекла",
+    "parentId": "32169833-95d9-11ee-0a80-017900146640",
+    "archived": false
+  },
+  {
+    "id": "612be082-2ceb-11f1-0a80-1a2c000d1f50",
+    "name": "iPhone 17e",
+    "pathName": "iPhone и Смартфоны/iPhone 17",
+    "parentId": "dfabd620-992a-11f0-0a80-085200099667",
+    "archived": false
+  },
+  {
+    "id": "62db1847-6efe-11f1-0a80-14fc00494955",
+    "name": "Apple Watch Hermes Series 11",
+    "pathName": "Гаджеты/Часы/Apple Watch Hermes",
+    "parentId": "47ef2e0c-6efe-11f1-0a80-1d560049029f",
+    "archived": false
+  },
+  {
+    "id": "63859b8c-1ddf-11f1-0a80-1d770005812c",
+    "name": "iPad classic",
+    "pathName": "Планшеты. Компьютеры. ТВ/iPad",
+    "parentId": "c4bad1a5-95de-11ee-0a80-14690015014c",
+    "archived": false
+  },
+  {
+    "id": "64c554c5-95e0-11ee-0a80-0e9e0015b8cc",
+    "name": "Apple iMac БУ",
+    "pathName": "БУ/БУ ПК/Apple ПК",
+    "parentId": "ca7bde71-ff48-11ef-0a80-1a2300100975",
+    "archived": false
+  },
+  {
+    "id": "6567078b-95db-11ee-0a80-03970014a8dc",
+    "name": "Защитное стекло iPad",
+    "pathName": "Аксессуары/Защитные стекла",
+    "parentId": "32169833-95d9-11ee-0a80-017900146640",
+    "archived": false
+  },
+  {
+    "id": "656aa860-9f50-11ee-0a80-14cd000a5274",
+    "name": "Услуги прайслиста",
+    "pathName": "Услуги",
+    "parentId": "a2923398-9f4e-11ee-0a80-026e0017039e",
+    "archived": false
+  },
+  {
+    "id": "695bad27-bf47-11ee-0a80-15e1004eb982",
+    "name": "Apple iPhone SE",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "6b265b12-afd3-11ee-0a80-0321001651df",
+    "name": "Apple iPhone 11 Pro",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "6b9cca6e-95e0-11ee-0a80-08340015f97d",
+    "name": "Apple iPad БУ",
+    "pathName": "БУ/БУ Техника",
+    "parentId": "14af41e0-95df-11ee-0a80-04d800150011",
+    "archived": false
+  },
+  {
+    "id": "6c018ab3-d487-11ee-0a80-00ad0043e504",
+    "name": "Apple iPhone 8",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "6ef78e6e-96f8-11f0-0a80-08440022ea2d",
+    "name": "10 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "6efce665-95db-11ee-0a80-0e9e00152c7f",
+    "name": "Gurdini",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone",
+    "parentId": "696754e1-95db-11ee-0a80-083400156258",
+    "archived": false
+  },
+  {
+    "id": "70dcc6a5-afd3-11ee-0a80-0c410017056a",
+    "name": "Apple iPhone 11 Pro Max",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "713fc4ef-1600-11f1-0a80-0935002fef59",
+    "name": "MacBook Air",
+    "pathName": "Планшеты. Компьютеры. ТВ/MacBook",
+    "parentId": "df3100bc-95de-11ee-0a80-1469001506e0",
+    "archived": false
+  },
+  {
+    "id": "72e1cf91-95e0-11ee-0a80-024600153289",
+    "name": "Apple MacBook БУ",
+    "pathName": "БУ/БУ ПК/Apple ПК",
+    "parentId": "ca7bde71-ff48-11ef-0a80-1a2300100975",
+    "archived": false
+  },
+  {
+    "id": "73395a22-95db-11ee-0a80-0e9e00152cd5",
+    "name": "MOCOLL",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone",
+    "parentId": "696754e1-95db-11ee-0a80-083400156258",
+    "archived": false
+  },
+  {
+    "id": "78929bd0-afd3-11ee-0a80-0321001652b6",
+    "name": "Apple iPhone 12",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "79c18b4d-95db-11ee-0a80-0834001563f4",
+    "name": "Remax",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone",
+    "parentId": "696754e1-95db-11ee-0a80-083400156258",
+    "archived": false
+  },
+  {
+    "id": "7bf7447e-127d-11f1-0a80-00cf00012aa1",
+    "name": "iPhone 16e",
+    "pathName": "iPhone и Смартфоны/iPhone 16",
+    "parentId": "7dc681c5-767e-11ef-0a80-143f001341be",
+    "archived": false
+  },
+  {
+    "id": "7cb36044-95dc-11ee-0a80-14690014c8d9",
+    "name": "Mag Wallet (чехол для карточек)",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "7cc41b39-96f8-11f0-0a80-16d90023875f",
+    "name": "11 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "7d27bd5b-afd3-11ee-0a80-14a10015cf06",
+    "name": "Apple iPhone 12 Pro",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "7d98c4f1-95e0-11ee-0a80-0cca001550d7",
+    "name": "Apple Watch БУ",
+    "pathName": "БУ/БУ Техника",
+    "parentId": "14af41e0-95df-11ee-0a80-04d800150011",
+    "archived": false
+  },
+  {
+    "id": "7fcabd10-95db-11ee-0a80-107d001504c3",
+    "name": "Защитное стекло для Apple Watch",
+    "pathName": "Аксессуары/Защитные стекла",
+    "parentId": "32169833-95d9-11ee-0a80-017900146640",
+    "archived": false
+  },
+  {
+    "id": "8027852a-afd3-11ee-0a80-11820016c511",
+    "name": "Apple iPhone 12 Pro Max",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "8064b7dd-9830-11ee-0a80-139800409b0b",
+    "name": "Remax матовое",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone/Remax",
+    "parentId": "79c18b4d-95db-11ee-0a80-0834001563f4",
+    "archived": false
+  },
+  {
+    "id": "87405718-95db-11ee-0a80-083400156572",
+    "name": "Защитное стекло для камеры iPhone",
+    "pathName": "Аксессуары/Защитные стекла",
+    "parentId": "32169833-95d9-11ee-0a80-017900146640",
+    "archived": false
+  },
+  {
+    "id": "8a07f689-7782-11f0-0a80-1bc40011f8e1",
+    "name": "ПК \\ Игровые ПК",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "8c4acd8a-96f8-11f0-0a80-143500237ab7",
+    "name": "12 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "90f643de-76c2-11f0-0a80-0cd300360b50",
+    "name": "Apple iPhone 13 Mini",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "9c86bf10-95de-11ee-0a80-14690014fdd9",
+    "name": "Наушники",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "9349b012-af95-11ee-0a80-1390000a8250",
+    "name": "Apple наушники",
+    "pathName": "Гаджеты/Наушники",
+    "parentId": "9c86bf10-95de-11ee-0a80-14690014fdd9",
+    "archived": false
+  },
+  {
+    "id": "9937956d-95e0-11ee-0a80-017900153ee3",
+    "name": "Пылесосы (Вертикальные)",
+    "pathName": "Гаджеты/Пылесосы",
+    "parentId": "1aa868b9-95e2-11ee-0a80-083400163888",
+    "archived": false
+  },
+  {
+    "id": "9a599bef-96f8-11f0-0a80-16d900238893",
+    "name": "13 серия",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone",
+    "parentId": "16c1b01d-96f8-11f0-0a80-0efd002393ee",
+    "archived": false
+  },
+  {
+    "id": "9a970efd-b646-11ef-0a80-1a91003f33e6",
+    "name": "Другие Смартфоны",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "4b23c1a4-5b1f-11ef-0a80-075900181ee6",
+    "name": "Google Pixel",
+    "pathName": "БУ/БУ Телефоны",
+    "parentId": "211911bc-3f73-11ef-0a80-0f75000ebbf9",
+    "archived": false
+  },
+  {
+    "id": "4cca0024-96fa-11f0-0a80-090b00221ab7",
+    "name": "iPhone 17 Pro Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/17 серия",
+    "parentId": "b1cfa704-96f8-11f0-0a80-0f420023512d",
+    "archived": false
+  },
+  {
+    "id": "4df421d2-1c40-11ef-0a80-16d50045be94",
+    "name": "Apple iPhone 15 Pro",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "50bbf2dc-3407-11f1-0a80-1bf9000db520",
+    "name": "Titan",
+    "pathName": "Гаджеты/Часы/Apple Watch 11",
+    "parentId": "3558b0ed-127e-11f1-0a80-093000012470",
+    "archived": false
+  },
+  {
+    "id": "51a09697-1c40-11ef-0a80-0bf700474cb9",
+    "name": "Apple iPhone 15 Pro Max",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "53790227-5b1f-11ef-0a80-08aa001a78fa",
+    "name": "One Plus",
+    "pathName": "БУ/БУ Телефоны",
+    "parentId": "211911bc-3f73-11ef-0a80-0f75000ebbf9",
+    "archived": false
+  },
+  {
+    "id": "a9b0e516-a2c3-11f0-0a80-17ef004f4d84",
+    "name": "Аксессуары другое",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "ac6ac4d7-95de-11ee-0a80-14690014ff7d",
+    "name": "Пылесосы (роботы)",
+    "pathName": "Гаджеты/Пылесосы",
+    "parentId": "1aa868b9-95e2-11ee-0a80-083400163888",
+    "archived": false
+  },
+  {
+    "id": "ad42de70-e0c4-11f0-0a80-13a1000fb86f",
+    "name": "Игровые Ноутбуки Александр",
+    "pathName": "Я.ИСКЛЮЧЕНИЕ",
+    "parentId": "c8e5b556-01b1-11f1-0a80-0bb9000915eb",
+    "archived": false
+  },
+  {
+    "id": "adc8a7bc-afd3-11ee-0a80-13900016d6d1",
+    "name": "Apple iPhone 13 Pro",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "afd42589-bc8f-11ef-0a80-01870014c084",
+    "name": "Наушники",
+    "pathName": "ДжекиЧан Авито",
+    "parentId": "5a339fd6-54cb-11ef-0a80-0da50017a51a",
+    "archived": false
+  },
+  {
+    "id": "b13d096a-afd3-11ee-0a80-01b8001770d5",
+    "name": "Apple iPhone 13 Pro Max",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "b19aa586-95db-11ee-0a80-139800148522",
+    "name": "Кабеля",
+    "pathName": "Аксессуары/СЗУ",
+    "parentId": "481e5fb7-95d9-11ee-0a80-0397001463e0",
+    "archived": false
+  },
+  {
+    "id": "b287f2ee-f808-11ee-0a80-008200150fab",
+    "name": "Apple iPhone 7 Plus",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "b30b8a70-8899-11f0-0a80-00360006db28",
+    "name": "Другое Железо",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "b5da95b9-95db-11ee-0a80-01790014ba07",
+    "name": "Baseus (Кабеля)",
+    "pathName": "Аксессуары/СЗУ/Кабеля",
+    "parentId": "b19aa586-95db-11ee-0a80-139800148522",
+    "archived": false
+  },
+  {
+    "id": "b63cd161-6a0f-11ef-0a80-0e8d00193831",
+    "name": "Прочие бренды БУ",
+    "pathName": "БУ/БУ Телефоны",
+    "parentId": "211911bc-3f73-11ef-0a80-0f75000ebbf9",
+    "archived": false
+  },
+  {
+    "id": "b7efcf28-af95-11ee-0a80-07ae0009fc51",
+    "name": "Проводные наушники Apple",
+    "pathName": "Гаджеты/Наушники/Apple наушники",
+    "parentId": "9349b012-af95-11ee-0a80-1390000a8250",
+    "archived": false
+  },
+  {
+    "id": "b91de88c-4ad7-11f1-0a80-0ee400231120",
+    "name": "iPhone 16 Pro Max",
+    "pathName": "iPhone и Смартфоны/iPhone 16",
+    "parentId": "7dc681c5-767e-11ef-0a80-143f001341be",
+    "archived": false
+  },
+  {
+    "id": "ba8b8fed-f297-11ee-0a80-0c6f0018e6a1",
+    "name": "Квадрокоптеры",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "bb1c6aa1-982e-11ee-0a80-09df0040d6bf",
+    "name": "Remax GL27",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone/Remax",
+    "parentId": "79c18b4d-95db-11ee-0a80-0834001563f4",
+    "archived": false
+  },
+  {
+    "id": "bb316064-95db-11ee-0a80-09df00147784",
+    "name": "Hoco (Кабеля)",
+    "pathName": "Аксессуары/СЗУ/Кабеля",
+    "parentId": "b19aa586-95db-11ee-0a80-139800148522",
+    "archived": false
+  },
+  {
+    "id": "be9aa4b9-96f8-11f0-0a80-143500237f01",
+    "name": "iPhone XR",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/10 серия",
+    "parentId": "6ef78e6e-96f8-11f0-0a80-08440022ea2d",
+    "archived": false
+  },
+  {
+    "id": "c3cc4d98-96f9-11f0-0a80-187f0023fe8d",
+    "name": "iPhone 12 mini",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/12 серия",
+    "parentId": "8c4acd8a-96f8-11f0-0a80-143500237ab7",
+    "archived": false
+  },
+  {
+    "id": "c6d8edaf-96f8-11f0-0a80-090b0021fba9",
+    "name": "iPhone X / XS",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/10 серия",
+    "parentId": "6ef78e6e-96f8-11f0-0a80-08440022ea2d",
+    "archived": false
+  },
+  {
+    "id": "c8bac4c5-95de-11ee-0a80-0e9e00158a2f",
+    "name": "iMac",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "c93c1e04-96f9-11f0-0a80-187f0023fed2",
+    "name": "iPhone 12 / 12 Pro",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/12 серия",
+    "parentId": "8c4acd8a-96f8-11f0-0a80-143500237ab7",
+    "archived": false
+  },
+  {
+    "id": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "name": "Услуги для Смартфонов",
+    "pathName": "Услуги/Услуги прайслиста",
+    "parentId": "656aa860-9f50-11ee-0a80-14cd000a5274",
+    "archived": false
+  },
+  {
+    "id": "cd62d4eb-96f8-11f0-0a80-0159002366b0",
+    "name": "iPhone XS Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/10 серия",
+    "parentId": "6ef78e6e-96f8-11f0-0a80-08440022ea2d",
+    "archived": false
+  },
+  {
+    "id": "cf57456c-bc8f-11ef-0a80-18d90014b5b4",
+    "name": "Часы, Прочее",
+    "pathName": "ДжекиЧан Авито",
+    "parentId": "5a339fd6-54cb-11ef-0a80-0da50017a51a",
+    "archived": false
+  },
+  {
+    "id": "cf85b3e0-d9ca-11f0-0a80-0f25003b60fb",
+    "name": "Прочие Гаджеты",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "d141c1ad-96f9-11f0-0a80-187f0023fffd",
+    "name": "iPhone 12 Pro Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/12 серия",
+    "parentId": "8c4acd8a-96f8-11f0-0a80-143500237ab7",
+    "archived": false
+  },
+  {
+    "id": "d2d72507-afd3-11ee-0a80-101600170034",
+    "name": "Apple iPhone 14",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "d4103b13-96f8-11f0-0a80-19dd00233235",
+    "name": "iPhone 11",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/11 серия",
+    "parentId": "7cc41b39-96f8-11f0-0a80-16d90023875f",
+    "archived": false
+  },
+  {
+    "id": "d4852812-0190-11ef-0a80-17170000254a",
+    "name": "Устройства ввода",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "d65e61fe-96f9-11f0-0a80-090b002214a7",
+    "name": "iPhone 13",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/13 серия",
+    "parentId": "9a599bef-96f8-11f0-0a80-16d900238893",
+    "archived": false
+  },
+  {
+    "id": "d737d2f8-127c-11f1-0a80-13fc00011464",
+    "name": "iPhone 16",
+    "pathName": "iPhone и Смартфоны/iPhone 16",
+    "parentId": "7dc681c5-767e-11ef-0a80-143f001341be",
+    "archived": false
+  },
+  {
+    "id": "d7c9906b-aec0-11ee-0a80-01b2007666b8",
+    "name": "Hoco",
+    "pathName": "Аксессуары/Аксессуары для Авто/Держатели",
+    "parentId": "17e7d340-95d9-11ee-0a80-139800143592",
+    "archived": false
+  },
+  {
+    "id": "d8ad1168-96f8-11f0-0a80-0cc600232163",
+    "name": "iPhone 11 Pro",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/11 серия",
+    "parentId": "7cc41b39-96f8-11f0-0a80-16d90023875f",
+    "archived": false
+  },
+  {
+    "id": "d9636329-afd3-11ee-0a80-13900016db45",
+    "name": "Apple iPhone 14 Plus",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "db49ea66-b151-11ee-0a80-15b7001355af",
+    "name": "Apple iPhone XS Max",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "db8743e2-96f9-11f0-0a80-00660023675e",
+    "name": "iPhone 13 mini",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/13 серия",
+    "parentId": "9a599bef-96f8-11f0-0a80-16d900238893",
+    "archived": false
+  },
+  {
+    "id": "dbc96962-127f-11f1-0a80-0fd100017323",
+    "name": "Apple Watch SE 3",
+    "pathName": "Гаджеты/Часы",
+    "parentId": "97c781a5-95de-11ee-0a80-09df0014c8d1",
+    "archived": false
+  },
+  {
+    "id": "de3ba4b9-afd3-11ee-0a80-08d40015b8b7",
+    "name": "Apple iPhone 14 Pro",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "df8e2405-aec3-11ee-0a80-117b0078e7c7",
+    "name": "Внешние накопители данных",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": false
+  },
+  {
+    "id": "a1db1274-7395-11f0-0a80-0b3500114742",
+    "name": "Mac Pro",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "a2a48cd9-1de0-11f1-0a80-19ed00051aed",
+    "name": "iPad mini",
+    "pathName": "Планшеты. Компьютеры. ТВ/iPad",
+    "parentId": "c4bad1a5-95de-11ee-0a80-14690015014c",
+    "archived": false
+  },
+  {
+    "id": "a45f5b91-95db-11ee-0a80-01790014b8bb",
+    "name": "Hoco (Наушники)",
+    "pathName": "Гаджеты/Наушники",
+    "parentId": "9c86bf10-95de-11ee-0a80-14690014fdd9",
+    "archived": false
+  },
+  {
+    "id": "a8250467-7395-11f0-0a80-11ba00117b3b",
+    "name": "Mac Studio",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "a8f3882a-aec4-11ee-0a80-01b200775b86",
+    "name": "Чехлы iPad",
+    "pathName": "Аксессуары/Чехлы",
+    "parentId": "4c5f37a2-95d9-11ee-0a80-146900146119",
+    "archived": false
+  },
+  {
+    "id": "a965c9eb-afd3-11ee-0a80-11820016c8f0",
+    "name": "Apple iPhone 13",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "282152fa-95d9-11ee-0a80-11fb0014cc4f",
+    "name": "Защитные пленки iPhone",
+    "pathName": "Аксессуары/Защитные пленки (плоттер)",
+    "parentId": "22dc6848-95d9-11ee-0a80-11fb0014ca0e",
+    "archived": false
+  },
+  {
+    "id": "49106d28-114b-11f1-0a80-0fb800359491",
+    "name": "iPhone Air",
+    "pathName": "iPhone и Смартфоны/iPhone 17",
+    "parentId": "dfabd620-992a-11f0-0a80-085200099667",
+    "archived": false
+  },
+  {
+    "id": "e4258c5f-96f9-11f0-0a80-0159002375c4",
+    "name": "iPhone 13 Pro",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/13 серия",
+    "parentId": "9a599bef-96f8-11f0-0a80-16d900238893",
+    "archived": false
+  },
+  {
+    "id": "fc0eddcf-95d8-11ee-0a80-0cca00147293",
+    "name": "Аксеccуары Macbook",
+    "pathName": "Аксессуары",
+    "parentId": "f6407351-95d8-11ee-0a80-139800143030",
+    "archived": true
+  },
+  {
+    "id": "e53ed262-bfe4-11f0-0a80-0ddd002a1906",
+    "name": "KZDoo",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone",
+    "parentId": "696754e1-95db-11ee-0a80-083400156258",
+    "archived": false
+  },
+  {
+    "id": "e917daea-982e-11ee-0a80-09df0040df9d",
+    "name": "Remax GL27 Антишпион",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone/Remax",
+    "parentId": "79c18b4d-95db-11ee-0a80-0834001563f4",
+    "archived": false
+  },
+  {
+    "id": "f0759de6-aed0-11ee-0a80-0b84007abd98",
+    "name": "Переходники",
+    "pathName": "Аксессуары/СЗУ",
+    "parentId": "481e5fb7-95d9-11ee-0a80-0397001463e0",
+    "archived": false
+  },
+  {
+    "id": "f23b995c-982e-11ee-0a80-017900403e3c",
+    "name": "Remax GL-59 сил кант",
+    "pathName": "Аксессуары/Защитные стекла/Защитное стекло iPhone/Remax",
+    "parentId": "79c18b4d-95db-11ee-0a80-0834001563f4",
+    "archived": false
+  },
+  {
+    "id": "f31685c2-178b-11f1-0a80-1a7d00039581",
+    "name": "iPad Pro",
+    "pathName": "Планшеты. Компьютеры. ТВ/iPad",
+    "parentId": "c4bad1a5-95de-11ee-0a80-14690015014c",
+    "archived": false
+  },
+  {
+    "id": "f3aa4aeb-b2a2-11ee-0a80-0525002373a7",
+    "name": "iPhone 14",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "f9bd9fd9-95db-11ee-0a80-11fb00152679",
+    "name": "Кабель Apple AASP",
+    "pathName": "Аксессуары/СЗУ/Кабеля",
+    "parentId": "b19aa586-95db-11ee-0a80-139800148522",
+    "archived": false
+  },
+  {
+    "id": "fbede311-15f0-11f0-0a80-1116001e5857",
+    "name": "Marshall",
+    "pathName": "Гаджеты/Наушники",
+    "parentId": "9c86bf10-95de-11ee-0a80-14690014fdd9",
+    "archived": false
+  },
+  {
+    "id": "fc3594de-bc8f-11ef-0a80-038400144f0c",
+    "name": "Фен",
+    "pathName": "ДжекиЧан Авито/Dyson",
+    "parentId": "c534b869-bc8f-11ef-0a80-056500143d26",
+    "archived": false
+  },
+  {
+    "id": "fda885df-96f9-11f0-0a80-015900237675",
+    "name": "iPhone 14 Pro",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/14 серия",
+    "parentId": "9fb45a6a-96f8-11f0-0a80-07290023a4c3",
+    "archived": false
+  },
+  {
+    "id": "fe63be2c-eaa6-11ef-0a80-163300063720",
+    "name": "Сертификат",
+    "pathName": "Я.ИСКЛЮЧЕНИЕ",
+    "parentId": "c8e5b556-01b1-11f1-0a80-0bb9000915eb",
+    "archived": false
+  },
+  {
+    "id": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "name": "Планшеты. Компьютеры. ТВ",
+    "pathName": "",
+    "parentId": null,
+    "archived": false
+  },
+  {
+    "id": "df3100bc-95de-11ee-0a80-1469001506e0",
+    "name": "MacBook",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "0dce3f94-96fa-11f0-0a80-0cc600233103",
+    "name": "iPhone 15 Plus",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/15 серия",
+    "parentId": "a50e03c6-96f8-11f0-0a80-08440022eccb",
+    "archived": false
+  },
+  {
+    "id": "1eb62633-96fa-11f0-0a80-07290023b9f4",
+    "name": "iPhone 16",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/16 серия",
+    "parentId": "abdd46e2-96f8-11f0-0a80-1bbe00223b19",
+    "archived": false
+  },
+  {
+    "id": "52841099-6efe-11f1-0a80-1a5c004973ea",
+    "name": "Apple Watch Hermes Ultra 3",
+    "pathName": "Гаджеты/Часы/Apple Watch Hermes",
+    "parentId": "47ef2e0c-6efe-11f1-0a80-1d560049029f",
+    "archived": false
+  },
+  {
+    "id": "9c05f947-af95-11ee-0a80-14a100098fef",
+    "name": "Беспроводные наушники Apple",
+    "pathName": "Гаджеты/Наушники/Apple наушники",
+    "parentId": "9349b012-af95-11ee-0a80-1390000a8250",
+    "archived": false
+  },
+  {
+    "id": "9caea8c0-8899-11f0-0a80-15bd0006fc2e",
+    "name": "ТВ \\ Мониторы",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "b79f7012-96f9-11f0-0a80-015900237404",
+    "name": "iPhone 11 Pro Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/11 серия",
+    "parentId": "7cc41b39-96f8-11f0-0a80-16d90023875f",
+    "archived": false
+  },
+  {
+    "id": "e2ab8103-afd3-11ee-0a80-14a10015d5e2",
+    "name": "Apple iPhone 14 Pro Max",
+    "pathName": "БУ/БУ Телефоны/Apple iPhone БУ",
+    "parentId": "915be390-95de-11ee-0a80-13980014d6ac",
+    "archived": false
+  },
+  {
+    "id": "e3940e8a-b2a2-11ee-0a80-052500237329",
+    "name": "iPhone 15",
+    "pathName": "iPhone и Смартфоны",
+    "parentId": "76290088-b1d5-11ee-0a80-02a00018ce16",
+    "archived": false
+  },
+  {
+    "id": "e9e05b05-96f9-11f0-0a80-19dd00233dd5",
+    "name": "iPhone 13 Pro Max",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/13 серия",
+    "parentId": "9a599bef-96f8-11f0-0a80-16d900238893",
+    "archived": false
+  },
+  {
+    "id": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "name": "Услуги Прочее",
+    "pathName": "Услуги/Услуги прайслиста",
+    "parentId": "656aa860-9f50-11ee-0a80-14cd000a5274",
+    "archived": false
+  },
+  {
+    "id": "ef82c4e0-96f9-11f0-0a80-090b00221564",
+    "name": "iPhone 14",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/14 серия",
+    "parentId": "9fb45a6a-96f8-11f0-0a80-07290023a4c3",
+    "archived": false
+  },
+  {
+    "id": "f01a51d5-9fa4-11f0-0a80-18800012e2d9",
+    "name": "Studio Display",
+    "pathName": "Планшеты. Компьютеры. ТВ",
+    "parentId": "bf091352-95de-11ee-0a80-09df0014cbab",
+    "archived": false
+  },
+  {
+    "id": "f62a8805-114b-11f1-0a80-1030003618c3",
+    "name": "iPhone 17 Pro",
+    "pathName": "iPhone и Смартфоны/iPhone 17",
+    "parentId": "dfabd620-992a-11f0-0a80-085200099667",
+    "archived": false
+  },
+  {
+    "id": "f63049a4-95db-11ee-0a80-11fb0015262c",
+    "name": "Кабель Apple OEM",
+    "pathName": "Аксессуары/СЗУ/Кабеля",
+    "parentId": "b19aa586-95db-11ee-0a80-139800148522",
+    "archived": false
+  },
+  {
+    "id": "f823a9ce-96f9-11f0-0a80-07290023b860",
+    "name": "iPhone 14 Plus",
+    "pathName": "Аксессуары/Чехлы/Чехлы iPhone/14 серия",
+    "parentId": "9fb45a6a-96f8-11f0-0a80-07290023a4c3",
+    "archived": false
+  },
+  {
+    "id": "f9770d48-95e1-11ee-0a80-1469001566a4",
+    "name": "Apple",
+    "pathName": "Гаджеты",
+    "parentId": "6950aaba-95de-11ee-0a80-0cca00152091",
+    "archived": false
+  },
+  {
+    "id": "1eef6a92-234e-11ef-0a80-02c20018f2f5",
+    "name": "Прочие защитные стекла",
+    "pathName": "Аксессуары/Защитные стекла",
+    "parentId": "32169833-95d9-11ee-0a80-017900146640",
+    "archived": false
+  }
+]

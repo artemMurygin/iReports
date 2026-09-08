@@ -1,0 +1,72 @@
+// Движение по балансу сотрудника — PRD 2 docs/payroll-closing-and-accrual/
+// prd-salary-accrual-and-employee-balance.md, раздел "Баланс сотрудника".
+// Баланс ОБЩИЙ по сотруднику (Фаза 8b): один остаток и одна лента на
+// employeeId, остаток на чтении — SUM(amount) по employeeId; direction —
+// лишь атрибут происхождения движения (документ какого направления его
+// породил / в какую кассу ERP уйдёт выплата), на остаток не влияет.
+// amount — Int в целых рублях со знаком (приход положительный, расход
+// отрицательный), та же единица, что у снапшота периода и документа
+// начисления.
+//
+// Ссылки на источники (accrualId/lineId/ruleId) — идентификаторы, а не
+// сериализованные копии (PRD 2, "Технические ограничения"): детализация
+// начисления живёт в документе, лента ведёт на него по accrualId. FK на
+// SalaryAccrualLine сознательно нет: движения SALARY_ACCRUAL/
+// ACCRUAL_ADJUSTMENT удаляются только действием «Отменить начисление», а
+// документы периода удаляются переоткрытием только пока все они DRAFT (то
+// есть без движений) — висячих ссылок не возникает по бизнес-инварианту.
+//
+// Ошибочное ручное движение без документа ERP исправляется удалением
+// записи (DELETE, Фаза 8b) — обратных/компенсирующих типов движений нет.
+//
+// Уникальный индекс (lineId, type) — идемпотентность проведения строки на
+// уровне БД, а не только проверкой в коде: повторный/параллельный accrue
+// одной строки не может породить второе движение SALARY_ACCRUAL (или второе
+// ACCRUAL_ADJUSTMENT). NULL-значения lineId (ручные движения, выплаты) под
+// индекс не попадают — Postgres не считает NULL равными.
+model BalanceTransaction {
+  id         String                 @id
+  employeeId Int                    @map("employee_id")
+  direction  SalesDirection
+  type       BalanceTransactionType
+  amount     Int
+
+  // Дата движения (может быть задним числом, в т.ч. внутри закрытого
+  // месяца — снапшот и документы закрытого периода при этом не меняются);
+  // createdAt — дата создания записи.
+  occurredAt DateTime @map("occurred_at")
+  createdBy  Int      @map("created_by")
+  comment    String?
+  period     String?
+
+  accrualId String? @map("accrual_id")
+  lineId    String? @map("line_id")
+  ruleId    String? @map("rule_id")
+
+  // Признак «должно отражаться в кассе ERP» — в PRD 2 только хранится,
+  // сама синхронизация — PRD 3.
+  erpSyncRequired Boolean @default(false) @map("erp_sync_required")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([lineId, type])
+  @@index([employeeId, occurredAt])
+  @@map("balance_transactions")
+}
+
+// Перечень заложен целиком сразу (PRD 2: перечень типов закладывается
+// целиком, включая PAYOUT, чтобы контракт не менялся в PRD 3).
+enum BalanceTransactionType {
+  SALARY_ACCRUAL
+  ACCRUAL_ADJUSTMENT
+  ADVANCE
+  EXTRA_ADVANCE
+  BONUS
+  SICK_LEAVE
+  VACATION_PAY
+  PENALTY
+  ADJUSTMENT
+  PAYOUT
+
+  @@map("balance_transaction_type")
+}

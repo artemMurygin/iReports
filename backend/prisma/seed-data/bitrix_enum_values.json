@@ -1,0 +1,830 @@
+[
+  {
+    "id": 464,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "Sony",
+    "sort": 200
+  },
+  {
+    "id": 526,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Яндекс Карты",
+    "sort": 50
+  },
+  {
+    "id": 528,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Google Поиск",
+    "sort": 60
+  },
+  {
+    "id": 540,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Youtube",
+    "sort": 130
+  },
+  {
+    "id": 580,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Не определено",
+    "sort": 150
+  },
+  {
+    "id": 634,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Замена дисплея",
+    "sort": 200
+  },
+  {
+    "id": 582,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Прямой заход",
+    "sort": 160
+  },
+  {
+    "id": 640,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Чистки и прочие услуги",
+    "sort": 500
+  },
+  {
+    "id": 644,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "После воды / ударник / не включается",
+    "sort": 700
+  },
+  {
+    "id": 788,
+    "fieldName": "UF_CRM_1762072688",
+    "value": "Ремонт",
+    "sort": 20
+  },
+  {
+    "id": 804,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Микстех",
+    "sort": 10
+  },
+  {
+    "id": 806,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Telemix (Huawei/Honor)",
+    "sort": 20
+  },
+  {
+    "id": 810,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Компьютерная клиника 999",
+    "sort": 40
+  },
+  {
+    "id": 824,
+    "fieldName": "UF_CRM_1762092221",
+    "value": "РЛ",
+    "sort": 10
+  },
+  {
+    "id": 826,
+    "fieldName": "UF_CRM_1762092221",
+    "value": "TradeMi",
+    "sort": 20
+  },
+  {
+    "id": 848,
+    "fieldName": "UF_CRM_1762092859",
+    "value": "Дорого",
+    "sort": 10
+  },
+  {
+    "id": 828,
+    "fieldName": "UF_CRM_1762092327",
+    "value": "Мы",
+    "sort": 10
+  },
+  {
+    "id": 830,
+    "fieldName": "UF_CRM_1762092327",
+    "value": "Клиент",
+    "sort": 20
+  },
+  {
+    "id": 852,
+    "fieldName": "UF_CRM_1762092859",
+    "value": "Перенесли покупку (уточнить причину)",
+    "sort": 30
+  },
+  {
+    "id": 854,
+    "fieldName": "UF_CRM_1762092859",
+    "value": "Доставка",
+    "sort": 40
+  },
+  {
+    "id": 858,
+    "fieldName": "UF_CRM_1762092859",
+    "value": "Дубль/Ошибочно созданная сделка",
+    "sort": 60
+  },
+  {
+    "id": 862,
+    "fieldName": "UF_CRM_1762093108",
+    "value": "Пополнение счета телефона по номеру",
+    "sort": 10
+  },
+  {
+    "id": 866,
+    "fieldName": "UF_CRM_1762093108",
+    "value": "По номеру телефона на счет в банке",
+    "sort": 30
+  },
+  {
+    "id": 872,
+    "fieldName": "UF_CRM_1762093255",
+    "value": "НеДокомплект",
+    "sort": 10
+  },
+  {
+    "id": 874,
+    "fieldName": "UF_CRM_1762093255",
+    "value": "Брак в товаре",
+    "sort": 20
+  },
+  {
+    "id": 878,
+    "fieldName": "UF_CRM_1762093255",
+    "value": "Просят заменить на другой",
+    "sort": 40
+  },
+  {
+    "id": 880,
+    "fieldName": "UF_CRM_1762093324",
+    "value": "WB",
+    "sort": 10
+  },
+  {
+    "id": 46,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "iPad",
+    "sort": 100
+  },
+  {
+    "id": 50,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "Watch",
+    "sort": 300
+  },
+  {
+    "id": 44,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "iPhone",
+    "sort": 0
+  },
+  {
+    "id": 58,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "Прочее",
+    "sort": 900
+  },
+  {
+    "id": 60,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "ALPINE GREEN",
+    "sort": 0
+  },
+  {
+    "id": 62,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "BLACK",
+    "sort": 100
+  },
+  {
+    "id": 64,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "BLUE",
+    "sort": 200
+  },
+  {
+    "id": 66,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "CORAL",
+    "sort": 300
+  },
+  {
+    "id": 68,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "DEEP PURPLE",
+    "sort": 400
+  },
+  {
+    "id": 70,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "GOLD",
+    "sort": 500
+  },
+  {
+    "id": 80,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "LIGHT YELLOW",
+    "sort": 1000
+  },
+  {
+    "id": 82,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "MIDNIGHT",
+    "sort": 1100
+  },
+  {
+    "id": 84,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "MIDNIGHT GREEN",
+    "sort": 1200
+  },
+  {
+    "id": 90,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "PURPLE",
+    "sort": 1500
+  },
+  {
+    "id": 98,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "SILVER",
+    "sort": 1900
+  },
+  {
+    "id": 100,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "SPACE BLACK",
+    "sort": 2000
+  },
+  {
+    "id": 102,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "SPACE GRAY",
+    "sort": 2100
+  },
+  {
+    "id": 106,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "WHITE",
+    "sort": 2300
+  },
+  {
+    "id": 108,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "YELLOW",
+    "sort": 2400
+  },
+  {
+    "id": 140,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "DARK BLUE",
+    "sort": 2500
+  },
+  {
+    "id": 124,
+    "fieldName": "UF_CRM_1703249604340",
+    "value": "Арсений Бакши",
+    "sort": 200
+  },
+  {
+    "id": 318,
+    "fieldName": "UF_CRM_1703249604340",
+    "value": "Кирилл Хвостенков",
+    "sort": 300
+  },
+  {
+    "id": 126,
+    "fieldName": "UF_CRM_1703252168745",
+    "value": "32 ГБ",
+    "sort": 0
+  },
+  {
+    "id": 132,
+    "fieldName": "UF_CRM_1703252168745",
+    "value": "256 ГБ",
+    "sort": 300
+  },
+  {
+    "id": 136,
+    "fieldName": "UF_CRM_1703252168745",
+    "value": "1 ТБ",
+    "sort": 500
+  },
+  {
+    "id": 150,
+    "fieldName": "UF_CRM_1703252556579",
+    "value": "Две eSIM",
+    "sort": 200
+  },
+  {
+    "id": 138,
+    "fieldName": "UF_CRM_1703252168745",
+    "value": "2 ТБ",
+    "sort": 600
+  },
+  {
+    "id": 148,
+    "fieldName": "UF_CRM_1703252556579",
+    "value": "Две физические SIM",
+    "sort": 100
+  },
+  {
+    "id": 276,
+    "fieldName": "UF_CRM_65E18B26A7282",
+    "value": "Telegram",
+    "sort": 0
+  },
+  {
+    "id": 446,
+    "fieldName": "UF_CRM_1727856102930",
+    "value": "Артем Мурыгин",
+    "sort": 0
+  },
+  {
+    "id": 154,
+    "fieldName": "UF_CRM_1703252630278",
+    "value": "Б/у",
+    "sort": 100
+  },
+  {
+    "id": 468,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "POCO",
+    "sort": 400
+  },
+  {
+    "id": 452,
+    "fieldName": "UF_CRM_1727856102930",
+    "value": "Георгий Прохоров",
+    "sort": 200
+  },
+  {
+    "id": 470,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "ACER",
+    "sort": 500
+  },
+  {
+    "id": 476,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "Прочее",
+    "sort": 800
+  },
+  {
+    "id": 520,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "По рекомендации",
+    "sort": 20
+  },
+  {
+    "id": 534,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Вконтакте",
+    "sort": 90
+  },
+  {
+    "id": 518,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Постоянный клиент",
+    "sort": 10
+  },
+  {
+    "id": 532,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Авито",
+    "sort": 80
+  },
+  {
+    "id": 538,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Instagram",
+    "sort": 120
+  },
+  {
+    "id": 636,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Замена стекла",
+    "sort": 300
+  },
+  {
+    "id": 782,
+    "fieldName": "UF_CRM_1762072602",
+    "value": "Wildberries",
+    "sort": 20
+  },
+  {
+    "id": 812,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Регион Ритейл сервис",
+    "sort": 50
+  },
+  {
+    "id": 814,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Айтитрейт",
+    "sort": 60
+  },
+  {
+    "id": 820,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "ИРП",
+    "sort": 90
+  },
+  {
+    "id": 834,
+    "fieldName": "UF_CRM_1762092432",
+    "value": "Мы",
+    "sort": 10
+  },
+  {
+    "id": 838,
+    "fieldName": "UF_CRM_1762092473",
+    "value": "Мы",
+    "sort": 10
+  },
+  {
+    "id": 846,
+    "fieldName": "UF_CRM_1762092775",
+    "value": "Прочее",
+    "sort": 30
+  },
+  {
+    "id": 844,
+    "fieldName": "UF_CRM_1762092775",
+    "value": "Trade Mi",
+    "sort": 20
+  },
+  {
+    "id": 860,
+    "fieldName": "UF_CRM_1762092859",
+    "value": "Больше не работают",
+    "sort": 70
+  },
+  {
+    "id": 52,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "iMac",
+    "sort": 400
+  },
+  {
+    "id": 496,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "Macmini",
+    "sort": 500
+  },
+  {
+    "id": 86,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "PACIFIC BLUE",
+    "sort": 1300
+  },
+  {
+    "id": 88,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "PINK",
+    "sort": 1400
+  },
+  {
+    "id": 122,
+    "fieldName": "UF_CRM_1703249604340",
+    "value": "Дмитрий Ховансков",
+    "sort": 100
+  },
+  {
+    "id": 460,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "Apple",
+    "sort": 0
+  },
+  {
+    "id": 498,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "MacPro",
+    "sort": 600
+  },
+  {
+    "id": 72,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "GRAPHITE",
+    "sort": 600
+  },
+  {
+    "id": 92,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "RED",
+    "sort": 1600
+  },
+  {
+    "id": 144,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "NATURAL TITANIUM",
+    "sort": 2700
+  },
+  {
+    "id": 130,
+    "fieldName": "UF_CRM_1703252168745",
+    "value": "128 ГБ",
+    "sort": 200
+  },
+  {
+    "id": 278,
+    "fieldName": "UF_CRM_65E18B26A7282",
+    "value": "WhatsApp",
+    "sort": 100
+  },
+  {
+    "id": 472,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "ASUS",
+    "sort": 600
+  },
+  {
+    "id": 536,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "2Gis",
+    "sort": 100
+  },
+  {
+    "id": 638,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Замена заднего стекла",
+    "sort": 400
+  },
+  {
+    "id": 808,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Real SC (Нарвская)",
+    "sort": 30
+  },
+  {
+    "id": 836,
+    "fieldName": "UF_CRM_1762092432",
+    "value": "Клиент",
+    "sort": 20
+  },
+  {
+    "id": 864,
+    "fieldName": "UF_CRM_1762093108",
+    "value": "По номеру карты",
+    "sort": 20
+  },
+  {
+    "id": 56,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "AirPods",
+    "sort": 800
+  },
+  {
+    "id": 76,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "LIGHT GREEN",
+    "sort": 800
+  },
+  {
+    "id": 96,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "SIERRA BLUE",
+    "sort": 1800
+  },
+  {
+    "id": 120,
+    "fieldName": "UF_CRM_1703249604340",
+    "value": "Олег Фадеев",
+    "sort": 0
+  },
+  {
+    "id": 146,
+    "fieldName": "UF_CRM_1703252556579",
+    "value": "Физическая SIM + eSIM",
+    "sort": 0
+  },
+  {
+    "id": 462,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "Samsung",
+    "sort": 100
+  },
+  {
+    "id": 522,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Яндекс Поиск",
+    "sort": 30
+  },
+  {
+    "id": 630,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Замена матрицы",
+    "sort": 0
+  },
+  {
+    "id": 660,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Прочее",
+    "sort": 800
+  },
+  {
+    "id": 784,
+    "fieldName": "UF_CRM_1762072602",
+    "value": "Ozon",
+    "sort": 30
+  },
+  {
+    "id": 822,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Elari Service",
+    "sort": 100
+  },
+  {
+    "id": 850,
+    "fieldName": "UF_CRM_1762092859",
+    "value": "Нет в наличии",
+    "sort": 20
+  },
+  {
+    "id": 876,
+    "fieldName": "UF_CRM_1762093255",
+    "value": "Не получили товар",
+    "sort": 30
+  },
+  {
+    "id": 54,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "iPod",
+    "sort": 700
+  },
+  {
+    "id": 78,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "LIGHT PURPLE",
+    "sort": 900
+  },
+  {
+    "id": 104,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "STARLIGHT",
+    "sort": 2200
+  },
+  {
+    "id": 134,
+    "fieldName": "UF_CRM_1703252168745",
+    "value": "512 ГБ",
+    "sort": 400
+  },
+  {
+    "id": 450,
+    "fieldName": "UF_CRM_1727856102930",
+    "value": "Олег Фадеев",
+    "sort": 100
+  },
+  {
+    "id": 474,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "HP",
+    "sort": 700
+  },
+  {
+    "id": 524,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Яндекс Директ",
+    "sort": 40
+  },
+  {
+    "id": 584,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Телеграм",
+    "sort": 110
+  },
+  {
+    "id": 632,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Замена аккумулятора",
+    "sort": 100
+  },
+  {
+    "id": 780,
+    "fieldName": "UF_CRM_1762072602",
+    "value": "ОПТ",
+    "sort": 10
+  },
+  {
+    "id": 818,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Горбушка",
+    "sort": 80
+  },
+  {
+    "id": 840,
+    "fieldName": "UF_CRM_1762092473",
+    "value": "Клиент",
+    "sort": 20
+  },
+  {
+    "id": 868,
+    "fieldName": "UF_CRM_1762093108",
+    "value": "В личный кабинет на сайте",
+    "sort": 40
+  },
+  {
+    "id": 48,
+    "fieldName": "UF_CRM_1703248170106",
+    "value": "Macbook",
+    "sort": 200
+  },
+  {
+    "id": 74,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "GREEN",
+    "sort": 700
+  },
+  {
+    "id": 94,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "ROSE GOLD",
+    "sort": 1700
+  },
+  {
+    "id": 142,
+    "fieldName": "UF_CRM_1703248628819",
+    "value": "SILVER GREY",
+    "sort": 2600
+  },
+  {
+    "id": 128,
+    "fieldName": "UF_CRM_1703252168745",
+    "value": "64 ГБ",
+    "sort": 100
+  },
+  {
+    "id": 152,
+    "fieldName": "UF_CRM_1703252630278",
+    "value": "Новый",
+    "sort": 0
+  },
+  {
+    "id": 466,
+    "fieldName": "UF_CRM_1730472738",
+    "value": "Xiaomi",
+    "sort": 300
+  },
+  {
+    "id": 530,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Google Карты",
+    "sort": 70
+  },
+  {
+    "id": 542,
+    "fieldName": "UF_CRM_1742462651851",
+    "value": "Другое (указать в комментарии)",
+    "sort": 140
+  },
+  {
+    "id": 642,
+    "fieldName": "UF_CRM_1747238112179",
+    "value": "Замена клавиатуры",
+    "sort": 600
+  },
+  {
+    "id": 786,
+    "fieldName": "UF_CRM_1762072688",
+    "value": "Возврат ДС",
+    "sort": 10
+  },
+  {
+    "id": 816,
+    "fieldName": "UF_CRM_1762092092",
+    "value": "Твой мобильный сервис (Samsung)",
+    "sort": 70
+  },
+  {
+    "id": 832,
+    "fieldName": "UF_CRM_1762092327",
+    "value": "Поставщик",
+    "sort": 30
+  },
+  {
+    "id": 842,
+    "fieldName": "UF_CRM_1762092775",
+    "value": "Опт",
+    "sort": 10
+  },
+  {
+    "id": 856,
+    "fieldName": "UF_CRM_1762092859",
+    "value": "Спам",
+    "sort": 50
+  },
+  {
+    "id": 870,
+    "fieldName": "UF_CRM_1762093108",
+    "value": "Обычная посылка почтой",
+    "sort": 50
+  },
+  {
+    "id": 882,
+    "fieldName": "UF_CRM_1762093324",
+    "value": "Ozon",
+    "sort": 20
+  }
+]

@@ -1,0 +1,248 @@
+import { z } from 'zod';
+
+// План продаж — сущность, без которой не считается ни одно процентное
+// зарплатное правило (Фаза 3, см. docs/payroll/plan-payroll-calculation.md
+// и prd-payroll-calculation.md, раздел "План продаж"). Модели общие для
+// направлений service и shop (см. Фазу 11) — направление задаётся полем
+// direction на каждой строке, а не отдельными таблицами.
+
+// Экспортируется — переиспользуется в sales-performance.ts (SalesFact /
+// SalesPrognose / SalesPerformance, Фаза 5), чтобы формат периода не
+// расходился по двум файлам контрактов.
+const periodSchema = z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM');
+
+// ========================== Направление ========================== //
+
+// Совпадает с AccountingDirection (src/shared/domain/calculation-context.ts
+// на бэкенде) — здесь та же пара значений в виде схемы, отдельного общего
+// экспорта между этим файлом и salary-rule.ts пока нет (см.
+// directionSalaryReportSchema), дублирование минимально и по значениям, а
+// не по смыслу.
+const salesDirectionSchema = z.enum(['service', 'shop']);
+export type SalesDirection = z.infer<typeof salesDirectionSchema>;
+
+// ========================== SalesPlanTemplate ========================== //
+
+// Дефолтные значения плана по отделу и, опционально, категории — стартовая
+// точка для самого первого месяца направления и запасной вариант, если
+// плана за предыдущий месяц ещё нет (Фаза 4). category = null — шаблон
+// действует на отдел целиком.
+// orderTypeIds — id типов заказов RoApp (RoappOrderType, справочник
+// GET /v1/service/reports/order-type), которые учитываются в плане/строке
+// шаблона; [] = "учитывать заказы всех типов" (в т.ч. для строк, созданных
+// до появления этого поля).
+const salesPlanTemplateSchema = z.object({
+    id: z.string(),
+    direction: salesDirectionSchema,
+    department: z.number(),
+    category: z.string().nullable(),
+    turnover: z.number(),
+    margin: z.number(),
+    orderTypeIds: z.array(z.number()),
+    growthPercent: z.number(),
+    // Глобальный (общий для всех пользователей) порядок строки-категории в
+    // таблице плана продаж — задаётся drag-and-drop в модалке
+    // редактирования плана (см.
+    // docs/sales-plan-row-drag-and-drop-reorder). Хранится на шаблоне, а
+    // не на самой строке SalesPlan, потому что переживает смену
+    // расчётного периода (см. комментарий у sortOrder в sales.prisma).
+    sortOrder: z.number().int(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+});
+export type SalesPlanTemplateResponse = z.infer<typeof salesPlanTemplateSchema>;
+
+// PUT — правка шаблона: чтение и запись всегда идут по естественному ключу
+// (direction, department, category), отдельного POST на создание строки
+// шаблона нет — первая правка комбинации создаёт её (см.
+// PutSalesPlanTemplateHandler).
+const putSalesPlanTemplateRequestSchema = z.object({
+    department: z.number(),
+    category: z.string().nullable().optional(),
+    turnover: z.number().nonnegative(),
+    margin: z.number(),
+    orderTypeIds: z.array(z.number()).optional(),
+    growthPercent: z.number().nonnegative(),
+});
+export type PutSalesPlanTemplateRequest = z.infer<
+    typeof putSalesPlanTemplateRequestSchema
+>;
+
+const listSalesPlanTemplatesQuerySchema = z.object({});
+export type ListSalesPlanTemplatesQuery = z.infer<
+    typeof listSalesPlanTemplatesQuerySchema
+>;
+
+// ========================== SalesPlan ========================== //
+
+// PREVIOUS_MONTH/TEMPLATE — источники, которыми крон и ленивое достраивание
+// заполняют месяц без участия руководителя (Фаза 4); MANUAL — ручное
+// создание (этот модуль) или правка уже существующей строки — любая правка
+// переводит источник в MANUAL, каким бы он ни был раньше.
+const salesPlanSourceSchema = z.enum([
+    'PREVIOUS_MONTH',
+    'TEMPLATE',
+    'MANUAL',
+]);
+export type SalesPlanSource = z.infer<typeof salesPlanSourceSchema>;
+
+// CREATED — строка полноценно участвует в расчётах, но ещё не подтверждена
+// руководителем; APPROVED — подтверждена. Автоматически APPROVED никогда не
+// проставляется.
+const salesPlanStatusSchema = z.enum(['CREATED', 'APPROVED']);
+export type SalesPlanStatus = z.infer<typeof salesPlanStatusSchema>;
+
+const salesPlanSchema = z.object({
+    id: z.string(),
+    direction: salesDirectionSchema,
+    department: z.number(),
+    category: z.string().nullable(),
+    period: periodSchema,
+    turnover: z.number(),
+    margin: z.number(),
+    // Id типов заказов RoApp (RoappOrderType, справочник
+    // GET /v1/service/reports/order-type), заказы которых учитываются в
+    // факте/прогнозе этой строки; [] = "учитывать заказы всех типов".
+    orderTypeIds: z.array(z.number()),
+    source: salesPlanSourceSchema,
+    status: salesPlanStatusSchema,
+    approvedBy: z.number().nullable(),
+    approvedAt: z.coerce.date().nullable(),
+    // Порядок строки, разрешённый по связанному SalesPlanTemplate
+    // (direction, department, category) — не собственное поле строки
+    // плана (у SalesPlan такого столбца нет, см. sales.prisma), а
+    // денормализованное значение, которое сервер подставляет при сборке
+    // ответа (см. GetSalesPerformanceService/ListSalesPlansService).
+    // null — для категории нет сохранённого шаблона/порядка, такая строка
+    // отображается последней в списке (см. docs/sales-plan-row-drag-and-
+    // drop-reorder). Помечено optional для обратной совместимости.
+    sortOrder: z.number().int().nullable().optional(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+});
+export type SalesPlanResponse = z.infer<typeof salesPlanSchema>;
+
+// Создание — всегда ручное (source = MANUAL на бэкенде, здесь не
+// запрашивается): автоматические источники (PREVIOUS_MONTH/TEMPLATE)
+// проставляет только крон/ленивое достраивание Фазы 4, у этого эндпоинта их
+// не бывает. Повторное создание на ту же комбинацию
+// (direction, department, category, period) отклоняется — как для каждой
+// строки батча по отдельности, так и для дублей внутри одного запроса.
+const createSalesPlanItemSchema = z.object({
+    department: z.number(),
+    category: z.string().nullable().optional(),
+    period: periodSchema,
+    turnover: z.number().nonnegative(),
+    margin: z.number(),
+    orderTypeIds: z.array(z.number()).optional(),
+});
+export type CreateSalesPlanItemRequest = z.infer<
+    typeof createSalesPlanItemSchema
+>;
+
+// Тело — один план или батч планов. direction в теле не передаётся вообще —
+// его выбирает сервер по тому, под каким доменным префиксом
+// (/v1/service/sales/plan или /v1/shop/sales/plan) пришёл запрос (см.
+// CreateSalesPlanHttpController/CreateShopSalesPlanHttpController). Union, а
+// не единая форма на оба случая (несовместим с createZodDto — TS2509, как и
+// approveSalesPlanRequestSchema ниже), валидируется на контроллере через
+// ZodValidationPipe напрямую.
+const createSalesPlanRequestSchema = z.union([
+    createSalesPlanItemSchema,
+    z.object({
+        items: z.array(createSalesPlanItemSchema).min(1),
+    }),
+]);
+export type CreateSalesPlanRequest = z.infer<
+    typeof createSalesPlanRequestSchema
+>;
+
+// Правка значений — direction/department/category/period неизменны (это
+// была бы уже другая строка); правка переводит source в MANUAL и сбрасывает
+// status в CREATED, если строка была утверждена.
+const updateSalesPlanRequestSchema = z
+    .object({
+        turnover: z.number().nonnegative().optional(),
+        margin: z.number().optional(),
+        orderTypeIds: z.array(z.number()).optional(),
+    })
+    .refine(
+        (data) =>
+            data.turnover !== undefined ||
+            data.margin !== undefined ||
+            data.orderTypeIds !== undefined,
+        {
+            message: 'Нужно указать turnover, margin и/или orderTypeIds',
+        },
+    );
+export type UpdateSalesPlanRequest = z.infer<
+    typeof updateSalesPlanRequestSchema
+>;
+
+// Батч-обновление глобального (общего для всех пользователей) порядка
+// строк-категорий плана — PATCH .../plan/order (см.
+// docs/sales-plan-row-drag-and-drop-reorder). department — одно на весь
+// запрос (переупорядочивание всегда происходит в рамках одной таблицы
+// модалки/страницы плана, т.е. одного отдела); category = null — строка
+// "без категории" (шаблон на отдел целиком, тот же сентинел-принцип, что и
+// в остальных схемах этого файла). Эндпоинт трогает только
+// SalesPlanTemplate.sortOrder — turnover/margin/orderTypeIds/growthPercent
+// существующих строк шаблона не меняются (см.
+// UpdateSalesPlanOrderHandler).
+const updateSalesPlanOrderItemSchema = z.object({
+    category: z.string().nullable().optional(),
+    sortOrder: z.number().int(),
+});
+export type UpdateSalesPlanOrderItem = z.infer<
+    typeof updateSalesPlanOrderItemSchema
+>;
+
+const updateSalesPlanOrderRequestSchema = z.object({
+    department: z.number(),
+    items: z.array(updateSalesPlanOrderItemSchema).min(1),
+});
+export type UpdateSalesPlanOrderRequest = z.infer<
+    typeof updateSalesPlanOrderRequestSchema
+>;
+
+// Утверждение построчно (ids) или массово по месяцу (period, в рамках
+// направления эндпоинта из пути — все строки CREATED переходят в APPROVED,
+// уже утверждённые строки не трогаются). approvedBy — Bitrix ID руководителя,
+// который утверждает: в проекте нет модели прав и резолва "текущего
+// пользователя" вне PortalAdminGuard (см. backend/CLAUDE.md), поэтому его
+// передаёт фронтенд явно, а не берёт из токена/сессии.
+const approveSalesPlanRequestSchema = z.union([
+    z.object({ ids: z.array(z.string()).min(1), approvedBy: z.number() }),
+    z.object({
+        period: periodSchema,
+        approvedBy: z.number(),
+    }),
+]);
+export type ApproveSalesPlanRequest = z.infer<
+    typeof approveSalesPlanRequestSchema
+>;
+
+const listSalesPlansQuerySchema = z.object({
+    period: periodSchema,
+});
+export type ListSalesPlansQuery = z.infer<typeof listSalesPlansQuerySchema>;
+
+export {
+    periodSchema,
+    salesDirectionSchema,
+    salesPlanTemplateSchema,
+    putSalesPlanTemplateRequestSchema,
+    listSalesPlanTemplatesQuerySchema,
+    salesPlanSourceSchema,
+    salesPlanStatusSchema,
+    salesPlanSchema,
+    createSalesPlanItemSchema,
+    createSalesPlanRequestSchema,
+    updateSalesPlanRequestSchema,
+    updateSalesPlanOrderItemSchema,
+    updateSalesPlanOrderRequestSchema,
+    approveSalesPlanRequestSchema,
+    listSalesPlansQuerySchema,
+};

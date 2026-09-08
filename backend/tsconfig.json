@@ -1,25 +1,36 @@
 {
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "compilerOptions": {
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "resolvePackageJsonExports": true,
+        // Пакет Prisma 7 генерирует клиент (prisma/generated/) с относительными импортами вида
+        // "./internal/class.ts" — при компиляции tsc сам по себе не переписывает расширение на .js
+        // в эмитируемых require(), из-за чего dist/prisma/generated падает на старте с
+        // MODULE_NOT_FOUND. rewriteRelativeImportExtensions (TS 5.7+) делает это переписывание.
+        "rewriteRelativeImportExtensions": true,
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "declaration": true,
+        "removeComments": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "target": "ES2023",
+        "sourceMap": true,
+        "outDir": "dist",
+        "rootDir": "./",
+        "baseUrl": "./",
+        "paths": {
+            "@/*": ["src/*"]
+        },
+        "incremental": true,
+        "skipLibCheck": true,
+        "strictNullChecks": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitAny": false,
+        "strictBindCallApply": false,
+        "noFallthroughCasesInSwitch": false
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules", "dist", "deprecated"]
 }

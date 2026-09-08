@@ -1,48 +1,99 @@
-import { BarChart3 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { Percent, Wallet } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 
-const NAV = [
-    { label: 'Воронка продаж', to: '/', disabled: false },
-    { label: 'Аналитика услуг', to: '/services', disabled: false },
-    { label: 'Отчёт по зарплатам', to: '/salaries', disabled: true },
-]
+import { useCurrentUser, useLogout } from '@/features/Auth'
+import { findMostSpecificNavMatch } from '@/shared/lib/nav.ts'
+import { getEmployeeInitials } from '@/shared/lib/employeeInitials.ts'
+import { Header as UiKitHeader, type ProfileMenuData } from '@/shared/ui-kit/organisms/Header'
 
-export function Header(){
+import { ALL_LEAVES, DRAWER_SECTIONS, isTopLevelNavItemActive, SECTIONS, TOP_LEVEL_NAV_ITEMS } from './navigation.tsx'
+
+export function Header() {
+    const location = useLocation()
+    // Общий с RouteGuard/useRouteGuardState кэш TanStack Query (тот же ключ auth-me, session.api.ts)
+    // — Header не делает повторный сетевой запрос, здесь он уже прогрет к моменту, когда рендерится
+    // Header (Layout монтируется только внутри RouteGuard, после подтверждения сессии).
+    const { employee } = useCurrentUser()
+    const { logout } = useLogout()
+    const user = employee
+        ? {
+              name: `${employee.firstName} ${employee.lastName}`.trim(),
+              initials: getEmployeeInitials(`${employee.firstName} ${employee.lastName}`),
+          }
+        : undefined
+
+    // Профиль-меню (Pencil `FjbRC`/`X2GpSa`, десктоп-поповер + мобильная шторка) — открывается
+    // из блока пользователя в шапке. «Выйти» доступно всегда; «Баланс»/«Зарплатные правила» —
+    // только когда известен id сотрудника (нужен для `/balance/employee/:id`).
+    const profileMenu: ProfileMenuData | undefined = employee
+        ? {
+              items: [
+                  { label: 'Баланс', icon: <Wallet />, to: `/balance/employee/${employee.id}` },
+                  { label: 'Зарплатные правила', icon: <Percent />, to: '/salaries/rules' },
+              ],
+              onLogout: () => logout(),
+          }
+        : undefined
+
+    // Pick the most specific match, not the first one in array order: with `end: false` (the
+    // default), a shorter leaf like "Отчёт по зарплате" (`/salaries`) matches any nested path,
+    // including "Правила начисления" (`/salaries/rules`) — comparing raw `find` order made the
+    // mobile app-bar/drawer show the wrong title depending on which leaf happened to come first
+    // in `SECTIONS`. `findMostSpecificNavMatch` compares `to.length` to pick the longest (most
+    // specific) matching path regardless of declaration order.
+    const activeLeaf = findMostSpecificNavMatch(ALL_LEAVES, location.pathname) ?? ALL_LEAVES[0]
+
+    // Subnav: the current section's own pages as tabs (node `SHMkH`) — only when there's more
+    // than one to switch between. Exactly one tab is marked `active`: the most specific match
+    // among the section's own items (same `findMostSpecificNavMatch` used for `activeLeaf` above),
+    // not each tab's own independent `NavLink` prefix match — otherwise e.g. "Отчёт по зарплате"
+    // (`/salaries`, prefix match) and "Правила начисления" (`/salaries/rules`) would both light up
+    // on `/salaries/rules`.
+    const activeSection = SECTIONS.find((section) => section.label === activeLeaf.section)
+    const activeSubnavTab = activeSection ? findMostSpecificNavMatch(activeSection.items, location.pathname) : null
+    const subnavTabs =
+        activeSection && activeSection.items.length > 1
+            ? activeSection.items.map(({ label, to, end, disabled }) => ({
+                  label,
+                  to,
+                  end,
+                  disabled,
+                  active: activeSubnavTab?.to === to,
+              }))
+            : undefined
+
+    // Nav Bar pills: each pill is lit when the current path belongs to its *whole* section (any
+    // of that section's child pages), not merely when it matches the single "primary" child page
+    // the pill happens to link to — otherwise the pill goes dark the moment you navigate to a
+    // sibling page in the same section (e.g. "Зарплата" on `/salary-accruals`, "Продажи" on
+    // `/sales-plan`). Computed per render (depends on `location.pathname`), unlike the
+    // pathname-independent `TOP_LEVEL_NAV_ITEMS` constant it's derived from.
+    const navItems = TOP_LEVEL_NAV_ITEMS.map((item) => ({
+        ...item,
+        active: isTopLevelNavItemActive(item, location.pathname),
+    }))
+
+    // Mobile drawer: same "exactly one active item" mechanism as the desktop pills/tabs above,
+    // rather than `NavDrawer`'s own independent `NavLink.isActive` per item (that used a plain
+    // path-prefix match with no notion of "the other items", the same class of bug fixed for
+    // `HeaderDesktop`/`Subnav`). The drawer lists every section's items flattened across the whole
+    // app (not just the current section, unlike Subnav's tabs), so the *single* most specific
+    // match across all of them is exactly `activeLeaf` computed above — an item is active only
+    // when it's that same leaf (`to` is unique across `ALL_LEAVES`, so comparing it is enough).
+    const drawerSections = DRAWER_SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.map((item) => ({ ...item, active: item.to === activeLeaf.to })),
+    }))
+
     return (
-        <header className="sticky top-0 z-10 flex items-center h-16 px-6 bg-white border-b border-gray-200 shrink-0 gap-8">
-            <div className="flex items-center gap-3 shrink-0">
-                <div className="flex items-center justify-center w-8 h-8 bg-[#38d97b] rounded-lg">
-                    <BarChart3 className="w-[18px] h-[18px] text-white" />
-                </div>
-                <span className="text-lg font-semibold text-gray-900" style={{ fontFamily: "Inter, sans-serif" }}>
-                    iRepair
-                </span>
-            </div>
-            <nav className="flex items-center gap-1">
-                {NAV.map(({ label, to, disabled }) =>
-                    disabled ? (
-                        <span
-                            key={to}
-                            className="px-3 py-1.5 text-sm text-gray-300 cursor-not-allowed select-none"
-                            style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                            {label}
-                        </span>
-                    ) : (
-                        <NavLink
-                            key={to}
-                            to={to}
-                            className={({ isActive }) =>
-                                `px-3 py-1.5 text-sm rounded-md transition-colors ${isActive ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`
-                            }
-                            style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                            {label}
-                        </NavLink>
-                    )
-                )}
-            </nav>
-        </header>
+        <UiKitHeader
+            navItems={navItems}
+            subnavTabs={subnavTabs}
+            drawerSections={drawerSections}
+            user={user}
+            mobile={{ section: activeLeaf.section, page: activeLeaf.label }}
+            onLogout={() => logout()}
+            profileMenu={profileMenu}
+        />
     )
 }
-

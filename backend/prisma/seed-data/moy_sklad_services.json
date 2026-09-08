@@ -1,0 +1,362 @@
+[
+  {
+    "id": "8544ca80-afa4-11ee-0a80-0046000708ec",
+    "name": "Перенос данных Android",
+    "code": "10190",
+    "description": null,
+    "salePrice": 5300,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.598Z"
+  },
+  {
+    "id": "e6ecc744-b487-11ee-0a80-1197001860b3",
+    "name": "Установка стекла на планшет",
+    "code": "10222",
+    "description": null,
+    "salePrice": 1160,
+    "folderId": "23c77276-b47d-11ee-0a80-139e0016688f",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:19.865Z"
+  },
+  {
+    "id": "e6f87198-b487-11ee-0a80-1197001860c2",
+    "name": "Установка пленки на смартфон (2 стороны)",
+    "code": "10220",
+    "description": null,
+    "salePrice": 700,
+    "folderId": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "archived": false,
+    "updatedAt": "2024-07-31T12:49:52.671Z"
+  },
+  {
+    "id": "e6fc4589-b487-11ee-0a80-1197001860c7",
+    "name": "Установка пленки на часы",
+    "code": "10228",
+    "description": null,
+    "salePrice": 340,
+    "folderId": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "archived": false,
+    "updatedAt": "2024-07-31T12:50:16.264Z"
+  },
+  {
+    "id": "e7049d8e-b487-11ee-0a80-1197001860d1",
+    "name": "Установка пленки на ноутбук (дисплей)",
+    "code": "10227",
+    "description": null,
+    "salePrice": 1100,
+    "folderId": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "archived": false,
+    "updatedAt": "2024-07-31T12:50:43.468Z"
+  },
+  {
+    "id": "e81c8da1-cfeb-11ee-0a80-070e0013b375",
+    "name": "Чистка системы МС",
+    "code": "10416",
+    "description": null,
+    "salePrice": 610,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2026-05-25T10:43:42.593Z"
+  },
+  {
+    "id": "54ed001a-007f-11ef-0a80-160800377e25",
+    "name": "Выезд курьера (не использовать)",
+    "code": "31179",
+    "description": null,
+    "salePrice": 440,
+    "folderId": "3f1e0c45-9faa-11f0-0a80-09940013dd03",
+    "archived": false,
+    "updatedAt": "2026-05-25T10:43:42.401Z"
+  },
+  {
+    "id": "84f6da08-afa4-11ee-0a80-00460007088b",
+    "name": "Настройка Apple Watch",
+    "code": "10183",
+    "description": null,
+    "salePrice": 1510,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2024-01-10T10:39:23.511Z"
+  },
+  {
+    "id": "37ecb8ed-4b43-11f0-0a80-101d00049781",
+    "name": "Для выгрузки заказа",
+    "code": "31931",
+    "description": null,
+    "salePrice": 0,
+    "folderId": "a2923398-9f4e-11ee-0a80-026e0017039e",
+    "archived": false,
+    "updatedAt": "2026-05-25T10:43:35.325Z"
+  },
+  {
+    "id": "36d90c5c-738f-11f0-0a80-16ab0010bb20",
+    "name": "Предоплата",
+    "code": "31992",
+    "description": null,
+    "salePrice": 0,
+    "folderId": null,
+    "archived": false,
+    "updatedAt": "2026-05-25T10:36:17.247Z"
+  },
+  {
+    "id": "84f251e6-afa4-11ee-0a80-004600070885",
+    "name": "Лазерная гравировка клавиатуры",
+    "code": "10180",
+    "description": null,
+    "salePrice": 2230,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2026-03-21T15:48:46.848Z"
+  },
+  {
+    "id": "84ffcfc3-afa4-11ee-0a80-004600070897",
+    "name": "Переустановка MacOS без сохранения данных",
+    "code": "10176",
+    "description": null,
+    "salePrice": 2300,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2024-01-10T10:39:23.571Z"
+  },
+  {
+    "id": "85226dd9-afa4-11ee-0a80-0046000708c2",
+    "name": "Восстановление учетной записи Apple",
+    "code": "10189",
+    "description": null,
+    "salePrice": 1750,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.574Z"
+  },
+  {
+    "id": "851c9b8a-afa4-11ee-0a80-0046000708bc",
+    "name": "Восстановление удаленного приложения из AppStore (5 шт.)",
+    "code": "10191",
+    "description": null,
+    "salePrice": 2190,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.572Z"
+  },
+  {
+    "id": "8531ed72-afa4-11ee-0a80-0046000708d4",
+    "name": "Перенос данных iOS 256-512гб",
+    "code": "10175",
+    "description": null,
+    "salePrice": 3490,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.580Z"
+  },
+  {
+    "id": "85281352-afa4-11ee-0a80-0046000708c8",
+    "name": "Комплексная чистка сеток динамиков iPhone",
+    "code": "10188",
+    "description": null,
+    "salePrice": 940,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T15:03:42.942Z"
+  },
+  {
+    "id": "853bbb88-afa4-11ee-0a80-0046000708e0",
+    "name": "Перенос контактов",
+    "code": "10181",
+    "description": null,
+    "salePrice": 3790,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.594Z"
+  },
+  {
+    "id": "e70bbe61-b487-11ee-0a80-1197001860db",
+    "name": "Установка пленки на ноутбук (дисплей+корпус)",
+    "code": "10223",
+    "description": null,
+    "salePrice": 1500,
+    "folderId": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "archived": false,
+    "updatedAt": "2024-07-31T12:50:37.065Z"
+  },
+  {
+    "id": "76b27cea-597f-11ef-0a80-17cb00168069",
+    "name": "Удержание с клиента Джеки Чан",
+    "code": "31347",
+    "description": null,
+    "salePrice": 0,
+    "folderId": "5a339fd6-54cb-11ef-0a80-0da50017a51a",
+    "archived": false,
+    "updatedAt": "2026-05-25T10:38:59.286Z"
+  },
+  {
+    "id": "84e8c616-afa4-11ee-0a80-004600070879",
+    "name": "Установка ПО на Macbook",
+    "code": "10172",
+    "description": null,
+    "salePrice": 2490,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2024-01-10T10:39:23.415Z"
+  },
+  {
+    "id": "85135bc2-afa4-11ee-0a80-0046000708af",
+    "name": "Восстановление (Переустановка) ПО iOS с сохранением данных",
+    "code": "10179",
+    "description": null,
+    "salePrice": 2490,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.567Z"
+  },
+  {
+    "id": "852cfa7e-afa4-11ee-0a80-0046000708ce",
+    "name": "Перенос данных iOS 1тб",
+    "code": "10184",
+    "description": null,
+    "salePrice": 6090,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.578Z"
+  },
+  {
+    "id": "b6b07f32-4f3b-11ef-0a80-14700013f2af",
+    "name": "Установка стекла на камеру",
+    "code": "31316",
+    "description": null,
+    "salePrice": 390,
+    "folderId": "23c77276-b47d-11ee-0a80-139e0016688f",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:19.857Z"
+  },
+  {
+    "id": "e6f4c5e3-b487-11ee-0a80-1197001860bd",
+    "name": "Установка пленки на смартфон (1 сторона)",
+    "code": "10221",
+    "description": null,
+    "salePrice": 540,
+    "folderId": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "archived": false,
+    "updatedAt": "2024-07-31T12:49:31.228Z"
+  },
+  {
+    "id": "84edd3f7-afa4-11ee-0a80-00460007087f",
+    "name": "Восстановление (Переустановка) ПО iOS без сохранения данных",
+    "code": "10182",
+    "description": null,
+    "salePrice": 920,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.560Z"
+  },
+  {
+    "id": "85374894-afa4-11ee-0a80-0046000708da",
+    "name": "Перенос данных iOS 64-128гб",
+    "code": "10173",
+    "description": null,
+    "salePrice": 2580,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.592Z"
+  },
+  {
+    "id": "e70085ae-b487-11ee-0a80-1197001860cc",
+    "name": "Установка пленки на планшет",
+    "code": "10225",
+    "description": null,
+    "salePrice": 1110,
+    "folderId": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "archived": false,
+    "updatedAt": "2024-07-31T12:50:23.404Z"
+  },
+  {
+    "id": "84fb883f-afa4-11ee-0a80-004600070891",
+    "name": "Перенос данных MacOS",
+    "code": "10185",
+    "description": null,
+    "salePrice": 3620,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2024-01-10T10:39:23.542Z"
+  },
+  {
+    "id": "85064e9d-afa4-11ee-0a80-00460007089d",
+    "name": "Переустановка MacOS с сохранением данных",
+    "code": "10186",
+    "description": null,
+    "salePrice": 5300,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2024-01-10T10:39:23.612Z"
+  },
+  {
+    "id": "85404a10-afa4-11ee-0a80-0046000708e6",
+    "name": "Создание и настройка учетной записи Apple",
+    "code": "10187",
+    "description": null,
+    "salePrice": 1690,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.596Z"
+  },
+  {
+    "id": "e6f04371-b487-11ee-0a80-1197001860b8",
+    "name": "Установка стекла на часы",
+    "code": "10224",
+    "description": null,
+    "salePrice": 350,
+    "folderId": "23c77276-b47d-11ee-0a80-139e0016688f",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:19.867Z"
+  },
+  {
+    "id": "eb859353-f74d-11ee-0a80-0b3e0017411b",
+    "name": "Чистка Apple Airpods",
+    "code": "31164",
+    "description": null,
+    "salePrice": 2270,
+    "folderId": "ed6e9b40-9f50-11ee-0a80-0fe900174e02",
+    "archived": false,
+    "updatedAt": "2026-05-25T10:43:42.596Z"
+  },
+  {
+    "id": "5013936d-5ccd-11f0-0a80-0dce00128b73",
+    "name": "Клавиатура Apple Magic Keyboard A1314",
+    "code": "31959",
+    "description": null,
+    "salePrice": 0,
+    "folderId": "0d6107e9-9f45-11ee-0a80-08a8001648d2",
+    "archived": false,
+    "updatedAt": "2026-05-25T10:38:44.725Z"
+  },
+  {
+    "id": "85182446-afa4-11ee-0a80-0046000708b6",
+    "name": "Восстановление удаленного приложения из AppStore (1 шт.)",
+    "code": "10174",
+    "description": null,
+    "salePrice": 500,
+    "folderId": "cb4d65e5-9f50-11ee-0a80-10d5001846c1",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:54:55.569Z"
+  },
+  {
+    "id": "e6e94124-b487-11ee-0a80-1197001860ae",
+    "name": "Установка стекла на смартфон",
+    "code": "10226",
+    "description": null,
+    "salePrice": 490,
+    "folderId": "23c77276-b47d-11ee-0a80-139e0016688f",
+    "archived": false,
+    "updatedAt": "2026-01-06T14:53:42.083Z"
+  },
+  {
+    "id": "e707d291-b487-11ee-0a80-1197001860d6",
+    "name": "Установка пленки на ноутбук (корпус)",
+    "code": "10219",
+    "description": null,
+    "salePrice": 1190,
+    "folderId": "2ef2e2fd-b47d-11ee-0a80-139e00166b55",
+    "archived": false,
+    "updatedAt": "2024-07-31T12:50:31.554Z"
+  }
+]

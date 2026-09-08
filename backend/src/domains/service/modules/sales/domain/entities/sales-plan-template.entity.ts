@@ -1,0 +1,127 @@
+import { randomUUID } from 'crypto';
+import { AggregateID, Entity } from '@/shared/domain/entity.base';
+import { ArgumentInvalidException } from '@/shared/exceptions';
+import { SalesPlanScope } from '../value-objects/sales-plan-scope.value-object';
+import {
+    SalesPlanTemplateCreateProps,
+    SalesPlanTemplateEditProps,
+    SalesPlanTemplateProps,
+} from '../types/sales-plan-template.types';
+import type { SalesDirection } from '../types/sales-plan.types';
+
+// spec: service/sales#scenario-шаблон-без-явного-процента-роста-получает-значение-по-умолчанию
+export const DEFAULT_GROWTH_PERCENT = 10;
+
+// spec: service/sales#requirement-шаблон-плана-как-отправная-точка-отделакатегории
+//
+// Стартовая точка для самого первого месяца направления и запасной
+// вариант, если плана за предыдущий месяц ещё нет (Фаза 4).
+export class SalesPlanTemplate extends Entity<SalesPlanTemplateProps> {
+    declare protected readonly _id: AggregateID;
+
+    static create(create: SalesPlanTemplateCreateProps): SalesPlanTemplate {
+        const scope = SalesPlanScope.create(
+            create.direction,
+            create.department,
+            create.category ?? null,
+        );
+        return new SalesPlanTemplate({
+            id: randomUUID(),
+            props: {
+                scope,
+                turnover: create.turnover,
+                margin: create.margin,
+                orderTypeIds: create.orderTypeIds ?? [],
+                growthPercent: create.growthPercent ?? DEFAULT_GROWTH_PERCENT,
+                sortOrder: create.sortOrder ?? 0,
+            },
+        });
+    }
+
+    get direction(): SalesDirection {
+        return this.props.scope.getDirection();
+    }
+
+    get department(): number {
+        return this.props.scope.getDepartment();
+    }
+
+    get category(): string | null {
+        return this.props.scope.getCategory();
+    }
+
+    get turnover(): number {
+        return this.props.turnover;
+    }
+
+    get margin(): number {
+        return this.props.margin;
+    }
+
+    get growthPercent(): number {
+        return this.props.growthPercent;
+    }
+
+    // spec: service/sales#scenario-пустой-список-типов-заказов-означает-все-типы
+    //
+    // Переносится на автосоздаваемый план (см.
+    // EnsureSalesPlansForPeriodService.fromTemplate()), когда для комбинации
+    // отдел/категория нет плана предыдущего месяца.
+    get orderTypeIds(): number[] {
+        return this.props.orderTypeIds;
+    }
+
+    get sortOrder(): number {
+        return this.props.sortOrder;
+    }
+
+    // Отдельный от update() метод — намеренно: батч-эндпоинт
+    // переупорядочивания строк плана (см. UpdateSalesPlanOrderHandler)
+    // обязан трогать только sortOrder, никогда turnover/margin/
+    // orderTypeIds/growthPercent (см. docs/sales-plan-row-drag-and-drop-
+    // reorder, "Не в скоупе"/технические ограничения) — общий update()
+    // с необязательными полями делал бы эту гарантию менее явной.
+    reorder(sortOrder: number): void {
+        this.props.sortOrder = sortOrder;
+        this.validate();
+    }
+
+    update(patch: SalesPlanTemplateEditProps): void {
+        if (patch.turnover !== undefined) {
+            this.props.turnover = patch.turnover;
+        }
+        if (patch.margin !== undefined) {
+            this.props.margin = patch.margin;
+        }
+        if (patch.orderTypeIds !== undefined) {
+            this.props.orderTypeIds = patch.orderTypeIds;
+        }
+        if (patch.growthPercent !== undefined) {
+            this.props.growthPercent = patch.growthPercent;
+        }
+        this.validate();
+    }
+
+    validate(): void {
+        if (this.props.turnover < 0) {
+            throw new ArgumentInvalidException(
+                'Плановый оборот шаблона не может быть отрицательным',
+            );
+        }
+        if (this.props.margin < 0) {
+            throw new ArgumentInvalidException(
+                'Плановая маржа шаблона не может быть отрицательной',
+            );
+        }
+        if (this.props.growthPercent < 0) {
+            throw new ArgumentInvalidException(
+                'Процент роста шаблона не может быть отрицательным',
+            );
+        }
+        if (!Number.isInteger(this.props.sortOrder)) {
+            throw new ArgumentInvalidException(
+                'Порядок строки шаблона должен быть целым числом',
+            );
+        }
+    }
+}

@@ -8,6 +8,7 @@ model RoappEmployee {
   ordersAsCloser  RoappOrder[]         @relation("OrderClosedBy")
   productsOrders  RoappProductsOrder[]
   serviceOrders   RoappServiceOrder[]
+  bitrixEmployee  BitrixEmployee?
 
   @@map("roapp_employees")
 }
@@ -60,7 +61,7 @@ model RoappService {
   name          String  @db.VarChar(255)
   engeneerBonus Int     @map("engeneer_bonus")
   price         Int
-  warranty      String @db.VarChar(64)
+  warranty      String  @db.VarChar(64)
   duration      Int
   inCatalog     Boolean @map("in_catalog")
   categoryId    Int?    @map("category_id")

@@ -1,1 +1,1 @@
-export { DealsByManagerChart } from './components/DealsByManagerChart'
+export { DealsByManagerChart } from '@/features/DealsByManagerChart/ui/DealsByManagerChart'

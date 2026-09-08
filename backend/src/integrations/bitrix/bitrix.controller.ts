@@ -3,34 +3,42 @@ import type { Response } from 'express';
 import { BitrixService } from './bitrix.service';
 import { BitrixAuthService } from './bitrix-auth.service';
 import { BitrixInstallDto } from './dto/bitrix-install.dto';
+import { Public } from '@/shared/decorators/public.decorator';
 
 @Controller('bitrix')
 export class BitrixController {
-  constructor(
-    private readonly bitrixService: BitrixService,
-    private readonly bitrixAuthService: BitrixAuthService,
-  ) {}
+    constructor(
+        private readonly bitrixService: BitrixService,
+        private readonly bitrixAuthService: BitrixAuthService,
+    ) {}
 
-  /**
-   * Обработчик установки приложения из Bitrix24.
-   * URL прописывается в настройках приложения как:
-   *   - "Application installer URL" (mass-market)
-   *   - "Initial installation path" (локальное приложение)
-   *
-   * Bitrix24 вызывает этот endpoint при первом открытии приложения администратором,
-   * передавая OAuth-токены через POST (application/x-www-form-urlencoded).
-   * В ответ возвращается HTML-страница, которая вызывает BX24.installFinish(),
-   * после чего приложение считается установленным и становится доступным всем сотрудникам.
-   */
-  @Post('install')
-  async install(
-    @Body() body: BitrixInstallDto,
-    @Res() res: Response,
-  ): Promise<void> {
-    await this.bitrixAuthService.saveInstallation(body);
+    /**
+     * Обработчик установки приложения из Bitrix24.
+     * URL прописывается в настройках приложения как:
+     *   - "Application installer URL" (mass-market)
+     *   - "Initial installation path" (локальное приложение)
+     *
+     * Bitrix24 вызывает этот endpoint при первом открытии приложения администратором,
+     * передавая OAuth-токены через POST (application/x-www-form-urlencoded).
+     * В ответ возвращается HTML-страница, которая вызывает BX24.installFinish(),
+     * после чего приложение считается установленным и становится доступным всем сотрудникам.
+     *
+     * @Public() — обязателен: Bitrix24 вызывает этот вебхук до появления какой-либо сессии
+     * iReports (это и есть момент установки приложения), поэтому он физически не может нести
+     * `session_id`. Добавлено при включении глобального SessionAuthGuard/PermissionsGuard как
+     * APP_GUARD (add-bitrix24-auth-and-rbac, раздел 24 tasks.md) — без этой пометки установка/
+     * переустановка приложения в маркетплейсе Bitrix24 стала бы отвечать 401.
+     */
+    @Public()
+    @Post('install')
+    async install(
+        @Body() body: BitrixInstallDto,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.bitrixAuthService.saveInstallation(body);
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<!DOCTYPE html>
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(`<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -44,5 +52,5 @@ export class BitrixController {
     </script>
   </body>
 </html>`);
-  }
+    }
 }
