@@ -96,21 +96,21 @@
 
 ## 6. Домен: `GoodsFlowMetric`, `GoodsTurnoverReportLine`, `GoodsTurnoverReport`
 
-- [ ] 6.1 Написать тесты на `GoodsFlowMetric` VO (`quantity`/`sum` ≥ 0, сравнение по значению,
+- [x] 6.1 Написать тесты на `GoodsFlowMetric` VO (`quantity`/`sum` ≥ 0, сравнение по значению,
   immutable). Верификация: тест-раннер видит тесты.
-- [ ] 6.2 Прогнать red.
-- [ ] 6.3 Реализовать `GoodsFlowMetric` (`domain/value-objects/`, наследник
+- [x] 6.2 Прогнать red.
+- [x] 6.3 Реализовать `GoodsFlowMetric` (`domain/value-objects/`, наследник
   `value-object.base.ts`).
-- [ ] 6.4 Прогнать green.
-- [ ] 6.5 Написать тесты на `GoodsTurnoverReportLine.calcRatio(stockPreviousSum)` — по сценариям
+- [x] 6.4 Прогнать green.
+- [x] 6.5 Написать тесты на `GoodsTurnoverReportLine.calcRatio(stockPreviousSum)` — по сценариям
   `specs/service/goods-turnover/spec.md` («коэффициент считается по формуле среднего остатка в
   рублях», «нет сохранённых данных за прошлый месяц — коэффициент не рассчитывается», «средний
   остаток равен нулю — коэффициент не рассчитывается»).
-- [ ] 6.6 Прогнать red.
-- [ ] 6.7 Реализовать `GoodsTurnoverReportLine` (entity, метод `calcRatio`) и
+- [x] 6.6 Прогнать red.
+- [x] 6.7 Реализовать `GoodsTurnoverReportLine` (entity, метод `calcRatio`) и
   `GoodsTurnoverReport` (aggregate root, инвариант уникальности `(categoryId, warehouseId)` в
   пределах периода) — `domain/entities/`.
-- [ ] 6.8 Прогнать green.
+- [x] 6.8 Прогнать green.
 
 ## 7. Application-порты
 
