@@ -457,14 +457,38 @@
 
 ## 17. Frontend: `CategoryTreeSelect` (порт из `pages/ServicesReport`)
 
-- [ ] 17.1 Портировать `pages/ServicesReport/ui/CategoryTreeSelect` в
+- [x] 17.1 Портировать `pages/ServicesReport/ui/CategoryTreeSelect` в
   `pages/GoodsTurnoverReport/ui/CategoryTreeSelect` под справочник товарных категорий (не
   сервисных) — переиспользовать `shared/lib/tree.ts` (`getDirectChildren`, `getSubtreeIds`).
-- [ ] 17.2 Написать тесты на адаптированный `model/categoryTree.ts` (аналог
+  **Выполнено**: `ui/CategoryTreeSelect/{CategoryTreeSelect.tsx, index.ts,
+  model/useCategoryOverlay.ts, ui/{CategorySearchInput.tsx, CategoryTreeBody.tsx,
+  categoryOverlay.ts}}` — портированы 1:1 по разметке/стилям; типы адаптированы под
+  `ProductCategoryResponse` (`ireports-contracts`, плоский `{id, name, parentId}`, без `depth`) и
+  под `selectedId`/`categoryId: number | null` (не `string | null`, как у `ServiceCategory`) —
+  `useGoodsTurnoverReportPage.ts` (задача 15, уже реализован) уже хранит `categoryId` числом
+  напрямую, поэтому конвертация через `String()`/`Number()` на границе не нужна.
+- [x] 17.2 Написать тесты на адаптированный `model/categoryTree.ts` (аналог
   `resolveDescendantIds`/`searchCategories` под товарные категории).
-- [ ] 17.3 Прогнать red.
-- [ ] 17.4 Реализовать адаптацию.
-- [ ] 17.5 Прогнать green.
+  **Выполнено**: `model/categoryTree.spec.ts` — 9 тестов (`getDirectChildren` для корня/вложенной/
+  листовой категории, `resolveDescendantIds` включает саму категорию и потомков произвольной
+  глубины, `searchCategories` — пустой запрос, поиск по подстроке без учёта регистра, цепочка
+  предков от корня, корневая категория без предков).
+- [x] 17.3 Прогнать red.
+  **Результат**: `Failed to resolve import "./categoryTree.ts"` — зафиксировано перед реализацией.
+- [x] 17.4 Реализовать адаптацию.
+  **Выполнено**: `model/categoryTree.ts` — `getDirectChildren`/`resolveDescendantIds` тонкими
+  обёртками над `shared/lib/tree.ts` (`getDirectChildren`/`getSubtreeIds`, как и предполагала
+  задача), `searchCategories`/`getAncestorChain` перенесены из `pages/ServicesReport` без
+  изменения логики (только тип элемента). `buildChartSeries` из оригинала не переносился — это
+  специфика графика услуг, у товарных категорий аналога нет.
+- [x] 17.5 Прогнать green.
+  **Результат**: `npx vitest run src/pages/GoodsTurnoverReport` — 2 files/13 tests green (9 новых
+  + 4 из задачи 15, без регрессий). `npx eslint --config eslint.config.js
+  src/pages/GoodsTurnoverReport` — 0 ошибок. `npx tsc -b` — чисто. `npm run build` — успешно.
+  Полный `npx vitest run` — 75/78 файлов green (425/432 тестов); те же 3 предсуществующих
+  падающих файла (`RouteGuard.spec.tsx`, `useHasPermission.spec.ts`,
+  `RequirePermission.spec.tsx`), что и зафиксировано задачей 15.6 (регрессия воспроизводится и на
+  `HEAD` без правок этого диапазона) — не трогалась, вне диапазона задачи 17.
 
 ## 18. Frontend: `GoodsTurnoverTable` — паттерн Ledger (ui-design.md, узел `D3Sf4` в `WvSO6`)
 
