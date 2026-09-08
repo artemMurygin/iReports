@@ -288,28 +288,59 @@
 
 ## 11. Крон: почасовой пересчёт открытого периода
 
-- [ ] 11.1 Написать тесты на `RecalculateOpenGoodsTurnoverPeriodCron` — читает статус
+- [x] 11.1 Написать тесты на `RecalculateOpenGoodsTurnoverPeriodCron` — читает статус
   `AccountingPeriod('service', period)` через `ACCOUNTING_PERIOD_REPOSITORY` (нет записи или
   `isOpen()` → пересчитать; `isClosed()` → пропустить), продолжает при ошибке одной пары
   категория-склад (design.md D6).
-- [ ] 11.2 Прогнать red.
-- [ ] 11.3 Реализовать `RecalculateOpenGoodsTurnoverPeriodCron`
+  **Выполнено**: `infrastructure/cron/recalculate-open-goods-turnover-period.cron.spec.ts` — 5
+  тестов (нет записи периода → пересчёт, `isOpen()` → пересчёт, `isClosed()` → пропуск без вызова
+  `build`/`replaceAll`, частичный успех `BuildGoodsTurnoverReportService` — build() уже сам не
+  бросает при сбое одной пары, крон сохраняет то, что вернулось, ошибка всего пересчёта — только
+  лог, без throw), по образцу `sales-plan-auto-creation.cron.spec.ts`.
+- [x] 11.2 Прогнать red.
+  **Результат**: `Cannot find module './recalculate-open-goods-turnover-period.cron'` —
+  зафиксировано перед реализацией.
+- [x] 11.3 Реализовать `RecalculateOpenGoodsTurnoverPeriodCron`
   (`@ProdCron(CronExpression.EVERY_HOUR)`, обёрнут в `runInSystemRequestContext` — по аналогии с
   `SalesPlanAutoCreationCron`) в `infrastructure/cron/`.
-- [ ] 11.4 Прогнать green.
+  **Выполнено**: `infrastructure/cron/recalculate-open-goods-turnover-period.cron.ts` — читает
+  `ACCOUNTING_PERIOD_REPOSITORY.findByDirectionAndPeriod('service', period)` (текущий период через
+  `Period.current()`, тот же UTC-расчёт, что и у `SalesPlanAutoCreationCron`), при `isClosed()`
+  пропускает, иначе вызывает `BuildGoodsTurnoverReportService.build(period)` +
+  `GOODS_TURNOVER_REPORT_LINE_REPOSITORY.replaceAll(period, report.lines)`; внешний `try/catch` +
+  `logCronError` вокруг всего тика — по образцу `SalesPlanAutoCreationCron.run()`.
+- [x] 11.4 Прогнать green.
+  **Результат**: `npm run test -- --testPathPatterns=recalculate-open-goods-turnover-period` —
+  5/5 green.
 
 ## 12. Событие: закрытие вместе с зарплатным периодом
 
-- [ ] 12.1 Написать тесты на обработчик `CloseGoodsTurnoverPeriod` — подписка на
+- [x] 12.1 Написать тесты на обработчик `CloseGoodsTurnoverPeriod` — подписка на
   `AccountingPeriodClosedDomainEvent`, реагирует только на `direction === 'service'` (событие с
   `direction: 'shop'` игнорируется), делает финальный пересчёт и сохраняет строки как снэпшот
   (design.md D7).
-- [ ] 12.2 Прогнать red.
-- [ ] 12.3 Реализовать `CloseGoodsTurnoverPeriod` (`@OnEvent('AccountingPeriodClosedDomainEvent')`,
+  **Выполнено**: `application/events/close-goods-turnover-period.event-handler.spec.ts` — 3 теста
+  (`direction: 'service'` → `build` + `replaceAll` вызваны с `event.period`, `direction: 'shop'` →
+  оба не вызваны, ошибка финального пересчёта → не бросает исключение, только логирует), по
+  образцу `AccountingPeriodClosedEventHandler.spec.ts`/`withRequestContext`.
+- [x] 12.2 Прогнать red.
+  **Результат**: `Cannot find module './close-goods-turnover-period.event-handler'` —
+  зафиксировано перед реализацией.
+- [x] 12.3 Реализовать `CloseGoodsTurnoverPeriod` (`@OnEvent('AccountingPeriodClosedDomainEvent')`,
   `application/events/`). Решение по design.md Open Questions: отдельного обработчика на
   переоткрытие `AccountingPeriod` не заводим — `ReopenAccountingPeriodHandler` не публикует
   событие, а часовой крон (задача 11) сам возобновит пересчёт открытого периода в течение часа.
-- [ ] 12.4 Прогнать green.
+  **Выполнено**: `application/events/close-goods-turnover-period.event-handler.ts` — событие
+  `AccountingPeriodClosedDomainEvent` (уже публикуемое `AccountingPeriod.close()` в
+  `modules/accounting`) резолвится по имени класса через `EventEmitter2.emitAsync` (см.
+  `aggregate-root.base.ts`), поэтому подписка из модуля `warehouse` ловит его без прямой связи с
+  `modules/accounting` за пределами `event.direction`/`event.period`; при
+  `direction !== 'service'` выходит без побочных эффектов, иначе — тот же путь, что и крон
+  (`BuildGoodsTurnoverReportService.build` + `replaceAll`), сбой логируется, а не пробрасывается
+  (design.md Risks — асинхронный подписчик, коммит транзакции закрытия зарплатного периода не
+  затрагивает). Переоткрытие — как и решено в Open Questions, отдельного обработчика нет.
+- [x] 12.4 Прогнать green.
+  **Результат**: `npm run test -- --testPathPatterns=close-goods-turnover-period` — 3/3 green.
 
 ## 13. Сборка модуля `warehouse`
 
