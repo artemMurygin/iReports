@@ -72,15 +72,23 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
         // контракт-форма (`taskCompletionShopSalaryConfigSchema`, issue #57 — независимая копия, не
         // общий объект с сервисной веткой).
         case 'TaskCompletion': {
-            if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите дедлайн'
-            // `draft.price` переиспользуется под `defaultAmount` — зеркало сервисной ветки
-            // (`service/model/ruleFormSchema.ts`).
+            // Зеркало сервисной ветки (`service/model/ruleFormSchema.ts`'s `case 'TaskCompletion'`)
+            // — `taskId` приходит от мастера (Шаг 1), `taskTitleTemplate`/`deadlineTemplate`
+            // required только при `isRecurring === true` (авто-пересоздание на новый период).
+            if (draft.taskId.trim() === '') errors.taskId = 'Задача ещё не создана — пройдите Шаг 1 мастера'
             const defaultAmount = parseNumber(draft.price)
             if (defaultAmount === undefined) errors.price = 'Укажите сумму начисления по умолчанию'
-            const taskDescription = draft.taskDescription.trim()
+            if (draft.isRecurring) {
+                if (draft.taskTitleTemplate.trim() === '') {
+                    errors.taskTitleTemplate = 'Укажите шаблон заголовка для новой задачи периода'
+                }
+                if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите шаблон дедлайна'
+            }
+            const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
             config = {
-                bitrixTaskTitle: draft.name.trim(),
-                ...(taskDescription !== '' ? { taskDescription } : {}),
+                taskId: draft.taskId.trim(),
+                taskTitleTemplate: draft.taskTitleTemplate.trim(),
+                ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
                 isRecurring: draft.isRecurring,
                 deadlineTemplate: draft.deadlineTemplate,
                 defaultAmount: defaultAmount ?? Number.NaN,
@@ -158,7 +166,9 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         orderTypeIds: [],
         // `TaskCompletion`-поля (раздел 21) — дефолты, перезаписываются ниже веткой `case
         // 'TaskCompletion'` при редактировании существующего правила этого типа.
-        taskDescription: '',
+        taskId: '',
+        taskTitleTemplate: '',
+        taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
     }
@@ -202,11 +212,20 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
             return {
                 ...base,
                 price: String(rule.config.defaultAmount),
-                taskDescription: rule.config.taskDescription ?? '',
+                taskId: latestTaskId(rule.config.taskIdByPeriod),
+                taskTitleTemplate: rule.config.taskTitleTemplate,
+                taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
                 deadlineTemplate: rule.config.deadlineTemplate,
             }
     }
 
     return base
+}
+
+/** Зеркало `service/model/ruleFormSchema.ts`'s `latestTaskId` — id задачи самого недавнего
+ * периода из `taskIdByPeriod` (карта только дополняется, см. backend `buildTaskCompletionConfig`). */
+function latestTaskId(taskIdByPeriod: Record<string, string>): string {
+    const values = Object.values(taskIdByPeriod)
+    return values.length > 0 ? values[values.length - 1] : ''
 }

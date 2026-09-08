@@ -7,6 +7,7 @@ import {
     HandCoins,
     LayoutDashboard,
     Link2,
+    ListChecks,
     Percent,
     Receipt,
     Settings,
@@ -42,8 +43,9 @@ export type NavSection = {
  * (no chevron in the design either). The mobile drawer (`NavDrawer`) shows the same sections as
  * grouped, flat lists — no dropdown there either.
  *
- * The top-level order — Продажи, Зарплата, График работы, Аналитика, Настройки
- * (docs/header-navigation-fixes/prd-header-navigation-fixes.md) — is declared once, by
+ * The top-level order — Продажи, Зарплата, График работы, Аналитика, Задачи, Настройки
+ * (docs/header-navigation-fixes/prd-header-navigation-fixes.md, extended by replace-bitrix-task-
+ * integration's `TASKS_STANDALONE_ITEM` right before «Настройки») — is declared once, by
  * `NAV_ENTRIES` below, and both the desktop Nav Bar (`TOP_LEVEL_NAV_ITEMS`) and the mobile drawer
  * (`DRAWER_SECTIONS`) derive their item order from it, rather than each assembling its own order.
  *
@@ -76,6 +78,16 @@ export const STANDALONE_ITEM: NavItem = {
     label: 'График работы',
     to: '/work-schedule',
     icon: <CalendarClock />,
+}
+
+// replace-bitrix-task-integration, раздел 13 tasks.md; ui-design.md, «Новые компоненты UI Kit»:
+// новый пункт топнава `t7zmq` в design/sallary-first-iteration.pen, «между «Зарплата» и
+// «Настройки»» — как и «График работы», это самостоятельная страница без вложенных пунктов/Subnav
+// (`pages/Tasks`, `/tasks`), поэтому standalone-запись, а не `NavSection`.
+export const TASKS_STANDALONE_ITEM: NavItem = {
+    label: 'Задачи',
+    to: '/tasks',
+    icon: <ListChecks />,
 }
 
 /**
@@ -148,6 +160,7 @@ const NAV_ENTRIES: NavEntry[] = [
             ],
         },
     },
+    { kind: 'standalone', item: TASKS_STANDALONE_ITEM },
     // Раздел «Настройки» — служебная часть IA (нет в Pencil-макете, там только
     // Продажи/Аналитика/Зарплата/График). Второй пункт, «Служебные аккаунты»
     // (docs/employee-ordering-and-salary-filter, Фаза 4), добавлен рядом со «Связи

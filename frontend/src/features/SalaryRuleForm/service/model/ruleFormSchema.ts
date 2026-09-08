@@ -43,20 +43,33 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             config = { award: buildOrderPayedAward(draft, errors), orderTypeIds: draft.orderTypeIds }
             break
         case 'TaskCompletion': {
-            if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите дедлайн'
+            // replace-bitrix-task-integration, раздел 14 tasks.md — `taskId` приходит от мастера
+            // (Шаг 1, `CreateTaskCompletionRuleWizard`), никогда не вводится текстом здесь; пустое
+            // значение — защита от регрессии (мастер должен был заполнить его раньше, чем эта форма
+            // вообще стала видна), не обычная ошибка пользовательского ввода.
+            if (draft.taskId.trim() === '') errors.taskId = 'Задача ещё не создана — пройдите Шаг 1 мастера'
             // `draft.price` переиспользуется под `defaultAmount` (та же семантика "денежное
             // значение, введённое текстом", что и у PayPerHour.config.price выше) — руководитель
             // задаёт сумму по умолчанию при создании правила, а сможет изменить её при проведении
             // начисления (SetTaskRewardModal, `features/SalaryAccruals`).
             const defaultAmount = parseNumber(draft.price)
             if (defaultAmount === undefined) errors.price = 'Укажите сумму начисления по умолчанию'
-            const taskDescription = draft.taskDescription.trim()
+            // Шаблонные поля (`taskTitleTemplate`/`deadlineTemplate`) обслуживают ТОЛЬКО
+            // авто-пересоздание регулярного правила на новый период — для разового правила они
+            // структурно всё равно уходят в контракт (`z.string()` допускает `''`), но
+            // содержательно не нужны, поэтому required-проверка условна на `isRecurring`
+            // (см. `TaskCompletionRuleFields.tsx`, где поля и скрыты при `isRecurring === false`).
+            if (draft.isRecurring) {
+                if (draft.taskTitleTemplate.trim() === '') {
+                    errors.taskTitleTemplate = 'Укажите шаблон заголовка для новой задачи периода'
+                }
+                if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите шаблон дедлайна'
+            }
+            const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
             config = {
-                // Форма не показывает отдельное поле «Название задачи» — по решению из фрейма
-                // `wV3fv` (node `u821y`'s hint «Из него формируется заголовок задачи в Bitrix24»)
-                // единственное поле `Название правила` служит и заголовком Bitrix24-задачи.
-                bitrixTaskTitle: draft.name.trim(),
-                ...(taskDescription !== '' ? { taskDescription } : {}),
+                taskId: draft.taskId.trim(),
+                taskTitleTemplate: draft.taskTitleTemplate.trim(),
+                ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
                 isRecurring: draft.isRecurring,
                 deadlineTemplate: draft.deadlineTemplate,
                 defaultAmount: defaultAmount ?? Number.NaN,
@@ -136,7 +149,9 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
-        taskDescription: '',
+        taskId: '',
+        taskTitleTemplate: '',
+        taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
     }
@@ -182,11 +197,29 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
             return {
                 ...base,
                 price: String(rule.config.defaultAmount),
-                taskDescription: rule.config.taskDescription ?? '',
+                // Ответ API отдаёт только `taskIdByPeriod` (design.md решение 2), не сам `taskId`
+                // (тот — одноразовый вход, относящийся к периоду ИЗ ЗАПРОСА, см.
+                // `contracts/commands/salary-rule.ts`'s `taskCompletionSalaryConfigResponseSchema`)
+                // — редактирование существующего правила переиспользует id ПОСЛЕДНЕГО периода,
+                // за который задача уже заводилась (см. `latestTaskId`), а не заново проводит
+                // пользователя через Шаг 1 мастера ради задачи, которая уже существует.
+                taskId: latestTaskId(rule.config.taskIdByPeriod),
+                taskTitleTemplate: rule.config.taskTitleTemplate,
+                taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
                 deadlineTemplate: rule.config.deadlineTemplate,
             }
     }
 
     return base
+}
+
+/** Последнее (по порядку вставки — тот же порядок, что и порядок расчётных периодов, т.к. карта
+ * только дополняется, см. `buildTaskCompletionConfig` backend) значение `taskIdByPeriod` — id
+ * задачи самого недавнего периода, за который она уже заводилась. `''`, если карта пуста (новое,
+ * ещё не сохранённое правило — этот путь на практике не используется, `draftFromRule` вызывается
+ * только для уже персистентных правил, но пустая карта технически валидна структурно). */
+function latestTaskId(taskIdByPeriod: Record<string, string>): string {
+    const values = Object.values(taskIdByPeriod)
+    return values.length > 0 ? values[values.length - 1] : ''
 }

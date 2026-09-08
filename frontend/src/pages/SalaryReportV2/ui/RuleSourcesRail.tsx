@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 
-import { TaskStatusBadge } from '@/features/SalaryAccruals'
 import { formatCurrency } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
+import { TaskStatusBadge } from '@/shared/ui-kit/atoms/TaskStatusBadge.tsx'
 
 import type { SalaryReportRule } from '@/features/SalaryReportData'
 
@@ -69,6 +69,14 @@ function sumAmounts(sources: SalaryReportRule['sources'], pick: 'fact' | 'progno
 }
 
 /**
+ * replace-bitrix-task-integration, tasks.md группа 15: статус бейджа источника `taskCompletion` —
+ * см. WHY в JSDoc `RuleSourcesRail` ниже (не поле API, а доменный инвариант `TaskCompletion.
+ * calculate()`/`TaskCompletionShop.calculate()`, гарантирующий, что источник `taskCompletion`
+ * попадает в `sources[]` только когда связанная задача в статусе `CLOSED_SUCCESSFULLY`).
+ */
+const TASK_COMPLETION_SOURCE_STATUS = 'CLOSED_SUCCESSFULLY' as const
+
+/**
  * Разворот правила в документы (Pencil: `H7Mz74`'s `oea4S`/`uU8GI` "Rail" — десктоп, `b63e8p`'s
  * `Uaxkm`/`yCFpT` — мобайл): подзаголовок "Позиция / Факт, ₽ / Прогноз, ₽" + по одной строке на
  * видимый источник + завершающая строка "Остаток". Табличный аналог старой
@@ -99,18 +107,24 @@ function sumAmounts(sources: SalaryReportRule['sources'], pick: 'fact' | 'progno
  * разворота, здесь его нет — без спейсера колонки Факт/Прогноз этого "Rail" съезжали бы правее
  * колонок строки правила и заголовка над ней ровно на ширину шеврона.
  *
- * `TaskStatusBadge` (tasks.md раздел 23, `features/SalaryAccruals`) — точечное дополнение строки
- * источника типа `taskCompletion`, без нового макета (ui-design.md явно относит `SalaryReportV2` к
- * непроработанным экранам). Статус жёстко `"DONE"`, а не читается из `source` — это не заглушка, а
- * прямое следствие уже реализованного правила `TaskCompletion.calculate()` (backend,
- * `domain/entities/salary-rules/task-completion.entity.ts` обоих направлений, spec
- * `service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения`):
- * `calculate()` возвращает `null` (строка целиком отсутствует в `sources[]`/отчёте), пока связанная
- * задача Bitrix24 не «Выполнено» — соответственно ЛЮБОЙ источник `taskCompletion`, дошедший до этого
- * рендера, уже гарантированно выполнен. Ни `calculationSourceRefSchema`, ни
- * `employeeSalaryReportSourceSchema` (`contracts/commands/salary-rule.ts`) сегодня не несут статус
- * задачи — читать здесь нечего; когда разделы 12/17 tasks.md прокинут поле в API, этот хардкод
- * нужно будет заменить на чтение настоящего статуса.
+ * `TaskStatusBadge` (`shared/ui-kit/atoms/`, tasks.md группа 10/15 replace-bitrix-task-integration)
+ * — точечное дополнение строки источника типа `taskCompletion`, без нового макета (ui-design.md
+ * явно относит `SalaryReportV2`/`RuleSourcesRail` к «изменение чисто компонентное… разметка не
+ * меняется»). Статус — константа `TASK_COMPLETION_SOURCE_STATUS`
+ * (`'CLOSED_SUCCESSFULLY'`), не читается из `source`: ни `calculationSourceRefSchema`, ни
+ * `employeeSalaryReportSourceSchema` (`contracts/commands/salary-rule.ts`) не несут статус задачи —
+ * источник `taskCompletion` несёт только `{type, id}` (см. WHY у
+ * `TaskCompletion.buildSources()`/`TaskCompletionShop.buildSources()`, оба направления backend). Но
+ * это не тот же произвольный хардкод, что был раньше (буквальный `"DONE"`, статус Bitrix24, уже
+ * выведенного из системы этим change) — значение здесь следует из доменного инварианта
+ * `TaskCompletion.calculate()`/`TaskCompletionShop.calculate()` (design.md решение 3, spec
+ * `service|shop/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения`):
+ * `calculate()` возвращает `null` (строка целиком отсутствует в `sources[]`/отчёте), пока
+ * `SalaryTask.isCompleted()` не истинно, а это верно ТОЛЬКО для статуса `CLOSED_SUCCESSFULLY` — не
+ * `DONE` и не любого из остальных 4 статусов (design.md решение 3: "только «Закрыта успешно»
+ * запускает начисление"). Соответственно ЛЮБОЙ источник `taskCompletion`, дошедший до этого
+ * рендера, уже гарантированно в статусе `CLOSED_SUCCESSFULLY` — если backend когда-нибудь начнёт
+ * отдавать статус построчно в API, эту константу нужно будет заменить на чтение настоящего поля.
  */
 export function RuleSourcesRail({ sources, className }: RuleSourcesRailProps) {
     const [showAll, setShowAll] = useState(false)
@@ -158,7 +172,9 @@ export function RuleSourcesRail({ sources, className }: RuleSourcesRailProps) {
                                 ) : (
                                     <span className="block min-w-0 truncate font-ui text-xs font-semibold text-ink">{primaryLabel}</span>
                                 )}
-                                {source.type === 'taskCompletion' && <TaskStatusBadge status="DONE" />}
+                                {source.type === 'taskCompletion' && (
+                                    <TaskStatusBadge status={TASK_COMPLETION_SOURCE_STATUS} />
+                                )}
                             </span>
                             {meta && <span className="block truncate font-ui text-[11px] text-ink-muted">{meta}</span>}
                         </span>

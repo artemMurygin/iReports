@@ -14,6 +14,7 @@ import { EmployeeBalancePage } from '@/pages/EmployeeBalance'
 import { EmployeeSettlementsPage } from '@/pages/EmployeeSettlements'
 import { EmployeeIdentityPage } from '@/pages/EmployeeIdentity'
 import { ServiceAccountsPage } from '@/pages/ServiceAccounts'
+import { TasksPage } from '@/pages/Tasks'
 import { WorkSchedulePage } from '@/pages/WorkSchedule'
 import { WorkScheduleTodayPage } from '@/pages/WorkScheduleToday'
 import { UiKitPreview } from '@/pages/UiKitPreview'
@@ -146,6 +147,13 @@ export const router = createBrowserRouter([
                 // документа начисления.
                 path: 'balance/employee/:id',
                 element: <EmployeeBalancePage />,
+            },
+            {
+                // replace-bitrix-task-integration, раздел 13 tasks.md; ui-design.md `iZrrX`/`cHCoj`/
+                // `JlkUN` — самостоятельный раздел «Задачи» (`app/navigation.tsx`'s
+                // `TASKS_STANDALONE_ITEM`), список всех задач независимо от зарплатных правил.
+                path: 'tasks',
+                element: <TasksPage />,
             },
             {
                 path: 'salaries/rules',

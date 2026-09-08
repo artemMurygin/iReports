@@ -9,8 +9,12 @@ import { DRAWER_SECTIONS, TOP_LEVEL_NAV_ITEMS } from './navigation.tsx'
  * `TOP_LEVEL_NAV_ITEMS`/`DRAWER_SECTIONS` were assembled, not a declared order. The target order
  * is Продажи, Зарплата, График работы, Аналитика, Настройки; both the desktop pills and the
  * mobile drawer must show it, and must show the *same* order as each other.
+ *
+ * `replace-bitrix-task-integration` (раздел 13 tasks.md) extends this with a standalone «Задачи»
+ * item right before «Настройки» (`TASKS_STANDALONE_ITEM`, `app/navigation.tsx`) — updated here so
+ * this regression test still locks in the *whole* order, not just the original five items.
  */
-const EXPECTED_ORDER = ['Продажи', 'Зарплата', 'График работы', 'Аналитика', 'Настройки']
+const EXPECTED_ORDER = ['Продажи', 'Зарплата', 'График работы', 'Аналитика', 'Задачи', 'Настройки']
 
 describe('top-level nav order', () => {
     it('lists TOP_LEVEL_NAV_ITEMS (desktop) in the target order', () => {

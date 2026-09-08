@@ -5,6 +5,7 @@ import type { RuleFormConfig, RuleType } from '@/features/SalaryRuleForm'
 import { Layout } from '../../ui/Layout.tsx'
 import { MobileSaveBar } from '../../ui/MobileSaveBar.tsx'
 import { PageHeader } from '../../ui/PageHeader.tsx'
+import { RulesColumn } from '../../ui/RulesColumn.tsx'
 import { TargetSummaryCard } from '../../ui/TargetSummaryCard/TargetSummaryCard.tsx'
 import { useServiceSchemaEditForm } from '../model/useServiceSchemaEditForm.ts'
 
@@ -50,32 +51,43 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
         />
     )
 
+    const ruleFormProps = {
+        config: page.config,
+        allowedRolesByType: page.allowedRolesByType,
+        isRoleTypesLoading: page.isRoleTypesLoading,
+        roleTypesError: page.roleTypesError,
+        isCategoriesLoading: page.isCategoriesLoading,
+        categoriesError: page.categoriesError,
+        orderTypes: page.orderTypes,
+        isOrderTypesLoading: page.isOrderTypesLoading,
+        orderTypesError: page.orderTypesError,
+        onChange: page.rules.updateDraft,
+        onChangeType: page.rules.changeType,
+        onChangeBorder: page.rules.updateBorder,
+        onCancel: page.rules.cancelExpanded,
+        onSave: page.rules.trySaveExpanded,
+    }
+
     const rules = (
-        <RuleList
+        <RulesColumn
             className="w-full flex-1"
-            eyebrow="ПРАВИЛА СХЕМЫ"
-            drafts={page.rules.drafts}
-            expandedId={page.rules.expandedId}
+            wizardDraft={page.wizardDraft}
+            wizardIndex={page.wizardDraftIndex}
             categories={page.categories}
-            ruleFormProps={{
-                config: page.config,
-                allowedRolesByType: page.allowedRolesByType,
-                isRoleTypesLoading: page.isRoleTypesLoading,
-                roleTypesError: page.roleTypesError,
-                isCategoriesLoading: page.isCategoriesLoading,
-                categoriesError: page.categoriesError,
-                orderTypes: page.orderTypes,
-                isOrderTypesLoading: page.isOrderTypesLoading,
-                orderTypesError: page.orderTypesError,
-                onChange: page.rules.updateDraft,
-                onChangeType: page.rules.changeType,
-                onChangeBorder: page.rules.updateBorder,
-                onCancel: page.rules.cancelExpanded,
-                onSave: page.rules.trySaveExpanded,
-            }}
-            onAdd={page.rules.addDraft}
-            onExpand={page.rules.toggleExpand}
-            onDelete={page.rules.removeDraft}
+            ruleFormProps={ruleFormProps}
+            onDeleteDraft={page.rules.removeDraft}
+            rules={
+                <RuleList
+                    eyebrow="ПРАВИЛА СХЕМЫ"
+                    drafts={page.rules.drafts}
+                    expandedId={page.rules.expandedId}
+                    categories={page.categories}
+                    ruleFormProps={ruleFormProps}
+                    onAdd={page.rules.addDraft}
+                    onExpand={page.rules.toggleExpand}
+                    onDelete={page.rules.removeDraft}
+                />
+            }
         />
     )
 
