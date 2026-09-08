@@ -444,16 +444,48 @@
 
 ## 16. Frontend: `WarehouseSelect` (ui-design.md, узел `M6ZfP` в `WvSO6`)
 
-- [ ] 16.1 Прочитать структуру узла `M6ZfP` (и копий `dGAXG`/`yKcNQ`/`u6VEag`/`t2Qsc`; на мобайле
+- [x] 16.1 Прочитать структуру узла `M6ZfP` (и копий `dGAXG`/`yKcNQ`/`u6VEag`/`t2Qsc`; на мобайле
   склад показан `Chip`-триггером, узел `Yu5pP` в `yDBTb`) через `mcp__pencil__execute`/`Get` в
   `design/sallary-first-iteration.pen`.
-- [ ] 16.2 Написать тесты на `WarehouseSelect` (выбор склада вызывает `onSelect`, отображает
+  **Выполнено**: `Get("M6ZfP", {depth: 6})` — frame `$surface`/`cornerRadius:10`/`stroke:$hairline`/
+  `gap:8`/`padding:[9,12]`/`justifyContent:space_between` с текстовой парой (Label "Склад ·"
+  `$ink-muted` 13px normal + Value `$ink` 13px 600) и иконкой `chevron-down` 15×15 `$ink-muted`
+  (bounds 273×33 в `WvSO6`, копии `dGAXG`/`yKcNQ`/`u6VEag`/`t2Qsc` — тот же паттерн в остальных 4
+  десктопных состояниях). `Get("Yu5pP", {depth: 6})` — мобильный `Chip`: frame `$surface`/
+  `cornerRadius:7`/`gap:6`/`padding:[6,10]` с иконкой `warehouse` 13×13, текстом 12px/500 `$ink` и
+  `chevron-down` 13×13, без подписи-лейбла.
+- [x] 16.2 Написать тесты на `WarehouseSelect` (выбор склада вызывает `onSelect`, отображает
   `selectedWarehouseId`, рендерит список из `warehouses` — произвольной длины, не ограничен 3).
-- [ ] 16.3 Прогнать red.
-- [ ] 16.4 Реализовать `WarehouseSelect` в `pages/GoodsTurnoverReport/ui/` (`shared/ui-kit/`) —
+  **Выполнено**: `ui/WarehouseSelect.spec.tsx` — 6 тестов (десктопный триггер: лейбл + текущее
+  значение, список из 5 складов без капа на 3, `onSelect` с id кликнутого склада; мобильный чип:
+  только значение без лейбла, `onSelect`; рендер без падения при `selectedWarehouseId: null`), по
+  образцу `pages/EmployeeBalance/ui/BalanceFilters.spec.tsx` (двойной рендер десктоп/мобайл,
+  `data-slot`-скоупинг через `within`).
+- [x] 16.3 Прогнать red.
+  **Результат**: `Failed to resolve import "./WarehouseSelect.tsx"` — зафиксировано перед
+  реализацией.
+- [x] 16.4 Реализовать `WarehouseSelect` в `pages/GoodsTurnoverReport/ui/` (`shared/ui-kit/`) —
   select/combobox-компонент (не Tabs — по указанию пользователя при ревью макета, см.
   `architecture.md`), верстка по прочитанному в 16.1.
-- [ ] 16.5 Прогнать green, сверить визуально со скриншотом узла `M6ZfP` (`TakeScreenshot`).
+  **Выполнено**: `ui/WarehouseSelect.tsx` — поверх `shared/ui-kit/atoms/Select` (radix-ui `Select`,
+  тот же примитив, что `SalaryReportFiltersV2`/`shared/ui-kit/atoms/Select.tsx`). Два независимых
+  контролируемых `Select`-инстанса с общим `value`/`onValueChange` (не два `SelectTrigger` в одном
+  `Select.Root` — Radix ожидает единственный триггер на корень для позиционирования попапа):
+  десктопный (`hidden md:flex`, лейбл «Склад ·» + значение + `chevron-down`, `rounded-[10px]`/
+  `px-3 py-[9px]`/`gap-2` — точное совпадение с `M6ZfP`) и мобильный (`flex md:hidden`, иконка
+  `Warehouse` (lucide) + значение + `chevron-down`, `rounded-[7px]`/`px-2.5 py-1.5`/`gap-1.5` —
+  совпадение с `Yu5pP`, кроме иконки `chevron-down` — 15px из общего `SelectTrigger` вместо 13px в
+  макете, задокументировано в комментарии компонента как сознательный трейд-офф переиспользования
+  примитива). `warehouses: WarehouseResponse[]` из `ireports-contracts` (контракт задачи 10.5).
+- [x] 16.5 Прогнать green, сверить визуально со скриншотом узла `M6ZfP` (`TakeScreenshot`).
+  **Результат**: `npx vitest run src/pages/GoodsTurnoverReport/ui/WarehouseSelect.spec.tsx` — 6/6
+  green. `npx eslint --config eslint.config.js` — 0 ошибок (только предсуществующие
+  `boundaries`-warnings конфига). `npx tsc -b` — чисто. `TakeScreenshot(["M6ZfP","Yu5pP"])`
+  подтвердил визуальный референс (серая пилюля «Склад · Сервисный центр · Тверская» с
+  `chevron-down` / чип «🏬 Тверская») — компонент сверен структурно/классами по этому референсу;
+  живой рендер `WarehouseSelect` внутри страницы не снимался скриншотом браузера, т.к. wiring в
+  `GoodsTurnoverReportPage`/`Layout` — отдельная задача (states+responsive, вне диапазона задачи
+  16, эти файлы прямо запрещено трогать в этой задаче).
 
 ## 17. Frontend: `CategoryTreeSelect` (порт из `pages/ServicesReport`)
 
