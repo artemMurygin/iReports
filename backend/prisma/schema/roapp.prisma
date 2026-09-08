@@ -123,6 +123,18 @@ model RoappProductCategory {
   @@map("roapp_product_categories")
 }
 
+// Справочник складов RemOnline — service-turnover-report (openspec/changes/
+// service-turnover-report), см. design.md D3. Синк — разовый npm run initial
+// (uploadWarehouses(), аналог uploadProductCategories()), НЕ 5-минутный
+// крон, по аналогии с RoappProductCategory. Id — внешний идентификатор
+// RoApp (без autoincrement), как у остальных справочников этой ERP.
+model RoappWarehouse {
+  id   Int    @id
+  name String
+
+  @@map("roapp_warehouses")
+}
+
 model RoappOrder {
   id                  Int       @id @default(autoincrement())
   label               String    @db.VarChar(255)

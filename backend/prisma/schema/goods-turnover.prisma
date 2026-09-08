@@ -1,0 +1,33 @@
+// Отчёт по оборачиваемости товаров направления «Сервис» — service-turnover-report
+// (openspec/changes/service-turnover-report). См. design.md D4/D5.
+//
+// Единственная новая таблица отчёта: строки полностью перезаписываются при
+// каждом пересчёте открытого месяца (D4) — собственной таблицы/статуса
+// периода нет, статус (открыт/закрыт) читается из уже существующей
+// AccountingPeriod направления service через ACCOUNTING_PERIOD_REPOSITORY
+// (D5), эта модель её не расширяет и не ссылается на неё по FK.
+model GoodsTurnoverReportLine {
+  id String @id
+
+  // Календарный месяц отчёта, формат YYYY-MM — как AccountingPeriod.period.
+  period      String
+  categoryId  Int    @map("category_id")
+  warehouseId Int    @map("warehouse_id")
+
+  outcomeQuantity Int @map("outcome_quantity")
+  outcomeSum      Int @map("outcome_sum")
+  stockQuantity   Int @map("stock_quantity")
+  stockSum        Int @map("stock_sum")
+
+  // Коэффициент оборачиваемости по сумме в рублях (см. spec.md, "Коэффициент
+  // считается по формуле среднего остатка в рублях") — null, когда нет
+  // сохранённых данных за прошлый месяц или средний остаток равен нулю
+  // (GoodsTurnoverReportLine.calcRatio), а не 0.
+  turnoverRatio Float? @map("turnover_ratio")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([period, categoryId, warehouseId])
+  @@map("goods_turnover_report_lines")
+}

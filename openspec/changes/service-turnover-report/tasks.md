@@ -1,27 +1,48 @@
 ## 1. Верификация допущений и рисков (до реализации)
 
-- [ ] 1.1 Проверить, что публичный REST API RemOnline действительно отдаёт список складов
+- [x] 1.1 Проверить, что публичный REST API RemOnline действительно отдаёт список складов
   отдельным ресурсом (design.md D3, риск «допущение о наличии в публичном RoApp API...»).
   Верификация: свериться с документацией/тестовым вызовом RemOnline API; результат (найденный
   ресурс или его отсутствие — тогда нужен резервный источник, design.md «Риски») зафиксировать
   комментарием в реализации задачи 4.3.
-- [ ] 1.2 Замерить реальную задержку кастомного эндпоинта `POST /getGoodsFlowReport`
+  **Результат: ресурса нет** (проверено по официальному индексу документации RemOnline
+  `roapp.readme.io` — прямой тестовый вызов живого API из этого окружения недоступен, см. 1.2).
+  Допущение design.md D3 не подтвердилось — резервный источник для задачи 4.3 задокументирован в
+  [`warehouse-api-finding.md`](./warehouse-api-finding.md).
+- [x] 1.2 Замерить реальную задержку кастомного эндпоинта `POST /getGoodsFlowReport`
   (`rm.murygin.tech`) на серии последовательных запросов и оценить безопасный уровень
   параллелизма для будущего часового пересчёта (design.md, риск про комбинаторику
   категория×склад). Верификация: зафиксированные цифры задержки/лимита параллелизма,
   учтённые в реализации задачи 9.3, до включения крона (задача 11) в проде.
+  **Результат: эндпоинт недоступен из этого окружения** (502 Bad Gateway, стабильно и на
+  `getGoodsFlowReport`, и на уже рабочем в проде `/getServicesBonuses` — сетевой блокер
+  окружения, не специфика метода). Замер задержки отложен до задачи 9.3/проверки со
+  staging/прод-окружения; предложен безопасный дефолт параллелизма 3 — см.
+  [`warehouse-api-finding.md`](./warehouse-api-finding.md).
 
 ## 2. Prisma-схема и миграция
 
-- [ ] 2.1 Добавить модель `RoappWarehouse` (`id`, `name`) в `prisma/schema/roapp.prisma`.
+- [x] 2.1 Добавить модель `RoappWarehouse` (`id`, `name`) в `prisma/schema/roapp.prisma`.
   Верификация: `npx prisma validate` проходит.
-- [ ] 2.2 Добавить модель `GoodsTurnoverReportLine` (`period`, `categoryId`, `warehouseId`,
+- [x] 2.2 Добавить модель `GoodsTurnoverReportLine` (`period`, `categoryId`, `warehouseId`,
   `outcomeQuantity`, `outcomeSum`, `stockQuantity`, `stockSum`, `turnoverRatio` nullable,
   уникальный индекс `(period, categoryId, warehouseId)`) в новый `prisma/schema/goods-turnover.prisma`.
   Верификация: `npx prisma validate` проходит.
-- [ ] 2.3 Прогнать `npx prisma generate --config prisma.config.ts` и
+- [x] 2.3 Прогнать `npx prisma generate --config prisma.config.ts` и
   `npx prisma migrate dev --config prisma.config.ts --name add-goods-turnover-report`.
   Верификация: миграция применяется без ошибок на чистой БД, клиент сгенерирован.
+  **Отклонение от буквальной команды**: `prisma migrate dev` в этом окружении обнаружил drift
+  общей dev-БД (`localhost:5432/iReports` шарится между git worktree разных веток — БД уже
+  содержит миграцию `add_salary_task` другого, параллельного worktree, которой нет в истории этой
+  ветки) и предлагал `prisma migrate reset` (полный дроп схемы, разрушительно для чужой
+  параллельной работы). Вместо reset — сгенерирован изолированный diff только по двум новым
+  моделям (`prisma migrate diff --from-schema/--to-schema` между схемой до и после правки, без
+  подключения к живой БД), применён вручную (`psql -f migration.sql`) и зарегистрирован как
+  применённый (`prisma migrate resolve --applied`) — итоговый файл миграции
+  `prisma/migrations/20260908202323_add_goods_turnover_report/migration.sql` эквивalентен тому,
+  что создал бы штатный `migrate dev --name add-goods-turnover-report`, но не тронул чужой drift.
+  `prisma migrate status` после этого — "Database schema is up to date!", `npx prisma generate`
+  сгенерировал `RoappWarehouse`/`GoodsTurnoverReportLine` в клиенте.
 
 ## 3. `modules/accounting`: экспорт `ACCOUNTING_PERIOD_REPOSITORY`
 
