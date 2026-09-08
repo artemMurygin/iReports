@@ -117,7 +117,7 @@
 
 ## 9. Application — построение отчёта (D4/D6/D7.2, TDD)
 
-- [ ] 9.1 Написать тесты на `RebuildGoodsTurnoverReportService.rebuild(period)` по specs:
+- [x] 9.1 Написать тесты на `RebuildGoodsTurnoverReportService.rebuild(period)` по specs:
   — оборот считается только из `Demand`/`MoySkladDemandPosition.sum` (без `RetailDemand`, без
     учёта возвратов);
   — остаток берётся из снимка `MoySkladStock` с максимальным `snapshotAt`, не превышающим конец
@@ -127,29 +127,29 @@
   — результат разбит по складам, без объединения;
   — повторный вызов для того же периода полностью заменяет прежние строки (не дублирует и не
     смешивает с предыдущим расчётом).
-- [ ] 9.2 Прогнать тесты из 9.1 и зафиксировать red.
-- [ ] 9.3 Реализовать `RebuildGoodsTurnoverReportService`, используя существующий
+- [x] 9.2 Прогнать тесты из 9.1 и зафиксировать red.
+- [x] 9.3 Реализовать `RebuildGoodsTurnoverReportService`, используя существующий
   `ProductFolderTreeService` (`domains/shop/sync/moySklad/product-folder-tree.service.ts`) для
   обхода дерева категорий и репозиторий из группы 4 для замены строк.
-- [ ] 9.4 Прогнать тесты из 9.1 и зафиксировать green, регрессий нет.
+- [x] 9.4 Прогнать тесты из 9.1 и зафиксировать green, регрессий нет.
 
 ## 10. Крон-задача пересчёта отчёта и закрытие периода (D9, TDD)
 
-- [ ] 10.1 Написать тесты на `GoodsTurnoverReportCron`: вызывает пересчёт текущего открытого месяца,
+- [x] 10.1 Написать тесты на `GoodsTurnoverReportCron`: вызывает пересчёт текущего открытого месяца,
   если `ShopAccountingPeriod` этого месяца не закрыт; пропускает пересчёт, если закрыт.
-- [ ] 10.2 Прогнать тесты из 10.1 и зафиксировать red.
-- [ ] 10.3 Реализовать `GoodsTurnoverReportCron` (`@ProdCron(EVERY_HOUR)`,
+- [x] 10.2 Прогнать тесты из 10.1 и зафиксировать red.
+- [x] 10.3 Реализовать `GoodsTurnoverReportCron` (`@ProdCron(EVERY_HOUR)`,
   `runInSystemRequestContext`), читающий статус через `SHOP_ACCOUNTING_PERIOD_REPOSITORY`
   (см. задачу 1.3).
-- [ ] 10.4 Прогнать тесты из 10.1 и зафиксировать green.
+- [x] 10.4 Прогнать тесты из 10.1 и зафиксировать green.
 
-- [ ] 10.5 Написать тесты на `GoodsTurnoverPeriodClosedHandler`: подписка на
+- [x] 10.5 Написать тесты на `GoodsTurnoverPeriodClosedHandler`: подписка на
   `ShopAccountingPeriodClosedDomainEvent` вызывает финальный пересчёт периода из события и
   фиксирует его как снэпшот (строки больше не меняются последующим часовым кроном, т.к. период уже
   закрыт).
-- [ ] 10.6 Прогнать тесты из 10.5 и зафиксировать red.
-- [ ] 10.7 Реализовать `GoodsTurnoverPeriodClosedHandler` (`@OnEvent('ShopAccountingPeriodClosedDomainEvent')`).
-- [ ] 10.8 Прогнать тесты из 10.5 и зафиксировать green, регрессий в существующем обработчике
+- [x] 10.6 Прогнать тесты из 10.5 и зафиксировать red.
+- [x] 10.7 Реализовать `GoodsTurnoverPeriodClosedHandler` (`@OnEvent('ShopAccountingPeriodClosedDomainEvent')`).
+- [x] 10.8 Прогнать тесты из 10.5 и зафиксировать green, регрессий в существующем обработчике
   закрытия периода `accounting` нет (несколько независимых подписчиков на одно событие).
 
 ## 11. Application — чтение отчёта (TDD)
