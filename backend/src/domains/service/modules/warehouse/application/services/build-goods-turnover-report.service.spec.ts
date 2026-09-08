@@ -56,7 +56,7 @@ function buildWarehouse(id: number) {
 }
 
 function buildService(options: {
-    categories: ProductCategory[] | ReturnType<typeof buildCategory>[];
+    categories: ProductCategory[];
     warehouses: ReturnType<typeof buildWarehouse>[];
     fetchGoodsFlowReport: RoappGateway['fetchGoodsFlowReport'];
     previousLines?: GoodsTurnoverReportLine[];
@@ -83,7 +83,13 @@ function buildService(options: {
         gateway,
     );
 
-    return { service, gateway, findByPeriod, warehouseRepository, categoryRepository };
+    return {
+        service,
+        gateway,
+        findByPeriod,
+        warehouseRepository,
+        categoryRepository,
+    };
 }
 
 describe('BuildGoodsTurnoverReportService', () => {
@@ -100,7 +106,9 @@ describe('BuildGoodsTurnoverReportService', () => {
             const report = await service.build('2026-08');
 
             expect(report.lines).toHaveLength(2);
-            const categoryIds = report.lines.map((line) => line.categoryId).sort();
+            const categoryIds = report.lines
+                .map((line) => line.categoryId)
+                .sort();
             expect(categoryIds).toEqual([1, 2]);
         });
     });
@@ -129,12 +137,23 @@ describe('BuildGoodsTurnoverReportService', () => {
     // складу": одна категория на разных складах — раздельные позиции.
     it('строит раздельные позиции для одной категории на разных складах', async () => {
         await withRequestContext(async () => {
-            const fetchGoodsFlowReport = jest.fn(async (params) => {
-                const [warehouseId] = params.warehouses;
-                return warehouseId === 10
-                    ? { outcome: { quantity: 1, sum: 1_000 }, stock: { quantity: 2, sum: 2_000 } }
-                    : { outcome: { quantity: 3, sum: 3_000 }, stock: { quantity: 4, sum: 4_000 } };
-            });
+            const fetchGoodsFlowReport = jest.fn(
+                async (
+                    params: Parameters<RoappGateway['fetchGoodsFlowReport']>[0],
+                ) => {
+                    await Promise.resolve();
+                    const [warehouseId] = params.warehouses;
+                    return warehouseId === 10
+                        ? {
+                              outcome: { quantity: 1, sum: 1_000 },
+                              stock: { quantity: 2, sum: 2_000 },
+                          }
+                        : {
+                              outcome: { quantity: 3, sum: 3_000 },
+                              stock: { quantity: 4, sum: 4_000 },
+                          };
+                },
+            );
             const { service } = buildService({
                 categories: [buildCategory(1)],
                 warehouses: [buildWarehouse(10), buildWarehouse(20)],
@@ -228,12 +247,17 @@ describe('BuildGoodsTurnoverReportService', () => {
     // построение отчёта целиком — частичный успех.
     it('пропускает пару категория-склад при сбое вызова ERP и не прерывает построение остальных', async () => {
         await withRequestContext(async () => {
-            const fetchGoodsFlowReport = jest.fn(async (params) => {
-                if (params.category_id === 2) {
-                    throw new Error('502 Bad Gateway');
-                }
-                return zeroResponse;
-            });
+            const fetchGoodsFlowReport = jest.fn(
+                async (
+                    params: Parameters<RoappGateway['fetchGoodsFlowReport']>[0],
+                ) => {
+                    await Promise.resolve();
+                    if (params.category_id === 2) {
+                        throw new Error('502 Bad Gateway');
+                    }
+                    return zeroResponse;
+                },
+            );
             const { service } = buildService({
                 categories: [buildCategory(1), buildCategory(2)],
                 warehouses: [buildWarehouse(10)],
@@ -287,7 +311,9 @@ describe('BuildGoodsTurnoverReportService', () => {
             const report = await service.build('2026-08');
 
             expect(report.lines).toHaveLength(6);
-            expect(maxActive).toBeLessThanOrEqual(GOODS_FLOW_REPORT_CONCURRENCY);
+            expect(maxActive).toBeLessThanOrEqual(
+                GOODS_FLOW_REPORT_CONCURRENCY,
+            );
             // 6 пар > лимита — реально работает параллельно, а не
             // последовательно один-за-одним.
             expect(maxActive).toBe(GOODS_FLOW_REPORT_CONCURRENCY);
@@ -296,7 +322,9 @@ describe('BuildGoodsTurnoverReportService', () => {
 
     it('запрашивает getGoodsFlowReport с диапазоном дат месяца, category_id и одним складом', async () => {
         await withRequestContext(async () => {
-            const fetchGoodsFlowReport = jest.fn().mockResolvedValue(zeroResponse);
+            const fetchGoodsFlowReport = jest
+                .fn()
+                .mockResolvedValue(zeroResponse);
             const { service } = buildService({
                 categories: [buildCategory(7)],
                 warehouses: [buildWarehouse(3)],

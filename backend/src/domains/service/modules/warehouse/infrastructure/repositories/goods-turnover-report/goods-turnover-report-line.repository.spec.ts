@@ -105,9 +105,9 @@ describe('GoodsTurnoverReportLineRepository', () => {
                 where: { period: '2026-08' },
             });
             expect(createMany).toHaveBeenCalledTimes(1);
-            const call = createMany.mock.calls[0][0] as {
-                data: Array<{ categoryId: number; warehouseId: number }>;
-            };
+            const [call] = createMany.mock.calls[0] as [
+                { data: Array<{ categoryId: number; warehouseId: number }> },
+            ];
             expect(call.data).toHaveLength(1);
             expect(call.data[0]?.categoryId).toBe(1);
             expect(call.data[0]?.warehouseId).toBe(10);
