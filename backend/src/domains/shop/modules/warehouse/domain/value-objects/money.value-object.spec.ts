@@ -19,9 +19,7 @@ describe('Money (shop warehouse)', () => {
 
     it('бросает исключение на отрицательное значение', () => {
         withRequestContext(() => {
-            expect(() => Money.ofKopecks(-1)).toThrow(
-                ArgumentInvalidException,
-            );
+            expect(() => Money.ofKopecks(-1)).toThrow(ArgumentInvalidException);
         });
     });
 
