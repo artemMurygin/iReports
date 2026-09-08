@@ -48,6 +48,53 @@ function makeReport(period: string): GetGoodsTurnoverReportResponse {
     }
 }
 
+// Отдельная фикстура для тестов фильтрации `rows` (задача 19): та же пара категорий
+// (`Дисплеи` -> `iPhone`), но на ДВУХ складах — проверяет, что `rows` оставляет только строки
+// выбранного склада, а выбор родительской категории включает и вложенную (17.4/18.4).
+function makeMultiWarehouseReport(period: string): GetGoodsTurnoverReportResponse {
+    return {
+        period,
+        lines: [
+            {
+                categoryId: 10,
+                categoryName: 'Дисплеи',
+                categoryParentId: null,
+                warehouseId: 1,
+                warehouseName: 'Склад №1',
+                outcomeQuantity: 5,
+                outcomeSum: 50000,
+                stockQuantity: 3,
+                stockSum: 30000,
+                turnoverRatio: 1.5,
+            },
+            {
+                categoryId: 11,
+                categoryName: 'iPhone',
+                categoryParentId: 10,
+                warehouseId: 1,
+                warehouseName: 'Склад №1',
+                outcomeQuantity: 2,
+                outcomeSum: 20000,
+                stockQuantity: 1,
+                stockSum: 10000,
+                turnoverRatio: 1.2,
+            },
+            {
+                categoryId: 10,
+                categoryName: 'Дисплеи',
+                categoryParentId: null,
+                warehouseId: 2,
+                warehouseName: 'Склад №2',
+                outcomeQuantity: 9,
+                outcomeSum: 90000,
+                stockQuantity: 4,
+                stockSum: 40000,
+                turnoverRatio: null,
+            },
+        ],
+    }
+}
+
 function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     function wrapper({ children }: { children: ReactNode }) {
@@ -61,13 +108,28 @@ describe('useGoodsTurnoverReportPage', () => {
         vi.mocked(axiosInstance.get).mockReset()
     })
 
-    function mockBackend() {
+    function mockBackend(
+        options: { report?: (period: string) => GetGoodsTurnoverReportResponse; periodStatus?: 'OPEN' | 'CLOSED' } = {},
+    ) {
+        const buildReport = options.report ?? makeReport
+        const status = options.periodStatus ?? 'OPEN'
         vi.mocked(axiosInstance.get).mockImplementation((url: string) => {
             if (url === '/v1/service/warehouse/product-categories') return Promise.resolve({ data: CATEGORIES })
             if (url === '/v1/service/warehouse/warehouses') return Promise.resolve({ data: WAREHOUSES })
             if (url.startsWith('/v1/service/warehouse/goods-turnover-report/')) {
                 const period = url.split('/').pop()!
-                return Promise.resolve({ data: makeReport(period) })
+                return Promise.resolve({ data: buildReport(period) })
+            }
+            // Задача 19 (openspec/changes/service-turnover-report): статус расчётного периода
+            // направления `service` — переиспользованный `GET .../period/:period`
+            // (`features/AccountingPeriod`), теперь тоже вызывается этим хуком (бейдж закрытого
+            // периода в Filter Row). Открытый по умолчанию — большинство тестов ниже про это не
+            // спрашивают.
+            if (url.startsWith('/v1/service/accounting/period/')) {
+                const period = url.split('/').pop()!
+                return Promise.resolve({
+                    data: { direction: 'service', period, status, closedBy: null, closedAt: null },
+                })
             }
             return Promise.reject(new Error(`Unexpected GET ${url}`))
         })
@@ -134,5 +196,49 @@ describe('useGoodsTurnoverReportPage', () => {
 
         expect(result.current.categoryId).toBe(10)
         expect(vi.mocked(axiosInstance.get).mock.calls.length).toBe(callCountBefore)
+    })
+
+    it('rows фильтрует report.lines по выбранному складу, и по выбранной категории вместе со всеми вложенными', async () => {
+        mockBackend({ report: makeMultiWarehouseReport })
+        const { result } = renderPage()
+
+        await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+        // Дефолтный склад — первый из справочника (id 1): обе строки склада №1, склад №2 отфильтрован.
+        expect(result.current.rows.map((r) => r.categoryId).sort()).toEqual([10, 11])
+
+        act(() => result.current.setWarehouseId(2))
+        expect(result.current.rows.map((r) => r.categoryId)).toEqual([10])
+
+        act(() => {
+            result.current.setWarehouseId(1)
+            result.current.setCategoryId(10)
+        })
+        // Родительская категория (10, «Дисплеи») включает и вложенную (11, «iPhone») — но не строки чужого склада.
+        expect(result.current.rows.map((r) => r.categoryId).sort()).toEqual([10, 11])
+
+        act(() => result.current.setCategoryId(11))
+        expect(result.current.rows.map((r) => r.categoryId)).toEqual([11])
+    })
+
+    it('isClosed отражает статус AccountingPeriod направления service за выбранный период (GET .../period/:period)', async () => {
+        mockBackend({ periodStatus: 'CLOSED' })
+        const { result } = renderPage()
+
+        await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+        await waitFor(() => expect(result.current.isClosed).toBe(true))
+    })
+
+    it('retry вызывает повторный запрос отчёта (кнопка «Повторить» в GoodsTurnoverErrorState)', async () => {
+        mockBackend()
+        const { result } = renderPage()
+
+        await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+        const callCountBefore = vi.mocked(axiosInstance.get).mock.calls.length
+
+        await act(async () => {
+            await result.current.retry()
+        })
+
+        expect(vi.mocked(axiosInstance.get).mock.calls.length).toBeGreaterThan(callCountBefore)
     })
 })

@@ -594,29 +594,122 @@
 
 ## 19. Frontend: состояния экрана (ui-design.md, «Ключевые состояния»)
 
-- [ ] 19.1 Реализовать состояние загрузки — `RefreshTransitionLayout`/`SpinnerPageLg` при
+- [x] 19.1 Реализовать состояние загрузки — `RefreshTransitionLayout`/`SpinnerPageLg` при
   `isInitialLoad` (узлы `jxljA` десктоп / `XJH3r` мобайл). Чисто визуальная задача без
   ветвлений — TDD-шаги не требуются, покрывается тестом 19.6 на переключение состояний.
-- [ ] 19.2 Реализовать состояние ошибки — карточка с `ApiError.message` и кнопкой «Повторить»
+  **Выполнено**: уже было в `Layout.tsx` (задача 15) — `RefreshTransitionLayout` перехватывает
+  `isInitialLoad` раньше `body`, только явно задокументирован этот факт в комментарии
+  `GoodsTurnoverReportBody.tsx` (её резолвер состояний вызывается уже ПОСЛЕ первой загрузки).
+- [x] 19.2 Реализовать состояние ошибки — карточка с `ApiError.message` и кнопкой «Повторить»
   (узлы `t7VF4`/`akKcU`).
-- [ ] 19.3 Реализовать состояние «отчёт ещё не пересчитан» — карточка без CTA (узлы
+  **Выполнено**: `ui/GoodsTurnoverErrorState.tsx` — структура и цвета вычитаны `Get`+
+  `resolveVariables` по узлам `W2qBFM` (десктоп)/`SSiyp` (мобайл): `$danger-soft` заливка, белый
+  кружок 64/56px с `triangle-alert`, заголовок «Не удалось загрузить отчёт», описание —
+  реальный `ApiError.message`, кнопка `Button variant="secondary"` + `refresh-cw` «Повторить»
+  (`onClick` — `retry`, новый `refetch` в `useGoodsTurnoverReportPage`).
+- [x] 19.3 Реализовать состояние «отчёт ещё не пересчитан» — карточка без CTA (узлы
   `Q2EwKA`/`W9VKM`), показывается, когда бэкенд вернул пустой список строк для периода.
-- [ ] 19.4 Реализовать бейдж закрытого периода в Filter Row (узлы `Sk1nF`/паттерн `VzQy1`/
+  **Выполнено**: `ui/GoodsTurnoverNotRecalculatedState.tsx` — текст/иконка `clock-4`/`$brand-soft`
+  дословно по `Get`+`resolveVariables` узлов `S5rxTH`/`w4caPq` (десктоп/мобайл идентичны текстом,
+  отличается только `padding`), без единой кнопки/интерактивного элемента.
+- [x] 19.4 Реализовать бейдж закрытого периода в Filter Row (узлы `Sk1nF`/паттерн `VzQy1`/
   `RvLO7`) — без кнопки закрытия/пересчёта (design.md D7 — закрытие не действие пользователя).
-- [ ] 19.5 Написать тесты на выбор состояния в `useGoodsTurnoverReportPage`/презентационном
+  **Выполнено**: `ui/PeriodStatusBadge.tsx` — точка+текст, `$brand-soft`/`$ok-ink` открыт vs
+  `$info-soft`/`$info-ink` закрыт (тексты «Открыт · пересчёт каждый час»/«Период закрыт · данные
+  зафиксированы» на десктопе, короткие «Открыт»/«Закрыт» на мобайле — `Get`+`resolveVariables`
+  подтвердил оба варианта дословно по узлам `QVydh`/`Sk1nF` десктоп и `B07YMi`/`PmBey`/`x8qOY8`/
+  `ymw1N` мобайл). Статус — `useAccountingPeriod('service', period)` из `features/AccountingPeriod`
+  (design.md D5: читается из `AccountingPeriod`, не дублируется). Ни одной кнопки внутри —
+  подтверждено тестом `PeriodStatusBadge.spec.tsx`.
+- [x] 19.5 Написать тесты на выбор состояния в `useGoodsTurnoverReportPage`/презентационном
   компоненте (какое состояние показывается при loading/error/пустых данных/`AccountingPeriod`
   закрыт — без условного рендера в самой странице, `frontend/CLAUDE.md`).
-- [ ] 19.6 Прогнать red → реализовать логику выбора состояния → прогнать green.
+  **Выполнено**: `model/goodsTurnoverBodyState.spec.ts` (4 теста на чистый резолвер error/
+  not-recalculated/ready), `ui/GoodsTurnoverReportBody.spec.tsx` (4 теста — карточка ошибки +
+  `onRetry`, «ещё не пересчитан» без единой кнопки, рендер таблицы при данных, приоритет ошибки
+  над пустым списком), `ui/PeriodStatusBadge.spec.tsx` (3 теста), `useGoodsTurnoverReportPage.spec.tsx`
+  дополнен тестами на `isClosed` (статус `AccountingPeriod`), `retry` (повторный запрос) и `rows`
+  (фильтрация по складу/поддереву категории). Ветвление состояний — только внутри
+  `GoodsTurnoverReportBody`; сама страница (`GoodsTurnoverReportPage.tsx`) без `&&`/тернарников,
+  только вычисленные переменные `header`/`body`, переданные в `Layout` (по образцу
+  `SalesPlanPage.tsx`).
+- [x] 19.6 Прогнать red → реализовать логику выбора состояния → прогнать green.
+  **Результат**: `npx vitest run src/pages/GoodsTurnoverReport src/shared/ui-kit/organisms/PeriodPicker.spec.tsx`
+  — 10 test files / 58 tests green. `npx tsc -b` — чисто. `npx eslint --config eslint.config.js
+  src/pages/GoodsTurnoverReport src/shared/ui-kit/organisms` — 0 ошибок (только предсуществующие
+  `boundaries`-warnings конфига). `npm run build` — успешно. Полный `npx vitest run` — 471/478
+  тестов green из 83/86 файлов; те же 3 предсуществующих падающих файла (`RouteGuard.spec.tsx`,
+  `useHasPermission.spec.ts`, `RequirePermission.spec.tsx`), зафиксированные регрессией ещё
+  задачей 15.6 (воспроизводится на `HEAD` без правок этого диапазона) — не трогались, вне
+  диапазона задач 19-20.
+  Заодно собрана вся страница воедино (это и было содержанием задачи 19.1 "собери страницу
+  воедино" из инструкции агенту): новый `ui/FilterRow.tsx` (композиция `WarehouseSelect`/
+  `CategoryTreeSelect`/`PeriodPicker`/`PeriodStatusBadge`, без собственной бизнес-логики) и новый
+  `shared/ui-kit/organisms/PeriodPicker.tsx` (architecture.md явно предписывает это место — "new,
+  shared/ui-kit/, если ещё нет подходящего", props `period`/`onChange`/`maxPeriod`; ни один из
+  задач 15-18 период-пикер не заводил). `useGoodsTurnoverReportPage.ts` дополнен: `rows` (`report.
+  lines`, отфильтрованные по складу и — если выбрана — поддереву категории через
+  `resolveDescendantIds`, задача 17; фильтрация по складу ОБЯЗАТЕЛЬНА до `GoodsTurnoverTable` —
+  её строки уникальны по `categoryId`), `retry` (`refetch` отчёта), `isClosed`/`maxPeriod`.
+  `Layout.tsx` лишился прежнего `error`-слота/легаси `ErrorLayout`-баннера (задача 15.1 копировала
+  паттерн `ServicesReport`, но ui-design.md для этой страницы специфицирует полноценную карточку
+  ошибки вместо баннера — теперь она часть `GoodsTurnoverReportBody`, без задвоения) —
+  задокументировано как явное отклонение прямо в файле.
 
 ## 20. Frontend: адаптивность 390 (ui-design.md, мобильные артборды)
 
-- [ ] 20.1 Прочитать мобильные артборды (`yDBTb`/`RvLO7`/`XJH3r`/`akKcU`/`W9VKM`) через
+- [x] 20.1 Прочитать мобильные артборды (`yDBTb`/`RvLO7`/`XJH3r`/`akKcU`/`W9VKM`) через
   `mcp__pencil__execute`/`Get` — структура `App Bar` → `Body` (`Page Header` → `Filters` →
   контент) → `Bottom Nav`.
-- [ ] 20.2 Реализовать адаптивные стили компонентов страницы под брейкпоинт 390 (Tailwind) —
+  **Выполнено**: полный обход `yDBTb` (`Get`+visitor, ~230 узлов) подтвердил структуру `App Bar`
+  (`ref`, глобальный компонент — уже реализован в `app/Header.tsx`/`HeaderMobile`, эта страница
+  его не строит заново) → `Body` (`Page Header`: `Title` «Оборачиваемость товаров» + `Subtitle`
+  IBM Plex Mono/Roboto — использован общий `shared/ui-kit/organisms/PageHeader.tsx` вместо нового
+  page-local заголовка, `font-display` вместо буквального IBM Plex Mono макета, см. обоснование в
+  комментарии `GoodsTurnoverReportPage.tsx`; `Filters`: `Row A` = `Period` (`fill_container`,
+  растягивается) + `Status Pill`, `Row B` = `Chip` склада + `Chip` категории; `Ledger Table`) →
+  `Bottom Nav` (тоже глобальный `ref`). Точечный `Get`+`resolveVariables` по `WIzBc`/`j4Bip`/
+  `AdbGE` (`yDBTb`/`RvLO7`) дал точный текст/цвета `PeriodStatusBadge`/`PeriodPicker` (задача 19),
+  сверен с десктопным `eAiFn` (`WvSO6`) — `Left` (склад+категория)/spacer/`Right`
+  (период+бейдж) в одну строку на десктопе против двух рядов на мобайле — ровно так и
+  реализовано в `FilterRow.tsx` (Tailwind `order`, без дублирования разметки).
+- [x] 20.2 Реализовать адаптивные стили компонентов страницы под брейкпоинт 390 (Tailwind) —
   карточное представление строк, если так показано в мобильном макете (сверить по 20.1).
-- [ ] 20.3 Проверить вручную в браузере на десктопной и мобильной ширине (навык `run`).
+  **Выполнено**: `GoodsTurnoverTable` (задача 18) уже не требует карточного представления на
+  мобайле — макет (`Get` по `yDBTb`/`FCNPa`, задача 18.1) подтвердил ту же `Ledger`-таблицу на
+  390, без отдельной карточной раскладки строк, поэтому задача 20 не трогает
+  `GoodsTurnoverTable.tsx`. `FilterRow.tsx` — `flex-col gap-2 md:flex-row` + Tailwind `order`
+  (мобайл: период+бейдж первым рядом, склад+категория вторым; десктоп: `Left`…spacer…`Right`,
+  порядок восстанавливается `md:order-1`/`md:order-3`). `PeriodPicker` (новый `shared/ui-kit/
+  organisms/`) — тот же приём двух независимых триггеров, что уже принят `WarehouseSelect`
+  (задача 16): десктоп `w-[220px]` с подписью «Период ·», мобайл `flex-1` с иконкой `calendar`
+  вместо подписи (растягивается на всю доступную ширину `Row A`, как в макете). `GoodsTurnoverError
+  State`/`GoodsTurnoverNotRecalculatedState` — `min-h-[320px] md:min-h-[420px]`, меньший `padding`/
+  иконка на мобайле (56px кружок/26px иконка vs 64px/28px десктоп — числа из `Get`+
+  `resolveVariables` по `SSiyp`/`w4caPq` против `W2qBFM`/`S5rxTH`).
+- [x] 20.3 Проверить вручную в браузере на десктопной и мобильной ширине (навык `run`).
   Верификация: нет overflow/переполнения ни на одном брейкпоинте.
+  **Выполнено**: `backend` (`npm run start:dev`, worktree-БД/окружение) и `frontend`
+  (`npm run start`, порт 5174 — 5173 занят фронтендом соседнего worktree) подняты в фоне,
+  Playwright открыл `/goods-turnover-report`. `TakeScreenshot`/`browser_take_screenshot`
+  зависал по таймауту "waiting for fonts to load" на ЭТОЙ странице — **и точно так же
+  воспроизведено на предсуществующей `/sales-plan`** (не моя страница, не трогалась) — окружение-
+  специфичный блокер Playwright/шрифтов в этой песочнице, а не баг моего кода; вместо скриншота
+  верификация сделана через `browser_evaluate` (`document.documentElement.scrollWidth` vs
+  `window.innerWidth`) и точечные `getBoundingClientRect()` по `data-slot`-узлам на 1440 и 390 —
+  **overflow отсутствует на обоих брейкпоинтах** (`scrollWidth === innerWidth` в обоих случаях;
+  на 390 Filter Row `Row A`/`Row B` укладываются в 358px внутри 390px страницы с 16px полями, на
+  1440 `Left`…spacer…`Right` укладываются в 1384px). Accessibility snapshot подтвердил реальные
+  сетевые вызовы (`/v1/service/warehouse/{product-categories,warehouses,goods-turnover-report/
+  2026-09}`, `/v1/service/accounting/period/2026-09}` — все `200 OK`, по одному разу, без
+  зацикливания) и корректный рендер состояния «отчёт ещё не пересчитан» (реальных строк отчёта в
+  БД пока нет — ожидаемо, крон/снапшот вне диапазона задач 19-20). Побочно замечено (НЕ в
+  диапазоне задач 19-20, не правилось): консольный React-warning "Select is changing from
+  uncontrolled to controlled" от `WarehouseSelect` (задача 16) — `selectedWarehouseId` стартует
+  `null` до загрузки справочника складов, `value` у `Select` меняется с `undefined` на строку;
+  чисто dev-режимный warning, без функционального дефекта, файл `WarehouseSelect.tsx` вне
+  диапазона этой задачи. Процессы (`nest`/`vite` этого worktree) остановлены `pkill` по окончании
+  проверки.
 
 ## 21. Интеграционная проверка «золотого пути»
 
