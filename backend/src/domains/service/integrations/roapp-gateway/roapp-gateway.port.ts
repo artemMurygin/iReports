@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { EmployeesShortSchema } from '../roapp/schemas/employees.schema';
+import { WarehouseSchema } from '../roapp/schemas/warehouses.schema';
 import { OrderTypesSchema } from '../roapp/schemas/orderTypes.schema';
 import { MarketingSourcesShortSchema } from '../roapp/schemas/marketingSources.schema';
 import { OrderStatusesSchema } from '../roapp/schemas/orderStatuses.schema';
@@ -21,6 +22,7 @@ import {
 } from '../custom-api-roapp/schemas/goodsFlowReport.schema';
 
 export type EmployeeShort = z.infer<typeof EmployeesShortSchema>;
+export type Warehouse = z.infer<typeof WarehouseSchema>;
 export type OrderType = z.infer<typeof OrderTypesSchema>;
 export type MarketingSourceShort = z.infer<typeof MarketingSourcesShortSchema>;
 export type OrderStatus = z.infer<typeof OrderStatusesSchema>;
@@ -36,6 +38,8 @@ export type OrderItem = NonNullable<z.infer<typeof OrderItemSchema>>;
  */
 export interface RoappGateway {
     fetchEmployees(): Promise<EmployeeShort[]>;
+    // spec: service/goods-turnover — задача 4.3 change service-turnover-report.
+    fetchWarehouses(): Promise<Warehouse[]>;
     fetchOrderTypes(): Promise<OrderType[]>;
     fetchOrderStatuses(): Promise<OrderStatus[]>;
     fetchMarketingSources(): Promise<MarketingSourceShort[]>;

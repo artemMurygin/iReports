@@ -56,22 +56,45 @@
 
 ## 4. RoApp: справочник складов
 
-- [ ] 4.1 Написать тест(ы) на метод получения списка складов из публичного API RemOnline
+- [x] 4.1 Написать тест(ы) на метод получения списка складов из публичного API RemOnline
   (форма ответа — по итогам верификации 1.1) и на `RoappGatewayPort.fetchWarehouses`.
   Верификация: `npm run test -- roapp.service` видит новые тесты.
-- [ ] 4.2 Прогнать тесты из 4.1, зафиксировать red (метода ещё нет).
-- [ ] 4.3 Реализовать метод в `integrations/roapp/roapp.service.ts`
+- [x] 4.2 Прогнать тесты из 4.1, зафиксировать red (метода ещё нет).
+- [x] 4.3 Реализовать метод в `integrations/roapp/roapp.service.ts`
   (если API RemOnline не отдаёт складов отдельным ресурсом — реализовать резервный источник,
   см. design.md «Риски», и явно задокументировать это отклонение здесь), добавить
   `fetchWarehouses` в `RoappGatewayPort`/`RoappGatewayAdapter` (`integrations/roapp-gateway`).
-- [ ] 4.4 Прогнать тесты из 4.1, зафиксировать green, без регрессий в `roapp.service.spec.ts`.
-- [ ] 4.5 Написать тест(ы) на `RoappSyncService.uploadWarehouses()` (апсерт в `roappWarehouse`,
+  **Отклонение подтверждено повторно и напрямую (не только по документации, как в задаче
+  1.1)**: в этом окружении (в отличие от задачи 1.1/1.2) оказался живой сетевой доступ и к
+  `api.roapp.io`, и к `rm.murygin.tech` — проверено заново перед реализацией.
+  `GET https://api.roapp.io/v2/{warehouses|company/warehouses|storage/warehouses|
+  catalog/warehouses|warehouse|stock/warehouses}` с валидным `ROAPP_TOKEN` — везде `404`;
+  `GET /v2/company/locations` существует, но отдаёт физические точки обслуживания (в данных
+  компании — 1 запись), не склады товара. Официальный OpenAPI-индекс RemOnline через MCP
+  `roapp` (`search-endpoints` по паттернам `warehouse`/`stock`/`storage`) — 0 совпадений.
+  `rm.murygin.tech` (кастомный бэкенд-компаньон, где мог быть вспомогательный эндпоинт) —
+  `502 Bad Gateway` на любой путь, включая корень `/`; проверить наличие там ресурса не
+  удалось. `warehouseId` встречается только внутри `write_offs` позиций заказа
+  (`GET /v2/orders/{id}/items`, подтверждено прямым вызовом) — только числовой ID списания без
+  названия склада, и `write_offs` сейчас не персистится синком заказов (восстановление
+  справочника оттуда потребовало бы отдельного рефакторинга вне скоупа задачи 4).
+  **Резервный источник**: ручной справочник через переменную окружения `ROAPP_WAREHOUSES`
+  (JSON-массив `{id, name}`), см. подробное обоснование и полный список проверенных путей в
+  `integrations/roapp/roapp-warehouses.config.ts`. Та же модель конфигурации, что уже
+  используется для `ROAPP_CASHBOX_ID`/`ROAPP_CATEGORY_ID`
+  (`modules/accounting/infrastructure/repositories/erp-cash/erp-cash.config.ts`) — читается из
+  `.env`, обновляется вручную при появлении нового склада в RemOnline, требует перезапуска
+  процесса. Пустая/неустановленная переменная — валидное состояние (пустой список, не ошибка);
+  невалидный JSON/форма элемента — падает с понятной ошибкой (fail fast), а не тихо отдаёт
+  пустой список.
+- [x] 4.4 Прогнать тесты из 4.1, зафиксировать green, без регрессий в `roapp.service.spec.ts`.
+- [x] 4.5 Написать тест(ы) на `RoappSyncService.uploadWarehouses()` (апсерт в `roappWarehouse`,
   по образцу `uploadProductCategories()`). Верификация: `npm run test -- roapp-sync` видит тест.
-- [ ] 4.6 Прогнать тесты из 4.5, зафиксировать red.
-- [ ] 4.7 Реализовать `uploadWarehouses()` в `roapp-sync.service.ts`, подключить в
+- [x] 4.6 Прогнать тесты из 4.5, зафиксировать red.
+- [x] 4.7 Реализовать `uploadWarehouses()` в `roapp-sync.service.ts`, подключить в
   `application/command/upload-initial-roapp-data.handler.ts` (тот же разовый `npm run initial`,
   НЕ 5-минутный крон — design.md D3).
-- [ ] 4.8 Прогнать тесты из 4.5, зафиксировать green, без регрессий в `roapp-sync.service.spec.ts`.
+- [x] 4.8 Прогнать тесты из 4.5, зафиксировать green, без регрессий в `roapp-sync.service.spec.ts`.
 
 ## 5. RoApp: клиент к `getGoodsFlowReport`
 

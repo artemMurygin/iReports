@@ -9,6 +9,7 @@ import {
     MarketingSourceShort,
     Order,
     OrderItem,
+    Warehouse,
 } from './roapp-gateway.port';
 import { Category } from '../roapp/schemas/serviceCatalog.schema';
 import { Service } from '../roapp/schemas/services.schema';
@@ -34,6 +35,10 @@ export class RoappGatewayAdapter implements RoappGateway {
 
     fetchEmployees(): Promise<EmployeeShort[]> {
         return this.roapp.fetchEmployees();
+    }
+
+    fetchWarehouses(): Promise<Warehouse[]> {
+        return this.roapp.fetchWarehouses();
     }
 
     fetchOrderTypes(): Promise<OrderType[]> {

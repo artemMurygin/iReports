@@ -50,6 +50,7 @@ describe('UpdateServicePricesHandler', () => {
 
         const gateway: RoappGateway = {
             fetchEmployees: jest.fn(),
+            fetchWarehouses: jest.fn(),
             fetchOrderTypes: jest.fn(),
             fetchOrderStatuses: jest.fn(),
             fetchMarketingSources: jest.fn(),

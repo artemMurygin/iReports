@@ -56,6 +56,27 @@ export class RoappSyncService {
         }
     }
 
+    // spec: service/goods-turnover — задача 4.7 change
+    // service-turnover-report. Апсерт без бизнес-порядка (плоский список,
+    // нет self-relation, в отличие от категорий) — по образцу
+    // uploadEmployees()/uploadMarketingSources(). Полная перезапись строк
+    // (не инкрементально) — согласуется с тем, что fetchWarehouses() сейчас
+    // резервный источник (см. roapp-warehouses.config.ts) и не поддерживает
+    // «только изменённые с даты X».
+    async uploadWarehouses() {
+        const warehouses = await this.roapp.fetchWarehouses();
+        await Promise.all(
+            warehouses.map((w) =>
+                this.db.roappWarehouse.upsert({
+                    where: { id: w.id },
+                    create: { id: w.id, name: w.name },
+                    update: { name: w.name },
+                }),
+            ),
+        );
+        return warehouses.length;
+    }
+
     async uploadOrderStatuses() {
         try {
             const statuses = await this.roapp.fetchOrderStatuses();
