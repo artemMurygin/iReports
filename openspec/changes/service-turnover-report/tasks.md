@@ -188,17 +188,43 @@
 
 ## 9. Application: построение отчёта
 
-- [ ] 9.1 Написать тесты на `BuildGoodsTurnoverReportService.build(period)` — обход дерева
+- [x] 9.1 Написать тесты на `BuildGoodsTurnoverReportService.build(period)` — обход дерева
   категорий (все категории и вложенные) × все склады, один вызов `getGoodsFlowReport` на пару
   (мок `ROAPP_GATEWAY`), довычисление `turnoverRatio` через `calcRatio` с чтением остатка
   прошлого периода из `GOODS_TURNOVER_REPORT_LINE_REPOSITORY` — по сценариям specs
   («покрывает все категории и вложенные», «категория без движения — нулевые показатели»,
   «отдельно по каждому складу», «позиция содержит все 4 показателя»).
-- [ ] 9.2 Прогнать red.
-- [ ] 9.3 Реализовать `BuildGoodsTurnoverReportService` (`application/services/`) — с учётом
+  **Выполнено**: `application/services/build-goods-turnover-report.service.spec.ts` — 10 тестов
+  (дерево категорий с вложенностью, нулевое движение, раздельные позиции по складам, все 4
+  показателя, `calcRatio` по сохранённому остатку прошлого периода и без него, частичный успех
+  при сбое пары категория-склад, пустые справочники, лимит параллелизма, форма запроса к
+  `getGoodsFlowReport`).
+- [x] 9.2 Прогнать red.
+  **Результат**: `Cannot find module './build-goods-turnover-report.service'` — зафиксировано
+  перед реализацией (сервис временно убран из каталога, тест-раннер запущен, файл возвращён).
+- [x] 9.3 Реализовать `BuildGoodsTurnoverReportService` (`application/services/`) — с учётом
   лимита параллелизма из задачи 1.2 и устойчивостью к сбою отдельной пары категория-склад (см.
   design.md D6 — частичный успех).
-- [ ] 9.4 Прогнать green.
+  **Выполнено**: `application/services/build-goods-turnover-report.service.ts`. Обход —
+  Cartesian-произведение `ProductCategoryRepositoryPort.findAll()` (плоский список, вложенность
+  уже раскрыта справочником — отдельного рекурсивного спуска не требуется) ×
+  `WarehouseRepositoryPort.findAll()`; на каждую пару один вызов
+  `ROAPP_GATEWAY.fetchGoodsFlowReport({startDate, endDate, category_id, warehouses:[warehouseId]})`
+  за границы месяца (`Period.getBounds()`). Остаток прошлого периода — один вызов
+  `GOODS_TURNOVER_REPORT_LINE_REPOSITORY.findByPeriod(period.previous())`, без доп. запросов к
+  ERP, ключ пары — `GoodsTurnoverReportLine.categoryWarehouseKey`. Параллелизм — пул из
+  `GOODS_FLOW_REPORT_CONCURRENCY = 3` воркеров (`runWithConcurrencyLimit`, реальное ограничение
+  одновременно летящих вызовов, не нарезка на чанки), значение и обоснование — по рекомендации
+  задачи 1.2/`warehouse-api-finding.md` (реальные цифры со стейджа/прода замерить не удалось —
+  сетевой блокер песочницы). Сбой одной пары — `try/catch` вокруг вызова ERP, `Logger.warn`,
+  пара пропускается (`null`), `build()` не бросает и не прерывает остальные пары (design.md D6).
+- [x] 9.4 Прогнать green.
+  **Результат**: `npm run test -- --testPathPatterns=build-goods-turnover-report` — 10/10 green.
+  `npm run test -- --testPathPatterns=domains/service/modules/warehouse` — 8 suites/46 tests green
+  (без регрессий в остальных файлах модуля, включая параллельно дорабатываемые задачей 10).
+  `npx tsc --noEmit` не даёт новых ошибок в `build-goods-turnover-report.service*.ts` (прочие
+  ошибки `tsc` в репозитории — предсуществующие/из параллельно выполняемой задачи 10, вне этого
+  диапазона).
 
 ## 10. Application/Interface: чтение отчёта и справочников (GET)
 
