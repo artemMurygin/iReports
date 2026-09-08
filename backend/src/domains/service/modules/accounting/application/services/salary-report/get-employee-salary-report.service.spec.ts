@@ -24,8 +24,8 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
-import type { EnsureSalaryTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
-import type { SalaryTaskRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
+import type { EnsureRuleTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
 
 // Отчёт сотрудника направления service (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит ОДНО
@@ -204,22 +204,21 @@ describe('GetEmployeeSalaryReportService', () => {
             deleteByDirectionAndPeriod: jest.fn(),
         };
 
-        // Раздел 11 tasks.md (add-task-based-salary-rule) — ленивое
-        // достраивание задачи регулярного TaskCompletion-правила; ни один
-        // фикстурный набор правил этого файла его не содержит, поэтому
-        // ensure() ни разу не вызывается — мок без poведения достаточен,
+        // Ленивое достраивание задачи регулярного TaskCompletion-правила; ни
+        // один фикстурный набор правил этого файла его не содержит, поэтому
+        // ensure() ни разу не вызывается — мок без поведения достаточен,
         // лишь бы конструктор получил объект нужного типа.
-        const ensureSalaryTask = {
+        const ensureRuleTask = {
             ensure: jest.fn(),
-        } as unknown as EnsureSalaryTaskForPeriodService;
+        } as unknown as EnsureRuleTaskForPeriodService;
 
-        // Раздел 12 tasks.md (add-task-based-salary-rule) — задачи
-        // TaskCompletion-правил, читаемые для штампа свежести кэша
+        // Задачи TaskCompletion-правил, читаемые для штампа свежести кэша
         // (taskCompletionFreshnessStamp); ни один фикстурный набор правил
-        // этого файла TaskCompletion не содержит, поэтому запрос вернёт [].
+        // этого файла TaskCompletion не содержит, поэтому findManyByIds
+        // вовсе не вызывается (см. findTaskCompletionTasks).
         const taskRepo = {
-            findManyByRulesAndPeriod: jest.fn().mockResolvedValue([]),
-        } as unknown as SalaryTaskRepositoryPort;
+            findManyByIds: jest.fn().mockResolvedValue([]),
+        } as unknown as TaskRepositoryPort;
 
         const service = new GetEmployeeSalaryReportService(
             periodRepo,
@@ -231,7 +230,7 @@ describe('GetEmployeeSalaryReportService', () => {
             taskRepo,
             contextBuilder,
             salaryRulesResolver,
-            ensureSalaryTask,
+            ensureRuleTask,
         );
 
         return {

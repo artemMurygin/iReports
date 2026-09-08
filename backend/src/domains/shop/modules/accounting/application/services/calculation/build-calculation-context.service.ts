@@ -9,8 +9,8 @@ import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/ty
 import { SHOP_SALES_PERFORMANCE_READER } from '@/domains/shop/modules/sales/application/ports/sales-performance.port';
 import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/sales-performance.port';
 import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/sales-performance.value-object';
-import { SHOP_SALARY_TASK_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import { TASK_REPOSITORY } from '@/modules/tasks/application/ports/task.repository.port';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
 import { buildTaskCompletionStatuses } from '@/domains/shop/modules/accounting/application/services/calculation/task-completion-statuses.builder';
 
 // Базовый контекст расчёта направления shop, ещё не привязанный к
@@ -66,8 +66,8 @@ export class BuildShopCalculationContextService {
         private readonly dataSource: ShopCalculationDataPort,
         @Inject(SHOP_SALES_PERFORMANCE_READER)
         private readonly salesPerformanceReader: ShopSalesPerformanceReaderPort,
-        @Inject(SHOP_SALARY_TASK_REPOSITORY)
-        private readonly taskRepo: ShopSalaryTaskRepositoryPort,
+        @Inject(TASK_REPOSITORY)
+        private readonly taskRepo: TaskRepositoryPort,
     ) {}
 
     // Раздел 17 tasks.md (add-task-based-salary-rule) — rules: уже

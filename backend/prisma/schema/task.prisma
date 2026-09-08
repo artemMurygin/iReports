@@ -1,0 +1,51 @@
+// Задача iReports — openspec/changes/replace-bitrix-task-integration,
+// design.md Decision 2. Полностью доменно-агностичная сущность общего
+// сквозного модуля src/modules/tasks: НЕ хранит и не знает про
+// salaryRuleId/period/isRecurring зарплатного правила — это понятия
+// зарплатного расчёта, не задачи как таковой (правило хранит свою ссылку
+// на задачу само, в TaskCompletionSalaryConfig.taskIdByPeriod, JSON-поле
+// внутри salary_rules.props). Заменяет бывшую SalaryTask (salary-task.prisma,
+// зеркальную копию задачи Bitrix24) — та удаляется отдельной миграцией
+// (design.md, Migration Plan, шаг 5) синхронно с переключением
+// domains/service|shop/modules/accounting на эту модель.
+//
+// direction — String, nullable: необязательный тег происхождения для
+// фильтрации в общем списке /tasks (по прецеденту BalanceTransaction.direction,
+// см. backend/CLAUDE.md, "Общие таблицы между service и shop" — исключение
+// для сущностей, физически не привязанных к одному направлению). НЕ
+// участвует в связи с зарплатным правилом — эту связь хранит и обслуживает
+// само правило.
+//
+// assigneeEmployeeId — БЕЗ @relation на BitrixEmployee, по прецеденту
+// MotivationSchema.targetId: ссылка на bitrix_employees.id без физического
+// ограничения (employee identity — отдельный сквозной модуль, tasks не
+// должен от него физически зависеть).
+//
+// status — String (не enum БД), тем же приёмом, что и WorkScheduleEntry.status/
+// SalaryRule.type: набор допустимых значений и граф переходов между ними —
+// в домене (TaskStatus value object, domain/value-objects/task-status.value-object.ts),
+// не на уровне БД. closedSuccessfullyAt — момент перехода именно в
+// CLOSED_SUCCESSFULLY (design.md Decision 3: только этот статус запускает
+// начисление правила TaskCompletion, не любой терминальный).
+model Task {
+  id          String   @id @default(uuid())
+  direction   String?
+  title       String
+  description String?
+  deadline    DateTime
+
+  assigneeEmployeeId Int @map("assignee_employee_id")
+
+  status               String
+  closedSuccessfullyAt DateTime? @map("closed_successfully_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Список /tasks фильтруется по status/direction (см. ListTasksService) —
+  // индексы под эти фильтры.
+  @@index([status])
+  @@index([direction])
+  @@index([assigneeEmployeeId])
+  @@map("tasks")
+}

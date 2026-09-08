@@ -1,31 +1,40 @@
 import { BuildServiceCalculationContextService } from './build-service-calculation-context.service';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
 import type { SalesPerformanceReaderPort } from '@/domains/service/modules/sales/application/ports/sales-performance.port';
-import type { SalaryTaskRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
-import { SalaryTask } from '@/domains/service/modules/accounting/domain/entities/salary-task/salary-task.entity';
-import { TaskStatus } from '@/domains/service/modules/accounting/domain/value-objects/task-status.value-object';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
+import { Task } from '@/modules/tasks/domain/entities/task.entity';
+import { TaskStatus } from '@/modules/tasks/domain/value-objects/task-status.value-object';
 import { TaskCompletion } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { Period } from '@/shared/domain/period.value-object';
 
-// Раздел 12 tasks.md (add-task-based-salary-rule) — BuildServiceCalculationContextService
-// заполняет erpData.taskCompletionStatuses статусами связанных SalaryTask
-// ТЕКУЩЕГО периода для всех TaskCompletion-правил переданной схемы (см.
-// design.md Decision 7, calculation-data.types.ts). Остальные поля erpData
-// (Фаза 7/8) здесь не переиспытываются заново — покрыты существующими
-// вызывающими (GetEmployeeSalaryReportService и т.п.), этот файл сфокусирован
-// на новом поведении.
+// replace-bitrix-task-integration, design.md решение 5 —
+// BuildServiceCalculationContextService заполняет erpData.taskCompletionStatuses
+// SalaryTask (accounting) ТЕКУЩЕГО периода для всех TaskCompletion-правил
+// переданной схемы, читая taskId из config.taskIdByPeriod[period] и вызывая
+// TASK_REPOSITORY.findManyByIds() напрямую (без Port/Adapter). Остальные
+// поля erpData (Фаза 7/8) здесь не переиспытываются заново — покрыты
+// существующими вызывающими (GetEmployeeSalaryReportService и т.п.), этот
+// файл сфокусирован на новом поведении.
 describe('BuildServiceCalculationContextService — taskCompletionStatuses', () => {
-    const buildTaskCompletionRule = () =>
-        TaskCompletion.create({
-            type: 'TaskCompletion',
-            name: 'Собрать отчёт по браку',
-            targetRole: 'ENGINEER',
-            config: {
-                bitrixTaskTitle: 'Собрать отчёт по браку за месяц',
-                isRecurring: true,
-                deadlineTemplate: '2026-08-05',
-                defaultAmount: 5000,
+    // TaskCompletion.create() всегда пишет taskId в taskIdByPeriod ТЕКУЩЕГО
+    // периода (Period.current()) — тесты этого файла конструируют правило
+    // напрямую, с произвольным периодом '2026-08', не привязанным к
+    // системной дате.
+    const buildTaskCompletionRule = (taskIdByPeriod: Record<string, string>) =>
+        new TaskCompletion({
+            id: 'rule-1',
+            props: {
+                name: 'Собрать отчёт по браку',
+                type: 'TaskCompletion',
+                targetRole: 'ENGINEER',
+                config: {
+                    taskIdByPeriod,
+                    taskTitleTemplate: 'Собрать отчёт по браку за месяц',
+                    isRecurring: true,
+                    deadlineTemplate: '2026-08-05',
+                    defaultAmount: 5000,
+                },
             },
         });
 
@@ -48,16 +57,11 @@ describe('BuildServiceCalculationContextService — taskCompletionStatuses', () 
     });
 
     const buildService = (
-        findManyByRulesAndPeriod: jest.Mock,
+        findManyByIds: jest.Mock,
     ): BuildServiceCalculationContextService => {
         const taskRepo = {
-            findByRuleAndPeriod: jest.fn(),
-            findActiveForDirection: jest.fn(),
-            insert: jest.fn(),
-            save: jest.fn(),
-            findManyByRulesAndPeriod,
-            findActiveByRule: jest.fn(),
-        } as unknown as SalaryTaskRepositoryPort;
+            findManyByIds,
+        } as unknown as TaskRepositoryPort;
 
         return new BuildServiceCalculationContextService(
             buildDataSource(),
@@ -66,37 +70,40 @@ describe('BuildServiceCalculationContextService — taskCompletionStatuses', () 
         );
     };
 
-    it('заполняет taskCompletionStatuses найденной задачей текущего периода', async () => {
-        const rule = buildTaskCompletionRule();
-        const task = SalaryTask.create({
-            salaryRuleId: rule.id,
-            period: '2026-08',
-            deadline: new Date('2026-08-05T00:00:00.000Z'),
-            isRecurring: true,
-            bitrixTaskId: 'bx-1',
-            taskStatus: TaskStatus.fromRaw('5'),
+    const buildTask = (id: string, status: string) =>
+        Task.reconstitute({
+            id,
+            props: {
+                direction: 'service',
+                title: 'т',
+                description: null,
+                deadline: new Date('2026-08-05T00:00:00.000Z'),
+                assigneeEmployeeId: 1,
+                status: TaskStatus.fromCode(status),
+                closedSuccessfullyAt: null,
+            },
         });
-        const findManyByRulesAndPeriod = jest.fn().mockResolvedValue([task]);
-        const service = buildService(findManyByRulesAndPeriod);
+
+    it('заполняет taskCompletionStatuses SalaryTask найденной задачи текущего периода', async () => {
+        const rule = buildTaskCompletionRule({ '2026-08': 'task-1' });
+        const task = buildTask('task-1', 'CLOSED_SUCCESSFULLY');
+        const findManyByIds = jest.fn().mockResolvedValue([task]);
+        const service = buildService(findManyByIds);
 
         const context = await service.build(Period.create('2026-08'), 1, [
             rule,
         ]);
 
-        expect(findManyByRulesAndPeriod).toHaveBeenCalledWith(
-            [rule.id],
-            '2026-08',
-        );
-        expect(context.erpData.taskCompletionStatuses?.[rule.id]).toEqual({
-            bitrixTaskId: 'bx-1',
-            status: expect.objectContaining({ code: '5' }) as unknown,
-        });
+        expect(findManyByIds).toHaveBeenCalledWith(['task-1']);
+        const entry = context.erpData.taskCompletionStatuses?.[rule.id];
+        expect(entry?.taskId).toBe('task-1');
+        expect(entry?.isCompleted()).toBe(true);
     });
 
     it('TaskCompletion-правило без найденной задачи не попадает в taskCompletionStatuses', async () => {
-        const rule = buildTaskCompletionRule();
-        const findManyByRulesAndPeriod = jest.fn().mockResolvedValue([]);
-        const service = buildService(findManyByRulesAndPeriod);
+        const rule = buildTaskCompletionRule({ '2026-08': 'missing-task' });
+        const findManyByIds = jest.fn().mockResolvedValue([]);
+        const service = buildService(findManyByIds);
 
         const context = await service.build(Period.create('2026-08'), 1, [
             rule,
@@ -112,14 +119,14 @@ describe('BuildServiceCalculationContextService — taskCompletionStatuses', () 
             targetRole: 'ENGINEER',
             config: { price: 100 },
         });
-        const findManyByRulesAndPeriod = jest.fn().mockResolvedValue([]);
-        const service = buildService(findManyByRulesAndPeriod);
+        const findManyByIds = jest.fn().mockResolvedValue([]);
+        const service = buildService(findManyByIds);
 
         const context = await service.build(Period.create('2026-08'), 1, [
             payPerHour,
         ]);
 
-        expect(findManyByRulesAndPeriod).not.toHaveBeenCalled();
+        expect(findManyByIds).not.toHaveBeenCalled();
         expect(context.erpData.taskCompletionStatuses).toEqual({});
     });
 });

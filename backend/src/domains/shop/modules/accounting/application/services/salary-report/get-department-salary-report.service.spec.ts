@@ -15,10 +15,8 @@ import { ShopAccountingPeriod } from '@/domains/shop/modules/accounting/domain/e
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import type { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
-import { ShopTaskStatus } from '@/domains/shop/modules/accounting/domain/value-objects/task-status.value-object';
-import { Period } from '@/shared/domain/period.value-object';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
+import type { Task } from '@/modules/tasks/domain/entities/task.entity';
 
 // Отчёт по отделу, ограниченный ОДНИМ направлением shop — в отличие от
 // GetDepartmentSalaryReportService (домен service, который сводит service
@@ -62,10 +60,9 @@ describe('GetShopDepartmentSalaryReportService', () => {
             number,
             { employeeId: number; total: number; lines: never[] }
         >;
-        // Раздел 17 tasks.md (add-task-based-salary-rule) —
-        // ShopSalaryTask, найденные batch-запросом findManyByRulesAndPeriod
+        // Task (src/modules/tasks), найденные batch-запросом findManyByIds
         // за расчётный период (erpData.taskCompletionStatuses отдела).
-        salaryTasks?: ShopSalaryTask[];
+        salaryTasks?: Task[];
     }) => {
         const findEmployeesInDepartment = jest
             .fn()
@@ -187,8 +184,8 @@ describe('GetShopDepartmentSalaryReportService', () => {
             findByPeriod: jest.fn().mockResolvedValue([]),
         };
 
-        // Раздел 16 tasks.md (add-task-based-salary-rule) — см. WHY в
-        // GetShopEmployeeSalaryReportService.spec.ts (зеркальный приём).
+        // См. WHY в GetShopEmployeeSalaryReportService.spec.ts (зеркальный
+        // приём).
         const ensure = jest
             .fn<Promise<unknown>, [string, string]>()
             .mockResolvedValue(null);
@@ -196,23 +193,21 @@ describe('GetShopDepartmentSalaryReportService', () => {
             ensure,
         } as unknown as EnsureShopSalaryTaskForPeriodService;
 
-        // Раздел 17 tasks.md (add-task-based-salary-rule) —
         // erpData.taskCompletionStatuses отдела: батч-запрос ОДИН раз на
         // весь отдел (см. WHY в GetShopDepartmentSalaryReportService), не
         // по одному на сотрудника — фикстуры этого файла без salaryTasks не
-        // содержат TaskCompletion-правил, поэтому findManyByRulesAndPeriod
-        // вовсе не вызывается (см. buildTaskCompletionStatuses).
-        const findManyByRulesAndPeriod = jest
+        // содержат TaskCompletion-правил, поэтому findManyByIds вовсе не
+        // вызывается (см. task-completion-statuses.builder.ts).
+        const findManyByIds = jest
             .fn()
             .mockResolvedValue(overrides.salaryTasks ?? []);
         const taskRepo = {
-            findByRuleAndPeriod: jest.fn(),
-            findActiveForDirection: jest.fn(),
             insert: jest.fn(),
-            save: jest.fn(),
-            findManyByRulesAndPeriod,
-            findActiveByRule: jest.fn(),
-        } as unknown as ShopSalaryTaskRepositoryPort;
+            update: jest.fn(),
+            findById: jest.fn(),
+            findManyByIds,
+            findMany: jest.fn(),
+        } as unknown as TaskRepositoryPort;
 
         const service = new GetShopDepartmentSalaryReportService(
             shopDataSource,
@@ -239,7 +234,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
             findByPeriod,
             findManyByKey,
             ensure,
-            findManyByRulesAndPeriod,
+            findManyByIds,
         };
     };
 
@@ -347,7 +342,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
             findHoursWorkedForEmployees,
             findByEmployees,
             findForScope,
-            findManyByRulesAndPeriod,
+            findManyByIds,
         } = buildService({ employees: manyEmployees, shopSchemas });
 
         await service.execute(1, '2026-08');
@@ -359,10 +354,10 @@ describe('GetShopDepartmentSalaryReportService', () => {
         expect(findHoursWorkedForEmployees).toHaveBeenCalledTimes(1);
         expect(findByEmployees).toHaveBeenCalledTimes(1);
         expect(findForScope).toHaveBeenCalledTimes(1);
-        // Раздел 17 tasks.md — фикстуры без TaskCompletion-правил, поэтому
-        // batch-запрос статусов задач вовсе не должен произойти (см.
-        // buildTaskCompletionStatuses).
-        expect(findManyByRulesAndPeriod).not.toHaveBeenCalled();
+        // Фикстуры без TaskCompletion-правил, поэтому batch-запрос
+        // статусов задач вовсе не должен произойти (см.
+        // task-completion-statuses.builder.ts).
+        expect(findManyByIds).not.toHaveBeenCalled();
     });
 
     it('сотрудник без личной схемы получает нулевой вклад, но остаётся в списке', async () => {
@@ -427,7 +422,8 @@ describe('GetShopDepartmentSalaryReportService', () => {
                     name: 'Собрать отчёт',
                     targetRole: 'OFFLINE_MANAGER',
                     config: {
-                        bitrixTaskTitle: 'Собрать отчёт',
+                        taskId: 'task-initial',
+                        taskTitleTemplate: 'Собрать отчёт',
                         isRecurring: true,
                         deadlineTemplate: '2026-01-25T18:00:00.000Z',
                         defaultAmount: 5000,
@@ -503,30 +499,11 @@ describe('GetShopDepartmentSalaryReportService', () => {
         });
     });
 
-    // Раздел 17 tasks.md (add-task-based-salary-rule) —
     // erpData.taskCompletionStatuses отдела: та же гейтинг-логика видимости
-    // строки TaskCompletion (design.md Decision 7), что и у отчёта
+    // строки TaskCompletion (design.md решение 5), что и у отчёта
     // сотрудника (GetShopEmployeeSalaryReportService), но собранная одним
     // батч-запросом на весь отдел (см. WHY в GetShopDepartmentSalaryReportService).
     describe('правило TaskCompletion', () => {
-        // buildBitrixTaskLink (раздел 7) читает портал из
-        // process.env.BITRIX24_WEBHOOK_URL — не подгружается автоматически
-        // для юнит-тестов (см. task-completion.entity.spec.ts).
-        const originalWebhookUrl = process.env.BITRIX24_WEBHOOK_URL;
-
-        beforeEach(() => {
-            process.env.BITRIX24_WEBHOOK_URL =
-                'https://irepair.bitrix24.ru/rest/12/8b659pktudu7xlqu/';
-        });
-
-        afterEach(() => {
-            if (originalWebhookUrl === undefined) {
-                delete process.env.BITRIX24_WEBHOOK_URL;
-            } else {
-                process.env.BITRIX24_WEBHOOK_URL = originalWebhookUrl;
-            }
-        });
-
         const buildTaskReportSchema = (employeeId: number) =>
             withRequestContext(() => {
                 const rule = TaskCompletionShop.create({
@@ -534,7 +511,8 @@ describe('GetShopDepartmentSalaryReportService', () => {
                     name: 'Сдать отчёт',
                     targetRole: 'OFFLINE_MANAGER',
                     config: {
-                        bitrixTaskTitle: 'Сдать отчёт по браку',
+                        taskId: 'task-1',
+                        taskTitleTemplate: 'Сдать отчёт по браку',
                         isRecurring: true,
                         deadlineTemplate: '2026-08-05',
                         defaultAmount: 5000,
@@ -554,27 +532,25 @@ describe('GetShopDepartmentSalaryReportService', () => {
         it('задача выполнена — строка попадает в отчёт (amount из config.defaultAmount, requiresManualInput)', async () => {
             const employees = [{ id: 1, name: 'Продавец' }];
             const { schema, rule } = buildTaskReportSchema(1);
-            const task = ShopSalaryTask.create({
-                salaryRuleId: rule.id,
-                period: Period.create('2026-08'),
-                deadline: new Date('2026-08-05T00:00:00.000Z'),
-                isRecurring: true,
-                bitrixTaskId: 'bx-1',
-                taskStatus: ShopTaskStatus.fromRaw('5'),
-            });
+            // taskIdByPeriod ключуется TaskCompletionShop.create() по
+            // Period.current() (design.md решение 4) — запрашиваем отчёт за
+            // ТОТ ЖЕ период, чтобы taskId реально нашёлся по ключу.
+            const currentPeriod = Object.keys(rule.config.taskIdByPeriod)[0];
+            const taskId = rule.config.taskIdByPeriod[currentPeriod];
+            const task = {
+                id: taskId,
+                status: { code: 'CLOSED_SUCCESSFULLY' },
+            } as unknown as Task;
 
-            const { service, findManyByRulesAndPeriod } = buildService({
+            const { service, findManyByIds } = buildService({
                 employees,
                 shopSchemas: [schema],
                 salaryTasks: [task],
             });
 
-            const report = await service.execute(1, '2026-08');
+            const report = await service.execute(1, currentPeriod);
 
-            expect(findManyByRulesAndPeriod).toHaveBeenCalledWith(
-                [rule.id],
-                '2026-08',
-            );
+            expect(findManyByIds).toHaveBeenCalledWith([taskId]);
             expect(report.employees[0].rules).toHaveLength(1);
             expect(report.employees[0].rules[0]).toEqual(
                 expect.objectContaining({
@@ -586,7 +562,8 @@ describe('GetShopDepartmentSalaryReportService', () => {
 
         it('задача ещё не выполнена — строка отсутствует в отчёте (FACT и PROGNOSE)', async () => {
             const employees = [{ id: 1, name: 'Продавец' }];
-            const { schema } = buildTaskReportSchema(1);
+            const { schema, rule } = buildTaskReportSchema(1);
+            const currentPeriod = Object.keys(rule.config.taskIdByPeriod)[0];
 
             const { service } = buildService({
                 employees,
@@ -594,7 +571,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
                 salaryTasks: [],
             });
 
-            const report = await service.execute(1, '2026-08');
+            const report = await service.execute(1, currentPeriod);
 
             expect(report.employees[0].rules).toHaveLength(0);
             expect(report.employees[0].total).toEqual({

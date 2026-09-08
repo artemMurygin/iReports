@@ -33,6 +33,14 @@ const directoryRoot = `/${v1}/directory`;
 // directoryRoot выше.
 const workScheduleRoot = `/${v1}/work-schedule`;
 
+// Задача (replace-bitrix-task-integration) — сквозной модуль src/modules/tasks,
+// общий для всех направлений (design.md решение 1/2): не вложен ни в
+// domains/service, ни в domains/shop, тем же приёмом, что workScheduleRoot
+// выше. Единственный вход создания задачи (POST) используется и напрямую с
+// фронта, и accounting-ом (EnsureRuleTaskForPeriodService, через CommandBus)
+// при авто-пересоздании на новый период регулярного правила.
+const tasksRoot = `/${v1}/tasks`;
+
 // Баланс сотрудника (PRD 2 docs/payroll-closing-and-accrual, Фаза 8b) —
 // баланс ОБЩИЙ по сотруднику: один остаток и одна лента на employeeId, без
 // деления на направления, поэтому и эндпоинты общие — под /v1/accounting,
@@ -199,6 +207,14 @@ export const routesV1 = {
         // Состав смены на дату (Фаза 4, docs/employee-work-schedule) —
         // источник данных мобильного экрана «Отдел сегодня».
         shift: `${workScheduleRoot}/shift`,
+    },
+    // Задача (replace-bitrix-task-integration) — см. комментарий у
+    // tasksRoot выше. byId — карточка задачи (GET); changeStatus — PATCH
+    // self-service перехода статуса (specs/tasks/spec.md).
+    tasks: {
+        root: tasksRoot,
+        byId: `${tasksRoot}/:id`,
+        changeStatus: `${tasksRoot}/:id/status`,
     },
     // Общий баланс сотрудника (PRD 2, Фаза 8b, см. комментарий у
     // accountingBalanceRoot выше): остаток и лента по employeeId,

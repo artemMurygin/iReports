@@ -123,33 +123,48 @@ const usedProductSoldSalaryRuleSchema = z.object({
     config: usedProductSoldSalaryConfigSchema,
 });
 
-// ========================== За выполнение задачи Bitrix24 ========================== //
+// ========================== За выполнение задачи ========================== //
 
-// Независимая копия сервисного taskCompletionSalaryConfigSchema
-// (contracts/commands/salary-rule.ts) — issue #57, тот же приём, что и у
-// остальных типов правил этого файла ("не смешивай контракты" направлений
-// через общий discriminatedUnion). Семантика полей идентична: bitrixTaskTitle/
-// taskDescription — название/описание создаваемой задачи, isRecurring —
-// разовая vs пересоздаваемая на каждый период задача, deadlineTemplate —
-// ISO-дата (для регулярного правила используется только число месяца), см.
-// design.md Decision 1/4.
-const taskCompletionShopSalaryConfigSchema = z.object({
-    bitrixTaskTitle: z.string(),
-    taskDescription: z.string().optional(),
+// Независимая копия сервисной пары taskCompletionSalaryConfigRequestSchema/
+// ...ResponseSchema (contracts/commands/salary-rule.ts) — issue #57, тот же приём, что и у
+// остальных типов правил этого файла ("не смешивай контракты" направлений через общий
+// discriminatedUnion). Семантика полей идентична (replace-bitrix-task-integration, design.md
+// решение 2/4): taskId (только запрос) — id уже созданной отдельным запросом `POST /v1/tasks`
+// задачи, сохраняется как config.taskIdByPeriod[текущийПериод]; taskTitleTemplate/
+// taskDescriptionTemplate/deadlineTemplate — шаблон ТОЛЬКО для авто-пересоздания задачи регулярного
+// правила на новый период, не для самой первой задачи; isRecurring — разовая vs пересоздаваемая на
+// каждый период задача; taskIdByPeriod (только ответ) — карта "период → задача", читается, но не
+// редактируется формой.
+const taskCompletionShopSalaryConfigRequestSchema = z.object({
+    taskId: z.string(),
+    taskTitleTemplate: z.string(),
+    taskDescriptionTemplate: z.string().optional(),
     isRecurring: z.boolean(),
     deadlineTemplate: z.string(),
     // Сумма начисления по умолчанию — зеркало service (см.
-    // taskCompletionSalaryConfigSchema в salary-rule.ts), независимая копия
-    // (issue #57).
+    // taskCompletionSalaryConfigRequestSchema в salary-rule.ts), независимая копия (issue #57).
     defaultAmount: z.number().int().nonnegative(),
 });
+
+export type TaskCompletionShopSalaryConfigRequest = z.infer<
+    typeof taskCompletionShopSalaryConfigRequestSchema
+>;
+
+const taskCompletionShopSalaryConfigResponseSchema =
+    taskCompletionShopSalaryConfigRequestSchema
+        .omit({ taskId: true })
+        .extend({ taskIdByPeriod: z.record(z.string(), z.string()) });
+
+export type TaskCompletionShopSalaryConfigResponse = z.infer<
+    typeof taskCompletionShopSalaryConfigResponseSchema
+>;
 
 const taskCompletionShopSalaryRuleSchema = z.object({
     id: z.string().optional(),
     type: z.literal('TaskCompletion'),
     name: z.string(),
     targetRole: targetRoleSchema,
-    config: taskCompletionShopSalaryConfigSchema,
+    config: taskCompletionShopSalaryConfigRequestSchema,
 });
 
 // ========================== Итоговый дискриминированный союз ========================== //
@@ -173,11 +188,22 @@ export type ShopSalaryRuleRequest = z.infer<typeof shopSalaryRuleRequestSchema>;
 // (shop-motivation-schema.ts) — предзаполнение формы редактирования на
 // фронте, в отличие от shopSalaryRuleRequestSchema, требует знать id уже
 // существующего правила.
+// taskCompletion — не .extend({ id }) поверх request-схемы: config различается между запросом и
+// ответом (taskId vs taskIdByPeriod, см. taskCompletionShopSalaryConfigResponseSchema выше), форма
+// строится заново с config-схемой ответа (тот же приём, что и в salary-rule.ts).
+const taskCompletionShopSalaryRuleResponseSchema = z.object({
+    id: z.string(),
+    type: z.literal('TaskCompletion'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: taskCompletionShopSalaryConfigResponseSchema,
+});
+
 const shopSalaryRuleResponseSchema = z.discriminatedUnion('type', [
     payPerHourShopSalaryRuleSchema.extend({ id: z.string() }),
     productSoldSalaryRuleSchema.extend({ id: z.string() }),
     usedProductSoldSalaryRuleSchema.extend({ id: z.string() }),
-    taskCompletionShopSalaryRuleSchema.extend({ id: z.string() }),
+    taskCompletionShopSalaryRuleResponseSchema,
 ]);
 
 export type ShopSalaryRuleResponse = z.infer<
@@ -199,7 +225,8 @@ export {
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,
     usedProductSoldSalaryConfigSchema,
-    taskCompletionShopSalaryConfigSchema,
+    taskCompletionShopSalaryConfigRequestSchema,
+    taskCompletionShopSalaryConfigResponseSchema,
     salaryRuleTypeInfoSchema as shopSalaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema as shopSalaryRuleTypesResponseSchema,
 };

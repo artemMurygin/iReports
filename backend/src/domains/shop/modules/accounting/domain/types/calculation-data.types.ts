@@ -3,7 +3,7 @@
 // (BuildShopCalculationContextService — по образцу
 // build-service-calculation-context.service.ts сервиса). Один раз на всю
 // мотивационную схему сотрудника и передаётся неизменным во все его правила.
-import type { ShopTaskStatus } from '../value-objects/task-status.value-object';
+import type { ShopSalaryTask } from '../entities/salary-task/salary-task.entity';
 
 export interface ShopProductSoldErpItem {
     // MoySkladDemandPosition.id — источник дедупликации "правило × позиция"
@@ -85,19 +85,15 @@ export interface ShopCalculationErpData {
     // переплатит сотруднику. Используется и UsedProductSold (Фаза 13) —
     // его необязательная категория раскрывается тем же механизмом.
     categoryDescendantFolderIds?: Record<string, string[]>;
-    // Раздел 15 tasks.md (add-task-based-salary-rule) — зеркало
-    // taskCompletionStatuses ServiceCalculationErpData сервиса (раздел 10).
+    // openspec/changes/replace-bitrix-task-integration, design.md решение 5 —
+    // зеркало taskCompletionStatuses ServiceCalculationErpData сервиса.
     // Источник TaskCompletionShop.calculate() — ключ SalaryRule.id.
-    // Заполняется BuildShopCalculationContextService (раздел 17, ещё не
-    // реализован на этом шаге) через ShopSalaryTaskRepository.
-    // findByRuleAndPeriod для каждого TaskCompletion-правила. Значение — не
-    // голый ShopTaskStatus, а пара {bitrixTaskId, status}: TaskCompletionShop.
-    // calculate() нужен bitrixTaskId, чтобы построить CalculationSourceRef
-    // (id/link, см. buildBitrixTaskLink), а сам статус не несёт его.
+    // Заполняется task-completion-statuses.builder.ts (вызывается из
+    // BuildShopCalculationContextService/GetShopDepartmentSalaryReportService)
+    // напрямую через TASK_REPOSITORY.findManyByIds() (src/modules/tasks, без
+    // Port/Adapter) — каждый Task сразу превращается в ShopSalaryTask
+    // (SalaryTask.create({taskId, status})), эфемерную Entity этого домена.
     // Опционально — так же, как productSoldItems, чтобы не ломать
     // существующие фикстуры контекста без TaskCompletion-правил.
-    taskCompletionStatuses?: Record<
-        string,
-        { bitrixTaskId: string; status: ShopTaskStatus }
-    >;
+    taskCompletionStatuses?: Record<string, ShopSalaryTask>;
 }

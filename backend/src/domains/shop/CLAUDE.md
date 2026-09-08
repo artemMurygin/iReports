@@ -115,8 +115,14 @@ domains/shop/
 зеркала, но отдельные файлы), включая расчётный период, документ начисления и зарплатные отчёты (см.
 ниже — это тоже полностью самостоятельные классы, а не переиспользование generic-по-`direction`
 классов `service`). Собственный реестр (`shopSalaryRuleRegistry`) и фабрика
-(`ShopSalaryRuleFactory`) трёх типов правил (`PayPerHourEntity`/`ProductSoldEntity`/
-`UsedProductSoldEntity`) — ролей инженера в `shop` нет.
+(`ShopSalaryRuleFactory`) четырёх типов правил (`PayPerHourEntity`/`ProductSoldEntity`/
+`UsedProductSoldEntity`/`TaskCompletionShop`) — ролей инженера в `shop` нет.
+- **`TaskCompletionShop`** (`replace-bitrix-task-integration`) — независимая от
+  `domains/service/modules/accounting`'s `TaskCompletion` реализация (свой класс, своя
+  `SalaryTask`-entity, свой `EnsureRuleTaskForPeriodService`), но ссылается на тот же сквозной модуль
+  `src/modules/tasks` (`backend/CLAUDE.md`, раздел «Integrations») — см.
+  `domains/service/CLAUDE.md`, раздел `modules/accounting`, за подробным описанием паттерна
+  `config.taskIdByPeriod`/`SalaryTask.isCompleted()`, зеркалируется здесь без изменений по сути.
 
 - Роли правил: `ONLINE_MANAGER`/`OFFLINE_MANAGER` — на уровне **отгрузки**
   (`MoySkladDemand.onlineManagerId`/`offlineManagerId`, `role-source.ts`); `ONLINE_PURCHASER`/

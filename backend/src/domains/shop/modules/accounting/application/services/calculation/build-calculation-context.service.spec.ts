@@ -4,9 +4,8 @@ import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sale
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/sales-performance.value-object';
 import { Period } from '@/shared/domain/period.value-object';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
-import { ShopTaskStatus } from '@/domains/shop/modules/accounting/domain/value-objects/task-status.value-object';
+import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
+import type { Task } from '@/modules/tasks/domain/entities/task.entity';
 import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 
@@ -41,10 +40,9 @@ describe('BuildShopCalculationContextService', () => {
         // тест не отличил бы "резолвим один раз на сотрудника" от "резолвим
         // по каждой уникальной category".
         performanceByCategory?: Record<string, ShopSalesPerformance | null>;
-        // Раздел 17 tasks.md (add-task-based-salary-rule) —
-        // findManyByRulesAndPeriod фейка SHOP_SALARY_TASK_REPOSITORY,
+        // findManyByIds фейка TASK_REPOSITORY (src/modules/tasks),
         // переопределяемый тестами erpData.taskCompletionStatuses ниже.
-        findManyByRulesAndPeriod?: jest.Mock;
+        findManyByIds?: jest.Mock;
     }) => {
         const findEmployeeIdentities = jest.fn().mockResolvedValue([]);
         const findHoursWorked = jest
@@ -93,17 +91,15 @@ describe('BuildShopCalculationContextService', () => {
             listForDepartment: jest.fn().mockResolvedValue([]),
         };
 
-        const findManyByRulesAndPeriod =
-            overrides?.findManyByRulesAndPeriod ??
-            jest.fn().mockResolvedValue([]);
+        const findManyByIds =
+            overrides?.findManyByIds ?? jest.fn().mockResolvedValue([]);
         const taskRepo = {
-            findByRuleAndPeriod: jest.fn(),
-            findActiveForDirection: jest.fn(),
             insert: jest.fn(),
-            save: jest.fn(),
-            findManyByRulesAndPeriod,
-            findActiveByRule: jest.fn(),
-        } as unknown as ShopSalaryTaskRepositoryPort;
+            update: jest.fn(),
+            findById: jest.fn(),
+            findManyByIds,
+            findMany: jest.fn(),
+        } as unknown as TaskRepositoryPort;
 
         const service = new BuildShopCalculationContextService(
             dataSource,
@@ -116,7 +112,7 @@ describe('BuildShopCalculationContextService', () => {
             dataSource,
             salesPerformanceReader,
             taskRepo,
-            findManyByRulesAndPeriod,
+            findManyByIds,
             findEmployeeIdentities,
             findHoursWorked,
             findProductSoldItems,
@@ -358,21 +354,22 @@ describe('BuildShopCalculationContextService', () => {
         });
     });
 
-    // Раздел 17 tasks.md (add-task-based-salary-rule) —
+    // openspec/changes/replace-bitrix-task-integration, design.md решение 5 —
     // BuildShopCalculationContextService заполняет erpData.taskCompletionStatuses
-    // статусами связанных ShopSalaryTask ТЕКУЩЕГО периода для всех
-    // TaskCompletion-правил переданной схемы (зеркало
-    // BuildServiceCalculationContextService.build, раздел 12, design.md
-    // Decision 7, calculation-data.types.ts). Остальные поля erpData здесь
-    // не переиспытываются — покрыты тестами выше.
+    // статусами ShopSalaryTask, построенными по TASK_REPOSITORY.findManyByIds
+    // (src/modules/tasks), для всех TaskCompletion-правил переданной схемы,
+    // у которых есть taskId за ТЕКУЩИЙ период (config.taskIdByPeriod).
+    // Остальные поля erpData здесь не переиспытываются — покрыты тестами
+    // выше.
     describe('taskCompletionStatuses', () => {
-        const buildTaskCompletionRule = () =>
+        const buildTaskCompletionRule = (taskId = 'task-1') =>
             TaskCompletionShop.create({
                 type: 'TaskCompletion',
                 name: 'Собрать отчёт по браку',
                 targetRole: 'ONLINE_MANAGER',
                 config: {
-                    bitrixTaskTitle: 'Собрать отчёт по браку за месяц',
+                    taskId,
+                    taskTitleTemplate: 'Собрать отчёт по браку за месяц',
                     isRecurring: true,
                     deadlineTemplate: '2026-08-05',
                     defaultAmount: 5000,
@@ -380,42 +377,40 @@ describe('BuildShopCalculationContextService', () => {
             });
 
         it('заполняет taskCompletionStatuses найденной задачей текущего периода', async () => {
-            const rule = buildTaskCompletionRule();
-            const task = ShopSalaryTask.create({
-                salaryRuleId: rule.id,
-                period: Period.create('2026-08'),
-                deadline: new Date('2026-08-05T00:00:00.000Z'),
-                isRecurring: true,
-                bitrixTaskId: 'bx-1',
-                taskStatus: ShopTaskStatus.fromRaw('5'),
-            });
-            const findManyByRulesAndPeriod = jest
-                .fn()
-                .mockResolvedValue([task]);
-            const { service } = buildService({ findManyByRulesAndPeriod });
+            const rule = buildTaskCompletionRule('task-1');
+            const taskId = Object.values(rule.config.taskIdByPeriod)[0];
+            const task = {
+                id: taskId,
+                status: { code: 'CLOSED_SUCCESSFULLY' },
+            } as unknown as Task;
+            const findManyByIds = jest.fn().mockResolvedValue([task]);
+            const { service } = buildService({ findManyByIds });
+            const currentPeriod = Object.keys(rule.config.taskIdByPeriod)[0];
 
-            const context = await service.build(Period.create('2026-08'), 1, [
-                rule,
-            ]);
-
-            expect(findManyByRulesAndPeriod).toHaveBeenCalledWith(
-                [rule.id],
-                '2026-08',
+            const context = await service.build(
+                Period.create(currentPeriod),
+                1,
+                [rule],
             );
+
+            expect(findManyByIds).toHaveBeenCalledWith([taskId]);
             const entry = context.erpData.taskCompletionStatuses?.[rule.id];
-            expect(entry?.bitrixTaskId).toBe('bx-1');
-            expect(entry?.status.getValue()).toBe('5');
-            expect(entry?.status.isDone()).toBe(true);
+            expect(entry?.taskId).toBe(taskId);
+            expect(entry?.status).toBe('CLOSED_SUCCESSFULLY');
+            expect(entry?.isCompleted()).toBe(true);
         });
 
         it('TaskCompletion-правило без найденной задачи не попадает в taskCompletionStatuses', async () => {
-            const rule = buildTaskCompletionRule();
-            const findManyByRulesAndPeriod = jest.fn().mockResolvedValue([]);
-            const { service } = buildService({ findManyByRulesAndPeriod });
+            const rule = buildTaskCompletionRule('task-1');
+            const findManyByIds = jest.fn().mockResolvedValue([]);
+            const { service } = buildService({ findManyByIds });
+            const currentPeriod = Object.keys(rule.config.taskIdByPeriod)[0];
 
-            const context = await service.build(Period.create('2026-08'), 1, [
-                rule,
-            ]);
+            const context = await service.build(
+                Period.create(currentPeriod),
+                1,
+                [rule],
+            );
 
             expect(context.erpData.taskCompletionStatuses).toEqual({});
         });
@@ -427,14 +422,14 @@ describe('BuildShopCalculationContextService', () => {
                 targetRole: 'ONLINE_MANAGER',
                 config: { price: 100 },
             });
-            const findManyByRulesAndPeriod = jest.fn().mockResolvedValue([]);
-            const { service } = buildService({ findManyByRulesAndPeriod });
+            const findManyByIds = jest.fn().mockResolvedValue([]);
+            const { service } = buildService({ findManyByIds });
 
             const context = await service.build(Period.create('2026-08'), 1, [
                 payPerHour,
             ]);
 
-            expect(findManyByRulesAndPeriod).not.toHaveBeenCalled();
+            expect(findManyByIds).not.toHaveBeenCalled();
             expect(context.erpData.taskCompletionStatuses).toEqual({});
         });
     });

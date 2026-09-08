@@ -11,16 +11,18 @@ import type { ShopMotivationTarget } from '@/domains/shop/modules/accounting/dom
 import { ShopSalaryRuleFactory } from '@/domains/shop/modules/accounting/domain/factories/salary-rule.factory';
 import { NotFoundException } from '@/shared/exceptions';
 import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
-import type { BitrixTasksGatewayPort } from '@/integrations/bitrix/ports/bitrix-tasks-gateway.port';
-import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
-import { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
-import { ShopTaskStatus } from '@/domains/shop/modules/accounting/domain/value-objects/task-status.value-object';
-import { Period } from '@/shared/domain/period.value-object';
+import type { CancelTaskForRuleDeletionService } from '@/modules/tasks/application/services/cancel-task-for-rule-deletion.service';
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 
 // Зеркало domains/service/modules/accounting/application/command/
-// update-motivation-schema.handler.spec.ts (Фаза "Редактирование
-// зарплатных схем", issue #57) — независимая копия для направления shop.
+// update-motivation-schema.handler.spec.ts (issue #57) — независимая копия
+// для направления shop.
+//
+// openspec/changes/replace-bitrix-task-integration, design.md решение 3/5 —
+// закрытие задачи Bitrix24 (closeTask) заменено на
+// CancelTaskForRuleDeletionService.cancel(taskId) (src/modules/tasks) для
+// КАЖДОГО taskId из config.taskIdByPeriod удаляемого TaskCompletion-правила
+// (разовое правило — одна запись, регулярное — по одной на период).
 describe('UpdateShopMotivationSchemaHandler', () => {
     const buildExistingSchema = (rulesCount = 1): ShopMotivationSchema => {
         const rules = Array.from({ length: rulesCount }, (_, index) =>
@@ -47,10 +49,7 @@ describe('UpdateShopMotivationSchemaHandler', () => {
     const buildHandler = (
         existingSchema: ShopMotivationSchema | null,
         overrides?: {
-            closeTaskImpl?: () => Promise<void>;
-            findActiveByRuleImpl?: (
-                ruleId: string,
-            ) => Promise<ShopSalaryTask[]>;
+            cancelImpl?: (taskId: string) => Promise<void>;
         },
     ) => {
         const findById = jest
@@ -86,38 +85,21 @@ describe('UpdateShopMotivationSchemaHandler', () => {
             .mockResolvedValue({ id: 'rule-id' });
         const commandBus = { execute } as unknown as CommandBus;
 
-        const closeTask = jest
+        const cancel = jest
             .fn()
             .mockImplementation(
-                overrides?.closeTaskImpl ?? (() => Promise.resolve()),
+                overrides?.cancelImpl ?? (() => Promise.resolve()),
             );
-        const tasksGateway: BitrixTasksGatewayPort = {
-            createTask: jest.fn(),
-            closeTask,
-            updateDeadline: jest.fn(),
-        };
-
-        const findActiveByRule = jest
-            .fn()
-            .mockImplementation(
-                overrides?.findActiveByRuleImpl ?? (() => Promise.resolve([])),
-            );
-        const salaryTaskRepo: ShopSalaryTaskRepositoryPort = {
-            findByRuleAndPeriod: jest.fn(),
-            findActiveForDirection: jest.fn(),
-            insert: jest.fn(),
-            save: jest.fn(),
-            findManyByRulesAndPeriod: jest.fn().mockResolvedValue([]),
-            findActiveByRule,
-        };
+        const cancelTaskForRuleDeletion = {
+            cancel,
+        } as unknown as CancelTaskForRuleDeletionService;
 
         const handler = new UpdateShopMotivationSchemaHandler(
             shopMotivationSchemaRepo as ShopMotivationSchemaRepositoryPort,
             shopSalaryRuleRepo as ShopSalaryRuleRepositoryPort,
             unitOfWork,
             commandBus,
-            tasksGateway,
-            salaryTaskRepo,
+            cancelTaskForRuleDeletion,
         );
 
         return {
@@ -128,8 +110,7 @@ describe('UpdateShopMotivationSchemaHandler', () => {
             updateRule,
             run,
             execute,
-            closeTask,
-            findActiveByRule,
+            cancel,
         };
     };
 
@@ -320,26 +301,40 @@ describe('UpdateShopMotivationSchemaHandler', () => {
         });
     });
 
-    // Раздел 17 tasks.md (add-task-based-salary-rule), design.md Decision 6 —
-    // зеркало UpdateMotivationSchemaHandler направления service (раздел 12,
-    // issue #57 — независимая копия): при исключении правила TaskCompletion
-    // из пересобираемого списка связанная задача закрывается в Bitrix24 ДО
-    // удаления записи правила; сбой Bitrix24 не блокирует удаление
-    // (внешняя система, расхождение обнаруживает крон синхронизации
-    // статуса, раздел 8).
+    // openspec/changes/replace-bitrix-task-integration, design.md решение
+    // 3/5 — при исключении правила TaskCompletion из пересобираемого
+    // списка КАЖДЫЙ taskId из его config.taskIdByPeriod отменяется через
+    // CancelTaskForRuleDeletionService.cancel() ДО удаления записи правила;
+    // сама CancelTaskForRuleDeletionService уже no-op на терминальной
+    // задаче (покрыто её собственным тестом, src/modules/tasks) — здесь
+    // проверяем только то, что хендлер её действительно вызывает по
+    // каждому taskId удаляемых правил.
     describe('правило TaskCompletion в старом наборе', () => {
-        const buildSchemaWithTaskRule = () => {
-            const taskRule = TaskCompletionShop.create({
-                type: 'TaskCompletion',
+        // ShopSalaryRule — плоский duck-typed интерфейс (см. domain/types/
+        // salary-rule.types.ts) — фейковый объект с заданным config
+        // достаточен для этого хендлера (он лишь читает
+        // rule.config.taskIdByPeriod и передаёт rule дальше в
+        // TaskCompletionShop.restore() как существующую карту), реальный
+        // класс/восстановление через фабрику не обязательны и только
+        // усложнили бы контроль над содержимым taskIdByPeriod в тесте.
+        const buildSchemaWithTaskRule = (
+            taskIdByPeriod: Record<string, string> = { '2026-08': 'task-9' },
+        ) => {
+            const taskRule: ShopSalaryRule = {
+                id: 'task-rule-1',
                 name: 'Сдать отчёт',
+                type: 'TaskCompletion',
                 targetRole: 'ONLINE_MANAGER',
                 config: {
-                    bitrixTaskTitle: 'Сдать отчёт по браку',
+                    taskIdByPeriod,
+                    taskTitleTemplate: 'Сдать отчёт по браку',
                     isRecurring: true,
                     deadlineTemplate: '2026-08-05',
                     defaultAmount: 5000,
                 },
-            });
+                updatedAt: new Date('2026-08-01T00:00:00.000Z'),
+                calculate: () => null,
+            };
             const schema = new ShopMotivationSchema({
                 id: 'schema-id',
                 props: {
@@ -355,29 +350,19 @@ describe('UpdateShopMotivationSchemaHandler', () => {
             return { schema, taskRule };
         };
 
-        it('закрывает связанную активную задачу Bitrix24 ДО удаления правил', async () => {
+        it('отменяет все задачи (по каждому taskId taskIdByPeriod) удаляемого правила ДО удаления записи', async () => {
             await withRequestContext(async () => {
-                const { schema, taskRule } = buildSchemaWithTaskRule();
-                const activeTask = ShopSalaryTask.create({
-                    salaryRuleId: taskRule.id,
-                    period: Period.create('2026-08'),
-                    deadline: new Date('2026-08-05T00:00:00.000Z'),
-                    isRecurring: true,
-                    bitrixTaskId: 'bx-9',
-                    taskStatus: ShopTaskStatus.fromRaw('2'),
+                const { schema, taskRule } = buildSchemaWithTaskRule({
+                    '2026-07': 'task-7',
+                    '2026-08': 'task-8',
                 });
                 const calls: string[] = [];
-                const { handler, closeTask, findActiveByRule, deleteByIds } =
-                    buildHandler(schema, {
-                        findActiveByRuleImpl: (ruleId) => {
-                            expect(ruleId).toBe(taskRule.id);
-                            return Promise.resolve([activeTask]);
-                        },
-                        closeTaskImpl: () => {
-                            calls.push('closeTask');
-                            return Promise.resolve();
-                        },
-                    });
+                const { handler, cancel, deleteByIds } = buildHandler(schema, {
+                    cancelImpl: (taskId) => {
+                        calls.push(`cancel:${taskId}`);
+                        return Promise.resolve();
+                    },
+                });
                 deleteByIds.mockImplementation(() => {
                     calls.push('deleteByIds');
                     return Promise.resolve();
@@ -390,48 +375,21 @@ describe('UpdateShopMotivationSchemaHandler', () => {
 
                 await handler.execute(command);
 
-                expect(findActiveByRule).toHaveBeenCalledWith(taskRule.id);
-                expect(closeTask).toHaveBeenCalledWith('bx-9');
+                expect(cancel).toHaveBeenCalledWith('task-7');
+                expect(cancel).toHaveBeenCalledWith('task-8');
                 expect(deleteByIds).toHaveBeenCalledWith([taskRule.id]);
-                expect(calls).toEqual(['closeTask', 'deleteByIds']);
+                expect(calls).toEqual([
+                    'cancel:task-7',
+                    'cancel:task-8',
+                    'deleteByIds',
+                ]);
             });
         });
 
-        it('ошибка closeTask НЕ блокирует удаление правила — только логируется', async () => {
-            await withRequestContext(async () => {
-                const { schema, taskRule } = buildSchemaWithTaskRule();
-                const activeTask = ShopSalaryTask.create({
-                    salaryRuleId: taskRule.id,
-                    period: Period.create('2026-08'),
-                    deadline: new Date('2026-08-05T00:00:00.000Z'),
-                    isRecurring: true,
-                    bitrixTaskId: 'bx-9',
-                    taskStatus: ShopTaskStatus.fromRaw('2'),
-                });
-                const { handler, deleteByIds } = buildHandler(schema, {
-                    findActiveByRuleImpl: () => Promise.resolve([activeTask]),
-                    closeTaskImpl: () =>
-                        Promise.reject(new Error('bitrix close down')),
-                });
-                const command = new UpdateShopMotivationSchemaCommand({
-                    motivationSchemaId: schema.id,
-                    name: 'Новое название',
-                    rules: [],
-                });
-
-                await expect(handler.execute(command)).resolves.toEqual({
-                    id: schema.id,
-                });
-
-                expect(deleteByIds).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        it('схема без правил TaskCompletion — closeTask вовсе не вызывается (регрессия)', async () => {
+        it('схема без правил TaskCompletion — cancel вовсе не вызывается (регрессия)', async () => {
             await withRequestContext(async () => {
                 const existingSchema = buildExistingSchema();
-                const { handler, closeTask, findActiveByRule } =
-                    buildHandler(existingSchema);
+                const { handler, cancel } = buildHandler(existingSchema);
                 const command = new UpdateShopMotivationSchemaCommand({
                     motivationSchemaId: 'schema-id',
                     name: 'Новое название',
@@ -440,26 +398,24 @@ describe('UpdateShopMotivationSchemaHandler', () => {
 
                 await handler.execute(command);
 
-                expect(findActiveByRule).not.toHaveBeenCalled();
-                expect(closeTask).not.toHaveBeenCalled();
+                expect(cancel).not.toHaveBeenCalled();
             });
         });
 
         // Регрессия бага: правка TaskCompletion-правила (id сохранился в
-        // payload) не должна закрывать/пересоздавать привязанную задачу
-        // Bitrix24 — только PATCH, реально исключающий правило из набора,
-        // закрывает задачу (см. тест выше).
-        it('правило TaskCompletion сохранилось в новом наборе (тот же id) — задача Bitrix24 НЕ закрывается и правило не пересоздаётся', async () => {
+        // payload) не должна отменять привязанные задачи — только PATCH,
+        // реально исключающий правило из набора, отменяет их (см. тест
+        // выше). taskIdByPeriod прежних периодов СОХРАНЯЕТСЯ (не
+        // перезаписывается целиком) — TaskCompletionShop.restore() сливает
+        // новый taskId (текущего периода, из тела запроса) с уже
+        // существующей картой, а не заменяет её.
+        it('правило TaskCompletion сохранилось в новом наборе (тот же id) — задачи НЕ отменяются, прежние записи taskIdByPeriod сохраняются', async () => {
             await withRequestContext(async () => {
-                const { schema, taskRule } = buildSchemaWithTaskRule();
-                const {
-                    handler,
-                    closeTask,
-                    findActiveByRule,
-                    deleteByIds,
-                    updateRule,
-                    execute,
-                } = buildHandler(schema);
+                const { schema, taskRule } = buildSchemaWithTaskRule({
+                    '2026-08': 'task-8',
+                });
+                const { handler, cancel, deleteByIds, updateRule, execute } =
+                    buildHandler(schema);
                 const command = new UpdateShopMotivationSchemaCommand({
                     motivationSchemaId: schema.id,
                     name: 'Новое название',
@@ -470,7 +426,8 @@ describe('UpdateShopMotivationSchemaHandler', () => {
                             name: 'Сдать отчёт (правка)',
                             targetRole: 'ONLINE_MANAGER',
                             config: {
-                                bitrixTaskTitle: 'Сдать отчёт по браку',
+                                taskId: 'task-9',
+                                taskTitleTemplate: 'Сдать отчёт по браку',
                                 isRecurring: true,
                                 deadlineTemplate: '2026-08-05',
                                 defaultAmount: 6000,
@@ -481,14 +438,21 @@ describe('UpdateShopMotivationSchemaHandler', () => {
 
                 await handler.execute(command);
 
-                expect(findActiveByRule).not.toHaveBeenCalled();
-                expect(closeTask).not.toHaveBeenCalled();
+                expect(cancel).not.toHaveBeenCalled();
                 expect(deleteByIds).toHaveBeenCalledWith([]);
                 expect(execute).not.toHaveBeenCalled();
                 expect(updateRule).toHaveBeenCalledTimes(1);
-                const [entity] = updateRule.mock.calls[0];
+                const [entity] = updateRule.mock.calls[0] as [
+                    TaskCompletionShop,
+                ];
                 expect(entity.id).toBe(taskRule.id);
                 expect(entity.name).toBe('Сдать отчёт (правка)');
+                // Старая запись сохранена; новая (текущий период) добавлена
+                // поверх неё — restore() сливает, а не заменяет карту.
+                expect(entity.config.taskIdByPeriod['2026-08']).toBe('task-8');
+                expect(Object.values(entity.config.taskIdByPeriod)).toContain(
+                    'task-9',
+                );
             });
         });
     });

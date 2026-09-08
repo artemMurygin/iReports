@@ -2,7 +2,8 @@ import { randomUUID } from 'crypto';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import { buildBitrixTaskLink } from '@/integrations/bitrix/bitrix-task-link-builder';
+import { Period } from '@/shared/domain/period.value-object';
+import type { TaskCompletionSalaryConfigRequest } from 'ireports-contracts';
 import {
     CreateSalaryRuleProps,
     SalaryRule,
@@ -12,16 +13,19 @@ import {
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 
-// Раздел 10 tasks.md (add-task-based-salary-rule): правило «за выполнение
-// задачи» — единственный тип правила сервиса, чей calculate() может вернуть
-// null (см. domain/types/salary-rule.types.ts, SalaryRule.calculate()) —
-// spec: service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения.
+// replace-bitrix-task-integration, design.md решение 2/4/5: правило «за
+// выполнение задачи» — единственный тип правила сервиса, чей calculate()
+// может вернуть null (см. domain/types/salary-rule.types.ts,
+// SalaryRule.calculate()) — spec:
+// service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения.
 //
-// Связанная задача Bitrix24 (SalaryTask, раздел 9) не хранится в props
-// правила и не читается репозиторием отсюда напрямую (правило не ходит в БД
-// само, см. calculation-context.ts) — её статус/bitrixTaskId приходят через
-// context.erpData.taskCompletionStatuses, заполняемый
-// BuildServiceCalculationContextService (раздел 12) по ruleId (this.id).
+// Связанная задача (модуль src/modules/tasks) не хранится в props правила
+// целиком и не читается репозиторием отсюда напрямую (правило не ходит в БД
+// само, см. calculation-context.ts) — только её id, в
+// config.taskIdByPeriod; статус приходит через
+// context.erpData.taskCompletionStatuses (SalaryTask, построенная
+// task-completion-statuses.builder.ts), заполняемый
+// BuildServiceCalculationContextService по ruleId (this.id).
 export class TaskCompletion
     extends Entity<TaskCompletionSalaryRule>
     implements SalaryRule
@@ -44,6 +48,10 @@ export class TaskCompletion
         return this.props.config;
     }
 
+    // design.md решение 4: приходящий в теле запроса taskId (id уже
+    // существующей, отдельно созданной задачи) просто сохраняется в
+    // config.taskIdByPeriod[текущийПериод] — CreateSalaryRuleHandler не
+    // делает ни одного вызова в tasks.
     static create(rule: CreateSalaryRuleProps): TaskCompletion {
         return new TaskCompletion({
             id: randomUUID(),
@@ -51,30 +59,34 @@ export class TaskCompletion
                 name: rule.name,
                 type: 'TaskCompletion',
                 targetRole: rule.targetRole,
-                config: rule.config as TaskCompletionSalaryConfig,
+                config: buildTaskCompletionConfig(
+                    rule.config as TaskCompletionSalaryConfigRequest,
+                ),
             },
         });
     }
 
     // spec: service/accounting#requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
     //
-    // null — задача ещё не заведена (нет записи в erpData.taskCompletionStatuses
-    // за этот проход) ИЛИ статус связанной задачи ещё не «Выполнено».
-    // amount ВСЕГДА равен config.defaultAmount (сумма по умолчанию, заданная
-    // при создании правила) — requiresManualInput ВСЕГДА true при статусе
-    // Done, руководитель по-прежнему обязан явно подтвердить/изменить сумму
-    // и указать комментарий при проведении (SetTaskCompletionLineReward,
-    // design.md Decision 5); действующая сумма живёт только на
-    // SalaryAccrualLine и не пересчитывается здесь, независимо от того,
-    // вводил ли руководитель сумму на уже существующем документе начисления
-    // ранее (тот же принцип, что и adjust() у других типов правил — не
-    // влияет на live-пересчёт открытого периода).
+    // null — задача этого периода ещё не заведена (нет записи в
+    // erpData.taskCompletionStatuses за этот проход, см. builder) ИЛИ
+    // SalaryTask.isCompleted() связанной задачи — false (design.md решение
+    // 3: только статус «Закрыта успешно» запускает начисление, не
+    // «Выполнена» и не любой другой статус — бизнес-правило описано в самой
+    // SalaryTask, не здесь). amount ВСЕГДА равен config.defaultAmount
+    // (сумма по умолчанию, заданная при создании правила) —
+    // requiresManualInput ВСЕГДА true, руководитель по-прежнему обязан явно
+    // подтвердить/изменить сумму и указать комментарий при проведении
+    // (SetTaskCompletionLineReward); действующая сумма живёт только на
+    // SalaryAccrualLine и не пересчитывается здесь (тот же принцип, что и
+    // adjust() у других типов правил — не влияет на live-пересчёт открытого
+    // периода).
     calculate(context: CalculationContext): CalculationLine | null {
         const erpData = context.erpData as
             ServiceCalculationErpData | undefined;
 
         const entry = erpData?.taskCompletionStatuses?.[this.id];
-        if (!entry || !entry.status.isDone()) {
+        if (!entry || !entry.isCompleted()) {
             return null;
         }
 
@@ -82,28 +94,47 @@ export class TaskCompletion
             ruleId: this.id,
             amount: this.props.config.defaultAmount,
             requiresManualInput: true,
-            sources: this.buildSources(entry.bitrixTaskId),
+            sources: this.buildSources(entry.taskId),
         };
     }
 
-    // design.md Decision 7 (add-task-based-salary-rule) — детализация строки
-    // показывает название/ссылку связанной задачи через существующий
-    // CalculationSourceRef, без нового UI-механизма.
-    //
-    // label — название задачи, как оно введено на самом правиле
-    // (config.bitrixTaskTitle) — это же значение уходит в Bitrix24 при
-    // создании задачи (tasks.task.add, раздел 12), поэтому не требует
-    // отдельного запроса за названием задачи из ERP.
-    private buildSources(bitrixTaskId: string) {
+    // Задача больше не живёт во внешней ERP (см. proposal.md → Why) —
+    // источник строки несёт только id связанной задачи, без
+    // человекочитаемого номера документа/ссылки в ERP (см.
+    // calculation-line.ts, CalculationSourceRef.label/link — опциональны
+    // именно для источников без такого документа, у 'taskCompletion'
+    // сегодня их нет).
+    private buildSources(taskId: string) {
         return [
             {
                 type: 'taskCompletion',
-                id: bitrixTaskId,
-                label: this.props.config.bitrixTaskTitle,
-                link: buildBitrixTaskLink(bitrixTaskId),
+                id: taskId,
             },
         ];
     }
 
     validate(): void {}
+}
+
+// Собирает домен-config из request-config — вызывается и TaskCompletion.create()
+// (существующий taskIdByPeriod ещё не заведён), и UpdateMotivationSchemaHandler
+// при правке уже существующего правила (existingTaskIdByPeriod — карта
+// прежнего правила, чтобы PATCH не терял привязку задач прошлых периодов
+// регулярного правила, см. design.md решение 4 — taskId запроса относится
+// только к ТЕКУЩЕМУ периоду).
+export function buildTaskCompletionConfig(
+    request: TaskCompletionSalaryConfigRequest,
+    existingTaskIdByPeriod: Record<string, string> = {},
+): TaskCompletionSalaryConfig {
+    return {
+        taskIdByPeriod: {
+            ...existingTaskIdByPeriod,
+            [Period.current().getValue()]: request.taskId,
+        },
+        taskTitleTemplate: request.taskTitleTemplate,
+        taskDescriptionTemplate: request.taskDescriptionTemplate,
+        isRecurring: request.isRecurring,
+        deadlineTemplate: request.deadlineTemplate,
+        defaultAmount: request.defaultAmount,
+    };
 }

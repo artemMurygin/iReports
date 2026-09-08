@@ -91,20 +91,32 @@ export type UsedProductSoldSalaryRule = {
     config: UsedProductSoldSalaryConfig;
 };
 
-// ========================== За выполнение задачи Bitrix24 ========================== //
+// ========================== За выполнение задачи ========================== //
 
-// Раздел 15 tasks.md (add-task-based-salary-rule), зеркало
-// TaskCompletionSalaryConfig/Rule сервиса (раздел 10, issue #57 —
-// независимая копия). bitrixTaskTitle — название задачи в Bitrix24
-// (используется и как CalculationSourceRef.label в
-// TaskCompletionShop.calculate(), см. design.md Decision 7 — без отдельного
-// round-trip в ERP за названием). isRecurring/deadlineTemplate — см.
-// EnsureShopSalaryTaskForPeriodService (раздел 16): deadlineTemplate —
-// ISO-дата, для разового правила берётся буквально, для регулярного
-// используется только число месяца.
+// openspec/changes/replace-bitrix-task-integration, design.md решение 2/4 —
+// зеркало TaskCompletionSalaryConfig сервиса (issue #57 — независимая
+// копия). Задача больше не создаётся ВМЕСТЕ с правилом (см.
+// CreateShopSalaryRuleHandler) — фронт создаёт её отдельным запросом
+// (`POST /v1/tasks`) и передаёт уже готовый taskId в теле запроса на
+// создание правила (contracts: TaskCompletionShopSalaryConfigRequest),
+// который сохраняется как taskIdByPeriod[текущийПериод] — это ЕДИНСТВЕННЫЙ
+// момент, где домен-объект строится из wire-формы запроса (см.
+// TaskCompletionShop.create()/.restore()).
+//
+// taskIdByPeriod — карта "период → id задачи" (design.md решение 2:
+// «Где теперь живёт связь "правило ↔ задача за период»): разовое правило
+// заводит ровно одну запись за всё время жизни, регулярное — по одной на
+// период. taskTitleTemplate/taskDescriptionTemplate/deadlineTemplate —
+// шаблон ТОЛЬКО для авто-пересоздания задачи регулярного правила на новый
+// период (EnsureShopSalaryTaskForPeriodService, design.md решение 4) — не
+// для самой первой задачи (та создана руками с произвольными заголовком/
+// описанием до появления правила, расхождение с шаблоном — осознанный
+// компромисс). deadlineTemplate — ISO-дата, для разового правила берётся
+// буквально, для регулярного используется только число месяца.
 export type TaskCompletionShopSalaryConfig = {
-    bitrixTaskTitle: string;
-    taskDescription?: string;
+    taskIdByPeriod: Record<string, string>;
+    taskTitleTemplate: string;
+    taskDescriptionTemplate?: string;
     isRecurring: boolean;
     deadlineTemplate: string;
     // Сумма начисления по умолчанию — зеркало

@@ -21,3 +21,4 @@ export * from './work-schedule';
 export * from './auth';
 export * from './session';
 export * from './roles';
+export * from './task';

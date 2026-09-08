@@ -12,6 +12,7 @@ import {
     ARGUMENT_NOT_PROVIDED,
     ARGUMENT_OUT_OF_RANGE,
     CONFLICT,
+    INVALID_TASK_TRANSITION,
     NOT_FOUND,
 } from './exception.codes';
 
@@ -21,6 +22,10 @@ const CODE_TO_HTTP_STATUS: Record<string, HttpStatus> = {
     [ARGUMENT_OUT_OF_RANGE]: HttpStatus.BAD_REQUEST,
     [CONFLICT]: HttpStatus.CONFLICT,
     [NOT_FOUND]: HttpStatus.NOT_FOUND,
+    // src/modules/tasks — недопустимый переход статуса задачи (граф
+    // TaskStatus.canTransitionTo) — конфликт с текущим состоянием задачи,
+    // тот же HTTP-статус, что и CONFLICT.
+    [INVALID_TASK_TRANSITION]: HttpStatus.CONFLICT,
 };
 
 /**

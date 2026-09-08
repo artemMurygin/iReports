@@ -14,7 +14,6 @@ import { RoappModule } from './domains/service/integrations/roapp/roapp.module';
 import { CustomApiRoappModule } from './domains/service/integrations/custom-api-roapp/custom-api-roapp.module';
 import { MoyskladModule } from './domains/shop/integrations/moySklad/moysklad.module';
 import { BitrixSyncModule } from './sync/bitrix/bitrix-sync.module';
-import { SalaryTaskStatusSyncModule } from './sync/bitrix-tasks/salary-task-status-sync.module';
 import { SalesModule } from './domains/service/modules/sales/sales.module';
 import { RoappSyncModule } from './domains/service/sync/roapp/roapp-sync.module';
 import { MoySkladSyncModule } from './domains/shop/sync/moySklad/moysklad-sync.module';
@@ -26,6 +25,7 @@ import { EmployeeIdentityModule } from './modules/employee-identity/employee-ide
 import { DirectoryModule } from './modules/directory/directory.module';
 import { WorkScheduleModule } from './modules/work-schedule/work-schedule.module';
 import { EmployeeBalanceModule } from './modules/employee-balance/employee-balance.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SessionModule } from './modules/session/session.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -49,7 +49,6 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         ScheduleModule.forRoot(),
         EventEmitterModule.forRoot(),
         BitrixSyncModule,
-        SalaryTaskStatusSyncModule,
         RoappSyncModule,
         SalesModule,
         ShopSalesModule,
@@ -60,6 +59,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         DirectoryModule,
         WorkScheduleModule,
         EmployeeBalanceModule,
+        TasksModule,
         AuthModule,
         SessionModule,
         RolesModule,

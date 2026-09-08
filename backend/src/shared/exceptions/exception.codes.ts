@@ -14,3 +14,7 @@ export const NOT_FOUND = 'GENERIC.NOT_FOUND';
 export const CONFLICT = 'GENERIC.CONFLICT';
 export const INTERNAL_SERVER_ERROR = 'GENERIC.INTERNAL_SERVER_ERROR';
 export const SALARY_RULE_CREATION_ERROR = 'GENERIC.SALARY_RULE_CREATION_ERROR';
+// src/modules/tasks (replace-bitrix-task-integration) — переход задачи в
+// статус, не входящий в список допустимых для её текущего статуса
+// (specs/tasks/spec.md, Requirement: «Жизненный цикл статуса задачи»).
+export const INVALID_TASK_TRANSITION = 'GENERIC.INVALID_TASK_TRANSITION';

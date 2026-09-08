@@ -1,100 +1,75 @@
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { ArgumentInvalidException } from '@/shared/exceptions';
-import { TaskStatus } from '@/domains/service/modules/accounting/domain/value-objects/task-status.value-object';
 import { SalaryTask, CreateSalaryTaskProps } from './salary-task.entity';
 
-// Раздел 9 tasks.md (add-task-based-salary-rule): доменная сущность поверх
-// Prisma-модели SalaryTask (задача 1.1, общая таблица service/shop) —
-// направление 'service', см. WHY в salary-task.repository.ts (изоляция на
-// уровне кода, backend/CLAUDE.md "Общие таблицы между service и shop").
+// replace-bitrix-task-integration, design.md решение 5: Entity accounting
+// поверх сырых данных src/modules/tasks — НЕ персистентная, создаётся
+// прямо в task-completion-statuses.builder.ts из Task[], полученного
+// TASK_REPOSITORY.findManyByIds() (без Port/Adapter). identity — сам
+// taskId (совпадает с id связанной Task), status — сырой код статуса
+// ('NEW'/'IN_PROGRESS'/'DONE'/'CLOSED_SUCCESSFULLY'/'CLOSED_UNSUCCESSFULLY'/
+// 'REWORK'), не через TaskStatus VO модуля tasks.
 describe('SalaryTask', () => {
     const baseProps = (): CreateSalaryTaskProps => ({
-        salaryRuleId: 'rule-1',
-        period: '2026-09',
-        deadline: new Date('2026-09-30T23:59:59.000Z'),
-        isRecurring: true,
-        bitrixTaskId: '777',
-        taskStatus: TaskStatus.fromRaw('2'),
+        taskId: 'task-1',
+        status: 'IN_PROGRESS',
     });
 
     describe('create', () => {
-        it('генерирует id и сохраняет переданные props, lastSyncedAt по умолчанию null', () => {
+        it('сохраняет taskId как identity и статус как есть', () => {
             withRequestContext(() => {
                 const task = SalaryTask.create(baseProps());
 
-                expect(task.id).toEqual(expect.any(String));
-                expect(task.salaryRuleId).toBe('rule-1');
-                expect(task.period).toBe('2026-09');
-                expect(task.deadline).toEqual(
-                    new Date('2026-09-30T23:59:59.000Z'),
-                );
-                expect(task.isRecurring).toBe(true);
-                expect(task.bitrixTaskId).toBe('777');
-                expect(task.taskStatus.code).toBe('2');
-                expect(task.lastSyncedAt).toBeNull();
+                expect(task.id).toBe('task-1');
+                expect(task.taskId).toBe('task-1');
+                expect(task.status).toBe('IN_PROGRESS');
             });
         });
 
-        it('принимает явный lastSyncedAt (реконструкция из персистентности)', () => {
-            withRequestContext(() => {
-                const lastSyncedAt = new Date('2026-09-05T10:00:00.000Z');
-                const task = SalaryTask.create({
-                    ...baseProps(),
-                    lastSyncedAt,
-                });
-
-                expect(task.lastSyncedAt).toEqual(lastSyncedAt);
-            });
-        });
-
-        it('выбрасывает ArgumentInvalidException без bitrixTaskId', () => {
+        it('выбрасывает ArgumentInvalidException без taskId', () => {
             withRequestContext(() => {
                 expect(() =>
-                    SalaryTask.create({ ...baseProps(), bitrixTaskId: '' }),
+                    SalaryTask.create({ ...baseProps(), taskId: '' }),
                 ).toThrow(ArgumentInvalidException);
             });
         });
 
-        it('выбрасывает ArgumentInvalidException без deadline', () => {
+        it('выбрасывает ArgumentInvalidException без status', () => {
             withRequestContext(() => {
                 expect(() =>
-                    SalaryTask.create({
-                        ...baseProps(),
-                        deadline: undefined as unknown as Date,
-                    }),
-                ).toThrow(ArgumentInvalidException);
-            });
-        });
-
-        it('выбрасывает ArgumentInvalidException без salaryRuleId', () => {
-            withRequestContext(() => {
-                expect(() =>
-                    SalaryTask.create({ ...baseProps(), salaryRuleId: '' }),
-                ).toThrow(ArgumentInvalidException);
-            });
-        });
-
-        it('выбрасывает ArgumentInvalidException без period', () => {
-            withRequestContext(() => {
-                expect(() =>
-                    SalaryTask.create({ ...baseProps(), period: '' }),
+                    SalaryTask.create({ ...baseProps(), status: '' }),
                 ).toThrow(ArgumentInvalidException);
             });
         });
     });
 
-    describe('markStatus', () => {
-        it('меняет taskStatus прямой мутацией props, не трогая остальные поля', () => {
+    // design.md решение 3/5: только CLOSED_SUCCESSFULLY запускает
+    // начисление правила TaskCompletion — бизнес-правило "что считается
+    // выполненным" описано здесь, локально в accounting, а не
+    // делегируется в TaskStatus модуля tasks.
+    describe('isCompleted', () => {
+        it('возвращает true только для статуса CLOSED_SUCCESSFULLY', () => {
             withRequestContext(() => {
-                const task = SalaryTask.create(baseProps());
+                expect(
+                    SalaryTask.create({
+                        taskId: 't',
+                        status: 'CLOSED_SUCCESSFULLY',
+                    }).isCompleted(),
+                ).toBe(true);
+            });
+        });
 
-                task.markStatus(TaskStatus.fromRaw('5'));
-
-                expect(task.taskStatus.code).toBe('5');
-                expect(task.taskStatus.isDone()).toBe(true);
-                expect(task.bitrixTaskId).toBe('777');
-                expect(task.salaryRuleId).toBe('rule-1');
-                expect(task.period).toBe('2026-09');
+        it.each([
+            'NEW',
+            'IN_PROGRESS',
+            'DONE',
+            'REWORK',
+            'CLOSED_UNSUCCESSFULLY',
+        ])('возвращает false для статуса %s', (status) => {
+            withRequestContext(() => {
+                expect(
+                    SalaryTask.create({ taskId: 't', status }).isCompleted(),
+                ).toBe(false);
             });
         });
     });

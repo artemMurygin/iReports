@@ -10,14 +10,13 @@ import { SALARY_RULE_REPOSITORY } from '../../ports/motivation-schema/salary-rul
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import { MotivationResponse } from 'ireports-contracts';
-import { BITRIX_TASKS_GATEWAY } from '@/integrations/bitrix/ports/bitrix-tasks-gateway.port';
-import type { BitrixTasksGatewayPort } from '@/integrations/bitrix/ports/bitrix-tasks-gateway.port';
-import { SALARY_TASK_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
-import type { SalaryTaskRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
+import { CancelTaskForRuleDeletionService } from '@/modules/tasks/application/services/cancel-task-for-rule-deletion.service';
 import { SalaryRuleFactory } from '@/domains/service/modules/accounting/domain/factories/salary-rule.factory';
+import { buildTaskCompletionConfig } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import type {
     CreateSalaryRuleProps,
     SalaryRule,
+    TaskCompletionSalaryConfig,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 
 @CommandHandler(UpdateMotivationSchemaCommand)
@@ -35,10 +34,7 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
         @Inject(UNIT_OF_WORK)
         protected readonly unitOfWork: UnitOfWorkPort,
         protected readonly commandBus: CommandBus,
-        @Inject(BITRIX_TASKS_GATEWAY)
-        protected readonly tasksGateway: BitrixTasksGatewayPort,
-        @Inject(SALARY_TASK_REPOSITORY)
-        protected readonly salaryTaskRepo: SalaryTaskRepositoryPort,
+        protected readonly cancelTaskForRuleDeletion: CancelTaskForRuleDeletionService,
     ) {}
 
     async execute(
@@ -47,7 +43,7 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
         // Переименование + замена набора правил направления service должны
         // быть атомарны (см. apiDesign плана: "rename + replace all rules of
         // THIS direction"), поэтому весь сценарий — find → rename → diff по
-        // id → close/delete removed → update kept → create new — идёт
+        // id → cancel/delete removed → update kept → create new — идёт
         // внутри одной транзакции, тем же приёмом, что и
         // CreateMotivationSchemaHandler.
         const motivationSchemaId = await this.unitOfWork.run(async () => {
@@ -70,11 +66,8 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
             // recreate-all"): правило из payload с id, совпадающим со старым
             // правилом, — это ТО ЖЕ правило, отредактированное на месте, а
             // не новое взамен удалённого. Без этого различения TaskCompletion
-            // терял бы привязанную задачу Bitrix24 (закрывалась и
-            // пересоздавалась заново) при КАЖДОМ PATCH схемы, даже если само
-            // правило не менялось — см. design.md Decision 6
-            // (add-task-based-salary-rule) и Requirement «Двусторонняя
-            // синхронизация данных задачи» specs/integrations/bitrix-tasks.
+            // терял бы привязанную задачу (отменялась и создавалась заново)
+            // при КАЖДОМ PATCH схемы, даже если само правило не менялось.
             const oldRules = schema.getProps().rules;
             const oldRulesById = new Map(
                 oldRules.map((rule) => [rule.id, rule]),
@@ -87,9 +80,9 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
                 // Совпадение id недостаточно — тип должен остаться прежним.
                 // Смена типа существующего правила (например, TaskCompletion
                 // → PayPerHour) — не редактирование того же правила, а
-                // фактическая замена: старое (с его задачей Bitrix24, если
-                // это был TaskCompletion) должно закрыться, новое —
-                // создаться заново обычным путём.
+                // фактическая замена: старое (с его задачей, если это был
+                // TaskCompletion) должно отмениться, новое — создаться
+                // заново обычным путём.
                 if (oldRule && oldRule.type === rule.type) {
                     keptRules.push({ id: rule.id as string, rule });
                 } else {
@@ -102,10 +95,10 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
                 (rule) => !keptRuleIds.has(rule.id),
             );
 
-            // Задачи Bitrix24 закрываются ТОЛЬКО у правил TaskCompletion,
-            // реально отсутствующих в новом наборе (removedRules) — не у
-            // всех старых правил, как было раньше.
-            await this.closeTaskCompletionTasks(removedRules);
+            // Задачи отменяются ТОЛЬКО у правил TaskCompletion, реально
+            // отсутствующих в новом наборе (removedRules) — не у всех
+            // старых правил.
+            await this.cancelTaskCompletionTasks(removedRules);
 
             // direction='service' зафиксирован внутри репозитория — правила
             // направления shop той же строки motivation_schemas (сотрудник с
@@ -115,18 +108,25 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
             );
 
             // Правила, сохранившиеся между PATCH (совпали по id), — их id
-            // не меняется, поэтому у TaskCompletion остаётся привязанной та
-            // же SalaryTask/задача Bitrix24; персистится только новое
-            // содержимое правила (название/роль/config).
+            // не меняется, поэтому у TaskCompletion остаётся привязанная та
+            // же задача; персистится только новое содержимое правила
+            // (название/роль/config). Для TaskCompletion config запроса
+            // (config.taskId — одноразовый вход, относится только к
+            // ТЕКУЩЕМУ периоду, design.md решение 4) СНАЧАЛА мержится со
+            // старым taskIdByPeriod правила (mergeTaskCompletionConfig) —
+            // иначе PATCH стёр бы привязку задач прошлых периодов
+            // регулярного правила.
             for (const { id, rule } of keptRules) {
-                const entity = SalaryRuleFactory.restore(id, rule);
+                const entity = SalaryRuleFactory.restore(
+                    id,
+                    this.mergeTaskCompletionConfig(rule, oldRulesById.get(id)),
+                );
                 await this.salaryRuleRepo.update(entity);
             }
 
             // Новые правила (без id в payload или с id, не найденным в
             // старом наборе) создаются через тот же CreateSalaryRuleCommand,
-            // что и CreateMotivationSchemaHandler — код создания правила
-            // (включая ветку TaskCompletion — создание задачи Bitrix24) не
+            // что и CreateMotivationSchemaHandler — код создания правила не
             // дублируется.
             for (const rule of newRules) {
                 await this.commandBus.execute(
@@ -143,31 +143,62 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
         return { id: motivationSchemaId };
     }
 
-    // design.md Decision 6 — «закрывается задача в Bitrix24, затем
-    // удаляется запись»; сбой Bitrix24 НЕ блокирует удаление правила
-    // (внешняя система, недоступность которой не должна останавливать
-    // локальную операцию) — расхождение («правила нет — задача в Bitrix24
-    // всё ещё открыта») обнаруживает ближайший цикл SalaryTaskStatusSyncCron
-    // (раздел 8). findActiveByRule — ВСЕ ещё не завершённые задачи правила
-    // вне зависимости от периода (разовое правило может быть удалено в
-    // периоде, отличном от периода создания его единственной задачи).
-    private async closeTaskCompletionTasks(rules: SalaryRule[]): Promise<void> {
+    // design.md решение 4 — taskId запроса относится ТОЛЬКО к ТЕКУЩЕМУ
+    // периоду (тот же readonly-виджет уже созданной задачи, что и на шаге 1
+    // мастера); при правке уже существующего правила эта единственная пара
+    // period→taskId ОБЪЕДИНЯЕТСЯ со старой картой правила, а не заменяет её
+    // целиком — иначе PATCH регулярного правила стирал бы привязку задач
+    // прошлых периодов.
+    private mergeTaskCompletionConfig(
+        rule: CreateSalaryRuleProps,
+        oldRule?: SalaryRule,
+    ): CreateSalaryRuleProps {
+        if (rule.type !== 'TaskCompletion') {
+            return rule;
+        }
+        const oldConfig = oldRule?.config as
+            TaskCompletionSalaryConfig | undefined;
+        // SalaryRuleFactory.restore() передаёт rule.config дальше БЕЗ
+        // трансформации (см. WHY там) — сюда намеренно кладётся уже
+        // домен-формы config (taskIdByPeriod), а не request-формы
+        // (TaskCompletionSalaryConfigRequest, с taskId), поэтому
+        // возвращаемое значение структурно не совпадает с
+        // CreateSalaryRuleProps (request-типом из contracts) — приведение
+        // типа оправдано тем же способом, что и сам restore().
+        return {
+            ...rule,
+            config: buildTaskCompletionConfig(
+                rule.config,
+                oldConfig?.taskIdByPeriod,
+            ),
+        } as unknown as CreateSalaryRuleProps;
+    }
+
+    // replace-bitrix-task-integration, design.md решение 3 «Отмена при
+    // удалении правила» — незавершённая задача переводится в «Закрыта
+    // неуспешно» (CancelTaskForRuleDeletionService.cancel(), уже no-op на
+    // терминальном статусе); сбой отмены НЕ блокирует удаление правила
+    // (техническая ошибка не должна останавливать локальную операцию,
+    // логируется для ручной сверки). Регулярное правило может нести
+    // несколько taskId (по одному на период, config.taskIdByPeriod) —
+    // отменяются ВСЕ, не только текущего периода.
+    private async cancelTaskCompletionTasks(
+        rules: SalaryRule[],
+    ): Promise<void> {
         const taskCompletionRules = rules.filter(
             (rule) => rule.type === 'TaskCompletion',
         );
 
         for (const rule of taskCompletionRules) {
-            const activeTasks = await this.salaryTaskRepo.findActiveByRule(
-                rule.id,
-            );
-            for (const task of activeTasks) {
+            const config = rule.config as TaskCompletionSalaryConfig;
+            const taskIds = Object.values(config.taskIdByPeriod);
+            for (const taskId of taskIds) {
                 try {
-                    await this.tasksGateway.closeTask(task.bitrixTaskId);
+                    await this.cancelTaskForRuleDeletion.cancel(taskId);
                 } catch (error) {
                     this.logger.error(
-                        `Не удалось закрыть задачу Bitrix24 ${task.bitrixTaskId} ` +
-                            `(правило TaskCompletion ${rule.id}) при удалении правила — ` +
-                            'расхождение обнаружит крон синхронизации статуса',
+                        `Не удалось отменить задачу ${taskId} (правило ` +
+                            `TaskCompletion ${rule.id}) при удалении правила`,
                         error instanceof Error ? error.stack : String(error),
                     );
                 }
