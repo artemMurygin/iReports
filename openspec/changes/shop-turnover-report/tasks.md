@@ -45,13 +45,13 @@
 
 ## 4. Application — порт и репозиторий отчёта (TDD)
 
-- [ ] 4.1 Написать тесты на `GOODS_TURNOVER_REPORT_REPOSITORY.replaceForPeriod`: полная замена
+- [x] 4.1 Написать тесты на `GOODS_TURNOVER_REPORT_REPOSITORY.replaceForPeriod`: полная замена
   строк периода в одной транзакции (старые строки периода удалены, новые записаны), строки других
   периодов не затронуты.
-- [ ] 4.2 Прогнать тесты из 4.1 и зафиксировать red.
-- [ ] 4.3 Реализовать порт (application/ports) и Prisma-репозиторий (infrastructure/repositories)
+- [x] 4.2 Прогнать тесты из 4.1 и зафиксировать red.
+- [x] 4.3 Реализовать порт (application/ports) и Prisma-репозиторий (infrastructure/repositories)
   через unit-of-work (`UNIT_OF_WORK`), включая `findByPeriod`.
-- [ ] 4.4 Прогнать тесты из 4.1 и зафиксировать green, регрессий нет.
+- [x] 4.4 Прогнать тесты из 4.1 и зафиксировать green, регрессий нет.
 
 ## 5. Sync — справочник складов (D2, TDD)
 
