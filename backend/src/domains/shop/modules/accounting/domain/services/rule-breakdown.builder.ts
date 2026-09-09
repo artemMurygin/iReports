@@ -27,22 +27,33 @@ export interface RuleBreakdownLine {
 // rules и lines собраны одним и тем же оркестратором за один проход (см.
 // PeriodCalculationOrchestrator.calculate) — строки идут в том же порядке,
 // что и правила схемы, поэтому сопоставление по индексу безопасно.
+//
+// Раздел 4 (add-task-based-salary-rule): line на позиции правила может быть
+// null (TaskCompletionShop — связанная задача ещё не выполнена, spec
+// shop/accounting: «строка отсутствует в отчёте»). Такое правило целиком
+// пропускается — flatMap возвращает [] для него, а не строку с
+// undefined-полями, поэтому длина результата может быть МЕНЬШЕ rules.length.
 export function buildRuleBreakdown(
     rules: ShopSalaryRule[],
-    lines: CalculationLine[],
+    lines: (CalculationLine | null)[],
 ): RuleBreakdownLine[] {
-    return rules.map((rule, index) => {
+    return rules.flatMap((rule, index) => {
         const line = lines[index];
-        return {
-            ruleId: rule.id,
-            type: rule.type,
-            name: rule.name,
-            targetRole: rule.targetRole,
-            salaryBasis: line.salaryBasis,
-            quantity: line.quantity,
-            rate: line.rate,
-            amount: line.amount,
-            sources: line.sources,
-        };
+        if (!line) {
+            return [];
+        }
+        return [
+            {
+                ruleId: rule.id,
+                type: rule.type,
+                name: rule.name,
+                targetRole: rule.targetRole,
+                salaryBasis: line.salaryBasis,
+                quantity: line.quantity,
+                rate: line.rate,
+                amount: line.amount,
+                sources: line.sources,
+            },
+        ];
     });
 }

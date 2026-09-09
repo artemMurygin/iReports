@@ -129,7 +129,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
     };
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
-        deleteAllByMotivationSchema: () => Promise.resolve(),
+        deleteByIds: () => Promise.resolve(),
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
     };

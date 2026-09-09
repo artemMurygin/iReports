@@ -33,18 +33,38 @@ export class ShopSalaryRuleRepository
         );
     }
 
-    // PATCH /v1/shop/accounting/motivation-schema/:id — часть "delete all
-    // + recreate" (см. UpdateShopMotivationSchemaHandler). direction:
-    // 'shop' в WHERE — не задевает правила направления service той же
-    // строки motivation_schemas (см. комментарий в
-    // ShopSalaryRuleRepositoryPort.deleteAllByMotivationSchema). write(null, ...)
-    // — нет конкретного агрегата, чьи domain-события нужно опубликовать.
-    async deleteAllByMotivationSchema(
-        motivationSchemaId: string,
-    ): Promise<void> {
+    // PATCH /v1/shop/accounting/motivation-schema/:id — удаляет только
+    // правила, реально исключённые из нового набора (diff по id, см.
+    // UpdateShopMotivationSchemaHandler). direction: 'shop' в WHERE — не
+    // задевает правила направления service той же строки motivation_schemas
+    // (см. комментарий в ShopSalaryRuleRepositoryPort.deleteByIds).
+    // write(null, ...) — нет конкретного агрегата, чьи domain-события нужно
+    // опубликовать.
+    async deleteByIds(ruleIds: string[]): Promise<void> {
+        if (ruleIds.length === 0) {
+            return;
+        }
         await this.write(null, (client) =>
             client.salaryRule.deleteMany({
-                where: { motivationSchemaId, direction: 'shop' },
+                where: { id: { in: ruleIds }, direction: 'shop' },
+            }),
+        );
+    }
+
+    // Раздел 16 tasks.md (add-task-based-salary-rule) — см. WHY у
+    // ShopSalaryRuleRepositoryPort.findById.
+    async findById(ruleId: string): Promise<ShopSalaryRule | null> {
+        const record = await this.client.salaryRule.findFirst({
+            where: { id: ruleId, direction: 'shop' },
+        });
+        return record ? this.mapper.toDomain(record) : null;
+    }
+
+    async update(entity: ShopSalaryRule): Promise<void> {
+        await this.write(entity, (client) =>
+            client.salaryRule.update({
+                where: { id: entity.id },
+                data: { props: this.mapper.toPersistence(entity).props },
             }),
         );
     }

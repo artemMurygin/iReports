@@ -3,8 +3,12 @@ import type { AccountingDirection } from '@/shared/domain/calculation-context';
 
 export interface AccountingCalculationCacheEntry {
     freshnessStamp: string;
-    factLines: CalculationLine[];
-    prognoseLines: CalculationLine[];
+    // (CalculationLine | null)[] — см. SalaryRule.calculate() и
+    // PeriodCalculationOrchestrator.calculate(): позиция может быть null
+    // (правило TaskCompletion ещё не готово выдать строку), кэш хранит эти
+    // "дыры" как есть, ничего не пересчитывая при попадании в кэш.
+    factLines: (CalculationLine | null)[];
+    prognoseLines: (CalculationLine | null)[];
     factTotal: number;
     prognoseTotal: number;
 }

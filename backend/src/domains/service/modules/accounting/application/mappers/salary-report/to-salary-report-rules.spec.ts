@@ -206,4 +206,124 @@ describe('buildSalaryReportRules', () => {
 
         expect(entry.sources[0].itemName).toBe('Замена экрана');
     });
+
+    // spec: service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
+    it('не включает правило, чья строка отсутствует хотя бы в одном из режимов (FACT/PROGNOSE)', () => {
+        const ruleA = PayPerHoursEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
+            config: { price: 250 },
+        });
+        const ruleB = OrderPayedEntity.create({
+            type: 'OrderPayed',
+            name: 'За выполнение задачи (заглушка)',
+            targetRole: 'ENGINEER',
+            config: { award: { type: 'Fixed', price: 0 } },
+        });
+        const lineA = {
+            ruleId: ruleA.id,
+            quantity: 8,
+            rate: 250,
+            amount: 2000,
+            sources: [],
+        };
+        const lineB = {
+            ruleId: ruleB.id,
+            amount: 0,
+            sources: [],
+        };
+
+        // FACT — задача ещё не выполнена (null), PROGNOSE — задача уже
+        // выполнена (строка есть): правило не готово ни для одного из
+        // режимов отчёта, пока не согласовано и там, и там.
+        const entries = buildSalaryReportRules(
+            [ruleA, ruleB],
+            [lineA, null],
+            [lineA, lineB],
+            null,
+        );
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0].ruleId).toBe(ruleA.id);
+    });
+
+    it('не включает правило, отсутствующее в обоих режимах сразу', () => {
+        const ruleA = PayPerHoursEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
+            config: { price: 250 },
+        });
+        const ruleB = OrderPayedEntity.create({
+            type: 'OrderPayed',
+            name: 'За выполнение задачи (заглушка)',
+            targetRole: 'ENGINEER',
+            config: { award: { type: 'Fixed', price: 0 } },
+        });
+        const lineA = {
+            ruleId: ruleA.id,
+            quantity: 8,
+            rate: 250,
+            amount: 2000,
+            sources: [],
+        };
+
+        const entries = buildSalaryReportRules(
+            [ruleA, ruleB],
+            [lineA, null],
+            [lineA, null],
+            null,
+        );
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0].ruleId).toBe(ruleA.id);
+    });
+
+    it('сопоставляет факт/прогноз по ruleId, а не по позиции в отфильтрованных массивах строк', () => {
+        const ruleA = PayPerHoursEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
+            config: { price: 250 },
+        });
+        const ruleB = OrderPayedEntity.create({
+            type: 'OrderPayed',
+            name: 'Правило, готовое только в прогнозе',
+            targetRole: 'ENGINEER',
+            config: { award: { type: 'Fixed', price: 700 } },
+        });
+        const ruleC = OrderPayedEntity.create({
+            type: 'OrderPayed',
+            name: 'Правило, готовое только в факте',
+            targetRole: 'ENGINEER',
+            config: { award: { type: 'Fixed', price: 300 } },
+        });
+        const lineA = {
+            ruleId: ruleA.id,
+            quantity: 8,
+            rate: 250,
+            amount: 2000,
+            sources: [],
+        };
+        const lineB = { ruleId: ruleB.id, amount: 700, sources: [] };
+        const lineC = { ruleId: ruleC.id, amount: 300, sources: [] };
+
+        // ruleB отсутствует в FACT (null), ruleC отсутствует в PROGNOSE
+        // (null) — после независимой фильтрации null внутри
+        // buildRuleBreakdown позиции factBreakdown[1] (ruleC) и
+        // prognoseBreakdown[1] (ruleB) указывали бы на РАЗНЫЕ правила при
+        // наивном зипе по индексу; корректно — свести по ruleId и оставить
+        // только ruleA, присутствующее в обоих режимах.
+        const entries = buildSalaryReportRules(
+            [ruleA, ruleB, ruleC],
+            [lineA, null, lineC],
+            [lineA, lineB, null],
+            null,
+        );
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0].ruleId).toBe(ruleA.id);
+        expect(entries[0].amount).toEqual({ fact: 2000, prognose: 2000 });
+    });
 });

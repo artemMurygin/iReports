@@ -64,6 +64,15 @@ model SalaryAccrualLine {
   amount         Int
   sources        Json
 
+  // Комментарий первичного ручного ввода суммы для строк типа TaskCompletion
+  // (design.md Decision 5) — отдельно от SalaryAccrualLineAdjustment.comment,
+  // который остаётся историей корректировок УЖЕ проведённой суммы.
+  // requiresManualInput — флаг, скопированный из RuleBreakdownLine/
+  // CalculationLine (src/shared/domain/calculation-line.ts) при создании
+  // строки; сбрасывается setManualReward() после первичного ввода.
+  comment             String?
+  requiresManualInput Boolean @default(false) @map("requires_manual_input")
+
   status SalaryAccrualLineStatus @default(DRAFT)
 
   createdAt DateTime @default(now()) @map("created_at")

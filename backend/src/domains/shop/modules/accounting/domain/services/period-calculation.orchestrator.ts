@@ -13,19 +13,25 @@ import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/d
 //
 // Правила в этой итерации независимы и не ссылаются на результаты друг
 // друга — итог является простой суммой строк.
+//
+// Раздел 4 (add-task-based-salary-rule): rule.calculate() может вернуть
+// null (TaskCompletionShop — «связанная задача ещё не выполнена», spec
+// shop/accounting), поэтому строка на позиции такого правила — null, а не
+// вставляется/пропускается — порядок и длина массива всегда совпадают с
+// rules (по индексу опирается buildRuleBreakdown).
 export class PeriodCalculationOrchestrator {
     static async calculate(
         rules: ShopSalaryRule[],
         context: ShopCalculationContext,
-    ): Promise<CalculationLine[]> {
-        const lines: CalculationLine[] = [];
+    ): Promise<(CalculationLine | null)[]> {
+        const lines: (CalculationLine | null)[] = [];
         for (const rule of rules) {
             lines.push(await rule.calculate(context));
         }
         return lines;
     }
 
-    static total(lines: CalculationLine[]): number {
-        return lines.reduce((sum, line) => sum + line.amount, 0);
+    static total(lines: (CalculationLine | null)[]): number {
+        return lines.reduce((sum, line) => sum + (line?.amount ?? 0), 0);
     }
 }

@@ -67,6 +67,8 @@ export class ShopSalaryAccrualMapper {
                             sources:
                                 line.sources as unknown as CalculationSourceRef[],
                             status: line.status,
+                            comment: line.comment,
+                            requiresManualInput: line.requiresManualInput,
                             adjustments: [...line.adjustments]
                                 .sort(
                                     (a, b) =>
@@ -138,6 +140,8 @@ export class ShopSalaryAccrualMapper {
                     amount: line.amount,
                     sources: line.sources as unknown as Prisma.InputJsonValue,
                     status: line.status,
+                    comment: line.comment,
+                    requiresManualInput: line.requiresManualInput,
                     createdAt: lineProps.createdAt,
                     updatedAt: lineProps.updatedAt,
                 };
@@ -214,6 +218,8 @@ export class ShopSalaryAccrualMapper {
             sources: line.sources,
             status: line.status,
             adjustmentComment: line.adjustmentComment ?? null,
+            comment: line.comment,
+            requiresManualInput: line.requiresManualInput,
         };
     }
 }

@@ -84,6 +84,18 @@ export class SalaryAccrualLineNotPaidException extends ConflictException {
     }
 }
 
+// Раздел 13 tasks.md (add-task-based-salary-rule) — SalaryAccrualLine.setManualReward()
+// (первичный ручной ввод суммы+комментария строки TaskCompletion, design.md
+// Decision 5) вызван на строке, для которой оркестратор расчёта не выставил
+// requiresManualInput (любой тип правила, кроме TaskCompletion, а также уже
+// заполненная TaskCompletion-строка) — ручной ввод для неё не предусмотрен,
+// сумма считается автоматически.
+export class SalaryAccrualLineManualInputNotRequiredException extends ConflictException {
+    constructor(lineId: string) {
+        super(`Строка начисления ${lineId} не требует ручного ввода суммы`);
+    }
+}
+
 // SalaryAccrual.markPaid() (PRD 3 docs/payroll-closing-and-accrual/
 // prd-salary-payout-and-erp-cash-documents.md, «Документы начисления...
 // в статусе ACCRUED переходят в PAID») — вызывающая сторона (обработчик

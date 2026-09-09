@@ -9,6 +9,9 @@ import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/ty
 import { SHOP_SALES_PERFORMANCE_READER } from '@/domains/shop/modules/sales/application/ports/sales-performance.port';
 import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sales/application/ports/sales-performance.port';
 import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/sales-performance.value-object';
+import { SHOP_SALARY_TASK_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import { buildTaskCompletionStatuses } from '@/domains/shop/modules/accounting/application/services/calculation/task-completion-statuses.builder';
 
 // Базовый контекст расчёта направления shop, ещё не привязанный к
 // конкретному режиму (FACT/PROGNOSE) — зеркало ServiceCalculationBaseContext
@@ -63,8 +66,19 @@ export class BuildShopCalculationContextService {
         private readonly dataSource: ShopCalculationDataPort,
         @Inject(SHOP_SALES_PERFORMANCE_READER)
         private readonly salesPerformanceReader: ShopSalesPerformanceReaderPort,
+        @Inject(SHOP_SALARY_TASK_REPOSITORY)
+        private readonly taskRepo: ShopSalaryTaskRepositoryPort,
     ) {}
 
+    // Раздел 17 tasks.md (add-task-based-salary-rule) — rules: уже
+    // разрешённый набор правил сотрудника (личных + отдела, см.
+    // ResolveShopEmployeeSalaryRulesService), нужен только чтобы вычленить
+    // TaskCompletion-правила и подтянуть их ShopSalaryTask.taskStatus
+    // текущего периода (erpData.taskCompletionStatuses, design.md
+    // Decision 7). Вызывающий (GetShopEmployeeSalaryReportService) уже
+    // резолвит rules ДО построения контекста — не дублируем поход в
+    // ShopMotivationSchemaRepository здесь (зеркало build() сервиса,
+    // раздел 12).
     async build(
         period: Period,
         employeeId: number,
@@ -75,16 +89,26 @@ export class BuildShopCalculationContextService {
         // но независимые" модули доменов).
         const base = new CalculationContextBuilder('shop', period, employeeId);
 
-        const [identities, hoursWorked, productSoldItems, departmentId] =
-            await Promise.all([
-                this.dataSource.findEmployeeIdentities(employeeId),
-                this.dataSource.findHoursWorked(employeeId, period.getValue()),
-                this.dataSource.findProductSoldItems(
-                    base.period.from,
-                    base.period.to,
-                ),
-                this.dataSource.findEmployeeDepartmentId(employeeId),
-            ]);
+        const [
+            identities,
+            hoursWorked,
+            productSoldItems,
+            departmentId,
+            taskCompletionStatuses,
+        ] = await Promise.all([
+            this.dataSource.findEmployeeIdentities(employeeId),
+            this.dataSource.findHoursWorked(employeeId, period.getValue()),
+            this.dataSource.findProductSoldItems(
+                base.period.from,
+                base.period.to,
+            ),
+            this.dataSource.findEmployeeDepartmentId(employeeId),
+            buildTaskCompletionStatuses(
+                this.taskRepo,
+                rules,
+                period.getValue(),
+            ),
+        ]);
 
         const categoryIds = this.collectProductCategoryIds(rules);
 
@@ -113,6 +137,7 @@ export class BuildShopCalculationContextService {
                 hoursWorked,
                 productSoldItems,
                 categoryDescendantFolderIds,
+                taskCompletionStatuses,
             } satisfies ShopCalculationErpData,
             salesPerformanceDetail,
             salesPerformanceByCategory,

@@ -182,9 +182,9 @@ export class MotivationSchemaRepository
         const props = entity.getProps();
         // Только имя — targetType/targetId неизменны после создания (нет
         // сценария "перенести схему на другую цель"), а rules персистятся
-        // отдельно (SalaryRuleRepository.deleteAllByMotivationSchema +
-        // CreateSalaryRuleCommand на каждое новое правило, см.
-        // UpdateMotivationSchemaHandler). Пишет ТОЛЬКО serviceName — общая
+        // отдельно (diff по id в UpdateMotivationSchemaHandler:
+        // SalaryRuleRepository.deleteByIds/update для сохранившихся правил +
+        // CreateSalaryRuleCommand на новые). Пишет ТОЛЬКО serviceName — общая
         // с shop-направлением колонка `name` больше не трогается этим
         // методом (кросс-направленческий баг переименования, см.
         // комментарий у serviceName в salary.prisma).

@@ -89,7 +89,17 @@ export class ShopSalaryAccrualRepository
             for (const line of accrual.lines) {
                 await client.salaryAccrualLine.update({
                     where: { id: line.id },
-                    data: { amount: line.amount, status: line.status },
+                    // comment/requiresManualInput — раздел 18 tasks.md
+                    // (add-task-based-salary-rule, design.md Decision 5):
+                    // setManualReward() меняет их наравне с amount/status,
+                    // без персиста здесь первичный ввод суммы TaskCompletion
+                    // терялся бы при следующем findById().
+                    data: {
+                        amount: line.amount,
+                        status: line.status,
+                        comment: line.comment,
+                        requiresManualInput: line.requiresManualInput,
+                    },
                 });
             }
             if (adjustments.length > 0) {

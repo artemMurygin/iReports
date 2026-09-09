@@ -48,4 +48,12 @@ export interface CalculationLine {
     rate?: number;
     amount: number;
     sources: CalculationSourceRef[];
+    // Раздел 10 tasks.md (add-task-based-salary-rule) — единственное новое
+    // поле в этом уже помеченном как антипаттерн файле (см. backend/CLAUDE.md,
+    // «Известный антипаттерн в src/shared/domain/»), без переноса остального
+    // технического долга. true у строки правила TaskCompletion: amount
+    // всегда 0, действующая сумма вводится руководителем вручную на
+    // SalaryAccrualLine (design.md Decision 5), а не пересчитывается здесь.
+    // Отсутствует/false у остальных типов правил.
+    requiresManualInput?: boolean;
 }

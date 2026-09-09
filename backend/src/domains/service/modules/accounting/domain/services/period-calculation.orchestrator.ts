@@ -15,18 +15,23 @@ import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/sa
 //
 // spec: service/accounting#requirement-мотивационная-схема-как-набор-зарплатных-правил
 export class PeriodCalculationOrchestrator {
+    // (CalculationLine | null)[] — null на позиции правила, чьё calculate()
+    // ещё не готово выдать строку (см. SalaryRule.calculate()); позиция в
+    // массиве сохраняется 1:1 с rules[], а не схлопывается, чтобы
+    // buildRuleBreakdown/buildSalaryReportRules могли сопоставить строку с
+    // породившим её правилом.
     static async calculate(
         rules: SalaryRule[],
         context: CalculationContext,
-    ): Promise<CalculationLine[]> {
-        const lines: CalculationLine[] = [];
+    ): Promise<(CalculationLine | null)[]> {
+        const lines: (CalculationLine | null)[] = [];
         for (const rule of rules) {
             lines.push(await rule.calculate(context));
         }
         return lines;
     }
 
-    static total(lines: CalculationLine[]): number {
-        return lines.reduce((sum, line) => sum + line.amount, 0);
+    static total(lines: (CalculationLine | null)[]): number {
+        return lines.reduce((sum, line) => sum + (line?.amount ?? 0), 0);
     }
 }

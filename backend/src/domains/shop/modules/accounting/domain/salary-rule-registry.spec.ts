@@ -2,6 +2,7 @@ import { shopSalaryRuleRegistry } from './salary-rule-registry';
 import { PayPerHourShopEntity } from './entities/salary-rules/pay-per-hour.entity';
 import { ProductSoldEntity } from './entities/salary-rules/product-sold.entity';
 import { UsedProductSoldEntity } from './entities/salary-rules/used-product-sold.entity';
+import { TaskCompletionShop } from './entities/salary-rules/task-completion.entity';
 import { salaryRuleRegistry } from '@/domains/service/modules/accounting/domain/salary-rule-registry';
 
 describe('shopSalaryRuleRegistry', () => {
@@ -15,10 +16,14 @@ describe('shopSalaryRuleRegistry', () => {
         expect(shopSalaryRuleRegistry.get('UsedProductSold')).toBe(
             UsedProductSoldEntity,
         );
+        // Раздел 15 tasks.md (add-task-based-salary-rule).
+        expect(shopSalaryRuleRegistry.get('TaskCompletion')).toBe(
+            TaskCompletionShop,
+        );
     });
 
-    it('не содержит лишних типов (Фаза 13 — PayPerHour, ProductSold, UsedProductSold)', () => {
-        expect(shopSalaryRuleRegistry.size).toBe(3);
+    it('не содержит лишних типов (раздел 15 — PayPerHour, ProductSold, UsedProductSold, TaskCompletion)', () => {
+        expect(shopSalaryRuleRegistry.size).toBe(4);
     });
 
     // issue #61: "GET списка типов правил возвращает разные наборы для

@@ -4,6 +4,11 @@ import type { ShopSalesPerformanceReaderPort } from '@/domains/shop/modules/sale
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/sales-performance.value-object';
 import { Period } from '@/shared/domain/period.value-object';
+import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
+import { ShopTaskStatus } from '@/domains/shop/modules/accounting/domain/value-objects/task-status.value-object';
+import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
+import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 
 // Юнит для BuildShopCalculationContextService (Фаза 13.5, issue #57) —
 // зеркало по духу спека сборки контекста сервиса (нет отдельного файла у
@@ -36,6 +41,10 @@ describe('BuildShopCalculationContextService', () => {
         // тест не отличил бы "резолвим один раз на сотрудника" от "резолвим
         // по каждой уникальной category".
         performanceByCategory?: Record<string, ShopSalesPerformance | null>;
+        // Раздел 17 tasks.md (add-task-based-salary-rule) —
+        // findManyByRulesAndPeriod фейка SHOP_SALARY_TASK_REPOSITORY,
+        // переопределяемый тестами erpData.taskCompletionStatuses ниже.
+        findManyByRulesAndPeriod?: jest.Mock;
     }) => {
         const findEmployeeIdentities = jest.fn().mockResolvedValue([]);
         const findHoursWorked = jest
@@ -84,15 +93,30 @@ describe('BuildShopCalculationContextService', () => {
             listForDepartment: jest.fn().mockResolvedValue([]),
         };
 
+        const findManyByRulesAndPeriod =
+            overrides?.findManyByRulesAndPeriod ??
+            jest.fn().mockResolvedValue([]);
+        const taskRepo = {
+            findByRuleAndPeriod: jest.fn(),
+            findActiveForDirection: jest.fn(),
+            insert: jest.fn(),
+            save: jest.fn(),
+            findManyByRulesAndPeriod,
+            findActiveByRule: jest.fn(),
+        } as unknown as ShopSalaryTaskRepositoryPort;
+
         const service = new BuildShopCalculationContextService(
             dataSource,
             salesPerformanceReader,
+            taskRepo,
         );
 
         return {
             service,
             dataSource,
             salesPerformanceReader,
+            taskRepo,
+            findManyByRulesAndPeriod,
             findEmployeeIdentities,
             findHoursWorked,
             findProductSoldItems,
@@ -331,6 +355,87 @@ describe('BuildShopCalculationContextService', () => {
 
             expect(findForScope).toHaveBeenCalledWith('2026-01', 5, null);
             expect(result).toBe(performance);
+        });
+    });
+
+    // Раздел 17 tasks.md (add-task-based-salary-rule) —
+    // BuildShopCalculationContextService заполняет erpData.taskCompletionStatuses
+    // статусами связанных ShopSalaryTask ТЕКУЩЕГО периода для всех
+    // TaskCompletion-правил переданной схемы (зеркало
+    // BuildServiceCalculationContextService.build, раздел 12, design.md
+    // Decision 7, calculation-data.types.ts). Остальные поля erpData здесь
+    // не переиспытываются — покрыты тестами выше.
+    describe('taskCompletionStatuses', () => {
+        const buildTaskCompletionRule = () =>
+            TaskCompletionShop.create({
+                type: 'TaskCompletion',
+                name: 'Собрать отчёт по браку',
+                targetRole: 'ONLINE_MANAGER',
+                config: {
+                    bitrixTaskTitle: 'Собрать отчёт по браку за месяц',
+                    isRecurring: true,
+                    deadlineTemplate: '2026-08-05',
+                    defaultAmount: 5000,
+                },
+            });
+
+        it('заполняет taskCompletionStatuses найденной задачей текущего периода', async () => {
+            const rule = buildTaskCompletionRule();
+            const task = ShopSalaryTask.create({
+                salaryRuleId: rule.id,
+                period: Period.create('2026-08'),
+                deadline: new Date('2026-08-05T00:00:00.000Z'),
+                isRecurring: true,
+                bitrixTaskId: 'bx-1',
+                taskStatus: ShopTaskStatus.fromRaw('5'),
+            });
+            const findManyByRulesAndPeriod = jest
+                .fn()
+                .mockResolvedValue([task]);
+            const { service } = buildService({ findManyByRulesAndPeriod });
+
+            const context = await service.build(Period.create('2026-08'), 1, [
+                rule,
+            ]);
+
+            expect(findManyByRulesAndPeriod).toHaveBeenCalledWith(
+                [rule.id],
+                '2026-08',
+            );
+            const entry = context.erpData.taskCompletionStatuses?.[rule.id];
+            expect(entry?.bitrixTaskId).toBe('bx-1');
+            expect(entry?.status.getValue()).toBe('5');
+            expect(entry?.status.isDone()).toBe(true);
+        });
+
+        it('TaskCompletion-правило без найденной задачи не попадает в taskCompletionStatuses', async () => {
+            const rule = buildTaskCompletionRule();
+            const findManyByRulesAndPeriod = jest.fn().mockResolvedValue([]);
+            const { service } = buildService({ findManyByRulesAndPeriod });
+
+            const context = await service.build(Period.create('2026-08'), 1, [
+                rule,
+            ]);
+
+            expect(context.erpData.taskCompletionStatuses).toEqual({});
+        });
+
+        it('нет TaskCompletion-правил в переданном наборе — не делает запрос за статусами', async () => {
+            const payPerHour = PayPerHourShopEntity.create({
+                type: 'PayPerHour',
+                name: 'Часы',
+                targetRole: 'ONLINE_MANAGER',
+                config: { price: 100 },
+            });
+            const findManyByRulesAndPeriod = jest.fn().mockResolvedValue([]);
+            const { service } = buildService({ findManyByRulesAndPeriod });
+
+            const context = await service.build(Period.create('2026-08'), 1, [
+                payPerHour,
+            ]);
+
+            expect(findManyByRulesAndPeriod).not.toHaveBeenCalled();
+            expect(context.erpData.taskCompletionStatuses).toEqual({});
         });
     });
 });

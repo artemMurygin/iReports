@@ -32,6 +32,17 @@ export type SalaryAccrualLineStatus = z.infer<
 // корректировки (null, если строка не корректировалась): UI показывает его
 // рядом с зачёркнутой исходной суммой, а проведение скорректированной
 // строки кладёт его в движение ACCRUAL_ADJUSTMENT (см. employee-balance.ts).
+//
+// comment/requiresManualInput (add-task-based-salary-rule, design.md
+// Decision 5) — зеркалят одноимённые аддитивные Prisma-колонки
+// SalaryAccrualLine (backend/prisma/schema/salary-accrual.prisma). comment —
+// первичный комментарий руководителя при ручном вводе суммы строки типа
+// TaskCompletion (не история корректировок — это отдельное поле для
+// отдельной сущности, adjustmentComment/SalaryAccrualLineAdjustment выше).
+// requiresManualInput — строка создана оркестратором расчёта с
+// originalAmount/amount = 0 и ждёт, пока руководитель введёт сумму и
+// комментарий (PATCH .../task-reward, setTaskCompletionLineRewardRequestSchema
+// ниже); сбрасывается в false после первого ввода.
 const salaryAccrualLineSchema = calculationLineSchema.extend({
     id: z.string(),
     type: z.string(),
@@ -40,6 +51,8 @@ const salaryAccrualLineSchema = calculationLineSchema.extend({
     originalAmount: z.number(),
     status: salaryAccrualLineStatusSchema,
     adjustmentComment: z.string().nullable(),
+    comment: z.string().nullable(),
+    requiresManualInput: z.boolean(),
 });
 export type SalaryAccrualLine = z.infer<typeof salaryAccrualLineSchema>;
 
@@ -133,6 +146,22 @@ export type AdjustSalaryAccrualLineRequest = z.infer<
     typeof adjustSalaryAccrualLineRequestSchema
 >;
 
+// PATCH .../salary_accruals/:id/lines/:lineId/task-reward — первичный ручной
+// ввод суммы+комментария строки типа TaskCompletion (design.md Decision 5,
+// tasks.md 13.3/18.3): только для строк с requiresManualInput === true и
+// статусом DRAFT. comment обязателен (spec service/accounting,
+// shop/accounting: «проведение отклоняется, пока комментарий не указан») —
+// в отличие от adjustSalaryAccrualLineRequestSchema, здесь нет adjustedBy
+// (см. SetTaskCompletionLineRewardHandler — не пишет
+// SalaryAccrualLineAdjustment, это первичный ввод, а не корректировка).
+const setTaskCompletionLineRewardRequestSchema = z.object({
+    amount: z.number().int(),
+    comment: z.string().min(1),
+});
+export type SetTaskCompletionLineRewardRequest = z.infer<
+    typeof setTaskCompletionLineRewardRequestSchema
+>;
+
 // ========================== Массовое проведение (Фаза 7) ========================== //
 
 // Строка перечня неудачных при массовом проведении («Начислить всё» /
@@ -192,6 +221,7 @@ export {
     salaryAccrualNotDraftRowSchema,
     accrueSalaryAccrualLineRequestSchema,
     adjustSalaryAccrualLineRequestSchema,
+    setTaskCompletionLineRewardRequestSchema,
     salaryAccrualLineFailureSchema,
     accrueSalaryAccrualDocumentResponseSchema,
     accruePeriodSalaryAccrualsResponseSchema,

@@ -9,13 +9,16 @@ export interface SalaryRuleRepositoryPort {
         meta: { motivationSchemaId: string },
     ): Promise<void>;
 
-    // Используется PATCH .../motivation-schema/:id перед пересозданием
-    // правил из тела запроса (см. UpdateMotivationSchemaHandler) —
-    // реализация сама фиксирует direction='service' в WHERE, тем же
-    // приёмом, что insert()/toPersistence() фиксируют его при записи, чтобы
-    // не задеть правила направления shop той же строки motivation_schemas
-    // (сотрудник с идентичностями в обеих ERP).
-    deleteAllByMotivationSchema(motivationSchemaId: string): Promise<void>;
+    // Используется PATCH .../motivation-schema/:id (UpdateMotivationSchemaHandler)
+    // для удаления ТОЛЬКО тех правил, которых нет в новом наборе из тела
+    // запроса (diff по id, а не полная замена — иначе TaskCompletion теряет
+    // привязанную задачу Bitrix24 при каждом PATCH, даже когда правило не
+    // менялось, см. design.md Decision 6, add-task-based-salary-rule).
+    // Реализация сама фиксирует direction='service' в WHERE, тем же приёмом,
+    // что insert()/toPersistence() фиксируют его при записи, чтобы не задеть
+    // правила направления shop той же строки motivation_schemas (сотрудник с
+    // идентичностями в обеих ERP). Пустой список — no-op, без запроса.
+    deleteByIds(ruleIds: string[]): Promise<void>;
 
     // Правило по id. null, если правила с таким id нет либо оно принадлежит
     // направлению shop (та же фильтрация direction='service' в WHERE, что и

@@ -4,6 +4,7 @@ import { SalaryRuleFactory } from './salary-rule.factory';
 import { PayPerHoursEntity } from '../entities/salary-rules/pay-per-hour.entity';
 import { ServiceCompletedEntity } from '../entities/salary-rules/service-completed.entity';
 import { OrderPayedEntity } from '../entities/salary-rules/order-payed.entity';
+import { TaskCompletion } from '../entities/salary-rules/task-completion.entity';
 
 describe('SalaryRuleFactory', () => {
     it('создаёт PayPerHoursEntity для типа PayPerHour', () => {
@@ -37,6 +38,22 @@ describe('SalaryRuleFactory', () => {
         });
 
         expect(rule).toBeInstanceOf(OrderPayedEntity);
+    });
+
+    it('создаёт TaskCompletion для типа TaskCompletion', () => {
+        const rule = SalaryRuleFactory.create({
+            type: 'TaskCompletion',
+            name: 'За выполнение задачи',
+            targetRole: 'ENGINEER',
+            config: {
+                bitrixTaskTitle: 'Проверить остатки',
+                isRecurring: false,
+                deadlineTemplate: '2026-08-15',
+                defaultAmount: 5000,
+            },
+        });
+
+        expect(rule).toBeInstanceOf(TaskCompletion);
     });
 
     it('выбрасывает NotFoundException для незарегистрированного типа', () => {

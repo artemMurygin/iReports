@@ -32,7 +32,11 @@ export class CalculateServiceSnapshotRowsService implements SnapshotRowsCalculat
             if (rules.length === 0) {
                 continue;
             }
-            const base = await this.contextBuilder.build(period, employeeId);
+            const base = await this.contextBuilder.build(
+                period,
+                employeeId,
+                rules,
+            );
             const lines = await PeriodCalculationOrchestrator.calculate(rules, {
                 employee: base.employee,
                 period: base.period,

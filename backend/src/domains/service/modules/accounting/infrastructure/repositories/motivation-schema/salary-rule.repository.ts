@@ -30,16 +30,16 @@ export class SalaryRuleRepository
         );
     }
 
-    async deleteAllByMotivationSchema(
-        motivationSchemaId: string,
-    ): Promise<void> {
+    async deleteByIds(ruleIds: string[]): Promise<void> {
+        if (ruleIds.length === 0) {
+            return;
+        }
         // direction: 'service' в WHERE — критично: не задевает правила
-        // направления shop той же строки motivation_schemas (сотрудник с
-        // идентичностями в обеих ERP), см. комментарий у
-        // SalaryRuleRepositoryPort.deleteAllByMotivationSchema.
+        // направления shop (сотрудник с идентичностями в обеих ERP), см.
+        // комментарий у SalaryRuleRepositoryPort.deleteByIds.
         await this.write(null, (client) =>
             client.salaryRule.deleteMany({
-                where: { motivationSchemaId, direction: 'service' },
+                where: { id: { in: ruleIds }, direction: 'service' },
             }),
         );
     }

@@ -40,8 +40,10 @@ export class AccountingCalculationCacheRepository
         }
         return {
             freshnessStamp: record.freshnessStamp,
-            factLines: record.factLines as unknown as CalculationLine[],
-            prognoseLines: record.prognoseLines as unknown as CalculationLine[],
+            factLines:
+                record.factLines as unknown as (CalculationLine | null)[],
+            prognoseLines:
+                record.prognoseLines as unknown as (CalculationLine | null)[],
             factTotal: record.factTotal,
             prognoseTotal: record.prognoseTotal,
         };

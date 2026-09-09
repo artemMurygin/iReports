@@ -3,6 +3,7 @@ import {
     orderPayedSalaryConfigSchema,
     payPerHourSalaryConfigSchema,
     serviceCompletedSalaryConfigSchema,
+    taskCompletionSalaryConfigSchema,
 } from 'ireports-contracts';
 import { salaryRuleRegistry } from '@/domains/service/modules/accounting/domain/salary-rule-registry';
 
@@ -14,7 +15,8 @@ import { salaryRuleRegistry } from '@/domains/service/modules/accounting/domain/
 //
 // Partial<Record<...>>, а не `as const`: ключ типа — SalaryRuleTypes из
 // contracts, а перечень реализованных схем конфига держится отдельно (все
-// три типа сервиса реализованы начиная с Фазы 8). Partial заставляет
+// четыре типа сервиса реализованы начиная с Фазы 8/раздела 10
+// add-task-based-salary-rule). Partial заставляет
 // вызывающий код (SalaryRuleMapper.toDomain) явно проверить `undefined`, а
 // не молча получить `any` на несуществующем ключе.
 export const salaryRuleConfigSchemaByType: Partial<
@@ -23,6 +25,7 @@ export const salaryRuleConfigSchemaByType: Partial<
     PayPerHour: payPerHourSalaryConfigSchema,
     ServiceCompleted: serviceCompletedSalaryConfigSchema,
     OrderPayed: orderPayedSalaryConfigSchema,
+    TaskCompletion: taskCompletionSalaryConfigSchema,
 };
 
 // Список типов берём из ключей реестра, а не хардкодим второй раз — так

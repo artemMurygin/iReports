@@ -42,6 +42,7 @@ import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { ShopSalaryAccrual } from '@/domains/shop/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { Period } from '@/shared/domain/period.value-object';
 import { DomainExceptionFilter } from '@/shared/exceptions';
@@ -85,7 +86,11 @@ describe('Документы начисления магазина: close → sa
     };
     const fakeShopSalaryRuleRepo: ShopSalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
-        deleteAllByMotivationSchema: () => Promise.resolve(),
+        deleteByIds: () => Promise.resolve(),
+        // Раздел 16 tasks.md (add-task-based-salary-rule) — не используется
+        // этим e2e-сценарием, но обязателен по интерфейсу порта.
+        findById: () => Promise.resolve(null),
+        update: () => Promise.resolve(),
     };
     const fakeShopCalculationData: ShopCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),
@@ -329,5 +334,84 @@ describe('Документы начисления магазина: close → sa
             [],
         );
         expect(snapshots.has('2026-07')).toBe(false);
+    });
+
+    // Раздел 18 tasks.md (add-task-based-salary-rule) — зеркало сценария
+    // "первичный ввод суммы по HTTP (task-reward)" сервиса
+    // (salary-accrual-lines.e2e.spec.ts): строка с requiresManualInput ===
+    // true заводится напрямую в in-memory репозитории (минуя закрытие
+    // периода — TaskCompletion требует полной интеграции с Bitrix24 Tasks
+    // API, вне скоупа этого e2e-сценария), проверяется сам HTTP-путь PATCH
+    // .../task-reward: 200 успешный ввод, 400 без комментария (zod-граница),
+    // 404 несуществующая строка/документ.
+    it('первичный ввод суммы по HTTP (task-reward): 200, 400 без комментария, 404', async () => {
+        const accrual = withRequestContext(() =>
+            ShopSalaryAccrual.createFromSnapshot({
+                period: '2026-05',
+                employeeId: 42,
+                isDismissed: false,
+                total: 0,
+                lines: [
+                    {
+                        ruleId: 'rule-task-1',
+                        type: 'TaskCompletion',
+                        name: 'За выполнение задачи',
+                        targetRole: 'ONLINE_MANAGER',
+                        amount: 0,
+                        sources: [
+                            {
+                                type: 'taskCompletion',
+                                id: 'task-1',
+                                label: 'Собрать отчёт по продажам',
+                                link: 'https://portal.bitrix24.ru/company/personal/user/0/tasks/task/view/1/',
+                            },
+                        ],
+                        requiresManualInput: true,
+                    },
+                ],
+            }),
+        );
+        accrualRepo.store.set(accrual.id, accrual);
+        const lineId = accrual.lines[0].id;
+
+        // Несуществующая строка → 404.
+        await request(app.getHttpServer())
+            .patch(
+                `/v1/shop/accounting/salary_accruals/${accrual.id}/lines/does-not-exist/task-reward`,
+            )
+            .send({ amount: 5000, comment: 'Готово' })
+            .expect(404);
+
+        // Без комментария — 400 на границе HTTP (zod), домен не тронут.
+        await request(app.getHttpServer())
+            .patch(
+                `/v1/shop/accounting/salary_accruals/${accrual.id}/lines/${lineId}/task-reward`,
+            )
+            .send({ amount: 5000, comment: '' })
+            .expect(400);
+
+        const rewarded = (
+            await request(app.getHttpServer())
+                .patch(
+                    `/v1/shop/accounting/salary_accruals/${accrual.id}/lines/${lineId}/task-reward`,
+                )
+                .send({ amount: 5000, comment: 'Задача выполнена досрочно' })
+                .expect(200)
+        ).body as SalaryAccrualResponse;
+        expect(rewarded.lines[0]).toMatchObject({
+            amount: 5000,
+            originalAmount: 0,
+            comment: 'Задача выполнена досрочно',
+            requiresManualInput: false,
+            status: 'DRAFT',
+        });
+
+        // Несуществующий документ → 404.
+        await request(app.getHttpServer())
+            .patch(
+                `/v1/shop/accounting/salary_accruals/does-not-exist/lines/${lineId}/task-reward`,
+            )
+            .send({ amount: 1000, comment: 'Нет такого документа' })
+            .expect(404);
     });
 });

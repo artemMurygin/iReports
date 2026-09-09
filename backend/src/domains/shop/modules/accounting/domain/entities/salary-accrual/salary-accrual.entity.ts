@@ -154,6 +154,22 @@ export class ShopSalaryAccrual extends AggregateRoot<ShopSalaryAccrualProps> {
         return line;
     }
 
+    // Первичный ручной ввод суммы+комментария строки TaskCompletion (раздел
+    // 18 tasks.md, design.md Decision 5, зеркало
+    // domains/service/.../salary-accrual.entity.ts setLineManualReward) —
+    // только до проведения (см. ShopSalaryAccrualLine.setManualReward для
+    // остальных инвариантов).
+    setLineManualReward(
+        lineId: string,
+        amount: number,
+        comment: string,
+    ): ShopSalaryAccrualLine {
+        this.ensureNotPaid();
+        const line = this.getLine(lineId);
+        line.setManualReward(amount, comment);
+        return line;
+    }
+
     private ensureNotPaid(): void {
         if (this.isPaid()) {
             throw new ShopSalaryAccrualPaidException(this.id);

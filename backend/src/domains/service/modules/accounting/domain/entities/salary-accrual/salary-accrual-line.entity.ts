@@ -3,8 +3,10 @@ import type { SalaryAccrualLineStatus } from 'ireports-contracts';
 import { AggregateID, Entity } from '@/shared/domain/entity.base';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { CalculationSourceRef } from '@/shared/domain/calculation-line';
+import { ArgumentNotProvidedException } from '@/shared/exceptions';
 import {
     SalaryAccrualLineAlreadyAccruedException,
+    SalaryAccrualLineManualInputNotRequiredException,
     SalaryAccrualLineNotAccruedException,
     SalaryAccrualLineNotDraftException,
     SalaryAccrualLineNotPaidException,
@@ -39,6 +41,11 @@ export interface SalaryAccrualSourceLine {
     rate?: number;
     amount: number;
     sources: CalculationSourceRef[];
+    // Раздел 10 tasks.md (add-task-based-salary-rule) — зеркалит
+    // RuleBreakdownLine.requiresManualInput (см. rule-breakdown.builder.ts).
+    // Проброс этого значения в SalaryAccrualLineProps/fromBreakdownLine —
+    // раздел 13 (ручной ввод суммы начисления), здесь только форма входа.
+    requiresManualInput?: boolean;
 }
 
 export interface SalaryAccrualLineProps {
@@ -58,6 +65,15 @@ export interface SalaryAccrualLineProps {
     // проведения добавляет запись; действующая сумма — amount, исходная —
     // originalAmount (никогда не меняется).
     adjustments: SalaryAccrualLineAdjustment[];
+    // Раздел 13 tasks.md (add-task-based-salary-rule, design.md Decision 5) —
+    // первичный комментарий руководителя при ручном вводе суммы строки типа
+    // TaskCompletion (НЕ история корректировок уже проведённой суммы — это
+    // adjustments/adjustmentComment выше) и флаг «строка ждёт ручного ввода».
+    // Optional — существующие конструкторы SalaryAccrualLine (прочие типы
+    // правил, старые тесты) не обязаны их указывать: getComment()/
+    // requiresManualInput трактуют отсутствие как «не задан»/false.
+    comment?: string | null;
+    requiresManualInput?: boolean;
 }
 
 export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
@@ -86,6 +102,8 @@ export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
                 sources: line.sources,
                 status: 'DRAFT',
                 adjustments: [],
+                comment: null,
+                requiresManualInput: line.requiresManualInput ?? false,
             },
         });
     }
@@ -142,6 +160,18 @@ export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
         return this.props.adjustments;
     }
 
+    // Первичный комментарий руководителя (setManualReward) — не путать с
+    // adjustmentComment (последняя корректировка уже проведённой суммы).
+    get comment(): string | null {
+        return this.props.comment ?? null;
+    }
+
+    // Строка ждёт ручного ввода суммы (TaskCompletion, design.md Decision 5)
+    // — true сразу после fromBreakdownLine, сбрасывается setManualReward().
+    get requiresManualInput(): boolean {
+        return this.props.requiresManualInput ?? false;
+    }
+
     isDraft(): boolean {
         return this.props.status === 'DRAFT';
     }
@@ -187,6 +217,39 @@ export class SalaryAccrualLine extends Entity<SalaryAccrualLineProps> {
         });
         this.props.adjustments.push(adjustment);
         this.props.amount = newAmount;
+    }
+
+    // Первичный ручной ввод суммы+комментария (раздел 13 tasks.md,
+    // design.md Decision 5) — только для строки, которую оркестратор
+    // расчёта пометил requiresManualInput (TaskCompletion, ещё не введено),
+    // и только до проведения. В отличие от adjust(): не история
+    // корректировок (SalaryAccrualLineAdjustment) — первичный ввод, а не
+    // изменение уже посчитанного значения; нет отдельного "автора" в
+    // контракте (setTaskCompletionLineRewardRequestSchema — только
+    // amount/comment, см. комментарий в contracts/commands/salary-accrual.ts)
+    // — в отличие от adjustedBy у adjust().
+    //
+    // spec: service/accounting#requirement-комментарий-обязателен-и-виден-сотруднику
+    setManualReward(amount: number, comment: string): void {
+        if (!this.requiresManualInput) {
+            throw new SalaryAccrualLineManualInputNotRequiredException(this.id);
+        }
+        if (!this.isDraft()) {
+            throw new SalaryAccrualLineNotDraftException(this.id);
+        }
+        if (!Number.isInteger(amount)) {
+            throw new ArgumentInvalidException(
+                'Сумма начисления по правилу «за выполнение задачи» должна быть целым числом рублей',
+            );
+        }
+        if (!comment || comment.trim().length === 0) {
+            throw new ArgumentNotProvidedException(
+                'Начисление по правилу «за выполнение задачи» требует комментария',
+            );
+        }
+        this.props.amount = amount;
+        this.props.comment = comment;
+        this.props.requiresManualInput = false;
     }
 
     // Проведение строки на баланс — переход DRAFT → ACCRUED. Повторное

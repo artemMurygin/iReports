@@ -283,6 +283,10 @@ export const routesV1 = {
                 lineById: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId`,
                 lineAccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
                 lineUnaccrue: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
+                // Первичный ручной ввод суммы+комментария строки TaskCompletion
+                // (раздел 13 tasks.md add-task-based-salary-rule, design.md
+                // Decision 5) — только для строк requiresManualInput === true.
+                lineTaskReward: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/task-reward`,
             },
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.
@@ -452,6 +456,10 @@ export const routesV1 = {
                 lineById: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId`,
                 lineAccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/accrue`,
                 lineUnaccrue: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/unaccrue`,
+                // Первичный ручной ввод суммы+комментария строки TaskCompletion
+                // (раздел 18 tasks.md add-task-based-salary-rule, design.md
+                // Decision 5) — зеркало service.accounting.salaryAccruals.lineTaskReward.
+                lineTaskReward: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/task-reward`,
             },
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.

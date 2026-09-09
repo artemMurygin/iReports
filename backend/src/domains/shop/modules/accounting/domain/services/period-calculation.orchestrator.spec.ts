@@ -2,6 +2,7 @@ import { PeriodCalculationOrchestrator } from './period-calculation.orchestrator
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
+import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 
 // Часы сотрудника за период — одно значение, сумма часов рабочих смен
 // графика (общий для service/shop WorkScheduleEntry, Фаза 5), общее для
@@ -21,6 +22,20 @@ const buildContext = (hoursWorked = 5): CalculationContext => ({
         hoursWorked: { fact: hoursWorked, prognose: hoursWorked },
     } satisfies ShopCalculationErpData,
     salesPerformance: null,
+});
+
+// Правило-заглушка, чьё calculate() возвращает null — воспроизводит
+// поведение TaskCompletion (Фаза 12, section 15) без зависимости от него:
+// раздел 4 вводит поддержку "дыр" в массиве строк ДО того, как заводится
+// сам TaskCompletion (см. комментарий-инструкция в начале tasks.md).
+const buildNullRule = (id: string): ShopSalaryRule => ({
+    id,
+    name: 'Задача (ещё не выполнена)',
+    type: 'TaskCompletion',
+    targetRole: 'ONLINE_MANAGER',
+    config: {} as ShopSalaryRule['config'],
+    updatedAt: new Date(),
+    calculate: (): null => null,
 });
 
 describe('PeriodCalculationOrchestrator (shop)', () => {
@@ -83,5 +98,36 @@ describe('PeriodCalculationOrchestrator (shop)', () => {
 
         expect(lines).toEqual([]);
         expect(PeriodCalculationOrchestrator.total(lines)).toBe(0);
+    });
+
+    // spec: shop/accounting — «строка отсутствует в отчёте, пока задача не
+    // выполнена» (TaskCompletion.calculate() возвращает null).
+    it('сохраняет null на позиции правила, чьё calculate() вернул null, не выбрасывая исключение и не схлопывая массив', async () => {
+        const ruleA = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Часы (онлайн-менеджер)',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 300 },
+        });
+        const ruleB = buildNullRule('rule-b');
+
+        const lines = await PeriodCalculationOrchestrator.calculate(
+            [ruleA, ruleB],
+            buildContext(),
+        );
+
+        expect(lines).toHaveLength(2);
+        expect(lines[0]).not.toBeNull();
+        expect(lines[1]).toBeNull();
+    });
+
+    it('total суммирует line?.amount ?? 0, игнорируя null-строки', () => {
+        const lines = [
+            { ruleId: 'rule-a', amount: 100, sources: [] },
+            null,
+            { ruleId: 'rule-c', amount: 50, sources: [] },
+        ];
+
+        expect(PeriodCalculationOrchestrator.total(lines)).toBe(150);
     });
 });

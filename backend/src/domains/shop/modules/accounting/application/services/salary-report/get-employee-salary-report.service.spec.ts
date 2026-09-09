@@ -17,12 +17,16 @@ import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/sale
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
+import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { ShopSalaryAccrualRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
+import type { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
+import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import type { ShopSalaryTask } from '@/domains/shop/modules/accounting/domain/entities/salary-task/salary-task.entity';
 
 // Отчёт по зарплате сотрудника магазина (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — сервис строит
@@ -68,6 +72,11 @@ describe('GetShopEmployeeSalaryReportService', () => {
             identifierType: string;
             externalId: string;
         }[];
+        // Раздел 12 tasks.md (add-task-based-salary-rule) — задачи
+        // TaskCompletion-правил, читаемые для штампа свежести кэша
+        // (taskCompletionFreshnessStamp). По умолчанию [] — большинство
+        // тестов этого файла TaskCompletion-правил не заводят.
+        taskCompletionTasks?: ShopSalaryTask[];
     }) => {
         const findShopByEmployee = jest
             .fn<Promise<ShopMotivationSchema | null>, [number]>()
@@ -222,6 +231,23 @@ describe('GetShopEmployeeSalaryReportService', () => {
             save: jest.fn(),
         };
 
+        // Раздел 16 tasks.md (add-task-based-salary-rule) — ленивое
+        // достраивание задачи Bitrix24 регулярных TaskCompletion-правил
+        // (см. WHY в самом сервисе). Фейк по умолчанию ничего не делает —
+        // большинство тестов этого файла не заводят TaskCompletion-правил.
+        const ensure = jest
+            .fn<Promise<unknown>, [string, string]>()
+            .mockResolvedValue(null);
+        const ensureSalaryTask = {
+            ensure,
+        } as unknown as EnsureShopSalaryTaskForPeriodService;
+
+        const taskRepo = {
+            findManyByRulesAndPeriod: jest
+                .fn()
+                .mockResolvedValue(overrides?.taskCompletionTasks ?? []),
+        } as unknown as ShopSalaryTaskRepositoryPort;
+
         const service = new GetShopEmployeeSalaryReportService(
             periodRepo,
             snapshotRepo,
@@ -231,6 +257,8 @@ describe('GetShopEmployeeSalaryReportService', () => {
             salesPlanRepo,
             shopContextBuilder,
             salaryRulesResolver,
+            ensureSalaryTask,
+            taskRepo,
         );
 
         return {
@@ -243,6 +271,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
             upsertCache,
             getLastSuccessfulSyncAt,
             findPlansByPeriod,
+            ensure,
         };
     };
 
@@ -556,5 +585,83 @@ describe('GetShopEmployeeSalaryReportService', () => {
         expect(findAccrualStatus).toHaveBeenCalledWith('2026-07', 42);
         expect(report.isClosed).toBe(true);
         expect(report.accrualStatus).toBe('DRAFT');
+    });
+
+    // Раздел 16 tasks.md (add-task-based-salary-rule) — ленивое
+    // достраивание задачи Bitrix24 (design.md Decision 4: "@ProdCron не
+    // тикает вне prod"), т.к. EnsureShopSalaryTaskForPeriodService.ensure()
+    // сам по себе не имеет отдельного HTTP-входа для регулярных правил.
+    describe('ленивое достраивание задачи TaskCompletion', () => {
+        it('открытый период — вызывает ensure() для каждого регулярного TaskCompletion-правила схемы', async () => {
+            const taskRule = withRequestContext(() =>
+                TaskCompletionShop.create({
+                    type: 'TaskCompletion',
+                    name: 'Собрать отчёт',
+                    targetRole: 'OFFLINE_MANAGER',
+                    config: {
+                        bitrixTaskTitle: 'Собрать отчёт',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                    },
+                }),
+            );
+            const shopSchema = withRequestContext(() =>
+                ShopMotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: 42,
+                    name: 'Схема с задачей',
+                    rules: [taskRule],
+                }),
+            );
+            const { service, ensure } = buildService({ shopSchema });
+
+            await service.execute(42, '2026-08');
+
+            expect(ensure).toHaveBeenCalledWith(taskRule.id, '2026-08', 42);
+        });
+
+        it('закрытый период — не вызывает ensure() (задачи новых периодов не нужны)', async () => {
+            const closedPeriod = withRequestContext(() => {
+                const period = ShopAccountingPeriod.openFor('2026-07');
+                period.close(1, 1);
+                return period;
+            });
+            const { service, ensure } = buildService({
+                shopAccountingPeriod: closedPeriod,
+            });
+
+            await service.execute(42, '2026-07');
+
+            expect(ensure).not.toHaveBeenCalled();
+        });
+
+        it('сбой ensure() для одного правила не ломает построение отчёта', async () => {
+            const taskRule = withRequestContext(() =>
+                TaskCompletionShop.create({
+                    type: 'TaskCompletion',
+                    name: 'Собрать отчёт',
+                    targetRole: 'OFFLINE_MANAGER',
+                    config: {
+                        bitrixTaskTitle: 'Собрать отчёт',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                    },
+                }),
+            );
+            const shopSchema = withRequestContext(() =>
+                ShopMotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: 42,
+                    name: 'Схема с задачей',
+                    rules: [taskRule],
+                }),
+            );
+            const { service, ensure } = buildService({ shopSchema });
+            ensure.mockRejectedValueOnce(new Error('bitrix down'));
+
+            await expect(service.execute(42, '2026-08')).resolves.toBeDefined();
+        });
     });
 });

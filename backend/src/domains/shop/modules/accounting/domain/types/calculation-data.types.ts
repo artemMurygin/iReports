@@ -1,14 +1,10 @@
 // Форма CalculationContext.erpData для направления shop (Фаза 12/13,
 // зеркало ServiceCalculationErpData сервиса). Собирается application-слоем
-// (будущий BuildShopCalculationContextService — по образцу
-// build-service-calculation-context.service.ts сервиса). Этот сервис
-// сознательно НЕ реализуется в Фазе 12/13 — ни один из выданных issues
-// 57-66 не требует HTTP-эндпоинта создания мотивационной схемы/отчёта по
-// зарплате магазина (см. accounting.module.ts — тот же решённый
-// вопрос, что и "путь записи"), поэтому оркестратор, реально наполняющий
-// эту структуру из БД, не существует — правила уже готовы её потреблять,
-// когда он появится. Один раз на всю мотивационную схему сотрудника и
-// передаётся неизменным во все его правила.
+// (BuildShopCalculationContextService — по образцу
+// build-service-calculation-context.service.ts сервиса). Один раз на всю
+// мотивационную схему сотрудника и передаётся неизменным во все его правила.
+import type { ShopTaskStatus } from '../value-objects/task-status.value-object';
+
 export interface ShopProductSoldErpItem {
     // MoySkladDemandPosition.id — источник дедупликации "правило × позиция"
     // (issue #61/#65).
@@ -89,4 +85,19 @@ export interface ShopCalculationErpData {
     // переплатит сотруднику. Используется и UsedProductSold (Фаза 13) —
     // его необязательная категория раскрывается тем же механизмом.
     categoryDescendantFolderIds?: Record<string, string[]>;
+    // Раздел 15 tasks.md (add-task-based-salary-rule) — зеркало
+    // taskCompletionStatuses ServiceCalculationErpData сервиса (раздел 10).
+    // Источник TaskCompletionShop.calculate() — ключ SalaryRule.id.
+    // Заполняется BuildShopCalculationContextService (раздел 17, ещё не
+    // реализован на этом шаге) через ShopSalaryTaskRepository.
+    // findByRuleAndPeriod для каждого TaskCompletion-правила. Значение — не
+    // голый ShopTaskStatus, а пара {bitrixTaskId, status}: TaskCompletionShop.
+    // calculate() нужен bitrixTaskId, чтобы построить CalculationSourceRef
+    // (id/link, см. buildBitrixTaskLink), а сам статус не несёт его.
+    // Опционально — так же, как productSoldItems, чтобы не ломать
+    // существующие фикстуры контекста без TaskCompletion-правил.
+    taskCompletionStatuses?: Record<
+        string,
+        { bitrixTaskId: string; status: ShopTaskStatus }
+    >;
 }

@@ -14,6 +14,7 @@ import { RoappModule } from './domains/service/integrations/roapp/roapp.module';
 import { CustomApiRoappModule } from './domains/service/integrations/custom-api-roapp/custom-api-roapp.module';
 import { MoyskladModule } from './domains/shop/integrations/moySklad/moysklad.module';
 import { BitrixSyncModule } from './sync/bitrix/bitrix-sync.module';
+import { SalaryTaskStatusSyncModule } from './sync/bitrix-tasks/salary-task-status-sync.module';
 import { SalesModule } from './domains/service/modules/sales/sales.module';
 import { RoappSyncModule } from './domains/service/sync/roapp/roapp-sync.module';
 import { MoySkladSyncModule } from './domains/shop/sync/moySklad/moysklad-sync.module';
@@ -48,6 +49,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         ScheduleModule.forRoot(),
         EventEmitterModule.forRoot(),
         BitrixSyncModule,
+        SalaryTaskStatusSyncModule,
         RoappSyncModule,
         SalesModule,
         ShopSalesModule,

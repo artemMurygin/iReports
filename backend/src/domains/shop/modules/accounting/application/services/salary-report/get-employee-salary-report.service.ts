@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
@@ -27,6 +27,16 @@ import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-statu
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SHOP_SALES_PLAN_REPOSITORY } from '@/domains/shop/modules/sales/application/ports/sales-plan.port';
 import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/application/ports/sales-plan.port';
+import {
+    EnsureShopSalaryTaskForPeriodService,
+    filterRecurringTaskCompletionShopRules,
+} from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
+import { SHOP_SALARY_TASK_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import type { ShopSalaryTaskRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-task/salary-task.port';
+import {
+    findTaskCompletionTasks,
+    taskCompletionFreshnessStamp,
+} from '@/domains/shop/modules/accounting/application/services/calculation/task-completion-statuses.builder';
 
 // Отчёт по зарплате сотрудника магазина (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — зеркало
@@ -62,6 +72,10 @@ import type { ShopSalesPlanRepositoryPort } from '@/domains/shop/modules/sales/a
 // самой реализацией (см. accounting.module.ts).
 @Injectable()
 export class GetShopEmployeeSalaryReportService {
+    private readonly logger = new Logger(
+        GetShopEmployeeSalaryReportService.name,
+    );
+
     constructor(
         @Inject(SHOP_ACCOUNTING_PERIOD_REPOSITORY)
         private readonly periodRepo: ShopAccountingPeriodRepositoryPort,
@@ -77,6 +91,13 @@ export class GetShopEmployeeSalaryReportService {
         private readonly salesPlanRepo: ShopSalesPlanRepositoryPort,
         private readonly shopContextBuilder: BuildShopCalculationContextService,
         private readonly salaryRulesResolver: ResolveShopEmployeeSalaryRulesService,
+        // Раздел 16 tasks.md (add-task-based-salary-rule) — ленивое
+        // достраивание задачи Bitrix24 регулярного правила TaskCompletion
+        // на текущий период (design.md Decision 4: "@ProdCron не тикает
+        // вне prod", см. ShopTaskCompletionAutoCreationCron).
+        private readonly ensureSalaryTask: EnsureShopSalaryTaskForPeriodService,
+        @Inject(SHOP_SALARY_TASK_REPOSITORY)
+        private readonly taskRepo: ShopSalaryTaskRepositoryPort,
     ) {}
 
     async execute(
@@ -160,9 +181,32 @@ export class GetShopEmployeeSalaryReportService {
         const { rules, schemasVersion } =
             await this.salaryRulesResolver.forEmployee(employeeId);
 
+        // Раздел 16 tasks.md — ленивый вызов ensure() ДО кэша: он не
+        // участвует в freshnessStamp расчёта (создание/пересоздание задачи
+        // Bitrix24 не влияет на уже посчитанные суммы, см. design.md
+        // Decision 5 — сумма правила TaskCompletion живёт на
+        // SalaryAccrualLine, не пересчитывается) и должен выполняться
+        // независимо от того, есть ли валидный кэш.
+        await this.ensureRecurringTaskCompletionTasks(
+            rules,
+            period,
+            employeeId,
+        );
+
+        // Раздел 12 tasks.md (add-task-based-salary-rule) — статусы связанных
+        // задач нужны и расчёту (через shopContextBuilder ниже), и штампу
+        // свежести кэша (см. taskCompletionFreshnessStamp) — запрашиваются
+        // здесь один раз, до решения "кэш/пересчёт".
+        const taskCompletionTasks = await findTaskCompletionTasks(
+            this.taskRepo,
+            rules,
+            period,
+        );
+
         const freshnessStamp = await this.computeFreshnessStamp(
             schemasVersion,
             period,
+            taskCompletionFreshnessStamp(taskCompletionTasks),
         );
 
         const cached = await this.cacheRepo.find(period, employeeId);
@@ -237,10 +281,47 @@ export class GetShopEmployeeSalaryReportService {
         );
     }
 
+    // Раздел 16 tasks.md (add-task-based-salary-rule) — по всем активным
+    // регулярным TaskCompletion-правилам запрашиваемого сотрудника
+    // (личная схема + схема отдела, см. ResolveShopEmployeeSalaryRulesService)
+    // за ТЕКУЩИЙ период обеспечивает существование задачи Bitrix24 (см.
+    // EnsureShopSalaryTaskForPeriodService — идемпотентно, не создаёт
+    // дублей). employeeId — тот же Bitrix ID, что уже пришёл параметром
+    // execute() (CalculationEmployee.id — единственный источник истины о
+    // человеке в расчёте, см. calculation-context.ts), передаётся как
+    // responsibleBitrixUserId. Ошибка одного правила (например, недоступен
+    // Bitrix24 REST) не должна ронять просмотр отчёта — логируется и
+    // пропускается, тот же fail-safe принцип, что и у
+    // ShopTaskCompletionAutoCreationCron.
+    private async ensureRecurringTaskCompletionTasks(
+        rules: ShopSalaryRule[],
+        period: string,
+        employeeId: number,
+    ): Promise<void> {
+        const recurringTaskRules =
+            filterRecurringTaskCompletionShopRules(rules);
+
+        await Promise.all(
+            recurringTaskRules.map((rule) =>
+                this.ensureSalaryTask
+                    .ensure(rule.id, period, employeeId)
+                    .catch((error: unknown) => {
+                        const message =
+                            error instanceof Error
+                                ? error.message
+                                : String(error);
+                        this.logger.error(
+                            `Не удалось обеспечить задачу Bitrix24 для правила ${rule.id}: ${message}`,
+                        );
+                    }),
+            ),
+        );
+    }
+
     private buildDirectionResponse(
         rules: ShopSalaryRule[],
-        factLines: CalculationLine[],
-        prognoseLines: CalculationLine[],
+        factLines: (CalculationLine | null)[],
+        prognoseLines: (CalculationLine | null)[],
         salesPerformanceDetail: Parameters<
             typeof buildShopSalaryReportRules
         >[3],
@@ -309,6 +390,7 @@ export class GetShopEmployeeSalaryReportService {
     private async computeFreshnessStamp(
         schemasVersion: string,
         period: string,
+        taskCompletionStamp: string,
     ): Promise<string> {
         const [domainSyncAt, plans] = await Promise.all([
             this.domainSyncStatus.getLastSuccessfulSyncAt('shop'),
@@ -324,6 +406,7 @@ export class GetShopEmployeeSalaryReportService {
             schemaVersion: schemasVersion,
             domainSyncStamp: AccountingCacheFreshness.dateStamp(domainSyncAt),
             salesPlanStamp: AccountingCacheFreshness.dateStamp(salesPlanAt),
+            taskCompletionStamp,
         });
     }
 }

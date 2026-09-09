@@ -77,7 +77,7 @@ describe('Документы начисления: close → salary_accruals →
     };
     const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
-        deleteAllByMotivationSchema: () => Promise.resolve(),
+        deleteByIds: () => Promise.resolve(),
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
     };

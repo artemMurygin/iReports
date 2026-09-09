@@ -1,4 +1,5 @@
 import type { ServiceOrderRoleFields } from '../services/role-source';
+import type { TaskStatus } from '../value-objects/task-status.value-object';
 
 // Конкретное наполнение CalculationContext.erpData для направления service
 // (Фаза 7, см. docs/payroll/plan-payroll-calculation.md). Собирается один
@@ -114,4 +115,18 @@ export interface ServiceCalculationErpData {
     // подставляет [] при отсутствии поля (тот же приём, что и
     // erpData?.hoursWorked ?? 0).
     orderPayedItems?: OrderPayedErpItem[];
+    // Раздел 10/12 tasks.md (add-task-based-salary-rule) — статус связанной
+    // SalaryTask по каждому TaskCompletion-правилу схемы, keyed по
+    // SalaryRule.id. Заполняется BuildServiceCalculationContextService
+    // (раздел 12, ещё не реализован на этом шаге) через
+    // SalaryTaskRepository.findByRuleAndPeriod для каждого TaskCompletion-
+    // правила. Значение — не голый TaskStatus, а пара {bitrixTaskId, status}:
+    // TaskCompletionEntity.calculate() нужен bitrixTaskId, чтобы построить
+    // CalculationSourceRef (id/link, см. buildBitrixTaskLink), а сам статус
+    // не несёт его. Опционально — так же, как orderPayedItems, чтобы не
+    // ломать существующие фикстуры контекста без TaskCompletion-правил.
+    taskCompletionStatuses?: Record<
+        string,
+        { bitrixTaskId: string; status: TaskStatus }
+    >;
 }

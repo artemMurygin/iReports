@@ -7,6 +7,10 @@ import type { SalesPerformance } from '@/domains/service/modules/sales/domain/va
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/calculation/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
+import {
+    EnsureSalaryTaskForPeriodService,
+    filterRecurringTaskCompletionRules,
+} from '@/domains/service/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
 import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
 import {
     isSalesPerformancePlanApproved,
@@ -27,6 +31,12 @@ import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-statu
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
+import { SALARY_TASK_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
+import type { SalaryTaskRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-task/salary-task.port';
+import {
+    findTaskCompletionTasks,
+    taskCompletionFreshnessStamp,
+} from '@/domains/service/modules/accounting/application/services/calculation/task-completion-statuses.builder';
 
 // Тонкий сквозной путь Фазы 1, дополненный Фазой 6 ленивым кэшем и
 // снапшотом закрытого периода, и Фазой 9 парой факт/прогноз + компактным
@@ -78,8 +88,11 @@ export class GetEmployeeSalaryReportService {
         private readonly domainSyncStatus: DomainSyncStatusPort,
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
+        @Inject(SALARY_TASK_REPOSITORY)
+        private readonly taskRepo: SalaryTaskRepositoryPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
         private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
+        private readonly ensureSalaryTask: EnsureSalaryTaskForPeriodService,
     ) {}
 
     async execute(
@@ -175,10 +188,29 @@ export class GetEmployeeSalaryReportService {
         const { rules, schemasVersion } =
             await this.salaryRulesResolver.forEmployee(employeeId);
 
+        // Раздел 11 tasks.md (add-task-based-salary-rule), design.md
+        // Decision 4 — ленивое достраивание задачи Bitrix24 регулярного
+        // TaskCompletion-правила ДО расчёта: @ProdCron (TaskCompletionAutoCreationCron)
+        // не тикает вне прода, поэтому первое открытие отчёта за новый
+        // период — единственная гарантия, что задача вообще будет заведена
+        // в dev/только что развёрнутом окружении.
+        await this.ensureTaskCompletionTasks(rules, period, employeeId);
+
+        // Раздел 12 tasks.md (add-task-based-salary-rule) — статусы связанных
+        // задач нужны и расчёту (через contextBuilder ниже), и штампу
+        // свежести кэша (см. taskCompletionFreshnessStamp) — запрашиваются
+        // здесь один раз, до решения "кэш/пересчёт".
+        const taskCompletionTasks = await findTaskCompletionTasks(
+            this.taskRepo,
+            rules,
+            period,
+        );
+
         const freshnessStamp = await this.computeFreshnessStamp(
             'service',
             schemasVersion,
             period,
+            taskCompletionFreshnessStamp(taskCompletionTasks),
         );
 
         const cached = await this.cacheRepo.find('service', period, employeeId);
@@ -199,6 +231,7 @@ export class GetEmployeeSalaryReportService {
         const baseContext = await this.contextBuilder.build(
             validatedPeriod,
             employeeId,
+            rules,
         );
 
         const [factLines, prognoseLines] = await Promise.all([
@@ -246,8 +279,8 @@ export class GetEmployeeSalaryReportService {
 
     private buildServiceDirectionResponse(
         rules: SalaryRule[],
-        factLines: CalculationLine[],
-        prognoseLines: CalculationLine[],
+        factLines: (CalculationLine | null)[],
+        prognoseLines: (CalculationLine | null)[],
         salesPerformanceDetail: SalesPerformance | null,
     ): OpenDirectionReport {
         const ruleBreakdown = buildSalaryReportRules(
@@ -281,13 +314,15 @@ export class GetEmployeeSalaryReportService {
         };
     }
 
-    // Три источника инвалидации кэша (PRD: синхронизация домена / правка
-    // схемы или правила / правка или утверждение плана) свёрнуты в одну
-    // строку сравнения — см. domain/services/accounting-cache-freshness.ts.
+    // Источники инвалидации кэша (PRD: синхронизация домена / правка схемы
+    // или правила / правка или утверждение плана; плюс статус связанных
+    // задач TaskCompletion-правил, см. taskCompletionFreshnessStamp) свёрнуты
+    // в одну строку сравнения — см. domain/services/accounting-cache-freshness.ts.
     private async computeFreshnessStamp(
         direction: AccountingDirection,
         schemasVersion: string,
         period: string,
+        taskCompletionStamp: string,
     ): Promise<string> {
         const [domainSyncAt, plans] = await Promise.all([
             this.domainSyncStatus.getLastSuccessfulSyncAt(direction),
@@ -303,7 +338,24 @@ export class GetEmployeeSalaryReportService {
             schemaVersion: schemasVersion,
             domainSyncStamp: AccountingCacheFreshness.dateStamp(domainSyncAt),
             salesPlanStamp: AccountingCacheFreshness.dateStamp(salesPlanAt),
+            taskCompletionStamp,
         });
+    }
+
+    // Раздел 11 tasks.md — по всем активным регулярным TaskCompletion-
+    // правилам сотрудника (личным + отдела, см. rules выше). Разовые
+    // правила не нуждаются в ensure() здесь — их задача заводится один раз
+    // при создании правила (раздел 12).
+    private async ensureTaskCompletionTasks(
+        rules: SalaryRule[],
+        period: string,
+        employeeId: number,
+    ): Promise<void> {
+        await Promise.all(
+            filterRecurringTaskCompletionRules(rules).map((rule) =>
+                this.ensureSalaryTask.ensure(rule.id, period, employeeId),
+            ),
+        );
     }
 }
 

@@ -77,16 +77,25 @@ export class AccountingCacheFreshness {
         return at ? at.toISOString() : 'never';
     }
 
-    // Склеивает три источника инвалидации кэша в одну строку сравнения.
+    // Склеивает источники инвалидации кэша в одну строку сравнения.
+    // taskCompletionStamp — штамп статусов SalaryTask TaskCompletion-правил
+    // сотрудника за период (см. taskCompletionFreshnessStamp,
+    // task-completion-statuses.builder.ts) — без него переход связанной
+    // задачи в «Выполнено» не инвалидирует кэш сам по себе (см. WHY там);
+    // опционален (по умолчанию 'none') ради обратной совместимости вызовов
+    // до раздела add-task-based-salary-rule, у которых просто нет ни одного
+    // TaskCompletion-правила.
     static buildStamp(parts: {
         schemaVersion: string;
         domainSyncStamp: string;
         salesPlanStamp: string;
+        taskCompletionStamp?: string;
     }): string {
         return [
             parts.schemaVersion,
             parts.domainSyncStamp,
             parts.salesPlanStamp,
+            parts.taskCompletionStamp ?? 'none',
         ].join('|');
     }
 }

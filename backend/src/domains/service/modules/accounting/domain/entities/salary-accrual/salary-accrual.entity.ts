@@ -164,6 +164,20 @@ export class SalaryAccrual extends AggregateRoot<SalaryAccrualProps> {
         return line;
     }
 
+    // Первичный ручной ввод суммы+комментария строки TaskCompletion (раздел
+    // 13 tasks.md, design.md Decision 5) — только до проведения (см.
+    // SalaryAccrualLine.setManualReward для остальных инвариантов).
+    setLineManualReward(
+        lineId: string,
+        amount: number,
+        comment: string,
+    ): SalaryAccrualLine {
+        this.ensureNotPaid();
+        const line = this.getLine(lineId);
+        line.setManualReward(amount, comment);
+        return line;
+    }
+
     private ensureNotPaid(): void {
         if (this.isPaid()) {
             throw new SalaryAccrualPaidException(this.id);

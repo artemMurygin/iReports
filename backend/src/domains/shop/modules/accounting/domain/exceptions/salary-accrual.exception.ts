@@ -61,6 +61,16 @@ export class ShopSalaryAccrualLineNotDraftException extends ConflictException {
     }
 }
 
+// Раздел 18 tasks.md (add-task-based-salary-rule) — зеркало
+// SalaryAccrualLineManualInputNotRequiredException сервиса: строка без
+// requiresManualInput (не TaskCompletion, либо сумма уже введена) отклоняет
+// первичный ручной ввод отдельно от ShopSalaryAccrualLineNotDraftException.
+export class ShopSalaryAccrualLineManualInputNotRequiredException extends ConflictException {
+    constructor(lineId: string) {
+        super(`Строка начисления ${lineId} не требует ручного ввода суммы`);
+    }
+}
+
 export class ShopSalaryAccrualLineNotPaidException extends ConflictException {
     constructor(lineId: string) {
         super(`Строка начисления ${lineId} не выплачена — возвращать нечего`);

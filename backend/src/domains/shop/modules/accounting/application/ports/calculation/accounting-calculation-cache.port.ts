@@ -2,8 +2,11 @@ import { CalculationLine } from '@/shared/domain/calculation-line';
 
 export interface ShopAccountingCalculationCacheEntry {
     freshnessStamp: string;
-    factLines: CalculationLine[];
-    prognoseLines: CalculationLine[];
+    // Раздел 4 (add-task-based-salary-rule): позиция может быть null —
+    // правило TaskCompletionShop без выполненной задачи в этом режиме
+    // (spec shop/accounting: «строка отсутствует в отчёте»).
+    factLines: (CalculationLine | null)[];
+    prognoseLines: (CalculationLine | null)[];
     factTotal: number;
     prognoseTotal: number;
 }

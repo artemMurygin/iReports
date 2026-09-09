@@ -89,7 +89,11 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
     };
     const fakeShopSalaryRuleRepo: ShopSalaryRuleRepositoryPort = {
         insert: () => Promise.resolve(),
-        deleteAllByMotivationSchema: () => Promise.resolve(),
+        deleteByIds: () => Promise.resolve(),
+        // Раздел 16 tasks.md (add-task-based-salary-rule) — не используется
+        // этим e2e-сценарием, но обязателен по интерфейсу порта.
+        findById: () => Promise.resolve(null),
+        update: () => Promise.resolve(),
     };
     const fakeShopCalculationData: ShopCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),

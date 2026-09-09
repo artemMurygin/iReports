@@ -91,10 +91,39 @@ export type UsedProductSoldSalaryRule = {
     config: UsedProductSoldSalaryConfig;
 };
 
+// ========================== За выполнение задачи Bitrix24 ========================== //
+
+// Раздел 15 tasks.md (add-task-based-salary-rule), зеркало
+// TaskCompletionSalaryConfig/Rule сервиса (раздел 10, issue #57 —
+// независимая копия). bitrixTaskTitle — название задачи в Bitrix24
+// (используется и как CalculationSourceRef.label в
+// TaskCompletionShop.calculate(), см. design.md Decision 7 — без отдельного
+// round-trip в ERP за названием). isRecurring/deadlineTemplate — см.
+// EnsureShopSalaryTaskForPeriodService (раздел 16): deadlineTemplate —
+// ISO-дата, для разового правила берётся буквально, для регулярного
+// используется только число месяца.
+export type TaskCompletionShopSalaryConfig = {
+    bitrixTaskTitle: string;
+    taskDescription?: string;
+    isRecurring: boolean;
+    deadlineTemplate: string;
+    // Сумма начисления по умолчанию — зеркало
+    // domain/types/salary-rule.types.ts направления service.
+    defaultAmount: number;
+};
+
+export type TaskCompletionShopSalaryRule = {
+    type: 'TaskCompletion';
+    name: string;
+    targetRole: TargetRole;
+    config: TaskCompletionShopSalaryConfig;
+};
+
 export type ShopSalaryRuleConfig =
     | PayPerHourShopSalaryConfig
     | ProductSoldSalaryConfig
-    | UsedProductSoldSalaryConfig;
+    | UsedProductSoldSalaryConfig
+    | TaskCompletionShopSalaryConfig;
 
 // Форма запроса на создание правила — контракт (ShopSalaryRuleRequest), а
 // не подмножество реализованных типов (то же решение, что у сервиса — см.
@@ -110,6 +139,13 @@ export type ShopSalaryRuleClass = {
     create(rule: CreateShopSalaryRuleProps): ShopSalaryRule;
 };
 
+// Раздел 4 (add-task-based-salary-rule) — calculate() может вернуть null:
+// TaskCompletionShop (раздел 15) сигнализирует так "строка отсутствует в
+// отчёте, пока связанная задача Bitrix24 не выполнена" (spec
+// shop/accounting), а не CalculationLine с amount: 0 — ноль неотличим от
+// "правило посчитано и заработало 0". Существующие типы правил
+// (PayPerHour/ProductSold/UsedProductSold) продолжают всегда возвращать
+// не-null CalculationLine.
 export type ShopSalaryRule = {
     readonly id: string;
     readonly name: string;
@@ -119,5 +155,5 @@ export type ShopSalaryRule = {
     readonly updatedAt: Date;
     calculate(
         context: ShopCalculationContext,
-    ): CalculationLine | Promise<CalculationLine>;
+    ): CalculationLine | null | Promise<CalculationLine | null>;
 };

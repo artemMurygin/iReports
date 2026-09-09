@@ -23,27 +23,41 @@ export interface RuleBreakdownLine {
     rate?: number;
     amount: number;
     sources: CalculationSourceRef[];
+    // Раздел 10 tasks.md (add-task-based-salary-rule) — прокидывает
+    // CalculationLine.requiresManualInput (см. shared/domain/calculation-line.ts)
+    // дальше по цепочке в документ начисления (SalaryAccrualSourceLine,
+    // раздел 13).
+    requiresManualInput?: boolean;
 }
 
 // rules и lines собраны одним и тем же оркестратором за один проход (см.
 // PeriodCalculationOrchestrator.calculate) — строки идут в том же порядке,
-// что и правила схемы, поэтому сопоставление по индексу безопасно.
+// что и правила схемы, поэтому сопоставление по индексу безопасно. Правило,
+// чья строка на этой позиции — null (см. SalaryRule.calculate()), пропускается
+// целиком: пустая строка на его место не вставляется — spec:
+// service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения.
 export function buildRuleBreakdown(
     rules: SalaryRule[],
-    lines: CalculationLine[],
+    lines: (CalculationLine | null)[],
 ): RuleBreakdownLine[] {
-    return rules.map((rule, index) => {
+    return rules.flatMap((rule, index) => {
         const line = lines[index];
-        return {
-            ruleId: rule.id,
-            type: rule.type,
-            name: rule.name,
-            targetRole: rule.targetRole,
-            salaryBasis: line.salaryBasis,
-            quantity: line.quantity,
-            rate: line.rate,
-            amount: line.amount,
-            sources: line.sources,
-        };
+        if (!line) {
+            return [];
+        }
+        return [
+            {
+                ruleId: rule.id,
+                type: rule.type,
+                name: rule.name,
+                targetRole: rule.targetRole,
+                salaryBasis: line.salaryBasis,
+                quantity: line.quantity,
+                rate: line.rate,
+                amount: line.amount,
+                sources: line.sources,
+                requiresManualInput: line.requiresManualInput,
+            },
+        ];
     });
 }

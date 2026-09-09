@@ -139,6 +139,8 @@ export class InMemoryShopSalaryAccrualRepository implements ShopSalaryAccrualRep
                             amount: lineProps.amount,
                             sources: [...lineProps.sources],
                             status: lineProps.status,
+                            comment: lineProps.comment,
+                            requiresManualInput: lineProps.requiresManualInput,
                             adjustments: [...lineProps.adjustments],
                         },
                     });

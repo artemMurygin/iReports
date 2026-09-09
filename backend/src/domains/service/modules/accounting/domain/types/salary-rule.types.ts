@@ -78,10 +78,37 @@ export type OrderPayedSalaryRule = {
     config: OrderPayedSalaryConfig;
 };
 
+// За выполнение задачи Bitrix24 (раздел 10 tasks.md add-task-based-salary-rule).
+// bitrixTaskTitle — название задачи в Bitrix24 (используется и как
+// CalculationSourceRef.label в TaskCompletionEntity.calculate(), см. design.md
+// Decision 7 — без отдельного round-trip в ERP за названием). isRecurring/
+// deadlineTemplate — см. EnsureSalaryTaskForPeriodService (раздел 11):
+// deadlineTemplate — ISO-дата, для разового правила берётся буквально, для
+// регулярного используется только число месяца.
+export type TaskCompletionSalaryConfig = {
+    bitrixTaskTitle: string;
+    taskDescription?: string;
+    isRecurring: boolean;
+    deadlineTemplate: string;
+    // Сумма начисления по умолчанию — TaskCompletion.calculate() подставляет
+    // её в CalculationLine.amount, когда задача переходит в «Выполнено»;
+    // руководитель может изменить сумму при проведении начисления (см.
+    // SetTaskCompletionLineRewardHandler), но comment остаётся обязательным.
+    defaultAmount: number;
+};
+
+export type TaskCompletionSalaryRule = {
+    type: 'TaskCompletion';
+    name: string;
+    targetRole: TargetRole;
+    config: TaskCompletionSalaryConfig;
+};
+
 export type SalaryRuleConfig =
     | PayPerHourSalaryConfig
     | ServiceCompletedSalaryConfig
-    | OrderPayedSalaryConfig;
+    | OrderPayedSalaryConfig
+    | TaskCompletionSalaryConfig;
 
 // Форма запроса на создание правила — контракт (SalaryRuleRequest), а не
 // подмножество из двух реализованных типов: контракт уже включает
@@ -118,7 +145,15 @@ export type SalaryRule = {
     // Entity (базовый класс всех конкретных правил) уже несёт updatedAt
     // рантайм-полем, здесь лишь делаем его частью структурного типа.
     readonly updatedAt: Date;
+    // CalculationLine | null (а не всегда CalculationLine) — начиная с
+    // TaskCompletion (см. tasks.md раздел 3), правило может не иметь строки
+    // расчёта вовсе, а не строку с нулевой суммой: null означает «правило
+    // ещё не готово к начислению за этот проход» (например, связанная
+    // задача Bitrix24 ещё не переведена в статус «Выполнено» — spec:
+    // service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения).
+    // Существующие типы правил (PayPerHour/ServiceCompleted/OrderPayed)
+    // продолжают всегда возвращать не-null CalculationLine.
     calculate(
         context: CalculationContext,
-    ): CalculationLine | Promise<CalculationLine>;
+    ): CalculationLine | null | Promise<CalculationLine | null>;
 };

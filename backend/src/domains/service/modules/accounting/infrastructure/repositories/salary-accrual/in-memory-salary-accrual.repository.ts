@@ -183,6 +183,8 @@ export class InMemorySalaryAccrualRepository implements SalaryAccrualRepositoryP
                             sources: [...lineProps.sources],
                             status: lineProps.status,
                             adjustments: [...lineProps.adjustments],
+                            comment: lineProps.comment,
+                            requiresManualInput: lineProps.requiresManualInput,
                         },
                     });
                 }),

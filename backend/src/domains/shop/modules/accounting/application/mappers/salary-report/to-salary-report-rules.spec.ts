@@ -174,4 +174,112 @@ describe('buildShopSalaryReportRules', () => {
 
         expect(entry.floatPercent).toBeUndefined();
     });
+
+    // spec: shop/accounting — «строка отсутствует в отчёте, пока задача не
+    // выполнена»: buildShopSalaryReportRules пропускает правило целиком,
+    // если брейкдаун отсутствует хотя бы в одном из режимов (FACT или
+    // PROGNOSE), сопоставляя факт/прогноз по ruleId (не по позиции —
+    // buildRuleBreakdown отбрасывает null-строки, поэтому длина/порядок
+    // fact- и prognose-брейкдаунов могут разойтись).
+    it('пропускает правило, если строка отсутствует в FACT, даже если она есть в PROGNOSE', () => {
+        const ruleA = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 250 },
+        });
+        const ruleB = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Задача (выполнена только к моменту прогноза)',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 100 },
+        });
+        const factLines = [
+            {
+                ruleId: ruleA.id,
+                quantity: 8,
+                rate: 250,
+                amount: 2000,
+                sources: [],
+            },
+            null,
+        ];
+        const prognoseLines = [
+            {
+                ruleId: ruleA.id,
+                quantity: 8,
+                rate: 250,
+                amount: 2000,
+                sources: [],
+            },
+            {
+                ruleId: ruleB.id,
+                quantity: 1,
+                rate: 100,
+                amount: 100,
+                sources: [],
+            },
+        ];
+
+        const result = buildShopSalaryReportRules(
+            [ruleA, ruleB],
+            factLines,
+            prognoseLines,
+            null,
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].ruleId).toBe(ruleA.id);
+    });
+
+    it('пропускает правило, если строка отсутствует в PROGNOSE, даже если она есть в FACT', () => {
+        const ruleA = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 250 },
+        });
+        const ruleB = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Задача (просрочена к моменту прогноза)',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 100 },
+        });
+        const factLines = [
+            {
+                ruleId: ruleA.id,
+                quantity: 8,
+                rate: 250,
+                amount: 2000,
+                sources: [],
+            },
+            {
+                ruleId: ruleB.id,
+                quantity: 1,
+                rate: 100,
+                amount: 100,
+                sources: [],
+            },
+        ];
+        const prognoseLines = [
+            {
+                ruleId: ruleA.id,
+                quantity: 8,
+                rate: 250,
+                amount: 2000,
+                sources: [],
+            },
+            null,
+        ];
+
+        const result = buildShopSalaryReportRules(
+            [ruleA, ruleB],
+            factLines,
+            prognoseLines,
+            null,
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].ruleId).toBe(ruleA.id);
+    });
 });

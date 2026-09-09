@@ -44,7 +44,12 @@ const payPerHourShopSalaryConfigSchema = z.object({
     price: z.number(),
 });
 
+// id (опционально) — зеркало salary-rule.ts (см. WHY там): используется
+// ТОЛЬКО телом PATCH .../shop/accounting/motivation-schema/:id, чтобы
+// отличить "правило отредактировано на месте" от "правило удалено и
+// создано новое".
 const payPerHourShopSalaryRuleSchema = z.object({
+    id: z.string().optional(),
     type: z.literal('PayPerHour'),
     name: z.string(),
     targetRole: targetRoleSchema,
@@ -79,6 +84,7 @@ const productSoldSalaryConfigSchema = z.object({
 });
 
 const productSoldSalaryRuleSchema = z.object({
+    id: z.string().optional(),
     type: z.literal('ProductSold'),
     name: z.string(),
     targetRole: targetRoleSchema,
@@ -110,10 +116,40 @@ const usedProductSoldSalaryConfigSchema = z.object({
 });
 
 const usedProductSoldSalaryRuleSchema = z.object({
+    id: z.string().optional(),
     type: z.literal('UsedProductSold'),
     name: z.string(),
     targetRole: targetRoleSchema,
     config: usedProductSoldSalaryConfigSchema,
+});
+
+// ========================== За выполнение задачи Bitrix24 ========================== //
+
+// Независимая копия сервисного taskCompletionSalaryConfigSchema
+// (contracts/commands/salary-rule.ts) — issue #57, тот же приём, что и у
+// остальных типов правил этого файла ("не смешивай контракты" направлений
+// через общий discriminatedUnion). Семантика полей идентична: bitrixTaskTitle/
+// taskDescription — название/описание создаваемой задачи, isRecurring —
+// разовая vs пересоздаваемая на каждый период задача, deadlineTemplate —
+// ISO-дата (для регулярного правила используется только число месяца), см.
+// design.md Decision 1/4.
+const taskCompletionShopSalaryConfigSchema = z.object({
+    bitrixTaskTitle: z.string(),
+    taskDescription: z.string().optional(),
+    isRecurring: z.boolean(),
+    deadlineTemplate: z.string(),
+    // Сумма начисления по умолчанию — зеркало service (см.
+    // taskCompletionSalaryConfigSchema в salary-rule.ts), независимая копия
+    // (issue #57).
+    defaultAmount: z.number().int().nonnegative(),
+});
+
+const taskCompletionShopSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('TaskCompletion'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: taskCompletionShopSalaryConfigSchema,
 });
 
 // ========================== Итоговый дискриминированный союз ========================== //
@@ -122,6 +158,7 @@ const shopSalaryRuleRequestSchema = z.discriminatedUnion('type', [
     payPerHourShopSalaryRuleSchema,
     productSoldSalaryRuleSchema,
     usedProductSoldSalaryRuleSchema,
+    taskCompletionShopSalaryRuleSchema,
 ]);
 
 export type ShopSalaryRuleRequest = z.infer<typeof shopSalaryRuleRequestSchema>;
@@ -140,6 +177,7 @@ const shopSalaryRuleResponseSchema = z.discriminatedUnion('type', [
     payPerHourShopSalaryRuleSchema.extend({ id: z.string() }),
     productSoldSalaryRuleSchema.extend({ id: z.string() }),
     usedProductSoldSalaryRuleSchema.extend({ id: z.string() }),
+    taskCompletionShopSalaryRuleSchema.extend({ id: z.string() }),
 ]);
 
 export type ShopSalaryRuleResponse = z.infer<
@@ -161,6 +199,7 @@ export {
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,
     usedProductSoldSalaryConfigSchema,
+    taskCompletionShopSalaryConfigSchema,
     salaryRuleTypeInfoSchema as shopSalaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema as shopSalaryRuleTypesResponseSchema,
 };

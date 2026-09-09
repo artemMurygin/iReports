@@ -3,6 +3,7 @@ import {
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,
     usedProductSoldSalaryConfigSchema,
+    taskCompletionShopSalaryConfigSchema,
 } from 'ireports-contracts';
 import { shopSalaryRuleRegistry } from '@/domains/shop/modules/accounting/domain/salary-rule-registry';
 
@@ -23,6 +24,14 @@ export const shopSalaryRuleConfigSchemaByType: Partial<
     PayPerHour: payPerHourShopSalaryConfigSchema,
     ProductSold: productSoldSalaryConfigSchema,
     UsedProductSold: usedProductSoldSalaryConfigSchema,
+    // Раздел 16 tasks.md (add-task-based-salary-rule) — недостающая запись,
+    // обнаруженная при подготовке findById() (ShopSalaryRuleRepository):
+    // TaskCompletionShop уже зарегистрирован в shopSalaryRuleRegistry
+    // (раздел 15), но эта карта — единственный источник схемы конфига для
+    // ShopSalaryRuleMapper.toDomain() — без записи здесь чтение ЛЮБОГО
+    // персистентного правила TaskCompletion падает с "Нет схемы конфига
+    // для зарегистрированного типа правила".
+    TaskCompletion: taskCompletionShopSalaryConfigSchema,
 };
 
 // Список типов берём из ключей реестра, а не хардкодим второй раз — так

@@ -101,7 +101,19 @@ const payPerHourSalaryConfigSchema = z.object({
     price: z.number(),
 });
 
+// id (опционально) — используется ТОЛЬКО телом PATCH .../motivation-schema/:id
+// (UpdateMotivationSchemaHandler): наличие id уже существующего правила
+// говорит бэкенду, что это то же правило, отредактированное на месте (запись
+// в БД обновляется, id/связанные сущности вроде задачи Bitrix24 у
+// TaskCompletion сохраняются), а не новое взамен старого. Отсутствие id —
+// новое правило (создаётся с нуля, как и раньше). Для POST-создания схемы id
+// не передаётся и игнорируется, если передан. См. design.md Decision 6
+// (add-task-based-salary-rule) — без этого поля PATCH не может отличить
+// "правило не менялось/отредактировано" от "правило удалено и создано новое",
+// что для TaskCompletion means удаление и пересоздание Bitrix-задачи при
+// КАЖДОМ PATCH, даже когда правило не менялось.
 const payPerHourSalaryRuleSchema = z.object({
+    id: z.string().optional(),
     type: z.literal('PayPerHour'),
     name: z.string(),
     targetRole: targetRoleSchema,
@@ -124,6 +136,7 @@ const serviceCompletedSalaryConfigSchema = z.object({
 });
 
 const serviceCompletedSalaryRuleSchema = z.object({
+    id: z.string().optional(),
     type: z.literal('ServiceCompleted'),
     name: z.string(),
     targetRole: targetRoleSchema,
@@ -159,16 +172,51 @@ const orderPayedSalaryConfigSchema = z.object({
 });
 
 const orderPayedSalaryRuleSchema = z.object({
+    id: z.string().optional(),
     type: z.literal('OrderPayed'),
     name: z.string(),
     targetRole: targetRoleSchema,
     config: orderPayedSalaryConfigSchema,
 });
 
+// ========================== За выполнение задачи Bitrix24 ========================== //
+
+// Задача создаётся/сопровождается автоматически (см. design.md Decision 1/4):
+// bitrixTaskTitle — название создаваемой в Bitrix24 задачи, taskDescription —
+// её необязательное описание (сама задача формирует описание диагностической
+// информацией сверх этого поля, см. tasks.md 12.3 — здесь только то, что
+// вводит пользователь в форме правила). isRecurring — разовая задача (заведена
+// один раз, никогда не пересоздаётся на новый период) либо регулярная
+// (пересоздаётся на каждый расчётный период, design.md Decision 4).
+// deadlineTemplate — ISO-дата (`YYYY-MM-DD`): для разового правила берётся
+// буквально как дедлайн единственной задачи, для регулярного используется
+// только число месяца (день) — дедлайн каждой новой задачи периода строится
+// из периода + этого дня (см. tasks.md 10.3/11.3).
+const taskCompletionSalaryConfigSchema = z.object({
+    bitrixTaskTitle: z.string(),
+    taskDescription: z.string().optional(),
+    isRecurring: z.boolean(),
+    deadlineTemplate: z.string(),
+    // Сумма начисления по умолчанию — подставляется в строку начисления,
+    // когда задача переходит в «Выполнено» (TaskCompletion.calculate()),
+    // руководитель может изменить её при проведении (см.
+    // setTaskCompletionLineRewardRequestSchema в salary-accrual.ts).
+    defaultAmount: z.number().int().nonnegative(),
+});
+
+const taskCompletionSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('TaskCompletion'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: taskCompletionSalaryConfigSchema,
+});
+
 const salaryRuleRequestSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleSchema,
     serviceCompletedSalaryRuleSchema,
     orderPayedSalaryRuleSchema,
+    taskCompletionSalaryRuleSchema,
 ]);
 
 export type SalaryRuleRequest = z.infer<typeof salaryRuleRequestSchema>;
@@ -188,11 +236,14 @@ const serviceCompletedSalaryRuleResponseSchema =
 const orderPayedSalaryRuleResponseSchema = orderPayedSalaryRuleSchema.extend({
     id: z.string(),
 });
+const taskCompletionSalaryRuleResponseSchema =
+    taskCompletionSalaryRuleSchema.extend({ id: z.string() });
 
 const salaryRuleResponseSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleResponseSchema,
     serviceCompletedSalaryRuleResponseSchema,
     orderPayedSalaryRuleResponseSchema,
+    taskCompletionSalaryRuleResponseSchema,
 ]);
 
 export type SalaryRuleResponse = z.infer<typeof salaryRuleResponseSchema>;
@@ -438,6 +489,7 @@ export {
     payPerHourSalaryConfigSchema,
     serviceCompletedSalaryConfigSchema,
     orderPayedSalaryConfigSchema,
+    taskCompletionSalaryConfigSchema,
     percentBorderSchema,
     percentBordersSchema,
     salaryBasisSchema,

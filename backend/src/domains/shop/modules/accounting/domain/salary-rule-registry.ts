@@ -1,6 +1,7 @@
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
 import { UsedProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/used-product-sold.entity';
+import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import {
     ShopSalaryRuleClass,
     ShopSalaryRuleTypes,
@@ -21,4 +22,6 @@ export const shopSalaryRuleRegistry = new Map<
     ['PayPerHour', PayPerHourShopEntity],
     ['ProductSold', ProductSoldEntity],
     ['UsedProductSold', UsedProductSoldEntity],
+    // Раздел 15 tasks.md (add-task-based-salary-rule).
+    ['TaskCompletion', TaskCompletionShop],
 ]);

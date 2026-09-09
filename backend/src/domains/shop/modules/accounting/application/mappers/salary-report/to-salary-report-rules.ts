@@ -12,7 +12,10 @@ import {
     ProductSoldSalaryConfig,
     ShopSalaryRule,
 } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
-import { buildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
+import {
+    buildRuleBreakdown,
+    RuleBreakdownLine,
+} from '@/domains/shop/modules/accounting/domain/services/rule-breakdown.builder';
 import { FloatPercentSchedule } from '@/domains/shop/modules/accounting/domain/value-objects/float-percent-schedule.value-object';
 import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/sales-performance.value-object';
 
@@ -20,48 +23,68 @@ import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/v
 // (Фаза 13.5, issue #57) — независимая реализация в домене shop. Общая
 // точка для отчёта сотрудника и отчёта отдела, чтобы форма и правила
 // сведения пары «факт/прогноз» не расходились по двум местам.
-// rules/factLines/prognoseLines собраны одним и тем же оркестратором за
-// один проход на каждый режим — сопоставление по индексу безопасно (см.
-// rule-breakdown.builder.ts).
+//
+// Раздел 4 (add-task-based-salary-rule): factLines/prognoseLines могут
+// содержать null на позиции правила без строки в этом режиме
+// (TaskCompletionShop — задача ещё не выполнена, spec shop/accounting:
+// «строка отсутствует в отчёте»). buildRuleBreakdown уже отбрасывает такие
+// null-строки, поэтому factBreakdown/prognoseBreakdown МОГУТ иметь разную
+// длину и порядок между собой — сопоставление по индексу здесь
+// небезопасно, в отличие от rule-breakdown.builder.ts (там rules и lines
+// строго синхронны по позиции). Правило включается в ответ только если у
+// него есть строка в ОБОИХ режимах — сопоставление по ruleId через Map.
 export function buildShopSalaryReportRules(
     rules: ShopSalaryRule[],
-    factLines: CalculationLine[],
-    prognoseLines: CalculationLine[],
+    factLines: (CalculationLine | null)[],
+    prognoseLines: (CalculationLine | null)[],
     performance: ShopSalesPerformance | null,
 ): EmployeeSalaryReportRule[] {
-    const factBreakdown = buildRuleBreakdown(rules, factLines);
-    const prognoseBreakdown = buildRuleBreakdown(rules, prognoseLines);
+    const factByRuleId = toRuleIdMap(buildRuleBreakdown(rules, factLines));
+    const prognoseByRuleId = toRuleIdMap(
+        buildRuleBreakdown(rules, prognoseLines),
+    );
 
-    return rules.map((rule, index) => {
-        const fact = factBreakdown[index];
-        const prognose = prognoseBreakdown[index];
+    return rules.flatMap((rule) => {
+        const fact = factByRuleId.get(rule.id);
+        const prognose = prognoseByRuleId.get(rule.id);
+        if (!fact || !prognose) {
+            return [];
+        }
         const percentBorders = getFloatPercentBorders(rule);
 
-        return {
-            ruleId: fact.ruleId,
-            type: fact.type,
-            name: fact.name,
-            targetRole: fact.targetRole,
-            amount: { fact: fact.amount, prognose: prognose.amount },
-            appliedPercent: isPercentAward(rule) ? fact.rate : undefined,
-            floatPercent:
-                percentBorders && performance
-                    ? {
-                          fact: buildThresholdInfo(
-                              percentBorders,
-                              performance,
-                              'fact',
-                          ),
-                          prognose: buildThresholdInfo(
-                              percentBorders,
-                              performance,
-                              'prognose',
-                          ),
-                      }
-                    : undefined,
-            sources: buildResponseSources(fact.sources, prognose.sources),
-        };
+        return [
+            {
+                ruleId: fact.ruleId,
+                type: fact.type,
+                name: fact.name,
+                targetRole: fact.targetRole,
+                amount: { fact: fact.amount, prognose: prognose.amount },
+                appliedPercent: isPercentAward(rule) ? fact.rate : undefined,
+                floatPercent:
+                    percentBorders && performance
+                        ? {
+                              fact: buildThresholdInfo(
+                                  percentBorders,
+                                  performance,
+                                  'fact',
+                              ),
+                              prognose: buildThresholdInfo(
+                                  percentBorders,
+                                  performance,
+                                  'prognose',
+                              ),
+                          }
+                        : undefined,
+                sources: buildResponseSources(fact.sources, prognose.sources),
+            },
+        ];
     });
+}
+
+function toRuleIdMap(
+    breakdown: RuleBreakdownLine[],
+): Map<string, RuleBreakdownLine> {
+    return new Map(breakdown.map((line) => [line.ruleId, line]));
 }
 
 // Сводит sources[] пары ФАКТ/ПРОГНОЗ по позиции — зеркало buildResponseSources
