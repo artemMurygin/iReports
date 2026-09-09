@@ -11,14 +11,25 @@ import type { GoodsTurnoverReportLineResponse } from 'ireports-contracts'
 // как есть; `GoodsTurnoverTable` их просто не читает.
 export type GoodsTurnoverRow = GoodsTurnoverReportLineResponse
 
+// Минимальная форма записи справочника категорий, нужная дереву — `ListProductCategoriesService`
+// (тот же справочник, что уже грузит `CategoryTreeSelect`, задача 17) отдаёт больше полей, но
+// здесь важны только id/parentId.
+export type ProductCategoryRef = { id: number; parentId: number | null }
+
 // Одна строка уже развёрнутого (flatten) дерева — `depth` определяет число `Rail`-фреймов слева
-// от `Marker` (ui-design.md: "по одному Rail 16px на каждый уровень предка"), `hasChildren`
-// выбирает иконку `Marker`-а (`Chevron` для узла с потомками, `Dash` для листа — подтверждено
-// `Get` по `D3Sf4`: `ut7Jk`/`H0YeG`/`Ok6Qz`/... "Marker" содержат `Dash`, `V7csB`/`DrTeO`/`RCZQq`/...
-// содержат `Chevron`), `rootIndex` — порядковый номер корневой (depth 0) категории-предка этой
-// строки, используется для циклической покраски `Dot` верхнего уровня (см. `ROOT_DOT_COLORS`
-// ниже, тот же приём, что `G7Vnt`/`j6ASa3`/`k4XXNl`/... — палитра из 6 цветов, повторяется по
-// кругу).
+// от `Marker` (ui-design.md: "по одному Rail 16px на каждый уровень предка") и вычисляется по
+// РЕАЛЬНОЙ цепочке предков из справочника категорий (см. `buildGoodsTurnoverTreeRows`), а не по
+// тому, у скольких из них есть строка в отчёте — иначе категория, чей родитель не попал в отчёт
+// (например, RemOnline не вернул по нему данные за период), ошибочно всплывала бы на верхний
+// уровень как самостоятельная корневая категория. `hasChildren` выбирает иконку `Marker`-а
+// (`Chevron` для узла с потомками, `Dash` для листа — подтверждено `Get` по `D3Sf4`:
+// `ut7Jk`/`H0YeG`/`Ok6Qz`/... "Marker" содержат `Dash`, `V7csB`/`DrTeO`/`RCZQq`/... содержат
+// `Chevron`), `rootIndex` — порядковый номер РЕАЛЬНОЙ корневой (`parentId: null` в справочнике)
+// категории-предка этой строки, используется для циклической покраски `Dot` верхнего уровня (см.
+// `ROOT_DOT_COLORS` ниже, тот же приём, что `G7Vnt`/`j6ASa3`/`k4XXNl`/... — палитра из 6 цветов,
+// повторяется по кругу); `Dot` рисуется только при `depth === 0` — строка с "дырой" в предках
+// (см. выше) свой настоящий `rootIndex` несёт, но точку не показывает, раз сама не является
+// настоящим корнем.
 export type GoodsTurnoverTreeRow = GoodsTurnoverRow & {
     depth: number
     hasChildren: boolean
@@ -27,47 +38,136 @@ export type GoodsTurnoverTreeRow = GoodsTurnoverRow & {
 
 /**
  * Строит плоский (уже развёрнутый в порядке обхода в глубину) список строк дерева из плоского
- * `GoodsTurnoverRow[]` + `categoryParentId` — вложенность произвольной глубины, без капа
- * (ui-design.md: "паттерн один Rail на уровень линейно продолжается на 5+ уровней без изменения
- * логики"). Implements задачу 18.2-18.3 openspec/changes/service-turnover-report (TDD на
- * построение дерева).
+ * `GoodsTurnoverRow[]` — вложенность произвольной глубины, без капа (ui-design.md: "паттерн один
+ * Rail на уровень линейно продолжается на 5+ уровней без изменения логики"). Implements задачу
+ * 18.2-18.3 openspec/changes/service-turnover-report (TDD на построение дерева).
+ *
+ * `categories` — полный справочник категорий (`ListProductCategoriesService`, тот же, что грузит
+ * `CategoryTreeSelect`) — источник истины для `depth`/родства, а не сам `rows`: отчёт за период
+ * содержит только категории, по которым ERP вернул данные (частичный успех бэкенда,
+ * `BuildGoodsTurnoverReportService` design.md D6 — сбой одной пары категория-склад не прерывает
+ * построение остальных), поэтому у части строк реальный родитель может отсутствовать в `rows`, но
+ * присутствовать в полном справочнике. Опущенный/пустой `categories` — сохраняет прежнее
+ * поведение "родство только по `rows`" (тесты, вызовы без справочника под рукой).
  *
  * Категория без движения товара (`turnoverRatio: null`, нулевые расход/остаток) НЕ фильтруется —
  * остаётся обычной строкой таблицы (`specs/service/goods-turnover/spec.md`, "Категория без
  * движения товара").
  *
- * Защитный случай сверх буквального требования задачи: строка, чей `categoryParentId` указывает
- * на категорию, отсутствующую в переданном `rows` (например, `CategoryTreeSelect`, задача 17,
- * отфильтровал `rows` до поддерева одной категории — тогда корень поддерева ссылается на предка
- * вне отфильтрованного набора), трактуется как корень (`depth: 0`), а не отбрасывается молча.
+ * Строка, чей ближайший ЕСТЬ-В-`rows` предок отсутствует (сам предок без данных, его предок тоже
+ * без данных, и так вплоть до настоящего корня справочника — либо `categories` вообще не
+ * передан), группируется как визуальный "верхний" узел списка (не имеет видимого родителя над
+ * собой), но её `depth` остаётся РЕАЛЬНЫМ (числом настоящих предков по справочнику) — то есть она
+ * не притворяется корнем визуально (`isTopLevel`/`Dot` в `GoodsTurnoverTable` завязаны на
+ * `depth === 0`, а не на позицию в списке).
+ *
+ * Сиблинги на каждом уровне сортируются по алфавиту (`categoryName.localeCompare(_, 'ru')` —
+ * тот же приём, что уже применяет `CategoryTreeSelect` этой же страницы для дерева фильтра) —
+ * порядок в исходном `rows` (порядок ответа бэкенда) не гарантирован и не имеет бизнес-смысла для
+ * пользователя таблицы.
  */
-export function buildGoodsTurnoverTreeRows(rows: GoodsTurnoverRow[]): GoodsTurnoverTreeRow[] {
-    const idsInSet = new Set(rows.map((row) => row.categoryId))
-    const childrenByParent = new Map<number | null, GoodsTurnoverRow[]>()
+export function buildGoodsTurnoverTreeRows(rows: GoodsTurnoverRow[], categories: ProductCategoryRef[] = []): GoodsTurnoverTreeRow[] {
+    if (rows.length === 0) return []
 
-    for (const row of rows) {
-        const parentKey = row.categoryParentId !== null && idsInSet.has(row.categoryParentId) ? row.categoryParentId : null
-        const siblings = childrenByParent.get(parentKey)
-        if (siblings) siblings.push(row)
-        else childrenByParent.set(parentKey, [row])
-    }
+    // Реальный родитель по справочнику — приоритетный источник; для категорий, которых почему-то
+    // нет в справочнике (пустой `categories`, рассинхрон справочника с отчётом), падаем обратно на
+    // `categoryParentId` из самой строки отчёта — прежнее поведение.
+    const realParentById = new Map<number, number | null>(rows.map((row) => [row.categoryId, row.categoryParentId]))
+    for (const category of categories) realParentById.set(category.id, category.parentId)
 
-    const result: GoodsTurnoverTreeRow[] = []
-    let nextRootIndex = 0
+    const rowIds = new Set(rows.map((row) => row.categoryId))
 
-    const visit = (parentKey: number | null, depth: number, rootIndex: number) => {
-        const children = childrenByParent.get(parentKey)
-        if (!children) return
-        for (const row of children) {
-            const resolvedRootIndex = depth === 0 ? nextRootIndex++ : rootIndex
-            const hasChildren = (childrenByParent.get(row.categoryId)?.length ?? 0) > 0
-            result.push({ ...row, depth, hasChildren, rootIndex: resolvedRootIndex })
-            visit(row.categoryId, depth + 1, resolvedRootIndex)
+    const realDepthAndRoot = (categoryId: number): { depth: number; rootId: number } => {
+        let depth = 0
+        let current = categoryId
+        const seen = new Set<number>([categoryId])
+        for (;;) {
+            const parentId = realParentById.get(current) ?? null
+            if (parentId === null || !realParentById.has(parentId) || seen.has(parentId)) return { depth, rootId: current }
+            seen.add(parentId)
+            current = parentId
+            depth++
         }
     }
 
-    visit(null, 0, 0)
+    // Ближайший предок, у которого ЕСТЬ строка в отчёте — определяет визуальное соседство
+    // (под какой видимой строкой рисуется эта) в отличие от `depth` (числа Rail), который считаем
+    // по реальному, а не "видимому" родству.
+    const nearestVisibleParentId = (categoryId: number): number | null => {
+        let current = realParentById.get(categoryId) ?? null
+        const seen = new Set<number>()
+        while (current !== null && !seen.has(current)) {
+            if (rowIds.has(current)) return current
+            seen.add(current)
+            current = realParentById.get(current) ?? null
+        }
+        return null
+    }
+
+    const childrenByVisibleParent = new Map<number | null, GoodsTurnoverRow[]>()
+    for (const row of rows) {
+        const parentKey = nearestVisibleParentId(row.categoryId)
+        const siblings = childrenByVisibleParent.get(parentKey)
+        if (siblings) siblings.push(row)
+        else childrenByVisibleParent.set(parentKey, [row])
+    }
+
+    for (const siblings of childrenByVisibleParent.values()) {
+        siblings.sort((a, b) => a.categoryName.localeCompare(b.categoryName, 'ru'))
+    }
+
+    const result: GoodsTurnoverTreeRow[] = []
+    const rootIndexByRealRoot = new Map<number, number>()
+    let nextRootIndex = 0
+
+    const visit = (parentKey: number | null) => {
+        const children = childrenByVisibleParent.get(parentKey)
+        if (!children) return
+        for (const row of children) {
+            const { depth, rootId } = realDepthAndRoot(row.categoryId)
+            let rootIndex = rootIndexByRealRoot.get(rootId)
+            if (rootIndex === undefined) {
+                rootIndex = nextRootIndex++
+                rootIndexByRealRoot.set(rootId, rootIndex)
+            }
+            const hasChildren = (childrenByVisibleParent.get(row.categoryId)?.length ?? 0) > 0
+            result.push({ ...row, depth, hasChildren, rootIndex })
+            visit(row.categoryId)
+        }
+    }
+
+    visit(null)
     return result
+}
+
+/**
+ * Убирает из уже развёрнутого (`buildGoodsTurnoverTreeRows`) списка все строки, чей ближайший
+ * видимый предок свёрнут (`isCollapsed`) — сама свёрнутая строка-предок остаётся видимой,
+ * скрываются только строки строго глубже неё, вплоть до следующей строки той же (или меньшей)
+ * глубины. Список уже в порядке обхода в глубину (родитель непосредственно перед всеми своими
+ * потомками), поэтому одного линейного прохода достаточно.
+ */
+export function filterVisibleRows(
+    rows: GoodsTurnoverTreeRow[],
+    isCollapsed: (categoryId: number) => boolean,
+): GoodsTurnoverTreeRow[] {
+    const visible: GoodsTurnoverTreeRow[] = []
+    let hiddenBelowDepth: number | null = null
+
+    for (const row of rows) {
+        if (hiddenBelowDepth !== null) {
+            if (row.depth > hiddenBelowDepth) continue
+            hiddenBelowDepth = null
+        }
+
+        visible.push(row)
+
+        if (row.hasChildren && isCollapsed(row.categoryId)) {
+            hiddenBelowDepth = row.depth
+        }
+    }
+
+    return visible
 }
 
 // Палитра `Dot`-маркера корневых категорий (ui-design.md, `D3Sf4` — 6 цветов, циклически по
@@ -96,14 +196,19 @@ export function getRatioColorClass(ratio: number | null): string {
     return 'text-danger'
 }
 
-// Итоговая строка «Итого» (ui-design.md, `tcWPr`) агрегирует расход/остаток по КОРНЕВЫМ (depth 0)
-// категориям, а не по всем строкам — подтверждено арифметикой самого мокапа (`D3Sf4`): сумма
-// `outcomeSum` дочерних категорий каждой корневой категории в точности равна `outcomeSum` самой
-// корневой строки (напр. "Дисплеи" 186 400 = "iPhone" 128 300 + "iPad" 41 200 + "MacBook" 16 900 -
-// с точностью округления; "Корпусные детали" 62 800 = "Задние крышки" 41 200 + "Рамки и шасси"
-// 21 600), т.е. бэкенд (`BuildGoodsTurnoverReportService`/RemOnline `getGoodsFlowReport` по
-// `category_id` родителя) уже отдаёт в строке родительской категории агрегат по всему поддереву.
-// Суммирование ВСЕХ строк (а не только корневых) задвоило бы каждую сумму на глубину дерева.
+// Итоговая строка «Итого» (ui-design.md, `tcWPr`) агрегирует расход/остаток по НАСТОЯЩИМ корневым
+// (реальный `parentId: null` в справочнике категорий, а не просто "родителя нет в `rows`" — та же
+// поправка, что и в `buildGoodsTurnoverTreeRows` выше) категориям, а не по всем строкам —
+// подтверждено арифметикой самого мокапа (`D3Sf4`): сумма `outcomeSum` дочерних категорий каждой
+// корневой категории в точности равна `outcomeSum` самой корневой строки (напр. "Дисплеи" 186 400
+// = "iPhone" 128 300 + "iPad" 41 200 + "MacBook" 16 900 - с точностью округления; "Корпусные
+// детали" 62 800 = "Задние крышки" 41 200 + "Рамки и шасси" 21 600), т.е. бэкенд
+// (`BuildGoodsTurnoverReportService`/RemOnline `getGoodsFlowReport` по `category_id` родителя) уже
+// отдаёт в строке родительской категории агрегат по всему поддереву. Суммирование ВСЕХ строк
+// (а не только корневых) задвоило бы каждую сумму на глубину дерева. Категория, чей настоящий
+// корень-предок не вернул данные за период (частичный успех бэкенда), в сумму не попадает — её
+// агрегат просто неизвестен без строки корня, досчитывать его снизу вверх было бы отдельным,
+// самостоятельно изобретённым бизнес-правилом.
 export type GoodsTurnoverSummary = {
     outcomeSum: number
     stockSum: number
@@ -112,9 +217,11 @@ export type GoodsTurnoverSummary = {
     rootCategoriesCount: number
 }
 
-export function summarizeGoodsTurnoverRows(rows: GoodsTurnoverRow[]): GoodsTurnoverSummary {
-    const idsInSet = new Set(rows.map((row) => row.categoryId))
-    const rootRows = rows.filter((row) => row.categoryParentId === null || !idsInSet.has(row.categoryParentId))
+export function summarizeGoodsTurnoverRows(rows: GoodsTurnoverRow[], categories: ProductCategoryRef[] = []): GoodsTurnoverSummary {
+    const realParentById = new Map<number, number | null>(rows.map((row) => [row.categoryId, row.categoryParentId]))
+    for (const category of categories) realParentById.set(category.id, category.parentId)
+
+    const rootRows = rows.filter((row) => (realParentById.get(row.categoryId) ?? null) === null)
 
     const outcomeSum = rootRows.reduce((sum, row) => sum + row.outcomeSum, 0)
     const stockSum = rootRows.reduce((sum, row) => sum + row.stockSum, 0)

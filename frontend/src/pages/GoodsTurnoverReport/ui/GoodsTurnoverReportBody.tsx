@@ -1,10 +1,10 @@
 import type { GoodsTurnoverReportLineResponse } from 'ireports-contracts'
 
 import { resolveGoodsTurnoverBodyState } from '../model/goodsTurnoverBodyState.ts'
-import type { GoodsTurnoverRow } from '../model/goodsTurnoverTree.ts'
+import type { GoodsTurnoverRow, ProductCategoryRef } from '../model/goodsTurnoverTree.ts'
 import { GoodsTurnoverErrorState } from './GoodsTurnoverErrorState.tsx'
 import { GoodsTurnoverNotRecalculatedState } from './GoodsTurnoverNotRecalculatedState.tsx'
-import { GoodsTurnoverTable } from './GoodsTurnoverTable.tsx'
+import { GoodsTurnoverTable } from './GoodsTurnoverTable'
 
 export type GoodsTurnoverReportBodyProps = {
     error: string | null
@@ -14,6 +14,8 @@ export type GoodsTurnoverReportBodyProps = {
     lines: GoodsTurnoverReportLineResponse[] | undefined
     /** Уже отфильтрованные по складу/категории строки — передаются в `GoodsTurnoverTable` как есть. */
     rows: GoodsTurnoverRow[]
+    /** Полный справочник категорий — прокидывается в `GoodsTurnoverTable` как есть, см. её пропс. */
+    categories?: ProductCategoryRef[]
     className?: string
 }
 
@@ -27,7 +29,7 @@ export type GoodsTurnoverReportBodyProps = {
  * Загрузка (`isInitialLoad`) сюда не доходит — `Layout`/`RefreshTransitionLayout` перехватывает её
  * раньше и вообще не рендерит `body` (задача 19.1, `SpinnerPageLg`).
  */
-export function GoodsTurnoverReportBody({ error, onRetry, lines, rows, className }: GoodsTurnoverReportBodyProps) {
+export function GoodsTurnoverReportBody({ error, onRetry, lines, rows, categories = [], className }: GoodsTurnoverReportBodyProps) {
     const state = resolveGoodsTurnoverBodyState({ error, lines })
 
     if (state === 'error') {
@@ -38,5 +40,5 @@ export function GoodsTurnoverReportBody({ error, onRetry, lines, rows, className
         return <GoodsTurnoverNotRecalculatedState className={className} />
     }
 
-    return <GoodsTurnoverTable rows={rows} className={className} />
+    return <GoodsTurnoverTable rows={rows} categories={categories} className={className} />
 }

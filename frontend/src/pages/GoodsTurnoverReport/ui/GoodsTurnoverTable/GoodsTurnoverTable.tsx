@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 import { cn } from '@/shared/lib/tw.ts'
@@ -6,16 +6,23 @@ import { formatCurrency, formatNumber, formatRatio } from '@/shared/lib/format.t
 
 import {
     buildGoodsTurnoverTreeRows,
+    filterVisibleRows,
     getRatioColorClass,
     getRootDotColor,
     pluralizeCategories,
     summarizeGoodsTurnoverRows,
     type GoodsTurnoverRow,
     type GoodsTurnoverTreeRow,
-} from '../model/goodsTurnoverTree.ts'
+    type ProductCategoryRef,
+} from '../../model/goodsTurnoverTree.ts'
+import { useExpandedCategories } from './model/useExpandedCategories.ts'
 
 export type GoodsTurnoverTableProps = {
     rows: GoodsTurnoverRow[]
+    /** Полный справочник категорий (`ListProductCategoriesService`) — источник истины для
+     * реальной глубины/родства строк, см. `buildGoodsTurnoverTreeRows`. Опущен => прежнее
+     * поведение "родство только по `rows`" (без справочника под рукой — тесты). */
+    categories?: ProductCategoryRef[]
     className?: string
 }
 
@@ -37,14 +44,23 @@ const RAIL_BORDER = 'border-[#DFE3E0]'
  * `Marker` (`Chevron` — у категории есть дочерние, `Dash` — лист), колонки расход/остаток
  * (шт/₽)/коэффициент («—» при `turnoverRatio: null`), футер со счётчиком категорий.
  *
+ * Категории по умолчанию отсортированы по алфавиту на каждом уровне (`buildGoodsTurnoverTreeRows`)
+ * и по умолчанию ВСЕ свёрнуты — разворачиваются кликом по строке; состояние `useExpandedCategories`
+ * (локальное, сбрасывается при размонтировании) ключуется по `categoryId`, не по позиции в списке.
+ *
  * `rows` — уже отфильтрованные по одному складу строки отчёта (architecture.md: `rows:
  * GoodsTurnoverRow[]` — "для выбранного склада"); фильтрацию по складу/категории делает
  * вызывающая сторона (`useGoodsTurnoverReportPage`/`CategoryTreeSelect`, задачи 15/17), сама
- * таблица только строит дерево из того, что получила.
+ * таблица только строит дерево из того, что получила. `categories` — полный справочник (не
+ * отфильтрованный по складу/периоду), нужен только для корректной глубины/родства строк, чьи
+ * настоящие предки не вернули данных за период (см. `buildGoodsTurnoverTreeRows`).
  */
-export function GoodsTurnoverTable({ rows, className }: GoodsTurnoverTableProps) {
-    const treeRows = useMemo(() => buildGoodsTurnoverTreeRows(rows), [rows])
-    const summary = useMemo(() => summarizeGoodsTurnoverRows(rows), [rows])
+export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTurnoverTableProps) {
+    const treeRows = useMemo(() => buildGoodsTurnoverTreeRows(rows, categories), [rows, categories])
+    const summary = useMemo(() => summarizeGoodsTurnoverRows(rows, categories), [rows, categories])
+    const { isExpanded, toggle } = useExpandedCategories()
+    const isCollapsed = useCallback((categoryId: number) => !isExpanded(categoryId), [isExpanded])
+    const visibleRows = useMemo(() => filterVisibleRows(treeRows, isCollapsed), [treeRows, isCollapsed])
 
     return (
         <div
@@ -56,10 +72,12 @@ export function GoodsTurnoverTable({ rows, className }: GoodsTurnoverTableProps)
         >
             <SummaryRow summary={summary} />
             <HeaderRow />
-            {treeRows.length === 0 ? (
+            {visibleRows.length === 0 ? (
                 <div className="px-5 py-6 text-center font-ui text-sm text-ink-muted">Нет строк для выбранных фильтров</div>
             ) : (
-                treeRows.map((row) => <TableRow key={row.categoryId} row={row} />)
+                visibleRows.map((row) => (
+                    <TableRow key={row.categoryId} row={row} isCollapsed={isCollapsed(row.categoryId)} onToggle={toggle} />
+                ))
             )}
             <Footer rootCategoriesCount={summary.rootCategoriesCount} />
         </div>
@@ -136,27 +154,41 @@ function NumCell({ width, children }: { width: number; children: ReactNode }) {
     )
 }
 
-type TableRowProps = { row: GoodsTurnoverTreeRow }
+type TableRowProps = { row: GoodsTurnoverTreeRow; isCollapsed: boolean; onToggle: (categoryId: number) => void }
 
-function TableRow({ row }: TableRowProps) {
+function TableRow({ row, isCollapsed, onToggle }: TableRowProps) {
     const isTopLevel = row.depth === 0
     const ratioText = row.turnoverRatio === null ? '—' : formatRatio(row.turnoverRatio)
 
     return (
         <div
             data-slot="goods-turnover-row"
+            role={row.hasChildren ? 'button' : undefined}
+            tabIndex={row.hasChildren ? 0 : undefined}
+            aria-expanded={row.hasChildren ? !isCollapsed : undefined}
+            onClick={row.hasChildren ? () => onToggle(row.categoryId) : undefined}
+            onKeyDown={
+                row.hasChildren
+                    ? (e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return
+                          e.preventDefault()
+                          onToggle(row.categoryId)
+                      }
+                    : undefined
+            }
             className={cn(
                 'flex items-center border-b',
                 ROW_DIVIDER,
                 isTopLevel ? 'h-8' : 'h-7',
                 isTopLevel ? TOP_LEVEL_ROW_FILL : 'bg-surface',
+                row.hasChildren && 'cursor-pointer select-none',
             )}
         >
             <div className="flex min-w-0 flex-1 items-center gap-1.5 py-0 pr-3 pl-3.5">
                 {Array.from({ length: row.depth }).map((_, i) => (
                     <span key={i} className={cn('h-full w-4 shrink-0 border-l', RAIL_BORDER)} aria-hidden />
                 ))}
-                <Marker hasChildren={row.hasChildren} isTopLevel={isTopLevel} />
+                <Marker hasChildren={row.hasChildren} isTopLevel={isTopLevel} isCollapsed={isCollapsed} />
                 {isTopLevel && (
                     <span
                         className="size-1.5 shrink-0 rounded-full"
@@ -219,11 +251,17 @@ function TableRow({ row }: TableRowProps) {
     )
 }
 
-function Marker({ hasChildren, isTopLevel }: { hasChildren: boolean; isTopLevel: boolean }) {
+function Marker({ hasChildren, isTopLevel, isCollapsed }: { hasChildren: boolean; isTopLevel: boolean; isCollapsed: boolean }) {
     return (
         <span className="flex h-full w-5 shrink-0 items-center justify-center" aria-hidden>
             {hasChildren ? (
-                <ChevronDown className={cn('size-3.5', isTopLevel ? 'text-ink' : 'text-ink-muted')} />
+                <ChevronDown
+                    className={cn(
+                        'size-3.5 transition-transform',
+                        isTopLevel ? 'text-ink' : 'text-ink-muted',
+                        isCollapsed && '-rotate-90',
+                    )}
+                />
             ) : (
                 <span className="h-px w-1.5 bg-ink-faint" />
             )}

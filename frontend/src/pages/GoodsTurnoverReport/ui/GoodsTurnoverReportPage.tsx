@@ -44,7 +44,13 @@ export function GoodsTurnoverReportPage() {
     )
 
     const body = (
-        <GoodsTurnoverReportBody error={page.error} onRetry={page.retry} lines={page.report?.lines} rows={page.rows} />
+        <GoodsTurnoverReportBody
+            error={page.error}
+            onRetry={page.retry}
+            lines={page.report?.lines}
+            rows={page.rows}
+            categories={page.categories}
+        />
     )
 
     return (

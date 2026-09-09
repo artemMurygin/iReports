@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
     buildGoodsTurnoverTreeRows,
+    filterVisibleRows,
     getRatioColorClass,
     getRootDotColor,
     pluralizeCategories,
@@ -71,10 +72,10 @@ describe('buildGoodsTurnoverTreeRows', () => {
 
     it('groups children under the right parent even when siblings are interleaved in the input', () => {
         const rows = [
-            row({ categoryId: 1, categoryParentId: null }),
-            row({ categoryId: 10, categoryParentId: null }),
-            row({ categoryId: 11, categoryParentId: 10 }),
-            row({ categoryId: 2, categoryParentId: 1 }),
+            row({ categoryId: 1, categoryParentId: null, categoryName: 'Аккумуляторы' }),
+            row({ categoryId: 10, categoryParentId: null, categoryName: 'Дисплеи' }),
+            row({ categoryId: 11, categoryParentId: 10, categoryName: 'iPhone' }),
+            row({ categoryId: 2, categoryParentId: 1, categoryName: 'iPad' }),
         ]
 
         const tree = buildGoodsTurnoverTreeRows(rows)
@@ -85,6 +86,20 @@ describe('buildGoodsTurnoverTreeRows', () => {
             [10, 0],
             [11, 1],
         ])
+    })
+
+    it('sorts siblings alphabetically (ru) at every level by default, ignoring input order', () => {
+        const rows = [
+            row({ categoryId: 1, categoryParentId: null, categoryName: 'Экраны' }),
+            row({ categoryId: 2, categoryParentId: null, categoryName: 'Аккумуляторы' }),
+            row({ categoryId: 3, categoryParentId: null, categoryName: 'Дисплеи' }),
+            row({ categoryId: 4, categoryParentId: 3, categoryName: 'iPhone' }),
+            row({ categoryId: 5, categoryParentId: 3, categoryName: 'Android' }),
+        ]
+
+        const tree = buildGoodsTurnoverTreeRows(rows)
+
+        expect(tree.map((r) => r.categoryName)).toEqual(['Аккумуляторы', 'Дисплеи', 'Android', 'iPhone', 'Экраны'])
     })
 
     it('keeps a category without movement as a regular row with turnoverRatio null, not filtered out', () => {
@@ -124,6 +139,118 @@ describe('buildGoodsTurnoverTreeRows', () => {
     })
 })
 
+describe('filterVisibleRows', () => {
+    const tree = (rows: (Partial<GoodsTurnoverRow> & Pick<GoodsTurnoverRow, 'categoryId' | 'categoryParentId'>)[]) =>
+        buildGoodsTurnoverTreeRows(rows.map((r) => row(r)))
+
+    const collapsed =
+        (...ids: number[]) =>
+        (categoryId: number) =>
+            ids.includes(categoryId)
+
+    it('returns every row unchanged when nothing is collapsed', () => {
+        const rows = tree([
+            { categoryId: 1, categoryParentId: null },
+            { categoryId: 2, categoryParentId: 1 },
+        ])
+
+        expect(filterVisibleRows(rows, collapsed())).toEqual(rows)
+    })
+
+    it('hides direct and nested descendants of a collapsed category, keeping the collapsed row itself', () => {
+        const rows = tree([
+            { categoryId: 1, categoryParentId: null },
+            { categoryId: 2, categoryParentId: 1 },
+            { categoryId: 3, categoryParentId: 2 },
+            { categoryId: 4, categoryParentId: null },
+        ])
+
+        const visible = filterVisibleRows(rows, collapsed(1))
+
+        expect(visible.map((r) => r.categoryId)).toEqual([1, 4])
+    })
+
+    it('keeps a sibling subtree visible when only one root category is collapsed', () => {
+        const rows = tree([
+            { categoryId: 1, categoryParentId: null },
+            { categoryId: 2, categoryParentId: 1 },
+            { categoryId: 10, categoryParentId: null },
+            { categoryId: 11, categoryParentId: 10 },
+        ])
+
+        expect(filterVisibleRows(rows, collapsed(1)).map((r) => r.categoryId)).toEqual([1, 10, 11])
+    })
+
+    it('remembers a collapsed grandchild even while its parent is also collapsed (re-expanding the parent alone would reveal it collapsed too)', () => {
+        const rows = tree([
+            { categoryId: 1, categoryParentId: null },
+            { categoryId: 2, categoryParentId: 1 },
+            { categoryId: 3, categoryParentId: 2 },
+        ])
+
+        // Оба узла свёрнуты одновременно — видна только корневая строка.
+        expect(filterVisibleRows(rows, collapsed(1, 2)).map((r) => r.categoryId)).toEqual([1])
+    })
+
+    it('collapsing an id with no children (or absent from the tree) has no effect', () => {
+        const rows = tree([{ categoryId: 1, categoryParentId: null }])
+
+        expect(filterVisibleRows(rows, collapsed(1, 999))).toEqual(rows)
+    })
+})
+
+describe('buildGoodsTurnoverTreeRows with a full category directory', () => {
+    it('nests a row under its real ancestor even when an intermediate ancestor has no report line', () => {
+        // Справочник: 1 (корень) -> 2 -> 3, но строка есть только у 1 и 3 (2 без данных за период —
+        // например, ERP не вернул данные по этой паре категория-склад).
+        const categories = [
+            { id: 1, parentId: null },
+            { id: 2, parentId: 1 },
+            { id: 3, parentId: 2 },
+        ]
+        const rows = [row({ categoryId: 1, categoryParentId: null }), row({ categoryId: 3, categoryParentId: 2 })]
+
+        const tree = buildGoodsTurnoverTreeRows(rows, categories)
+
+        // Категория 3 — не самостоятельный корень (её реальный родитель — 2, у 2 родитель — 1):
+        // depth считается по справочнику (2), а не по видимому соседству (иначе была бы 1).
+        expect(tree.map((r) => [r.categoryId, r.depth])).toEqual([
+            [1, 0],
+            [3, 2],
+        ])
+    })
+
+    it('keeps only true root categories (real parentId: null) as depth-0 rows — an orphan is not promoted to a fake root', () => {
+        const categories = [
+            { id: 1, parentId: null },
+            { id: 2, parentId: 1 },
+            { id: 3, parentId: 2 },
+        ]
+        // Ни у 1, ни у 2 нет строки за период — только у 3 (самая глубокая).
+        const rows = [row({ categoryId: 3, categoryParentId: 2 })]
+
+        const tree = buildGoodsTurnoverTreeRows(rows, categories)
+
+        expect(tree).toHaveLength(1)
+        expect(tree[0]).toMatchObject({ categoryId: 3, depth: 2 })
+    })
+
+    it('gives two orphans under the same missing real root the same rootIndex (consistent dot color)', () => {
+        const categories = [
+            { id: 1, parentId: null },
+            { id: 2, parentId: 1 },
+            { id: 3, parentId: 1 },
+        ]
+        // Корень 1 без данных — 2 и 3 оба "висят" без видимого родителя, но у обоих один и тот же
+        // настоящий корень-предок (1).
+        const rows = [row({ categoryId: 2, categoryParentId: 1 }), row({ categoryId: 3, categoryParentId: 1 })]
+
+        const tree = buildGoodsTurnoverTreeRows(rows, categories)
+
+        expect(tree.map((r) => r.rootIndex)).toEqual([tree[0].rootIndex, tree[0].rootIndex])
+    })
+})
+
 describe('getRootDotColor', () => {
     it('cycles through a fixed 6-color palette by rootIndex', () => {
         const colors = [0, 1, 2, 3, 4, 5, 6, 7].map(getRootDotColor)
@@ -157,6 +284,21 @@ describe('summarizeGoodsTurnoverRows', () => {
         expect(summary.stockSum).toBe(200)
         expect(summary.stockQuantity).toBe(4)
         expect(summary.rootCategoriesCount).toBe(1)
+    })
+
+    it('does not count an orphan (real parent missing a report line) as a root when a category directory is given', () => {
+        const categories = [
+            { id: 1, parentId: null },
+            { id: 2, parentId: 1 },
+        ]
+        // У 1 (настоящего корня) нет строки за период — только у 2.
+        const rows = [row({ categoryId: 2, categoryParentId: 1, outcomeSum: 60, stockSum: 120 })]
+
+        const summary = summarizeGoodsTurnoverRows(rows, categories)
+
+        expect(summary.rootCategoriesCount).toBe(0)
+        expect(summary.outcomeSum).toBe(0)
+        expect(summary.stockSum).toBe(0)
     })
 
     it('returns turnoverRatio null when no root row has a computed ratio', () => {
