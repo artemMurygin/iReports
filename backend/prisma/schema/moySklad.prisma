@@ -97,15 +97,66 @@ model MoySkladDemand {
   customerOrderId  String?  @map("customer_order_id")
   description      String?  @db.Text
 
+  // Склад отгрузки (shop-turnover-report, D3) — поле уже приходило в ответе
+  // МойСклад (demands.schema.ts: store: MetaWrapperSchema), но не
+  // сохранялось при апсерте. Nullable: у уже засинканных до этого изменения
+  // Demand его нет, пока не выполнен бэкфилл (см. Migration Plan). Название
+  // склада намеренно не дублируется на Demand — берётся join'ом на
+  // MoySkladStore, чтобы не рассинхронизироваться при переименовании склада.
+  storeId String? @map("store_id")
+
   onlineManager  MoySkladEmployee?        @relation("DemandOnlineManager", fields: [onlineManagerId], references: [id], onDelete: SetNull)
   offlineManager MoySkladEmployee?        @relation("DemandOfflineManager", fields: [offlineManagerId], references: [id], onDelete: SetNull)
+  store          MoySkladStore?           @relation(fields: [storeId], references: [id], onDelete: SetNull)
   positions      MoySkladDemandPosition[]
 
   @@index([moment])
   @@index([onlineManagerId])
   @@index([offlineManagerId])
   @@index([salesChannelId])
+  @@index([storeId])
   @@map("moy_sklad_demands")
+}
+
+// Справочник складов МойСклад (shop-turnover-report, D2) — раньше в проекте
+// не синкался вообще. Обычный постраничный справочник (GET /entity/store),
+// синкается тем же 5-минутным MoySkladSyncCron, что и остальные справочники
+// shop. Стабильный внешний ключ для разбивки Demand/MoySkladStock по складу.
+model MoySkladStore {
+  id   String @id
+  name String
+
+  demands MoySkladDemand[]
+
+  // MoySkladStock.warehouseId сознательно без relation сюда — см. комментарий
+  // над MoySkladStock ниже.
+
+  @@map("moy_sklad_stores")
+}
+
+// История почасовых снимков остатков по товару и складу (shop-turnover-
+// report, D5/D7.1) — накопительная (append-only) таблица: каждый прогон
+// почасового крона (MoySkladStockSyncCron) добавляет новый набор строк с
+// общим snapshotAt, не перезаписывая предыдущие. Разовый бэкфилл истории
+// (D5.1) пишет по одному снимку на конец месяца тем же способом — плотность
+// снимков в таблице поэтому неравномерна (месячная в прошлом, часовая
+// начиная с раскатки), это ожидаемо. productId/warehouseId сознательно без
+// Prisma-relation на MoySkladProduct/MoySkladStore (по аналогии с
+// customerOrderId/stateId/salesChannelId на MoySkladDemand выше) — снимок
+// остатков может прийти по товару, ещё не засинканному в MoySkladProduct
+// (например, между тиками разных кронов), и такая связь не должна ронять
+// синк остатков.
+model MoySkladStock {
+  id          String   @id
+  productId   String   @map("product_id")
+  warehouseId String   @map("warehouse_id")
+  quantity    Float
+  costSum     Int      @map("cost_sum")
+  snapshotAt  DateTime @map("snapshot_at")
+
+  @@unique([productId, warehouseId, snapshotAt])
+  @@index([snapshotAt])
+  @@map("moy_sklad_stocks")
 }
 
 model MoySkladDemandPosition {

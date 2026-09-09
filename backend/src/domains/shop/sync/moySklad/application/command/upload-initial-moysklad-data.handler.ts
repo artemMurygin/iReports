@@ -16,6 +16,14 @@ export class UploadInitialMoySkladDataHandler implements ICommandHandler<
         await this.syncService.uploadProductFolders();
         await this.syncService.uploadProducts();
         await this.syncService.uploadServices();
+        // uploadStores() перед uploadCreatedDemands: MoySkladDemand.storeId —
+        // реальный FK на MoySkladStore (D3 shop-turnover-report).
+        await this.syncService.uploadStores();
         await this.syncService.uploadCreatedDemands(fromDate);
+        // Бэкфилл истории остатков (D5.1 shop-turnover-report) — после
+        // uploadStores(), т.к. обходит все уже засинканные MoySkladStore;
+        // разовый шаг раскатки, не часть штатного 5-минутного/почасового
+        // синка (см. design.md Migration Plan).
+        await this.syncService.backfillHistoricalStockSnapshots(fromDate);
     }
 }

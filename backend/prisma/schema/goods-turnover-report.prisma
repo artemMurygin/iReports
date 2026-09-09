@@ -1,0 +1,27 @@
+// Строки отчёта по оборачиваемости товаров направления «Магазин»
+// (shop-turnover-report, D7.2). Одна строка на пару «категория × склад» за
+// месяц (period в формате "YYYY-MM") — оборот (сумма/количество проданного
+// за месяц) и остаток (себестоимость/количество на конец месяца), обе суммы
+// в копейках. Пересчёт открытого месяца (GoodsTurnoverReportCron/
+// GoodsTurnoverPeriodClosedHandler) полностью заменяет строки периода
+// (replaceForPeriod) — таблица не накопительная, в отличие от MoySkladStock
+// (moySklad.prisma). Статус периода (открыт/закрыт) здесь не хранится —
+// читается из ShopAccountingPeriod (см. design.md D7.2). Коэффициент
+// оборачиваемости не персистится — вычисляется при чтении (см. D8).
+model MoySkladTurnoverReportLine {
+  id          String @id
+  period      String
+  categoryId  String @map("category_id")
+  warehouseId String @map("warehouse_id")
+
+  turnoverQuantity Float @map("turnover_quantity")
+  turnoverSum      Int   @map("turnover_sum")
+  stockQuantity    Float @map("stock_quantity")
+  stockSum         Int   @map("stock_sum")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([period, categoryId, warehouseId])
+  @@map("moy_sklad_turnover_report_lines")
+}

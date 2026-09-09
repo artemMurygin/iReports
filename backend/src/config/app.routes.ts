@@ -505,8 +505,16 @@ export const routesV1 = {
         // Каталог (дерево категорий) магазина (Фаза 1, см.
         // domains/shop/modules/warehouse) — читает уже синхронизированную
         // MoySkladProductFolder, без товаров/остатков.
+        // goodsTurnoverReport/stores — отчёт по оборачиваемости товаров
+        // (change shop-turnover-report, design.md D10): :period — тот же
+        // формат YYYY-MM, что и у salesPerformance.byPeriod выше; stores —
+        // справочный список складов МойСклад для фильтра на странице отчёта.
         warehouse: {
             catalog: `${shopWarehouseRoot}/catalog`,
+            goodsTurnoverReport: {
+                byPeriod: `${shopWarehouseRoot}/goods-turnover-report/:period`,
+            },
+            stores: `${shopWarehouseRoot}/stores`,
         },
         // SalesFact/SalesPrognose/SalesPerformance магазина (Фаза 11, см.
         // domains/shop/modules/sales) — свой путь, направление не query-

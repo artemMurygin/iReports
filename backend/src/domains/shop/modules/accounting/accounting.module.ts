@@ -452,6 +452,11 @@ import { ShopTaskCompletionAutoCreationCron } from '@/domains/shop/modules/accou
         SHOP_MOTIVATION_SCHEMA_REPOSITORY,
         BuildShopCalculationContextService,
         SHOP_CALCULATION_DATA,
+        // shop-turnover-report: нужен GoodsTurnoverPeriodClosedHandler'у
+        // модуля warehouse, чтобы читать статус ShopAccountingPeriod
+        // (открыт/закрыт) без собственной таблицы периода (design.md D7.2) —
+        // сам провайдер уже зарегистрирован выше, здесь только экспорт.
+        SHOP_ACCOUNTING_PERIOD_REPOSITORY,
         // Nest не даёт реэкспортировать токен, которым модуль сам не
         // владеет (SHOP_SALES_PERFORMANCE_READER предоставлен ShopSalesModule,
         // а не этим модулем напрямую) — "Nest cannot export a

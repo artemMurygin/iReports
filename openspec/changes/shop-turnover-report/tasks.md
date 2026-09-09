@@ -1,15 +1,15 @@
 ## 1. Prisma-схема
 
-- [ ] 1.1 Добавить в `moySklad.prisma` модели `MoySkladStore` (`id`, `name`) и `MoySkladStock`
+- [x] 1.1 Добавить в `moySklad.prisma` модели `MoySkladStore` (`id`, `name`) и `MoySkladStock`
   (`productId`, `warehouseId`, `quantity`, `costSum`, `snapshotAt`, уникальный индекс
   `(productId, warehouseId, snapshotAt)`, индекс по `snapshotAt`); добавить nullable-колонку
   `storeId` в `MoySkladDemand`. Верификация: `prisma validate` проходит, `prisma migrate dev`
   генерирует аддитивную миграцию без ошибок.
-- [ ] 1.2 Добавить модель `MoySkladTurnoverReportLine` (`period`, `categoryId`, `warehouseId`,
+- [x] 1.2 Добавить модель `MoySkladTurnoverReportLine` (`period`, `categoryId`, `warehouseId`,
   `turnoverQuantity`, `turnoverSum`, `stockQuantity`, `stockSum`, уникальный индекс
   `(period, categoryId, warehouseId)`). Верификация: `prisma validate` + миграция применяется на
   тестовой БД.
-- [ ] 1.3 Добавить `SHOP_ACCOUNTING_PERIOD_REPOSITORY` в `exports` `ShopAccountingModule`.
+- [x] 1.3 Добавить `SHOP_ACCOUNTING_PERIOD_REPOSITORY` в `exports` `ShopAccountingModule`.
   Верификация: существующие тесты `ShopAccountingModule` не ломаются; сборка backend проходит.
 
 <!-- Чисто схемные изменения без ветвлений логики — TDD-шаги (red/green) не применимы, верификация
@@ -17,107 +17,107 @@
 
 ## 2. Domain — Value Objects (TDD)
 
-- [ ] 2.1 Написать тесты на `Money` (`domains/shop/modules/warehouse/domain/value-objects/
+- [x] 2.1 Написать тесты на `Money` (`domains/shop/modules/warehouse/domain/value-objects/
   money.value-object.ts`): создание из неотрицательного числа копеек, ошибка/исключение на
   отрицательное значение, сравнение по значению.
-- [ ] 2.2 Прогнать тесты из 2.1 и зафиксировать red (класса ещё нет).
-- [ ] 2.3 Реализовать `Money` (наследник `ValueObject` из `src/shared/domain/`).
-- [ ] 2.4 Прогнать тесты из 2.1 и зафиксировать green, регрессий в соседних тестах нет.
+- [x] 2.2 Прогнать тесты из 2.1 и зафиксировать red (класса ещё нет).
+- [x] 2.3 Реализовать `Money` (наследник `ValueObject` из `src/shared/domain/`).
+- [x] 2.4 Прогнать тесты из 2.1 и зафиксировать green, регрессий в соседних тестах нет.
 
-- [ ] 2.5 Написать тесты на `TurnoverCoefficient.calculate` (`domains/shop/modules/warehouse/
+- [x] 2.5 Написать тесты на `TurnoverCoefficient.calculate` (`domains/shop/modules/warehouse/
   domain/value-objects/turnover-coefficient.value-object.ts`) по D8/specs: обычный расчёт по
   формуле `turnoverSum / ((prevStockSum + currStockSum) / 2)`; `previousStockSum === null` →
   `isAvailable() === false` (не `0`); оба остатка нулевые → `isAvailable() === false` без деления
   на ноль.
-- [ ] 2.6 Прогнать тесты из 2.5 и зафиксировать red.
-- [ ] 2.7 Реализовать `TurnoverCoefficient`.
-- [ ] 2.8 Прогнать тесты из 2.5 и зафиксировать green, регрессий нет.
+- [x] 2.6 Прогнать тесты из 2.5 и зафиксировать red.
+- [x] 2.7 Реализовать `TurnoverCoefficient`.
+- [x] 2.8 Прогнать тесты из 2.5 и зафиксировать green, регрессий нет.
 
 ## 3. Domain — Aggregate `GoodsTurnoverReportLine` (TDD)
 
-- [ ] 3.1 Написать тесты на создание `GoodsTurnoverReportLine`: валидный `Period` (переиспользуется
+- [x] 3.1 Написать тесты на создание `GoodsTurnoverReportLine`: валидный `Period` (переиспользуется
   `src/shared/domain/period.value-object.ts`), неотрицательные `turnoverQuantity`/`stockQuantity`,
   обязательные `categoryId`/`warehouseId`.
-- [ ] 3.2 Прогнать тесты из 3.1 и зафиксировать red.
-- [ ] 3.3 Реализовать сущность `GoodsTurnoverReportLine` (наследник `Entity`/`AggregateRoot` из
+- [x] 3.2 Прогнать тесты из 3.1 и зафиксировать red.
+- [x] 3.3 Реализовать сущность `GoodsTurnoverReportLine` (наследник `Entity`/`AggregateRoot` из
   `src/shared/domain/`).
-- [ ] 3.4 Прогнать тесты из 3.1 и зафиксировать green, регрессий нет.
+- [x] 3.4 Прогнать тесты из 3.1 и зафиксировать green, регрессий нет.
 
 ## 4. Application — порт и репозиторий отчёта (TDD)
 
-- [ ] 4.1 Написать тесты на `GOODS_TURNOVER_REPORT_REPOSITORY.replaceForPeriod`: полная замена
+- [x] 4.1 Написать тесты на `GOODS_TURNOVER_REPORT_REPOSITORY.replaceForPeriod`: полная замена
   строк периода в одной транзакции (старые строки периода удалены, новые записаны), строки других
   периодов не затронуты.
-- [ ] 4.2 Прогнать тесты из 4.1 и зафиксировать red.
-- [ ] 4.3 Реализовать порт (application/ports) и Prisma-репозиторий (infrastructure/repositories)
+- [x] 4.2 Прогнать тесты из 4.1 и зафиксировать red.
+- [x] 4.3 Реализовать порт (application/ports) и Prisma-репозиторий (infrastructure/repositories)
   через unit-of-work (`UNIT_OF_WORK`), включая `findByPeriod`.
-- [ ] 4.4 Прогнать тесты из 4.1 и зафиксировать green, регрессий нет.
+- [x] 4.4 Прогнать тесты из 4.1 и зафиксировать green, регрессий нет.
 
 ## 5. Sync — справочник складов (D2, TDD)
 
-- [ ] 5.1 Написать тесты на `MoyskladService`-метод получения складов (`GET /entity/store`,
+- [x] 5.1 Написать тесты на `MoyskladService`-метод получения складов (`GET /entity/store`,
   постраничная выгрузка, по образцу существующих fetch-методов) — корректная пагинация, маппинг
   полей.
-- [ ] 5.2 Прогнать тесты из 5.1 и зафиксировать red.
-- [ ] 5.3 Реализовать метод получения складов + `MoySkladSyncService.uploadStores()` (апсерт в
+- [x] 5.2 Прогнать тесты из 5.1 и зафиксировать red.
+- [x] 5.3 Реализовать метод получения складов + `MoySkladSyncService.uploadStores()` (апсерт в
   `MoySkladStore`) + подключить к существующему 5-минутному `MoySkladSyncCron` и к
   `UploadInitialMoySkladDataHandler`.
-- [ ] 5.4 Прогнать тесты из 5.1 и зафиксировать green, регрессий в существующих тестах синка нет.
+- [x] 5.4 Прогнать тесты из 5.1 и зафиксировать green, регрессий в существующих тестах синка нет.
 
 ## 6. Sync — `storeId` на `Demand` (D3, TDD)
 
-- [ ] 6.1 Написать тесты на апсерт `Demand` в `moysklad-sync.service.ts`: при наличии `store` в
+- [x] 6.1 Написать тесты на апсерт `Demand` в `moysklad-sync.service.ts`: при наличии `store` в
   ответе МойСклад — `storeId` сохраняется; при отсутствии — остаётся `null`, апсерт не падает.
-- [ ] 6.2 Прогнать тесты из 6.1 и зафиксировать red (текущий маппинг поле отбрасывает).
-- [ ] 6.3 Дополнить маппинг апсерта `Demand` полем `storeId`.
-- [ ] 6.4 Прогнать тесты из 6.1 и зафиксировать green, регрессий в существующих тестах синка
+- [x] 6.2 Прогнать тесты из 6.1 и зафиксировать red (текущий маппинг поле отбрасывает).
+- [x] 6.3 Дополнить маппинг апсерта `Demand` полем `storeId`.
+- [x] 6.4 Прогнать тесты из 6.1 и зафиксировать green, регрессий в существующих тестах синка
   `Demand` (расчёт зарплаты) нет.
 
 ## 7. Sync — почасовой снимок остатков (D5, TDD)
 
-- [ ] 7.1 Написать тесты на `MoyskladService`-метод асинхронного отчёта об остатках
+- [x] 7.1 Написать тесты на `MoyskladService`-метод асинхронного отчёта об остатках
   (`GET /report/stock/bystore?async=true&groupBy=product`, без `limit`/`offset`): запуск задачи,
   опрос статуса до готовности, получение и парсинг итогового результата; обработка ошибки/таймаута
   опроса.
-- [ ] 7.2 Прогнать тесты из 7.1 и зафиксировать red.
-- [ ] 7.3 Реализовать метод (сверить контракт опроса асинхронной задачи МойСклад вручную перед
+- [x] 7.2 Прогнать тесты из 7.1 и зафиксировать red.
+- [x] 7.3 Реализовать метод (сверить контракт опроса асинхронной задачи МойСклад вручную перед
   реализацией — см. design.md «Открытые вопросы»; при недоступности/нестабильности — синхронный
   fallback с постраничной выгрузкой, см. design.md Risks).
-- [ ] 7.4 Прогнать тесты из 7.1 и зафиксировать green.
+- [x] 7.4 Прогнать тесты из 7.1 и зафиксировать green.
 
-- [ ] 7.5 Написать тесты на `MoySkladSyncService.uploadStockSnapshot()`: пишет новый набор строк
+- [x] 7.5 Написать тесты на `MoySkladSyncService.uploadStockSnapshot()`: пишет новый набор строк
   `MoySkladStock` с общим `snapshotAt`, не перезаписывая (не трогая) строки предыдущих прогонов.
-- [ ] 7.6 Прогнать тесты из 7.5 и зафиксировать red.
-- [ ] 7.7 Реализовать `uploadStockSnapshot()` + новую крон-задачу `MoySkladStockSyncCron`
+- [x] 7.6 Прогнать тесты из 7.5 и зафиксировать red.
+- [x] 7.7 Реализовать `uploadStockSnapshot()` + новую крон-задачу `MoySkladStockSyncCron`
   (`@ProdCron(CronExpression.EVERY_HOUR)`, обёрнута в `runInSystemRequestContext`, по аналогии с
   `RoappSyncCron`/`SalesPlanAutoCreationCron`).
-- [ ] 7.8 Прогнать тесты из 7.5 и зафиксировать green, регрессий нет.
+- [x] 7.8 Прогнать тесты из 7.5 и зафиксировать green, регрессий нет.
 
 ## 8. Sync — бэкфилл истории остатков (D5.1, TDD)
 
-- [ ] 8.1 Написать тесты на `MoyskladService`-метод легаси `GET /entity/assortment` с фильтром
+- [x] 8.1 Написать тесты на `MoyskladService`-метод легаси `GET /entity/assortment` с фильтром
   `stockMoment`/`stockStore`: корректный запрос фильтра на конец месяца для конкретного склада,
   парсинг остатка/себестоимости из ответа (сверить точные имена полей вручную перед реализацией —
   см. design.md «Открытые вопросы»).
-- [ ] 8.2 Прогнать тесты из 8.1 и зафиксировать red.
-- [ ] 8.3 Реализовать метод.
-- [ ] 8.4 Прогнать тесты из 8.1 и зафиксировать green.
+- [x] 8.2 Прогнать тесты из 8.1 и зафиксировать red.
+- [x] 8.3 Реализовать метод.
+- [x] 8.4 Прогнать тесты из 8.1 и зафиксировать green.
 
-- [ ] 8.5 Написать тесты на `MoySkladSyncService.backfillHistoricalStockSnapshots(fromDate)`: для
+- [x] 8.5 Написать тесты на `MoySkladSyncService.backfillHistoricalStockSnapshots(fromDate)`: для
   каждого месяца от `fromDate` до текущего и каждого склада пишет ровно один снимок
   `MoySkladStock` с `snapshotAt` = конец месяца; повторный запуск идемпотентен (upsert по
   `(productId, warehouseId, snapshotAt)`, не дублирует строки).
-- [ ] 8.6 Прогнать тесты из 8.5 и зафиксировать red.
-- [ ] 8.7 Реализовать метод; подключить его и `uploadStores()` в `UploadInitialMoySkladDataHandler`
+- [x] 8.6 Прогнать тесты из 8.5 и зафиксировать red.
+- [x] 8.7 Реализовать метод; подключить его и `uploadStores()` в `UploadInitialMoySkladDataHandler`
   (`backend/src/domains/shop/sync/moySklad/application/command/
   upload-initial-moysklad-data.handler.ts`), вызываемый из `backend/src/scripts/
   initialUploadData.ts` (`npm run initial`/`npm run initialProd <date> M`).
-- [ ] 8.8 Прогнать тесты из 8.5 и зафиксировать green, регрессий в существующем
+- [x] 8.8 Прогнать тесты из 8.5 и зафиксировать green, регрессий в существующем
   `UploadInitialMoySkladDataHandler` (синк сотрудников/категорий/товаров/услуг/`Demand`) нет.
 
 ## 9. Application — построение отчёта (D4/D6/D7.2, TDD)
 
-- [ ] 9.1 Написать тесты на `RebuildGoodsTurnoverReportService.rebuild(period)` по specs:
+- [x] 9.1 Написать тесты на `RebuildGoodsTurnoverReportService.rebuild(period)` по specs:
   — оборот считается только из `Demand`/`MoySkladDemandPosition.sum` (без `RetailDemand`, без
     учёта возвратов);
   — остаток берётся из снимка `MoySkladStock` с максимальным `snapshotAt`, не превышающим конец
@@ -127,63 +127,63 @@
   — результат разбит по складам, без объединения;
   — повторный вызов для того же периода полностью заменяет прежние строки (не дублирует и не
     смешивает с предыдущим расчётом).
-- [ ] 9.2 Прогнать тесты из 9.1 и зафиксировать red.
-- [ ] 9.3 Реализовать `RebuildGoodsTurnoverReportService`, используя существующий
+- [x] 9.2 Прогнать тесты из 9.1 и зафиксировать red.
+- [x] 9.3 Реализовать `RebuildGoodsTurnoverReportService`, используя существующий
   `ProductFolderTreeService` (`domains/shop/sync/moySklad/product-folder-tree.service.ts`) для
   обхода дерева категорий и репозиторий из группы 4 для замены строк.
-- [ ] 9.4 Прогнать тесты из 9.1 и зафиксировать green, регрессий нет.
+- [x] 9.4 Прогнать тесты из 9.1 и зафиксировать green, регрессий нет.
 
 ## 10. Крон-задача пересчёта отчёта и закрытие периода (D9, TDD)
 
-- [ ] 10.1 Написать тесты на `GoodsTurnoverReportCron`: вызывает пересчёт текущего открытого месяца,
+- [x] 10.1 Написать тесты на `GoodsTurnoverReportCron`: вызывает пересчёт текущего открытого месяца,
   если `ShopAccountingPeriod` этого месяца не закрыт; пропускает пересчёт, если закрыт.
-- [ ] 10.2 Прогнать тесты из 10.1 и зафиксировать red.
-- [ ] 10.3 Реализовать `GoodsTurnoverReportCron` (`@ProdCron(EVERY_HOUR)`,
+- [x] 10.2 Прогнать тесты из 10.1 и зафиксировать red.
+- [x] 10.3 Реализовать `GoodsTurnoverReportCron` (`@ProdCron(EVERY_HOUR)`,
   `runInSystemRequestContext`), читающий статус через `SHOP_ACCOUNTING_PERIOD_REPOSITORY`
   (см. задачу 1.3).
-- [ ] 10.4 Прогнать тесты из 10.1 и зафиксировать green.
+- [x] 10.4 Прогнать тесты из 10.1 и зафиксировать green.
 
-- [ ] 10.5 Написать тесты на `GoodsTurnoverPeriodClosedHandler`: подписка на
+- [x] 10.5 Написать тесты на `GoodsTurnoverPeriodClosedHandler`: подписка на
   `ShopAccountingPeriodClosedDomainEvent` вызывает финальный пересчёт периода из события и
   фиксирует его как снэпшот (строки больше не меняются последующим часовым кроном, т.к. период уже
   закрыт).
-- [ ] 10.6 Прогнать тесты из 10.5 и зафиксировать red.
-- [ ] 10.7 Реализовать `GoodsTurnoverPeriodClosedHandler` (`@OnEvent('ShopAccountingPeriodClosedDomainEvent')`).
-- [ ] 10.8 Прогнать тесты из 10.5 и зафиксировать green, регрессий в существующем обработчике
+- [x] 10.6 Прогнать тесты из 10.5 и зафиксировать red.
+- [x] 10.7 Реализовать `GoodsTurnoverPeriodClosedHandler` (`@OnEvent('ShopAccountingPeriodClosedDomainEvent')`).
+- [x] 10.8 Прогнать тесты из 10.5 и зафиксировать green, регрессий в существующем обработчике
   закрытия периода `accounting` нет (несколько независимых подписчиков на одно событие).
 
 ## 11. Application — чтение отчёта (TDD)
 
-- [ ] 11.1 Написать тесты на `GetGoodsTurnoverReportService.getReport(period, warehouseId?)`:
+- [x] 11.1 Написать тесты на `GetGoodsTurnoverReportService.getReport(period, warehouseId?)`:
   читает строки текущего и предыдущего периода, считает `TurnoverCoefficient` по каждой строке,
   фильтрует по складу при указании `warehouseId`, маппит в DTO ответа.
-- [ ] 11.2 Прогнать тесты из 11.1 и зафиксировать red.
-- [ ] 11.3 Реализовать `GetGoodsTurnoverReportService` и маппер в DTO.
-- [ ] 11.4 Прогнать тесты из 11.1 и зафиксировать green.
+- [x] 11.2 Прогнать тесты из 11.1 и зафиксировать red.
+- [x] 11.3 Реализовать `GetGoodsTurnoverReportService` и маппер в DTO.
+- [x] 11.4 Прогнать тесты из 11.1 и зафиксировать green.
 
 ## 12. Contracts (`ireports-contracts`)
 
-- [ ] 12.1 Добавить Zod-схемы `GoodsTurnoverReportLine`/`GoodsTurnoverReportResponse` (с
+- [x] 12.1 Добавить Zod-схемы `GoodsTurnoverReportLine`/`GoodsTurnoverReportResponse` (с
   `coefficient: number | null`) и `ShopStore` в `contracts/commands/` (по образцу
   `catalog.ts`/`sales-plan.ts`). Верификация: `tsc`/сборка `contracts` проходит, типы
   экспортируются из `ireports-contracts`.
 
 ## 13. HTTP-контроллеры (interface)
 
-- [ ] 13.1 Написать e2e/контроллерный тест на `GET /v1/shop/warehouse/goods-turnover-report/:period`
+- [x] 13.1 Написать e2e/контроллерный тест на `GET /v1/shop/warehouse/goods-turnover-report/:period`
   (успешный ответ по specs, включая случай отсутствующего предыдущего периода → `coefficient: null`
   в ответе, не `0`).
-- [ ] 13.2 Прогнать тест из 13.1 и зафиксировать red.
-- [ ] 13.3 Реализовать `GetGoodsTurnoverReportHttpController` (`@ApiTags('Магазин: склад')`,
+- [x] 13.2 Прогнать тест из 13.1 и зафиксировать red.
+- [x] 13.3 Реализовать `GetGoodsTurnoverReportHttpController` (`@ApiTags('Магазин: склад')`,
   `@ApiOperation`, DTO через `createZodDto`), зарегистрировать модуль в `shopDocument` в
   `src/config/swagger.config.ts`, если ещё не зарегистрирован для `warehouse`.
-- [ ] 13.4 Прогнать тест из 13.1 и зафиксировать green.
+- [x] 13.4 Прогнать тест из 13.1 и зафиксировать green.
 
-- [ ] 13.5 Написать e2e-тест на `GET /v1/shop/warehouse/stores`.
-- [ ] 13.6 Прогнать тест из 13.5 и зафиксировать red.
-- [ ] 13.7 Реализовать `GetShopStoresHttpController`.
-- [ ] 13.8 Прогнать тест из 13.5 и зафиксировать green.
-- [ ] 13.9 Обновить `ENDPOINTS.md` двумя новыми эндпоинтами.
+- [x] 13.5 Написать e2e-тест на `GET /v1/shop/warehouse/stores`.
+- [x] 13.6 Прогнать тест из 13.5 и зафиксировать red.
+- [x] 13.7 Реализовать `GetShopStoresHttpController`.
+- [x] 13.8 Прогнать тест из 13.5 и зафиксировать green.
+- [x] 13.9 Обновить `ENDPOINTS.md` двумя новыми эндпоинтами.
 
 ## 14. Frontend — вынос переиспользуемой инфраструктуры (рефакторинг, без новой логики)
 
