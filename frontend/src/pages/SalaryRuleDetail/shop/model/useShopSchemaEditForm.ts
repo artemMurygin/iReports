@@ -56,6 +56,15 @@ export function useShopSchemaEditForm({
     const { resolvedRules } = rules
     const canSave = schemaName.trim().length > 0 && rules.allDraftsValid && !updateSchema.isPending
 
+    // TaskCompletion можно завести только на схему конкретного сотрудника (backend
+    // CreateShopSalaryRuleHandler бросает TaskCompletionRequiresPersonalSchemaException для схемы
+    // отдела) — на схеме отдела пункт убирается из дропдауна «Тип правила» при редактировании,
+    // зеркало `service/model/useServiceSchemaEditForm.ts`.
+    const visibleConfig: RuleFormConfig =
+        schema.target.type === 'Department'
+            ? { ...config, ruleTypeOrder: config.ruleTypeOrder.filter((type) => type !== 'TaskCompletion') }
+            : config
+
     const handleSave = useCallback(() => {
         if (!canSave || !resolvedRules) return
         updateSchema.mutate(
@@ -78,7 +87,7 @@ export function useShopSchemaEditForm({
         target: schema.target,
         ruleCount: rules.drafts.length,
         rules,
-        config,
+        config: visibleConfig,
         allowedRolesByType,
         isRoleTypesLoading,
         roleTypesError,

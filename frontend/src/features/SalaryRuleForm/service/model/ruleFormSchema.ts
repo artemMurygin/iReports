@@ -42,6 +42,27 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
         case 'OrderPayed':
             config = { award: buildOrderPayedAward(draft, errors), orderTypeIds: draft.orderTypeIds }
             break
+        case 'TaskCompletion': {
+            if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите дедлайн'
+            // `draft.price` переиспользуется под `defaultAmount` (та же семантика "денежное
+            // значение, введённое текстом", что и у PayPerHour.config.price выше) — руководитель
+            // задаёт сумму по умолчанию при создании правила, а сможет изменить её при проведении
+            // начисления (SetTaskRewardModal, `features/SalaryAccruals`).
+            const defaultAmount = parseNumber(draft.price)
+            if (defaultAmount === undefined) errors.price = 'Укажите сумму начисления по умолчанию'
+            const taskDescription = draft.taskDescription.trim()
+            config = {
+                // Форма не показывает отдельное поле «Название задачи» — по решению из фрейма
+                // `wV3fv` (node `u821y`'s hint «Из него формируется заголовок задачи в Bitrix24»)
+                // единственное поле `Название правила` служит и заголовком Bitrix24-задачи.
+                bitrixTaskTitle: draft.name.trim(),
+                ...(taskDescription !== '' ? { taskDescription } : {}),
+                isRecurring: draft.isRecurring,
+                deadlineTemplate: draft.deadlineTemplate,
+                defaultAmount: defaultAmount ?? Number.NaN,
+            }
+            break
+        }
         default:
             // `draft.type` is the shared `RuleType` union (Фаза 4, `core/model/ruleDraft.ts`) — the shop-only
             // literals (`ProductSold`/`UsedProductSold`) never reach this resolver in practice (the
@@ -58,6 +79,12 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
     }
 
     const candidate = {
+        // `ruleId` только когда задан — draft.ruleId отсутствует у нового
+        // правила ("Добавить правило"), явный `id: undefined` в объекте
+        // ломает `salaryRuleRequestSchema.safeParse` для discriminatedUnion
+        // с `.optional()`-полем иначе, чем полное отсутствие ключа (см.
+        // `RuleDraft.ruleId`'s комментарий — зачем это поле вообще нужно).
+        ...(draft.ruleId ? { id: draft.ruleId } : {}),
         type: draft.type,
         name: draft.name.trim(),
         targetRole: draft.targetRole,
@@ -86,15 +113,16 @@ function bordersFromResponse(
 /**
  * Обратное преобразование `resolveRuleDraft` — уже существующее правило (`GET .../motivation-schema/:id`,
  * `rules[]`) в `RuleDraft` для предзаполнения формы редактирования (`pages/SalaryRuleDetail`). `id`
- * ответа сознательно отбрасывается: `RuleDraft` его не хранит — `PATCH` заменяет весь набор правил
- * направления целиком ("rename + replace all rules of THIS direction", см. apiDesign плана), так что
- * фронту не нужно помнить id отдельного правила, чтобы его отредактировать. `confirmed: true` — черновик
+ * ответа переносится в `draft.ruleId` (не отбрасывается — см. `RuleDraft.ruleId`'s комментарий:
+ * `PATCH` теперь диффит набор правил по id, а не заменяет его целиком, иначе задача Bitrix24 у
+ * TaskCompletion пересоздавалась бы при каждом сохранении формы). `confirmed: true` — черновик
  * уже сохранён на бэкенде, значит для `useSalaryRulesDraft`'s инварианта он не "новый неподтверждённый",
  * а обычный подтверждённый ряд списка (см. `core/model/useSalaryRulesDraft.ts`'s комментарий).
  */
 export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
     const base: RuleDraft = {
         draftId: crypto.randomUUID(),
+        ruleId: rule.id,
         confirmed: true,
         type: rule.type,
         name: rule.name,
@@ -108,6 +136,9 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
+        taskDescription: '',
+        isRecurring: false,
+        deadlineTemplate: '',
     }
 
     switch (rule.type) {
@@ -146,6 +177,15 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
             }
             break
         }
+
+        case 'TaskCompletion':
+            return {
+                ...base,
+                price: String(rule.config.defaultAmount),
+                taskDescription: rule.config.taskDescription ?? '',
+                isRecurring: rule.config.isRecurring,
+                deadlineTemplate: rule.config.deadlineTemplate,
+            }
     }
 
     return base

@@ -71,6 +71,15 @@ export function RuleFormCardFields({
                     onChange={(event) => onChange({ name: event.target.value })}
                     placeholder="Например, Оплата за час"
                 />
+                {/* `TaskCompletion` не заводит отдельное поле «Название задачи (в Bitrix24)» —
+                    node `u821y` (`wV3fv`) показывает этот же hint под тем же полем «Название
+                    правила», подтверждая решение переиспользовать его как заголовок задачи
+                    (см. `service/model/ruleFormSchema.ts`'s `resolveRuleDraft`). */}
+                {draft.type === 'TaskCompletion' && (
+                    <p className="font-ui text-[11px] text-ink-muted">
+                        Из него формируется заголовок задачи в Bitrix24
+                    </p>
+                )}
                 <FieldError message={errors.name} />
             </div>
 

@@ -8,6 +8,7 @@ import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 import { useAccrueLine, useUnaccrueLine } from '../model/useAccrualMutations.ts'
 
 import { AdjustLineModal } from './AdjustLineModal.tsx'
+import { SetTaskRewardModal } from './SetTaskRewardModal.tsx'
 
 export type AccrualLineActionsProps = {
     line: SalaryAccrualLine
@@ -27,12 +28,40 @@ export type AccrualLineActionsProps = {
  * (см. `DeleteIdentityModal`, где модалка оправдана предупреждением о пересчёте).
  * `PAID` (или любой другой статус строки) сюда не доходит — вызывающая таблица/список
  * карточек решает видимость всей колонки по статусу ДОКУМЕНТА, а не строки.
+ *
+ * `requiresManualInput === true` (add-task-based-salary-rule, раздел 24, design.md
+ * Decision 5) — строка правила «за выполнение задачи» с ещё не заданной суммой
+ * (`originalAmount`/`amount` = 0). Вместо «Начислить»+карандаша «Корректировать»
+ * (`AdjustLineModal`) показывается единственное действие «Указать сумму»
+ * (`SetTaskRewardModal`, PATCH .../task-reward) — начислять нулевую сумму до того, как
+ * руководитель её ввёл, не имеет смысла (spec service/accounting: «проведение
+ * отклоняется, пока комментарий не указан»); после сохранения `requiresManualInput`
+ * сбрасывается бэкендом, и строка на следующем рефетче попадает в обычную ветку `DRAFT`
+ * ниже.
  */
 function AccrualLineActions({ line, direction, accrualId }: AccrualLineActionsProps) {
     const accrueLine = useAccrueLine(direction, accrualId)
     const unaccrueLine = useUnaccrueLine(direction, accrualId)
     const [isAdjustOpen, setAdjustOpen] = useState(false)
+    const [isTaskRewardOpen, setTaskRewardOpen] = useState(false)
     const [isConfirmingUnaccrue, setConfirmingUnaccrue] = useState(false)
+
+    if (line.status === 'DRAFT' && line.requiresManualInput) {
+        return (
+            <>
+                <Button type="button" size="sm" onClick={() => setTaskRewardOpen(true)}>
+                    Указать сумму
+                </Button>
+                <SetTaskRewardModal
+                    open={isTaskRewardOpen}
+                    onOpenChange={setTaskRewardOpen}
+                    line={line}
+                    direction={direction}
+                    accrualId={accrualId}
+                />
+            </>
+        )
+    }
 
     if (line.status === 'DRAFT') {
         return (

@@ -45,7 +45,17 @@ export function useSalaryRulesPage() {
     const targetOptionsError =
         (target.targetType === 'Department' ? departmentsQuery.error : employeesQuery.error)?.message ?? null
 
-    const config = active.config
+    // TaskCompletion можно завести только на схему конкретного сотрудника (backend
+    // CreateSalaryRuleHandler/CreateShopSalaryRuleHandler бросает
+    // TaskCompletionRequiresPersonalSchemaException для схемы отдела) — на схеме отдела пункт
+    // убирается из дропдауна «Тип правила», а не просто отклоняется на сабмите.
+    const config: typeof active.config = useMemo(() => {
+        if (target.targetType !== 'Department') return active.config
+        return {
+            ...active.config,
+            ruleTypeOrder: active.config.ruleTypeOrder.filter((type) => type !== 'TaskCompletion'),
+        }
+    }, [active.config, target.targetType])
 
     const isSubmitting = service.isSubmitting || shop.isSubmitting
     const canSubmit =

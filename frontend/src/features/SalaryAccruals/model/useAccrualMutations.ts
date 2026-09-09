@@ -59,6 +59,21 @@ export function useAdjustLine(direction: SalesDirection, accrualId: string) {
     })
 }
 
+/** Первичный ручной ввод суммы+комментария строки «за выполнение задачи»
+ * (add-task-based-salary-rule, раздел 24) — только requiresManualInput === true, DRAFT. */
+export function useSetTaskCompletionLineReward(direction: SalesDirection, accrualId: string) {
+    const invalidate = useInvalidateSalaryAccrualsData()
+
+    return useMutation({
+        mutationFn: (payload: { lineId: string; amount: number; comment: string }) =>
+            api.setTaskCompletionLineReward(direction, accrualId, payload.lineId, {
+                amount: payload.amount,
+                comment: payload.comment,
+            }),
+        onSuccess: invalidate,
+    })
+}
+
 /** Начислить весь документ построчно («Начислить всё» на карточке документа). */
 export function useAccrueDocument(direction: SalesDirection) {
     const invalidate = useInvalidateSalaryAccrualsData()

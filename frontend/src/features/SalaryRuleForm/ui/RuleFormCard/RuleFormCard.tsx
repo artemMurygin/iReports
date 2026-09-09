@@ -5,6 +5,7 @@ import { AwardSection } from './ui/AwardSection.tsx'
 import { RuleFormCardFields } from './ui/RuleFormCardFields.tsx'
 import { RuleFormCardFooter } from './ui/RuleFormCardFooter.tsx'
 import { RuleFormCardHeader } from './ui/RuleFormCardHeader.tsx'
+import { TaskCompletionRuleFields } from './ui/TaskCompletionRuleFields.tsx'
 
 /**
  * Pencil: design/sallary-first-iteration.pen, node `tSYIw` → `Список правил` → `Правило 3 ·
@@ -65,6 +66,7 @@ export function RuleFormCard({
         awardOptions,
         showCategory,
         showOrderTypeIds,
+        showTaskFields,
         patchDraft,
         changeBorder,
         handleTypeChange,
@@ -106,8 +108,11 @@ export function RuleFormCard({
 
                     <div className="h-px w-full bg-hairline" />
 
-                    {/* Тип-зависимое тело: у `PayPerHour` — единственное поле ставки, у остальных
-                        типов — блок «Вариант награды» с под-полями выбранного варианта. */}
+                    {/* Тип-зависимое тело: у `PayPerHour` — единственное поле ставки, у
+                        `TaskCompletion` (`config.taskRuleTypes`) — описание/периодичность/дедлайн
+                        задачи Bitrix24 вместо "вознаграждения" (сумма вводится вручную позже, см.
+                        `SalaryAccruals`, раздел 24), у остальных типов — блок «Вариант награды» с
+                        под-полями выбранного варианта. */}
                     {draft.type === 'PayPerHour' ? (
                         <AmountField
                             label="Ставка, ₽ / час"
@@ -116,6 +121,8 @@ export function RuleFormCard({
                             error={errors.price}
                             onValueChange={(price) => patchDraft({ price })}
                         />
+                    ) : showTaskFields ? (
+                        <TaskCompletionRuleFields draft={draft} errors={errors} onChange={patchDraft} />
                     ) : (
                         <AwardSection
                             draft={draft}

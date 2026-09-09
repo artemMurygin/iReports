@@ -10,6 +10,7 @@ export {
     useAccrueLine,
     useUnaccrueLine,
     useAdjustLine,
+    useSetTaskCompletionLineReward,
     useAccrueDocument,
     useAccruePeriod,
     useInvalidateSalaryAccrualsData,
@@ -38,8 +39,14 @@ export {
     STATUS_FILTERS,
 } from './model/accrualView.ts'
 export type { AccrualProgress, AccrualsTotals, AccrualStatusFilter } from './model/accrualView.ts'
-export { ACCRUAL_STATUS_LABEL, ACCRUAL_LINE_STATUS_LABEL, ROLE_LABEL } from './model/labels.ts'
+export {
+    ACCRUAL_STATUS_LABEL,
+    ACCRUAL_LINE_STATUS_LABEL,
+    ROLE_LABEL,
+    type TaskCompletionStatus,
+} from './model/labels.ts'
 export { AccrualStatusBadge, AccrualLineStatusBadge, DismissedBadge } from './ui/AccrualStatusBadge.tsx'
+export { TaskStatusBadge } from './ui/TaskStatusBadge.tsx'
 export { AccrualProgressBar } from './ui/AccrualProgressBar.tsx'
 export { AccrualsTotalCard } from './ui/AccrualsTotalCard.tsx'
 export { AccrualsLedgerCard } from './ui/AccrualsLedgerCard.tsx'
@@ -53,3 +60,4 @@ export { SelectionBar } from './ui/SelectionBar.tsx'
 export { AccrueSelectedDialog } from './ui/AccrueSelectedDialog.tsx'
 export { AccruePeriodDialog } from './ui/AccruePeriodDialog.tsx'
 export { AccrueResultModal } from './ui/AccrueResultModal.tsx'
+export { SetTaskRewardModal } from './ui/SetTaskRewardModal.tsx'

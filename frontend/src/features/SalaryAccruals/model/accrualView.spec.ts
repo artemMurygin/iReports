@@ -50,6 +50,8 @@ function line(overrides: Partial<SalaryAccrualLine> = {}): SalaryAccrualLine {
         status: 'DRAFT',
         sources: [],
         adjustmentComment: null,
+        comment: null,
+        requiresManualInput: false,
         ...overrides,
     }
 }

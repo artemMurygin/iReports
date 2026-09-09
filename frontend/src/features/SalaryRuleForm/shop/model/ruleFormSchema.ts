@@ -66,6 +66,27 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
         case 'UsedProductSold':
             config = { category: draft.category, award: buildUsedProductSoldAward(draft, errors) }
             break
+        // Раздел 21 (зеркало раздела 10/20 для `shop`) — независимая копия сервисной ветки
+        // `resolveRuleDraft`'s `case 'TaskCompletion'` (`service/model/ruleFormSchema.ts`), тот же
+        // приём построения `bitrixTaskTitle` из `draft.name` (node `wV3fv`'s `u821y` hint), тот же
+        // контракт-форма (`taskCompletionShopSalaryConfigSchema`, issue #57 — независимая копия, не
+        // общий объект с сервисной веткой).
+        case 'TaskCompletion': {
+            if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите дедлайн'
+            // `draft.price` переиспользуется под `defaultAmount` — зеркало сервисной ветки
+            // (`service/model/ruleFormSchema.ts`).
+            const defaultAmount = parseNumber(draft.price)
+            if (defaultAmount === undefined) errors.price = 'Укажите сумму начисления по умолчанию'
+            const taskDescription = draft.taskDescription.trim()
+            config = {
+                bitrixTaskTitle: draft.name.trim(),
+                ...(taskDescription !== '' ? { taskDescription } : {}),
+                isRecurring: draft.isRecurring,
+                deadlineTemplate: draft.deadlineTemplate,
+                defaultAmount: defaultAmount ?? Number.NaN,
+            }
+            break
+        }
         default:
             // `draft.type` is the shared `RuleType` union (`core/model/ruleDraft.ts`) — the service-only
             // literals (`ServiceCompleted`/`OrderPayed`) never reach this resolver in practice (the
@@ -81,6 +102,8 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
     }
 
     const candidate = {
+        // Зеркало service/model/ruleFormSchema.ts — см. RuleDraft.ruleId.
+        ...(draft.ruleId ? { id: draft.ruleId } : {}),
         type: draft.type,
         name: draft.name.trim(),
         targetRole: draft.targetRole,
@@ -110,11 +133,14 @@ function bordersFromResponse(
  * Shop mirror of `service/model/ruleFormSchema.ts`'s `draftFromRule` — обратное преобразование
  * `resolveShopRuleDraft` для предзаполнения формы редактирования (`pages/SalaryRuleDetail`, shop
  * направление). `category` (`ProductSold`/`UsedProductSold`) переносится как есть — та же `string |
- * null`, что уже хранит `RuleDraft.category` (см. `core/model/ruleDraft.ts`'s комментарий).
+ * null`, что уже хранит `RuleDraft.category` (см. `core/model/ruleDraft.ts`'s комментарий). `id`
+ * ответа переносится в `draft.ruleId` — см. `RuleDraft.ruleId`'s комментарий, зеркало сервисного
+ * `draftFromRule`.
  */
 export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
     const base: RuleDraft = {
         draftId: crypto.randomUUID(),
+        ruleId: rule.id,
         confirmed: true,
         type: rule.type,
         name: rule.name,
@@ -130,6 +156,11 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         // orderTypeIds — сервисное поле (`OrderPayed`/`ServiceCompleted`, Фаза 5,
         // docs/service-plan-salary-rule-order-category-filter), ни один shop-тип его не имеет.
         orderTypeIds: [],
+        // `TaskCompletion`-поля (раздел 21) — дефолты, перезаписываются ниже веткой `case
+        // 'TaskCompletion'` при редактировании существующего правила этого типа.
+        taskDescription: '',
+        isRecurring: false,
+        deadlineTemplate: '',
     }
 
     switch (rule.type) {
@@ -166,6 +197,15 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
             }
             break
         }
+
+        case 'TaskCompletion':
+            return {
+                ...base,
+                price: String(rule.config.defaultAmount),
+                taskDescription: rule.config.taskDescription ?? '',
+                isRecurring: rule.config.isRecurring,
+                deadlineTemplate: rule.config.deadlineTemplate,
+            }
     }
 
     return base

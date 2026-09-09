@@ -5,6 +5,7 @@ import type {
     SalaryAccrualListResponse,
     SalaryAccrualResponse,
     SalesDirection,
+    SetTaskCompletionLineRewardRequest,
 } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
@@ -99,6 +100,24 @@ export const api = {
                 comment: payload.comment,
                 adjustedBy: HARDCODED_ACCRUED_BY,
             })
+            .then((r) => r.data),
+
+    // PATCH .../salary_accruals/:id/lines/:lineId/task-reward — первичный ручной ввод
+    // суммы+комментария строки правила «за выполнение задачи» (add-task-based-salary-rule,
+    // contracts 2.3/backend 13.3/18.3): только для строк с requiresManualInput === true и
+    // статусом DRAFT, comment обязателен. В отличие от adjustLine — нет adjustedBy (первичный
+    // ввод, а не корректировка уже проведённой суммы).
+    setTaskCompletionLineReward: (
+        direction: SalesDirection,
+        accrualId: string,
+        lineId: string,
+        payload: SetTaskCompletionLineRewardRequest,
+    ): Promise<SalaryAccrualResponse> =>
+        apiInstance
+            .patch<SalaryAccrualResponse>(
+                `${basePath(direction)}/salary_accruals/${accrualId}/lines/${lineId}/task-reward`,
+                { amount: payload.amount, comment: payload.comment },
+            )
             .then((r) => r.data),
 
     // POST .../salary_accruals/:id/accrue — начислить весь документ построчно;

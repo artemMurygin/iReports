@@ -55,6 +55,18 @@ export function summarizeRuleDraft(draft: RuleDraft, categories: CatalogCategory
         return `${formatNumber(draft.price)} ₽ за час · без варианта награды`
     }
 
+    // `TaskCompletion` не читает `summarizeAward` — у него нет `awardKind` вообще (сумма всегда
+    // вводится вручную позже, `SalaryAccruals`, раздел 24), иначе строка показывала бы
+    // "Вариант награды не выбран" (см. node `yMyTp`, `wV3fv`: "Регулярная · дедлайн 25-е число").
+    if (draft.type === 'TaskCompletion') {
+        const periodicity = draft.isRecurring ? 'Регулярная' : 'Разовая'
+        const parsedDay = new Date(draft.deadlineTemplate).getDate()
+        if (draft.deadlineTemplate.trim() === '' || Number.isNaN(parsedDay)) return periodicity
+        return draft.isRecurring
+            ? `${periodicity} · дедлайн ${parsedDay}-е число`
+            : `${periodicity} · дедлайн ${draft.deadlineTemplate}`
+    }
+
     const parts = [summarizeAward(draft)]
 
     if (draft.type === 'ProductSold' || draft.type === 'UsedProductSold') {

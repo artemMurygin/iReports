@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 
+import { TaskStatusBadge } from '@/features/SalaryAccruals'
 import { formatCurrency } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
 
@@ -97,6 +98,19 @@ function sumAmounts(sources: SalaryReportRule['sources'], pick: 'fact' | 'progno
  * md:gap-3`, что и кнопка `LedgerRuleRow` выше неё: та резервирует эту колонку под шеврон
  * разворота, здесь его нет — без спейсера колонки Факт/Прогноз этого "Rail" съезжали бы правее
  * колонок строки правила и заголовка над ней ровно на ширину шеврона.
+ *
+ * `TaskStatusBadge` (tasks.md раздел 23, `features/SalaryAccruals`) — точечное дополнение строки
+ * источника типа `taskCompletion`, без нового макета (ui-design.md явно относит `SalaryReportV2` к
+ * непроработанным экранам). Статус жёстко `"DONE"`, а не читается из `source` — это не заглушка, а
+ * прямое следствие уже реализованного правила `TaskCompletion.calculate()` (backend,
+ * `domain/entities/salary-rules/task-completion.entity.ts` обоих направлений, spec
+ * `service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения`):
+ * `calculate()` возвращает `null` (строка целиком отсутствует в `sources[]`/отчёте), пока связанная
+ * задача Bitrix24 не «Выполнено» — соответственно ЛЮБОЙ источник `taskCompletion`, дошедший до этого
+ * рендера, уже гарантированно выполнен. Ни `calculationSourceRefSchema`, ни
+ * `employeeSalaryReportSourceSchema` (`contracts/commands/salary-rule.ts`) сегодня не несут статус
+ * задачи — читать здесь нечего; когда разделы 12/17 tasks.md прокинут поле в API, этот хардкод
+ * нужно будет заменить на чтение настоящего статуса.
  */
 export function RuleSourcesRail({ sources, className }: RuleSourcesRailProps) {
     const [showAll, setShowAll] = useState(false)
@@ -131,18 +145,21 @@ export function RuleSourcesRail({ sources, className }: RuleSourcesRailProps) {
                         className="flex items-center gap-2 border-b border-hairline py-2 last:border-b-0 md:gap-3"
                     >
                         <span className="min-w-0 flex-1">
-                            {source.link ? (
-                                <a
-                                    href={source.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block truncate font-ui text-xs font-semibold text-info-ink hover:underline"
-                                >
-                                    {primaryLabel}
-                                </a>
-                            ) : (
-                                <span className="block truncate font-ui text-xs font-semibold text-ink">{primaryLabel}</span>
-                            )}
+                            <span className="flex min-w-0 items-center gap-1.5">
+                                {source.link ? (
+                                    <a
+                                        href={source.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block min-w-0 truncate font-ui text-xs font-semibold text-info-ink hover:underline"
+                                    >
+                                        {primaryLabel}
+                                    </a>
+                                ) : (
+                                    <span className="block min-w-0 truncate font-ui text-xs font-semibold text-ink">{primaryLabel}</span>
+                                )}
+                                {source.type === 'taskCompletion' && <TaskStatusBadge status="DONE" />}
+                            </span>
                             {meta && <span className="block truncate font-ui text-[11px] text-ink-muted">{meta}</span>}
                         </span>
                         <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-bold text-ink tabular-nums')}>

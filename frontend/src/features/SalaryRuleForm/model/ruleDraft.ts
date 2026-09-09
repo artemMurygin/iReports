@@ -50,6 +50,14 @@ export type BorderDraft = {
  */
 export type RuleDraft = {
     draftId: string
+    /** id of the persisted rule this draft was loaded from (`draftFromRule`/`draftFromShopRule`),
+     * `undefined` for a draft created via "Добавить правило" (brand-new rule). Threaded through to
+     * `resolveRuleDraft`/`resolveShopRuleDraft`'s output as `id` on PATCH, so the backend can tell
+     * "this rule was edited in place" from "this rule is new" (see `salaryRuleRequestSchema`'s `id`
+     * comment, `contracts/commands/salary-rule.ts`) — without it every PATCH replaced the whole rule
+     * set with brand-new ids, which silently deleted and recreated the Bitrix24 task behind every
+     * `TaskCompletion` rule on every edit, even when nothing about that rule changed. */
+    ruleId?: string
     /** Whether this draft was ever accepted via "Сохранить правило" — decides what "Отмена"/
      * collapsing does (see `useSalaryRulesDraft.ts`): a draft added via "Добавить правило" and
      * never confirmed is discarded on cancel/collapse; a confirmed one just collapses. */
@@ -57,8 +65,9 @@ export type RuleDraft = {
     type: RuleType
     name: string
     targetRole: TargetRole | ''
-    /** `PayPerHour.config.price` and award `Fixed.price` share this field (only one is ever read,
-     * depending on `type`/`awardKind`). */
+    /** `PayPerHour.config.price`, award `Fixed.price` and `TaskCompletion.config.defaultAmount`
+     * share this field (only one is ever read, depending on `type`/`awardKind`) — same "money as
+     * text, parsed on submit" shape for all three. */
     price: string
     awardKind: AwardKind | ''
     /** `ServicePercent.percent` / `FixedPercent.percent`. */
@@ -82,6 +91,22 @@ export type RuleDraft = {
      * поэтому черновик всегда несёт значение (never `undefined`), а не отдельное "не задано" состояние.
      * Read only for `OrderPayed`/`ServiceCompleted`; ignored otherwise. */
     orderTypeIds: number[]
+    /** `TaskCompletion.config.taskDescription` (tasks.md раздел 20, node `DcWkE`) — необязательное
+     * описание создаваемой в Bitrix24 задачи. `''` — «не задано» (сериализуется как `undefined` в
+     * `resolveRuleDraft`, не как пустая строка, см. `service/model/ruleFormSchema.ts`). Read only for
+     * `TaskCompletion`; ignored otherwise. */
+    taskDescription: string
+    /** `TaskCompletion.config.isRecurring` (node `wQOPI`, «Периодичность»: Разовая/Регулярная) — есть
+     * ли смысл заново создавать задачу на каждый расчётный период, или она разовая (заведена один
+     * раз, никогда не пересоздаётся). Read only for `TaskCompletion`; ignored otherwise. */
+    isRecurring: boolean
+    /** `TaskCompletion.config.deadlineTemplate` (node «Field Дедлайн», паттерн `vm91M`) — ISO-дата
+     * (`YYYY-MM-DD`): для разового правила (`isRecurring: false`) берётся буквально как дедлайн
+     * единственной задачи, для регулярного — используется только число месяца (день), см.
+     * `contracts/commands/salary-rule.ts`'s `taskCompletionSalaryConfigSchema`. Хранится как есть,
+     * без парсинга/форматирования на стороне драфта — контракт уже принимает голую строку. Read
+     * only for `TaskCompletion`; ignored otherwise. */
+    deadlineTemplate: string
 }
 
 /** Default 3 threshold rows — pre-filled with the mockup's own example values (`design/
@@ -111,6 +136,9 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
+        taskDescription: '',
+        isRecurring: false,
+        deadlineTemplate: '',
     }
 }
 
@@ -131,5 +159,8 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         thresholdsExpanded: false,
         category: null,
         orderTypeIds: [],
+        taskDescription: '',
+        isRecurring: false,
+        deadlineTemplate: '',
     }
 }

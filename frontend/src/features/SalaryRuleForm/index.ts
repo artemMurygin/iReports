@@ -14,8 +14,8 @@
 
 export { RuleList } from './ui/RuleList'
 export type { RuleListProps } from './ui/RuleList'
-export { RuleFormCard } from './ui/RuleFormCard'
-export type { RuleFormCardContext, RuleFormCardProps } from './ui/RuleFormCard'
+export { RuleFormCard, TaskCompletionRuleFields } from './ui/RuleFormCard'
+export type { RuleFormCardContext, RuleFormCardProps, TaskCompletionRuleFieldsProps } from './ui/RuleFormCard'
 export { SchemaNameField } from './ui/SchemaNameField.tsx'
 export type { SchemaNameFieldProps } from './ui/SchemaNameField.tsx'
 

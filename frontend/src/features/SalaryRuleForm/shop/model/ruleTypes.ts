@@ -18,8 +18,9 @@ import { SALARY_BASIS_LABELS, type AwardOptionConfig, type RuleFormConfig } from
 export { SHOP_RULE_TYPE_LABELS }
 
 /** Порядок типов в селекте «Тип правила» направления «Магазин» — зеркало
- * `service/model/ruleTypes.ts`'s `RULE_TYPE_ORDER`, живёт в своём направлении. */
-export const SHOP_RULE_TYPE_ORDER: ShopRuleType[] = ['PayPerHour', 'ProductSold', 'UsedProductSold']
+ * `service/model/ruleTypes.ts`'s `RULE_TYPE_ORDER`, живёт в своём направлении. `TaskCompletion` —
+ * последний в списке, тот же порядок, что и у сервисного `RULE_TYPE_ORDER` (tasks.md раздел 21). */
+export const SHOP_RULE_TYPE_ORDER: ShopRuleType[] = ['PayPerHour', 'ProductSold', 'UsedProductSold', 'TaskCompletion']
 
 /** `shopSalaryBasisSchema` (`shop-salary-rule.ts`) — only `REVENUE`/`MARGIN`, no
  * `SALARY_MINUS_ENGINEER_SALARY` (shop has no engineer role/salary, see that schema's comment) —
@@ -40,6 +41,7 @@ export const SHOP_SALARY_BASIS_OPTIONS: SegmentedControlOption<'REVENUE' | 'MARG
  * empty-array convention. */
 export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
+    TaskCompletion: [],
     ProductSold: [
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за проданный товар' },
         { kind: 'FixedPercent', title: 'Фиксированный процент', description: 'Процент от выбранной базы' },
@@ -56,6 +58,11 @@ export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[
  * (node `vtDMA`) only for these two. */
 export const SHOP_CATEGORY_RULE_TYPES: ShopRuleType[] = ['ProductSold', 'UsedProductSold']
 
+/** `TaskCompletion` — тот же тип "без вознаграждения" (tasks.md раздел 21, зеркало раздела 20, node
+ * `ZMEof`), тело карточки — переиспользуемый `TaskCompletionRuleFields`
+ * (`core/ui/RuleFormCard/ui/TaskCompletionRuleFields.tsx`), не `AwardSection`. */
+export const SHOP_TASK_RULE_TYPES: ShopRuleType[] = ['TaskCompletion']
+
 export const SHOP_RULE_FORM_CONFIG: RuleFormConfig = {
     ruleTypeOrder: SHOP_RULE_TYPE_ORDER,
     ruleTypeLabels: SHOP_RULE_TYPE_LABELS,
@@ -65,4 +72,5 @@ export const SHOP_RULE_FORM_CONFIG: RuleFormConfig = {
     // Никакой shop-тип правила не фильтрует по RoApp order type (Фаза 5,
     // docs/service-plan-salary-rule-order-category-filter — вне скоупа для shop, см. PRD).
     orderTypeRuleTypes: [],
+    taskRuleTypes: SHOP_TASK_RULE_TYPES,
 }

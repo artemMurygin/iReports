@@ -33,7 +33,13 @@ export type AwardOptionConfig = {
  * `orderTypeRuleTypes` (Фаза 5, docs/service-plan-salary-rule-order-category-filter) — the subset
  * that shows the `OrderTypeField` multiselect (`OrderPayed`/`ServiceCompleted`) — is empty for
  * shop (no shop rule type filters by RoApp order type). The two lists never overlap for a given
- * direction, so `core/ui/RuleFormCard` treats them as mutually exclusive.
+ * direction, so `core/ui/RuleFormCard` treats them as mutually exclusive. `taskRuleTypes`
+ * (tasks.md раздел 20) — the subset that shows `TaskCompletionRuleFields` (описание задачи /
+ * периодичность / дедлайн) instead of the usual `AmountField`/`AwardSection` body — `['TaskCompletion']`
+ * for both directions (раздел 20 service, раздел 21 shop): the same component renders both, only
+ * `targetRole`-справочник differs (node `ZMEof` — same `Topnav`+`Content` shell as service's
+ * `wV3fv`/`tSYIw`, confirmed via `mcp__pencil__execute`, no shop-specific visual divergence found
+ * for this block).
  */
 export type RuleFormConfig = {
     ruleTypeOrder: RuleType[]
@@ -42,4 +48,5 @@ export type RuleFormConfig = {
     salaryBasisOptions: SegmentedControlOption<SalaryBasisValue>[]
     categoryRuleTypes: RuleType[]
     orderTypeRuleTypes: RuleType[]
+    taskRuleTypes: RuleType[]
 }

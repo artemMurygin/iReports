@@ -49,11 +49,31 @@ export function getSalaryBasisLabel(basis: string | undefined): string {
     return SALARY_BASIS_LABEL[basis] ?? basis
 }
 
+/**
+ * Нормализованный статус связанной задачи Bitrix24 правила `TaskCompletion` (tasks.md раздел 23,
+ * `TaskStatusBadge`) — три состояния из architecture.md: «Выполнено» (бэкенд:
+ * `TaskStatus.isDone()`, `domain/value-objects/task-status.value-object.ts` обоих направлений),
+ * «В работе» (не выполнена, дедлайн ещё не наступил) и «Просрочено» (не выполнена, дедлайн уже
+ * прошёл). Контрактного enum'а для этого поля сегодня нет — разделы 12/17 tasks.md, которые должны
+ * прокинуть статус через `erpData`/`CalculationSourceRef` в API-ответ, ещё не реализованы (см.
+ * `contracts/commands/salary-rule.ts`/`salary-accrual.ts`: ни `calculationSourceRefSchema`, ни
+ * `employeeSalaryReportSourceSchema` не несут статус). Тип объявлен локально здесь; когда контракт
+ * появится — заменить этот union на производную от него.
+ */
+export type TaskCompletionStatus = 'DONE' | 'IN_PROGRESS' | 'OVERDUE'
+
+export const TASK_STATUS_LABEL: Record<TaskCompletionStatus, string> = {
+    DONE: 'Выполнено',
+    IN_PROGRESS: 'В работе',
+    OVERDUE: 'Просрочено',
+}
+
 /** Типы источников строки — реальные значения `sources[].type` с бэкенда (та же карта и
  * обоснование, что у pages/SalaryReport/ui/RuleSources.tsx). */
 const SOURCE_TYPE_LABEL: Record<string, string> = {
     order: 'Заказ',
     serviceOrderItem: 'Позиция услуги',
+    taskCompletion: 'Задача',
     demandPosition: 'Позиция отгрузки',
 }
 

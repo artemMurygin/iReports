@@ -43,6 +43,7 @@ export function useRuleFormCard({
     const awardOptions = config.awardOptionsByType[draft.type] ?? []
     const showCategory = config.categoryRuleTypes.includes(draft.type)
     const showOrderTypeIds = config.orderTypeRuleTypes.includes(draft.type)
+    const showTaskFields = config.taskRuleTypes.includes(draft.type)
 
     function patchDraft(patch: Partial<RuleDraft>) {
         onChange(draft.draftId, patch)
@@ -94,6 +95,7 @@ export function useRuleFormCard({
         awardOptions,
         showCategory,
         showOrderTypeIds,
+        showTaskFields,
         patchDraft,
         changeBorder,
         handleTypeChange,
