@@ -3,7 +3,6 @@ import type { Task, TaskDirection } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
 import { Avatar, AvatarFallback } from '@/shared/ui-kit/atoms/Avatar'
-import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 import { TaskStatusBadge } from '@/shared/ui-kit/atoms/TaskStatusBadge.tsx'
 import { ColumnHeader } from '@/shared/ui-kit/molecules/ColumnHeader'
 
@@ -78,7 +77,12 @@ function TaskTableRow({
     const assigneeLabel = assigneeName ?? `Сотрудник #${task.assigneeEmployeeId}`
 
     return (
-        <div data-slot="task-table-row" className="flex items-center border-b border-hairline last:border-b-0">
+        <button
+            type="button"
+            data-slot="task-table-row"
+            onClick={() => onSelect(task.id)}
+            className="flex w-full items-center border-b border-hairline text-left transition-colors last:border-b-0 hover:bg-canvas"
+        >
             <div className="min-w-[280px] flex-1 px-3 py-3.5">
                 <p className="truncate font-ui text-sm font-semibold text-ink">{task.title}</p>
                 {task.direction && (
@@ -102,11 +106,9 @@ function TaskTableRow({
             </div>
 
             <div className={cn('flex shrink-0 items-center justify-end px-3', COLUMN_WIDTH.actions)}>
-                <IconButton aria-label={`Открыть задачу «${task.title}»`} onClick={() => onSelect(task.id)}>
-                    <ChevronRight />
-                </IconButton>
+                <ChevronRight aria-hidden className="size-[15px] text-ink-muted" />
             </div>
-        </div>
+        </button>
     )
 }
 

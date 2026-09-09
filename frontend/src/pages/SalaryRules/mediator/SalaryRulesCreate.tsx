@@ -1,4 +1,6 @@
+import { CreateTaskPanel } from '@/features/CreateTask'
 import { RuleList } from '@/features/SalaryRuleForm'
+import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 
 import { useSalaryRulesPage } from '../model/useSalaryRulesPage.ts'
 import { Layout } from '../ui/Layout'
@@ -43,28 +45,32 @@ export function SalaryRulesCreate() {
         />
     )
 
+    const ruleFormProps = {
+        config: page.config,
+        allowedRolesByType: page.allowedRolesByType,
+        isRoleTypesLoading: page.isRoleTypesLoading,
+        roleTypesError: page.roleTypesError,
+        isCategoriesLoading: page.isCategoriesLoading,
+        categoriesError: page.categoriesError,
+        orderTypes: page.orderTypes,
+        isOrderTypesLoading: page.isOrderTypesLoading,
+        orderTypesError: page.orderTypesError,
+        onChange: page.rules.updateDraft,
+        onChangeType: page.rules.changeType,
+        onChangeBorder: page.rules.updateBorder,
+        onCancel: page.rules.cancelExpanded,
+        onSave: page.rules.trySaveExpanded,
+        onOpenTask: page.onOpenTask,
+        onCreateTask: page.onCreateTask,
+    }
+
     const rules = (
         <RuleList
             className="w-full flex-1"
             drafts={page.rules.drafts}
             expandedId={page.rules.expandedId}
             categories={page.categories}
-            ruleFormProps={{
-                config: page.config,
-                allowedRolesByType: page.allowedRolesByType,
-                isRoleTypesLoading: page.isRoleTypesLoading,
-                roleTypesError: page.roleTypesError,
-                isCategoriesLoading: page.isCategoriesLoading,
-                categoriesError: page.categoriesError,
-                orderTypes: page.orderTypes,
-                isOrderTypesLoading: page.isOrderTypesLoading,
-                orderTypesError: page.orderTypesError,
-                onChange: page.rules.updateDraft,
-                onChangeType: page.rules.changeType,
-                onChangeBorder: page.rules.updateBorder,
-                onCancel: page.rules.cancelExpanded,
-                onSave: page.rules.trySaveExpanded,
-            }}
+            ruleFormProps={ruleFormProps}
             onAdd={page.rules.addDraft}
             onExpand={page.rules.toggleExpand}
             onDelete={page.rules.removeDraft}
@@ -83,5 +89,16 @@ export function SalaryRulesCreate() {
         />
     )
 
-    return <Layout header={header} banner={banner} target={target} rules={rules} mobileBar={mobileBar} />
+    return (
+        <>
+            <Layout header={header} banner={banner} target={target} rules={rules} mobileBar={mobileBar} />
+
+            <CreateTaskPanel
+                open={page.isCreatingTask}
+                onOpenChange={(open) => !open && page.cancelCreateTask()}
+                onCreated={page.handleTaskCreated}
+            />
+            <TaskDetailsPanel taskId={page.openTaskId} onClose={page.closeTaskDetails} />
+        </>
+    )
 }

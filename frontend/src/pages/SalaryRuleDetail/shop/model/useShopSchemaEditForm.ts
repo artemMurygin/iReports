@@ -12,11 +12,10 @@ import {
     draftFromShopRule,
     resolveShopRuleDraft,
     useSalaryRulesDraft,
+    useTaskLinkPanels,
     type RuleFormConfig,
     type RuleType,
 } from '@/features/SalaryRuleForm'
-
-import { selectWizardDraft } from '../../model/selectWizardDraft.ts'
 
 import { useUpdateMotivationSchema } from './useUpdateMotivationSchema.ts'
 
@@ -58,11 +57,9 @@ export function useShopSchemaEditForm({
     const { resolvedRules } = rules
     const canSave = schemaName.trim().length > 0 && rules.allDraftsValid && !updateSchema.isPending
 
-    // replace-bitrix-task-integration, раздел 14 tasks.md (14.6) — зеркало
-    // `service/model/useServiceSchemaEditForm.ts`'s `wizardDraft`/`wizardDraftIndex` (обе стороны
-    // делят одну и ту же `selectWizardDraft`, см. её комментарий).
-    const wizardDraft = selectWizardDraft(rules.drafts, rules.expandedId)
-    const wizardDraftIndex = wizardDraft ? rules.drafts.findIndex((draft) => draft.draftId === wizardDraft.draftId) : -1
+    // replace-bitrix-task-integration — зеркало `service/model/useServiceSchemaEditForm.ts`'s
+    // `taskPanels` (обе стороны делят одну и ту же `useTaskLinkPanels`).
+    const taskPanels = useTaskLinkPanels(rules.updateDraft)
 
     // TaskCompletion можно завести только на схему конкретного сотрудника (backend
     // CreateShopSalaryRuleHandler бросает TaskCompletionRequiresPersonalSchemaException для схемы
@@ -95,8 +92,13 @@ export function useShopSchemaEditForm({
         target: schema.target,
         ruleCount: rules.drafts.length,
         rules,
-        wizardDraft,
-        wizardDraftIndex,
+        onOpenTask: taskPanels.openTask,
+        onCreateTask: taskPanels.requestCreateTask,
+        openTaskId: taskPanels.openTaskId,
+        closeTaskDetails: taskPanels.closeTaskDetails,
+        isCreatingTask: taskPanels.isCreatingTask,
+        cancelCreateTask: taskPanels.cancelCreateTask,
+        handleTaskCreated: taskPanels.handleTaskCreated,
         config: visibleConfig,
         allowedRolesByType,
         isRoleTypesLoading,

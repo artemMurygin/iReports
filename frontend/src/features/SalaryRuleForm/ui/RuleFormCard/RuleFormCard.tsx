@@ -57,6 +57,8 @@ export function RuleFormCard({
     onChangeBorder,
     onCancel,
     onSave,
+    onOpenTask,
+    onCreateTask,
     onDelete,
     className,
 }: RuleFormCardProps) {
@@ -122,7 +124,13 @@ export function RuleFormCard({
                             onValueChange={(price) => patchDraft({ price })}
                         />
                     ) : showTaskFields ? (
-                        <TaskCompletionRuleFields draft={draft} errors={errors} onChange={patchDraft} />
+                        <TaskCompletionRuleFields
+                            draft={draft}
+                            errors={errors}
+                            onChange={patchDraft}
+                            onOpenTask={onOpenTask}
+                            onCreateTask={onCreateTask}
+                        />
                     ) : (
                         <AwardSection
                             draft={draft}

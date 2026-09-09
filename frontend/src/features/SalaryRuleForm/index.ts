@@ -38,6 +38,7 @@ export type { ResolveDraftFn, RuleSaveOutcome } from './model/ruleResolver.ts'
 export { useAllowedRolesByType } from './model/useAllowedRolesByType.ts'
 export { pluralizeRules, summarizeRuleDraft, summarizeBorders } from './model/ruleSummary.ts'
 export { ROLE_LABELS } from './model/roleLabels.ts'
+export { useTaskLinkPanels } from './model/useTaskLinkPanels.ts'
 
 export { resolveRuleDraft, draftFromRule } from './service/model/ruleFormSchema.ts'
 export type { RuleFieldErrors, ResolveRuleDraftResult } from './service/model/ruleFormSchema.ts'

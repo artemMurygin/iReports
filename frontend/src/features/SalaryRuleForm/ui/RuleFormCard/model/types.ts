@@ -30,6 +30,14 @@ export type RuleFormCardContext = {
     onChangeBorder: (id: string, index: number, patch: Partial<BorderDraft>) => void
     onCancel: () => void
     onSave: () => RuleSaveOutcome | null
+    /** `TaskCompletion` only (`TaskCompletionRuleFields`'s "Задача") — opens the task details side
+     * panel (`features/TaskStatusControl`'s `TaskDetailsPanel`) for an already-linked task. Optional
+     * because every other rule type's `RuleFormCardContext` never reads it — see
+     * `useTaskLinkPanels.ts` for where the callback actually comes from. */
+    onOpenTask?: (taskId: string) => void
+    /** `TaskCompletion` only — opens the task creation side panel (`features/CreateTask`'s
+     * `CreateTaskPanel`) for this draft when it has no task yet. See `onOpenTask`'s comment. */
+    onCreateTask?: (draftId: string) => void
 }
 
 export type RuleFormCardProps = RuleFormCardContext & {

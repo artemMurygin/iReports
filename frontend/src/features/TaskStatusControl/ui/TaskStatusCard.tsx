@@ -26,8 +26,11 @@ const DIRECTION_LABEL: Record<TaskDirection, string> = {
     shop: 'Шоп',
 }
 
-function formatDeadline(deadline: Date): string {
-    return deadline.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+// `Task.deadline` — тип `Date` в ireports-contracts (`z.coerce.date()` в схеме ответа), но фронт не
+// прогоняет ответы API через эту схему — по факту это ISO-строка из JSON, не `Date` (тот же случай,
+// что `transaction.occurredAt` в `TransactionsLedger.tsx`), поэтому оборачиваем в `new Date(...)`.
+function formatDeadline(deadline: Date | string): string {
+    return new Date(deadline).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function initialsOf(name: string): string {

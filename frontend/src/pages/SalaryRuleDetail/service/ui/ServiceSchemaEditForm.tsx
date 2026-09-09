@@ -1,11 +1,12 @@
 import type { MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
+import { CreateTaskPanel } from '@/features/CreateTask'
 import { RuleList } from '@/features/SalaryRuleForm'
 import type { RuleFormConfig, RuleType } from '@/features/SalaryRuleForm'
+import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 
 import { Layout } from '../../ui/Layout.tsx'
 import { MobileSaveBar } from '../../ui/MobileSaveBar.tsx'
 import { PageHeader } from '../../ui/PageHeader.tsx'
-import { RulesColumn } from '../../ui/RulesColumn.tsx'
 import { TargetSummaryCard } from '../../ui/TargetSummaryCard/TargetSummaryCard.tsx'
 import { useServiceSchemaEditForm } from '../model/useServiceSchemaEditForm.ts'
 
@@ -66,28 +67,20 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
         onChangeBorder: page.rules.updateBorder,
         onCancel: page.rules.cancelExpanded,
         onSave: page.rules.trySaveExpanded,
+        onOpenTask: page.onOpenTask,
+        onCreateTask: page.onCreateTask,
     }
 
     const rules = (
-        <RulesColumn
-            className="w-full flex-1"
-            wizardDraft={page.wizardDraft}
-            wizardIndex={page.wizardDraftIndex}
+        <RuleList
+            eyebrow="ПРАВИЛА СХЕМЫ"
+            drafts={page.rules.drafts}
+            expandedId={page.rules.expandedId}
             categories={page.categories}
             ruleFormProps={ruleFormProps}
-            onDeleteDraft={page.rules.removeDraft}
-            rules={
-                <RuleList
-                    eyebrow="ПРАВИЛА СХЕМЫ"
-                    drafts={page.rules.drafts}
-                    expandedId={page.rules.expandedId}
-                    categories={page.categories}
-                    ruleFormProps={ruleFormProps}
-                    onAdd={page.rules.addDraft}
-                    onExpand={page.rules.toggleExpand}
-                    onDelete={page.rules.removeDraft}
-                />
-            }
+            onAdd={page.rules.addDraft}
+            onExpand={page.rules.toggleExpand}
+            onDelete={page.rules.removeDraft}
         />
     )
 
@@ -100,5 +93,16 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
         />
     )
 
-    return <Layout header={header} target={target} rules={rules} mobileBar={mobileBar} />
+    return (
+        <>
+            <Layout header={header} target={target} rules={rules} mobileBar={mobileBar} />
+
+            <CreateTaskPanel
+                open={page.isCreatingTask}
+                onOpenChange={(open) => !open && page.cancelCreateTask()}
+                onCreated={page.handleTaskCreated}
+            />
+            <TaskDetailsPanel taskId={page.openTaskId} onClose={page.closeTaskDetails} />
+        </>
+    )
 }

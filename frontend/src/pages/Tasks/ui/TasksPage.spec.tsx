@@ -102,7 +102,9 @@ describe('TasksPage', () => {
             expect(screen.getAllByText('Обзвонить клиентов после диагностики').length).toBeGreaterThan(0),
         )
 
-        await user.click(screen.getByRole('button', { name: /Открыть задачу/ }))
+        // The whole row is a `<button>` now (no separate "Открыть задачу" affordance) — click the
+        // title text, same as a real user would, rather than relying on a specific button name.
+        await user.click(screen.getAllByText('Обзвонить клиентов после диагностики')[0])
 
         await waitFor(() => expect(axiosInstance.get).toHaveBeenCalledWith('/v1/tasks/task-1', expect.anything()))
         expect(await screen.findByText('Позвонить и уточнить впечатления')).toBeInTheDocument()
