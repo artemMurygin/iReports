@@ -60,9 +60,9 @@ export class RoappSyncService {
     // service-turnover-report. Апсерт без бизнес-порядка (плоский список,
     // нет self-relation, в отличие от категорий) — по образцу
     // uploadEmployees()/uploadMarketingSources(). Полная перезапись строк
-    // (не инкрементально) — согласуется с тем, что fetchWarehouses() сейчас
-    // резервный источник (см. roapp-warehouses.config.ts) и не поддерживает
-    // «только изменённые с даты X».
+    // (не инкрементально) — RoappService.fetchWarehouses() отдаёт полный
+    // список складов за один вызов (не поддерживает «только изменённые с
+    // даты X»), поэтому синк каждый раз апсертит весь справочник целиком.
     async uploadWarehouses() {
         const warehouses = await this.roapp.fetchWarehouses();
         await Promise.all(

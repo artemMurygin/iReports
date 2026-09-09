@@ -267,8 +267,10 @@ read-only справочников. Диапазон дат валидирует
   параметров; используется для дерева/фильтра категорий на фронтенде (не для сборки самого отчёта —
   та уже денормализована выше)
 - `GET /v1/service/warehouse/warehouses` — справочник складов (`roapp_warehouses`, `id`/`name`), без
-  параметров; резервный источник — ручной справочник `ROAPP_WAREHOUSES` (`.env`), не публичное REST
-  API RemOnline напрямую (в нём нет отдельного ресурса складов, см. design.md D3/риски)
+  параметров; источник — `GET https://api.roapp.io/warehouse/` (RemOnline, недокументированный в
+  актуальном v2 OpenAPI-индексе эндпоинт из более старой версии API, см.
+  https://roapp.readme.io/v1.4/reference/get-warehouses), синкается в `roapp_warehouses` разовым
+  `npm run initial` (`RoappSyncService.uploadWarehouses`)
 
 ## domains/shop/modules/sales (`/v1/shop/sales/plan`, `/v1/shop/sales/plan_template`, `/v1/shop/sales/salesPerformance`)
 SalesFact/SalesPrognose/SalesPerformance направления `shop` по данным МойСклад (Фаза 11, issue #54/#55)

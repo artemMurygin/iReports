@@ -87,6 +87,15 @@
   процесса. Пустая/неустановленная переменная — валидное состояние (пустой список, не ошибка);
   невалидный JSON/форма элемента — падает с понятной ошибкой (fail fast), а не тихо отдаёт
   пустой список.
+  **Аддендум (после мерджа в feat/salary, вне первоначального диапазона задачи 4)**: резервный
+  источник заменён реальным вызовом RemOnline. Пользователь указал на рабочий, но не описанный в
+  актуальном OpenAPI-индексе v2 эндпоинт из более старой (v1.4) версии публичного API —
+  `GET https://api.roapp.io/warehouse/` (https://roapp.readme.io/v1.4/reference/get-warehouses),
+  подтверждено прямым вызовом с тем же `ROAPP_TOKEN` (`200 OK`, реальные 6 складов iRepair, включая
+  `id=38107`, ранее использованный как placeholder в задаче 14.1). `roapp-warehouses.config.ts` и
+  переменная `ROAPP_WAREHOUSES` удалены; `RoappService.fetchWarehouses()` теперь делает реальный
+  HTTP-запрос (`type=product`, маппинг `title` → `name`) с тем же контрактом
+  `Promise<{id, name}[]>` и тем же `BadGatewayException` при сбое/невалидном ответе.
 - [x] 4.4 Прогнать тесты из 4.1, зафиксировать green, без регрессий в `roapp.service.spec.ts`.
 - [x] 4.5 Написать тест(ы) на `RoappSyncService.uploadWarehouses()` (апсерт в `roappWarehouse`,
   по образцу `uploadProductCategories()`). Верификация: `npm run test -- roapp-sync` видит тест.
@@ -399,6 +408,13 @@
   **Результат**: `roapp_warehouses` после прогона — 1 запись (`id=38107`), не пустой список,
   формальная верификация задачи выполнена; `WarehouseModule` корректно резолвит все свои
   зависимости при полной загрузке `AppModule` (видно в логе `InstanceLoader`).
+  **Аддендум (после мерджа в feat/salary)**: плейсхолдер `ROAPP_WAREHOUSES` устранён — задача 4.3
+  теперь вызывает реальный эндпоинт RemOnline. Повторный прогон синка (тот же приём — временный
+  скрипт вне AppModule, т.к. полный `AppModule` в этом окружении падает на несвязанной зависимости
+  `AiHttpService`/`OPENAI_API_KEY`; собран вручную `RoappService` + `DatabaseService`, удалён после
+  проверки) заполнил `roapp_warehouses` 6 реальными складами iRepair (`38107` «1 iRepair |
+  Основной», `2390668`, `2652825`, `2931560`, `4476051`, `5407498` — все `type=product`), включая
+  корректное название для `id=38107`, у которого раньше был только placeholder.
 
 ## 15. Frontend: страница `GoodsTurnoverReport` — каркас
 

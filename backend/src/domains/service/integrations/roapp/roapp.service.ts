@@ -10,8 +10,10 @@ import { OrderItemSchema } from './schemas/orderItems.schema';
 import { ServiceSchema } from './schemas/services.schema';
 import { ProductSchema } from './schemas/products.schema';
 import { CategorySchema } from './schemas/serviceCatalog.schema';
-import { WarehouseSchema } from './schemas/warehouses.schema';
-import { readManualWarehouses } from './roapp-warehouses.config';
+import {
+    RoappWarehousesApiResponseSchema,
+    WarehouseSchema,
+} from './schemas/warehouses.schema';
 import { delay } from '../../../../shared/delay';
 import {
     Params,
@@ -257,21 +259,36 @@ export class RoappService {
     }
 
     // Справочник складов (spec: service/goods-turnover, задача 4.3 change
-    // service-turnover-report) — резервный источник, не вызов публичного
-    // API RemOnline: допущение design.md D3 о наличии там отдельного
-    // ресурса складов не подтвердилось (проверено на этапе реализации —
-    // подробности и итоговый резервный источник см.
-    // roapp-warehouses.config.ts). Сигнатура/место (RoappService,
-    // integrations/roapp) намеренно оставлены как для остальных
-    // справочников RoApp — вызывающий код (RoappGateway/RoappSyncService)
-    // не знает и не должен знать, что за ней сейчас нет реального HTTP-вызова.
-    fetchWarehouses(): Promise<z.infer<typeof WarehouseSchema>[]> {
-        // Promise.resolve().then(...), не Promise.resolve(readManualWarehouses())
-        // — readManualWarehouses() валидирует Zod'ом и может бросить синхронно;
-        // оборачиваем вызов, чтобы ошибка приходила как отклонённый Promise
-        // (контракт метода — Promise, как у остальных fetch*), а не как
-        // синхронное исключение из самого fetchWarehouses().
-        return Promise.resolve().then(() => readManualWarehouses());
+    // service-turnover-report). Допущение design.md D3 о наличии в
+    // актуальном публичном API RemOnline (`api.roapp.io/v2`) ресурса
+    // списка складов не подтвердилось — но у RemOnline нашёлся рабочий,
+    // хоть и не описанный в OpenAPI-индексе v2 эндпоинт из более старой
+    // (v1.4) версии API: `GET https://api.roapp.io/warehouse/`,
+    // принимающий тот же Bearer ROAPP_TOKEN (см. документацию
+    // https://roapp.readme.io/v1.4/reference/get-warehouses). Абсолютный
+    // URL вместо относительного пути — у `roApp.instance` baseURL
+    // зафиксирован на `/v2`, а этот эндпоинт вне версионирования; axios
+    // подставляет абсолютный URL вместо конкатенации с baseURL, тот же
+    // клиент/токен переиспользуется без отдельного HTTP-инстанса.
+    // `type=product` — фильтр самого RemOnline (дефолт), исключающий
+    // склады типа `asset` (внутреннее оборудование компании, не товар).
+    async fetchWarehouses(): Promise<z.infer<typeof WarehouseSchema>[]> {
+        try {
+            const { data } = await this.roApp.instance.get<unknown>(
+                'https://api.roapp.io/warehouse/',
+                { params: { type: 'product' } },
+            );
+            const { data: warehouses } =
+                RoappWarehousesApiResponseSchema.parse(data);
+            return warehouses.map((warehouse) => ({
+                id: warehouse.id,
+                name: warehouse.title,
+            }));
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch warehouses from Roapp: ${toErrorMessage(error)}`,
+            );
+        }
     }
 
     async fetchMarketingSources(): Promise<

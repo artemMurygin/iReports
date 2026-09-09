@@ -1,58 +1,87 @@
+import { BadGatewayException } from '@nestjs/common';
 import { RoappService } from './roapp.service';
 import type { RoappHttpService } from './roapp.instace';
 
-// spec: service/goods-turnover — задача 4.1 change service-turnover-report.
-// fetchWarehouses() не вызывает публичное API RemOnline (допущение design.md
-// D3 не подтвердилось, см. roapp-warehouses.config.ts) — читает резервный
-// источник, ручной справочник в ROAPP_WAREHOUSES. Тестируем именно этот
-// контракт: форма ответа = [{id, name}], пустой список без конфигурации,
-// fail-fast при некорректном значении переменной.
+// spec: service/goods-turnover — задача 4.1 change service-turnover-report
+// (обновлено: реальный вызов RemOnline вместо ручного справочника
+// ROAPP_WAREHOUSES, см. roapp.service.ts). Эндпоинт вне версионирования
+// v2 (`GET https://api.roapp.io/warehouse/`, документация
+// https://roapp.readme.io/v1.4/reference/get-warehouses) — HTTP-клиент
+// замокан целиком (get — jest.fn()), по образцу
+// custom-api-roapp.service.spec.ts.
 describe('RoappService.fetchWarehouses', () => {
-    const originalEnv = process.env.ROAPP_WAREHOUSES;
+    let get: jest.Mock;
+    let service: RoappService;
 
-    const buildService = () => new RoappService({} as RoappHttpService);
-
-    afterEach(() => {
-        if (originalEnv === undefined) {
-            delete process.env.ROAPP_WAREHOUSES;
-        } else {
-            process.env.ROAPP_WAREHOUSES = originalEnv;
-        }
+    beforeEach(() => {
+        get = jest.fn();
+        const roApp = { instance: { get } } as unknown as RoappHttpService;
+        service = new RoappService(roApp);
     });
 
-    it('возвращает список складов, заданный в ROAPP_WAREHOUSES', async () => {
-        process.env.ROAPP_WAREHOUSES = JSON.stringify([
-            { id: 1, name: 'Основной склад' },
-            { id: 2, name: 'Склад запчастей' },
-        ]);
+    const apiResponse = {
+        data: [
+            {
+                id: 38107,
+                title: 'Основной склад',
+                is_global: false,
+                type: 'product',
+            },
+            {
+                id: 2390668,
+                title: 'Склад запчастей',
+                is_global: false,
+                type: 'product',
+            },
+        ],
+        count: 2,
+        success: true,
+    };
 
-        const warehouses = await buildService().fetchWarehouses();
+    it('запрашивает GET https://api.roapp.io/warehouse/ с type=product', async () => {
+        get.mockResolvedValueOnce({ data: apiResponse });
+
+        await service.fetchWarehouses();
+
+        expect(get).toHaveBeenCalledWith('https://api.roapp.io/warehouse/', {
+            params: { type: 'product' },
+        });
+    });
+
+    it('возвращает список складов в форме [{id, name}], name = title', async () => {
+        get.mockResolvedValueOnce({ data: apiResponse });
+
+        const warehouses = await service.fetchWarehouses();
 
         expect(warehouses).toEqual([
-            { id: 1, name: 'Основной склад' },
-            { id: 2, name: 'Склад запчастей' },
+            { id: 38107, name: 'Основной склад' },
+            { id: 2390668, name: 'Склад запчастей' },
         ]);
     });
 
-    it('возвращает пустой список, если ROAPP_WAREHOUSES не задана', async () => {
-        delete process.env.ROAPP_WAREHOUSES;
+    it('пустой список складов -> пустой массив, не ошибка', async () => {
+        get.mockResolvedValueOnce({
+            data: { data: [], count: 0, success: true },
+        });
 
-        await expect(buildService().fetchWarehouses()).resolves.toEqual([]);
+        await expect(service.fetchWarehouses()).resolves.toEqual([]);
     });
 
-    it('падает с понятной ошибкой на невалидном JSON в ROAPP_WAREHOUSES', async () => {
-        process.env.ROAPP_WAREHOUSES = '{not valid json';
+    it('ответ, не проходящий Zod-валидацию, -> BadGatewayException', async () => {
+        get.mockResolvedValueOnce({
+            data: { data: [{ id: 1 }], count: 1, success: true },
+        });
 
-        await expect(buildService().fetchWarehouses()).rejects.toThrow(
-            /ROAPP_WAREHOUSES/,
-        );
+        const error = await service.fetchWarehouses().catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(BadGatewayException);
     });
 
-    it('падает с понятной ошибкой на элементе неверной формы', async () => {
-        process.env.ROAPP_WAREHOUSES = JSON.stringify([
-            { id: 'не число', name: 'Склад' },
-        ]);
+    it('сбой HTTP-вызова -> BadGatewayException', async () => {
+        get.mockRejectedValueOnce(new Error('502 Bad Gateway'));
 
-        await expect(buildService().fetchWarehouses()).rejects.toThrow();
+        const error = await service.fetchWarehouses().catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(BadGatewayException);
     });
 });
