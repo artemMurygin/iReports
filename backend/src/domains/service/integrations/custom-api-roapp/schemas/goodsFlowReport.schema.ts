@@ -11,9 +11,14 @@ export type GoodsFlowReportRequest = z.infer<
     typeof GoodsFlowReportRequestSchema
 >;
 
+// sum приходит от RoApp дробным числом (с копейками) — round до целых
+// рублей здесь же, в контракте, той же формулой, что и
+// domains/service/modules/accounting/domain/services/money.ts#roundRubles,
+// чтобы GoodsFlowMetric (требует целую сумму, см. money.ts) не отбрасывал
+// пару категория-склад целиком из-за ArgumentInvalidException.
 const GoodsFlowMetricSchema = z.object({
     quantity: z.number(),
-    sum: z.number(),
+    sum: z.number().transform((sum) => Math.round(sum)),
 });
 
 export const GoodsFlowReportResponseSchema = z.object({

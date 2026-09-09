@@ -54,6 +54,22 @@ describe('CustomApiRoappService.getGoodsFlowReport', () => {
         });
     });
 
+    it('округляет дробную сумму (RoApp отдаёт с копейками) до целых рублей', async () => {
+        post.mockResolvedValueOnce({
+            data: {
+                outcome: { quantity: 3, sum: 11943.2 },
+                stock: { quantity: 10, sum: 21611.32682 },
+            },
+        });
+
+        const result = await service.getGoodsFlowReport(payload);
+
+        expect(result).toEqual({
+            outcome: { quantity: 3, sum: 11943 },
+            stock: { quantity: 10, sum: 21611 },
+        });
+    });
+
     it('ответ, не проходящий Zod-валидацию, -> BadGatewayException', async () => {
         post.mockResolvedValueOnce({
             data: { outcome: { quantity: 3 }, stock: { quantity: 10, sum: 5000 } },
