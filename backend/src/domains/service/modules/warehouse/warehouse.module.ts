@@ -4,6 +4,8 @@ import { RoappGatewayModule } from '@/domains/service/integrations/roapp-gateway
 import { PRODUCT_CATEGORY_REPOSITORY } from './application/ports/product-category/product-category.port';
 import { WAREHOUSE_REPOSITORY } from './application/ports/warehouse/warehouse.port';
 import { GOODS_TURNOVER_REPORT_LINE_REPOSITORY } from './application/ports/goods-turnover-report/goods-turnover-report-line.port';
+import { GOODS_TURNOVER_WAREHOUSE_SCOPE } from './application/ports/goods-turnover-report/goods-turnover-warehouse-scope.port';
+import { GoodsTurnoverWarehouseScope } from './domain/value-objects/goods-turnover-warehouse-scope.value-object';
 import { ProductCategoryRepository } from './infrastructure/repositories/product-category/product-category.repository';
 import { WarehouseRepository } from './infrastructure/repositories/warehouse/warehouse.repository';
 import { GoodsTurnoverReportLineRepository } from './infrastructure/repositories/goods-turnover-report/goods-turnover-report-line.repository';
@@ -55,6 +57,13 @@ import { ListWarehousesHttpController } from './interface/http-controllers/wareh
         {
             provide: WAREHOUSE_REPOSITORY,
             useClass: WarehouseRepository,
+        },
+        // Конфиг того, до какой глубины дерева категорий строится отчёт —
+        // для основного склада и отдельно для всех остальных (см.
+        // GoodsTurnoverWarehouseScope, spec: service/goods-turnover).
+        {
+            provide: GOODS_TURNOVER_WAREHOUSE_SCOPE,
+            useValue: GoodsTurnoverWarehouseScope.default(),
         },
     ],
 })

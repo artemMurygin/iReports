@@ -8,6 +8,7 @@ import { ProductCategory } from '../../domain/value-objects/product-category.val
 import { Warehouse } from '../../domain/value-objects/warehouse.value-object';
 import { GoodsTurnoverReportLine } from '../../domain/entities/goods-turnover-report/goods-turnover-report-line.entity';
 import { GoodsFlowMetric } from '../../domain/value-objects/goods-flow-metric.value-object';
+import { GoodsTurnoverWarehouseScope } from '../../domain/value-objects/goods-turnover-warehouse-scope.value-object';
 import {
     BuildGoodsTurnoverReportService,
     GOODS_FLOW_REPORT_CONCURRENCY,
@@ -60,6 +61,10 @@ function buildService(options: {
     warehouses: ReturnType<typeof buildWarehouse>[];
     fetchGoodsFlowReport: RoappGateway['fetchGoodsFlowReport'];
     previousLines?: GoodsTurnoverReportLine[];
+    // По умолчанию — без ограничения глубины категорий, чтобы существующие
+    // тесты (не про GoodsTurnoverWarehouseScope) не зависели от прод-id
+    // основного склада.
+    scope?: GoodsTurnoverWarehouseScope;
 }) {
     const categoryRepository: ProductCategoryRepositoryPort = {
         findAll: jest.fn().mockResolvedValue(options.categories),
@@ -81,6 +86,7 @@ function buildService(options: {
         warehouseRepository,
         lineRepository,
         gateway,
+        options.scope ?? GoodsTurnoverWarehouseScope.unrestricted(),
     );
 
     return {
@@ -338,6 +344,84 @@ describe('BuildGoodsTurnoverReportService', () => {
                 endDate: Date.UTC(2026, 7, 31, 23, 59, 59, 999),
                 category_id: 7,
                 warehouses: [3],
+            });
+        });
+    });
+
+    // spec: service/goods-turnover#requirement-глубина-категорий-в-отчёте-ограничивается-по-складу
+    describe('ограничение глубины категорий по GoodsTurnoverWarehouseScope', () => {
+        it('основной склад получает корень и прямые дети, но не более глубокие категории', async () => {
+            await withRequestContext(async () => {
+                const scope = GoodsTurnoverWarehouseScope.default();
+                const mainWarehouseId = 38107;
+                const { service } = buildService({
+                    categories: [
+                        buildCategory(1), // depth 0
+                        buildCategory(2, 1), // depth 1
+                        buildCategory(3, 2), // depth 2
+                    ],
+                    warehouses: [buildWarehouse(mainWarehouseId)],
+                    fetchGoodsFlowReport: jest
+                        .fn()
+                        .mockResolvedValue(zeroResponse),
+                    scope,
+                });
+
+                const report = await service.build('2026-08');
+
+                const categoryIds = report.lines
+                    .map((line) => line.categoryId)
+                    .sort();
+                expect(categoryIds).toEqual([1, 2]);
+            });
+        });
+
+        it('любой другой склад получает только корневые категории', async () => {
+            await withRequestContext(async () => {
+                const scope = GoodsTurnoverWarehouseScope.default();
+                const { service } = buildService({
+                    categories: [buildCategory(1), buildCategory(2, 1)],
+                    warehouses: [buildWarehouse(10)],
+                    fetchGoodsFlowReport: jest
+                        .fn()
+                        .mockResolvedValue(zeroResponse),
+                    scope,
+                });
+
+                const report = await service.build('2026-08');
+
+                expect(report.lines.map((line) => line.categoryId)).toEqual([
+                    1,
+                ]);
+            });
+        });
+
+        it('основной и обычный склад одновременно — у каждого своя глубина', async () => {
+            await withRequestContext(async () => {
+                const scope = GoodsTurnoverWarehouseScope.default();
+                const mainWarehouseId = 38107;
+                const { service } = buildService({
+                    categories: [buildCategory(1), buildCategory(2, 1)],
+                    warehouses: [
+                        buildWarehouse(mainWarehouseId),
+                        buildWarehouse(10),
+                    ],
+                    fetchGoodsFlowReport: jest
+                        .fn()
+                        .mockResolvedValue(zeroResponse),
+                    scope,
+                });
+
+                const report = await service.build('2026-08');
+
+                const byWarehouse = new Map<number, number[]>();
+                for (const line of report.lines) {
+                    const ids = byWarehouse.get(line.warehouseId) ?? [];
+                    ids.push(line.categoryId);
+                    byWarehouse.set(line.warehouseId, ids.sort());
+                }
+                expect(byWarehouse.get(mainWarehouseId)).toEqual([1, 2]);
+                expect(byWarehouse.get(10)).toEqual([1]);
             });
         });
     });

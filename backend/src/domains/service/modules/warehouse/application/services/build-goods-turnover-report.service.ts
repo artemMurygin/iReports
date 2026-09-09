@@ -9,9 +9,12 @@ import { WAREHOUSE_REPOSITORY } from '../ports/warehouse/warehouse.port';
 import type { WarehouseRepositoryPort } from '../ports/warehouse/warehouse.port';
 import { GOODS_TURNOVER_REPORT_LINE_REPOSITORY } from '../ports/goods-turnover-report/goods-turnover-report-line.port';
 import type { GoodsTurnoverReportLineRepositoryPort } from '../ports/goods-turnover-report/goods-turnover-report-line.port';
+import { GOODS_TURNOVER_WAREHOUSE_SCOPE } from '../ports/goods-turnover-report/goods-turnover-warehouse-scope.port';
 import { GoodsTurnoverReport } from '../../domain/entities/goods-turnover-report/goods-turnover-report.entity';
 import { GoodsTurnoverReportLine } from '../../domain/entities/goods-turnover-report/goods-turnover-report-line.entity';
 import { GoodsFlowMetric } from '../../domain/value-objects/goods-flow-metric.value-object';
+import { GoodsTurnoverWarehouseScope } from '../../domain/value-objects/goods-turnover-warehouse-scope.value-object';
+import { calculateCategoryDepths } from '../../domain/services/category-depth.calculator';
 
 // Безопасный дефолт параллелизма вызовов getGoodsFlowReport (design.md,
 // риск "Комбинаторика категория × склад"; warehouse-api-finding.md, задача
@@ -31,11 +34,14 @@ interface CategoryWarehousePair {
 // календарный месяц (design.md D4) — рекурсивно (за счёт плоского перебора,
 // иерархия categoryId/parentId сервису не важна: "рекурсивный обход дерева"
 // сводится к тому, что справочник категорий уже включает узлы любого уровня
-// вложенности, см. ProductCategoryRepositoryPort.findAll) обходит все
-// категории справочника товаров × все склады и для каждой пары делает один
-// вызов ROAPP_GATEWAY.fetchGoodsFlowReport за диапазон дат месяца
-// (spec: service/goods-turnover, "Отчёт покрывает все категории и все
-// вложенные категории", "Отчёт строится отдельно по каждому складу").
+// вложенности, см. ProductCategoryRepositoryPort.findAll) обходит категории
+// справочника товаров × склады и для каждой допущенной парой (см.
+// GoodsTurnoverWarehouseScope — для основного склада корень и вложенные
+// категории до его глубины, для остальных складов — только категории до
+// глубины по умолчанию) делает один вызов ROAPP_GATEWAY.fetchGoodsFlowReport
+// за диапазон дат месяца (spec: service/goods-turnover, "Отчёт покрывает все
+// категории и все вложенные категории", "Отчёт строится отдельно по каждому
+// складу", "Глубина категорий в отчёте ограничивается по складу").
 // Только СТРОИТ отчёт в памяти — сохранение (GOODS_TURNOVER_REPORT_LINE_REPOSITORY.replaceAll)
 // остаётся на вызывающей стороне (крон задачи 11, обработчик закрытия
 // периода задачи 12), это не смешивается с построением здесь.
@@ -52,6 +58,8 @@ export class BuildGoodsTurnoverReportService {
         private readonly lineRepository: GoodsTurnoverReportLineRepositoryPort,
         @Inject(ROAPP_GATEWAY)
         private readonly roappGateway: RoappGateway,
+        @Inject(GOODS_TURNOVER_WAREHOUSE_SCOPE)
+        private readonly warehouseScope: GoodsTurnoverWarehouseScope,
     ) {}
 
     async build(period: string): Promise<GoodsTurnoverReport> {
@@ -75,9 +83,16 @@ export class BuildGoodsTurnoverReportService {
             );
         }
 
+        const categoryDepths = calculateCategoryDepths(categories);
+
         const pairs: CategoryWarehousePair[] = [];
-        for (const category of categories) {
-            for (const warehouse of warehouses) {
+        for (const warehouse of warehouses) {
+            const maxDepth = this.warehouseScope.maxCategoryDepthFor(
+                warehouse.getId(),
+            );
+            for (const category of categories) {
+                const depth = categoryDepths.get(category.getId()) ?? 0;
+                if (depth > maxDepth) continue;
                 pairs.push({
                     categoryId: category.getId(),
                     warehouseId: warehouse.getId(),
