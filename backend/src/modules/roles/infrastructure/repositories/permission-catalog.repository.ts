@@ -8,9 +8,7 @@ import type { PermissionCatalogEntry } from '../../application/ports/permission-
 // промежуточной domain-сущности — соответствует тому, что каталог не
 // изменяется через доменные команды, только сидируется из кода.
 @Injectable()
-export class PermissionCatalogRepository
-    implements PermissionCatalogRepositoryPort
-{
+export class PermissionCatalogRepository implements PermissionCatalogRepositoryPort {
     constructor(private readonly db: DatabaseService) {}
 
     async upsertMany(entries: PermissionCatalogEntry[]): Promise<void> {

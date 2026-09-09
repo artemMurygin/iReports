@@ -20,10 +20,12 @@ describe('BitrixIdentityResolver', () => {
             ReturnType<BitrixEmployeeLookupPort['findById']>,
             Parameters<BitrixEmployeeLookupPort['findById']>
         >();
-        const upsertOne = jest.fn<
-            ReturnType<BitrixEmployeeUpsertPort['upsertOne']>,
-            Parameters<BitrixEmployeeUpsertPort['upsertOne']>
-        >().mockResolvedValue(undefined);
+        const upsertOne = jest
+            .fn<
+                ReturnType<BitrixEmployeeUpsertPort['upsertOne']>,
+                Parameters<BitrixEmployeeUpsertPort['upsertOne']>
+            >()
+            .mockResolvedValue(undefined);
         const lookup: BitrixEmployeeLookupPort = { findById };
         const upsert: BitrixEmployeeUpsertPort = { upsertOne };
         const resolver = new BitrixIdentityResolver(lookup, upsert);
@@ -44,10 +46,10 @@ describe('BitrixIdentityResolver', () => {
             clientEndpoint,
         );
 
-        expect(axiosGet).toHaveBeenCalledWith(
-            `${clientEndpoint}user.current`,
-            { params: { auth: 'auth-token' }, timeout: 5_000 },
-        );
+        expect(axiosGet).toHaveBeenCalledWith(`${clientEndpoint}user.current`, {
+            params: { auth: 'auth-token' },
+            timeout: 5_000,
+        });
         expect(result.bitrixEmployeeId).toBe(42);
         expect(result.profile.NAME).toBe('Иван');
         expect(upsertOne).not.toHaveBeenCalled();
@@ -56,7 +58,9 @@ describe('BitrixIdentityResolver', () => {
     it('самовосстанавливает отсутствующего BitrixEmployee через BITRIX_EMPLOYEE_UPSERT_PORT', async () => {
         const { resolver, findById, upsertOne } = createResolver();
         axiosGet.mockResolvedValueOnce({
-            data: { result: { ID: '7', NAME: 'Новый', LAST_NAME: 'Сотрудник' } },
+            data: {
+                result: { ID: '7', NAME: 'Новый', LAST_NAME: 'Сотрудник' },
+            },
         });
         findById
             .mockResolvedValueOnce(null)

@@ -70,12 +70,23 @@ export function applySessionCookie(res: Response, sessionId: string): void {
 }
 
 export function clearSessionCookie(res: Response): void {
-    const sessionOptions = { httpOnly: true, secure: true, sameSite: 'none' as const, path: '/' };
+    const sessionOptions = {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none' as const,
+        path: '/',
+    };
     const csrfOptions = { secure: true, sameSite: 'none' as const, path: '/' };
     clearHostScopedCookie(res, SESSION_COOKIE_NAME, sessionOptions);
     clearHostScopedCookie(res, CSRF_COOKIE_NAME, csrfOptions);
-    res.clearCookie(SESSION_COOKIE_NAME, { ...sessionOptions, domain: COOKIE_DOMAIN });
-    res.clearCookie(CSRF_COOKIE_NAME, { ...csrfOptions, domain: COOKIE_DOMAIN });
+    res.clearCookie(SESSION_COOKIE_NAME, {
+        ...sessionOptions,
+        domain: COOKIE_DOMAIN,
+    });
+    res.clearCookie(CSRF_COOKIE_NAME, {
+        ...csrfOptions,
+        domain: COOKIE_DOMAIN,
+    });
 }
 
 // Double-submit CSRF (design.md, Decision 7): значение — HMAC-SHA256(session_id)
@@ -90,7 +101,12 @@ export function computeCsrfToken(sessionId: string): string {
 }
 
 export function applyCsrfCookie(res: Response, sessionId: string): void {
-    const options = { httpOnly: false, secure: true, sameSite: 'none' as const, path: '/' };
+    const options = {
+        httpOnly: false,
+        secure: true,
+        sameSite: 'none' as const,
+        path: '/',
+    };
     clearHostScopedCookie(res, CSRF_COOKIE_NAME, options);
     res.cookie(CSRF_COOKIE_NAME, computeCsrfToken(sessionId), {
         ...options,

@@ -43,10 +43,7 @@ export class SessionService implements SessionPort {
             issuedAt: new Date().toISOString(),
         });
         await this.redis.expire(sessionKey(sessionId), SESSION_TTL_SECONDS);
-        await this.redis.sadd(
-            employeeSessionsKey(bitrixEmployeeId),
-            sessionId,
-        );
+        await this.redis.sadd(employeeSessionsKey(bitrixEmployeeId), sessionId);
 
         return { sessionId };
     }

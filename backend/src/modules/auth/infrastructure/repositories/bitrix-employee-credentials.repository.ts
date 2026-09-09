@@ -19,9 +19,9 @@ export class BitrixEmployeeCredentialsRepository
     async findByEmployeeId(
         bitrixEmployeeId: number,
     ): Promise<BitrixEmployeeCredentials | null> {
-        const record = await this.client.bitrixEmployeeCredentials.findUnique(
-            { where: { bitrixEmployeeId } },
-        );
+        const record = await this.client.bitrixEmployeeCredentials.findUnique({
+            where: { bitrixEmployeeId },
+        });
         return record ? this.mapper.toDomain(record) : null;
     }
 

@@ -6,13 +6,10 @@ import { Mapper } from '@/shared/domain/mapper.interface';
 import { BitrixEmployeeCredentials } from '../../domain/entities/bitrix-employee-credentials.entity';
 import { BitrixCredentials } from '../../domain/value-objects/bitrix-credentials.value-object';
 
-export class BitrixEmployeeCredentialsMapper
-    implements
-        Mapper<
-            BitrixEmployeeCredentials,
-            Prisma.BitrixEmployeeCredentialsCreateInput
-        >
-{
+export class BitrixEmployeeCredentialsMapper implements Mapper<
+    BitrixEmployeeCredentials,
+    Prisma.BitrixEmployeeCredentialsCreateInput
+> {
     toDomain(
         record: BitrixEmployeeCredentialsRecord,
     ): BitrixEmployeeCredentials {

@@ -24,7 +24,10 @@ export class BitrixCredentials extends ValueObject<BitrixCredentialsProps> {
                 'refreshToken не может быть пустым',
             );
         }
-        if (!(props.expiresAt instanceof Date) || isNaN(props.expiresAt.getTime())) {
+        if (
+            !(props.expiresAt instanceof Date) ||
+            isNaN(props.expiresAt.getTime())
+        ) {
             throw new ArgumentInvalidException(
                 'expiresAt должен быть корректной датой',
             );

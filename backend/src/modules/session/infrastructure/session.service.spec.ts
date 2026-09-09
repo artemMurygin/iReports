@@ -64,8 +64,16 @@ describe('SessionService', () => {
         it('генерирует новый session_id при каждом вызове (защита от session fixation)', async () => {
             const { service } = createService();
 
-            const first = await service.createSession(42, ['reports:view'], 'cookie');
-            const second = await service.createSession(42, ['reports:view'], 'cookie');
+            const first = await service.createSession(
+                42,
+                ['reports:view'],
+                'cookie',
+            );
+            const second = await service.createSession(
+                42,
+                ['reports:view'],
+                'cookie',
+            );
 
             expect(first.sessionId).not.toBe(second.sessionId);
         });
@@ -89,11 +97,7 @@ describe('SessionService', () => {
         it('добавляет session_id в обратный индекс employee_sessions:<id>', async () => {
             const { service, redis } = createService();
 
-            const { sessionId } = await service.createSession(
-                42,
-                [],
-                'cookie',
-            );
+            const { sessionId } = await service.createSession(42, [], 'cookie');
 
             expect(await redis.smembers('employee_sessions:42')).toContain(
                 sessionId,

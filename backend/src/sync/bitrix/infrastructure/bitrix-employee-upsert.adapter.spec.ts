@@ -17,7 +17,9 @@ describe('BitrixEmployeeUpsertAdapter', () => {
 
     const createAdapter = () => {
         const bitrix = { fetchEmployeeById: jest.fn() } as any;
-        const sync = { upsertEmployeeRecord: jest.fn().mockResolvedValue(undefined) } as any;
+        const sync = {
+            upsertEmployeeRecord: jest.fn().mockResolvedValue(undefined),
+        } as any;
         const adapter = new BitrixEmployeeUpsertAdapter(bitrix, sync);
         return { adapter, bitrix, sync };
     };
@@ -37,9 +39,7 @@ describe('BitrixEmployeeUpsertAdapter', () => {
         const { adapter, bitrix, sync } = createAdapter();
         bitrix.fetchEmployeeById.mockResolvedValue(null);
 
-        await expect(adapter.upsertOne(404)).rejects.toThrow(
-            NotFoundException,
-        );
+        await expect(adapter.upsertOne(404)).rejects.toThrow(NotFoundException);
         expect(sync.upsertEmployeeRecord).not.toHaveBeenCalled();
     });
 });

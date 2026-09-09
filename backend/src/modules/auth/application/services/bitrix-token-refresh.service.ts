@@ -30,9 +30,7 @@ export class BitrixTokenRefreshService {
     ) {}
 
     async getValidAccessToken(bitrixEmployeeId: number): Promise<string> {
-        const entity = await this.repository.findByEmployeeId(
-            bitrixEmployeeId,
-        );
+        const entity = await this.repository.findByEmployeeId(bitrixEmployeeId);
         if (!entity) {
             throw new UnauthorizedException(
                 `Для сотрудника ${bitrixEmployeeId} нет сохранённых токенов Bitrix24 — требуется повторный вход`,

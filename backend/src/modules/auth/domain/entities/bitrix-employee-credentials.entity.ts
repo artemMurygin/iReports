@@ -50,9 +50,7 @@ export class BitrixEmployeeCredentials extends AggregateRoot<BitrixEmployeeCrede
             );
         }
         if (!this.props.memberId || !this.props.memberId.trim()) {
-            throw new ArgumentInvalidException(
-                'memberId не может быть пустым',
-            );
+            throw new ArgumentInvalidException('memberId не может быть пустым');
         }
     }
 }

@@ -7,7 +7,8 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 // "role:manage" вместо "roles:manage" ловится там, где строка впервые
 // оборачивается в PermissionCode, а не тихо не срабатывает в рантайме
 // (design.md, Decision 12).
-const PERMISSION_CODE_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(-[a-z0-9]+)*$/;
+const PERMISSION_CODE_PATTERN =
+    /^[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export class PermissionCode extends ValueObject<string> {
     static create(value: string): PermissionCode {

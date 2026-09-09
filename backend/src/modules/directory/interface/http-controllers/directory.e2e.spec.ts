@@ -285,8 +285,18 @@ describe('Directory HTTP (e2e)', () => {
 
         const body = response.body as ListEmployeesWithServiceAccountResponse;
         expect(body).toEqual([
-            { id: 7, name: 'Пётр Петров', departmentId: 2, isServiceAccount: false },
-            { id: 42, name: 'Иван Иванов', departmentId: 1, isServiceAccount: true },
+            {
+                id: 7,
+                name: 'Пётр Петров',
+                departmentId: 2,
+                isServiceAccount: false,
+            },
+            {
+                id: 42,
+                name: 'Иван Иванов',
+                departmentId: 1,
+                isServiceAccount: true,
+            },
         ]);
     });
 

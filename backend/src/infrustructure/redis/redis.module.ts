@@ -19,7 +19,8 @@ export { REDIS_CLIENT } from './redis-client.token';
                     // 10) — ioredis не должен бесконечно ретраить и блокировать
                     // запрос дольше разумного.
                     maxRetriesPerRequest: 1,
-                    retryStrategy: (times: number) => Math.min(times * 200, 2_000),
+                    retryStrategy: (times: number) =>
+                        Math.min(times * 200, 2_000),
                     lazyConnect: false,
                 });
                 client.on('connect', () =>

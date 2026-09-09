@@ -42,7 +42,10 @@ export class BitrixIdentityResolver {
         accessToken: string,
         clientEndpoint: string,
     ): Promise<ResolvedBitrixIdentity> {
-        const profile = await this.fetchCurrentUser(accessToken, clientEndpoint);
+        const profile = await this.fetchCurrentUser(
+            accessToken,
+            clientEndpoint,
+        );
         const bitrixEmployeeId = Number(profile.ID);
 
         let employee = await this.employeeLookup.findById(bitrixEmployeeId);
