@@ -1,7 +1,20 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import {
+    BadGatewayException,
+    BadRequestException,
+    Injectable,
+} from '@nestjs/common';
 import { BitrixHttpService } from './bitrix.instance';
 import { Filter } from './types';
-import { BitrixDealSchema } from './schema';
+import {
+    BITRIX_TASK_STATUS_COMPLETED,
+    BitrixBatchTaskStatusResponseSchema,
+    BitrixCreateTaskRequestSchema,
+    BitrixDealSchema,
+    BitrixTaskAddResponseSchema,
+    BitrixTaskStatusEntrySchema,
+    BitrixTaskUpdateResponseSchema,
+    type BitrixCreateTaskRequest,
+} from './schema';
 import { delay } from '../../shared/delay';
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import type {
@@ -12,6 +25,13 @@ import type {
     BitrixUser,
     BitrixUserField,
 } from './bitrix-api.types';
+
+interface CreateTaskInput {
+    responsibleBitrixUserId: number;
+    title: string;
+    description?: string;
+    deadline: Date;
+}
 
 @Injectable()
 export class BitrixService {
@@ -185,5 +205,162 @@ export class BitrixService {
             params,
         );
         return data.result;
+    }
+
+    // --- Задачи Bitrix24 (tasks.task.*) ---
+    //
+    // Раздел 5 tasks.md (add-task-based-salary-rule), design.md Decision 2:
+    // write-методы над `tasks.task.*` живут прямо на BitrixService (не в
+    // отдельном классе-клиенте), используют тот же BitrixHttpService, что и
+    // read-методы выше, но НЕ используют _getWithRetry — повторная отправка
+    // мутирующего запроса (создание/закрытие/сдвиг дедлайна задачи) при
+    // сетевой ошибке может задвоить эффект в Bitrix24, поэтому ретраев нет:
+    // при ошибке метод один раз бросает BadGatewayException и вызывающий код
+    // (транзакция создания правила, крон синка) сам решает, что делать дальше.
+
+    /**
+     * Создаёт задачу в Bitrix24 (`tasks.task.add`) для правила зарплаты типа
+     * `TaskCompletion`. `responsibleBitrixUserId` — сотрудник, на которого
+     * оформлено правило; постановщик (`CREATED_BY`) не передаётся явно —
+     * им становится технический пользователь вебхука, которым выполнен сам
+     * REST-запрос (design.md Decision 2).
+     */
+    async createTask(
+        input: CreateTaskInput,
+    ): Promise<{ bitrixTaskId: string }> {
+        let payload: BitrixCreateTaskRequest;
+        try {
+            payload = BitrixCreateTaskRequestSchema.parse(input);
+        } catch (error) {
+            throw new BadRequestException(
+                error instanceof Error ? error.message : String(error),
+            );
+        }
+
+        try {
+            const { data } = await this.bitrix.instance.post<unknown>(
+                '/tasks.task.add',
+                {
+                    fields: {
+                        TITLE: payload.title,
+                        RESPONSIBLE_ID: payload.responsibleBitrixUserId,
+                        ...(payload.description !== undefined
+                            ? { DESCRIPTION: payload.description }
+                            : {}),
+                        DEADLINE: payload.deadline.toISOString(),
+                    },
+                },
+            );
+            const parsed = BitrixTaskAddResponseSchema.parse(data);
+            return { bitrixTaskId: String(parsed.result.task.id) };
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to create task in Bitrix24: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+    }
+
+    /**
+     * Переводит задачу в статус "Завершена" (`tasks.task.update`,
+     * `STATUS = 5`) — используется при удалении/пересборке зарплатного
+     * правила `TaskCompletion` (design.md Decision 6).
+     */
+    async closeTask(bitrixTaskId: string): Promise<void> {
+        try {
+            const { data } = await this.bitrix.instance.post<unknown>(
+                '/tasks.task.update',
+                {
+                    taskId: bitrixTaskId,
+                    fields: { STATUS: BITRIX_TASK_STATUS_COMPLETED },
+                },
+            );
+            BitrixTaskUpdateResponseSchema.parse(data);
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to close task in Bitrix24: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+    }
+
+    /**
+     * Сдвигает дедлайн существующей задачи (`tasks.task.update`, поле
+     * `DEADLINE`) — используется при пересоздании регулярной задачи на новый
+     * расчётный период (design.md Decision 4).
+     */
+    async updateTaskDeadline(
+        bitrixTaskId: string,
+        deadline: Date,
+    ): Promise<void> {
+        try {
+            const { data } = await this.bitrix.instance.post<unknown>(
+                '/tasks.task.update',
+                {
+                    taskId: bitrixTaskId,
+                    fields: { DEADLINE: deadline.toISOString() },
+                },
+            );
+            BitrixTaskUpdateResponseSchema.parse(data);
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to update task deadline in Bitrix24: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+    }
+
+    /**
+     * Опрашивает статусы нескольких задач ОДНИМ batch-запросом (Bitrix24 REST
+     * `batch`, тот же приём, что постраничная выгрузка сделок в `_fetchDeals`,
+     * но здесь — пакетирование по количеству задач, а не страниц) вместо
+     * N вызовов `tasks.task.get`. Пустой массив не делает сетевой вызов.
+     *
+     * Возвращает СЫРОЙ код статуса Bitrix24 (не доменный VO `TaskStatus` —
+     * он заводится отдельно и независимо для `service`/`shop` в разделах
+     * 9/14 tasks.md; эта инфраструктурная точка используется обоими
+     * направлениями и не должна знать о доменных типах ни одного из них).
+     * Ключ отсутствует в результирующей `Map`, если Bitrix24 не вернул
+     * задачу по этому id (`result_error` — например, задача удалена вручную
+     * в CRM) — вызывающий код (крон 8) сам решает, что делать с пропуском.
+     */
+    async fetchTaskStatusesBatch(
+        bitrixTaskIds: string[],
+    ): Promise<Map<string, string>> {
+        if (bitrixTaskIds.length === 0) {
+            return new Map();
+        }
+
+        const cmd: Record<string, string> = {};
+        for (const id of bitrixTaskIds) {
+            cmd[id] =
+                `tasks.task.get?taskId=${encodeURIComponent(id)}&select[]=STATUS`;
+        }
+
+        try {
+            const { data } = await this.bitrix.instance.post<unknown>(
+                '/batch',
+                { halt: 0, cmd },
+            );
+            const parsed = BitrixBatchTaskStatusResponseSchema.parse(data);
+
+            // Разбор ПО ОДНОЙ задаче (safeParse), а не через строгую схему
+            // на весь `result.result` сразу — задача, которую Bitrix24 не
+            // смог вернуть (удалена/недоступна), приходит под своим ключом в
+            // форме, не совпадающей с `{task:{status}}` (например, пустым
+            // массивом), и не должна ронять статус всех ОСТАЛЬНЫХ задач
+            // батча — см. WHY у BitrixBatchTaskStatusResponseSchema.
+            const statuses = new Map<string, string>();
+            for (const id of bitrixTaskIds) {
+                const entry = BitrixTaskStatusEntrySchema.safeParse(
+                    parsed.result.result[id],
+                );
+                if (entry.success) {
+                    statuses.set(id, String(entry.data.task.status));
+                }
+            }
+            return statuses;
+        } catch (error) {
+            throw new BadGatewayException(
+                `Failed to fetch task statuses from Bitrix24: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
     }
 }
