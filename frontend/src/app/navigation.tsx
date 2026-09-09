@@ -15,6 +15,7 @@ import {
     TrendingUp,
     UserCog,
     Wallet,
+    Warehouse,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -141,7 +142,10 @@ const NAV_ENTRIES: NavEntry[] = [
         section: {
             label: 'Аналитика',
             icon: <ChartNoAxesColumn />,
-            items: [{ label: 'Услуги', to: '/services', icon: <FileText /> }],
+            items: [
+                { label: 'Услуги', to: '/services', icon: <FileText /> },
+                { label: 'Оборачиваемость товаров', to: '/goods-turnover-report', icon: <Warehouse /> },
+            ],
         },
     },
     // Раздел «Настройки» — служебная часть IA (нет в Pencil-макете, там только
