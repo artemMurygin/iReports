@@ -7,11 +7,10 @@ import {
     draftFromRule,
     resolveRuleDraft,
     useSalaryRulesDraft,
+    useTaskLinkPanels,
     type RuleFormConfig,
     type RuleType,
 } from '@/features/SalaryRuleForm'
-
-import { selectWizardDraft } from '../../model/selectWizardDraft.ts'
 
 import { useUpdateMotivationSchema } from './useUpdateMotivationSchema.ts'
 
@@ -54,13 +53,11 @@ export function useServiceSchemaEditForm({
     const { resolvedRules } = rules
     const canSave = schemaName.trim().length > 0 && rules.allDraftsValid && !updateSchema.isPending
 
-    // replace-bitrix-task-integration, раздел 14 tasks.md (14.6) — раскрытый черновик открывает
-    // мастер `CreateTaskCompletionRuleWizard` вместо обычной инлайн-карточки (см.
-    // `selectWizardDraft`'s комментарий про то, почему условие завязано на `confirmed`, а не на
-    // `taskId`). Сама ветка "мастер или список" не здесь (это `model`-хук, не мандатор), а в
-    // презентационном `ui/RulesColumn.tsx`, которому просто передаётся уже готовое значение.
-    const wizardDraft = selectWizardDraft(rules.drafts, rules.expandedId)
-    const wizardDraftIndex = wizardDraft ? rules.drafts.findIndex((draft) => draft.draftId === wizardDraft.draftId) : -1
+    // replace-bitrix-task-integration — "Создать задачу"/"Задача" в `TaskCompletionRuleFields`
+    // открывают боковые панели (`CreateTaskPanel`/`TaskDetailsPanel`), которые эта страница рендерит
+    // (см. `useTaskLinkPanels.ts` за тем, почему сама оркестрация живёт в `features/SalaryRuleForm`,
+    // а рендер панелей — здесь).
+    const taskPanels = useTaskLinkPanels(rules.updateDraft)
 
     // TaskCompletion можно завести только на схему конкретного сотрудника (backend
     // CreateSalaryRuleHandler бросает TaskCompletionRequiresPersonalSchemaException для схемы
@@ -93,8 +90,13 @@ export function useServiceSchemaEditForm({
         target: schema.target,
         ruleCount: rules.drafts.length,
         rules,
-        wizardDraft,
-        wizardDraftIndex,
+        onOpenTask: taskPanels.openTask,
+        onCreateTask: taskPanels.requestCreateTask,
+        openTaskId: taskPanels.openTaskId,
+        closeTaskDetails: taskPanels.closeTaskDetails,
+        isCreatingTask: taskPanels.isCreatingTask,
+        cancelCreateTask: taskPanels.cancelCreateTask,
+        handleTaskCreated: taskPanels.handleTaskCreated,
         config: visibleConfig,
         allowedRolesByType,
         isRoleTypesLoading,

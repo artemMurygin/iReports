@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react'
 
+import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 import { Button } from '@/shared/ui-kit/atoms/Button'
 import { PageHeader } from '@/shared/ui-kit/organisms/PageHeader.tsx'
 
@@ -7,7 +8,6 @@ import { useTasksPage } from '../model/useTasksPage.ts'
 import { CreateTaskModal } from './CreateTaskModal.tsx'
 import { FilterBar } from './FilterBar.tsx'
 import { Layout } from './Layout.tsx'
-import { TaskDrawer } from './TaskDrawer.tsx'
 import { TasksBody } from './TasksBody.tsx'
 
 /**
@@ -87,7 +87,7 @@ export function TasksPage() {
                 onCreated={onTaskCreated}
             />
 
-            <TaskDrawer taskId={selectedTaskId} onClose={closeTaskDetail} />
+            <TaskDetailsPanel taskId={selectedTaskId} onClose={closeTaskDetail} />
         </>
     )
 }

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 
+import { useTaskLinkPanels } from '@/features/SalaryRuleForm'
 import { useDepartments, useEmployees, type TargetOption } from '@/features/TargetDirectory'
 
 import { useServiceDirection } from '../service'
@@ -57,6 +58,12 @@ export function useSalaryRulesPage() {
         }
     }, [active.config, target.targetType])
 
+    // replace-bitrix-task-integration — "Создать задачу"/"Задача" в `TaskCompletionRuleFields`
+    // открывают боковые панели (`CreateTaskPanel`/`TaskDetailsPanel`), которые эта страница рендерит
+    // (см. `taskPanels`'s комментарий в `useTaskLinkPanels.ts` за тем, почему сама оркестрация
+    // живёт в `features/SalaryRuleForm`, а рендер панелей — здесь).
+    const taskPanels = useTaskLinkPanels(active.rules.updateDraft)
+
     const isSubmitting = service.isSubmitting || shop.isSubmitting
     const canSubmit =
         target.targetId !== null && target.schemaName.trim().length > 0 && active.rules.allDraftsValid && !isSubmitting
@@ -91,6 +98,13 @@ export function useSalaryRulesPage() {
 
         config,
         rules: active.rules,
+        onOpenTask: taskPanels.openTask,
+        onCreateTask: taskPanels.requestCreateTask,
+        openTaskId: taskPanels.openTaskId,
+        closeTaskDetails: taskPanels.closeTaskDetails,
+        isCreatingTask: taskPanels.isCreatingTask,
+        cancelCreateTask: taskPanels.cancelCreateTask,
+        handleTaskCreated: taskPanels.handleTaskCreated,
         allowedRolesByType: active.allowedRolesByType,
         isRoleTypesLoading: active.isRoleTypesLoading,
         roleTypesError: active.roleTypesError,
