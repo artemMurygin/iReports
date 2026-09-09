@@ -1,65 +1,41 @@
-import { useGoodsTurnoverReportPage } from '@/pages/GoodsTurnoverReport/model/useGoodsTurnoverReportPage.ts'
+import { useState } from 'react'
 import { PageHeader } from '@/shared/ui-kit/organisms/PageHeader.tsx'
+import { Tabs, type TabItem } from '@/shared/ui-kit/molecules/Tabs.tsx'
 
-import { GoodsTurnoverFilterRow } from './FilterRow.tsx'
-import { GoodsTurnoverReportBody } from './GoodsTurnoverReportBody.tsx'
-import { Layout } from './Layout.tsx'
+import { ServiceGoodsTurnoverReport } from './ServiceGoodsTurnoverReport.tsx'
+import { ShopGoodsTurnoverReport } from './ShopGoodsTurnoverReport.tsx'
+
+type DirectionTab = 'service' | 'shop'
+
+const TABS: TabItem[] = [
+    { id: 'service', label: 'Сервис' },
+    { id: 'shop', label: 'Магазин' },
+]
 
 /**
- * Страница `/goods-turnover-report` (openspec/changes/service-turnover-report, задачи 15/19) —
- * сборка `useGoodsTurnoverReportPage()` -> `Layout` (по образцу `pages/SalesPlan/ui/
- * SalesPlanPage.tsx`, `frontend/CLAUDE.md` "Mediator-компонент для страниц"), без условного
- * рендера здесь (правило "медиатор/страница не должен содержать условного рендера" —
- * `frontend/CLAUDE.md`): `header`/`body` — переменные, собранные из уже готовых пропсов хука,
- * ветвление состояний (ошибка/«ещё не пересчитан»/таблица) целиком внутри `GoodsTurnoverReportBody`
- * (задача 19.1-19.3).
+ * Страница `/goods-turnover-report` — общий заголовок + переключатель направления (`Tabs`,
+ * `shared/ui-kit/molecules/Tabs.tsx`, тот же приём, что `PageHeader`/`Direction Row` на
+ * `pages/SalesPlan`) над вкладками «Сервис» (`ServiceGoodsTurnoverReport`, было единственным
+ * содержимым этой страницы, openspec/changes/service-turnover-report) и «Магазин»
+ * (`ShopGoodsTurnoverReport`, merge feat/shopTurnOverReport) — обе вкладки самостоятельно ведут
+ * свой запрос/фильтры/Refresh-переход, здесь только выбор, какая из них смонтирована (React не
+ * держит стейт/не шлёт запросы немонтированной вкладки).
  *
- * `PageHeader` — общий organism `shared/ui-kit/` (Pencil: `e84ap`, уже переиспользуется
- * `pages/SalaryRuleList`/`pages/SalesPlan`), а не page-local заголовок — заголовок/подзаголовок
- * этой страницы (Pencil, узлы `xKv4h`/`UhRtf` в `WvSO6`/`yDBTb`) не содержат ничего специфичного
- * (`title`/`subtitle`-only, без `actions`), под этот случай `PageHeader` и предназначен.
+ * Без условного рендера внутри веток («медиатор/страница не должен содержать условного рендера» —
+ * `frontend/CLAUDE.md`) — единственное ветвление здесь ровно то, что и определяет tab-switcher
+ * (какой из двух самодостаточных view смонтирован), сами view ничего не решают снаружи.
  */
 export function GoodsTurnoverReportPage() {
-    const page = useGoodsTurnoverReportPage()
-
-    const header = (
-        <>
-            <PageHeader
-                title="Оборачиваемость товаров"
-                subtitle="Расход и остаток запчастей по категориям справочника и складам за месяц"
-            />
-            <GoodsTurnoverFilterRow
-                warehouses={page.warehouses}
-                warehouseId={page.warehouseId}
-                onWarehouseChange={page.setWarehouseId}
-                categories={page.categories}
-                categoryId={page.categoryId}
-                onCategoryChange={page.setCategoryId}
-                period={page.period}
-                onPeriodChange={page.setPeriod}
-                maxPeriod={page.maxPeriod}
-                isClosed={page.isClosed}
-            />
-        </>
-    )
-
-    const body = (
-        <GoodsTurnoverReportBody
-            error={page.error}
-            onRetry={page.retry}
-            lines={page.report?.lines}
-            rows={page.rows}
-            categories={page.categories}
-        />
-    )
+    const [tab, setTab] = useState<DirectionTab>('service')
 
     return (
-        <Layout
-            isInitialLoad={page.isInitialLoad}
-            isRefreshing={page.isRefreshing}
-            dataVersion={page.dataVersion}
-            header={header}
-            body={body}
-        />
+        <main className="flex flex-1 flex-col gap-4 bg-canvas px-4 py-5 md:px-7 md:py-6">
+            <PageHeader
+                title="Оборачиваемость товаров"
+                subtitle="Расход и остаток по категориям справочника и складам за месяц"
+            />
+            <Tabs tabs={TABS} activeId={tab} onChange={(id) => setTab(id as DirectionTab)} />
+            {tab === 'service' ? <ServiceGoodsTurnoverReport /> : <ShopGoodsTurnoverReport />}
+        </main>
     )
 }
