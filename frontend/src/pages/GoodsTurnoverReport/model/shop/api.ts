@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { CatalogResponse, ShopGoodsTurnoverReportResponse, ShopStoresResponse } from 'ireports-contracts'
+import { shopGoodsTurnoverReportResponseSchema, type CatalogResponse, type ShopGoodsTurnoverReportResponse, type ShopStoresResponse } from 'ireports-contracts'
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
 
@@ -18,15 +18,19 @@ import { ApiError } from '@/shared/errors/apiError.ts'
 // Смена склада/категории не инициирует новый запрос — `ShopGoodsTurnoverTable` фильтрует уже
 // загруженные строки на фронтенде (тот же приём, что у `service`).
 export const shopApi = {
+    // Ответ бэкенда отдаёт turnoverSum/stockSum в копейках (см. WHY в
+    // contracts/commands/shop-goods-turnover-report.ts) — прогоняем через
+    // саму zod-схему контракта (`.parse`, а не просто приведение типа через
+    // дженерик `apiInstance.get<...>`), чтобы её `transform` (копейки ->
+    // рубли) реально сработал один раз, здесь, а не полагаться на то, что
+    // каждый потребитель (таблица/сводка) сам не забудет поделить на 100.
     getShopGoodsTurnoverReport: (period: string) =>
         queryOptions({
             queryKey: ['goods-turnover-report', 'shop', 'report', period],
             queryFn: ({ signal }): Promise<ShopGoodsTurnoverReportResponse> =>
                 apiInstance
-                    .get<ShopGoodsTurnoverReportResponse>(`/v1/shop/warehouse/goods-turnover-report/${period}`, {
-                        signal,
-                    })
-                    .then((r) => r.data)
+                    .get<unknown>(`/v1/shop/warehouse/goods-turnover-report/${period}`, { signal })
+                    .then((r) => shopGoodsTurnoverReportResponseSchema.parse(r.data))
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить отчёт по оборачиваемости товаров магазина ' + error)
                     }),
