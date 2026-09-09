@@ -50,6 +50,7 @@ describe('UpdateServicePricesHandler', () => {
 
         const gateway: RoappGateway = {
             fetchEmployees: jest.fn(),
+            fetchWarehouses: jest.fn(),
             fetchOrderTypes: jest.fn(),
             fetchOrderStatuses: jest.fn(),
             fetchMarketingSources: jest.fn(),
@@ -62,6 +63,7 @@ describe('UpdateServicePricesHandler', () => {
             fetchServiceBonuses: jest.fn(),
             fetchServiceBonusById: jest.fn(),
             createService: jest.fn(),
+            fetchGoodsFlowReport: jest.fn(),
             async *fetchServices() {
                 await Promise.resolve();
                 yield [

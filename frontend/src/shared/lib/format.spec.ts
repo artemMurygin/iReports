@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatShortDate, formatShortDateTime } from './format.ts'
+import { formatRatio, formatShortDate, formatShortDateTime } from './format.ts'
 
 describe('formatShortDate', () => {
     it('formats a Date without trailing periods (unlike Intl.DateTimeFormat)', () => {
@@ -25,5 +25,13 @@ describe('formatShortDateTime', () => {
     it('accepts a numeric timestamp (dataUpdatedAt shape)', () => {
         const date = new Date(2026, 7, 25, 14, 30)
         expect(formatShortDateTime(date.getTime())).toBe(formatShortDateTime(date))
+    })
+})
+
+describe('formatRatio', () => {
+    it('formats two decimal places with a Russian comma, used by GoodsTurnoverTable turnoverRatio', () => {
+        expect(formatRatio(0.891)).toBe('0,89')
+        expect(formatRatio(1.2)).toBe('1,20')
+        expect(formatRatio(0)).toBe('0,00')
     })
 })

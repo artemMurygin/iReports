@@ -17,6 +17,7 @@ export class UploadInitialRoappDataHandler implements ICommandHandler<
         await this.syncService.uploadOrderStatuses();
         await this.syncService.uploadOrderTypes();
         await this.syncService.uploadProductCategories();
+        await this.syncService.uploadWarehouses();
         await this.syncService.uploadServiceCategories();
         await this.syncService.uploadServices();
         await this.syncService.uploadProducts();

@@ -243,6 +243,33 @@ read-only справочников. Диапазон дат валидирует
 - `GET /v1/service/sales/deals/models` — модели устройств сделок (`BitrixDeviceTypes`); путь `/models`
   сохранён как в легаси, хотя внутри — `getDeviceTypes()`
 
+## domains/service/modules/warehouse (`/v1/service/warehouse`)
+Отчёт по оборачиваемости товаров (openspec/changes/service-turnover-report) — первая часть заявленного,
+но ранее не реализованного модуля `warehouse` (см. `domains/service/CLAUDE.md`, «Целевой набор модулей
+домена»). Расход и остаток товара (в штуках и в рублях) и коэффициент оборачиваемости по каждой
+категории (и вложенной) справочника товаров, отдельно по каждому складу, за календарный месяц.
+Пересчитывается ежечасно, пока зарплатный расчётный период направления `service` за этот же месяц не
+закрыт (`AccountingPeriod`, `modules/accounting`) — у отчёта нет собственной таблицы/статуса периода,
+открыт/закрыт месяц определяется чтением именно этой таблицы (design.md D5); своего эндпоинта закрытия
+поэтому тоже нет — месяц фиксируется автоматически вместе с закрытием зарплатного периода (D7).
+- `GET /v1/service/warehouse/goods-turnover-report/:period` — строки отчёта за месяц (`period` —
+  `YYYY-MM`, невалидный формат — `400`); каждая строка — пара категория×склад, денормализованная
+  именем/`parentId` категории и именем склада прямо в строке (`GoodsTurnoverReportLine` → справочники
+  категорий/складов, без отдельного join на фронтенде): `{ categoryId, categoryName,
+  categoryParentId, warehouseId, warehouseName, outcomeQuantity, outcomeSum, stockQuantity, stockSum,
+  turnoverRatio }`. `turnoverRatio` — `outcome.sum(тек.мес) / ((stock.sum(прошл.мес) +
+  stock.sum(тек.мес)) / 2)`, `null` (не `0`), если данных за прошлый месяц по этой же паре нет, либо
+  средний остаток равен нулю. Месяц, ещё ни разу не пересчитанный (в том числе справочник складов ещё
+  не синхронизирован) — пустой список `lines`, не ошибка: используется фронтендом для состояния «отчёт
+  ещё не пересчитан»
+- `GET /v1/service/warehouse/product-categories` — плоский справочник категорий товаров
+  (`roapp_product_categories`, `id`/`name`/`parentId`, без `depth` — таблица её не хранит), без
+  параметров; используется для дерева/фильтра категорий на фронтенде (не для сборки самого отчёта —
+  та уже денормализована выше)
+- `GET /v1/service/warehouse/warehouses` — справочник складов (`roapp_warehouses`, `id`/`name`), без
+  параметров; резервный источник — ручной справочник `ROAPP_WAREHOUSES` (`.env`), не публичное REST
+  API RemOnline напрямую (в нём нет отдельного ресурса складов, см. design.md D3/риски)
+
 ## domains/shop/modules/sales (`/v1/shop/sales/plan`, `/v1/shop/sales/plan_template`, `/v1/shop/sales/salesPerformance`)
 SalesFact/SalesPrognose/SalesPerformance направления `shop` по данным МойСклад (Фаза 11, issue #54/#55)
 — зеркало `GetSalesPerformanceService` направления `service`, отдельный эндпоинт вместо `direction` в

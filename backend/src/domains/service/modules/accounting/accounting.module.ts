@@ -386,5 +386,11 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
             useClass: WorkScheduleEntryRepository,
         },
     ],
+    // ACCOUNTING_PERIOD_REPOSITORY — экспортирован для модуля
+    // domains/service/modules/warehouse (service-turnover-report,
+    // design.md D5): крон почасового пересчёта отчёта по оборачиваемости
+    // товара читает статус AccountingPeriod('service', period), не дублируя
+    // репозиторий. Ничего больше отсюда наружу не течёт.
+    exports: [ACCOUNTING_PERIOD_REPOSITORY],
 })
 export class AccountingModule {}

@@ -119,6 +119,18 @@ export function formatPercentPrecise(part: number, whole: number): string {
 }
 
 /**
+ * Two-decimal-place ratio (Russian comma, no suffix) — e.g. `formatRatio(0.891)` -> '0,89'. Used
+ * by `pages/GoodsTurnoverReport/ui/GoodsTurnoverTable.tsx` for `turnoverRatio`
+ * (openspec/changes/service-turnover-report, задача 18) — the ratio itself is unitless (расход в
+ * ₽ / средний остаток в ₽), so unlike `formatCurrency`/`formatPercent` there's no suffix to add.
+ * `null` (коэффициент не рассчитан, `specs/service/goods-turnover/spec.md`) is the caller's
+ * responsibility — render '—' before calling this, not handled here.
+ */
+export function formatRatio(value: number): string {
+    return value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+/**
  * Explicit table rather than `Intl.DateTimeFormat('ru-RU', { month: 'short' })` — that locale
  * formatter's exact output (trailing "." after the abbreviation, a trailing "г." after the year)
  * varies across ICU/Node versions and doesn't match the mockups' style ("12 авг 2026"), so a

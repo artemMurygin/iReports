@@ -10,6 +10,8 @@ import { OrderItemSchema } from './schemas/orderItems.schema';
 import { ServiceSchema } from './schemas/services.schema';
 import { ProductSchema } from './schemas/products.schema';
 import { CategorySchema } from './schemas/serviceCatalog.schema';
+import { WarehouseSchema } from './schemas/warehouses.schema';
+import { readManualWarehouses } from './roapp-warehouses.config';
 import { delay } from '../../../../shared/delay';
 import {
     Params,
@@ -252,6 +254,24 @@ export class RoappService {
                 `Failed to fetch sources from Roapp: ${toErrorMessage(error)}`,
             );
         }
+    }
+
+    // Справочник складов (spec: service/goods-turnover, задача 4.3 change
+    // service-turnover-report) — резервный источник, не вызов публичного
+    // API RemOnline: допущение design.md D3 о наличии там отдельного
+    // ресурса складов не подтвердилось (проверено на этапе реализации —
+    // подробности и итоговый резервный источник см.
+    // roapp-warehouses.config.ts). Сигнатура/место (RoappService,
+    // integrations/roapp) намеренно оставлены как для остальных
+    // справочников RoApp — вызывающий код (RoappGateway/RoappSyncService)
+    // не знает и не должен знать, что за ней сейчас нет реального HTTP-вызова.
+    fetchWarehouses(): Promise<z.infer<typeof WarehouseSchema>[]> {
+        // Promise.resolve().then(...), не Promise.resolve(readManualWarehouses())
+        // — readManualWarehouses() валидирует Zod'ом и может бросить синхронно;
+        // оборачиваем вызов, чтобы ошибка приходила как отклонённый Promise
+        // (контракт метода — Promise, как у остальных fetch*), а не как
+        // синхронное исключение из самого fetchWarehouses().
+        return Promise.resolve().then(() => readManualWarehouses());
     }
 
     async fetchMarketingSources(): Promise<

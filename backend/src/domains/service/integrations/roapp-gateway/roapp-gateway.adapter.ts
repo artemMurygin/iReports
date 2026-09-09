@@ -9,6 +9,7 @@ import {
     MarketingSourceShort,
     Order,
     OrderItem,
+    Warehouse,
 } from './roapp-gateway.port';
 import { Category } from '../roapp/schemas/serviceCatalog.schema';
 import { Service } from '../roapp/schemas/services.schema';
@@ -20,6 +21,10 @@ import {
     CreateServiceResponse,
 } from '../custom-api-roapp/schemas/createService.schema';
 import { UpdateServicesResponse } from '../custom-api-roapp/schemas/updateServices.schema';
+import {
+    GoodsFlowReportRequest,
+    GoodsFlowReportResponse,
+} from '../custom-api-roapp/schemas/goodsFlowReport.schema';
 
 @Injectable()
 export class RoappGatewayAdapter implements RoappGateway {
@@ -30,6 +35,10 @@ export class RoappGatewayAdapter implements RoappGateway {
 
     fetchEmployees(): Promise<EmployeeShort[]> {
         return this.roapp.fetchEmployees();
+    }
+
+    fetchWarehouses(): Promise<Warehouse[]> {
+        return this.roapp.fetchWarehouses();
     }
 
     fetchOrderTypes(): Promise<OrderType[]> {
@@ -93,5 +102,11 @@ export class RoappGatewayAdapter implements RoappGateway {
 
     updateServicesFromFile(file: Buffer): Promise<UpdateServicesResponse> {
         return this.customApiRoapp.updateServices(file);
+    }
+
+    fetchGoodsFlowReport(
+        params: GoodsFlowReportRequest,
+    ): Promise<GoodsFlowReportResponse> {
+        return this.customApiRoapp.getGoodsFlowReport(params);
     }
 }

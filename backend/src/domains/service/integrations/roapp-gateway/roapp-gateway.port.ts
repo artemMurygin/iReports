@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { EmployeesShortSchema } from '../roapp/schemas/employees.schema';
+import { WarehouseSchema } from '../roapp/schemas/warehouses.schema';
 import { OrderTypesSchema } from '../roapp/schemas/orderTypes.schema';
 import { MarketingSourcesShortSchema } from '../roapp/schemas/marketingSources.schema';
 import { OrderStatusesSchema } from '../roapp/schemas/orderStatuses.schema';
@@ -15,8 +16,13 @@ import {
     CreateServiceResponse,
 } from '../custom-api-roapp/schemas/createService.schema';
 import { UpdateServicesResponse } from '../custom-api-roapp/schemas/updateServices.schema';
+import {
+    GoodsFlowReportRequest,
+    GoodsFlowReportResponse,
+} from '../custom-api-roapp/schemas/goodsFlowReport.schema';
 
 export type EmployeeShort = z.infer<typeof EmployeesShortSchema>;
+export type Warehouse = z.infer<typeof WarehouseSchema>;
 export type OrderType = z.infer<typeof OrderTypesSchema>;
 export type MarketingSourceShort = z.infer<typeof MarketingSourcesShortSchema>;
 export type OrderStatus = z.infer<typeof OrderStatusesSchema>;
@@ -32,6 +38,8 @@ export type OrderItem = NonNullable<z.infer<typeof OrderItemSchema>>;
  */
 export interface RoappGateway {
     fetchEmployees(): Promise<EmployeeShort[]>;
+    // spec: service/goods-turnover — задача 4.3 change service-turnover-report.
+    fetchWarehouses(): Promise<Warehouse[]>;
     fetchOrderTypes(): Promise<OrderType[]>;
     fetchOrderStatuses(): Promise<OrderStatus[]>;
     fetchMarketingSources(): Promise<MarketingSourceShort[]>;
@@ -53,6 +61,13 @@ export interface RoappGateway {
         payload: CreateServiceRequest,
     ): Promise<CreateServiceResponse>;
     updateServicesFromFile(file: Buffer): Promise<UpdateServicesResponse>;
+
+    // Расход/остаток товара за период по одной категории и набору складов
+    // (spec: service/goods-turnover) — design.md D2 change
+    // service-turnover-report.
+    fetchGoodsFlowReport(
+        params: GoodsFlowReportRequest,
+    ): Promise<GoodsFlowReportResponse>;
 }
 
 export const ROAPP_GATEWAY = Symbol('ROAPP_GATEWAY');

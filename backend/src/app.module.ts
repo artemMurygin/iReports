@@ -20,6 +20,7 @@ import { RoappSyncModule } from './domains/service/sync/roapp/roapp-sync.module'
 import { MoySkladSyncModule } from './domains/shop/sync/moySklad/moysklad-sync.module';
 import { ShopSalesModule } from './domains/shop/modules/sales/sales.module';
 import { AccountingModule } from './domains/service/modules/accounting/accounting.module';
+import { WarehouseModule } from './domains/service/modules/warehouse/warehouse.module';
 import { ShopAccountingModule } from './domains/shop/modules/accounting/accounting.module';
 import { ShopWarehouseModule } from './domains/shop/modules/warehouse/warehouse.module';
 import { EmployeeIdentityModule } from './modules/employee-identity/employee-identity.module';
@@ -54,6 +55,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         SalesModule,
         ShopSalesModule,
         AccountingModule,
+        WarehouseModule,
         ShopAccountingModule,
         ShopWarehouseModule,
         EmployeeIdentityModule,

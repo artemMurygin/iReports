@@ -92,6 +92,13 @@ const serviceReportsRoot = `${serviceRoot}/reports`;
 // service и shop, см. shopMarketingPricingRoot ниже) удалён целиком в
 // Фазе 10 того же трека.
 const serviceMarketingPricingRoot = `${serviceRoot}/marketing/pricing`;
+// Отчёт по оборачиваемости товаров (openspec/changes/service-turnover-report,
+// задача 10) — новый модуль domains/service/modules/warehouse (первая часть
+// заявленного, но ранее не реализованного модуля, см. domains/service/
+// CLAUDE.md, "Целевой набор модулей домена"). По аналогии с shopWarehouseRoot
+// ниже — свой путь-корень /v1/service/warehouse, а не вложенность в reports/
+// accounting.
+const serviceWarehouseRoot = `${serviceRoot}/warehouse`;
 
 // Направление shop — все маршруты домена domains/shop под общим префиксом
 // /v1/shop.
@@ -388,6 +395,19 @@ export const routesV1 = {
             pricing: {
                 updateServicePrices: `${serviceMarketingPricingRoot}/update-service-prices`,
             },
+        },
+        // Отчёт по оборачиваемости товаров (см. комментарий у
+        // serviceWarehouseRoot выше) — задача 10, GET-поверхность:
+        // сам отчёт за месяц + два read-only справочника (категории товаров,
+        // склады), нужных фронтенду для построения дерева/списка выбора.
+        // Своего эндпоинта закрытия нет (design.md D7 — закрытие следует за
+        // закрытием зарплатного AccountingPeriod, не отдельное действие).
+        warehouse: {
+            goodsTurnoverReport: {
+                byPeriod: `${serviceWarehouseRoot}/goods-turnover-report/:period`,
+            },
+            productCategories: `${serviceWarehouseRoot}/product-categories`,
+            warehouses: `${serviceWarehouseRoot}/warehouses`,
         },
     },
     // Маршруты направления shop (domains/shop) — под префиксом /v1/shop.
