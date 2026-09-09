@@ -126,6 +126,21 @@ Shared DDD building blocks (base classes to extend, not reimplement) live in `sr
 `aggregate-root.base.ts`, `entity.base.ts`, `value-object.base.ts`, `domain-event.base.ts`,
 `command.base.ts`, `repository.port.ts`, `mapper.interface.ts`.
 
+**⚠️ Известный антипаттерн в `src/shared/domain/`**: помимо технических базовых классов выше, в этой
+папке уже накопились файлы, которые фактически несут знания о бизнес-домене (`period.value-object.ts` —
+формат расчётного периода `service`/`shop`, `percent.ts` — формула `percentCompletion` для продаж,
+`calculation-context.ts`/`calculation-line.ts` — форма результата расчёта зарплатного правила,
+`employee-salary-rules.ts` — слияние правил отдела и сотрудника). Правильно: `src/shared/domain/` должен
+содержать только технические/инфраструктурные строительные блоки, ничего не знающие о бизнес-домене
+(`Period`/`CalculationLine` и т.п. — это домен зарплатного расчёта service/shop, а не инфраструктура) —
+для набора действительно общих между `service` и `shop` бизнес-примитивов нужен отдельный, явно
+DDD-именованный "shared kernel" (например `src/shared/salary-calculation/`), не смешанный с технической
+базой. Перечисленные файлы — существующий технический долг, накопленный до того, как это было замечено;
+переносить их одним махом в рамках произвольной задачи не нужно, но **не добавляй новые
+бизнес-специфичные файлы в `src/shared/domain/` рядом с базовыми классами** — при следующей возможности
+(например, при выделении общей зарплатной математики между `service`/`shop`) заводи для них отдельную
+явно бизнес-именованную папку внутри `src/shared/`, а не продолжай смешение здесь.
+
 #### Value objects
 
 В доменном слое value object (наследник `value-object.base.ts`, см.
