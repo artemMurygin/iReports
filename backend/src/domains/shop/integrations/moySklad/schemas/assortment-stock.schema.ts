@@ -2,15 +2,20 @@ import { z } from 'zod';
 
 // GET /entity/assortment?filter=stockMoment=...;stockStore=... (легаси,
 // используется только для разового бэкфилла истории остатков, см.
-// design.md D5.1). Точные имена полей остатка/себестоимости в ответе НЕ
-// подтверждены документацией, доступной через использованный инструмент
-// (design.md "Открытые вопросы") — по аналогии со StockAll (design.md D5)
-// ожидаем `stock` (шт.) и `price` (коп.), с запасными именами
-// `quantity`/`buyPrice` на случай расхождения. Эта функция — единственная
-// точка сопоставления полей: при расхождении на реальном аккаунте
-// достаточно поправить её. `warn` вызывается при использовании запасного
-// имени поля или нулевого значения по умолчанию — по прод-логам
-// бэкфилла будет видно, если реальные имена полей другие.
+// design.md D5.1). Открытый вопрос design.md разрешён проверкой реального
+// ответа API: строка отдаёт остаток в `stock` (шт.) и себестоимость единицы
+// в `buyPrice.value` (коп., объект `{ value, currency }`, тот же формат,
+// что у `salePrices[].value`/`minPrice.value`) — НЕ плоское поле `price`,
+// как ожидалось по аналогии со StockAll (design.md D5, /report/stock/
+// bystore, см. stock-report.schema.ts): та строка отдаёт уже готовую сумму
+// себестоимости на складе одним числом, а не цену за единицу. costSum здесь
+// — расчётное поле (`quantity × buyPrice.value`), приводимое к той же
+// семантике "сумма на складе", которую ждёт RebuildGoodsTurnoverReportService
+// (использует costSum как есть, без домножения на quantity). Эта функция —
+// единственная точка сопоставления полей: при дальнейшем расхождении на
+// реальном аккаунте достаточно поправить её. `warn` вызывается при
+// использовании запасного имени поля или нулевого значения по умолчанию —
+// по прод-логам бэкфилла будет видно, если реальные имена полей другие.
 const RawAssortmentStockRowSchema = z
     .object({
         meta: z.object({ href: z.string() }),
@@ -50,17 +55,21 @@ export function toAssortmentStockRow(
         quantity = 0;
     }
 
-    let price = asNumber(parsed.price);
-    if (price === undefined) {
+    const buyPrice = parsed.buyPrice;
+    let buyPriceValue =
+        typeof buyPrice === 'object' && buyPrice !== null && 'value' in buyPrice
+            ? asNumber((buyPrice as { value: unknown }).value)
+            : undefined;
+    if (buyPriceValue === undefined) {
         warn(
-            `/entity/assortment: поле "price" отсутствует у ${href}, себестоимость принята за 0`,
+            `/entity/assortment: поле "buyPrice.value" отсутствует у ${href}, себестоимость принята за 0`,
         );
-        price = 0;
+        buyPriceValue = 0;
     }
 
     return {
         productHref: href,
         quantity,
-        costSum: Math.round(price),
+        costSum: Math.round(quantity * buyPriceValue),
     };
 }

@@ -278,10 +278,11 @@ describe('MoyskladService.fetchStockByStore (D5)', () => {
 });
 
 // spec: shop-turnover-report D5.1 — легаси бэкфилл истории остатков.
-// Контракт эндпоинта (фильтр stockMoment/stockStore, пагинация) подтверждён
-// документацией; точные имена полей остатка/себестоимости — нет (design.md
-// "Открытые вопросы") — тесты покрывают и штатный разбор (stock/price), и
-// запасной путь с логированием.
+// Контракт эндпоинта (фильтр stockMoment/stockStore, пагинация) и имена
+// полей строки подтверждены реальным ответом API: остаток — `stock` (шт.),
+// себестоимость единицы — `buyPrice.value` (коп., объект `{ value,
+// currency }`, НЕ плоское поле `price`) — тесты покрывают и штатный разбор
+// (stock/buyPrice.value), и запасной путь с логированием.
 describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
     const buildService = (http: { get: jest.Mock }) =>
         new MoyskladService({
@@ -290,7 +291,7 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
             }),
         } as unknown as MoyskladHttpService);
 
-    it('строит фильтр stockMoment/stockStore и парсит остаток/себестоимость из stock/price', async () => {
+    it('строит фильтр stockMoment/stockStore и парсит остаток/себестоимость из stock/buyPrice.value', async () => {
         const http = createHttpMock();
         http.get.mockResolvedValueOnce({
             data: {
@@ -300,7 +301,7 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
                             href: 'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1',
                         },
                         stock: 7,
-                        price: 12300,
+                        buyPrice: { value: 500 },
                     },
                 ],
                 meta: { size: 1, limit: 1000, offset: 0 },
@@ -322,7 +323,7 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
                     productHref:
                         'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1',
                     quantity: 7,
-                    costSum: 12300,
+                    costSum: 3500,
                 },
             ],
         ]);
@@ -347,7 +348,7 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
                         {
                             meta: { href: '.../product/p1' },
                             stock: 1,
-                            price: 100,
+                            buyPrice: { value: 100 },
                         },
                     ],
                     meta: { size: 2, limit: 1, offset: 0 },
@@ -359,7 +360,7 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
                         {
                             meta: { href: '.../product/p2' },
                             stock: 2,
-                            price: 200,
+                            buyPrice: { value: 200 },
                         },
                     ],
                     meta: { size: 2, limit: 1, offset: 1 },
@@ -394,7 +395,7 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
                     {
                         meta: { href: '.../product/p1' },
                         quantity: 4,
-                        price: 500,
+                        buyPrice: { value: 500 },
                     },
                 ],
                 meta: { size: 1, limit: 1000, offset: 0 },
@@ -410,7 +411,7 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
             pages.push(batch);
         }
 
-        expect(pages[0][0]).toMatchObject({ quantity: 4, costSum: 500 });
+        expect(pages[0][0]).toMatchObject({ quantity: 4, costSum: 2000 });
         expect(warnSpy).toHaveBeenCalled();
         warnSpy.mockRestore();
     });
