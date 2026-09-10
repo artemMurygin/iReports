@@ -10,6 +10,7 @@ import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/e
 import { TasksModule } from '@/modules/tasks/tasks.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/update-motivation-schema.handler';
+import { DeleteMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/delete-motivation-schema.handler';
 import { CreateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-salary-rule.handler';
 import { CloseAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/accounting-period/close-accounting-period.handler';
 import { ReopenAccountingPeriodHandler } from '@/domains/service/modules/accounting/application/command/accounting-period/reopen-accounting-period.handler';
@@ -45,6 +46,7 @@ import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/
 import { ListMotivationSchemasHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/list-motivation-schemas.http.controller';
 import { GetMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/get-motivation-schema.http.controller';
 import { UpdateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/update-motivation-schema.http.controller';
+import { DeleteMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/delete-motivation-schema.http.controller';
 import { GetEmployeeSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-report/get-employee-salary-report.http.controller';
 import { GetDepartmentSalaryReportHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-report/get-department-salary-report.http.controller';
 import { CloseAccountingPeriodHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accounting-period/close-accounting-period.http.controller';
@@ -178,6 +180,7 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         ListMotivationSchemasHttpController,
         GetMotivationSchemaHttpController,
         UpdateMotivationSchemaHttpController,
+        DeleteMotivationSchemaHttpController,
         GetEmployeeSalaryReportHttpController,
         GetDepartmentSalaryReportHttpController,
         CloseAccountingPeriodHttpController,
@@ -228,6 +231,7 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
     providers: [
         CreateMotivationSchemaHandler,
         UpdateMotivationSchemaHandler,
+        DeleteMotivationSchemaHandler,
         ListMotivationSchemasService,
         GetMotivationSchemaService,
         CreateSalaryRuleHandler,

@@ -30,6 +30,7 @@ import { CreateShopPayoutBatchHandler } from '@/domains/shop/modules/accounting/
 import { DeleteShopPayoutHandler } from '@/domains/shop/modules/accounting/application/command/cashbox-payout/delete-payout.handler';
 import { CreateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/create-motivation-schema.handler';
 import { UpdateShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/update-motivation-schema.handler';
+import { DeleteShopMotivationSchemaHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/delete-motivation-schema.handler';
 import { CalculateShopSnapshotRowsService } from '@/domains/shop/modules/accounting/application/services/calculation/calculate-snapshot-rows.service';
 import { MoySkladErpPeriodSyncAdapter } from '@/domains/shop/modules/accounting/infrastructure/sync/moysklad-erp-period-sync.adapter';
 import { GetShopClosePeriodPreviewHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/get-close-period-preview.http.controller';
@@ -43,6 +44,7 @@ import { CreateShopMotivationSchemaHttpController } from '@/domains/shop/modules
 import { ListShopMotivationSchemasHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/motivation-schema/list-motivation-schemas.http.controller';
 import { GetShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/motivation-schema/get-motivation-schema.http.controller';
 import { UpdateShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/motivation-schema/update-motivation-schema.http.controller';
+import { DeleteShopMotivationSchemaHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/motivation-schema/delete-motivation-schema.http.controller';
 import { GetShopAccountingPeriodHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/get-accounting-period.http.controller';
 import { ReopenShopAccountingPeriodHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/reopen-accounting-period.http.controller';
 import { RecalculateShopAccountingPeriodHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/accounting-period/recalculate-accounting-period.http.controller';
@@ -220,6 +222,7 @@ import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/acc
         ListShopMotivationSchemasHttpController,
         GetShopMotivationSchemaHttpController,
         UpdateShopMotivationSchemaHttpController,
+        DeleteShopMotivationSchemaHttpController,
         GetShopAccountingPeriodHttpController,
         ReopenShopAccountingPeriodHttpController,
         RecalculateShopAccountingPeriodHttpController,
@@ -278,6 +281,7 @@ import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/acc
         CreateShopSalaryRuleHandler,
         CreateShopMotivationSchemaHandler,
         UpdateShopMotivationSchemaHandler,
+        DeleteShopMotivationSchemaHandler,
         ListShopMotivationSchemasService,
         GetShopMotivationSchemaService,
         BuildShopCalculationContextService,
