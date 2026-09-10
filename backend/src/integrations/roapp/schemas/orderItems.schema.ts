@@ -11,8 +11,8 @@ const uomSchema = z.object({
 const entitySchema = z.object({
   id: z.number().int(),
   type: z.string(),
-  code: z.string(),
-  sku: z.string(),
+  code: z.string().nullable(),
+  sku: z.string().nullable(),
   sn_accounting: z.boolean(),
   title: z.string(),
   description: z.string(),
