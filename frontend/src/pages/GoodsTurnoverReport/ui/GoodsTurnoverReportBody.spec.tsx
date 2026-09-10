@@ -60,6 +60,24 @@ describe('GoodsTurnoverReportBody', () => {
         expect(screen.queryByText('Не удалось загрузить отчёт')).not.toBeInTheDocument()
     })
 
+    // FR5 of add-department-head-salary-rules: `total` — прокидывается насквозь в `GoodsTurnoverTable`
+    // для рендера строки «Итого» из готового ответа API, а не из локального пересчёта по `rows`.
+    it('passes the total prop through to the table\'s "Итого" row', () => {
+        const rows = [line()]
+        render(
+            <GoodsTurnoverReportBody
+                error={null}
+                onRetry={vi.fn()}
+                lines={rows}
+                rows={rows}
+                total={{ warehouseId: 1, outcomeSum: 123_000, stockSum: 45_000, stockQuantity: 7, turnoverRatio: 2 }}
+            />,
+        )
+
+        expect(screen.getByText('123 000 ₽')).toBeInTheDocument()
+        expect(screen.getByText('45 000 ₽')).toBeInTheDocument()
+    })
+
     it('prefers the error state over an empty/undefined lines list', () => {
         render(<GoodsTurnoverReportBody error="Сеть недоступна" onRetry={vi.fn()} lines={[]} rows={[]} />)
 

@@ -1,4 +1,4 @@
-import type { ShopGoodsTurnoverReportLine } from 'ireports-contracts'
+import type { ShopGoodsTurnoverReportLine, ShopGoodsTurnoverWarehouseTotal } from 'ireports-contracts'
 
 import { resolveShopGoodsTurnoverBodyState } from '../../model/shop/goodsTurnoverBodyState.ts'
 import type { ShopCategoryRef } from '../../model/shop/categoryTree.ts'
@@ -11,12 +11,17 @@ export type ShopGoodsTurnoverReportBodyProps = {
     error: string | null
     onRetry: () => void
     /** Сырой (нефильтрованный) ответ отчёта — только для выбора состояния
-     * (`resolveShopGoodsTurnoverBodyState`: пустой массив => «отчёт ещё не пересчитан»). */
+     * (`resolveShopGoodsTurnoverBodyState`: пустой массив => «отчёт ещё не пересчитан»). Строки
+     * ответа (`report.lines` новой формы `{lines, totals}`, FR5 of
+     * add-department-head-salary-rules, BREAKING) — не весь объект ответа. */
     lines: ShopGoodsTurnoverReportLine[] | undefined
     /** Уже денормализованные и отфильтрованные по складу/категории строки — передаются в
      * `ShopGoodsTurnoverTable` как есть. */
     rows: ShopGoodsTurnoverRow[]
     categories?: ShopCategoryRef[]
+    /** Готовая запись `totals` выбранного склада — прокидывается в `ShopGoodsTurnoverTable` как
+     * есть (Implements FR5 of add-department-head-salary-rules), см. её пропс. */
+    total?: ShopGoodsTurnoverWarehouseTotal | null
     className?: string
 }
 
@@ -26,7 +31,7 @@ export type ShopGoodsTurnoverReportBodyProps = {
  * `GoodsTurnoverErrorState`/`GoodsTurnoverNotRecalculatedState` переиспользуются как есть — они
  * презентационные и не завязаны на тип id категории/склада.
  */
-export function ShopGoodsTurnoverReportBody({ error, onRetry, lines, rows, categories = [], className }: ShopGoodsTurnoverReportBodyProps) {
+export function ShopGoodsTurnoverReportBody({ error, onRetry, lines, rows, categories = [], total = null, className }: ShopGoodsTurnoverReportBodyProps) {
     const state = resolveShopGoodsTurnoverBodyState({ error, lines })
 
     if (state === 'error') {
@@ -37,5 +42,5 @@ export function ShopGoodsTurnoverReportBody({ error, onRetry, lines, rows, categ
         return <GoodsTurnoverNotRecalculatedState className={className} />
     }
 
-    return <ShopGoodsTurnoverTable rows={rows} categories={categories} className={className} />
+    return <ShopGoodsTurnoverTable rows={rows} categories={categories} total={total} className={className} />
 }

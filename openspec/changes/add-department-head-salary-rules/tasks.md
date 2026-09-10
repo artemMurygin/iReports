@@ -182,10 +182,31 @@
 
 ## 18. Frontend: `GoodsTurnoverReport` — переход на `totals` из API
 
-- [ ] 18.1 Написать тесты: страница рендерит строку «Итого» из поля `totals` ответа API (а не через `summarizeGoodsTurnoverRows`/`summarizeShopGoodsTurnoverRows`); shop-версия корректно читает новую форму ответа `{lines, totals}`
-- [ ] 18.2 Прогнать тесты из 18.1 и зафиксировать red
-- [ ] 18.3 Удалить `model/{,shop/}goodsTurnoverTree.ts` (`summarizeGoodsTurnoverRows`/`summarizeShopGoodsTurnoverRows`) и подключить рендер «Итого» из `totals` ответа API (service + shop)
-- [ ] 18.4 Прогнать тесты из 18.1 и зафиксировать green
+- [x] 18.1 Написать тесты: страница рендерит строку «Итого» из поля `totals` ответа API (а не через `summarizeGoodsTurnoverRows`/`summarizeShopGoodsTurnoverRows`); shop-версия корректно читает новую форму ответа `{lines, totals}`
+- [x] 18.2 Прогнать тесты из 18.1 и зафиксировать red
+- [x] 18.3 Удалить `model/{,shop/}goodsTurnoverTree.ts` (`summarizeGoodsTurnoverRows`/`summarizeShopGoodsTurnoverRows`) и подключить рендер «Итого» из `totals` ответа API (service + shop)
+- [x] 18.4 Прогнать тесты из 18.1 и зафиксировать green
+
+  Примечание по реализации: удалены только `summarizeGoodsTurnoverRows`/`summarizeShopGoodsTurnoverRows`
+  (+ их типы `GoodsTurnoverSummary`/`ShopGoodsTurnoverSummary`) — сами файлы `model/{,shop/}
+  goodsTurnoverTree.ts` остаются (`buildGoodsTurnoverTreeRows`/`filterVisibleRows`/цвета/
+  `pluralizeCategories` и т. д. не относятся к FR5, не трогались). Вместо удалённых функций —
+  новые `countRootCategories`/`countShopRootCategories`: футер таблицы («N категорий») остаётся
+  локальным вычислением по уже отфильтрованным по складу/категории `rows` (а не по `totals`,
+  который не знает о фильтре по категории и всегда о целом складе), тогда как строка «Итого»
+  (проп `total: GoodsTurnoverWarehouseTotalResponse | ShopGoodsTurnoverWarehouseTotal | null`,
+  `GoodsTurnoverTable`/`ShopGoodsTurnoverTable`) рендерится напрямую из записи `report.totals`,
+  подобранной по текущему `warehouseId` в `useGoodsTurnoverReportPage`/`useShopGoodsTurnoverReportPage`
+  (без учёта фильтра по категории — соответствует формуле бэкенда, которая всегда о целом складе).
+  `total` проброшен через `GoodsTurnoverReportBody`/`ShopGoodsTurnoverReportBody` вплоть до
+  `Service/ShopGoodsTurnoverReport.tsx`. Отдельно у shop: `useShopGoodsTurnoverReportPage`
+  адаптирован под смену формы ответа (BREAKING) — `useQuery`'s `data` теперь весь объект
+  `{lines, totals}` (`report`), а не голый массив строк; `rows`/`isInitialLoad`/возвращаемый `lines`
+  теперь читаются из `report.lines`. Написан новый файл-спека
+  `model/shop/useShopGoodsTurnoverReportPage.spec.tsx` (ранее отсутствовал) и новый
+  `ui/shop/GoodsTurnoverTable/GoodsTurnoverTable.spec.tsx` (ранее отсутствовал) — по образцу уже
+  существующих `service`-спек. Полный `npm run test`/`npx tsc -b --noEmit` (frontend) — без
+  регрессий (654 теста, чистый тайпчек).
 
 ## 19. Интеграционная проверка
 

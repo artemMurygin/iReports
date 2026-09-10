@@ -1,16 +1,17 @@
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
+import type { ShopGoodsTurnoverWarehouseTotal } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw.ts'
 import { formatCurrency, formatNumber, formatRatio } from '@/shared/lib/format.ts'
 
 import {
     buildShopGoodsTurnoverTreeRows,
+    countShopRootCategories,
     filterVisibleShopRows,
     getShopRatioColorClass,
     getShopRootDotColor,
     pluralizeShopCategories,
-    summarizeShopGoodsTurnoverRows,
     type ShopGoodsTurnoverRow,
     type ShopGoodsTurnoverTreeRow,
 } from '../../../model/shop/goodsTurnoverTree.ts'
@@ -22,6 +23,12 @@ export type ShopGoodsTurnoverTableProps = {
     /** Полный (плоский) каталог категорий — источник истины для реальной глубины/родства строк,
      * см. `buildShopGoodsTurnoverTreeRows`. */
     categories?: ShopCategoryRef[]
+    /**
+     * Готовая итоговая запись «по складу» для строки «Итого» — из поля `totals` ответа
+     * `GET .../goods-turnover-report/:period` (Implements FR5 of add-department-head-salary-rules,
+     * BREAKING форма ответа `{lines, totals}`). `null`/не передан — плейсхолдер «—», см. `SummaryRow`.
+     */
+    total?: ShopGoodsTurnoverWarehouseTotal | null
     className?: string
 }
 
@@ -40,9 +47,9 @@ const RAIL_BORDER = 'border-[#DFE3E0]'
  * полей контракта (`turnoverQuantity`/`turnoverSum`/`coefficient` вместо `outcomeQuantity`/
  * `outcomeSum`/`turnoverRatio`) — визуально и по поведению идентична оригиналу.
  */
-export function ShopGoodsTurnoverTable({ rows, categories = [], className }: ShopGoodsTurnoverTableProps) {
+export function ShopGoodsTurnoverTable({ rows, categories = [], total = null, className }: ShopGoodsTurnoverTableProps) {
     const treeRows = useMemo(() => buildShopGoodsTurnoverTreeRows(rows, categories), [rows, categories])
-    const summary = useMemo(() => summarizeShopGoodsTurnoverRows(rows, categories), [rows, categories])
+    const rootCategoriesCount = useMemo(() => countShopRootCategories(rows, categories), [rows, categories])
     const { isExpanded, toggle } = useExpandedShopCategories()
     const isCollapsed = useCallback((categoryId: string) => !isExpanded(categoryId), [isExpanded])
     const visibleRows = useMemo(() => filterVisibleShopRows(treeRows, isCollapsed), [treeRows, isCollapsed])
@@ -55,7 +62,7 @@ export function ShopGoodsTurnoverTable({ rows, categories = [], className }: Sho
                 className,
             )}
         >
-            <SummaryRow summary={summary} />
+            <SummaryRow total={total} />
             <HeaderRow />
             {visibleRows.length === 0 ? (
                 <div className="px-5 py-6 text-center font-ui text-sm text-ink-muted">Нет строк для выбранных фильтров</div>
@@ -64,25 +71,28 @@ export function ShopGoodsTurnoverTable({ rows, categories = [], className }: Sho
                     <TableRow key={row.categoryId} row={row} isCollapsed={isCollapsed(row.categoryId)} onToggle={toggle} />
                 ))
             )}
-            <Footer rootCategoriesCount={summary.rootCategoriesCount} />
+            <Footer rootCategoriesCount={rootCategoriesCount} />
         </div>
     )
 }
 
-type SummaryRowProps = { summary: ReturnType<typeof summarizeShopGoodsTurnoverRows> }
+type SummaryRowProps = { total: ShopGoodsTurnoverWarehouseTotal | null }
 
-function SummaryRow({ summary }: SummaryRowProps) {
+// Implements FR5 of add-department-head-salary-rules: строка «Итого» рендерится напрямую из
+// готового `total` ответа API (`{lines, totals}`, BREAKING), без локального пересчёта по `rows` —
+// см. комментарий в `model/shop/goodsTurnoverTree.ts`.
+function SummaryRow({ total }: SummaryRowProps) {
     return (
         <div className={cn('grid grid-cols-3 divide-x', ROW_DIVIDER_X, 'border-b', ROW_DIVIDER)}>
-            <SummaryMetric label="Расход товаров · факт" value={formatCurrency(summary.turnoverSum)} />
+            <SummaryMetric label="Расход товаров · факт" value={total === null ? '—' : formatCurrency(total.turnoverSum)} />
             <SummaryMetric
                 label="Остаток на складе"
-                value={formatCurrency(summary.stockSum)}
-                suffix={`${formatNumber(summary.stockQuantity)} шт`}
+                value={total === null ? '—' : formatCurrency(total.stockSum)}
+                suffix={total === null ? undefined : `${formatNumber(total.stockQuantity)} шт`}
             />
             <SummaryMetric
                 label="Оборачиваемость"
-                value={summary.coefficient === null ? '—' : formatRatio(summary.coefficient)}
+                value={total?.coefficient == null ? '—' : formatRatio(total.coefficient)}
             />
         </div>
     )

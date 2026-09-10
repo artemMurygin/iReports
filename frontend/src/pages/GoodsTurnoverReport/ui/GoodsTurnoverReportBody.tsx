@@ -1,4 +1,4 @@
-import type { GoodsTurnoverReportLineResponse } from 'ireports-contracts'
+import type { GoodsTurnoverReportLineResponse, GoodsTurnoverWarehouseTotalResponse } from 'ireports-contracts'
 
 import { resolveGoodsTurnoverBodyState } from '../model/goodsTurnoverBodyState.ts'
 import type { GoodsTurnoverRow, ProductCategoryRef } from '../model/goodsTurnoverTree.ts'
@@ -16,6 +16,9 @@ export type GoodsTurnoverReportBodyProps = {
     rows: GoodsTurnoverRow[]
     /** Полный справочник категорий — прокидывается в `GoodsTurnoverTable` как есть, см. её пропс. */
     categories?: ProductCategoryRef[]
+    /** Готовая запись `totals` выбранного склада — прокидывается в `GoodsTurnoverTable` как есть
+     * (Implements FR5 of add-department-head-salary-rules), см. её пропс. */
+    total?: GoodsTurnoverWarehouseTotalResponse | null
     className?: string
 }
 
@@ -29,7 +32,7 @@ export type GoodsTurnoverReportBodyProps = {
  * Загрузка (`isInitialLoad`) сюда не доходит — `Layout`/`RefreshTransitionLayout` перехватывает её
  * раньше и вообще не рендерит `body` (задача 19.1, `SpinnerPageLg`).
  */
-export function GoodsTurnoverReportBody({ error, onRetry, lines, rows, categories = [], className }: GoodsTurnoverReportBodyProps) {
+export function GoodsTurnoverReportBody({ error, onRetry, lines, rows, categories = [], total = null, className }: GoodsTurnoverReportBodyProps) {
     const state = resolveGoodsTurnoverBodyState({ error, lines })
 
     if (state === 'error') {
@@ -40,5 +43,5 @@ export function GoodsTurnoverReportBody({ error, onRetry, lines, rows, categorie
         return <GoodsTurnoverNotRecalculatedState className={className} />
     }
 
-    return <GoodsTurnoverTable rows={rows} categories={categories} className={className} />
+    return <GoodsTurnoverTable rows={rows} categories={categories} total={total} className={className} />
 }

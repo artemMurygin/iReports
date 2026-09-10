@@ -46,6 +46,11 @@ function getCurrentPeriod(): string {
  *   `categoryId`, поэтому фильтрация по одному складу обязательна ДО построения дерева —
  *   `model/goodsTurnoverTree.ts`, задача 18). `warehouseId === null` (пустой справочник складов) —
  *   отфильтровать нечего, пустой список.
+ * - `total` (Implements FR5 of add-department-head-salary-rules) — готовая запись `report.totals`
+ *   для текущего `warehouseId` (`null`, пока склад не встретился ни в одной записи `totals` —
+ *   например, для него ещё нет строк отчёта за период), без локального пересчёта по `rows`: формула
+ *   «сумма по настоящим корневым строкам + средневзвешенный коэффициент» переехала на backend
+ *   (`summarizeGoodsTurnoverRows`, была в `model/goodsTurnoverTree.ts`, удалена этим change).
  * - `retry` — `refetch` запроса отчёта, под кнопку «Повторить» в `GoodsTurnoverErrorState`.
  * - `isClosed`/`maxPeriod` — статус расчётного периода направления `service` за выбранный месяц
  *   (`useAccountingPeriod`, `features/AccountingPeriod` — переиспользует существующий `GET
@@ -94,6 +99,13 @@ export function useGoodsTurnoverReportPage() {
         return byWarehouse.filter((line) => allowedIds.has(line.categoryId))
     }, [report, warehouseId, categoryId, categories])
 
+    // FR5 of add-department-head-salary-rules — готовая запись `totals` для текущего склада, а не
+    // локальный пересчёт по `rows` (см. комментарий над хуком).
+    const total = useMemo(
+        () => report?.totals.find((t) => t.warehouseId === warehouseId) ?? null,
+        [report, warehouseId],
+    )
+
     const loading = isFetching
     const isInitialLoad = loading && report === undefined
     const isRefreshing = loading && !isInitialLoad
@@ -116,6 +128,7 @@ export function useGoodsTurnoverReportPage() {
         warehouses,
         report,
         rows,
+        total,
 
         isClosed,
         isInitialLoad,

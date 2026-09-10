@@ -45,6 +45,9 @@ function makeReport(period: string): GetGoodsTurnoverReportResponse {
                 turnoverRatio: 1.5,
             },
         ],
+        // FR5 of add-department-head-salary-rules: `totals` — готовая итоговая строка по складу,
+        // возвращаемая backend'ом (аддитивное поле поверх уже существующего `{period, lines}`).
+        totals: [{ warehouseId: 1, outcomeSum: 50000, stockSum: 30000, stockQuantity: 3, turnoverRatio: 1.5 }],
     }
 }
 
@@ -91,6 +94,12 @@ function makeMultiWarehouseReport(period: string): GetGoodsTurnoverReportRespons
                 stockSum: 40000,
                 turnoverRatio: null,
             },
+        ],
+        // По одной записи `totals` на склад, встретившийся в `lines` (FR5) — намеренно другие
+        // числа, чем сумма по `lines`, чтобы тест ниже не мог случайно совпасть при пересчёте.
+        totals: [
+            { warehouseId: 1, outcomeSum: 70000, stockSum: 40000, stockQuantity: 4, turnoverRatio: 1.4 },
+            { warehouseId: 2, outcomeSum: 90000, stockSum: 40000, stockQuantity: 4, turnoverRatio: null },
         ],
     }
 }
@@ -218,6 +227,23 @@ describe('useGoodsTurnoverReportPage', () => {
 
         act(() => result.current.setCategoryId(11))
         expect(result.current.rows.map((r) => r.categoryId)).toEqual([11])
+    })
+
+    // FR5 of add-department-head-salary-rules: `total` — готовая запись `report.totals` для
+    // текущего `warehouseId`, а не локальный пересчёт по `rows` (formula переехала на backend).
+    it('total отдаёт запись report.totals для выбранного склада и обновляется при смене склада; null для склада без записи в totals', async () => {
+        mockBackend({ report: makeMultiWarehouseReport })
+        const { result } = renderPage()
+
+        await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+        expect(result.current.warehouseId).toBe(1)
+        expect(result.current.total).toEqual({ warehouseId: 1, outcomeSum: 70000, stockSum: 40000, stockQuantity: 4, turnoverRatio: 1.4 })
+
+        act(() => result.current.setWarehouseId(2))
+        expect(result.current.total).toEqual({ warehouseId: 2, outcomeSum: 90000, stockSum: 40000, stockQuantity: 4, turnoverRatio: null })
+
+        act(() => result.current.setWarehouseId(999))
+        expect(result.current.total).toBeNull()
     })
 
     it('isClosed отражает статус AccountingPeriod направления service за выбранный период (GET .../period/:period)', async () => {

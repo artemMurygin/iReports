@@ -36,6 +36,7 @@ export function ServiceGoodsTurnoverReport() {
             lines={page.report?.lines}
             rows={page.rows}
             categories={page.categories}
+            total={page.total}
         />
     )
 

@@ -1,16 +1,17 @@
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
+import type { GoodsTurnoverWarehouseTotalResponse } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw.ts'
 import { formatCurrency, formatNumber, formatRatio } from '@/shared/lib/format.ts'
 
 import {
     buildGoodsTurnoverTreeRows,
+    countRootCategories,
     filterVisibleRows,
     getRatioColorClass,
     getRootDotColor,
     pluralizeCategories,
-    summarizeGoodsTurnoverRows,
     type GoodsTurnoverRow,
     type GoodsTurnoverTreeRow,
     type ProductCategoryRef,
@@ -23,6 +24,14 @@ export type GoodsTurnoverTableProps = {
      * реальной глубины/родства строк, см. `buildGoodsTurnoverTreeRows`. Опущен => прежнее
      * поведение "родство только по `rows`" (без справочника под рукой — тесты). */
     categories?: ProductCategoryRef[]
+    /**
+     * Готовая итоговая запись «по складу» для строки «Итого» — из поля `totals` ответа
+     * `GET .../goods-turnover-report/:period` (Implements FR5 of add-department-head-salary-rules).
+     * `null`/не передан — склад ещё не встретился ни в одной записи `totals` (например, для него
+     * вообще нет строк отчёта за период) — рендерится плейсхолдер «—» вместо числа, не 0
+     * (см. `SummaryRow`).
+     */
+    total?: GoodsTurnoverWarehouseTotalResponse | null
     className?: string
 }
 
@@ -55,9 +64,9 @@ const RAIL_BORDER = 'border-[#DFE3E0]'
  * отфильтрованный по складу/периоду), нужен только для корректной глубины/родства строк, чьи
  * настоящие предки не вернули данных за период (см. `buildGoodsTurnoverTreeRows`).
  */
-export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTurnoverTableProps) {
+export function GoodsTurnoverTable({ rows, categories = [], total = null, className }: GoodsTurnoverTableProps) {
     const treeRows = useMemo(() => buildGoodsTurnoverTreeRows(rows, categories), [rows, categories])
-    const summary = useMemo(() => summarizeGoodsTurnoverRows(rows, categories), [rows, categories])
+    const rootCategoriesCount = useMemo(() => countRootCategories(rows, categories), [rows, categories])
     const { isExpanded, toggle } = useExpandedCategories()
     const isCollapsed = useCallback((categoryId: number) => !isExpanded(categoryId), [isExpanded])
     const visibleRows = useMemo(() => filterVisibleRows(treeRows, isCollapsed), [treeRows, isCollapsed])
@@ -70,7 +79,7 @@ export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTu
                 className,
             )}
         >
-            <SummaryRow summary={summary} />
+            <SummaryRow total={total} />
             <HeaderRow />
             {visibleRows.length === 0 ? (
                 <div className="px-5 py-6 text-center font-ui text-sm text-ink-muted">Нет строк для выбранных фильтров</div>
@@ -79,25 +88,28 @@ export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTu
                     <TableRow key={row.categoryId} row={row} isCollapsed={isCollapsed(row.categoryId)} onToggle={toggle} />
                 ))
             )}
-            <Footer rootCategoriesCount={summary.rootCategoriesCount} />
+            <Footer rootCategoriesCount={rootCategoriesCount} />
         </div>
     )
 }
 
-type SummaryRowProps = { summary: ReturnType<typeof summarizeGoodsTurnoverRows> }
+type SummaryRowProps = { total: GoodsTurnoverWarehouseTotalResponse | null }
 
-function SummaryRow({ summary }: SummaryRowProps) {
+// Implements FR5 of add-department-head-salary-rules: строка «Итого» рендерится напрямую из
+// готового `total` ответа API, без локального пересчёта по `rows` (формула переехала на backend,
+// см. комментарий в `model/goodsTurnoverTree.ts`).
+function SummaryRow({ total }: SummaryRowProps) {
     return (
         <div className={cn('grid grid-cols-3 divide-x', ROW_DIVIDER_X, 'border-b', ROW_DIVIDER)}>
-            <SummaryMetric label="Расход запчастей · факт" value={formatCurrency(summary.outcomeSum)} />
+            <SummaryMetric label="Расход запчастей · факт" value={total === null ? '—' : formatCurrency(total.outcomeSum)} />
             <SummaryMetric
                 label="Остаток на складе"
-                value={formatCurrency(summary.stockSum)}
-                suffix={`${formatNumber(summary.stockQuantity)} шт`}
+                value={total === null ? '—' : formatCurrency(total.stockSum)}
+                suffix={total === null ? undefined : `${formatNumber(total.stockQuantity)} шт`}
             />
             <SummaryMetric
                 label="Оборачиваемость"
-                value={summary.turnoverRatio === null ? '—' : formatRatio(summary.turnoverRatio)}
+                value={total?.turnoverRatio == null ? '—' : formatRatio(total.turnoverRatio)}
             />
         </div>
     )
