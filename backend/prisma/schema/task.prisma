@@ -4,10 +4,10 @@
 // salaryRuleId/period/isRecurring зарплатного правила — это понятия
 // зарплатного расчёта, не задачи как таковой (правило хранит свою ссылку
 // на задачу само, в TaskCompletionSalaryConfig.taskIdByPeriod, JSON-поле
-// внутри salary_rules.props). Заменяет бывшую SalaryTask (salary-task.prisma,
-// зеркальную копию задачи Bitrix24) — та удаляется отдельной миграцией
-// (design.md, Migration Plan, шаг 5) синхронно с переключением
-// domains/service|shop/modules/accounting на эту модель.
+// внутри salary_rules.props). Заменяет бывшую SalaryTask (зеркальную копию
+// задачи Bitrix24) — та удалена отдельной миграцией (design.md, Migration
+// Plan, шаг 5) синхронно с переключением domains/service|shop/modules/accounting
+// на эту модель.
 //
 // direction — String, nullable: необязательный тег происхождения для
 // фильтрации в общем списке /tasks (по прецеденту BalanceTransaction.direction,
