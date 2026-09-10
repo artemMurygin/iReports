@@ -84,6 +84,8 @@
 
   Примечание по реализации (см. финальный отчёт агента): `departmentSalesPerformance`/`turnoverPerformance` реализованы как ДОПОЛНИТЕЛЬНЫЕ поля контекста (уже заложенные группой 10 в `calculation-context.types.ts`), а не как смена формы существующего `context.salesPerformance` — тот у service уже сегодня одиночный `SalesPerformanceContext` (не `Map`) и остаётся без изменений; 4 существующих вида правил service (`context.salesPerformance.percentCompletion` у `OrderPayed`) не затронуты и не требовали правки. Обнаружен и обойдён (см. `toRoappCategoryId` в `build-service-calculation-context.service.ts`) сторонний, ранее существовавший разрыв типов между `DepartmentTurnoverBonusSalaryConfig.category: string | null` (contracts, группа 1) и `TurnoverPerformanceReaderPort.findForScope(..., category: number | null)` (группа 8) — не устранён в контрактах/сущностях (не в скоупе групп 12–13), задокументирован инлайн-комментарием.
 
+  Follow-up (fix, commit "fix(accounting): spread departmentSalesPerformance/turnoverPerformance into rule.calculate() context"): `BuildServiceCalculationContextService.build()` из 12.3 уже возвращал `departmentSalesPerformance`/`turnoverPerformance`, но 5 downstream-мест, строящих итоговый `CalculationContext`/`ServiceCalculationContext` для `PeriodCalculationOrchestrator.calculate()`, перечисляли поля явно (`employee`/`period`/`erpData`/`mode`/`salesPerformance`) вместо обоих новых полей — `DepartmentPercent`/`DepartmentPlanBonus`/`DepartmentTurnoverBonus` молча считали 0 при реальном расчёте (их "нет данных для scope → 0" fallback скрывал баг). Исправлено в `calculate-service-snapshot-rows.service.ts`, `get-employee-salary-report.service.ts` (2 вызова) и `get-department-salary-report.service.ts` (который вдобавок строит `erpData` батчем на отдел сам, не через `BuildServiceCalculationContextService`, — там `departmentSalesPerformance`/`turnoverPerformance` пришлось резолвить заново, тем же способом, что и в builder'е, по union правил всего отдела). Покрыто red/green юнит-тестами на каждом файле.
+
 ## 13. Backend/shop: расчётный контекст + registry/factory/mapper
 
 - [x] 13.1 Написать тесты зеркально п.12 для shop (`BuildShopCalculationContextService`, `shopSalaryRuleRegistry`/`ShopSalaryRuleFactory`, `ShopSalaryRuleMapper`)
@@ -92,6 +94,8 @@
 - [x] 13.4 Прогнать тесты из 13.1 и полный набор существующих salary-rule тестов shop, зафиксировать green без регрессий
 
   Примечание по реализации: аналогично п.12 — `context.salesPerformance` (`Map<category, number>`) у shop тоже НЕ менялся, `departmentSalesPerformance`/`turnoverPerformance` — отдельные поля; `ProductSold`/`UsedProductSold` не затронуты. warehouseId/category у shop — оба `string` end-to-end, разрыва типов (как у service) нет.
+
+  Follow-up (fix, commit "fix(accounting): spread departmentSalesPerformance/turnoverPerformance into rule.calculate() context"): та же ошибка, что и в группе 12 (см. примечание там) — зеркально исправлена в `calculate-snapshot-rows.service.ts`, `get-employee-salary-report.service.ts` (2 вызова) и `get-department-salary-report.service.ts` направления shop, с тем же red/green покрытием.
 
 ## 14. Frontend: схема формы, конфиг наград, лейбл роли (service + shop)
 
