@@ -34,9 +34,12 @@ function getCurrentPeriod(): string {
  *
  * Разворачивание строк правил (в отчёте сотрудника и в отчёте отдела) — общий локальный `Set`-стейт
  * здесь, а не в каждом презентационном компоненте по отдельности: строка идентифицируется собственным
- * `ruleId`, и оба режима используют одну и ту же пару хелперов toggle/isExpanded независимо от
- * текущего `scope`. Строка сотрудника в отчёте отдела (`DepartmentEmployeeGroupV2`) сама по себе НЕ
- * разворачивается — это ссылка на отдельный отчёт сотрудника, а не toggle (см. `SozIO`-редизайн,
+ * `ruleId` (ключ `${direction}:${ruleId}`), и оба режима используют одну и ту же пару хелперов
+ * toggle/isExpanded независимо от текущего `scope`. Тот же `Set` обслуживает и разворот групп ролей
+ * в отчёте сотрудника (`LedgerRoleGroup`, ключ `role:${direction}:${role}`, см. её комментарий) —
+ * оба формата ключа структурно не пересекаются, отдельный `Set` под группы ролей не нужен. Строка
+ * сотрудника в отчёте отдела (`DepartmentEmployeeGroupV2`) сама по себе НЕ разворачивается — это
+ * ссылка на отдельный отчёт сотрудника, а не toggle (см. `SozIO`-редизайн,
  * `docs/salary-department-first-navigation`), поэтому отдельного `Set`-стейта для неё здесь нет.
  *
  * Блоки направлений в карточке-гроссбухе отчёта сотрудника (`LedgerDirectionBlock`) сворачиваются
@@ -63,9 +66,7 @@ export function useSalaryReportSelection(options?: {
     const [departmentId, setDepartmentId] = useState<number | null>(null)
     const [direction, setDirection] = useState<SalaryDirection>('service')
     const [expandedRuleKeys, setExpandedRuleKeys] = useState<Set<string>>(new Set())
-    const [collapsedDirectionKeys, setCollapsedDirectionKeys] = useState<Set<SalaryDirection>>(
-        () => new Set(['shop']),
-    )
+    const [collapsedDirectionKeys, setCollapsedDirectionKeys] = useState<Set<SalaryDirection>>(() => new Set(['shop']))
 
     const employeeReportState = useEmployeeSalaryReport(scope === 'employee' ? employeeId : null, period)
     const departmentReportState = useDepartmentSalaryReport(

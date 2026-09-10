@@ -53,6 +53,15 @@ export function SalaryReportV2Page() {
 
     const departmentName = departments.find((department) => department.id === departmentId)?.name ?? null
 
+    const breadcrumbs =
+        scope === 'employee'
+            ? [
+                  { label: 'Зарплата' },
+                  { label: 'Отчёт по зарплате', to: '/salaries' },
+                  { label: employeeName ?? 'Сотрудник' },
+              ]
+            : undefined
+
     return (
         <Layout
             isInitialLoad={isInitialLoad}
@@ -61,6 +70,7 @@ export function SalaryReportV2Page() {
             header={
                 <>
                     <PageHeader
+                        breadcrumbs={breadcrumbs}
                         title={
                             <SalaryReportHeading
                                 scope={scope}

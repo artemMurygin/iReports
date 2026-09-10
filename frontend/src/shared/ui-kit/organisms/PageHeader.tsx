@@ -1,7 +1,7 @@
-
 import type { ReactNode } from 'react'
 
 import { cn } from '@/shared/lib/tw'
+import { Breadcrumbs } from '@/shared/ui-kit/atoms/Breadcrumbs'
 
 /**
  * Pencil: design/sallary-first-iteration.pen, node `e84ap` (`ERP/Organism/Page Header`) — a
@@ -35,15 +35,21 @@ export type PageHeaderProps = {
      * более сложным содержимым). */
     title: ReactNode
     subtitle?: string
+    /** Строка хлебных крошек над заголовком (`Breadcrumbs`, см. `shared/ui-kit/atoms/Breadcrumbs`).
+     * Пропускается, если не передан — не все страницы, использующие `PageHeader`, нуждаются в
+     * навигации вверх по иерархии. */
+    breadcrumbs?: PageHeaderBreadcrumb[]
     /** Secondary + primary action buttons, rendered as-is (0-2 typical, per the mockup's `RL69s`
      * "Actions" frame). Omit for no action row. */
     actions?: ReactNode
     className?: string
 }
 
-function PageHeader({ title, subtitle, actions, className }: PageHeaderProps) {
+function PageHeader({ title, subtitle, breadcrumbs, actions, className }: PageHeaderProps) {
     return (
         <div data-slot="page-header" className={cn('flex flex-col gap-3', className)}>
+            {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
+
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
                     <h1 className="font-display text-[26px] font-bold tracking-[-0.4px] text-ink">{title}</h1>

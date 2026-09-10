@@ -7,9 +7,10 @@ import { cn } from '@/shared/lib/tw'
 
 import type { DirectionReportVM, SalaryDirection } from '@/features/SalaryReportData'
 
+import { groupRulesByRole } from '../model/groupRulesByRole.ts'
 import { LEDGER_CHEVRON_COL, LEDGER_VALUE_COL } from '../model/ledgerColumns.ts'
 
-import { LedgerRuleRow } from './LedgerRuleRow.tsx'
+import { LedgerRoleGroup } from './LedgerRoleGroup.tsx'
 
 export type LedgerDirectionBlockProps = {
     report: DirectionReportVM
@@ -44,7 +45,10 @@ const ICON_CLASS: Record<SalaryDirection, string> = {
  * Один блок направления внутри карточки-гроссбуха (Pencil: `H7Mz74`'s пара
  * `fNwhK`+`Fbvla`+правила / `TMa9C`+`c56oXc`+правила, `b63e8p`'s мобильный аналог тех же узлов) —
  * заголовок (иконка · название · "· N правил" · бейдж начисления · факт/прогноз по направлению),
- * заголовок колонок таблицы правил, затем сами строки (`LedgerRuleRow`). Функционально — прямой
+ * заголовок колонок таблицы правил, затем сами правила, сгруппированные по роли (`targetRole`,
+ * см. `groupRulesByRole`) — каждая роль своей сворачиваемой строкой-аккордеоном (`LedgerRoleGroup`,
+ * ключ разворота `role:${direction}:${role}`, тот же `Set`-стейт, что и у строк правил), а не
+ * плоским списком правил. Функционально — прямой
  * аналог старой `pages/SalaryReport/ui/DirectionSection.tsx` (то же вычисление "Месяц закрыт" для
  * `total.prognose === null`), не переиспользованной напрямую по той же причине, что и остальные
  * компоненты этой страницы (`pages` не может импортировать другую `pages`).
@@ -80,7 +84,9 @@ export function LedgerDirectionBlock({
                 <div className="flex min-w-0 items-center gap-2">
                     <Icon className={cn('size-4 shrink-0', ICON_CLASS[report.direction])} />
                     <span className="truncate font-ui text-base font-bold text-ink">{report.label}</span>
-                    <span className="shrink-0 font-ui text-xs text-ink-muted">· {pluralizeRules(report.rules.length)}</span>
+                    <span className="shrink-0 font-ui text-xs text-ink-muted">
+                        · {pluralizeRules(report.rules.length)}
+                    </span>
                     {report.accrualStatus !== null && <AccrualStatusBadge status={report.accrualStatus} />}
                 </div>
 
@@ -121,21 +127,30 @@ export function LedgerDirectionBlock({
                 ) : (
                     <>
                         <div className="hidden items-center gap-2 bg-canvas px-3 py-2.5 md:flex md:gap-3 md:px-5">
-                            <span className="min-w-0 flex-1 font-ui text-xs font-semibold text-ink">Правило начисления</span>
-                            <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-semibold text-ink')}>Факт, ₽</span>
-                            <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-medium text-ink-muted')}>Прогноз, ₽</span>
+                            <span className="min-w-0 flex-1 font-ui text-xs font-semibold text-ink">
+                                Правило начисления
+                            </span>
+                            <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-semibold text-ink')}>
+                                Факт, ₽
+                            </span>
+                            <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-medium text-ink-muted')}>
+                                Прогноз, ₽
+                            </span>
                             <span className={LEDGER_CHEVRON_COL} />
                         </div>
 
-                        {report.rules.map((rule) => {
-                            const key = `${report.direction}:${rule.ruleId}`
+                        {groupRulesByRole(report.rules, report.direction).map(({ role, rules }) => {
+                            const key = `role:${report.direction}:${role}`
                             return (
-                                <LedgerRuleRow
-                                    key={rule.ruleId}
-                                    rule={rule}
+                                <LedgerRoleGroup
+                                    key={role}
+                                    role={role}
+                                    rules={rules}
                                     direction={report.direction}
                                     isExpanded={isRuleExpanded(key)}
                                     onToggle={() => onToggleRule(key)}
+                                    isRuleExpanded={isRuleExpanded}
+                                    onToggleRule={onToggleRule}
                                 />
                             )
                         })}
