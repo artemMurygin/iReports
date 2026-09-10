@@ -152,10 +152,33 @@
 
 ## 17. Frontend: лейблы новых типов в `SalaryAccruals`/`SalaryReportData`
 
-- [ ] 17.1 Написать тесты: `model/labels.ts` обеих фич возвращает корректный текст для 3 новых типов правил
-- [ ] 17.2 Прогнать тесты из 17.1 и зафиксировать red
-- [ ] 17.3 Реализовать в `features/SalaryAccruals/model/labels.ts` и `features/SalaryReportData/model/labels.ts`
-- [ ] 17.4 Прогнать тесты из 17.1 и зафиксировать green
+- [x] 17.1 Написать тесты: `model/labels.ts` обеих фич возвращает корректный текст для 3 новых типов правил
+- [x] 17.2 Прогнать тесты из 17.1 и зафиксировать red
+- [x] 17.3 Реализовать в `features/SalaryAccruals/model/labels.ts` и `features/SalaryReportData/model/labels.ts`
+- [x] 17.4 Прогнать тесты из 17.1 и зафиксировать green
+
+  Примечание по реализации: единственный реальный пробел в обоих `labels.ts` — `ROLE_LABEL`/
+  `ROLE_LABELS` (`Record<TargetRole, string>`) не хватало ключа `DEPARTMENT_HEAD` (FR1, `TargetRole`
+  расширен контрактами группы 1), из-за чего оба файла не проходили `tsc -b` (проверено:
+  `npx tsc -b --noEmit` до правки называл именно эти два файла). Для самих 3 новых ТИПОВ правил
+  (FR2–FR4) отдельного кода в этих файлах не потребовалось — прецедент уже есть в истории репозитория
+  (commit 302dc77, добавление типа `TaskCompletion`): `SalaryReportData/model/labels.ts`'s
+  `RULE_TYPE_LABELS`/`getRuleTypeLabel` — прямой реэкспорт `kernel/ruleTypeLabels.ts`'s
+  `ALL_RULE_TYPE_LABELS`, уже донёсшего лейблы 3 новых типов (группа 14); `SalaryAccruals`
+  отображает тип строки через `formatLineMeta` (`model/accrualView.ts`), которая читает тот же
+  `ALL_RULE_TYPE_LABELS` из kernel напрямую, а не через `labels.ts` — так же было устроено и для уже
+  существующего `TaskCompletion`. `RULE_UNIT_FORMS`/`RULE_UNIT_PLURAL_LABEL` сознательно не получили
+  записей для 3 новых типов: `DepartmentPercentEntity`/`DepartmentPlanBonusEntity`/
+  `DepartmentTurnoverBonusEntity.calculate()` всегда возвращают `sources: []` и не выставляют
+  `quantity` (нет измеримой транзакционной единицы на уровне отдела/направления) — тот же паттерн,
+  что уже используется правилами без счётной базы (`formatLineBasisNote` откатывается на «фикс за
+  период»). Новые тесты (`SalaryAccruals/model/labels.spec.ts`,
+  `SalaryReportData/model/labels.spec.ts`) фиксируют оба факта: `ROLE_LABEL(S).DEPARTMENT_HEAD` и
+  корректный текст для `DepartmentPercent`/`DepartmentPlanBonus`/`DepartmentTurnoverBonus` через
+  `formatLineMeta`/`getRuleTypeLabel` — red подтверждён (`ROLE_LABEL(S).DEPARTMENT_HEAD` было
+  `undefined`, 2 упавших теста из 11), green — после добавления `DEPARTMENT_HEAD` в обе карты
+  (`npx vitest run src/features/SalaryAccruals src/features/SalaryReportData` — 39 passed, без
+  регрессий).
 
 ## 18. Frontend: `GoodsTurnoverReport` — переход на `totals` из API
 
