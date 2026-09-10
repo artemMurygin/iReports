@@ -5,6 +5,7 @@ import { DomainSyncStatusModule } from '@/shared/infrastructure/domain-sync-stat
 import { DirectionSyncLockModule } from '@/shared/infrastructure/sync-lock/direction-sync-lock.module';
 import { RoappSyncService } from './roapp-sync.service';
 import { RoappSyncCron } from './roapp-sync.cron';
+import { RoappCatalogsSyncCron } from './roapp-catalogs-sync.cron';
 import { UploadInitialRoappDataHandler } from './application/command/upload-initial-roapp-data.handler';
 
 // RoappSyncService и DirectionSyncLockModule экспортируются для
@@ -18,7 +19,12 @@ import { UploadInitialRoappDataHandler } from './application/command/upload-init
         DirectionSyncLockModule,
         CqrsModule,
     ],
-    providers: [RoappSyncService, RoappSyncCron, UploadInitialRoappDataHandler],
+    providers: [
+        RoappSyncService,
+        RoappSyncCron,
+        RoappCatalogsSyncCron,
+        UploadInitialRoappDataHandler,
+    ],
     exports: [RoappSyncService, DirectionSyncLockModule],
 })
 export class RoappSyncModule {}

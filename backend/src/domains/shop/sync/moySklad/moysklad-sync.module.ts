@@ -5,6 +5,7 @@ import { DirectionSyncLockModule } from '@/shared/infrastructure/sync-lock/direc
 import { MoySkladSyncService } from './moysklad-sync.service';
 import { MoySkladSyncCron } from './moysklad-sync.cron';
 import { MoySkladStockSyncCron } from './moysklad-stock-sync.cron';
+import { MoySkladCatalogsSyncCron } from './moysklad-catalogs-sync.cron';
 import { ProductFolderTreeService } from './product-folder-tree.service';
 import { UploadInitialMoySkladDataHandler } from './application/command/upload-initial-moysklad-data.handler';
 
@@ -16,6 +17,7 @@ import { UploadInitialMoySkladDataHandler } from './application/command/upload-i
         // spec: shop-turnover-report D5/D9 — независимая почасовая крон-
         // задача снимка остатков (см. moysklad-stock-sync.cron.ts).
         MoySkladStockSyncCron,
+        MoySkladCatalogsSyncCron,
         ProductFolderTreeService,
         UploadInitialMoySkladDataHandler,
     ],

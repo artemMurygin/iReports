@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { BitrixModule } from '../../integrations/bitrix/bitrix.module';
 import { BitrixSyncService } from './bitrix-sync.service';
 import { BitrixSyncCron } from './bitrix-sync.cron';
+import { BitrixCatalogsSyncCron } from './bitrix-catalogs-sync.cron';
 import { UploadInitialBitrixDataHandler } from './application/command/upload-initial-bitrix-data.handler';
 import { BITRIX_EMPLOYEE_UPSERT_PORT } from './application/ports/bitrix-employee-upsert.port';
 import { BitrixEmployeeUpsertAdapter } from './infrastructure/bitrix-employee-upsert.adapter';
@@ -12,6 +13,7 @@ import { BitrixEmployeeUpsertAdapter } from './infrastructure/bitrix-employee-up
     providers: [
         BitrixSyncService,
         BitrixSyncCron,
+        BitrixCatalogsSyncCron,
         UploadInitialBitrixDataHandler,
         {
             provide: BITRIX_EMPLOYEE_UPSERT_PORT,
