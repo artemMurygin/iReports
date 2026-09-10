@@ -55,9 +55,43 @@ export type ShopGoodsTurnoverReportLine = z.infer<
     typeof shopGoodsTurnoverReportLineSchema
 >;
 
-const shopGoodsTurnoverReportResponseSchema = z.array(
-    shopGoodsTurnoverReportLineSchema,
-);
+// Итоговая строка «по складу» (add-department-head-salary-rules, FR5) — зеркало
+// goodsTurnoverWarehouseTotalSchema (goods-turnover-report.ts, service): та же формула (сумма +
+// количество + средневзвешенный по остатку коэффициент по НАСТОЯЩИМ корневым категориям, design.md
+// Decision 6), независимая реализация (нет объединяющего агрегата у shop, см. комментарий вверху
+// файла). Название полей — по образцу shopGoodsTurnoverReportLineSchema выше (turnoverSum/
+// coefficient, а не outcomeSum/turnoverRatio сервисного контракта) — та же причина, что и у самой
+// строки: не переименовываем на границе, чтобы не путать "то же поле под двумя именами" внутри
+// одного контракта. warehouseId — обязателен, string (MoySklad UUID), как у строки отчёта.
+// turnoverSum/stockSum — та же конвертация копейки→рубли через transform, что и у строки (см.
+// комментарий выше), т.к. backend считает totals той же арифметикой над теми же копеечными суммами.
+const shopGoodsTurnoverWarehouseTotalSchema = z.object({
+    warehouseId: z.string(),
+    turnoverSum: z
+        .number()
+        .int()
+        .nonnegative()
+        .transform((kopecks) => kopecks / 100),
+    stockSum: z
+        .number()
+        .int()
+        .nonnegative()
+        .transform((kopecks) => kopecks / 100),
+    stockQuantity: z.number().nonnegative(),
+    coefficient: z.number().nullable(),
+});
+export type ShopGoodsTurnoverWarehouseTotal = z.infer<
+    typeof shopGoodsTurnoverWarehouseTotalSchema
+>;
+
+// BREAKING (add-department-head-salary-rules, FR5): форма ответа меняется с голого массива строк
+// на { lines, totals } — единственный сегодняшний потребитель (frontend этого же приложения +
+// внутренний port зарплатного расчёта) обновляется в этом же change, внешних клиентов у эндпоинта
+// нет (см. proposal.md, "Impact"). totals — по одной записи на склад, встретившийся в lines.
+const shopGoodsTurnoverReportResponseSchema = z.object({
+    lines: z.array(shopGoodsTurnoverReportLineSchema),
+    totals: z.array(shopGoodsTurnoverWarehouseTotalSchema),
+});
 export type ShopGoodsTurnoverReportResponse = z.infer<
     typeof shopGoodsTurnoverReportResponseSchema
 >;
@@ -74,6 +108,7 @@ export type ShopGoodsTurnoverReportQuery = z.infer<
 
 export {
     shopGoodsTurnoverReportLineSchema,
+    shopGoodsTurnoverWarehouseTotalSchema,
     shopGoodsTurnoverReportResponseSchema,
     shopGoodsTurnoverReportQuerySchema,
 };

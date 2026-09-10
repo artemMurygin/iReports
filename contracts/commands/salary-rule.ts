@@ -38,6 +38,16 @@ import { salaryAccrualStatusSchema } from './salary-accrual-status';
 // как и OFFICE, намеренно не входит — остальные два типа правил сервиса
 // (ServiceCompleted/OrderPayed) матчат сотрудника через
 // service-role-source.ts, где у неё нет собственного поля ERP.
+//
+// DEPARTMENT_HEAD (add-department-head-salary-rules, FR1) — «руководитель направления»: мотивация
+// зависит не от личных транзакций сотрудника, а от результата отдела/категории/направления целиком
+// (DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus ниже). Назначается ВРУЧНУЮ через
+// уже существующий targetType = 'Employee' — без синка Bitrix24 UF_HEAD и без новой сущности «глава
+// отдела» (design.md Decision 1: осознанно отклонённая альтернатива). role-source.ts не расширяется
+// под эту роль — 3 новых вида правил не матчат сотрудника по заказу/отгрузке, они всегда считаются
+// целиком на того единственного сотрудника, кому назначена схема (design.md Decision 2). В
+// ALL_SERVICE_ROLES/ALL_SHOP_ROLES входит — единственная цель добавления в каталог: чтобы UI
+// показывал роль как опцию для этих 3 новых видов правил (design.md Decision 4).
 const targetRoleSchema = z.enum([
     'ENGINEER',
     'ONLINE_MANAGER',
@@ -47,6 +57,7 @@ const targetRoleSchema = z.enum([
     'OFFLINE_PURCHASER',
     'OFFICE',
     'SOLO_MANAGER',
+    'DEPARTMENT_HEAD',
 ]);
 
 export type TargetRole = z.infer<typeof targetRoleSchema>;
@@ -239,11 +250,106 @@ const taskCompletionSalaryRuleSchema = z.object({
     config: taskCompletionSalaryConfigRequestSchema,
 });
 
+// ================= Уровень отдела/направления (add-department-head-salary-rules) ================= //
+//
+// Implements FR1-FR4 of add-department-head-salary-rules.
+//
+// Три новых вида правила уровня отдела/направления (design.md Decision 2) — в отличие от
+// PayPerHour/ServiceCompleted/OrderPayed/TaskCompletion выше, они НЕ итерируют транзакции и не
+// матчат роль сотрудника по заказу: всегда считаются целиком на того единственного сотрудника,
+// кому назначена схема правила (targetType = 'Employee', design.md Decision 1). `targetRole`
+// сохраняется на форме правила ради консистентности схемы/каталога ролей в UI, но не участвует в
+// самой логике расчёта.
+//
+// category: string | null — тот же scope-параметр, что и у ProductSoldEntity.config.category
+// (null = без фильтра, «весь склад/направление»). department, с которым в итоге резолвится
+// SalesPerformance для DepartmentPercent/DepartmentPlanBonus, в конфиг НЕ входит — он неизбежно
+// берётся из собственного BitrixEmployee.departmentId сотрудника, которому назначено правило
+// (design.md Decision 1, существующий механизм findEmployeeDepartmentId, без изменений).
+
+// DepartmentPercent (FR2) — % от факта выручки/маржи отдела/категории/направления, без какого-либо
+// коэффициента (простой фиксированный процент от фактического значения плана продаж за период):
+// amount = round(fact.(turnover|margin) * percent / 100).
+const departmentPercentSalaryConfigSchema = z.object({
+    salaryBasis: salaryBasisSchema,
+    category: z.string().nullable(),
+    percent: z.number(),
+});
+
+export type DepartmentPercentSalaryConfig = z.infer<
+    typeof departmentPercentSalaryConfigSchema
+>;
+
+const departmentPercentSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('DepartmentPercent'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: departmentPercentSalaryConfigSchema,
+});
+
+// DepartmentPlanBonus (FR3) — фиксированная сумма × плавающий коэффициент выполнения плана продаж
+// по выручке/марже (по категории или по всему направлению), переиспользует уже существующий
+// percentBorders/resolveFloatPercentMultiplier и уже существующий SalesPerformance.percentCompletion:
+// amount = round(fixedAmount * resolveFloatPercentMultiplier(percentBorders, percentCompletion)).
+const departmentPlanBonusSalaryConfigSchema = z.object({
+    salaryBasis: salaryBasisSchema,
+    category: z.string().nullable(),
+    fixedAmount: z.number(),
+    percentBorders: percentBordersSchema,
+});
+
+export type DepartmentPlanBonusSalaryConfig = z.infer<
+    typeof departmentPlanBonusSalaryConfigSchema
+>;
+
+const departmentPlanBonusSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('DepartmentPlanBonus'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: departmentPlanBonusSalaryConfigSchema,
+});
+
+// DepartmentTurnoverBonus (FR4) — фиксированная сумма × плавающий коэффициент выполнения плана по
+// коэффициенту оборачиваемости, привязанный к конкретному СКЛАДУ (warehouseId — обязательное поле:
+// оборачиваемость скоуплена по категории × складу, автоматической привязки сотрудник→склад в
+// системе нет, в отличие от отдела, design.md Decision 1) и опционально к category внутри него
+// (null — итог по всему складу, см. GoodsTurnoverWarehouseTotal, FR5). planTurnoverRatio хранится
+// прямо в конфигурации самого правила, а не как отдельная сущность/справочник плана:
+// amount = round(fixedAmount * resolveFloatPercentMultiplier(percentBorders,
+//   (factTurnoverRatio / planTurnoverRatio) * 100)).
+// warehouseId — number для service (RoApp/RemOnline warehouse id, см. warehouseSchema в
+// goods-turnover-report.ts); зеркальная shop-схема (shop-salary-rule.ts) использует string
+// (MoySklad UUID, см. shopGoodsTurnoverReportLineSchema.warehouseId).
+const departmentTurnoverBonusSalaryConfigSchema = z.object({
+    warehouseId: z.number(),
+    category: z.string().nullable(),
+    fixedAmount: z.number(),
+    planTurnoverRatio: z.number(),
+    percentBorders: percentBordersSchema,
+});
+
+export type DepartmentTurnoverBonusSalaryConfig = z.infer<
+    typeof departmentTurnoverBonusSalaryConfigSchema
+>;
+
+const departmentTurnoverBonusSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('DepartmentTurnoverBonus'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: departmentTurnoverBonusSalaryConfigSchema,
+});
+
 const salaryRuleRequestSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleSchema,
     serviceCompletedSalaryRuleSchema,
     orderPayedSalaryRuleSchema,
     taskCompletionSalaryRuleSchema,
+    departmentPercentSalaryRuleSchema,
+    departmentPlanBonusSalaryRuleSchema,
+    departmentTurnoverBonusSalaryRuleSchema,
 ]);
 
 export type SalaryRuleRequest = z.infer<typeof salaryRuleRequestSchema>;
@@ -274,11 +380,23 @@ const taskCompletionSalaryRuleResponseSchema = z.object({
     config: taskCompletionSalaryConfigResponseSchema,
 });
 
+// 3 новых вида правила уровня отдела/направления (add-department-head-salary-rules, FR2-FR4) —
+// config одинаков между запросом и ответом (в отличие от TaskCompletion), поэтому просто .extend({ id }).
+const departmentPercentSalaryRuleResponseSchema =
+    departmentPercentSalaryRuleSchema.extend({ id: z.string() });
+const departmentPlanBonusSalaryRuleResponseSchema =
+    departmentPlanBonusSalaryRuleSchema.extend({ id: z.string() });
+const departmentTurnoverBonusSalaryRuleResponseSchema =
+    departmentTurnoverBonusSalaryRuleSchema.extend({ id: z.string() });
+
 const salaryRuleResponseSchema = z.discriminatedUnion('type', [
     payPerHourSalaryRuleResponseSchema,
     serviceCompletedSalaryRuleResponseSchema,
     orderPayedSalaryRuleResponseSchema,
     taskCompletionSalaryRuleResponseSchema,
+    departmentPercentSalaryRuleResponseSchema,
+    departmentPlanBonusSalaryRuleResponseSchema,
+    departmentTurnoverBonusSalaryRuleResponseSchema,
 ]);
 
 export type SalaryRuleResponse = z.infer<typeof salaryRuleResponseSchema>;
@@ -437,7 +555,10 @@ const employeeSalaryReportRuleSchema = z.object({
     amount: factPrognoseAmountSchema,
     appliedPercent: z.number().optional(),
     floatPercent: z
-        .object({ fact: floatPercentInfoSchema, prognose: floatPercentInfoSchema })
+        .object({
+            fact: floatPercentInfoSchema,
+            prognose: floatPercentInfoSchema,
+        })
         .optional(),
     sources: z.array(employeeSalaryReportSourceSchema),
 });
@@ -526,6 +647,9 @@ export {
     orderPayedSalaryConfigSchema,
     taskCompletionSalaryConfigRequestSchema,
     taskCompletionSalaryConfigResponseSchema,
+    departmentPercentSalaryConfigSchema,
+    departmentPlanBonusSalaryConfigSchema,
+    departmentTurnoverBonusSalaryConfigSchema,
     percentBorderSchema,
     percentBordersSchema,
     salaryBasisSchema,

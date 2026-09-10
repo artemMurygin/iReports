@@ -167,6 +167,79 @@ const taskCompletionShopSalaryRuleSchema = z.object({
     config: taskCompletionShopSalaryConfigRequestSchema,
 });
 
+// ================= Уровень отдела/направления (add-department-head-salary-rules) ================= //
+//
+// Implements FR1-FR4 of add-department-head-salary-rules.
+//
+// Зеркало трёх новых видов правила из salary-rule.ts (service), см. WHY там — независимая копия
+// (issue #57), состав полей идентичен по смыслу, отличия: shopSalaryBasisSchema вместо
+// salaryBasisSchema (нет SALARY_MINUS_ENGINEER_SALARY — в магазине нет роли инженера) и
+// warehouseId: string (MoySklad UUID, как shopGoodsTurnoverReportLineSchema.warehouseId) вместо
+// number (RoApp warehouse id) у service.
+
+// DepartmentPercent (FR2, shop) — % от факта выручки/маржи категории/магазина, без коэффициента.
+const departmentPercentShopSalaryConfigSchema = z.object({
+    salaryBasis: shopSalaryBasisSchema,
+    category: z.string().nullable(),
+    percent: z.number(),
+});
+
+export type DepartmentPercentShopSalaryConfig = z.infer<
+    typeof departmentPercentShopSalaryConfigSchema
+>;
+
+const departmentPercentShopSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('DepartmentPercent'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: departmentPercentShopSalaryConfigSchema,
+});
+
+// DepartmentPlanBonus (FR3, shop) — фиксированная сумма × плавающий коэффициент выполнения плана
+// продаж по выручке/марже, переиспользует существующий percentBordersSchema.
+const departmentPlanBonusShopSalaryConfigSchema = z.object({
+    salaryBasis: shopSalaryBasisSchema,
+    category: z.string().nullable(),
+    fixedAmount: z.number(),
+    percentBorders: percentBordersSchema,
+});
+
+export type DepartmentPlanBonusShopSalaryConfig = z.infer<
+    typeof departmentPlanBonusShopSalaryConfigSchema
+>;
+
+const departmentPlanBonusShopSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('DepartmentPlanBonus'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: departmentPlanBonusShopSalaryConfigSchema,
+});
+
+// DepartmentTurnoverBonus (FR4, shop) — фиксированная сумма × плавающий коэффициент выполнения
+// плана по коэффициенту оборачиваемости конкретного склада МойСклад (warehouseId — обязательное
+// поле, строковый UUID); planTurnoverRatio хранится прямо в конфигурации правила.
+const departmentTurnoverBonusShopSalaryConfigSchema = z.object({
+    warehouseId: z.string(),
+    category: z.string().nullable(),
+    fixedAmount: z.number(),
+    planTurnoverRatio: z.number(),
+    percentBorders: percentBordersSchema,
+});
+
+export type DepartmentTurnoverBonusShopSalaryConfig = z.infer<
+    typeof departmentTurnoverBonusShopSalaryConfigSchema
+>;
+
+const departmentTurnoverBonusShopSalaryRuleSchema = z.object({
+    id: z.string().optional(),
+    type: z.literal('DepartmentTurnoverBonus'),
+    name: z.string(),
+    targetRole: targetRoleSchema,
+    config: departmentTurnoverBonusShopSalaryConfigSchema,
+});
+
 // ========================== Итоговый дискриминированный союз ========================== //
 
 const shopSalaryRuleRequestSchema = z.discriminatedUnion('type', [
@@ -174,6 +247,9 @@ const shopSalaryRuleRequestSchema = z.discriminatedUnion('type', [
     productSoldSalaryRuleSchema,
     usedProductSoldSalaryRuleSchema,
     taskCompletionShopSalaryRuleSchema,
+    departmentPercentShopSalaryRuleSchema,
+    departmentPlanBonusShopSalaryRuleSchema,
+    departmentTurnoverBonusShopSalaryRuleSchema,
 ]);
 
 export type ShopSalaryRuleRequest = z.infer<typeof shopSalaryRuleRequestSchema>;
@@ -204,6 +280,9 @@ const shopSalaryRuleResponseSchema = z.discriminatedUnion('type', [
     productSoldSalaryRuleSchema.extend({ id: z.string() }),
     usedProductSoldSalaryRuleSchema.extend({ id: z.string() }),
     taskCompletionShopSalaryRuleResponseSchema,
+    departmentPercentShopSalaryRuleSchema.extend({ id: z.string() }),
+    departmentPlanBonusShopSalaryRuleSchema.extend({ id: z.string() }),
+    departmentTurnoverBonusShopSalaryRuleSchema.extend({ id: z.string() }),
 ]);
 
 export type ShopSalaryRuleResponse = z.infer<
@@ -227,6 +306,9 @@ export {
     usedProductSoldSalaryConfigSchema,
     taskCompletionShopSalaryConfigRequestSchema,
     taskCompletionShopSalaryConfigResponseSchema,
+    departmentPercentShopSalaryConfigSchema,
+    departmentPlanBonusShopSalaryConfigSchema,
+    departmentTurnoverBonusShopSalaryConfigSchema,
     salaryRuleTypeInfoSchema as shopSalaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema as shopSalaryRuleTypesResponseSchema,
 };
