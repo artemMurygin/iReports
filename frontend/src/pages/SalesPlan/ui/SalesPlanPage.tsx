@@ -26,9 +26,12 @@ export function SalesPlanPage() {
     const {
         direction,
         setDirection,
+        activeDirection,
         period,
         setPeriod,
         rows,
+        serviceRows,
+        shopRows,
         totals,
         isInitialLoad,
         isRefreshing,
@@ -86,7 +89,7 @@ export function SalesPlanPage() {
                     <EditPlanModal
                         open={isEditModalOpen}
                         onOpenChange={setIsEditModalOpen}
-                        direction={direction}
+                        direction={activeDirection}
                         period={period}
                         rows={editRows}
                     />
@@ -94,7 +97,7 @@ export function SalesPlanPage() {
                     <ClosePeriodDialog
                         open={isCloseDialogOpen}
                         onOpenChange={setIsCloseDialogOpen}
-                        direction={direction}
+                        direction={activeDirection}
                         period={period}
                         rowDetailsById={unapprovedRowDetailsById}
                         departmentNameById={departmentNameById}
@@ -106,7 +109,7 @@ export function SalesPlanPage() {
                     <ReopenPeriodDialog
                         open={isReopenDialogOpen}
                         onOpenChange={setIsReopenDialogOpen}
-                        direction={direction}
+                        direction={activeDirection}
                         period={period}
                         employeeNameById={employeeNameById}
                     />
@@ -116,6 +119,8 @@ export function SalesPlanPage() {
                 <SalesPlanBody
                     direction={direction}
                     rows={rows}
+                    serviceRows={serviceRows}
+                    shopRows={shopRows}
                     totals={totals}
                     periodLabel={periodLabel}
                     hasData={hasData}

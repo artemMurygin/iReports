@@ -117,7 +117,7 @@ function renderCombined() {
     const utils = renderHook(
         ({ open }: { open: boolean }) => {
             const page = useSalesPlanPage()
-            const form = useEditPlanForm({ open, onOpenChange, direction: page.direction, rows: page.editRows })
+            const form = useEditPlanForm({ open, onOpenChange, direction: page.activeDirection, rows: page.editRows })
             return { page, form }
         },
         { wrapper, initialProps: { open: false } },

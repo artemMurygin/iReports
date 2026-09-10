@@ -25,12 +25,16 @@ const COLUMN_WIDTH = {
 export type SalesPlanTableProps = {
     rows: SalesPlanRow[]
     className?: string
-    /** `row.plan.id` -> selected. From `useSalesPlanSelection`. */
-    selectedIds: Set<string>
-    onToggleRow: (id: string) => void
-    onToggleAll: () => void
-    isAllSelected: boolean
-    isIndeterminate: boolean
+    /** `row.plan.id` -> selected. From `useSalesPlanSelection`. Omit every selection prop
+     * (along with `onToggleRow`/`onToggleAll`) to render a read-only table with no selection
+     * checkboxes at all — same "omitted callback hides the checkbox" convention `PlanCard` uses
+     * for its own `onSelectedChange`. Used by the "Все" combined view (`pages/SalesPlan`), where
+     * selection/approve only make sense for a single direction's plan. */
+    selectedIds?: Set<string>
+    onToggleRow?: (id: string) => void
+    onToggleAll?: () => void
+    isAllSelected?: boolean
+    isIndeterminate?: boolean
 }
 
 /**
@@ -64,13 +68,15 @@ function SalesPlanTable({
             <div className="overflow-x-auto">
                 <div className="min-w-[1084px]">
                     <div className="flex items-center border-b border-hairline bg-canvas">
-                        <div className="flex h-10 w-11 shrink-0 items-center justify-center">
-                            <Checkbox
-                                checked={isIndeterminate ? 'indeterminate' : isAllSelected}
-                                onCheckedChange={onToggleAll}
-                                aria-label="Выбрать все категории"
-                            />
-                        </div>
+                        {onToggleAll && (
+                            <div className="flex h-10 w-11 shrink-0 items-center justify-center">
+                                <Checkbox
+                                    checked={isIndeterminate ? 'indeterminate' : (isAllSelected ?? false)}
+                                    onCheckedChange={onToggleAll}
+                                    aria-label="Выбрать все категории"
+                                />
+                            </div>
+                        )}
                         <ColumnHeader label="Категория" className="min-w-[200px] flex-1" />
                         <ColumnHeader label="План, ₽" align="end" className={COLUMN_WIDTH.plan} />
                         <ColumnHeader label="Факт, ₽" align="end" emphasis className={COLUMN_WIDTH.fact} />
@@ -85,8 +91,8 @@ function SalesPlanTable({
                             key={row.plan.id}
                             row={row}
                             zebra={index % 2 === 0}
-                            selected={selectedIds.has(row.plan.id)}
-                            onToggle={() => onToggleRow(row.plan.id)}
+                            selected={selectedIds?.has(row.plan.id) ?? false}
+                            onToggle={onToggleRow ? () => onToggleRow(row.plan.id) : undefined}
                         />
                     ))}
                 </div>
@@ -104,7 +110,7 @@ function SalesPlanTableRow({
     row: SalesPlanRow
     zebra: boolean
     selected: boolean
-    onToggle: () => void
+    onToggle?: () => void
 }) {
     return (
         <div
@@ -114,13 +120,15 @@ function SalesPlanTableRow({
                 zebra ? 'bg-row-selected' : 'bg-surface',
             )}
         >
-            <div className="flex w-11 shrink-0 items-center justify-center self-stretch">
-                <Checkbox
-                    checked={selected}
-                    onCheckedChange={onToggle}
-                    aria-label={`Выбрать категорию ${row.categoryName}`}
-                />
-            </div>
+            {onToggle && (
+                <div className="flex w-11 shrink-0 items-center justify-center self-stretch">
+                    <Checkbox
+                        checked={selected}
+                        onCheckedChange={onToggle}
+                        aria-label={`Выбрать категорию ${row.categoryName}`}
+                    />
+                </div>
+            )}
 
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-[3px] py-2">
                 <div className="flex items-center">

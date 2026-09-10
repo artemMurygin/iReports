@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useLayoutEffect, useRef, type CSSProperties } from 'react'
 import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core'
 import type { OrderTypeResponse } from 'ireports-contracts'
 import { GripVertical } from 'lucide-react'
@@ -6,7 +6,7 @@ import { GripVertical } from 'lucide-react'
 import { cn } from '@/shared/lib/tw'
 import { CellStatus } from '@/shared/ui-kit/molecules/CellStatus'
 import type { EditRowView } from '@/features/SalesPlan/ui/EditPlanModal/model/useEditPlanForm.ts'
-import { formatCurrency, formatPercent } from '@/features/SalesPlan/model/format.ts'
+import { formatCurrency, formatNumber, formatPercent } from '@/features/SalesPlan/model/format.ts'
 import { OrderTypeSelect } from '@/features/SalesPlan/ui/EditPlanModal/ui/OrderTypeSelect.tsx'
 
 export const HANDLE_WIDTH = 'w-8'
@@ -14,6 +14,7 @@ const CATEGORY_WIDTH = 'min-w-[160px] flex-1'
 const INPUT_WIDTH = 'w-[150px]'
 const ORDER_TYPES_WIDTH = 'w-[170px]'
 const FACT_WIDTH = 'w-[160px]'
+const FORECAST_WIDTH = 'w-[160px]'
 const STATUS_WIDTH = 'w-[116px]'
 
 /** Everything `useSortable` (`@dnd-kit/sortable`) hands back that this row needs to render as a
@@ -120,6 +121,18 @@ export function EditPlanTableRow({
                 />
             </div>
 
+            <div className={cn('flex h-full shrink-0 flex-col items-end justify-center gap-0.5 px-3', FACT_WIDTH)}>
+                <span className="font-ui text-[13px] font-medium text-ink">{formatCurrency(row.fact.turnover)}</span>
+                <span className="font-ui text-[11px] text-ink-muted">
+                    {factPercent} {isDirty ? 'от нового плана' : 'от плана'}
+                </span>
+            </div>
+
+            <div className={cn('flex h-full shrink-0 flex-col items-end justify-center gap-0.5 px-3', FORECAST_WIDTH)}>
+                <span className="font-ui text-[13px] font-medium text-ink">{formatCurrency(row.prognose.turnover)}</span>
+                <span className="font-ui text-[11px] text-ink-muted">маржа {formatCurrency(row.prognose.margin)}</span>
+            </div>
+
             {showOrderTypes && (
                 <div className={cn('flex h-full shrink-0 items-center px-2', ORDER_TYPES_WIDTH)}>
                     <OrderTypeSelect
@@ -133,14 +146,7 @@ export function EditPlanTableRow({
                 </div>
             )}
 
-            <div className={cn('flex h-full shrink-0 flex-col items-end justify-center gap-0.5 px-3', FACT_WIDTH)}>
-                <span className="font-ui text-[13px] font-medium text-ink">{formatCurrency(row.fact.turnover)}</span>
-                <span className="font-ui text-[11px] text-ink-muted">
-                    {factPercent} {isDirty ? 'от нового плана' : 'от плана'}
-                </span>
-            </div>
-
-            <div className={cn('flex h-full shrink-0 items-center px-3', STATUS_WIDTH)}>
+            <div className={cn('flex h-full shrink-0 items-center justify-end px-3', STATUS_WIDTH)}>
                 {isDirty ? (
                     <span className="inline-flex w-fit shrink-0 items-center rounded-md bg-warn-soft px-2 py-[3px] font-ui text-[11px] font-semibold whitespace-nowrap text-warn-ink">
                         Изменён
@@ -153,6 +159,31 @@ export function EditPlanTableRow({
     )
 }
 
+/** Digits-only count of `text` up to (excluding) `caretIndex` — used to keep the caret glued to
+ * the same digit while `\D`-stripping/re-grouping reflows the thousands separators around it. */
+function digitsBeforeCaret(text: string, caretIndex: number): number {
+    return text.slice(0, caretIndex).replace(/\D/g, '').length
+}
+
+/** Inverse of `digitsBeforeCaret` against the newly-formatted string: the character index right
+ * after the `count`-th digit (so the caret lands between the same two digits it started between,
+ * not before/after a thousands-separator space that just appeared or disappeared next to it). */
+function caretIndexAfterDigits(formatted: string, count: number): number {
+    let seen = 0
+    let index = 0
+    while (index < formatted.length && seen < count) {
+        if (/\d/.test(formatted[index])) seen++
+        index++
+    }
+    return index
+}
+
+/** `value`/`onChange` carry the raw digit string (e.g. `'150000'`, same contract `useEditPlanForm`
+ * already had via `Number(value)`/`parseOrFallback`) — this component only adds thousands-grouped
+ * display (`formatNumber`, same as every read-only amount on this page) on top, stripping
+ * anything non-digit the user types/pastes and re-placing the caret so grouping spaces appearing/
+ * disappearing around it don't make it jump, since a plain controlled `value={formatNumber(...)}`
+ * would otherwise always snap the caret to the end after each keystroke. */
 function EditPlanCellInput({
     value,
     isDirty,
@@ -164,16 +195,35 @@ function EditPlanCellInput({
     onChange: (value: string) => void
     'aria-label': string
 }) {
+    const inputRef = useRef<HTMLInputElement>(null)
+    const pendingCaret = useRef<number | null>(null)
+    const displayValue = value === '' ? '' : formatNumber(Number(value))
+
+    useLayoutEffect(() => {
+        if (pendingCaret.current === null) return
+        inputRef.current?.setSelectionRange(pendingCaret.current, pendingCaret.current)
+        pendingCaret.current = null
+    }, [displayValue])
+
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const raw = e.target.value
+        const caret = e.target.selectionStart ?? raw.length
+        const digitsOnly = raw.replace(/\D/g, '')
+        const nextDisplay = digitsOnly === '' ? '' : formatNumber(Number(digitsOnly))
+        pendingCaret.current = caretIndexAfterDigits(nextDisplay, digitsBeforeCaret(raw, caret))
+        onChange(digitsOnly)
+    }
+
     return (
         <input
-            type="number"
-            inputMode="decimal"
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
             aria-label={ariaLabel}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
+            value={displayValue}
+            onChange={handleChange}
             className={cn(
                 'h-8 w-full min-w-0 rounded-[6px] border px-2.5 text-right font-ui text-[13px] font-medium text-ink outline-none tabular-nums focus-visible:ring-2 focus-visible:ring-brand/40',
-                '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                 isDirty ? 'border-brand-border bg-brand-soft' : 'border-hairline bg-surface',
             )}
         />

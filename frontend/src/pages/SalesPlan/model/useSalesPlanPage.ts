@@ -6,13 +6,13 @@ import { toast } from 'sonner'
 import type { SalesDirection } from 'ireports-contracts'
 
 import {
-    DEFAULT_DIRECTION,
     DEFAULT_PERIOD,
     formatPeriodLabel,
     formatPeriodMonthName,
     useApproveSalesPlanRows,
     useSalesPlan,
     useSalesPlanSelection,
+    type SalesPlanTotals,
 } from '@/features/SalesPlan'
 import {
     ACCOUNTING_PERIOD_QUERY_KEY_PREFIX,
@@ -21,6 +21,23 @@ import {
     type UnapprovedRowDetails,
 } from '@/features/AccountingPeriod'
 import { useDepartments, useEmployees } from '@/features/TargetDirectory'
+
+/** `PageHeader`'s Direction Tabs add a third, page-local "Все" option on top of the real
+ * `SalesDirection` the backend/contracts know about (`service`/`shop`) — it never reaches an
+ * API call itself, it just means "fetch and show both at once", so it stays a UI-only type here
+ * rather than widening the shared `SalesDirection` contract. */
+export type SalesPlanDirectionFilter = SalesDirection | 'all'
+
+function sumTotals(a: SalesPlanTotals, b: SalesPlanTotals): SalesPlanTotals {
+    return {
+        categoriesCount: a.categoriesCount + b.categoriesCount,
+        planTurnover: a.planTurnover + b.planTurnover,
+        factTurnover: a.factTurnover + b.factTurnover,
+        prognoseTurnover: a.prognoseTurnover + b.prognoseTurnover,
+        planMargin: a.planMargin + b.planMargin,
+        factMargin: a.factMargin + b.factMargin,
+    }
+}
 
 /**
  * Owns all of `SalesPlanPage`'s state: `direction`/`period` selection, the `useSalesPlan` data
@@ -35,18 +52,52 @@ import { useDepartments, useEmployees } from '@/features/TargetDirectory'
  * Tabs and `PeriodPicker` can drive them — `useSalesPlan` switches its data source internally
  * based on the `direction`/`period` it's given, so the page stays direction/period-agnostic.
  *
+ * "Все" (`isAllDirections`) fetches both directions at once — `useSalesPlan` is called once per
+ * real direction, each with `enabled` switched off unless that direction is actually needed
+ * (either it's the selected tab, or the tab is "Все") — and shows them as two read-only sections
+ * (`SalesPlanDirectionSection`, via `serviceRows`/`shopRows`) with summed KPI totals
+ * (`sumTotals`). Every single-direction feature (selection, edit modal, approve, close/reopen
+ * month) keeps working off `active` — `direction`, or `service` as an inert fallback while "Все"
+ * is selected — since `PageHeader` hides all of those actions for "Все" anyway (mutating a
+ * single plan doesn't make sense while looking at both at once), so a `SalesDirection`-typed
+ * fallback here is never actually exercised by the user.
+ *
  * `editRows` follows the selection-or-all rule the edit modal needs: `selection.selectedCount >
  * 0` -> only the selected rows, otherwise every row currently on screen for this
  * `direction`/`period` — computed here (not inside the modal) since it's the one place that
  * already holds both `rows` and `selection`.
  */
+// "Все" — первая вкладка (см. `PageHeader`'s `DIRECTIONS`) и то, что видит пользователь при
+// заходе на страницу, а не `DEFAULT_DIRECTION` ('service') — тот остаётся дефолтом для мест,
+// которым нужен именно конкретный `SalesDirection` (например `SalesPlanCardV2`).
+const DEFAULT_DIRECTION_FILTER: SalesPlanDirectionFilter = 'all'
+
 export function useSalesPlanPage() {
-    const [direction, setDirection] = useState<SalesDirection>(DEFAULT_DIRECTION)
+    const [direction, setDirection] = useState<SalesPlanDirectionFilter>(DEFAULT_DIRECTION_FILTER)
     const [period, setPeriod] = useState<string>(DEFAULT_PERIOD)
-    const { rows, totals, isInitialLoad, isRefreshing, error, dataVersion } = useSalesPlan(direction, period)
-    const selection = useSalesPlanSelection(direction, period, rows)
+    const isAllDirections = direction === 'all'
+    const active: SalesDirection = direction === 'shop' ? 'shop' : 'service'
+
+    const service = useSalesPlan('service', period, { enabled: isAllDirections || direction === 'service' })
+    const shop = useSalesPlan('shop', period, { enabled: isAllDirections || direction === 'shop' })
+    const singleDirectionData = active === 'shop' ? shop : service
+
+    const rows = singleDirectionData.rows
+    const totals = isAllDirections ? sumTotals(service.totals, shop.totals) : singleDirectionData.totals
+    const isInitialLoad = isAllDirections
+        ? service.isInitialLoad || shop.isInitialLoad
+        : singleDirectionData.isInitialLoad
+    const isRefreshing = isAllDirections
+        ? !isInitialLoad && (service.isRefreshing || shop.isRefreshing)
+        : singleDirectionData.isRefreshing
+    const error = isAllDirections ? (service.error ?? shop.error) : singleDirectionData.error
+    const dataVersion = isAllDirections
+        ? Math.max(service.dataVersion, shop.dataVersion)
+        : singleDirectionData.dataVersion
+
+    const selection = useSalesPlanSelection(active, period, rows)
     const periodLabel = formatPeriodLabel(period)
-    const hasData = rows.length > 0
+    const hasData = isAllDirections ? service.rows.length > 0 || shop.rows.length > 0 : rows.length > 0
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const editRows = selection.selectedCount > 0 ? rows.filter((row) => selection.isSelected(row.plan.id)) : rows
 
@@ -57,7 +108,7 @@ export function useSalesPlanPage() {
     // для перечня документов не в «Черновике» в диалоге переоткрытия. Композиция трёх
     // фич происходит здесь, на уровне страницы: сами фичи друг о друге не знают
     // (кросс-импорты features запрещены линтингом).
-    const { periodStatus, isClosed } = useAccountingPeriod(direction, period)
+    const { periodStatus, isClosed } = useAccountingPeriod(active, period)
     const employees = useEmployees()
     const departments = useDepartments()
     const queryClient = useQueryClient()
@@ -99,7 +150,7 @@ export function useSalesPlanPage() {
     // же адрес списка документов начисления месяца (страница появится в Фазе 5 плана).
     const accrualsLabel = `Начисления за ${formatPeriodMonthName(period)}`
     function goToAccruals() {
-        navigate(`/salary-accruals?period=${period}&direction=${direction}`)
+        navigate(`/salary-accruals?period=${period}&direction=${active}`)
     }
 
     // "Утвердить выбранное" (Selection Bar) — approveRows is keyed on `direction` just like
@@ -109,7 +160,7 @@ export function useSalesPlanPage() {
     // handler at all: if every currently-selected row is already APPROVED there's nothing to
     // approve, so `onApprove` is left `undefined` and SelectionBar/SelectionBarMobile render it
     // disabled with an explanatory title instead.
-    const approveRows = useApproveSalesPlanRows(direction)
+    const approveRows = useApproveSalesPlanRows(active)
     const selectedRows = rows.filter((row) => selection.isSelected(row.plan.id))
     const hasApprovable = selectedRows.some((row) => row.plan.status !== 'APPROVED')
 
@@ -151,9 +202,15 @@ export function useSalesPlanPage() {
     return {
         direction,
         setDirection,
+        isAllDirections,
+        /** Resolved concrete direction — `direction` itself while a single tab is selected, or
+         * `service` as an inert fallback while "Все" is selected (see this hook's doc comment). */
+        activeDirection: active,
         period,
         setPeriod,
         rows,
+        serviceRows: service.rows,
+        shopRows: shop.rows,
         totals,
         isInitialLoad,
         isRefreshing,

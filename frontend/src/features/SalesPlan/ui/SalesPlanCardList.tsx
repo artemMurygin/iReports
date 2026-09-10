@@ -14,9 +14,11 @@ export type SalesPlanCardListProps = {
     rows: SalesPlanRow[]
     direction: SalesDirection
     className?: string
-    /** `row.plan.id` -> selected. From `useSalesPlanSelection`. */
-    selectedIds: Set<string>
-    onToggleRow: (id: string) => void
+    /** `row.plan.id` -> selected. From `useSalesPlanSelection`. Omit both this and `onToggleRow`
+     * to render read-only cards with no selection checkbox — see `SalesPlanTable`'s matching prop
+     * for why (the "Все" combined view). */
+    selectedIds?: Set<string>
+    onToggleRow?: (id: string) => void
 }
 
 /**
@@ -47,8 +49,8 @@ function SalesPlanCardList({ rows, direction, className, selectedIds, onToggleRo
                         percentCompletion={row.fact.percentCompletion}
                         marginRangeLabel={`${formatNumber(row.fact.margin)} из ${formatNumber(row.plan.margin)}`}
                         marginPercent={row.marginPercent}
-                        selected={selectedIds.has(row.plan.id)}
-                        onSelectedChange={() => onToggleRow(row.plan.id)}
+                        selected={selectedIds?.has(row.plan.id) ?? false}
+                        onSelectedChange={onToggleRow ? () => onToggleRow(row.plan.id) : undefined}
                     />
                 ))}
             </div>

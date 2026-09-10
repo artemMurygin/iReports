@@ -26,6 +26,7 @@ const CATEGORY_WIDTH = 'min-w-[160px] flex-1'
 const INPUT_WIDTH = 'w-[150px]'
 const ORDER_TYPES_WIDTH = 'w-[170px]'
 const FACT_WIDTH = 'w-[160px]'
+const FORECAST_WIDTH = 'w-[160px]'
 const STATUS_WIDTH = 'w-[116px]'
 
 type Props = {
@@ -68,6 +69,7 @@ export function EditPlanTable({
     onReorder,
 }: Props) {
     const factPercent = summary.draftTurnover !== 0 ? formatPercent(summary.factTurnover, summary.draftTurnover) : '0%'
+    const forecastTurnoverTotal = rowViews.reduce((sum, view) => sum + view.row.prognose.turnover, 0)
 
     // `activationConstraint.distance` — a small drag threshold before a pointer-down on the
     // handle counts as a drag, so a plain click/tap on the handle doesn't jitter-trigger a
@@ -118,15 +120,23 @@ export function EditPlanTable({
     return (
         <div data-slot="edit-plan-table" className="overflow-hidden rounded-[10px] border border-hairline bg-surface">
             <div className="overflow-x-auto">
-                <div className={showOrderTypes ? 'min-w-[890px]' : 'min-w-[720px]'}>
+                {/* Сумма фактических минимальных ширин колонок (ручка 32 + категория min 160 +
+                    2 инпута по 150 + факт 160 + прогноз 160 + [типы заказов 170] + статус 116) —
+                    а не произвольное число: если занизить это значение, flex-строка (её колонки
+                    все `shrink-0`, кроме категории) всё равно требует полную ширину и вылезает
+                    за рамки этого `div`, из-за чего последняя колонка перестаёт совпадать с
+                    границей/фоном строки (подтверждено замером `scrollWidth` в браузере — контент
+                    требовал 1098px при заявленных 1050px). */}
+                <div className={showOrderTypes ? 'min-w-[1098px]' : 'min-w-[928px]'}>
                     <div className="flex items-center border-b border-hairline bg-canvas">
                         {canReorder && <span className={cn('shrink-0', HANDLE_WIDTH)} />}
                         <ColumnHeader label="Категория" className={CATEGORY_WIDTH} />
                         <ColumnHeader label="План выручки, ₽" align="end" className={INPUT_WIDTH} />
                         <ColumnHeader label="План маржи, ₽" align="end" className={INPUT_WIDTH} />
-                        {showOrderTypes && <ColumnHeader label="Типы заказов" className={ORDER_TYPES_WIDTH} />}
                         <ColumnHeader label="Факт · выполнение" align="end" className={FACT_WIDTH} />
-                        <ColumnHeader label="Статус" className={STATUS_WIDTH} />
+                        <ColumnHeader label="Прогноз, ₽" align="end" className={FORECAST_WIDTH} />
+                        {showOrderTypes && <ColumnHeader label="Типы заказов" align="end" className={ORDER_TYPES_WIDTH} />}
+                        <ColumnHeader label="Статус" align="end" className={STATUS_WIDTH} />
                     </div>
 
                     {rows}
@@ -152,7 +162,6 @@ export function EditPlanTable({
                         >
                             {formatCurrency(summary.draftMargin)}
                         </span>
-                        {showOrderTypes && <span className={cn('shrink-0', ORDER_TYPES_WIDTH)} />}
                         <span
                             className={cn(
                                 'shrink-0 truncate px-3 text-right font-ui text-xs font-semibold text-ink',
@@ -161,6 +170,15 @@ export function EditPlanTable({
                         >
                             {formatCurrency(summary.factTurnover)} · {factPercent}
                         </span>
+                        <span
+                            className={cn(
+                                'shrink-0 truncate px-3 text-right font-ui text-xs font-semibold text-ink',
+                                FORECAST_WIDTH,
+                            )}
+                        >
+                            {formatCurrency(forecastTurnoverTotal)}
+                        </span>
+                        {showOrderTypes && <span className={cn('shrink-0', ORDER_TYPES_WIDTH)} />}
                         <span className={cn('shrink-0', STATUS_WIDTH)} />
                     </div>
                 </div>

@@ -74,11 +74,18 @@ function EditPlanModal({ open, onOpenChange, direction, period, rows }: EditPlan
         rows,
     })
 
+    // `EditPlanTable`'s row needs 1098px with the "Типы заказов" column (`service`) or 928px
+    // without it (`shop`) — see that file's own `min-w-[1098px]`/`min-w-[928px]` comment. The
+    // modal here adds its own `px-5` body padding (40px) + `EditPlanTable`'s 1px border each side,
+    // so its `max-w` is that row width + 42px, rounded up for a little breathing room — wide
+    // enough that the table never needs its own horizontal scrollbar inside the modal.
+    const modalWidthClassName = showOrderTypes ? 'sm:max-w-[1160px]' : 'sm:max-w-[980px]'
+
     return (
         <Modal
             open={open}
             onOpenChange={onOpenChange}
-            className="sm:max-w-[960px]"
+            className={modalWidthClassName}
             title="Редактирование плана продаж"
             subtitle={`Направление «${DIRECTION_LABEL[direction]}» · ${formatPeriodLabel(period)} · период открыт`}
             footer={

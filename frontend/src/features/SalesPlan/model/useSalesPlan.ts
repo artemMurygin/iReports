@@ -85,7 +85,17 @@ export function useShopCategoryNames() {
     return useMemo(() => flattenCatalog(shopCatalog ?? []), [shopCatalog])
 }
 
-export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, period: string = DEFAULT_PERIOD) {
+export function useSalesPlan(
+    direction: SalesDirection = DEFAULT_DIRECTION,
+    period: string = DEFAULT_PERIOD,
+    options: { enabled?: boolean } = {},
+) {
+    // `enabled` (default `true`) lets a caller that needs more than one direction at once — the
+    // "Все" combined view, `pages/SalesPlan/model/useSalesPlanPage.ts` — call this hook once per
+    // direction and switch each call's fetch on/off independently, instead of `useSalesPlan`
+    // always fetching whichever single `direction` it was given (which is all any other caller
+    // has ever needed).
+    const { enabled = true } = options
     const isShop = direction === 'shop'
 
     // placeholderData: keepPreviousData (см. frontend/CLAUDE.md, "isInitialLoad / isRefreshing
@@ -98,32 +108,32 @@ export function useSalesPlan(direction: SalesDirection = DEFAULT_DIRECTION, peri
         dataUpdatedAt: servicePerformanceUpdatedAt,
         isFetching: isServicePerformanceFetching,
         error: servicePerformanceError,
-    } = useQuery({ ...api.getSalesPerformance(period), enabled: !isShop, placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getSalesPerformance(period), enabled: !isShop && enabled, placeholderData: keepPreviousData })
 
     const {
         data: serviceCategories,
         isFetching: isServiceCategoriesFetching,
         error: serviceCategoriesError,
-    } = useQuery({ ...api.getServiceCategories(), enabled: !isShop, placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getServiceCategories(), enabled: !isShop && enabled, placeholderData: keepPreviousData })
 
     const {
         data: orderTypes,
         isFetching: isOrderTypesFetching,
         error: orderTypesError,
-    } = useQuery({ ...api.getOrderTypes(), enabled: !isShop, placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getOrderTypes(), enabled: !isShop && enabled, placeholderData: keepPreviousData })
 
     const {
         data: shopPerformance,
         dataUpdatedAt: shopPerformanceUpdatedAt,
         isFetching: isShopPerformanceFetching,
         error: shopPerformanceError,
-    } = useQuery({ ...api.getShopSalesPerformance(period), enabled: isShop, placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getShopSalesPerformance(period), enabled: isShop && enabled, placeholderData: keepPreviousData })
 
     const {
         data: shopCatalog,
         isFetching: isShopCatalogFetching,
         error: shopCatalogError,
-    } = useQuery({ ...api.getShopCatalog(), enabled: isShop, placeholderData: keepPreviousData })
+    } = useQuery({ ...api.getShopCatalog(), enabled: isShop && enabled, placeholderData: keepPreviousData })
 
     const performance = isShop ? shopPerformance : servicePerformance
     const isPerformanceFetching = isShop ? isShopPerformanceFetching : isServicePerformanceFetching

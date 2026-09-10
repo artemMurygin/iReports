@@ -1,18 +1,19 @@
 import { FileText, Lock, Pencil, RotateCcw } from 'lucide-react'
-import type { SalesDirection } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw'
 import { Button } from '@/shared/ui-kit/atoms/Button'
 import { PeriodPicker } from '@/features/SalesPlan'
+import type { SalesPlanDirectionFilter } from '@/pages/SalesPlan/model/useSalesPlanPage.ts'
 
-const DIRECTIONS: { value: SalesDirection; label: string }[] = [
+const DIRECTIONS: { value: SalesPlanDirectionFilter; label: string }[] = [
+    { value: 'all', label: 'Все' },
     { value: 'service', label: 'Сервис' },
     { value: 'shop', label: 'Магазин' },
 ]
 
 export type PageHeaderProps = {
-    direction: SalesDirection
-    onDirectionChange: (direction: SalesDirection) => void
+    direction: SalesPlanDirectionFilter
+    onDirectionChange: (direction: SalesPlanDirectionFilter) => void
     period: string
     onPeriodChange: (period: string) => void
     onEditPlan: () => void
@@ -67,9 +68,11 @@ function PageHeader({
     onOpenAccruals,
     className,
 }: PageHeaderProps) {
-    const subtitle = isPeriodClosed
-        ? 'Месяц закрыт: отчет по зарплате сформирован, график работы закрыт для редактирования'
-        : ''
+    const isAllDirections = direction === 'all'
+    const subtitle =
+        !isAllDirections && isPeriodClosed
+            ? 'Месяц закрыт: отчет по зарплате сформирован, график работы закрыт для редактирования'
+            : ''
 
     return (
         <div data-slot="sales-plan-page-header" className={cn('flex flex-col gap-4', className)}>
@@ -79,19 +82,23 @@ function PageHeader({
                     <p className="font-ui text-sm text-ink-muted">{subtitle}</p>
                 </div>
 
-                {isPeriodClosed ? (
-                    <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-info-soft px-3 py-[7px]">
-                        <span className="size-[7px] rounded-full bg-info-ink" />
-                        <span className="font-ui text-[13px] font-medium text-info-ink">
-                            Период закрыт{closedLabel !== null ? ` · ${closedLabel}` : ''}
-                        </span>
-                    </div>
-                ) : (
-                    <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-soft px-3 py-[7px]">
-                        <span className="size-[7px] rounded-full bg-brand-strong" />
-                        <span className="font-ui text-[13px] font-medium text-ok-ink">Период открыт</span>
-                    </div>
-                )}
+                {/* Период открыт/закрыт — статус одного конкретного направления (закрывается
+                    независимо для Сервиса и Магазина), поэтому пилюля скрыта при "Все": ни один
+                    из двух статусов не был бы однозначно верным для обоих сразу. */}
+                {!isAllDirections &&
+                    (isPeriodClosed ? (
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-info-soft px-3 py-[7px]">
+                            <span className="size-[7px] rounded-full bg-info-ink" />
+                            <span className="font-ui text-[13px] font-medium text-info-ink">
+                                Период закрыт{closedLabel !== null ? ` · ${closedLabel}` : ''}
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-soft px-3 py-[7px]">
+                            <span className="size-[7px] rounded-full bg-brand-strong" />
+                            <span className="font-ui text-[13px] font-medium text-ok-ink">Период открыт</span>
+                        </div>
+                    ))}
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -116,41 +123,47 @@ function PageHeader({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                    <PeriodPicker period={period} onPeriodChange={onPeriodChange} isClosed={isPeriodClosed} />
+                    <PeriodPicker period={period} onPeriodChange={onPeriodChange} isClosed={!isAllDirections && isPeriodClosed} />
 
-                    {isPeriodClosed ? (
-                        <>
-                            <Button type="button" onClick={onOpenAccruals}>
-                                <FileText />
-                                {accrualsLabel}
-                            </Button>
-                            <Button type="button" variant="secondary" onClick={onReopenMonth}>
-                                <RotateCcw />
-                                Переоткрыть месяц
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                            <Button type="button" variant="secondary" onClick={onEditPlan} disabled={editDisabled}>
-                                <Pencil />
-                                Изменить план
-                            </Button>
-                            <span className="group relative inline-flex">
-                                <Button type="button" onClick={onCloseMonth} disabled={!isPeriodExpired}>
-                                    <Lock />
-                                    Закрыть месяц
+                    {/* "Изменить план" / "Утвердить" / "Закрыть месяц" (и их закрытый-период
+                        аналоги) все мутируют ОДНО направление — при "Все" ни одно из двух не
+                        выбрано однозначно, поэтому весь блок действий скрыт (см. PRD-обсуждение:
+                        скрыть/задизейблить действия для "Все"), а не привязан к одному из них
+                        произвольно. */}
+                    {!isAllDirections &&
+                        (isPeriodClosed ? (
+                            <>
+                                <Button type="button" onClick={onOpenAccruals}>
+                                    <FileText />
+                                    {accrualsLabel}
                                 </Button>
-                                {!isPeriodExpired && (
-                                    <span
-                                        role="tooltip"
-                                        className="pointer-events-none absolute top-full right-0 z-10 mt-2 hidden rounded-lg bg-ink px-2.5 py-1.5 font-ui text-xs font-semibold whitespace-nowrap text-surface group-hover:block"
-                                    >
-                                        Месяц ещё не закончился
-                                    </span>
-                                )}
-                            </span>
-                        </>
-                    )}
+                                <Button type="button" variant="secondary" onClick={onReopenMonth}>
+                                    <RotateCcw />
+                                    Переоткрыть месяц
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button type="button" variant="secondary" onClick={onEditPlan} disabled={editDisabled}>
+                                    <Pencil />
+                                    Изменить план
+                                </Button>
+                                <span className="group relative inline-flex">
+                                    <Button type="button" onClick={onCloseMonth} disabled={!isPeriodExpired}>
+                                        <Lock />
+                                        Закрыть месяц
+                                    </Button>
+                                    {!isPeriodExpired && (
+                                        <span
+                                            role="tooltip"
+                                            className="pointer-events-none absolute top-full right-0 z-10 mt-2 hidden rounded-lg bg-ink px-2.5 py-1.5 font-ui text-xs font-semibold whitespace-nowrap text-surface group-hover:block"
+                                        >
+                                            Месяц ещё не закончился
+                                        </span>
+                                    )}
+                                </span>
+                            </>
+                        ))}
                 </div>
             </div>
         </div>
