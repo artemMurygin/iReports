@@ -55,6 +55,10 @@ A separate npm package (`ireports-contracts`) reused by both the backend and the
 - **Recharts** — charts and analytics dashboards.
 - The architecture follows **Feature-Sliced Design** principles: layers `app` (bootstrapping and configuration) → `pages` (screens) → `features` (business functionality) → `kernel` (shared types/interfaces) → `shared` (pure infrastructure with no business logic), with rules restricting the direction of imports between layers.
 
+### Межмодульные зависимости внутри backend
+
+Если модулю нужны данные другого модуля — даже соседнего внутри того же домена (например, `accounting` нуждается в данных, которые строит `warehouse`) — прямой импорт чужого сервиса/репозитория запрещён. Вместо этого модуль-потребитель заводит собственную entity (и, если нужно, собственный repository-порт), которая восстанавливается напрямую из базы данных — из тех же физических таблиц, но через свой собственный доступ, а не через вызов application-сервиса другого модуля. Это тот же принцип изоляции, что уже применяется между `service` и `shop` при общих таблицах (см. `backend/CLAUDE.md`, «Общие таблицы между `service` и `shop`»), только распространённый на любую пару модулей, а не только на домены.
+
 ### Infrastructure
 
 - Deployment via **Docker Compose**: `postgres` (pgvector), `backend`, `frontend` (Nginx).
