@@ -120,6 +120,8 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         // интерфейсу порта.
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
+        findByTaskId: () => Promise.resolve(null),
+        findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeShopAccountingPeriodRepo: ShopAccountingPeriodRepositoryPort = {
         findByPeriod: () => Promise.resolve(null),

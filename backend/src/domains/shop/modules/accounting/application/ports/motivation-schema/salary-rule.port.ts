@@ -45,6 +45,21 @@ export interface ShopSalaryRuleRepositoryPort {
     // EnsureShopSalaryTaskForPeriodService.ensure()), этот метод не
     // обходит мотивационные схемы и не резолвит ответственного.
     findById(ruleId: string): Promise<ShopSalaryRule | null>;
+
+    // Раздел 15 tasks.md (add-task-salary-rule-links-comments) — зеркало
+    // domains/service/modules/accounting'ного findByTaskId (issue #57,
+    // независимая копия): правило вида TaskCompletion, чей
+    // config.taskIdByPeriod ТЕКУЩЕГО расчётного периода равен taskId (см.
+    // design.md решение 4 — полное сканирование правил домена без отдельной
+    // индексной таблицы). null — ни одно правило домена shop не ссылается
+    // на эту задачу в текущем периоде. spec:
+    // shop/accounting#requirement-зарплатное-правило-и-начисление-доступны-для-поиска-по-идентификатору-задачи
+    findByTaskId(taskId: string): Promise<ShopSalaryRule | null>;
+
+    // Раздел 18 tasks.md — motivationSchemaId правила (см. WHY у
+    // findMotivationSchemaId направления service) — нужен
+    // GetShopSalaryRuleService для резолвинга названия мотивационной схемы.
+    findMotivationSchemaId(ruleId: string): Promise<string | null>;
 }
 
 export const SHOP_SALARY_RULE_REPOSITORY = Symbol(

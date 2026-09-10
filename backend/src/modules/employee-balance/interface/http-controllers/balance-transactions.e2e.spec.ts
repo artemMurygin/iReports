@@ -106,6 +106,8 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         deleteByIds: () => Promise.resolve(),
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
+        findByTaskId: () => Promise.resolve(null),
+        findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: (direction, period) =>

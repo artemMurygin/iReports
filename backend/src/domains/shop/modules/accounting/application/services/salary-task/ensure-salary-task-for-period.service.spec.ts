@@ -62,6 +62,8 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
             deleteByIds: jest.fn(),
             findById,
             update,
+            findByTaskId: jest.fn(),
+            findMotivationSchemaId: jest.fn(),
         };
 
         const execute = jest

@@ -101,6 +101,12 @@ import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/a
 import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySklad/moysklad-cash-document.adapter';
 import { TasksModule } from '@/modules/tasks/tasks.module';
 import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/accounting/application/services/salary-task/ensure-salary-task-for-period.service';
+import { FindSalaryRuleForTaskService } from '@/domains/shop/modules/accounting/application/services/salary-task/find-salary-rule-for-task.service';
+import { FindSalaryAccrualForTaskService } from '@/domains/shop/modules/accounting/application/services/salary-task/find-salary-accrual-for-task.service';
+import { GetSalaryRuleService } from '@/domains/shop/modules/accounting/application/services/salary-task/get-salary-rule.service';
+import { GetShopSalaryRuleHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule.http.controller';
+import { GetShopSalaryRuleByTaskHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule-by-task.http.controller';
+import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-accrual/get-salary-accrual-line-by-task.http.controller';
 
 // Модуль accounting магазина (Фазы 12/13, issue #57/#64, персистентность и
 // оркестратор — Фаза 13.5, см.
@@ -272,6 +278,13 @@ import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/acc
         CreateShopPayoutHttpController,
         CreateShopPayoutBatchHttpController,
         DeleteShopPayoutHttpController,
+        // Раздел 19 tasks.md (add-task-salary-rule-links-comments) — зеркало
+        // service.accounting выше: правило по id (боковая панель) и
+        // обратный поиск правила/начисления по taskId, читаются фронтендом
+        // напрямую (design.md решение 2).
+        GetShopSalaryRuleHttpController,
+        GetShopSalaryRuleByTaskHttpController,
+        GetShopSalaryAccrualLineByTaskHttpController,
     ],
     providers: [
         ListShopSalaryRuleTypesService,
@@ -435,6 +448,13 @@ import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/acc
         // ("@ProdCron не тикает в dev" — отдельного крона автосоздания
         // больше нет, design.md Migration Plan).
         EnsureShopSalaryTaskForPeriodService,
+        // Раздел 19 tasks.md (add-task-salary-rule-links-comments) — поверх
+        // уже провайдированных SHOP_SALARY_RULE_REPOSITORY/
+        // SHOP_SALARY_ACCRUAL_REPOSITORY/SHOP_MOTIVATION_SCHEMA_REPOSITORY
+        // выше, новых репозиториев не требуют.
+        FindSalaryRuleForTaskService,
+        FindSalaryAccrualForTaskService,
+        GetSalaryRuleService,
     ],
     exports: [
         SHOP_MOTIVATION_SCHEMA_REPOSITORY,

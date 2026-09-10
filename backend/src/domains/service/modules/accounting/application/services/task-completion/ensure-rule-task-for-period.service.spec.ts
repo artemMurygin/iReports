@@ -54,6 +54,8 @@ describe('EnsureRuleTaskForPeriodService', () => {
             deleteByIds: jest.fn(),
             findById: jest.fn(),
             update,
+            findByTaskId: jest.fn(),
+            findMotivationSchemaId: jest.fn(),
         };
         const execute = jest.fn().mockResolvedValue({ id: 'new-task-id' });
         const commandBus = { execute } as unknown as CommandBus;

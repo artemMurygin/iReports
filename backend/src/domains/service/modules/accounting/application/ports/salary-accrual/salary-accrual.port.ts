@@ -1,5 +1,6 @@
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import type { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual-line.entity';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 
 // Документы начисления зарплаты (PRD 1 docs/payroll-closing-and-accrual) —
@@ -99,6 +100,20 @@ export interface SalaryAccrualRepositoryPort {
         direction: AccountingDirection,
         employeeId: number,
     ): Promise<SalaryAccrual[]>;
+
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — обратный
+    // поиск строки начисления по taskId (для блока на карточке задачи,
+    // tasks/salary-rule-panel): строка типа TaskCompletion, чей `sources`
+    // содержит `{type: 'taskCompletion', id: taskId}`. direction — явный
+    // параметр, как и у остальных методов этого порта (см. WHY над портом).
+    // null — строка ещё не отображается (задача не закрыта успешно) либо ни
+    // одна строка ни одного документа этого направления не ссылается на
+    // задачу. spec:
+    // service/accounting#requirement-зарплатное-правило-и-начисление-доступны-для-поиска-по-идентификатору-задачи
+    findLineByTaskId(
+        direction: AccountingDirection,
+        taskId: string,
+    ): Promise<SalaryAccrualLine | null>;
 }
 
 export const SALARY_ACCRUAL_REPOSITORY = Symbol('SALARY_ACCRUAL_REPOSITORY');

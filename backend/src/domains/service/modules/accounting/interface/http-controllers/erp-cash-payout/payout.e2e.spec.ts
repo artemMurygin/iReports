@@ -111,6 +111,8 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         deleteByIds: () => Promise.resolve(),
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
+        findByTaskId: () => Promise.resolve(null),
+        findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: (direction, period) =>

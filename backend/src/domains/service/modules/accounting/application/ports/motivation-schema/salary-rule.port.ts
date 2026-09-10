@@ -28,6 +28,23 @@ export interface SalaryRuleRepositoryPort {
     // Персист правила ПОСЛЕ создания (не insert — сущность уже существует
     // в БД), для точечных мутаций props правила in-place.
     update(entity: SalaryRule): Promise<void>;
+
+    // Раздел 15 tasks.md (add-task-salary-rule-links-comments) — обратный
+    // поиск: правило вида TaskCompletion, чей config.taskIdByPeriod ТЕКУЩЕГО
+    // расчётного периода равен taskId (см. design.md решение 4 — полное
+    // сканирование правил домена без отдельной индексной таблицы, правил
+    // этого вида на домен ожидаемо мало). null — ни одно правило домена
+    // service не ссылается на эту задачу в текущем периоде. spec:
+    // service/accounting#requirement-зарплатное-правило-и-начисление-доступны-для-поиска-по-идентификатору-задачи
+    findByTaskId(taskId: string): Promise<SalaryRule | null>;
+
+    // Раздел 18 tasks.md — motivationSchemaId правила, отдельно от самой
+    // сущности: SalaryRule (структурный доменный тип) его не хранит (не
+    // часть salary-rule.types.ts), нужен GetSalaryRuleService, чтобы
+    // отдельным вызовом MotivationSchemaRepositoryPort.findById резолвить
+    // название мотивационной схемы для боковой панели правила. null — то же
+    // условие, что и у findById (нет строки/чужое направление).
+    findMotivationSchemaId(ruleId: string): Promise<string | null>;
 }
 
 export const SALARY_RULE_REPOSITORY = Symbol('SALARY_RULE_REPOSITORY');

@@ -7,7 +7,11 @@ import request from 'supertest';
 import type { CreateTaskResponse, Task } from 'ireports-contracts';
 import { TasksModule } from '@/modules/tasks/tasks.module';
 import { TASK_REPOSITORY } from '@/modules/tasks/application/ports/task.repository.port';
+import { TASK_COMMENT_REPOSITORY } from '@/modules/tasks/application/ports/task-comment.repository.port';
+import { TASK_LINK_REPOSITORY } from '@/modules/tasks/application/ports/task-link.repository.port';
 import { InMemoryTaskRepository } from '@/modules/tasks/infrastructure/repositories/in-memory-task.repository';
+import { InMemoryTaskCommentRepository } from '@/modules/tasks/infrastructure/repositories/in-memory-task-comment.repository';
+import { InMemoryTaskLinkRepository } from '@/modules/tasks/infrastructure/repositories/in-memory-task-link.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 
 // specs/tasks/spec.md — сквозной сценарий HTTP-слоя src/modules/tasks:
@@ -31,6 +35,15 @@ describe('Tasks HTTP (e2e)', () => {
         })
             .overrideProvider(TASK_REPOSITORY)
             .useValue(taskRepo)
+            // add-task-salary-rule-links-comments, группы 13-14: TasksModule
+            // теперь провайдит и TASK_COMMENT_REPOSITORY/TASK_LINK_REPOSITORY
+            // (реальные Prisma-реализации) — подменяем их in-memory, как и
+            // TASK_REPOSITORY выше, этот файл их поведение не проверяет (см.
+            // task-comments-links.e2e.spec.ts).
+            .overrideProvider(TASK_COMMENT_REPOSITORY)
+            .useValue(new InMemoryTaskCommentRepository())
+            .overrideProvider(TASK_LINK_REPOSITORY)
+            .useValue(new InMemoryTaskLinkRepository())
             .compile();
 
         app = moduleRef.createNestApplication();

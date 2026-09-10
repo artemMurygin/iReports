@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { ShopSalaryRuleRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
-import { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
+import {
+    ShopSalaryRule,
+    TaskCompletionShopSalaryConfig,
+} from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
+import { Period } from '@/shared/domain/period.value-object';
 import { ShopSalaryRuleMapper } from '../../mappers/motivation-schema/salary-rule.mapper';
 
 // Зеркало domains/service/modules/accounting/infrastructure/repositories/
@@ -68,5 +72,33 @@ export class ShopSalaryRuleRepository
                 data: { name, targetRole, props },
             }),
         );
+    }
+
+    // Раздел 15 tasks.md (add-task-salary-rule-links-comments) — зеркало
+    // domains/service/.../salary-rule.repository.ts'ного findByTaskId (см.
+    // WHY на ShopSalaryRuleRepositoryPort.findByTaskId).
+    async findByTaskId(taskId: string): Promise<ShopSalaryRule | null> {
+        const records = await this.client.salaryRule.findMany({
+            where: { type: 'TaskCompletion', direction: 'shop' },
+        });
+        const currentPeriod = Period.current().getValue();
+        for (const record of records) {
+            const rule = this.mapper.toDomain(record);
+            const config = rule.config as TaskCompletionShopSalaryConfig;
+            if (config.taskIdByPeriod[currentPeriod] === taskId) {
+                return rule;
+            }
+        }
+        return null;
+    }
+
+    // Раздел 18 tasks.md — см. WHY на
+    // ShopSalaryRuleRepositoryPort.findMotivationSchemaId.
+    async findMotivationSchemaId(ruleId: string): Promise<string | null> {
+        const record = await this.client.salaryRule.findFirst({
+            where: { id: ruleId, direction: 'shop' },
+            select: { motivationSchemaId: true },
+        });
+        return record?.motivationSchemaId ?? null;
     }
 }

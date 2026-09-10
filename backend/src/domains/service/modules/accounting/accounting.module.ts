@@ -39,6 +39,9 @@ import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/a
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
 import { EnsureRuleTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
+import { FindSalaryRuleForTaskService } from '@/domains/service/modules/accounting/application/services/task-completion/find-salary-rule-for-task.service';
+import { FindSalaryAccrualForTaskService } from '@/domains/service/modules/accounting/application/services/task-completion/find-salary-accrual-for-task.service';
+import { GetSalaryRuleService } from '@/domains/service/modules/accounting/application/services/task-completion/get-salary-rule.service';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/create-motivation-schema.http.controller';
@@ -65,6 +68,9 @@ import { CreatePayoutBatchHttpController } from '@/domains/service/modules/accou
 import { DeletePayoutHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/erp-cash-payout/delete-payout.http.controller';
 import { GetClosePeriodPreviewHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/accounting-period/get-close-period-preview.http.controller';
 import { GetErpCashConfigHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/erp-cash/get-erp-cash-config.http.controller';
+import { GetSalaryRuleHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule.http.controller';
+import { GetSalaryRuleByTaskHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule-by-task.http.controller';
+import { GetSalaryAccrualLineByTaskHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-accrual/get-salary-accrual-line-by-task.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
@@ -224,6 +230,14 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         CreatePayoutHttpController,
         CreatePayoutBatchHttpController,
         DeletePayoutHttpController,
+        // Раздел 19 tasks.md (add-task-salary-rule-links-comments) — правило
+        // по собственному id (боковая панель) и обратный поиск правила/
+        // начисления по taskId (карточка задачи, tasks/salary-rule-panel),
+        // читаются фронтендом напрямую, не backend modules/tasks (design.md
+        // решение 2).
+        GetSalaryRuleHttpController,
+        GetSalaryRuleByTaskHttpController,
+        GetSalaryAccrualLineByTaskHttpController,
     ],
     providers: [
         CreateMotivationSchemaHandler,
@@ -374,6 +388,12 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
             provide: WORK_SCHEDULE_ENTRY_REPOSITORY,
             useClass: WorkScheduleEntryRepository,
         },
+        // Раздел 19 tasks.md (add-task-salary-rule-links-comments) — поверх
+        // уже провайдированных SALARY_RULE_REPOSITORY/SALARY_ACCRUAL_REPOSITORY/
+        // MOTIVATION_SCHEMA_REPOSITORY выше, новых репозиториев не требуют.
+        FindSalaryRuleForTaskService,
+        FindSalaryAccrualForTaskService,
+        GetSalaryRuleService,
     ],
     // ACCOUNTING_PERIOD_REPOSITORY — экспортирован для модуля
     // domains/service/modules/warehouse (service-turnover-report,

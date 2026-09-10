@@ -43,57 +43,63 @@ export interface ShopSalaryAccrualPersistence {
 // подставляется фиксированным 'shop' в toPersistence(), toDomain() его
 // намеренно не читает (см. тот же приём у ShopAccountingPeriodMapper):
 // строки этого направления и так фильтруются ShopSalaryAccrualRepository.
+export type ShopSalaryAccrualLineRecordWithAdjustments =
+    SalaryAccrualLineRecord & {
+        adjustments: SalaryAccrualLineAdjustmentRecord[];
+    };
+
 export class ShopSalaryAccrualMapper {
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — извлечено
+    // из toDomain(), см. WHY у зеркала
+    // domains/service/.../salary-accrual.mapper.ts'ного lineToDomain.
+    lineToDomain(
+        line: ShopSalaryAccrualLineRecordWithAdjustments,
+    ): ShopSalaryAccrualLine {
+        return new ShopSalaryAccrualLine({
+            id: line.id,
+            createdAt: line.createdAt,
+            updatedAt: line.updatedAt,
+            props: {
+                position: line.position,
+                ruleId: line.ruleId,
+                type: line.type,
+                name: line.name,
+                targetRole: line.targetRole,
+                salaryBasis: line.salaryBasis ?? undefined,
+                quantity: line.quantity ?? undefined,
+                rate: line.rate ?? undefined,
+                originalAmount: line.originalAmount,
+                amount: line.amount,
+                sources: line.sources as unknown as CalculationSourceRef[],
+                status: line.status,
+                comment: line.comment,
+                requiresManualInput: line.requiresManualInput,
+                adjustments: [...line.adjustments]
+                    .sort(
+                        (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+                    )
+                    .map(
+                        (adjustment) =>
+                            new ShopSalaryAccrualLineAdjustment({
+                                id: adjustment.id,
+                                createdAt: adjustment.createdAt,
+                                updatedAt: adjustment.createdAt,
+                                props: {
+                                    previousAmount: adjustment.previousAmount,
+                                    newAmount: adjustment.newAmount,
+                                    comment: adjustment.comment,
+                                    adjustedBy: adjustment.adjustedBy,
+                                },
+                            }),
+                    ),
+            },
+        });
+    }
+
     toDomain(record: ShopSalaryAccrualRecordWithLines): ShopSalaryAccrual {
         const lines = [...record.lines]
             .sort((a, b) => a.position - b.position)
-            .map(
-                (line) =>
-                    new ShopSalaryAccrualLine({
-                        id: line.id,
-                        createdAt: line.createdAt,
-                        updatedAt: line.updatedAt,
-                        props: {
-                            position: line.position,
-                            ruleId: line.ruleId,
-                            type: line.type,
-                            name: line.name,
-                            targetRole: line.targetRole,
-                            salaryBasis: line.salaryBasis ?? undefined,
-                            quantity: line.quantity ?? undefined,
-                            rate: line.rate ?? undefined,
-                            originalAmount: line.originalAmount,
-                            amount: line.amount,
-                            sources:
-                                line.sources as unknown as CalculationSourceRef[],
-                            status: line.status,
-                            comment: line.comment,
-                            requiresManualInput: line.requiresManualInput,
-                            adjustments: [...line.adjustments]
-                                .sort(
-                                    (a, b) =>
-                                        a.createdAt.getTime() -
-                                        b.createdAt.getTime(),
-                                )
-                                .map(
-                                    (adjustment) =>
-                                        new ShopSalaryAccrualLineAdjustment({
-                                            id: adjustment.id,
-                                            createdAt: adjustment.createdAt,
-                                            updatedAt: adjustment.createdAt,
-                                            props: {
-                                                previousAmount:
-                                                    adjustment.previousAmount,
-                                                newAmount: adjustment.newAmount,
-                                                comment: adjustment.comment,
-                                                adjustedBy:
-                                                    adjustment.adjustedBy,
-                                            },
-                                        }),
-                                ),
-                        },
-                    }),
-            );
+            .map((line) => this.lineToDomain(line));
         return new ShopSalaryAccrual({
             id: record.id,
             createdAt: record.createdAt,

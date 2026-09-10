@@ -1,5 +1,6 @@
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import { ShopSalaryAccrual } from '@/domains/shop/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import type { ShopSalaryAccrualLine } from '@/domains/shop/modules/accounting/domain/entities/salary-accrual/salary-accrual-line.entity';
 
 // Зеркало domains/service/modules/accounting/application/ports/
 // salary-accrual.port.ts (Фаза 6 docs/service-shop-boundary-violations-fix)
@@ -42,6 +43,15 @@ export interface ShopSalaryAccrualRepositoryPort {
     // Удаление выплаты (PRD 3, Фаза 12) — документы сотрудника в статусе
     // PAID, не ограничено периодом.
     findPaidByEmployee(employeeId: number): Promise<ShopSalaryAccrual[]>;
+
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — зеркало
+    // domains/service/.../salary-accrual.port.ts'ного findLineByTaskId, без
+    // параметра direction (зафиксирован 'shop' реализацией, тот же приём,
+    // что и у остальных методов этого порта): строка типа TaskCompletion,
+    // чей `sources` содержит `{type: 'taskCompletion', id: taskId}`. null —
+    // строка ещё не отображается либо ни одна не ссылается на задачу. spec:
+    // shop/accounting#requirement-зарплатное-правило-и-начисление-доступны-для-поиска-по-идентификатору-задачи
+    findLineByTaskId(taskId: string): Promise<ShopSalaryAccrualLine | null>;
 }
 
 export const SHOP_SALARY_ACCRUAL_REPOSITORY = Symbol(

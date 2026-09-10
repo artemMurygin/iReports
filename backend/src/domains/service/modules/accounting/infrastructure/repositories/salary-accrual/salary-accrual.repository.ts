@@ -3,8 +3,10 @@ import type { SalaryAccrualStatus } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import type { SalaryAccrualLine } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual-line.entity';
 import { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
+import type { CalculationSourceRef } from '@/shared/domain/calculation-line';
 import { SalaryAccrualMapper } from '../../mappers/salary-accrual/salary-accrual.mapper';
 
 @Injectable()
@@ -164,5 +166,31 @@ export class SalaryAccrualRepository
             orderBy: { period: 'asc' },
         });
         return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — обратный
+    // поиск строки начисления по taskId. Фильтр по type='TaskCompletion' на
+    // уровне БД сужает выборку до строк, чей source вообще может быть
+    // {type:'taskCompletion', ...} (см. buildSources() в
+    // task-completion.entity.ts — type строки копирует rule.type,
+    // rule-breakdown.builder.ts), сравнение конкретного taskId в sources —
+    // в приложении, тем же приёмом, что и SalaryRuleRepository.findByTaskId
+    // (design.md решение 4): без untested JSON-containment оператора
+    // Prisma/Postgres, строк этого типа на направление ожидаемо мало.
+    async findLineByTaskId(
+        direction: AccountingDirection,
+        taskId: string,
+    ): Promise<SalaryAccrualLine | null> {
+        const records = await this.client.salaryAccrualLine.findMany({
+            where: { type: 'TaskCompletion', accrual: { direction } },
+            include: { adjustments: true },
+        });
+        const match = records.find((record) =>
+            (record.sources as unknown as CalculationSourceRef[]).some(
+                (source) =>
+                    source.type === 'taskCompletion' && source.id === taskId,
+            ),
+        );
+        return match ? this.mapper.lineToDomain(match) : null;
     }
 }

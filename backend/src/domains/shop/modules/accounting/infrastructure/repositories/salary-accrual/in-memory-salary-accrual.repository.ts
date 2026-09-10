@@ -103,6 +103,28 @@ export class InMemoryShopSalaryAccrualRepository implements ShopSalaryAccrualRep
         this.statusOverrides.set(id, status);
     }
 
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — зеркало
+    // domains/service/.../in-memory-salary-accrual.repository.ts'ного
+    // findLineByTaskId, без параметра direction (все документы хранилища
+    // этого фейка — уже 'shop').
+    findLineByTaskId(taskId: string): Promise<ShopSalaryAccrualLine | null> {
+        for (const accrual of this.store.values()) {
+            const line = accrual.lines.find(
+                (candidate) =>
+                    candidate.type === 'TaskCompletion' &&
+                    candidate.sources.some(
+                        (source) =>
+                            source.type === 'taskCompletion' &&
+                            source.id === taskId,
+                    ),
+            );
+            if (line) {
+                return Promise.resolve(line);
+            }
+        }
+        return Promise.resolve(null);
+    }
+
     private cloned(
         accrual: ShopSalaryAccrual | undefined,
     ): ShopSalaryAccrual | undefined {

@@ -142,6 +142,32 @@ export class InMemorySalaryAccrualRepository implements SalaryAccrualRepositoryP
         this.statusOverrides.set(id, status);
     }
 
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — см. WHY у
+    // SalaryAccrualRepositoryPort.findLineByTaskId.
+    findLineByTaskId(
+        direction: AccountingDirection,
+        taskId: string,
+    ): Promise<SalaryAccrualLine | null> {
+        for (const accrual of this.store.values()) {
+            if (accrual.direction !== direction) {
+                continue;
+            }
+            const line = accrual.lines.find(
+                (candidate) =>
+                    candidate.type === 'TaskCompletion' &&
+                    candidate.sources.some(
+                        (source) =>
+                            source.type === 'taskCompletion' &&
+                            source.id === taskId,
+                    ),
+            );
+            if (line) {
+                return Promise.resolve(line);
+            }
+        }
+        return Promise.resolve(null);
+    }
+
     // Свежая копия агрегата на каждое чтение — эмуляция «Prisma собирает
     // сущность из записей БД заново»: мутации непроведённого save не видны
     // следующему читателю (см. комментарий в шапке класса).

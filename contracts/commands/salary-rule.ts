@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { salaryAccrualStatusSchema } from './salary-accrual-status';
+import { salesDirectionSchema } from './sales-plan';
 
 // ========================== Роль правила ========================== //
 
@@ -283,6 +284,64 @@ const salaryRuleResponseSchema = z.discriminatedUnion('type', [
 
 export type SalaryRuleResponse = z.infer<typeof salaryRuleResponseSchema>;
 
+// ========================== Сводка правила для карточки задачи ========================== //
+
+// Сводка зарплатного правила «за выполнение задачи», отображаемая в блоке `ERP/Organism/Task Rule
+// Card` на карточке задачи (add-task-salary-rule-links-comments, architecture.md, Method Signatures:
+// `FindSalaryRuleForTaskService.execute`) — не полная форма правила (`salaryRuleResponseSchema`),
+// только то, что нужно карточке: иконка по типу, название, роль в мета-строке. id — правила, тот же,
+// что и `SalaryRuleDetail.id` ниже, чтобы клик по карточке открывал боковую панель
+// `features/SalaryRuleDetailsPanel` (`GetSalaryRuleService`/`useSalaryRule(ruleId, direction)`) с
+// полным описанием.
+const salaryRuleSummarySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    targetRole: targetRoleSchema,
+});
+
+export type SalaryRuleSummary = z.infer<typeof salaryRuleSummarySchema>;
+
+// ========================== Детальное описание правила (боковая панель) ========================== //
+
+// Для read-only боковой панели `features/SalaryRuleDetailsPanel` (design.md решение 5,
+// `GetSalaryRuleService.execute`) — та же форма, что у вариантов `salaryRuleResponseSchema` выше
+// (id/type/name/targetRole/config, различающиеся по типу правила — «параметры» из proposal.md),
+// плюс: direction — панель открывается из карточки задачи и может относиться к любому направлению,
+// вызывающий код не обязан знать его заранее (в отличие от salaryRuleResponseSchema, читаемого внутри
+// уже известного направления); motivationSchemaName — название мотивационной схемы, к которой
+// относится правило (architecture.md, Method Signatures: «уточнено по итогам ui-design.md», ui-design.md
+// «Отклонения от architecture.md» п.1 — панель показывает «Инженеры · Сервис»). Каждый вариант
+// расширяется отдельно, как и у salaryRuleResponseSchema (`.extend` на union недоступен, `type` должен
+// остаться дискриминантом).
+const payPerHourSalaryRuleDetailSchema = payPerHourSalaryRuleResponseSchema.extend({
+    direction: salesDirectionSchema,
+    motivationSchemaName: z.string(),
+});
+const serviceCompletedSalaryRuleDetailSchema =
+    serviceCompletedSalaryRuleResponseSchema.extend({
+        direction: salesDirectionSchema,
+        motivationSchemaName: z.string(),
+    });
+const orderPayedSalaryRuleDetailSchema = orderPayedSalaryRuleResponseSchema.extend({
+    direction: salesDirectionSchema,
+    motivationSchemaName: z.string(),
+});
+const taskCompletionSalaryRuleDetailSchema =
+    taskCompletionSalaryRuleResponseSchema.extend({
+        direction: salesDirectionSchema,
+        motivationSchemaName: z.string(),
+    });
+
+const salaryRuleDetailSchema = z.discriminatedUnion('type', [
+    payPerHourSalaryRuleDetailSchema,
+    serviceCompletedSalaryRuleDetailSchema,
+    orderPayedSalaryRuleDetailSchema,
+    taskCompletionSalaryRuleDetailSchema,
+]);
+
+export type SalaryRuleDetail = z.infer<typeof salaryRuleDetailSchema>;
+
 // ========================== Список типов правил для UI ========================== //
 
 // Ответ GET /accounting/salary_role_types (Фаза 8, "Когда готово" плана) —
@@ -542,4 +601,6 @@ export {
     salaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema,
     salaryRuleResponseSchema,
+    salaryRuleSummarySchema,
+    salaryRuleDetailSchema,
 };

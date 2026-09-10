@@ -29,6 +29,8 @@ describe('CreateShopSalaryRuleHandler', () => {
             deleteByIds: jest.fn().mockResolvedValue(undefined),
             findById: jest.fn().mockResolvedValue(null),
             update: jest.fn().mockResolvedValue(undefined),
+            findByTaskId: jest.fn().mockResolvedValue(null),
+            findMotivationSchemaId: jest.fn().mockResolvedValue(null),
         };
 
         const handler = new CreateShopSalaryRuleHandler(shopSalaryRuleRepo);

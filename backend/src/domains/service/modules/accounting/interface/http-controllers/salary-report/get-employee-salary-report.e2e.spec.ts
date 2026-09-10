@@ -106,6 +106,8 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
         deleteByIds: () => Promise.resolve(),
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
+        findByTaskId: () => Promise.resolve(null),
+        findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: () => Promise.resolve(null),
