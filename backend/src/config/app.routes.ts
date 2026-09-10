@@ -217,11 +217,16 @@ export const routesV1 = {
     },
     // Задача (replace-bitrix-task-integration) — см. комментарий у
     // tasksRoot выше. byId — карточка задачи (GET); changeStatus — PATCH
-    // self-service перехода статуса (specs/tasks/spec.md).
+    // self-service перехода статуса (specs/tasks/spec.md). comments/links —
+    // add-task-salary-rule-links-comments (architecture.md, «HTTP-эндпоинты»):
+    // комментарии и ссылки задачи, собственные сущности modules/tasks.
     tasks: {
         root: tasksRoot,
         byId: `${tasksRoot}/:id`,
         changeStatus: `${tasksRoot}/:id/status`,
+        comments: `${tasksRoot}/:id/comments`,
+        links: `${tasksRoot}/:id/links`,
+        linkById: `${tasksRoot}/:id/links/:linkId`,
     },
     // Общий баланс сотрудника (PRD 2, Фаза 8b, см. комментарий у
     // accountingBalanceRoot выше): остаток и лента по employeeId,
@@ -310,6 +315,24 @@ export const routesV1 = {
                 // (раздел 13 tasks.md add-task-based-salary-rule, design.md
                 // Decision 5) — только для строк requiresManualInput === true.
                 lineTaskReward: `${serviceAccountingRoot}/salary_accruals/:id/lines/:lineId/task-reward`,
+            },
+            // Зарплатное правило/начисление по задаче (раздел 19 tasks.md
+            // add-task-salary-rule-links-comments, design.md решение 2) —
+            // read-only, читается фронтендом напрямую (карточка задачи,
+            // tasks/salary-rule-panel), не backend modules/tasks. byId —
+            // правило по собственному id (боковая панель правила,
+            // GetSalaryRuleService); byTaskId — обратный поиск правила по
+            // задаче (FindSalaryRuleForTaskService). Зеркало —
+            // shop.accounting.salaryRules ниже.
+            salaryRules: {
+                byId: `${serviceAccountingRoot}/salary-rules/:ruleId`,
+                byTaskId: `${serviceAccountingRoot}/salary-rules/by-task/:taskId`,
+            },
+            // Обратный поиск строки начисления по задаче (раздел 19
+            // tasks.md, FindSalaryAccrualForTaskService) — зеркало
+            // shop.accounting.salaryAccrualLines ниже.
+            salaryAccrualLines: {
+                byTaskId: `${serviceAccountingRoot}/salary-accrual-lines/by-task/:taskId`,
             },
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.
@@ -496,6 +519,18 @@ export const routesV1 = {
                 // (раздел 18 tasks.md add-task-based-salary-rule, design.md
                 // Decision 5) — зеркало service.accounting.salaryAccruals.lineTaskReward.
                 lineTaskReward: `${shopAccountingRoot}/salary_accruals/:id/lines/:lineId/task-reward`,
+            },
+            // Зарплатное правило/начисление по задаче (раздел 19 tasks.md
+            // add-task-salary-rule-links-comments) — зеркалит
+            // service.accounting.salaryRules/salaryAccrualLines выше, в
+            // своём namespace shopAccountingRoot (см. запрет на импорт между
+            // domains/service и domains/shop в backend/CLAUDE.md).
+            salaryRules: {
+                byId: `${shopAccountingRoot}/salary-rules/:ruleId`,
+                byTaskId: `${shopAccountingRoot}/salary-rules/by-task/:taskId`,
+            },
+            salaryAccrualLines: {
+                byTaskId: `${shopAccountingRoot}/salary-accrual-lines/by-task/:taskId`,
             },
             // Баланс сотрудника с Фазы 8b — ОБЩИЙ по employeeId, его
             // маршруты живут вне направления: см. routesV1.accounting.balance.

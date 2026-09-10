@@ -2,16 +2,23 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { Task } from 'ireports-contracts'
+import type { SalaryRuleDetail, SalaryRuleSummary, Task } from 'ireports-contracts'
 
 import { api as axiosInstance } from '@/shared/api/axios.instance.ts'
 
-import { TasksPage } from './TasksPage.tsx'
+import { TasksPageMediator } from './TasksPageMediator.tsx'
 
 // replace-bitrix-task-integration, tasks.md 13.3/13.4 — smoke-проверка собранной страницы поверх
 // уже готовых `features/CreateTask`/`features/TaskStatusControl`: пустое состояние по фильтру,
 // список с реальным статусом, открытие карточки задачи и модалки создания. Мокаем
 // axios-инстанс, тот же приём, что `TaskStatusControl.spec.tsx`/`useTasksPage.spec.tsx`.
+//
+// add-task-salary-rule-links-comments, tasks.md группа 30 — файл переехал из
+// `ui/TasksPage.spec.tsx` вместе с реструктуризацией `TasksPage.tsx` в
+// `mediator/TasksPageMediator.tsx` (architecture.md: «выделяется `mediator/TasksPageMediator`»,
+// design.md решение делает страницу композицией двух stateful-виджетов — `useTasksPage()` +
+// `useSalaryRulePanel()`). Добавлен блок тестов на открытие/закрытие боковой панели правила по
+// клику из карточки задачи — весь остальной набор тестов регрессионный, перенесён как есть.
 vi.mock('@/shared/api/axios.instance.ts', () => ({
     api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
 }))
@@ -44,13 +51,15 @@ function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
     render(
         <QueryClientProvider client={queryClient}>
-            <TasksPage />
+            <TasksPageMediator />
         </QueryClientProvider>,
     )
     return { queryClient }
 }
 
-describe('TasksPage', () => {
+const NOT_FOUND = { isAxiosError: true, response: { status: 404 } }
+
+describe('TasksPageMediator', () => {
     beforeEach(() => {
         vi.mocked(axiosInstance.get).mockReset()
         vi.mocked(axiosInstance.post).mockReset()
@@ -94,6 +103,11 @@ describe('TasksPage', () => {
             if (url === '/v1/tasks') return Promise.resolve({ data: [makeTask()] })
             if (url === '/v1/tasks/task-1') return Promise.resolve({ data: makeTask() })
             if (url === '/v1/directory/employees') return Promise.resolve({ data: [] })
+            if (url === '/v1/tasks/task-1/comments') return Promise.resolve({ data: [] })
+            if (url === '/v1/tasks/task-1/links') return Promise.resolve({ data: [] })
+            if (url === '/v1/service/accounting/salary-rules/by-task/task-1') return Promise.reject(NOT_FOUND)
+            if (url === '/v1/service/accounting/salary-accrual-lines/by-task/task-1')
+                return Promise.reject(NOT_FOUND)
             return Promise.reject(new Error(`unexpected GET ${url}`))
         })
 
@@ -150,5 +164,96 @@ describe('TasksPage', () => {
         await user.click(screen.getAllByRole('button', { name: 'Новая задача' })[0])
 
         expect(await screen.findByRole('button', { name: 'Создать задачу' })).toBeInTheDocument()
+    })
+
+    // add-task-salary-rule-links-comments, tasks.md группа 30 — `spec:
+    // tasks/salary-rule-panel#Requirement: Клик по связанному правилу открывает боковую панель с
+    // его описанием`. Проверяет ровно то, что mediator обязан оркестровать сам (без чужого
+    // internal-состояния): клик по блоку правила внутри карточки задачи -> `useSalaryRulePanel`'s
+    // `openRule` -> `SalaryRuleDetailsPanel` монтирует контент и запрашивает правило по `ruleId`.
+    describe('панель зарплатного правила (add-task-salary-rule-links-comments)', () => {
+        const RULE_SUMMARY: SalaryRuleSummary = {
+            id: 'rule-1',
+            name: 'Задача: Обзвонить клиентов после диагностики',
+            type: 'TaskCompletion',
+            targetRole: 'ENGINEER',
+        }
+        const RULE_DETAIL: SalaryRuleDetail = {
+            id: 'rule-1',
+            type: 'TaskCompletion',
+            name: 'Задача: Обзвонить клиентов после диагностики',
+            targetRole: 'ENGINEER',
+            config: {
+                taskTitleTemplate: 'Обзвонить клиентов',
+                isRecurring: false,
+                deadlineTemplate: '2026-09-08',
+                defaultAmount: 5000,
+                taskIdByPeriod: { '2026-09': 'task-1' },
+            },
+            direction: 'service',
+            motivationSchemaName: 'Инженеры',
+        }
+
+        function mockTaskWithRule() {
+            vi.mocked(axiosInstance.get).mockImplementation((url: string) => {
+                if (url === '/v1/tasks') return Promise.resolve({ data: [makeTask()] })
+                if (url === '/v1/tasks/task-1') return Promise.resolve({ data: makeTask() })
+                if (url === '/v1/directory/employees') return Promise.resolve({ data: [] })
+                if (url === '/v1/tasks/task-1/comments') return Promise.resolve({ data: [] })
+                if (url === '/v1/tasks/task-1/links') return Promise.resolve({ data: [] })
+                if (url === '/v1/service/accounting/salary-rules/by-task/task-1')
+                    return Promise.resolve({ data: RULE_SUMMARY })
+                if (url === '/v1/service/accounting/salary-accrual-lines/by-task/task-1')
+                    return Promise.reject(NOT_FOUND)
+                if (url === '/v1/service/accounting/salary-rules/rule-1')
+                    return Promise.resolve({ data: RULE_DETAIL })
+                return Promise.reject(new Error(`unexpected GET ${url}`))
+            })
+        }
+
+        it('клик по блоку правила на карточке задачи открывает SalaryRuleDetailsPanel (GET .../salary-rules/rule-1)', async () => {
+            const user = userEvent.setup()
+            mockTaskWithRule()
+
+            renderPage()
+            await waitFor(() =>
+                expect(screen.getAllByText('Обзвонить клиентов после диагностики').length).toBeGreaterThan(0),
+            )
+            await user.click(screen.getAllByText('Обзвонить клиентов после диагностики')[0])
+
+            const ruleButton = await screen.findByRole('button', {
+                name: /Задача: Обзвонить клиентов после диагностики/,
+            })
+            await user.click(ruleButton)
+
+            await waitFor(() =>
+                expect(axiosInstance.get).toHaveBeenCalledWith('/v1/service/accounting/salary-rules/rule-1', expect.anything()),
+            )
+            expect(await screen.findByText('Зарплатное правило · только просмотр')).toBeInTheDocument()
+            expect(screen.getByText('Инженеры')).toBeInTheDocument()
+        })
+
+        it('"Закрыть" на панели правила скрывает её без затрагивания карточки задачи', async () => {
+            const user = userEvent.setup()
+            mockTaskWithRule()
+
+            renderPage()
+            await waitFor(() =>
+                expect(screen.getAllByText('Обзвонить клиентов после диагностики').length).toBeGreaterThan(0),
+            )
+            await user.click(screen.getAllByText('Обзвонить клиентов после диагностики')[0])
+            await user.click(
+                await screen.findByRole('button', { name: /Задача: Обзвонить клиентов после диагностики/ }),
+            )
+            await screen.findByText('Зарплатное правило · только просмотр')
+
+            await user.click(screen.getByRole('button', { name: 'Закрыть панель правила' }))
+
+            await waitFor(() =>
+                expect(screen.queryByText('Зарплатное правило · только просмотр')).not.toBeInTheDocument(),
+            )
+            // Задача всё ещё открыта — закрытие панели правила не закрыло карточку задачи.
+            expect(screen.getByText('Позвонить и уточнить впечатления')).toBeInTheDocument()
+        })
     })
 })

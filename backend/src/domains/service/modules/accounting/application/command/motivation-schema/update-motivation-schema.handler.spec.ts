@@ -69,6 +69,8 @@ describe('UpdateMotivationSchemaHandler', () => {
             deleteByIds,
             findById: jest.fn().mockResolvedValue(null),
             update: updateRule,
+            findByTaskId: jest.fn().mockResolvedValue(null),
+            findMotivationSchemaId: jest.fn().mockResolvedValue(null),
         };
         // run() выполняет переданную работу напрямую, без реальной транзакции
         // — тот же приём, что и в create-motivation-schema.handler.spec.ts.

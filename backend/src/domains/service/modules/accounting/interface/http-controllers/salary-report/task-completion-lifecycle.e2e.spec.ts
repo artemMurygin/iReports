@@ -99,6 +99,8 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         // хранит ТОТ ЖЕ объект правила (mergeEmployeeSalaryRules не клонирует),
         // поэтому мутация видна следующему чтению схемы без реальной записи.
         update: () => Promise.resolve(),
+        findByTaskId: () => Promise.resolve(null),
+        findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
         findByDirectionAndPeriod: () => Promise.resolve(null),
@@ -229,14 +231,15 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
                 targetRole: 'ENGINEER',
                 config: {
                     taskId: initialTaskId,
-                    taskTitleTemplate: 'Сдать ежемесячный отчёт по инвентаризации',
+                    taskTitleTemplate:
+                        'Сдать ежемесячный отчёт по инвентаризации',
                     taskDescriptionTemplate: 'Сверить остатки на складе',
                     isRecurring: true,
                     deadlineTemplate: '2026-09-30',
                     defaultAmount: 1500,
                 },
             }),
-        ) as TaskCompletion;
+        );
         const schema = withRequestContext(() =>
             MotivationSchema.create({
                 targetType: 'Employee',
@@ -258,7 +261,9 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         period: string,
     ): Promise<EmployeeSalaryReportResponse> {
         const response = await request(app.getHttpServer())
-            .get(`/v1/service/accounting/salary_report/employee/${employeeId}/${period}`)
+            .get(
+                `/v1/service/accounting/salary_report/employee/${employeeId}/${period}`,
+            )
             .expect(200);
         return response.body as EmployeeSalaryReportResponse;
     }

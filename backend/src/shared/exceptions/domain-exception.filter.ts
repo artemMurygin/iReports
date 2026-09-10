@@ -12,8 +12,11 @@ import {
     ARGUMENT_NOT_PROVIDED,
     ARGUMENT_OUT_OF_RANGE,
     CONFLICT,
+    INVALID_TASK_LINK_URL,
     INVALID_TASK_TRANSITION,
     NOT_FOUND,
+    SALARY_RULE_NOT_FOUND,
+    TASK_COMMENT_BODY_EMPTY,
 } from './exception.codes';
 
 const CODE_TO_HTTP_STATUS: Record<string, HttpStatus> = {
@@ -26,6 +29,21 @@ const CODE_TO_HTTP_STATUS: Record<string, HttpStatus> = {
     // TaskStatus.canTransitionTo) — конфликт с текущим состоянием задачи,
     // тот же HTTP-статус, что и CONFLICT.
     [INVALID_TASK_TRANSITION]: HttpStatus.CONFLICT,
+    // src/modules/tasks (add-task-salary-rule-links-comments) — пустой/
+    // пробельный текст комментария и синтаксически невалидный URL ссылки
+    // отклоняются до сохранения (tasks.md, группы 13-14) — те же 4xx, что и
+    // ARGUMENT_INVALID.
+    [TASK_COMMENT_BODY_EMPTY]: HttpStatus.BAD_REQUEST,
+    [INVALID_TASK_LINK_URL]: HttpStatus.BAD_REQUEST,
+    // domains/{service,shop}/modules/accounting (add-task-salary-rule-links-comments,
+    // раздел 19 tasks.md) — GetSalaryRuleService/GetShopSalaryRuleService не
+    // нашли правило по id (SalaryRuleNotFoundException/
+    // ShopSalaryRuleNotFoundException, оба используют этот общий код, см. WHY
+    // над SALARY_RULE_NOT_FOUND в exception.codes.ts). Раньше не было в этой
+    // карте (эти exception-классы, в отличие от остальных Not Found в
+    // проекте, не наследуют общий NotFoundException, а объявляют
+    // специфичный код напрямую) — без записи здесь падало в 500 вместо 404.
+    [SALARY_RULE_NOT_FOUND]: HttpStatus.NOT_FOUND,
 };
 
 /**

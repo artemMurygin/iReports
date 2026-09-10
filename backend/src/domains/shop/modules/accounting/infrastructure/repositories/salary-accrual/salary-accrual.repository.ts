@@ -3,7 +3,9 @@ import type { SalaryAccrualStatus } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { PrismaRepository } from '@/shared/infrastructure/persistence/prisma.repository';
 import { ShopSalaryAccrual } from '@/domains/shop/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
+import type { ShopSalaryAccrualLine } from '@/domains/shop/modules/accounting/domain/entities/salary-accrual/salary-accrual-line.entity';
 import { ShopSalaryAccrualRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
+import type { CalculationSourceRef } from '@/shared/domain/calculation-line';
 import { ShopSalaryAccrualMapper } from '../../mappers/salary-accrual/salary-accrual.mapper';
 
 // Зеркало domains/service/modules/accounting/infrastructure/repositories/
@@ -154,5 +156,24 @@ export class ShopSalaryAccrualRepository
             orderBy: { period: 'asc' },
         });
         return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — зеркало
+    // domains/service/.../salary-accrual.repository.ts'ного findLineByTaskId
+    // (см. WHY там), direction зафиксирован 'shop'.
+    async findLineByTaskId(
+        taskId: string,
+    ): Promise<ShopSalaryAccrualLine | null> {
+        const records = await this.client.salaryAccrualLine.findMany({
+            where: { type: 'TaskCompletion', accrual: { direction: 'shop' } },
+            include: { adjustments: true },
+        });
+        const match = records.find((record) =>
+            (record.sources as unknown as CalculationSourceRef[]).some(
+                (source) =>
+                    source.type === 'taskCompletion' && source.id === taskId,
+            ),
+        );
+        return match ? this.mapper.lineToDomain(match) : null;
     }
 }

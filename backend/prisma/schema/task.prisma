@@ -49,3 +49,40 @@ model Task {
   @@index([assigneeEmployeeId])
   @@map("tasks")
 }
+
+// add-task-salary-rule-links-comments — комментарий к задаче
+// (specs/tasks/comments/spec.md). Собственная таблица модуля tasks
+// (design.md Decision 1: не JSON-поле на Task — список неограниченной
+// длины, добавление отдельной записи неатомарно без своей таблицы).
+//
+// taskId — БЕЗ @relation на Task, тем же приёмом, что и
+// assigneeEmployeeId выше (см. комментарий над Task): физическая FK-связь
+// здесь не заводится по тому же прецеденту, хотя обе таблицы уже локальны
+// для iReports.
+//
+// authorEmployeeId — БЕЗ @relation на BitrixEmployee, тем же приёмом, что
+// и Task.assigneeEmployeeId выше — источник сотрудника внешний (Bitrix).
+model TaskComment {
+  id               String   @id @default(uuid())
+  taskId           String   @map("task_id")
+  authorEmployeeId Int      @map("author_employee_id")
+  body             String
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+// add-task-salary-rule-links-comments — ссылка на задаче
+// (specs/tasks/links/spec.md). Та же логика собственной таблицы и
+// отсутствия @relation на Task, что и у TaskComment выше.
+model TaskLink {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  url       String
+  label     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskId])
+  @@map("task_links")
+}

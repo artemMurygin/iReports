@@ -229,6 +229,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
             findAccruedByEmployee: jest.fn().mockResolvedValue([]),
             findPaidByEmployee: jest.fn().mockResolvedValue([]),
             save: jest.fn(),
+            findLineByTaskId: jest.fn().mockResolvedValue(null),
         };
 
         // openspec/changes/replace-bitrix-task-integration — ленивое

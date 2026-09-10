@@ -103,6 +103,63 @@ export type ChangeTaskStatusRequest = z.infer<
     typeof changeTaskStatusRequestSchema
 >;
 
+// ========================== Комментарий к задаче ========================== //
+
+// Комментарий — собственная сущность модуля `tasks` (add-task-salary-rule-links-comments,
+// design.md решение 1: «TaskComment и TaskLink — новые таблицы в modules/tasks, без Prisma
+// @relation»), хранится рядом с `Task`, `taskId` — обычное поле, не foreign-key-`@relation`, по тому
+// же прецеденту, что и `assigneeEmployeeId` выше (источник сотрудника — внешний, Bitrix).
+// authorEmployeeId на создании резолвится backend'ом из сессии (`req.user.employeeId`,
+// `SessionAuthGuard`), а не приходит в теле запроса — здесь описан персистентный/ответный вид
+// комментария (`tasks/comments#Requirement: Комментарий фиксирует автора, время и текст`). text —
+// непустая строка (`tasks/comments#Requirement: Пустой комментарий отклоняется`; строка только из
+// пробелов отклоняется доменным VO `TaskCommentBody` на бэкенде, `min(1)` здесь — базовая проверка
+// «не пустая совсем»).
+const taskCommentSchema = z.object({
+    id: z.string(),
+    taskId: z.string(),
+    authorEmployeeId: z.number(),
+    text: z.string().min(1),
+    createdAt: z.coerce.date(),
+});
+
+export type TaskComment = z.infer<typeof taskCommentSchema>;
+
+// POST /v1/tasks/:id/comments — тело запроса на создание комментария. Без `authorEmployeeId` (из
+// сессии, см. выше) и без `id`/`taskId`/`createdAt` (id из URL, остальное генерирует бэкенд).
+const createTaskCommentRequestSchema = z.object({
+    text: z.string().min(1),
+});
+
+export type CreateTaskCommentRequest = z.infer<
+    typeof createTaskCommentRequestSchema
+>;
+
+// ========================== Ссылка на задаче ========================== //
+
+// Ссылка — собственная сущность модуля `tasks` (design.md решение 1), тем же приёмом, что и
+// `taskCommentSchema` выше — `taskId` обычным полем, без `@relation`. url — синтаксически валидный
+// адрес (доменный VO `TaskLinkUrl` на бэкенде, `tasks/links#Requirement: Ссылка должна быть валидным
+// адресом`), label — опциональная человекочитаемая подпись (design.md, Non-Goals: без превью/
+// форматирования, только адрес и подпись).
+const taskLinkSchema = z.object({
+    id: z.string(),
+    taskId: z.string(),
+    url: z.string().url(),
+    label: z.string().optional(),
+    createdAt: z.coerce.date(),
+});
+
+export type TaskLink = z.infer<typeof taskLinkSchema>;
+
+// POST /v1/tasks/:id/links — тело запроса на добавление ссылки.
+const createTaskLinkRequestSchema = z.object({
+    url: z.string().url(),
+    label: z.string().optional(),
+});
+
+export type CreateTaskLinkRequest = z.infer<typeof createTaskLinkRequestSchema>;
+
 export {
     taskDirectionSchema,
     taskStatusSchema,
@@ -111,4 +168,8 @@ export {
     createTaskResponseSchema,
     listTasksQuerySchema,
     changeTaskStatusRequestSchema,
+    taskCommentSchema,
+    createTaskCommentRequestSchema,
+    taskLinkSchema,
+    createTaskLinkRequestSchema,
 };

@@ -94,6 +94,8 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
         // этим e2e-сценарием, но обязателен по интерфейсу порта.
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
+        findByTaskId: () => Promise.resolve(null),
+        findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeShopCalculationData: ShopCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),

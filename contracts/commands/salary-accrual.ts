@@ -119,6 +119,24 @@ export type SalaryAccrualNotDraftRow = z.infer<
     typeof salaryAccrualNotDraftRowSchema
 >;
 
+// ========================== Сводка начисления для карточки задачи ========================== //
+
+// Сводка строки начисления «за выполнение задачи», отображаемая в нижней строке (сумма + бейдж
+// статуса) `ERP/Organism/Task Rule Card` на карточке задачи (add-task-salary-rule-links-comments,
+// architecture.md, Method Signatures: `FindSalaryAccrualForTaskService.execute` — «включает сумму и
+// статус строки (`Проведено`/иное), уточнено по итогам ui-design.md»). Не полная
+// `salaryAccrualLineSchema` (calculationLineSchema + sources и т.д.) — карточке задачи не нужна
+// разбивка по источникам, только итог по строке.
+const salaryAccrualLineSummarySchema = z.object({
+    id: z.string(),
+    amount: z.number(),
+    status: salaryAccrualLineStatusSchema,
+});
+
+export type SalaryAccrualLineSummary = z.infer<
+    typeof salaryAccrualLineSummarySchema
+>;
+
 // ========================== Действия над строкой (PRD 2, Фаза 6) ========================== //
 
 // POST .../salary_accruals/:id/lines/:lineId/accrue — проведение строки на
@@ -225,4 +243,5 @@ export {
     salaryAccrualLineFailureSchema,
     accrueSalaryAccrualDocumentResponseSchema,
     accruePeriodSalaryAccrualsResponseSchema,
+    salaryAccrualLineSummarySchema,
 };

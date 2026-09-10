@@ -91,6 +91,11 @@ describe('Документы начисления магазина: close → sa
         // этим e2e-сценарием, но обязателен по интерфейсу порта.
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
+        // Разделы 15/18 tasks.md (add-task-salary-rule-links-comments) —
+        // тоже не используются этим e2e-сценарием, но обязательны по
+        // интерфейсу порта.
+        findByTaskId: () => Promise.resolve(null),
+        findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeShopCalculationData: ShopCalculationDataPort = {
         findEmployeeIdentities: () => Promise.resolve([]),

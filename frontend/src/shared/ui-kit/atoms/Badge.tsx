@@ -15,6 +15,10 @@ import { cn } from '@/shared/lib/tw'
  * - `neutral` — `canvas`/`ink-muted`, used for the "Системная" pill on the `Administrator` role
  *   card (`JUnxq` "System Badge" on `s5nMLx`) that a role card shows instead of
  *   rename/delete icons (`design.md` Decision 9 — a system role cannot be deleted).
+ * - `violet` — `violet-soft`/`violet-ink`, added for the salary rule type pill on
+ *   `features/SalaryRuleDetailsPanel/ui/SalaryRuleSummaryCard.tsx` (Pencil node `TY1It`/`n7Pn5Z`,
+ *   "Вид правила" -> `PGyPp` instance, fill `$violet-soft`, label fill `$violet-ink` — see
+ *   add-task-salary-rule-links-comments tasks.md группа 29).
  *
  * First-time build of this UI Kit atom from its `uDEum` base — no earlier page instanced it in
  * code yet (frontend/CLAUDE.md: new UI Kit components go in `shared/ui-kit/`, not `shared/ui/`).
@@ -26,6 +30,7 @@ const badgeVariants = cva(
             tone: {
                 brand: 'bg-brand-soft text-ok-ink',
                 neutral: 'bg-canvas text-ink-muted',
+                violet: 'bg-violet-soft text-violet-ink',
             },
         },
         defaultVariants: {

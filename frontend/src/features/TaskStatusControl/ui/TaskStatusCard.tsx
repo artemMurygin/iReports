@@ -1,5 +1,13 @@
 import { BadgeCheck, BadgeX, Layers, X } from 'lucide-react'
-import type { Task, TaskDirection, TaskStatus } from 'ireports-contracts'
+import type {
+    SalaryAccrualLineSummary,
+    SalaryRuleSummary,
+    Task,
+    TaskComment,
+    TaskDirection,
+    TaskLink,
+    TaskStatus,
+} from 'ireports-contracts'
 
 import { Avatar, AvatarFallback } from '@/shared/ui-kit/atoms/Avatar.tsx'
 import { Chip } from '@/shared/ui-kit/atoms/Chip.tsx'
@@ -7,6 +15,9 @@ import { IconButton } from '@/shared/ui-kit/atoms/IconButton.tsx'
 import { TaskStatusBadge } from '@/shared/ui-kit/atoms/TaskStatusBadge.tsx'
 import { cn } from '@/shared/lib/tw'
 
+import { SalaryRuleSummaryBlock } from './SalaryRuleSummaryBlock.tsx'
+import { TaskCommentsSection } from './TaskCommentsSection.tsx'
+import { TaskLinksSection } from './TaskLinksSection.tsx'
 import { TaskTransitionActions } from './TaskTransitionActions.tsx'
 
 /**
@@ -59,6 +70,16 @@ export type TaskStatusCardProps = {
     onTransition: (targetStatus: TaskStatus) => void
     onClose?: () => void
     className?: string
+    comments: TaskComment[]
+    onAddComment: (text: string) => void
+    isAddingComment?: boolean
+    links: TaskLink[]
+    onAddLink: (url: string, label?: string) => void
+    onRemoveLink: (linkId: string) => void
+    salaryRuleSummary: SalaryRuleSummary | null
+    salaryAccrual: SalaryAccrualLineSummary | null
+    salaryRuleDirection: TaskDirection | null
+    onOpenSalaryRule?: (args: { ruleId: string; direction: TaskDirection }) => void
 }
 
 export function TaskStatusCard({
@@ -68,6 +89,16 @@ export function TaskStatusCard({
     onTransition,
     onClose,
     className,
+    comments,
+    onAddComment,
+    isAddingComment = false,
+    links,
+    onAddLink,
+    onRemoveLink,
+    salaryRuleSummary,
+    salaryAccrual,
+    salaryRuleDirection,
+    onOpenSalaryRule,
 }: TaskStatusCardProps) {
     const assigneeLabel = assigneeName ?? `Сотрудник #${task.assigneeEmployeeId}`
     const terminalNote = TERMINAL_NOTE[task.status]
@@ -139,6 +170,33 @@ export function TaskStatusCard({
                         isPending={isTransitionPending}
                     />
                 )}
+
+                {salaryRuleSummary && (
+                    <>
+                        <div className="h-px w-full bg-hairline" />
+                        <div className="flex flex-col gap-2.5">
+                            <p className="font-ui text-xs font-medium text-ink-muted">Зарплатное правило</p>
+                            <SalaryRuleSummaryBlock
+                                summary={salaryRuleSummary}
+                                accrual={salaryAccrual}
+                                direction={salaryRuleDirection ?? task.direction ?? 'service'}
+                                onOpen={onOpenSalaryRule}
+                            />
+                            {!salaryAccrual && (
+                                <p className="font-ui text-[11.5px] text-ink-muted">
+                                    Начисление появится после того, как задачу закроют успешно и оно попадёт в
+                                    отчёт сотрудника.
+                                </p>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                <div className="h-px w-full bg-hairline" />
+                <TaskLinksSection links={links} onAddLink={onAddLink} onRemoveLink={onRemoveLink} />
+
+                <div className="h-px w-full bg-hairline" />
+                <TaskCommentsSection comments={comments} onAddComment={onAddComment} isSubmitting={isAddingComment} />
             </div>
         </div>
     )

@@ -18,3 +18,15 @@ export const SALARY_RULE_CREATION_ERROR = 'GENERIC.SALARY_RULE_CREATION_ERROR';
 // статус, не входящий в список допустимых для её текущего статуса
 // (specs/tasks/spec.md, Requirement: «Жизненный цикл статуса задачи»).
 export const INVALID_TASK_TRANSITION = 'GENERIC.INVALID_TASK_TRANSITION';
+// src/modules/tasks (add-task-salary-rule-links-comments) — попытка
+// сохранить комментарий/ссылку задачи с невалидным значением
+// (spec: tasks/comments#requirement-пустой-комментарий-отклоняется,
+// spec: tasks/links#requirement-ссылка-должна-быть-валидным-адресом).
+export const TASK_COMMENT_BODY_EMPTY = 'TASKS.COMMENT_BODY_EMPTY';
+export const INVALID_TASK_LINK_URL = 'TASKS.INVALID_LINK_URL';
+// domains/{service,shop}/modules/accounting (add-task-salary-rule-links-comments) —
+// GetSalaryRuleService (боковая панель зарплатного правила,
+// features/SalaryRuleDetailsPanel) не нашла правило по id. Общий код для
+// обоих направлений — конечный клиент (фронтенд) различает direction
+// параметром запроса, а не кодом ошибки.
+export const SALARY_RULE_NOT_FOUND = 'ACCOUNTING.SALARY_RULE_NOT_FOUND';

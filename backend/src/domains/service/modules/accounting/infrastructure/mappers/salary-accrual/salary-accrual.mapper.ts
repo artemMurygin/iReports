@@ -39,57 +39,63 @@ export interface SalaryAccrualEmployeeInfo {
 // документов закрытия батчами), поэтому toPersistence отдаёт не вложенный
 // CreateInput, а пару плоских CreateManyInput — см.
 // SalaryAccrualRepository.saveAll.
+export type SalaryAccrualLineRecordWithAdjustments = SalaryAccrualLineRecord & {
+    adjustments: SalaryAccrualLineAdjustmentRecord[];
+};
+
 export class SalaryAccrualMapper {
+    // Раздел 16 tasks.md (add-task-salary-rule-links-comments) — извлечено
+    // из toDomain(), чтобы SalaryAccrualRepository.findLineByTaskId мог
+    // смаппить одну строку без похода за целым документом (та же форма
+    // входа, что и record.lines[i] внутри toDomain).
+    lineToDomain(
+        line: SalaryAccrualLineRecordWithAdjustments,
+    ): SalaryAccrualLine {
+        return new SalaryAccrualLine({
+            id: line.id,
+            createdAt: line.createdAt,
+            updatedAt: line.updatedAt,
+            props: {
+                position: line.position,
+                ruleId: line.ruleId,
+                type: line.type,
+                name: line.name,
+                targetRole: line.targetRole,
+                salaryBasis: line.salaryBasis ?? undefined,
+                quantity: line.quantity ?? undefined,
+                rate: line.rate ?? undefined,
+                originalAmount: line.originalAmount,
+                amount: line.amount,
+                sources: line.sources as unknown as CalculationSourceRef[],
+                status: line.status,
+                comment: line.comment,
+                requiresManualInput: line.requiresManualInput,
+                adjustments: [...line.adjustments]
+                    .sort(
+                        (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+                    )
+                    .map(
+                        (adjustment) =>
+                            new SalaryAccrualLineAdjustment({
+                                id: adjustment.id,
+                                createdAt: adjustment.createdAt,
+                                updatedAt: adjustment.createdAt,
+                                props: {
+                                    previousAmount: adjustment.previousAmount,
+                                    newAmount: adjustment.newAmount,
+                                    comment: adjustment.comment,
+                                    adjustedBy: adjustment.adjustedBy,
+                                },
+                            }),
+                    ),
+            },
+        });
+    }
+
     toDomain(record: SalaryAccrualRecordWithLines): SalaryAccrual {
         const lines = [...record.lines]
             .sort((a, b) => a.position - b.position)
-            .map(
-                (line) =>
-                    new SalaryAccrualLine({
-                        id: line.id,
-                        createdAt: line.createdAt,
-                        updatedAt: line.updatedAt,
-                        props: {
-                            position: line.position,
-                            ruleId: line.ruleId,
-                            type: line.type,
-                            name: line.name,
-                            targetRole: line.targetRole,
-                            salaryBasis: line.salaryBasis ?? undefined,
-                            quantity: line.quantity ?? undefined,
-                            rate: line.rate ?? undefined,
-                            originalAmount: line.originalAmount,
-                            amount: line.amount,
-                            sources:
-                                line.sources as unknown as CalculationSourceRef[],
-                            status: line.status,
-                            comment: line.comment,
-                            requiresManualInput: line.requiresManualInput,
-                            adjustments: [...line.adjustments]
-                                .sort(
-                                    (a, b) =>
-                                        a.createdAt.getTime() -
-                                        b.createdAt.getTime(),
-                                )
-                                .map(
-                                    (adjustment) =>
-                                        new SalaryAccrualLineAdjustment({
-                                            id: adjustment.id,
-                                            createdAt: adjustment.createdAt,
-                                            updatedAt: adjustment.createdAt,
-                                            props: {
-                                                previousAmount:
-                                                    adjustment.previousAmount,
-                                                newAmount: adjustment.newAmount,
-                                                comment: adjustment.comment,
-                                                adjustedBy:
-                                                    adjustment.adjustedBy,
-                                            },
-                                        }),
-                                ),
-                        },
-                    }),
-            );
+            .map((line) => this.lineToDomain(line));
         return new SalaryAccrual({
             id: record.id,
             createdAt: record.createdAt,

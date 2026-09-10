@@ -202,7 +202,13 @@ describe('GetEmployeeSalaryReportService', () => {
             findByDirectionAndPeriod: jest.fn().mockResolvedValue([]),
             findStatusByKey: findAccrualStatus,
             deleteByDirectionAndPeriod: jest.fn(),
-        };
+            // Уже отсутствовавшие в этом фейке до этого change методы порта
+            // (findByIds/save/findAccruedByEmployee/findPaidByEmployee) не
+            // добавляются здесь — их отсутствие не связано с разделом 16
+            // tasks.md (add-task-salary-rule-links-comments), только
+            // findLineByTaskId, добавленный этим разделом.
+            findLineByTaskId: jest.fn().mockResolvedValue(null),
+        } as unknown as SalaryAccrualRepositoryPort;
 
         // Ленивое достраивание задачи регулярного TaskCompletion-правила; ни
         // один фикстурный набор правил этого файла его не содержит, поэтому
