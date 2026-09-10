@@ -36,6 +36,9 @@ describe('listShopSalaryRuleTypes', () => {
                     'OFFLINE_MANAGER',
                     'ONLINE_PURCHASER',
                     'OFFLINE_PURCHASER',
+                    // FR1 add-department-head-salary-rules — «руководитель направления» доступен
+                    // как опция роли для 3 новых видов правил (design.md Decision 4).
+                    'DEPARTMENT_HEAD',
                 ]),
             );
         }

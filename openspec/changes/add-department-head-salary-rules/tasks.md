@@ -63,17 +63,17 @@
 
 ## 10. Backend/service: 3 новых entity правила + роль
 
-- [ ] 10.1 Написать тесты на `.calculate()` трёх сущностей: `DepartmentPercentEntity` (`round(fact.(turnover|margin) * percent / 100)` по `category`), `DepartmentPlanBonusEntity` (`round(fixedAmount * multiplier(percentCompletion))`), `DepartmentTurnoverBonusEntity` (`round(fixedAmount * multiplier(resolveTurnoverPercentCompletion(...)))`)
-- [ ] 10.2 Прогнать тесты из 10.1 и зафиксировать red
-- [ ] 10.3 Реализовать 3 entity в `domains/service/modules/accounting/domain/entities/salary-rules/` и добавить новую роль в `ALL_SERVICE_ROLES` (`salary-rule-role-catalog.ts`) — без матчинга по заказу (`role-source.ts` для этой роли не используется, правило матчится напрямую на сотрудника со схемой)
-- [ ] 10.4 Прогнать тесты из 10.1 и зафиксировать green
+- [x] 10.1 Написать тесты на `.calculate()` трёх сущностей: `DepartmentPercentEntity` (`round(fact.(turnover|margin) * percent / 100)` по `category`), `DepartmentPlanBonusEntity` (`round(fixedAmount * multiplier(percentCompletion))`), `DepartmentTurnoverBonusEntity` (`round(fixedAmount * multiplier(resolveTurnoverPercentCompletion(...)))`)
+- [x] 10.2 Прогнать тесты из 10.1 и зафиксировать red
+- [x] 10.3 Реализовать 3 entity в `domains/service/modules/accounting/domain/entities/salary-rules/` и добавить новую роль в `ALL_SERVICE_ROLES` (`salary-rule-role-catalog.ts`) — без матчинга по заказу (`role-source.ts` для этой роли не используется, правило матчится напрямую на сотрудника со схемой)
+- [x] 10.4 Прогнать тесты из 10.1 и зафиксировать green
 
 ## 11. Backend/shop: 3 зеркальных entity правила + роль
 
-- [ ] 11.1 Написать тесты зеркально п.10 для `DepartmentPercentEntity`/`DepartmentPlanBonusEntity`/`DepartmentTurnoverBonusEntity` (shop), `config.warehouseId` — склад МойСклад
-- [ ] 11.2 Прогнать тесты из 11.1 и зафиксировать red
-- [ ] 11.3 Реализовать 3 entity в `domains/shop/modules/accounting/domain/entities/salary-rules/` и добавить роль в `ALL_SHOP_ROLES`
-- [ ] 11.4 Прогнать тесты из 11.1 и зафиксировать green
+- [x] 11.1 Написать тесты зеркально п.10 для `DepartmentPercentEntity`/`DepartmentPlanBonusEntity`/`DepartmentTurnoverBonusEntity` (shop), `config.warehouseId` — склад МойСклад
+- [x] 11.2 Прогнать тесты из 11.1 и зафиксировать red
+- [x] 11.3 Реализовать 3 entity в `domains/shop/modules/accounting/domain/entities/salary-rules/` и добавить роль в `ALL_SHOP_ROLES`
+- [x] 11.4 Прогнать тесты из 11.1 и зафиксировать green
 
 ## 12. Backend/service: расчётный контекст + registry/factory/mapper
 

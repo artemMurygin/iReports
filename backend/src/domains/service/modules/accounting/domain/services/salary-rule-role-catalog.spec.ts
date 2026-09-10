@@ -14,9 +14,16 @@ describe('listSalaryRuleTypes', () => {
         ]);
         for (const entry of types) {
             expect(entry.allowedRoles).toEqual(
-                expect.arrayContaining(['ENGINEER', 'ONLINE_MANAGER']),
+                expect.arrayContaining([
+                    'ENGINEER',
+                    'ONLINE_MANAGER',
+                    // FR1 add-department-head-salary-rules — «руководитель направления» доступен
+                    // как опция роли для 3 новых видов правил (design.md Decision 4); каталог не
+                    // различает типы правил, поэтому роль видна и у существующих 4 типов.
+                    'DEPARTMENT_HEAD',
+                ]),
             );
-            expect(entry.allowedRoles.length).toBe(4);
+            expect(entry.allowedRoles.length).toBe(5);
         }
     });
 });

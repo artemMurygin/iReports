@@ -15,11 +15,19 @@ import type { TargetRole } from '@/domains/service/modules/accounting/domain/typ
 // targetRoleSchema, поэтому появление OFFICE в контракте не расширяет этот
 // каталог само по себе. Роль нужна графику работы (WorkScheduleEntry.role),
 // а не зарплатным правилам сервиса — ни одно из них её не матчит.
+//
+// DEPARTMENT_HEAD (FR1 add-department-head-salary-rules) — «руководитель направления»: единственная
+// цель добавления в каталог — чтобы UI показывал роль как опцию для 3 новых видов правила уровня
+// отдела (DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus, design.md Decision 4).
+// Каталог не различает типы правил (см. listSalaryRuleTypes ниже — один и тот же список для всех
+// зарегистрированных типов), поэтому роль видна и у существующих 4 транзакционных видов правил —
+// их role-source.ts её не матчит, так что выбор роли там просто не имеет эффекта.
 const ALL_SERVICE_ROLES: TargetRole[] = [
     'ENGINEER',
     'ONLINE_MANAGER',
     'OFFLINE_MANAGER',
     'ORDER_MANAGER',
+    'DEPARTMENT_HEAD',
 ];
 
 export interface SalaryRuleTypeCatalogEntry {

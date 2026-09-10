@@ -131,11 +131,75 @@ export type TaskCompletionShopSalaryRule = {
     config: TaskCompletionShopSalaryConfig;
 };
 
+// ================= Уровень отдела/направления (add-department-head-salary-rules) ================= //
+//
+// Implements FR1-FR4 of add-department-head-salary-rules.
+//
+// Зеркало трёх новых видов правила из domains/service/modules/accounting/domain/types/
+// salary-rule.types.ts — независимая копия (issue #57 принцип "зеркальные, но независимые" модули
+// доменов), состав полей идентичен по смыслу, отличия: ShopSalaryBasis (REVENUE/MARGIN — нет
+// SALARY_MINUS_ENGINEER_SALARY, в магазине нет роли инженера) и warehouseId: string (MoySklad UUID)
+// вместо number (RoApp warehouse id) у сервиса.
+
+// DepartmentPercent (FR2) — % от факта выручки/маржи категории/магазина, без коэффициента:
+// amount = round(fact.(turnover|margin) * percent / 100).
+export type DepartmentPercentShopSalaryConfig = {
+    salaryBasis: ShopSalaryBasis;
+    category: string | null;
+    percent: number;
+};
+
+export type DepartmentPercentShopSalaryRule = {
+    type: 'DepartmentPercent';
+    name: string;
+    targetRole: TargetRole;
+    config: DepartmentPercentShopSalaryConfig;
+};
+
+// DepartmentPlanBonus (FR3) — фиксированная сумма × плавающий коэффициент выполнения плана продаж
+// по выручке/марже, переиспользует уже существующий percentBorders/FloatPercentSchedule и уже
+// существующий ShopSalesPerformance.percentCompletion.
+export type DepartmentPlanBonusShopSalaryConfig = {
+    salaryBasis: ShopSalaryBasis;
+    category: string | null;
+    fixedAmount: number;
+    percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+};
+
+export type DepartmentPlanBonusShopSalaryRule = {
+    type: 'DepartmentPlanBonus';
+    name: string;
+    targetRole: TargetRole;
+    config: DepartmentPlanBonusShopSalaryConfig;
+};
+
+// DepartmentTurnoverBonus (FR4) — фиксированная сумма × плавающий коэффициент выполнения плана по
+// коэффициенту оборачиваемости конкретного склада МойСклад (warehouseId — обязательный строковый
+// UUID, оборачиваемость скоуплена по категории × складу, не по отделу) и опционально category внутри
+// него (null — итог по всему складу). planTurnoverRatio хранится прямо в конфигурации правила.
+export type DepartmentTurnoverBonusShopSalaryConfig = {
+    warehouseId: string;
+    category: string | null;
+    fixedAmount: number;
+    planTurnoverRatio: number;
+    percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+};
+
+export type DepartmentTurnoverBonusShopSalaryRule = {
+    type: 'DepartmentTurnoverBonus';
+    name: string;
+    targetRole: TargetRole;
+    config: DepartmentTurnoverBonusShopSalaryConfig;
+};
+
 export type ShopSalaryRuleConfig =
     | PayPerHourShopSalaryConfig
     | ProductSoldSalaryConfig
     | UsedProductSoldSalaryConfig
-    | TaskCompletionShopSalaryConfig;
+    | TaskCompletionShopSalaryConfig
+    | DepartmentPercentShopSalaryConfig
+    | DepartmentPlanBonusShopSalaryConfig
+    | DepartmentTurnoverBonusShopSalaryConfig;
 
 // Форма запроса на создание правила — контракт (ShopSalaryRuleRequest), а
 // не подмножество реализованных типов (то же решение, что у сервиса — см.

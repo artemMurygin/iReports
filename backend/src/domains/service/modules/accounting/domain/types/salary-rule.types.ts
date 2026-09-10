@@ -112,11 +112,84 @@ export type TaskCompletionSalaryRule = {
     config: TaskCompletionSalaryConfig;
 };
 
+// ================= Уровень отдела/направления (add-department-head-salary-rules) ================= //
+//
+// Implements FR1-FR4 of add-department-head-salary-rules.
+//
+// Три новых вида правила, не итерирующих транзакции (design.md Decision 2) — всегда считаются
+// целиком на того единственного сотрудника, кому назначена схема (targetType = 'Employee'). Формы
+// config зеркалят contracts/commands/salary-rule.ts (departmentPercentSalaryConfigSchema и т.п.), как
+// и остальные 4 вида выше — домен не импортирует z.infer контракта напрямую.
+//
+// category: string | null — тот же scope-параметр, что и у существующего ProductSoldEntity (shop):
+// null = без фильтра, «весь склад/направление». department, с которым резолвится SalesPerformance
+// для DepartmentPercent/DepartmentPlanBonus, в config НЕ входит — берётся из собственного
+// BitrixEmployee.departmentId сотрудника, которому назначено правило (design.md Decision 1,
+// findEmployeeDepartmentId, без изменений).
+
+// DepartmentPercent (FR2) — % от факта выручки/маржи отдела/категории, без коэффициента:
+// amount = round(fact.(turnover|margin) * percent / 100).
+export type DepartmentPercentSalaryConfig = {
+    salaryBasis: SalaryBasis;
+    category: string | null;
+    percent: number;
+};
+
+export type DepartmentPercentSalaryRule = {
+    type: 'DepartmentPercent';
+    name: string;
+    targetRole: TargetRole;
+    config: DepartmentPercentSalaryConfig;
+};
+
+// DepartmentPlanBonus (FR3) — фиксированная сумма × плавающий коэффициент выполнения плана продаж
+// по выручке/марже, переиспользует уже существующий percentBorders/resolveFloatPercentMultiplier и
+// уже существующий SalesPerformance.percentCompletion:
+// amount = round(fixedAmount * resolveFloatPercentMultiplier(percentBorders, percentCompletion)).
+export type DepartmentPlanBonusSalaryConfig = {
+    salaryBasis: SalaryBasis;
+    category: string | null;
+    fixedAmount: number;
+    percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+};
+
+export type DepartmentPlanBonusSalaryRule = {
+    type: 'DepartmentPlanBonus';
+    name: string;
+    targetRole: TargetRole;
+    config: DepartmentPlanBonusSalaryConfig;
+};
+
+// DepartmentTurnoverBonus (FR4) — фиксированная сумма × плавающий коэффициент выполнения плана по
+// коэффициенту оборачиваемости конкретного склада (warehouseId — обязательное поле, RoApp warehouse
+// id, оборачиваемость скоуплена по категории × складу, не по отделу — design.md Decision 1/2) и
+// опционально category внутри него (null — итог по всему складу, см. GoodsTurnoverWarehouseTotal,
+// FR5). planTurnoverRatio хранится прямо в конфигурации правила, а не отдельной сущностью плана:
+// amount = round(fixedAmount * resolveFloatPercentMultiplier(percentBorders,
+//   resolveTurnoverPercentCompletion(factTurnoverRatio, planTurnoverRatio))).
+export type DepartmentTurnoverBonusSalaryConfig = {
+    warehouseId: number;
+    category: string | null;
+    fixedAmount: number;
+    planTurnoverRatio: number;
+    percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+};
+
+export type DepartmentTurnoverBonusSalaryRule = {
+    type: 'DepartmentTurnoverBonus';
+    name: string;
+    targetRole: TargetRole;
+    config: DepartmentTurnoverBonusSalaryConfig;
+};
+
 export type SalaryRuleConfig =
     | PayPerHourSalaryConfig
     | ServiceCompletedSalaryConfig
     | OrderPayedSalaryConfig
-    | TaskCompletionSalaryConfig;
+    | TaskCompletionSalaryConfig
+    | DepartmentPercentSalaryConfig
+    | DepartmentPlanBonusSalaryConfig
+    | DepartmentTurnoverBonusSalaryConfig;
 
 // Форма запроса на создание правила — контракт (SalaryRuleRequest), а не
 // подмножество из двух реализованных типов: контракт уже включает
