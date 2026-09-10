@@ -124,10 +124,31 @@
 
 ## 16. Frontend: `RuleFormCardFields` — 3 новые ветки рендера полей (desktop + mobile)
 
-- [ ] 16.1 Написать тесты: при award-типе `DepartmentPercent`/`DepartmentPlanBonus`/`DepartmentTurnoverBonus` рендерится корректный набор полей (Категория + База начисления + Процент / Категория + База начисления + Сумма + пороги / Склад + Категория + Сумма + План коэфф. + пороги) и НЕ рендерится блок «Вариант награды» (подтверждено — у этих 3 видов фиксированный набор полей на тип, без award-выбора)
-- [ ] 16.2 Прогнать тесты из 16.1 и зафиксировать red
-- [ ] 16.3 Реализовать 3 ветки в `features/SalaryRuleForm/ui/RuleFormCard/ui/RuleFormCardFields` по карточкам из `ui-design.md` (читать точную структуру полей через `mcp__pencil__execute`/`Get` по Node ID в `design/sallary-first-iteration.pen`): desktop — `x8OVx` (FR2), `O9tPQ` (FR3), `WdQo0` (FR4); мобильный 390 — `ThvHu` (FR2), `sHiW6` (FR3), `PXeac` (FR4)
-- [ ] 16.4 Прогнать тесты из 16.1 и зафиксировать green, сверить каждое состояние со скриншотом соответствующей карточки в Pencil
+- [x] 16.1 Написать тесты: при award-типе `DepartmentPercent`/`DepartmentPlanBonus`/`DepartmentTurnoverBonus` рендерится корректный набор полей (Категория + База начисления + Процент / Категория + База начисления + Сумма + пороги / Склад + Категория + Сумма + План коэфф. + пороги) и НЕ рендерится блок «Вариант награды» (подтверждено — у этих 3 видов фиксированный набор полей на тип, без award-выбора)
+- [x] 16.2 Прогнать тесты из 16.1 и зафиксировать red
+- [x] 16.3 Реализовать 3 ветки в `features/SalaryRuleForm/ui/RuleFormCard/ui/RuleFormCardFields` по карточкам из `ui-design.md` (читать точную структуру полей через `mcp__pencil__execute`/`Get` по Node ID в `design/sallary-first-iteration.pen`): desktop — `x8OVx` (FR2), `O9tPQ` (FR3), `WdQo0` (FR4); мобильный 390 — `ThvHu` (FR2), `sHiW6` (FR3), `PXeac` (FR4)
+- [x] 16.4 Прогнать тесты из 16.1 и зафиксировать green, сверить каждое состояние со скриншотом соответствующей карточки в Pencil
+
+  Примечание по реализации (см. финальный отчёт агента): точная структура/лейблы/порядок полей всех
+  6 карточек (`x8OVx`/`O9tPQ`/`WdQo0`/`ThvHu`/`sHiW6`/`PXeac`) прочитаны через `mcp__pencil__execute`/
+  `Get` — сверка со «скриншотом» сделана как построчное сравнение прочитанной JSON-структуры узлов
+  (лейблы `Label`/`Hint`, порядок `Row Base`/`Row Params`/`Row Warehouse`/`Row Amount`), а не через
+  фактический рендер приложения в браузере (dev-сервер в скоупе задачи не поднимался); мобильные
+  карточки (390) подтвердили тот же порядок и состав полей в один столбец — отдельной мобильной
+  вёрстки не потребовалось, использованы уже mobile-адаптивные `PercentSliderField`/`SalaryBasisField`/
+  `ThresholdsEditor`/`CategoryField`/`WarehouseField` (Фаза 5 pattern), см. комментарий над
+  `RuleFormCardFields`. Помимо самого компонента, потребовались минимальные сопутствующие правки вне
+  файла из заголовка группы, необходимые, чтобы 3 новые ветки были реально достижимы и не дублировали
+  «Вариант награды»: `RuleFormCard.tsx` (пропускает `AwardSection`/лишний divider для
+  `showDepartmentFields`, прокидывает новые пропсы `onChangeBorder`/`warehouses` в
+  `RuleFormCardFields`), `model/useRuleFormCard.ts` (`showDepartmentFields`), `model/ruleDraft.ts`
+  (`DEPARTMENT_RULE_TYPES`), `model/types.ts` (опциональные `warehouses`/`isWarehousesLoading`/
+  `warehousesError` в `RuleFormCardContext`) и `service/model/ruleTypes.ts`/`shop/model/ruleTypes.ts`
+  (3 новых типа добавлены в `RULE_TYPE_ORDER`/`SHOP_RULE_TYPE_ORDER` перед `TaskCompletion` — иначе
+  «Тип правила» select никогда бы их не предлагал; группа 14 явно отложила это на группу 16/15, см. её
+  примечание). Реальное подключение справочника складов к API (аналог `useOrderTypes`/`useCatalog`) не
+  добавлялось — `warehouses` остаётся опциональным пропом, по умолчанию `[]`; в tasks.md нет отдельной
+  группы для этого проводника, вероятный пробел плана вне скоупа групп 14-16.
 
 ## 17. Frontend: лейблы новых типов в `SalaryAccruals`/`SalaryReportData`
 

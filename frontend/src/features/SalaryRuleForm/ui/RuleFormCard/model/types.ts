@@ -3,6 +3,7 @@ import type { CatalogCategoryResponse, OrderTypeResponse, TargetRole } from 'ire
 import type { RuleFormConfig } from '../../../model/ruleFormConfig.ts'
 import type { RuleSaveOutcome } from '../../../model/ruleResolver.ts'
 import type { BorderDraft, RuleDraft, RuleType } from '../../../model/ruleDraft.ts'
+import type { WarehouseFieldWarehouse } from '../../WarehouseField'
 
 /**
  * Всё, что карточке правила нужно от родителя помимо самого черновика: конфиг направления,
@@ -25,6 +26,12 @@ export type RuleFormCardContext = {
     orderTypes: OrderTypeResponse[]
     isOrderTypesLoading?: boolean
     orderTypesError?: string | null
+    /** `DepartmentTurnoverBonus` only (FR4 of add-department-head-salary-rules) — the warehouse
+     * picklist `RuleFormCardFields.tsx`'s `WarehouseField` branch reads. Optional/defaults to `[]`
+     * inside that component so no other rule type or existing caller needs to supply it. */
+    warehouses?: WarehouseFieldWarehouse[]
+    isWarehousesLoading?: boolean
+    warehousesError?: string | null
     onChange: (id: string, patch: Partial<RuleDraft>) => void
     onChangeType: (id: string, type: RuleType) => void
     onChangeBorder: (id: string, index: number, patch: Partial<BorderDraft>) => void

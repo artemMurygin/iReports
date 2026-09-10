@@ -18,6 +18,14 @@ export type { ServiceRuleType, ShopRuleType }
  */
 export type RuleType = ServiceRuleType | ShopRuleType
 
+/** The 3 department-level rule types from add-department-head-salary-rules (FR2-FR4) — common to
+ * both directions (same literal type names, `kernel/ruleTypeLabels.ts`). Unlike every other
+ * `RuleType`, none of these 3 offers an award-variant selector at all (ui-design.md
+ * «Отклонения»): `core/ui/RuleFormCard`'s `RuleFormCard.tsx` reads this list to skip rendering
+ * `AwardSection` for them — their own fixed field set is rendered entirely by
+ * `RuleFormCardFields.tsx` instead (Implements FR2, FR3, FR4). */
+export const DEPARTMENT_RULE_TYPES: RuleType[] = ['DepartmentPercent', 'DepartmentPlanBonus', 'DepartmentTurnoverBonus']
+
 /** Union of every `award.type` across the 3 award-bearing rule types — which subset applies to a
  * given `RuleType` is `service/model/ruleTypes.ts`'s `AWARD_OPTIONS_BY_TYPE`. */
 export type AwardKind = 'Fixed' | 'ServiceFixed' | 'ServicePercent' | 'FixedPercent' | 'FloatPercent'

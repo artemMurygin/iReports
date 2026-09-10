@@ -19,8 +19,18 @@ export { SHOP_RULE_TYPE_LABELS }
 
 /** Порядок типов в селекте «Тип правила» направления «Магазин» — зеркало
  * `service/model/ruleTypes.ts`'s `RULE_TYPE_ORDER`, живёт в своём направлении. `TaskCompletion` —
- * последний в списке, тот же порядок, что и у сервисного `RULE_TYPE_ORDER` (tasks.md раздел 21). */
-export const SHOP_RULE_TYPE_ORDER: ShopRuleType[] = ['PayPerHour', 'ProductSold', 'UsedProductSold', 'TaskCompletion']
+ * последний в списке, тот же порядок, что и у сервисного `RULE_TYPE_ORDER` (tasks.md раздел 21).
+ * `DepartmentPercent`/`DepartmentPlanBonus`/`DepartmentTurnoverBonus` (add-department-head-salary-
+ * rules, FR2-FR4) — та же вставка перед `TaskCompletion`, что и у сервисного списка. */
+export const SHOP_RULE_TYPE_ORDER: ShopRuleType[] = [
+    'PayPerHour',
+    'ProductSold',
+    'UsedProductSold',
+    'DepartmentPercent',
+    'DepartmentPlanBonus',
+    'DepartmentTurnoverBonus',
+    'TaskCompletion',
+]
 
 /** `shopSalaryBasisSchema` (`shop-salary-rule.ts`) — only `REVENUE`/`MARGIN`, no
  * `SALARY_MINUS_ENGINEER_SALARY` (shop has no engineer role/salary, see that schema's comment) —
