@@ -79,6 +79,7 @@ import { GetShopClosePeriodPreviewService } from '@/domains/shop/modules/account
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { SHOP_SNAPSHOT_ROWS_CALCULATOR } from '@/domains/shop/modules/accounting/application/ports/calculation/snapshot-rows-calculator.port';
+import { SHOP_TURNOVER_REPORT_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/turnover-report/turnover-report.port';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { SHOP_SALARY_ACCRUAL_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
@@ -95,6 +96,7 @@ import { ShopAccountingPeriodSnapshotRepository } from '@/domains/shop/modules/a
 import { ShopAccountingCalculationCacheRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/calculation/accounting-calculation-cache.repository';
 import { ShopCashboxConfigRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/cashbox/cashbox-config.repository';
 import { PayoutCashboxRecordRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/cashbox/payout-cashbox-record.repository';
+import { ShopTurnoverReportRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/turnover-report/turnover-report.repository';
 import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import { EmployeeIdentityRepository } from '@/modules/employee-identity/infrastructure/repositories/employee-identity.repository';
 import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
@@ -435,6 +437,15 @@ import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/acc
         // ("@ProdCron не тикает в dev" — отдельного крона автосоздания
         // больше нет, design.md Migration Plan).
         EnsureShopSalaryTaskForPeriodService,
+        // TurnoverReportSnapshot (add-department-head-salary-rules, FR4, design.md Decision 6b) —
+        // собственный Prisma-делегат модуля accounting/shop над moy_sklad_turnover_report_lines,
+        // читает ту же физическую таблицу, что и GOODS_TURNOVER_REPORT_REPOSITORY модуля warehouse,
+        // но без единого класса/вызова между модулями (root CLAUDE.md, «Межмодульные зависимости
+        // внутри backend»).
+        {
+            provide: SHOP_TURNOVER_REPORT_REPOSITORY,
+            useClass: ShopTurnoverReportRepository,
+        },
     ],
     exports: [
         SHOP_MOTIVATION_SCHEMA_REPOSITORY,

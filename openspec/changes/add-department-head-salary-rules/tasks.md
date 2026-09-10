@@ -35,17 +35,17 @@
 
 ## 6. Backend/service: `TurnoverReportSnapshot` + `TURNOVER_REPORT_REPOSITORY` (accounting)
 
-- [ ] 6.1 Написать тесты: `TurnoverReportSnapshot` восстанавливается из `goods_turnover_report_lines` через собственный Prisma-делегат модуля `accounting` (без обращения к сервисам модуля `warehouse` — root `CLAUDE.md`, изоляция между модулями); `TURNOVER_REPORT_REPOSITORY.findByPeriodAndWarehouse`
-- [ ] 6.2 Прогнать тесты из 6.1 и зафиксировать red
-- [ ] 6.3 Реализовать `TurnoverReportSnapshot`, порт `TURNOVER_REPORT_REPOSITORY`, Prisma-репозиторий и собственную копию `GoodsTurnoverWarehouseTotal` внутри `accounting/service` (Decision 6b), зарегистрировать провайдеры в модуле
-- [ ] 6.4 Прогнать тесты из 6.1 и зафиксировать green
+- [x] 6.1 Написать тесты: `TurnoverReportSnapshot` восстанавливается из `goods_turnover_report_lines` через собственный Prisma-делегат модуля `accounting` (без обращения к сервисам модуля `warehouse` — root `CLAUDE.md`, изоляция между модулями); `TURNOVER_REPORT_REPOSITORY.findByPeriodAndWarehouse`
+- [x] 6.2 Прогнать тесты из 6.1 и зафиксировать red
+- [x] 6.3 Реализовать `TurnoverReportSnapshot`, порт `TURNOVER_REPORT_REPOSITORY`, Prisma-репозиторий и собственную копию `GoodsTurnoverWarehouseTotal` внутри `accounting/service` (Decision 6b), зарегистрировать провайдеры в модуле
+- [x] 6.4 Прогнать тесты из 6.1 и зафиксировать green
 
 ## 7. Backend/shop: `TurnoverReportSnapshot` + `SHOP_TURNOVER_REPORT_REPOSITORY` (accounting)
 
-- [ ] 7.1 Написать тесты: `TurnoverReportSnapshot` (shop) восстанавливается из `moy_sklad_turnover_report_lines` через собственный Prisma-делегат `accounting/shop`; `SHOP_TURNOVER_REPORT_REPOSITORY.findByPeriodAndWarehouse`
-- [ ] 7.2 Прогнать тесты из 7.1 и зафиксировать red
-- [ ] 7.3 Реализовать зеркально п.6 для shop, зарегистрировать провайдеры
-- [ ] 7.4 Прогнать тесты из 7.1 и зафиксировать green
+- [x] 7.1 Написать тесты: `TurnoverReportSnapshot` (shop) восстанавливается из `moy_sklad_turnover_report_lines` через собственный Prisma-делегат `accounting/shop`; `SHOP_TURNOVER_REPORT_REPOSITORY.findByPeriodAndWarehouse`
+- [x] 7.2 Прогнать тесты из 7.1 и зафиксировать red
+- [x] 7.3 Реализовать зеркально п.6 для shop, зарегистрировать провайдеры
+- [x] 7.4 Прогнать тесты из 7.1 и зафиксировать green
 
 ## 8. Backend/service: `TURNOVER_PERFORMANCE_READER` + `resolveTurnoverPercentCompletion`
 
