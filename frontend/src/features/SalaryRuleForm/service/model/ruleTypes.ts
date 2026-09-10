@@ -37,6 +37,13 @@ export const SALARY_BASIS_OPTIONS: SegmentedControlOption<SalaryBasisValue>[] = 
 export const AWARD_OPTIONS_BY_TYPE: Record<ServiceRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
     TaskCompletion: [],
+    // add-department-head-salary-rules (FR2-FR4) — тот же приём, что и у `PayPerHour`/
+    // `TaskCompletion`: у этих 3 типов вообще нет "Вариант награды" (ui-design.md «Отклонения»),
+    // их собственные поля рендерятся отдельной веткой `RuleFormCardFields`, не через
+    // `AwardSection`/этот список.
+    DepartmentPercent: [],
+    DepartmentPlanBonus: [],
+    DepartmentTurnoverBonus: [],
     ServiceCompleted: [
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за выполненную услугу' },
         {

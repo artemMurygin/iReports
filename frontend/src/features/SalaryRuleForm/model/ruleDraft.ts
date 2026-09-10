@@ -65,12 +65,14 @@ export type RuleDraft = {
     type: RuleType
     name: string
     targetRole: TargetRole | ''
-    /** `PayPerHour.config.price`, award `Fixed.price` and `TaskCompletion.config.defaultAmount`
-     * share this field (only one is ever read, depending on `type`/`awardKind`) — same "money as
-     * text, parsed on submit" shape for all three. */
+    /** `PayPerHour.config.price`, award `Fixed.price`, `TaskCompletion.config.defaultAmount` and
+     * `DepartmentPlanBonus`/`DepartmentTurnoverBonus`'s `config.fixedAmount` (add-department-head-
+     * salary-rules, FR3/FR4) share this field (only one is ever read, depending on `type`/
+     * `awardKind`) — same "money as text, parsed on submit" shape for all of them. */
     price: string
     awardKind: AwardKind | ''
-    /** `ServicePercent.percent` / `FixedPercent.percent`. */
+    /** `ServicePercent.percent` / `FixedPercent.percent` / `DepartmentPercent.config.percent`
+     * (add-department-head-salary-rules, FR2). */
     percent: string
     /** `FloatPercent.basePercent` (`OrderPayed`/`ProductSold` only). */
     basePercent: string
@@ -126,6 +128,20 @@ export type RuleDraft = {
      * парсинга/форматирования на стороне драфта. Read only for `TaskCompletion`; ignored
      * otherwise. */
     deadlineTemplate: string
+    /** `DepartmentTurnoverBonus.config.warehouseId` (add-department-head-salary-rules, FR4) — id
+     * склада, обязательное поле (design.md Decision 2: оборачиваемость скоуплена по категории ×
+     * складу, автоматической привязки сотрудник→склад нет). Текстом, как и остальные числовые/id
+     * поля драфта — `service/model/ruleFormSchema.ts` парсит его как `number` (RoApp warehouse id),
+     * `shop/model/ruleFormSchema.ts` оставляет как есть (MoySklad UUID), см.
+     * `ruleAwards.ts`'s `buildDepartmentTurnoverBonusConfig`'s `warehouseIdKind` param. `''` —
+     * «склад не выбран», единственное состояние, в котором резолвер отказывает. Read only for
+     * `DepartmentTurnoverBonus`; ignored otherwise. */
+    warehouseId: string
+    /** `DepartmentTurnoverBonus.config.planTurnoverRatio` (FR4) — план коэффициента оборачиваемости,
+     * хранится прямо в конфигурации правила, а не как отдельная сущность (design.md Decision 2).
+     * Текст, парсится на сабмите как и остальные числовые поля драфта. Read only for
+     * `DepartmentTurnoverBonus`; ignored otherwise. */
+    planTurnoverRatio: string
 }
 
 /** Default 3 threshold rows — pre-filled with the mockup's own example values (`design/
@@ -160,6 +176,8 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        warehouseId: '',
+        planTurnoverRatio: '',
     }
 }
 
@@ -185,5 +203,7 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        warehouseId: '',
+        planTurnoverRatio: '',
     }
 }

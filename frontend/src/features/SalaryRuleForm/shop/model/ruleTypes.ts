@@ -42,6 +42,11 @@ export const SHOP_SALARY_BASIS_OPTIONS: SegmentedControlOption<'REVENUE' | 'MARG
 export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
     TaskCompletion: [],
+    // add-department-head-salary-rules (FR2-FR4) — зеркало service/model/ruleTypes.ts: эти 3 типа
+    // не имеют "Вариант награды" (ui-design.md «Отклонения»).
+    DepartmentPercent: [],
+    DepartmentPlanBonus: [],
+    DepartmentTurnoverBonus: [],
     ProductSold: [
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за проданный товар' },
         { kind: 'FixedPercent', title: 'Фиксированный процент', description: 'Процент от выбранной базы' },

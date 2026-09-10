@@ -1,7 +1,13 @@
 import { salaryRuleRequestSchema, type SalaryRuleRequest, type SalaryRuleResponse } from 'ireports-contracts'
 
 import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
-import { buildOrderPayedAward, buildServiceCompletedAward } from '../../model/ruleAwards.ts'
+import {
+    buildDepartmentPercentConfig,
+    buildDepartmentPlanBonusConfig,
+    buildDepartmentTurnoverBonusConfig,
+    buildOrderPayedAward,
+    buildServiceCompletedAward,
+} from '../../model/ruleAwards.ts'
 import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ruleDraft.ts'
 
 // Re-exported so existing imports (`core/ui/RuleFormCard`, `core/ui/RuleList`,
@@ -76,6 +82,21 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             }
             break
         }
+        // add-department-head-salary-rules, FR2-FR4 — 3 новых вида уровня отдела/направления
+        // (design.md Decision 2): не транзакционные, без `awardKind`-ветки, config строится целиком
+        // общими билдерами из `core/model/ruleAwards.ts` (переиспользуются `shop/model/ruleFormSchema.ts`,
+        // см. их комментарий).
+        case 'DepartmentPercent':
+            config = buildDepartmentPercentConfig(draft, errors)
+            break
+        case 'DepartmentPlanBonus':
+            config = buildDepartmentPlanBonusConfig(draft, errors)
+            break
+        case 'DepartmentTurnoverBonus':
+            // 'number' — service.config.warehouseId — RoApp/RemOnline warehouse id (см.
+            // `departmentTurnoverBonusSalaryConfigSchema`, `contracts/commands/salary-rule.ts`).
+            config = buildDepartmentTurnoverBonusConfig(draft, errors, 'number')
+            break
         default:
             // `draft.type` is the shared `RuleType` union (Фаза 4, `core/model/ruleDraft.ts`) — the shop-only
             // literals (`ProductSold`/`UsedProductSold`) never reach this resolver in practice (the
@@ -154,6 +175,8 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        warehouseId: '',
+        planTurnoverRatio: '',
     }
 
     switch (rule.type) {
@@ -208,6 +231,35 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
                 taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
                 deadlineTemplate: rule.config.deadlineTemplate,
+            }
+
+        // add-department-head-salary-rules, FR2-FR4 — обратное преобразование для 3 новых видов
+        // (зеркало `buildDepartmentXConfig`'s полей, `core/model/ruleAwards.ts`).
+        case 'DepartmentPercent':
+            return {
+                ...base,
+                salaryBasis: rule.config.salaryBasis,
+                category: rule.config.category,
+                percent: String(rule.config.percent),
+            }
+
+        case 'DepartmentPlanBonus':
+            return {
+                ...base,
+                salaryBasis: rule.config.salaryBasis,
+                category: rule.config.category,
+                price: String(rule.config.fixedAmount),
+                percentBorders: bordersFromResponse(rule.config.percentBorders),
+            }
+
+        case 'DepartmentTurnoverBonus':
+            return {
+                ...base,
+                category: rule.config.category,
+                price: String(rule.config.fixedAmount),
+                warehouseId: String(rule.config.warehouseId),
+                planTurnoverRatio: String(rule.config.planTurnoverRatio),
+                percentBorders: bordersFromResponse(rule.config.percentBorders),
             }
     }
 

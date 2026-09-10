@@ -95,10 +95,25 @@
 
 ## 14. Frontend: схема формы, конфиг наград, лейбл роли (service + shop)
 
-- [ ] 14.1 Написать тесты: `ruleFormSchema` (service+shop) принимает 3 новых award-типа; `ruleAwards.ts` содержит конфиг полей для них; `roleLabels.ts` содержит лейбл «Руководитель направления»
-- [ ] 14.2 Прогнать тесты из 14.1 и зафиксировать red
-- [ ] 14.3 Реализовать в `features/SalaryRuleForm/{service,shop}/model` (`ruleFormSchema.ts`, `ruleAwards.ts`, `roleLabels.ts`)
-- [ ] 14.4 Прогнать тесты из 14.1 и зафиксировать green
+- [x] 14.1 Написать тесты: `ruleFormSchema` (service+shop) принимает 3 новых award-типа; `ruleAwards.ts` содержит конфиг полей для них; `roleLabels.ts` содержит лейбл «Руководитель направления»
+- [x] 14.2 Прогнать тесты из 14.1 и зафиксировать red
+- [x] 14.3 Реализовать в `features/SalaryRuleForm/{service,shop}/model` (`ruleFormSchema.ts`, `ruleAwards.ts`, `roleLabels.ts`)
+- [x] 14.4 Прогнать тесты из 14.1 и зафиксировать green
+
+  Примечание по реализации (см. финальный отчёт агента): помимо трёх файлов из 14.3, потребовались
+  необходимые сопутствующие правки — `kernel/ruleTypeLabels.ts` (3 новых литерала типа + лейблы для
+  обоих направлений — без этого `ruleFormSchema.ts` не компилировался бы против уже расширенного
+  контрактами `SalaryRuleResponse`/`ShopSalaryRuleResponse`), `model/ruleDraft.ts` (новые поля
+  `warehouseId`/`planTurnoverRatio`, нужные обоим `ruleFormSchema.ts` для FR4) и
+  `model/formNumberUtils.ts` (`RuleFieldErrors` — ключи `warehouseId`/`planTurnoverRatio`). Также
+  точечно закрыты 2 записи `AWARD_OPTIONS_BY_TYPE`/`SHOP_AWARD_OPTIONS_BY_TYPE` (`service/shop/model/
+  ruleTypes.ts`, пустые массивы `[]` по образцу `PayPerHour`/`TaskCompletion` — у FR2–FR4 нет
+  «Варианта награды», ui-design.md «Отклонения») — без этого `Record<ServiceRuleType|ShopRuleType,
+  ...>` не проходил типизацию после расширения union'а; сам рендеринг новых типов (`RuleFormCardFields`,
+  `RULE_TYPE_ORDER`/выбор в UI) остаётся за группой 16/15 и не добавлялся. `ROLE_LABELS`-копии в
+  `features/SalaryAccruals`/`features/SalaryReportData` (`Record<TargetRole,...>`) и
+  `pages/GoodsTurnoverReport` — уже были не откомпилированы до начала этой группы (последствие
+  контрактов из групп 1/2, не этой группы) и намеренно не тронуты — вне скоупа (группы 17/18).
 
 ## 15. Frontend: `WarehouseField` (новый компонент)
 

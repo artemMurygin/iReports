@@ -367,3 +367,276 @@ describe('resolveRuleDraft — PayPerHour never carries orderTypeIds', () => {
         }
     })
 })
+
+/**
+ * add-department-head-salary-rules, FR2-FR4 — the 3 new department-level rule types (design.md
+ * Decision 2: not transactional, no `award` variant selector at all — ui-design.md «Отклонения»,
+ * «Блок «Вариант награды» не переиспользован для FR2–FR4»). `targetRole: 'DEPARTMENT_HEAD'` (FR1)
+ * is the role these are designed for, though `resolveRuleDraft` itself accepts any `targetRole` from
+ * the shared enum — the role/type pairing is a UI-level concern (`RuleRoleField`/`useAllowedRolesByType`),
+ * not something this resolver enforces.
+ */
+describe('resolveRuleDraft — DepartmentPercent (FR2)', () => {
+    it('succeeds with salaryBasis, category null ("весь склад/направление") and percent', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentPercent',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'MARGIN',
+                category: null,
+                percent: '5',
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentPercent') {
+            expect(result.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5 })
+        }
+    })
+
+    it('carries a specific category id through', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentPercent',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'REVENUE',
+                category: 'repair-id',
+                percent: '3',
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentPercent') {
+            expect(result.data.config.category).toBe('repair-id')
+        }
+    })
+
+    it('fails when percent is missing', () => {
+        const result = resolveRuleDraft(
+            baseDraft({ type: 'DepartmentPercent', targetRole: 'DEPARTMENT_HEAD', salaryBasis: 'REVENUE', percent: '' }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.percent).toBeTruthy()
+    })
+
+    it('fails when salaryBasis is not chosen', () => {
+        const result = resolveRuleDraft(
+            baseDraft({ type: 'DepartmentPercent', targetRole: 'DEPARTMENT_HEAD', salaryBasis: '', percent: '5' }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.salaryBasis).toBeTruthy()
+    })
+})
+
+describe('resolveRuleDraft — DepartmentPlanBonus (FR3)', () => {
+    it('succeeds with a fixed amount and exactly 3 valid percentBorders', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentPlanBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'MARGIN',
+                category: null,
+                price: '10000',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentPlanBonus') {
+            expect(result.data.config.fixedAmount).toBe(10000)
+            expect(result.data.config.percentBorders).toHaveLength(3)
+        }
+    })
+
+    it('fails when the fixed amount is missing', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentPlanBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'MARGIN',
+                price: '',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.price).toBeTruthy()
+    })
+
+    it('fails with only 2 percentBorders', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentPlanBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'MARGIN',
+                price: '10000',
+                percentBorders: defaultBorders().slice(0, 2),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.thresholds).toContain('2')
+    })
+})
+
+describe('resolveRuleDraft — DepartmentTurnoverBonus (FR4)', () => {
+    it('succeeds with a numeric warehouseId (RoApp id), plan ratio and exactly 3 percentBorders', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: '7',
+                category: null,
+                price: '15000',
+                planTurnoverRatio: '1.2',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentTurnoverBonus') {
+            expect(result.data.config.warehouseId).toBe(7)
+            expect(result.data.config.fixedAmount).toBe(15000)
+            expect(result.data.config.planTurnoverRatio).toBe(1.2)
+            expect(result.data.config.percentBorders).toHaveLength(3)
+        }
+    })
+
+    it('carries a specific category id (scope within the warehouse) through', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: '7',
+                category: 'accessories-id',
+                price: '15000',
+                planTurnoverRatio: '1.2',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentTurnoverBonus') {
+            expect(result.data.config.category).toBe('accessories-id')
+        }
+    })
+
+    it('fails when the warehouse is not selected', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: '',
+                price: '15000',
+                planTurnoverRatio: '1.2',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.warehouseId).toBeTruthy()
+    })
+
+    it('fails when the plan turnover ratio is missing', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: '7',
+                price: '15000',
+                planTurnoverRatio: '',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.planTurnoverRatio).toBeTruthy()
+    })
+
+    it('fails with only 2 percentBorders', () => {
+        const result = resolveRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: '7',
+                price: '15000',
+                planTurnoverRatio: '1.2',
+                percentBorders: defaultBorders().slice(0, 2),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.thresholds).toContain('2')
+    })
+})
+
+describe('draftFromRule — department-level rule types round-trip (FR2-FR4)', () => {
+    it('DepartmentPercent', () => {
+        const draft = draftFromRule({
+            id: 'rule-dep-1',
+            type: 'DepartmentPercent',
+            name: 'Процент от маржи направления',
+            targetRole: 'DEPARTMENT_HEAD',
+            config: { salaryBasis: 'MARGIN', category: null, percent: 5 },
+        })
+        expect(draft.type).toBe('DepartmentPercent')
+        expect(draft.salaryBasis).toBe('MARGIN')
+        expect(draft.category).toBeNull()
+        expect(draft.percent).toBe('5')
+
+        const resolvedAgain = resolveRuleDraft(draft)
+        expect(resolvedAgain.success).toBe(true)
+        if (resolvedAgain.success && resolvedAgain.data.type === 'DepartmentPercent') {
+            expect(resolvedAgain.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5 })
+        }
+    })
+
+    it('DepartmentPlanBonus', () => {
+        const draft = draftFromRule({
+            id: 'rule-dep-2',
+            type: 'DepartmentPlanBonus',
+            name: 'Премия за план выручки',
+            targetRole: 'DEPARTMENT_HEAD',
+            config: { salaryBasis: 'REVENUE', category: 'repair-id', fixedAmount: 10000, percentBorders: defaultBordersResponse() },
+        })
+        expect(draft.salaryBasis).toBe('REVENUE')
+        expect(draft.category).toBe('repair-id')
+        expect(draft.price).toBe('10000')
+        expect(draft.percentBorders).toHaveLength(3)
+
+        const resolvedAgain = resolveRuleDraft(draft)
+        expect(resolvedAgain.success).toBe(true)
+        if (resolvedAgain.success && resolvedAgain.data.type === 'DepartmentPlanBonus') {
+            expect(resolvedAgain.data.config.fixedAmount).toBe(10000)
+        }
+    })
+
+    it('DepartmentTurnoverBonus', () => {
+        const draft = draftFromRule({
+            id: 'rule-dep-3',
+            type: 'DepartmentTurnoverBonus',
+            name: 'Премия за оборачиваемость',
+            targetRole: 'DEPARTMENT_HEAD',
+            config: {
+                warehouseId: 7,
+                category: 'repair-id',
+                fixedAmount: 15000,
+                planTurnoverRatio: 1.2,
+                percentBorders: defaultBordersResponse(),
+            },
+        })
+        expect(draft.warehouseId).toBe('7')
+        expect(draft.planTurnoverRatio).toBe('1.2')
+        expect(draft.price).toBe('15000')
+        expect(draft.category).toBe('repair-id')
+
+        const resolvedAgain = resolveRuleDraft(draft)
+        expect(resolvedAgain.success).toBe(true)
+        if (resolvedAgain.success && resolvedAgain.data.type === 'DepartmentTurnoverBonus') {
+            expect(resolvedAgain.data.config.warehouseId).toBe(7)
+        }
+    })
+})
+
+type PercentBorderResponse = { name: string; fromPlanPercent: number; multiplier: number; mode: 'FIX' | 'LINEAR' }
+
+function defaultBordersResponse(): [PercentBorderResponse, PercentBorderResponse, PercentBorderResponse] {
+    const [a, b, c] = defaultBorders()
+    const toResponse = (border: BorderDraft): PercentBorderResponse => ({
+        name: border.name,
+        fromPlanPercent: Number(border.fromPlanPercent),
+        multiplier: Number(border.multiplier),
+        mode: border.mode,
+    })
+    return [toResponse(a), toResponse(b), toResponse(c)]
+}

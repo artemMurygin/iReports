@@ -24,4 +24,10 @@ export const ROLE_LABELS: Record<TargetRole, string> = {
     // ALL_SERVICE_ROLES (её часы всё же участвуют в расчёте PayPerHour, см.
     // pay-per-hour-roles.ts), карта покрывает весь enum по той же причине.
     SOLO_MANAGER: 'Соло-менеджер',
+    // DEPARTMENT_HEAD (add-department-head-salary-rules, FR1) — «руководитель направления»:
+    // назначается вручную через уже существующий targetType = 'Employee', видна в каталоге ролей
+    // (ALL_SERVICE_ROLES/ALL_SHOP_ROLES) как опция для 3 новых видов правил уровня отдела/
+    // направления (DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus, FR2-FR4). Точное
+    // имя литерала — открытый вопрос архитектуры (design.md Q1), не влияющий на русский текст.
+    DEPARTMENT_HEAD: 'Руководитель направления',
 }
