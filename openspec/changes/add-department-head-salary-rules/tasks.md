@@ -210,6 +210,29 @@
 
 ## 19. Интеграционная проверка
 
-- [ ] 19.1 Прогнать backend test suite для `domains/service/modules/accounting`, `domains/shop/modules/accounting`, `domains/{service,shop}/modules/warehouse` (`npm run test -- accounting` / `-- warehouse`) — без регрессий
-- [ ] 19.2 Прогнать frontend test suite для `features/SalaryRuleForm`, `features/SalaryAccruals`, `features/SalaryReportData`, `pages/GoodsTurnoverReport` — без регрессий
-- [ ] 19.3 Обновить `ENDPOINTS.md`, если описание ответа эндпоинта `GET .../goods-turnover-report/:period` (shop) требует пометки об изменении формы ответа
+- [x] 19.1 Прогнать backend test suite для `domains/service/modules/accounting`, `domains/shop/modules/accounting`, `domains/{service,shop}/modules/warehouse` (`npm run test -- accounting` / `-- warehouse`) — без регрессий
+- [x] 19.2 Прогнать frontend test suite для `features/SalaryRuleForm`, `features/SalaryAccruals`, `features/SalaryReportData`, `pages/GoodsTurnoverReport` — без регрессий
+- [x] 19.3 Обновить `ENDPOINTS.md`, если описание ответа эндпоинта `GET .../goods-turnover-report/:period` (shop) требует пометки об изменении формы ответа
+
+  Примечание по реализации (финальная интеграционная проверка): полный прогон —
+  `npm run backend:build` (green), `npm run backend:test` (308 suites / 1838 тестов, green),
+  `npm run frontend:build`/`frontend:lint` (green), `cd frontend && npm test` (108 файлов / 654
+  теста, green). Отфильтрованные прогоны из 19.1/19.2 (`npx jest --testPathPatterns=...` —
+  157/896; `npx vitest run src/features/{SalaryRuleForm,SalaryAccruals,SalaryReportData}
+  src/pages/GoodsTurnoverReport` — 25/234) зелёные, без регрессий. `npm run backend:lint` изначально
+  падал на 2 новые ошибки `@typescript-eslint/no-unsafe-member-access` в тестах группы 12/13
+  (`build-service-calculation-context.service.spec.ts:326`,
+  `build-calculation-context.service.spec.ts:602` — нетипизированный `jest.fn().mock.calls`
+  callback) — исправлено типизацией деструктурируемого кортежа по образцу уже существующего
+  паттерна (`moysklad.service.spec.ts`); остальные 44 ошибки/5 предупреждений lint —
+  подтверждённый pre-existing долг вне этого change (`src/modules/auth`, `src/modules/session`,
+  `src/sync/bitrix/{bitrix-sync.service.spec.ts,infrastructure/bitrix-employee-upsert.adapter.spec.ts}`
+  — 0 изменений в этих файлах между `feat/salary` и веткой change). `npm run validate:specs`
+  (корень) — 120 невалидных ссылок; 119 pre-existing (тот же паттерн долга, устаревшие
+  `spec: <task-id>`-ссылки вместо `<capability-path>#<anchor>`, есть уже на `feat/salary`); 1 новая,
+  внесённая этим change — `department-percent.entity.ts:94` (`spec: FR2` не по конвенции
+  `openspec/specs/conventions/documentation/spec.md`, не исправлено — вне минимального скоупа задачи
+  19, см. финальный отчёт агента). `ENDPOINTS.md` обновлён (19.3): секции `domains/service/modules/warehouse`
+  и `domains/shop/modules/warehouse` — описание ответа `GET .../goods-turnover-report/:period`
+  приведено к текущей форме контракта (`{ period, lines, totals }` service — аддитивно; `{ lines,
+  totals }` shop — BREAKING, было голым массивом), с полями `totals` по обеим схемам.

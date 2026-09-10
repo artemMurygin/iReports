@@ -268,16 +268,21 @@ read-only справочников. Диапазон дат валидирует
 закрыт (`AccountingPeriod`, `modules/accounting`) — у отчёта нет собственной таблицы/статуса периода,
 открыт/закрыт месяц определяется чтением именно этой таблицы (design.md D5); своего эндпоинта закрытия
 поэтому тоже нет — месяц фиксируется автоматически вместе с закрытием зарплатного периода (D7).
-- `GET /v1/service/warehouse/goods-turnover-report/:period` — строки отчёта за месяц (`period` —
-  `YYYY-MM`, невалидный формат — `400`); каждая строка — пара категория×склад, денормализованная
-  именем/`parentId` категории и именем склада прямо в строке (`GoodsTurnoverReportLine` → справочники
-  категорий/складов, без отдельного join на фронтенде): `{ categoryId, categoryName,
-  categoryParentId, warehouseId, warehouseName, outcomeQuantity, outcomeSum, stockQuantity, stockSum,
-  turnoverRatio }`. `turnoverRatio` — `outcome.sum(тек.мес) / ((stock.sum(прошл.мес) +
-  stock.sum(тек.мес)) / 2)`, `null` (не `0`), если данных за прошлый месяц по этой же паре нет, либо
-  средний остаток равен нулю. Месяц, ещё ни разу не пересчитанный (в том числе справочник складов ещё
-  не синхронизирован) — пустой список `lines`, не ошибка: используется фронтендом для состояния «отчёт
-  ещё не пересчитан»
+- `GET /v1/service/warehouse/goods-turnover-report/:period` — отчёт за месяц (`period` — `YYYY-MM`,
+  невалидный формат — `400`): `{ period, lines, totals }`. `lines` — строки отчёта, каждая — пара
+  категория×склад, денормализованная именем/`parentId` категории и именем склада прямо в строке
+  (`GoodsTurnoverReportLine` → справочники категорий/складов, без отдельного join на фронтенде):
+  `{ categoryId, categoryName, categoryParentId, warehouseId, warehouseName, outcomeQuantity,
+  outcomeSum, stockQuantity, stockSum, turnoverRatio }`. `turnoverRatio` — `outcome.sum(тек.мес) /
+  ((stock.sum(прошл.мес) + stock.sum(тек.мес)) / 2)`, `null` (не `0`), если данных за прошлый месяц по
+  этой же паре нет, либо средний остаток равен нулю. `totals` (add-department-head-salary-rules, FR5;
+  аддитивное поле поверх ранее существовавшего `{ period, lines }`) — по одной итоговой строке на
+  склад, встретившийся в `lines`: `{ warehouseId, outcomeSum, stockSum, stockQuantity, turnoverRatio }`
+  — сумма/количество и средневзвешенный по остатку коэффициент по НАСТОЯЩИМ корневым категориям
+  склада (`categoryParentId === null`); `turnoverRatio: null`, если ни одна корневая строка склада не
+  имеет посчитанного коэффициента. Месяц, ещё ни разу не пересчитанный (в том числе справочник складов
+  ещё не синхронизирован) — пустые `lines`/`totals`, не ошибка: используется фронтендом для состояния
+  «отчёт ещё не пересчитан»
 - `GET /v1/service/warehouse/product-categories` — плоский справочник категорий товаров
   (`roapp_product_categories`, `id`/`name`/`parentId`, без `depth` — таблица её не хранит), без
   параметров; используется для дерева/фильтра категорий на фронтенде (не для сборки самого отчёта —
@@ -407,10 +412,15 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
 - `GET /v1/shop/warehouse/catalog` — дерево категорий каталога магазина (`id`/`name`/`pathName`/
   `children`, родитель/потомки, не плоский список); архивные категории не отфильтровываются
 - `GET /v1/shop/warehouse/goods-turnover-report/:period` (`period` = `YYYY-MM`, опциональный query
-  `warehouseId`) — отчёт по оборачиваемости товаров за месяц: плоский массив строк «категория ×
-  склад» (`categoryId`/`warehouseId`/`turnoverQuantity`/`turnoverSum`/`stockQuantity`/`stockSum` —
-  денежные поля в копейках — /`coefficient`). `coefficient: null`, если строки за предыдущий период
-  нет или оба сравниваемых остатка нулевые (не `0`, см. design.md D8 change `shop-turnover-report`).
+  `warehouseId`) — отчёт по оборачиваемости товаров за месяц: **BREAKING (add-department-head-salary-rules,
+  FR5)** — ответ теперь `{ lines, totals }` вместо голого массива строк. `lines` — массив строк
+  «категория × склад» (`categoryId`/`warehouseId`/`turnoverQuantity`/`turnoverSum`/`stockQuantity`/
+  `stockSum` — денежные поля в копейках — /`coefficient`). `coefficient: null`, если строки за
+  предыдущий период нет или оба сравниваемых остатка нулевые (не `0`, см. design.md D8 change
+  `shop-turnover-report`). `totals` — по одной итоговой строке на склад, встретившийся в `lines`:
+  `{ warehouseId, turnoverSum, stockSum, stockQuantity, coefficient }` (те же денежные поля в
+  копейках) — сумма/количество и средневзвешенный по остатку коэффициент по НАСТОЯЩИМ корневым
+  категориям склада, независимая от `service` реализация той же формулы (design.md Decision 6).
   `400`, если `period` не в формате `YYYY-MM`
 - `GET /v1/shop/warehouse/stores` — справочный список складов МойСклад (`id`/`name`) для фильтра на
   странице отчёта по оборачиваемости

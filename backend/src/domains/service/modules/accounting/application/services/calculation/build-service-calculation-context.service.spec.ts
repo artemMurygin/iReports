@@ -208,9 +208,19 @@ describe('BuildServiceCalculationContextService — departmentSalesPerformance /
     };
 
     const percentBorders = [
-        { name: 'A', fromPlanPercent: 50, multiplier: 0.5, mode: 'FIX' as const },
+        {
+            name: 'A',
+            fromPlanPercent: 50,
+            multiplier: 0.5,
+            mode: 'FIX' as const,
+        },
         { name: 'B', fromPlanPercent: 70, multiplier: 1, mode: 'FIX' as const },
-        { name: 'C', fromPlanPercent: 100, multiplier: 1.5, mode: 'FIX' as const },
+        {
+            name: 'C',
+            fromPlanPercent: 100,
+            multiplier: 1.5,
+            mode: 'FIX' as const,
+        },
     ] as const;
 
     const buildDepartmentPercentRule = (category: string | null) =>
@@ -313,7 +323,8 @@ describe('BuildServiceCalculationContextService — departmentSalesPerformance /
             ]);
 
             const callsForCategory = findForScope.mock.calls.filter(
-                (call) => call[3] === 'cat-1',
+                ([, , , category]: [string, string, number, string | null]) =>
+                    category === 'cat-1',
             );
             expect(callsForCategory).toHaveLength(1);
         });
@@ -361,11 +372,7 @@ describe('BuildServiceCalculationContextService — departmentSalesPerformance /
 
             const context = await service.build(period(), 1, [rule]);
 
-            expect(turnoverFindForScope).toHaveBeenCalledWith(
-                '2026-08',
-                7,
-                2,
-            );
+            expect(turnoverFindForScope).toHaveBeenCalledWith('2026-08', 7, 2);
             expect(
                 context.turnoverPerformance.get(
                     turnoverPerformanceScopeKey({

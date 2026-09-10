@@ -71,9 +71,24 @@ describe('ShopSalaryRuleFactory', () => {
                 category: null,
                 fixedAmount: 10000,
                 percentBorders: [
-                    { name: 'A', fromPlanPercent: 50, multiplier: 0.5, mode: 'FIX' },
-                    { name: 'B', fromPlanPercent: 70, multiplier: 1, mode: 'FIX' },
-                    { name: 'C', fromPlanPercent: 100, multiplier: 1.5, mode: 'FIX' },
+                    {
+                        name: 'A',
+                        fromPlanPercent: 50,
+                        multiplier: 0.5,
+                        mode: 'FIX',
+                    },
+                    {
+                        name: 'B',
+                        fromPlanPercent: 70,
+                        multiplier: 1,
+                        mode: 'FIX',
+                    },
+                    {
+                        name: 'C',
+                        fromPlanPercent: 100,
+                        multiplier: 1.5,
+                        mode: 'FIX',
+                    },
                 ],
             },
         });
@@ -93,9 +108,24 @@ describe('ShopSalaryRuleFactory', () => {
                 fixedAmount: 5000,
                 planTurnoverRatio: 1,
                 percentBorders: [
-                    { name: 'A', fromPlanPercent: 50, multiplier: 0.5, mode: 'FIX' },
-                    { name: 'B', fromPlanPercent: 70, multiplier: 1, mode: 'FIX' },
-                    { name: 'C', fromPlanPercent: 100, multiplier: 1.5, mode: 'FIX' },
+                    {
+                        name: 'A',
+                        fromPlanPercent: 50,
+                        multiplier: 0.5,
+                        mode: 'FIX',
+                    },
+                    {
+                        name: 'B',
+                        fromPlanPercent: 70,
+                        multiplier: 1,
+                        mode: 'FIX',
+                    },
+                    {
+                        name: 'C',
+                        fromPlanPercent: 100,
+                        multiplier: 1.5,
+                        mode: 'FIX',
+                    },
                 ],
             },
         });

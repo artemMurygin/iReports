@@ -110,7 +110,8 @@ describe('BuildShopCalculationContextService', () => {
         } as unknown as TaskRepositoryPort;
 
         const turnoverFindForScope =
-            overrides?.turnoverFindForScope ?? jest.fn().mockResolvedValue(null);
+            overrides?.turnoverFindForScope ??
+            jest.fn().mockResolvedValue(null);
         const turnoverPerformanceReader: ShopTurnoverPerformanceReaderPort = {
             findForScope: turnoverFindForScope,
         };
@@ -467,9 +468,24 @@ describe('BuildShopCalculationContextService', () => {
             }) as unknown as ShopSalesPerformance;
 
         const percentBorders = [
-            { name: 'A', fromPlanPercent: 50, multiplier: 0.5, mode: 'FIX' as const },
-            { name: 'B', fromPlanPercent: 70, multiplier: 1, mode: 'FIX' as const },
-            { name: 'C', fromPlanPercent: 100, multiplier: 1.5, mode: 'FIX' as const },
+            {
+                name: 'A',
+                fromPlanPercent: 50,
+                multiplier: 0.5,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'B',
+                fromPlanPercent: 70,
+                multiplier: 1,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'C',
+                fromPlanPercent: 100,
+                multiplier: 1.5,
+                mode: 'FIX' as const,
+            },
         ] as const;
 
         const buildDepartmentPercentRule = (category: string | null) =>
@@ -514,9 +530,11 @@ describe('BuildShopCalculationContextService', () => {
             it('null, если у сотрудника нет отдела', async () => {
                 const { service } = buildService({ departmentId: null });
 
-                const context = await service.build(Period.create('2026-08'), 1, [
-                    buildDepartmentPercentRule(null),
-                ]);
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentPercentRule(null)],
+                );
 
                 expect(context.departmentSalesPerformance).toBeNull();
             });
@@ -532,16 +550,20 @@ describe('BuildShopCalculationContextService', () => {
                     performanceByCategory: { 'cat-1': performance },
                 });
 
-                const context = await service.build(Period.create('2026-08'), 1, [
-                    buildDepartmentPercentRule('cat-1'),
-                ]);
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentPercentRule('cat-1')],
+                );
 
                 expect(findForScope).toHaveBeenCalledWith(
                     '2026-08',
                     10,
                     'cat-1',
                 );
-                expect(context.departmentSalesPerformance?.get('cat-1')).toEqual({
+                expect(
+                    context.departmentSalesPerformance?.get('cat-1'),
+                ).toEqual({
                     fact: { turnover: 100000, margin: 40000 },
                     percentCompletion: 80,
                 });
@@ -553,9 +575,11 @@ describe('BuildShopCalculationContextService', () => {
                     performanceByCategory: {},
                 });
 
-                const context = await service.build(Period.create('2026-08'), 1, [
-                    buildDepartmentPercentRule('cat-1'),
-                ]);
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentPercentRule('cat-1')],
+                );
 
                 expect(context.departmentSalesPerformance?.has('cat-1')).toBe(
                     false,
@@ -575,7 +599,8 @@ describe('BuildShopCalculationContextService', () => {
                 ]);
 
                 const callsForCategory = findForScope.mock.calls.filter(
-                    (call) => call[2] === 'cat-1',
+                    ([, , category]: [string, number, string | null]) =>
+                        category === 'cat-1',
                 );
                 expect(callsForCategory).toHaveLength(1);
             });
@@ -589,9 +614,11 @@ describe('BuildShopCalculationContextService', () => {
                     config: { price: 100 },
                 });
 
-                const context = await service.build(Period.create('2026-08'), 1, [
-                    payPerHour,
-                ]);
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [payPerHour],
+                );
 
                 expect(context.departmentSalesPerformance).toEqual(new Map());
             });
@@ -603,9 +630,11 @@ describe('BuildShopCalculationContextService', () => {
                 const { service } = buildService({ turnoverFindForScope });
                 const rule = buildDepartmentTurnoverBonusRule('wh-1', 'cat-2');
 
-                const context = await service.build(Period.create('2026-08'), 1, [
-                    rule,
-                ]);
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [rule],
+                );
 
                 expect(turnoverFindForScope).toHaveBeenCalledWith(
                     '2026-08',
@@ -642,9 +671,11 @@ describe('BuildShopCalculationContextService', () => {
                     category: null,
                 });
 
-                const context = await service.build(Period.create('2026-08'), 1, [
-                    buildDepartmentTurnoverBonusRule('wh-1', null),
-                ]);
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentTurnoverBonusRule('wh-1', null)],
+                );
 
                 expect(context.turnoverPerformance.has(key)).toBe(true);
                 expect(context.turnoverPerformance.get(key)).toBeNull();
@@ -660,9 +691,11 @@ describe('BuildShopCalculationContextService', () => {
                     config: { price: 100 },
                 });
 
-                const context = await service.build(Period.create('2026-08'), 1, [
-                    payPerHour,
-                ]);
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [payPerHour],
+                );
 
                 expect(context.turnoverPerformance).toEqual(new Map());
                 expect(turnoverFindForScope).not.toHaveBeenCalled();
