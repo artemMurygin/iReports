@@ -117,10 +117,10 @@
 
 ## 15. Frontend: `WarehouseField` (новый компонент)
 
-- [ ] 15.1 Написать тесты: компонент рендерит список складов, вызывает `onChange` при выборе, обязателен для `DepartmentTurnoverBonus`
-- [ ] 15.2 Прогнать тесты из 15.1 и зафиксировать red
-- [ ] 15.3 Реализовать `features/SalaryRuleForm/ui/WarehouseField` — визуально переиспользовать `ERP/Molecule/Field` по паттерну поля «Склад» в карточке FR4 (Node ID `WdQo0`/`Cp19t`, `design/sallary-first-iteration.pen` — читать точную структуру через `mcp__pencil__execute`/`Get`, тот же паттерн, что уже применён у `CategoryField`)
-- [ ] 15.4 Прогнать тесты из 15.1 и зафиксировать green
+- [x] 15.1 Написать тесты: компонент рендерит список складов, вызывает `onChange` при выборе, обязателен для `DepartmentTurnoverBonus`
+- [x] 15.2 Прогнать тесты из 15.1 и зафиксировать red
+- [x] 15.3 Реализовать `features/SalaryRuleForm/ui/WarehouseField` — визуально переиспользовать `ERP/Molecule/Field` по паттерну поля «Склад» в карточке FR4 (Node ID `WdQo0`/`Cp19t`, `design/sallary-first-iteration.pen` — читать точную структуру через `mcp__pencil__execute`/`Get`, тот же паттерн, что уже применён у `CategoryField`)
+- [x] 15.4 Прогнать тесты из 15.1 и зафиксировать green
 
 ## 16. Frontend: `RuleFormCardFields` — 3 новые ветки рендера полей (desktop + mobile)
 
