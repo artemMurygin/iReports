@@ -80,6 +80,7 @@ import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sy
 import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { SHOP_SNAPSHOT_ROWS_CALCULATOR } from '@/domains/shop/modules/accounting/application/ports/calculation/snapshot-rows-calculator.port';
 import { SHOP_TURNOVER_REPORT_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/turnover-report/turnover-report.port';
+import { SHOP_TURNOVER_PERFORMANCE_READER } from '@/domains/shop/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { SHOP_SALARY_ACCRUAL_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
@@ -97,6 +98,7 @@ import { ShopAccountingCalculationCacheRepository } from '@/domains/shop/modules
 import { ShopCashboxConfigRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/cashbox/cashbox-config.repository';
 import { PayoutCashboxRecordRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/cashbox/payout-cashbox-record.repository';
 import { ShopTurnoverReportRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/turnover-report/turnover-report.repository';
+import { GetShopTurnoverPerformanceService } from '@/domains/shop/modules/accounting/infrastructure/repositories/turnover-performance/get-turnover-performance.service';
 import { EMPLOYEE_IDENTITY_REPOSITORY } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import { EmployeeIdentityRepository } from '@/modules/employee-identity/infrastructure/repositories/employee-identity.repository';
 import { SHOP_ERP_CASH_DOCUMENT_PORT } from '@/domains/shop/modules/accounting/application/ports/cashbox/cashbox-document.port';
@@ -445,6 +447,13 @@ import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/acc
         {
             provide: SHOP_TURNOVER_REPORT_REPOSITORY,
             useClass: ShopTurnoverReportRepository,
+        },
+        // GetShopTurnoverPerformanceService (FR4, design.md Decision 6b) — реализация
+        // SHOP_TURNOVER_PERFORMANCE_READER поверх SHOP_TURNOVER_REPORT_REPOSITORY выше, читает
+        // moySkladProductFolder собственным Prisma-делегатом для "весь склад" (category = null).
+        {
+            provide: SHOP_TURNOVER_PERFORMANCE_READER,
+            useClass: GetShopTurnoverPerformanceService,
         },
     ],
     exports: [

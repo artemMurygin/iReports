@@ -49,17 +49,17 @@
 
 ## 8. Backend/service: `TURNOVER_PERFORMANCE_READER` + `resolveTurnoverPercentCompletion`
 
-- [ ] 8.1 Написать тесты: `TurnoverPerformanceReaderPort.findForScope(period, warehouseId, category)` — факт по категории склада и итог по всему складу при `category = null` (из `TurnoverReportSnapshot`), `null` при недостатке данных; `resolveTurnoverPercentCompletion(factRatio, planRatio)` — включая `factRatio = null`
-- [ ] 8.2 Прогнать тесты из 8.1 и зафиксировать red
-- [ ] 8.3 Реализовать `GetTurnoverPerformanceService` (реализация порта через `TURNOVER_REPORT_REPOSITORY`) и `resolveTurnoverPercentCompletion` (service)
-- [ ] 8.4 Прогнать тесты из 8.1 и зафиксировать green
+- [x] 8.1 Написать тесты: `TurnoverPerformanceReaderPort.findForScope(period, warehouseId, category)` — факт по категории склада и итог по всему складу при `category = null` (из `TurnoverReportSnapshot`), `null` при недостатке данных; `resolveTurnoverPercentCompletion(factRatio, planRatio)` — включая `factRatio = null`
+- [x] 8.2 Прогнать тесты из 8.1 и зафиксировать red
+- [x] 8.3 Реализовать `GetTurnoverPerformanceService` (реализация порта через `TURNOVER_REPORT_REPOSITORY`) и `resolveTurnoverPercentCompletion` (service)
+- [x] 8.4 Прогнать тесты из 8.1 и зафиксировать green
 
 ## 9. Backend/shop: `SHOP_TURNOVER_PERFORMANCE_READER` + `resolveTurnoverPercentCompletion`
 
-- [ ] 9.1 Написать тесты зеркально п.8 для shop
-- [ ] 9.2 Прогнать тесты из 9.1 и зафиксировать red
-- [ ] 9.3 Реализовать `GetShopTurnoverPerformanceService` и `resolveTurnoverPercentCompletion` (shop)
-- [ ] 9.4 Прогнать тесты из 9.1 и зафиксировать green
+- [x] 9.1 Написать тесты зеркально п.8 для shop
+- [x] 9.2 Прогнать тесты из 9.1 и зафиксировать red
+- [x] 9.3 Реализовать `GetShopTurnoverPerformanceService` и `resolveTurnoverPercentCompletion` (shop)
+- [x] 9.4 Прогнать тесты из 9.1 и зафиксировать green
 
 ## 10. Backend/service: 3 новых entity правила + роль
 

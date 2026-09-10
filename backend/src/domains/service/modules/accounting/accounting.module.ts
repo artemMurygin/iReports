@@ -80,6 +80,7 @@ import { SERVICE_ERP_CASH_DOCUMENT_PORT } from '@/domains/service/modules/accoun
 import { ERP_PERIOD_SYNC } from '@/shared/application/ports/erp-period-sync.port';
 import { SNAPSHOT_ROWS_CALCULATOR } from '@/domains/service/modules/accounting/application/ports/calculation/snapshot-rows-calculator.port';
 import { TURNOVER_REPORT_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/turnover-report/turnover-report.port';
+import { TURNOVER_PERFORMANCE_READER } from '@/domains/service/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
 import { MotivationSchemaRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/motivation-schema.repository';
 import { SalaryRuleRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/motivation-schema/salary-rule.repository';
 import { AccountingPeriodRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/accounting-period/accounting-period.repository';
@@ -92,6 +93,7 @@ import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infras
 import { ErpCashConfigRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/erp-cash-config.repository';
 import { PayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/payout-cashbox-record.repository';
 import { TurnoverReportRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/turnover-report/turnover-report.repository';
+import { GetTurnoverPerformanceService } from '@/domains/service/modules/accounting/infrastructure/repositories/turnover-performance/get-turnover-performance.service';
 import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/infrastructure/sync/roapp-erp-period-sync.adapter';
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period/accounting-period-closed.event-handler';
@@ -384,6 +386,13 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         {
             provide: TURNOVER_REPORT_REPOSITORY,
             useClass: TurnoverReportRepository,
+        },
+        // GetTurnoverPerformanceService (FR4, design.md Decision 6b) — реализация
+        // TURNOVER_PERFORMANCE_READER поверх TURNOVER_REPORT_REPOSITORY выше, читает
+        // roappProductCategory собственным Prisma-делегатом для "весь склад" (category = null).
+        {
+            provide: TURNOVER_PERFORMANCE_READER,
+            useClass: GetTurnoverPerformanceService,
         },
     ],
     // ACCOUNTING_PERIOD_REPOSITORY — экспортирован для модуля
