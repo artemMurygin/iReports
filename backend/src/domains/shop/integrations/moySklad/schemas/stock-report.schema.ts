@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { z } from 'zod';
 
 // GET /report/stock/bystore?groupBy=product (shop-turnover-report D5) —
@@ -9,13 +10,29 @@ import { z } from 'zod';
 // документацией именно КОНТРАКТ ОПРОСА асинхронной задачи (не имена полей
 // строки) — это обрабатывается в MoyskladService (см. "Открытые вопросы"
 // design.md), а не здесь.
+//
+// На реальном аккаунте МойСклад иногда отдаёт запись stockByStore без
+// "price" (по всей видимости — товар без известной себестоимости на
+// складе). Раз в этом отчёте нет инъекции `warn`-колбэка, как у
+// toAssortmentStockRow (schema.parse здесь вызывается универсально из
+// MoyskladService._fetchPaged/_fetchStockByStoreAsync) — используем
+// Logger напрямую и дефолт 0, а не падение всего батча.
 const StockByStoreEntrySchema = z
     .object({
         meta: z.object({ href: z.string() }),
         stock: z.number(),
-        price: z.number(),
+        price: z.number().optional(),
     })
-    .passthrough();
+    .passthrough()
+    .transform((entry) => {
+        if (entry.price === undefined) {
+            Logger.warn(
+                `/report/stock/bystore: поле "price" отсутствует у ${entry.meta.href}, себестоимость принята за 0`,
+                'StockByStoreSchema',
+            );
+        }
+        return { ...entry, price: entry.price ?? 0 };
+    });
 
 export const StockByStoreRowSchema = z
     .object({
