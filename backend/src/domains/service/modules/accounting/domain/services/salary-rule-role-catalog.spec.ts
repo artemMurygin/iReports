@@ -5,8 +5,13 @@ describe('listSalaryRuleTypes', () => {
         const types = listSalaryRuleTypes();
 
         // Раздел 10 tasks.md (add-task-based-salary-rule) — 4 типа вместо 3
-        // после регистрации TaskCompletion в salaryRuleRegistry.
+        // после регистрации TaskCompletion в salaryRuleRegistry. Раздел 12
+        // tasks.md (add-department-head-salary-rules) — ещё 3 новых вида
+        // уровня отдела/направления после их регистрации в этом же раунде.
         expect(types.map((t) => t.type).sort()).toEqual([
+            'DepartmentPercent',
+            'DepartmentPlanBonus',
+            'DepartmentTurnoverBonus',
             'OrderPayed',
             'PayPerHour',
             'ServiceCompleted',

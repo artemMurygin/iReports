@@ -4,6 +4,9 @@ import {
     payPerHourSalaryConfigSchema,
     serviceCompletedSalaryConfigSchema,
     taskCompletionSalaryConfigResponseSchema,
+    departmentPercentSalaryConfigSchema,
+    departmentPlanBonusSalaryConfigSchema,
+    departmentTurnoverBonusSalaryConfigSchema,
 } from 'ireports-contracts';
 import { salaryRuleRegistry } from '@/domains/service/modules/accounting/domain/salary-rule-registry';
 
@@ -31,6 +34,12 @@ export const salaryRuleConfigSchemaByType: Partial<
     ServiceCompleted: serviceCompletedSalaryConfigSchema,
     OrderPayed: orderPayedSalaryConfigSchema,
     TaskCompletion: taskCompletionSalaryConfigResponseSchema,
+    // Implements FR2-FR4 of add-department-head-salary-rules (tasks.md раздел 12) — config этих 3
+    // новых видов правила тоже неизменной формой доходит от запроса до jsonb-колонки `props`, как и
+    // у PayPerHour/ServiceCompleted/OrderPayed выше.
+    DepartmentPercent: departmentPercentSalaryConfigSchema,
+    DepartmentPlanBonus: departmentPlanBonusSalaryConfigSchema,
+    DepartmentTurnoverBonus: departmentTurnoverBonusSalaryConfigSchema,
 };
 
 // Список типов берём из ключей реестра, а не хардкодим второй раз — так

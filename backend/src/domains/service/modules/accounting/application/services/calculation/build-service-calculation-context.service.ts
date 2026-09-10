@@ -10,8 +10,22 @@ import type { SalesPerformanceReaderPort } from '@/domains/service/modules/sales
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
 import { TASK_REPOSITORY } from '@/modules/tasks/application/ports/task.repository.port';
 import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
-import type { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import type {
+    DepartmentPercentSalaryConfig,
+    DepartmentPlanBonusSalaryConfig,
+    DepartmentTurnoverBonusSalaryConfig,
+    SalaryRule,
+} from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { buildTaskCompletionStatuses } from '@/domains/service/modules/accounting/application/services/calculation/task-completion-statuses.builder';
+import { TURNOVER_PERFORMANCE_READER } from '@/domains/service/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
+import type { TurnoverPerformanceReaderPort } from '@/domains/service/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
+import type {
+    DepartmentSalesPerformanceByCategory,
+    DepartmentSalesPerformanceEntry,
+    TurnoverPerformanceByScope,
+    TurnoverPerformanceScope,
+} from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
+import { turnoverPerformanceScopeKey } from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
 
 // Базовый контекст расчёта направления service, ещё не привязанный к
 // конкретному режиму (FACT/PROGNOSE, Фаза 9) — salesPerformanceDetail несёт
@@ -29,6 +43,18 @@ export interface ServiceCalculationBaseContext {
     period: CalculationContext['period'];
     erpData: ServiceCalculationErpData;
     salesPerformanceDetail: SalesPerformance | null;
+    // Implements FR2-FR3 of add-department-head-salary-rules (tasks.md раздел 12, design.md
+    // Decision 3) — факт (turnover/margin) + percentCompletion по СОБСТВЕННОЙ category каждого
+    // DepartmentPercent/DepartmentPlanBonus правила переданной схемы (а не department целиком, как
+    // salesPerformanceDetail выше). null, если у сотрудника нет отдела — тот же признак, что и у
+    // salesPerformanceDetail. Мода FACT/PROGNOSE не различается (в отличие от
+    // toSalesPerformanceContext) — новые виды правил читают факт напрямую, без прогнозного прохода.
+    departmentSalesPerformance: DepartmentSalesPerformanceByCategory | null;
+    // Implements FR4 of add-department-head-salary-rules (tasks.md раздел 12) — факт. коэффициент
+    // оборачиваемости по уникальным (warehouseId, category) скоупам DepartmentTurnoverBonus правил
+    // схемы, ключ — turnoverPerformanceScopeKey(). Всегда Map (не null), пустая, если в схеме нет ни
+    // одного такого правила.
+    turnoverPerformance: TurnoverPerformanceByScope;
 }
 
 // Application-слой сборки контекста расчёта направления service (Фаза 7) —
@@ -49,6 +75,9 @@ export class BuildServiceCalculationContextService {
         private readonly salesPerformanceReader: SalesPerformanceReaderPort,
         @Inject(TASK_REPOSITORY)
         private readonly taskRepo: TaskRepositoryPort,
+        // Implements FR4 of add-department-head-salary-rules (tasks.md раздел 12).
+        @Inject(TURNOVER_PERFORMANCE_READER)
+        private readonly turnoverPerformanceReader: TurnoverPerformanceReaderPort,
     ) {}
 
     // replace-bitrix-task-integration, design.md решение 5 — rules: уже
@@ -97,10 +126,16 @@ export class BuildServiceCalculationContextService {
             ),
         ]);
 
-        const salesPerformanceDetail = await this.findSalesPerformance(
-            period,
-            departmentId,
-        );
+        const [salesPerformanceDetail, departmentSalesPerformance, turnoverPerformance] =
+            await Promise.all([
+                this.findSalesPerformance(period, departmentId),
+                this.resolveDepartmentSalesPerformance(
+                    period,
+                    departmentId,
+                    rules,
+                ),
+                this.resolveTurnoverPerformance(period, rules),
+            ]);
 
         return {
             employee: { ...base.employee, identities },
@@ -112,6 +147,8 @@ export class BuildServiceCalculationContextService {
                 taskCompletionStatuses,
             },
             salesPerformanceDetail,
+            departmentSalesPerformance,
+            turnoverPerformance,
         };
     }
 
@@ -151,5 +188,167 @@ export class BuildServiceCalculationContextService {
         const departmentId =
             await this.dataSource.findEmployeeDepartmentId(employeeId);
         return this.findSalesPerformance(period, departmentId);
+    }
+
+    // Implements FR2-FR3 of add-department-head-salary-rules (tasks.md раздел 12).
+    //
+    // Карта fact/percentCompletion по уникальным category правил DepartmentPercent/
+    // DepartmentPlanBonus переданной схемы — по одному findForScope на категорию (не на правило: две
+    // разные правила с одинаковой category делят один запрос), плюс сам departmentId. null, если у
+    // сотрудника нет отдела вовсе (department для этих правил всегда implicit, design.md Decision 1)
+    // — тогда запросов не делается совсем. Пустая Map, если department есть, но в схеме нет ни
+    // одного правила этих двух видов.
+    private async resolveDepartmentSalesPerformance(
+        period: Period,
+        departmentId: number | null,
+        rules: SalaryRule[],
+    ): Promise<DepartmentSalesPerformanceByCategory | null> {
+        if (departmentId == null) {
+            return null;
+        }
+
+        const categories = this.collectDepartmentSalesPerformanceCategories(
+            rules,
+        );
+        const result: DepartmentSalesPerformanceByCategory = new Map();
+        if (categories.size === 0) {
+            return result;
+        }
+
+        const entries = await Promise.all(
+            [...categories].map(
+                async (category) =>
+                    [
+                        category,
+                        await this.salesPerformanceReader.findForScope(
+                            'service',
+                            period.getValue(),
+                            departmentId,
+                            category,
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [category, performance] of entries) {
+            if (performance) {
+                result.set(category, this.toDepartmentSalesPerformanceEntry(performance));
+            }
+        }
+        return result;
+    }
+
+    private collectDepartmentSalesPerformanceCategories(
+        rules: SalaryRule[],
+    ): Set<string | null> {
+        const categories = new Set<string | null>();
+        for (const rule of rules) {
+            if (
+                rule.type !== 'DepartmentPercent' &&
+                rule.type !== 'DepartmentPlanBonus'
+            ) {
+                continue;
+            }
+            const config = rule.config as
+                | DepartmentPercentSalaryConfig
+                | DepartmentPlanBonusSalaryConfig;
+            categories.add(config.category);
+        }
+        return categories;
+    }
+
+    private toDepartmentSalesPerformanceEntry(
+        performance: SalesPerformance,
+    ): DepartmentSalesPerformanceEntry {
+        const fact = performance.getFact();
+        return {
+            fact: { turnover: fact.getTurnover(), margin: fact.getMargin() },
+            percentCompletion: fact.getPercentCompletion(),
+        };
+    }
+
+    // Implements FR4 of add-department-head-salary-rules (tasks.md раздел 12).
+    //
+    // Карта факт. коэффициента оборачиваемости по уникальным (warehouseId, category) скоупам правил
+    // DepartmentTurnoverBonus переданной схемы — по одному findForScope на скоуп (несколько правил с
+    // одинаковым warehouseId+category делят один запрос). В отличие от
+    // resolveDepartmentSalesPerformance, не зависит от department сотрудника вовсе (design.md
+    // Decision 1/2 — оборачиваемость скоуплена по складу, не по отделу). Значение null для scope
+    // записывается в карту явно (а не пропускается) — TurnoverPerformanceByScope несёт `number | null`
+    // именно чтобы отличить "проверяли, данных нет" от "ещё не проверяли".
+    private async resolveTurnoverPerformance(
+        period: Period,
+        rules: SalaryRule[],
+    ): Promise<TurnoverPerformanceByScope> {
+        const scopes = this.collectTurnoverPerformanceScopes(rules);
+        const result: TurnoverPerformanceByScope = new Map();
+        if (scopes.length === 0) {
+            return result;
+        }
+
+        const entries = await Promise.all(
+            scopes.map(
+                async (scope) =>
+                    [
+                        turnoverPerformanceScopeKey(scope),
+                        await this.turnoverPerformanceReader.findForScope(
+                            period.getValue(),
+                            scope.warehouseId,
+                            this.toRoappCategoryId(scope.category),
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [key, ratio] of entries) {
+            result.set(key, ratio);
+        }
+        return result;
+    }
+
+    // PRE-EXISTING CROSS-GROUP TYPE GAP (discovered while implementing tasks.md раздел 12, not
+    // introduced here — see final report): `DepartmentTurnoverBonusSalaryConfig.category` is
+    // `string | null` end-to-end (contracts/commands/salary-rule.ts, calculation-context.types.ts,
+    // TurnoverPerformanceScope) — the same generic scope-parameter shape used by every other
+    // category field in this domain (SalesPlan.category, ProductSold.config.category,
+    // DepartmentPercent/DepartmentPlanBonus.config.category). But service's turnover report rows
+    // key categories by the numeric RoApp category id (roappProductCategory.id) —
+    // TurnoverPerformanceReaderPort.findForScope/TurnoverReportSnapshot.ratioForCategory both take
+    // `category: number | null` (see application/ports/turnover-performance/turnover-performance.port.ts,
+    // domain/entities/turnover-report/turnover-report-snapshot.entity.ts — both from an earlier task
+    // group). This bridges the two conventions at the one call site that needs both: a numeric-string
+    // category parses to its RoApp id; `null` stays `null`; a non-numeric string (should not occur in
+    // practice — the UI is expected to submit the RoApp category id as a string) resolves to `null`
+    // (falls back to "insufficient data", design.md Q2 — never throws). Fixing this properly means
+    // reconciling the config schema's category type with the turnover port's, which reaches into
+    // contracts and an earlier group's entities/tests — flagged for a follow-up, not done here.
+    private toRoappCategoryId(category: string | null): number | null {
+        if (category === null) {
+            return null;
+        }
+        const parsed = Number(category);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    private collectTurnoverPerformanceScopes(
+        rules: SalaryRule[],
+    ): TurnoverPerformanceScope[] {
+        const seenKeys = new Set<string>();
+        const scopes: TurnoverPerformanceScope[] = [];
+        for (const rule of rules) {
+            if (rule.type !== 'DepartmentTurnoverBonus') {
+                continue;
+            }
+            const config = rule.config as DepartmentTurnoverBonusSalaryConfig;
+            const scope: TurnoverPerformanceScope = {
+                warehouseId: config.warehouseId,
+                category: config.category,
+            };
+            const key = turnoverPerformanceScopeKey(scope);
+            if (seenKeys.has(key)) {
+                continue;
+            }
+            seenKeys.add(key);
+            scopes.push(scope);
+        }
+        return scopes;
     }
 }
