@@ -23,7 +23,7 @@ export class GetGoodsTurnoverReportHttpController {
     @Get(routesV1.shop.warehouse.goodsTurnoverReport.byPeriod)
     @ApiOperation({
         summary:
-            'Отчёт по оборачиваемости товаров магазина (оборот/остаток/коэффициент) за период',
+            'Отчёт по оборачиваемости товаров магазина (оборот/остаток/коэффициент) за период и итог по складу',
     })
     async get(
         @Param('period') period: string,

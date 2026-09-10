@@ -11,6 +11,8 @@ import { GoodsTurnoverReportCron } from './infrastructure/cron/goods-turnover-re
 import { GoodsTurnoverPeriodClosedHandler } from './application/events/period-closed.handler';
 import { GoodsTurnoverReportRepository } from './infrastructure/repositories/goods-turnover-report/goods-turnover-report.repository';
 import { GOODS_TURNOVER_REPORT_REPOSITORY } from './application/ports/goods-turnover-report/goods-turnover-report.port';
+import { ProductCategoryRepository } from './infrastructure/repositories/product-category/product-category.repository';
+import { PRODUCT_CATEGORY_REPOSITORY } from './application/ports/product-category/product-category.port';
 import { GetGoodsTurnoverReportHttpController } from './interface/http-controllers/get-goods-turnover-report.http.controller';
 import { GetShopStoresHttpController } from './interface/http-controllers/get-shop-stores.http.controller';
 
@@ -63,6 +65,10 @@ import { GetShopStoresHttpController } from './interface/http-controllers/get-sh
         {
             provide: GOODS_TURNOVER_REPORT_REPOSITORY,
             useClass: GoodsTurnoverReportRepository,
+        },
+        {
+            provide: PRODUCT_CATEGORY_REPOSITORY,
+            useClass: ProductCategoryRepository,
         },
         {
             provide: SHOP_ACCOUNTING_PERIOD_REPOSITORY,

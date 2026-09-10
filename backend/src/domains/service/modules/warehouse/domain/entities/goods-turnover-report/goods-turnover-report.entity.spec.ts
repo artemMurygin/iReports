@@ -21,6 +21,24 @@ function buildLine(
     });
 }
 
+function buildLineWithFlow(
+    categoryId: number,
+    warehouseId: number,
+    props: { outcomeSum?: number; stockSum?: number; stockQuantity?: number },
+    period = '2026-08',
+): GoodsTurnoverReportLine {
+    return GoodsTurnoverReportLine.create({
+        period,
+        categoryId,
+        warehouseId,
+        outcome: GoodsFlowMetric.create(0, props.outcomeSum ?? 0),
+        stock: GoodsFlowMetric.create(
+            props.stockQuantity ?? 0,
+            props.stockSum ?? 0,
+        ),
+    });
+}
+
 describe('GoodsTurnoverReport', () => {
     it('строит агрегат из позиций разных пар категория-склад', () => {
         const report = GoodsTurnoverReport.create({
@@ -70,6 +88,67 @@ describe('GoodsTurnoverReport', () => {
                     lines: [buildLine(1, 1, '2026-07')],
                 }),
             ).toThrow(GoodsTurnoverReportLinePeriodMismatchException);
+        });
+    });
+
+    // add-department-head-salary-rules, tasks.md задача 4.1 (design.md Decision 6a, FR5):
+    // GoodsTurnoverReport.totals() — по одной записи GoodsTurnoverWarehouseTotal на каждый склад,
+    // встретившийся в lines, посчитанной по строкам настоящих корневых категорий (rootCategoryIds).
+    describe('totals', () => {
+        it('пустой отчёт → пустой массив totals', () => {
+            const report = GoodsTurnoverReport.create({
+                period: '2026-08',
+                lines: [],
+            });
+
+            expect(report.totals(new Set())).toEqual([]);
+        });
+
+        it('одна запись на склад — суммирует только строки настоящих корневых категорий', () => {
+            const report = GoodsTurnoverReport.create({
+                period: '2026-08',
+                lines: [
+                    buildLineWithFlow(1, 1, {
+                        outcomeSum: 100,
+                        stockSum: 200,
+                        stockQuantity: 4,
+                    }),
+                    // дочерняя категория той же корневой — не должна задваивать сумму родителя
+                    buildLineWithFlow(2, 1, {
+                        outcomeSum: 60,
+                        stockSum: 120,
+                        stockQuantity: 2,
+                    }),
+                ],
+            });
+
+            const totals = report.totals(new Set([1]));
+
+            expect(totals).toHaveLength(1);
+            expect(totals[0].warehouseId).toBe(1);
+            expect(totals[0].outcomeSum).toBe(100);
+            expect(totals[0].stockSum).toBe(200);
+            expect(totals[0].stockQuantity).toBe(4);
+        });
+
+        it('по одной записи на каждый склад, встретившийся в lines, включая склад без корневых строк', () => {
+            const report = GoodsTurnoverReport.create({
+                period: '2026-08',
+                lines: [
+                    buildLineWithFlow(1, 1, { outcomeSum: 100, stockSum: 200 }),
+                    // категория 2 на складе 2 — не корневая (не входит в rootCategoryIds), но
+                    // склад 2 всё равно должен появиться в totals с нулевыми суммами.
+                    buildLineWithFlow(2, 2, { outcomeSum: 999, stockSum: 999 }),
+                ],
+            });
+
+            const totals = report.totals(new Set([1]));
+
+            expect(totals.map((t) => t.warehouseId).sort()).toEqual([1, 2]);
+            const warehouse2 = totals.find((t) => t.warehouseId === 2);
+            expect(warehouse2?.outcomeSum).toBe(0);
+            expect(warehouse2?.stockSum).toBe(0);
+            expect(warehouse2?.turnoverRatio).toBeNull();
         });
     });
 });

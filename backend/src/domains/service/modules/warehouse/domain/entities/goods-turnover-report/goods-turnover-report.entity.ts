@@ -6,6 +6,7 @@ import {
     DuplicateGoodsTurnoverReportLineException,
     GoodsTurnoverReportLinePeriodMismatchException,
 } from '../../exceptions/goods-turnover-report.exception';
+import { GoodsTurnoverWarehouseTotal } from '../../value-objects/goods-turnover-warehouse-total.value-object';
 import { GoodsTurnoverReportLine } from './goods-turnover-report-line.entity';
 
 export interface GoodsTurnoverReportProps {
@@ -74,5 +75,36 @@ export class GoodsTurnoverReport extends AggregateRoot<GoodsTurnoverReportProps>
             }
             seen.add(key);
         }
+    }
+
+    // implements FR5 of add-department-head-salary-rules
+    // Итоговая строка «по складу» (design.md Decision 6a) —
+    // по одной GoodsTurnoverWarehouseTotal на каждый склад, встретившийся в lines, посчитанной
+    // только по строкам НАСТОЯЩИХ корневых категорий этого склада (rootCategoryIds — множество id
+    // категорий с parentId === null, критерий корня не виден на самой строке отчёта, поэтому
+    // приходит параметром от вызывающей стороны, GetGoodsTurnoverReportService, которая уже
+    // загружает справочник категорий для денормализации lines). Склад без единой строки корневой
+    // категории (частичный успех построения отчёта — RemOnline не вернул данные по корневой
+    // категории этого склада за период) всё равно попадает в результат нулевой записью — не
+    // выпадает из totals молча.
+    totals(
+        rootCategoryIds: ReadonlySet<number>,
+    ): GoodsTurnoverWarehouseTotal[] {
+        const linesByWarehouse = new Map<number, GoodsTurnoverReportLine[]>();
+        for (const line of this.props.lines) {
+            const lines = linesByWarehouse.get(line.warehouseId) ?? [];
+            lines.push(line);
+            linesByWarehouse.set(line.warehouseId, lines);
+        }
+
+        return Array.from(linesByWarehouse.entries()).map(
+            ([warehouseId, lines]) =>
+                GoodsTurnoverWarehouseTotal.calculate(
+                    warehouseId,
+                    lines.filter((line) =>
+                        rootCategoryIds.has(line.categoryId),
+                    ),
+                ),
+        );
     }
 }

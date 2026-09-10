@@ -14,24 +14,24 @@
 
 ## 3. Backend/service: формула итога по складу (warehouse)
 
-- [ ] 3.1 Написать тесты на `TurnoverRatioValueObject` (инвариант `value > 0`) и на `GoodsTurnoverWarehouseTotal` (warehouse/service) — формула «сумма по настоящим корневым строкам + средневзвешенный коэффициент» (design.md, Decision 6a)
-- [ ] 3.2 Прогнать тесты из 3.1 и зафиксировать red
-- [ ] 3.3 Реализовать `TurnoverRatioValueObject` и `GoodsTurnoverWarehouseTotal` в `domains/service/modules/warehouse`
-- [ ] 3.4 Прогнать тесты из 3.1 и зафиксировать green
+- [x] 3.1 Написать тесты на `TurnoverRatioValueObject` (инвариант `value > 0`) и на `GoodsTurnoverWarehouseTotal` (warehouse/service) — формула «сумма по настоящим корневым строкам + средневзвешенный коэффициент» (design.md, Decision 6a)
+- [x] 3.2 Прогнать тесты из 3.1 и зафиксировать red
+- [x] 3.3 Реализовать `TurnoverRatioValueObject` и `GoodsTurnoverWarehouseTotal` в `domains/service/modules/warehouse`
+- [x] 3.4 Прогнать тесты из 3.1 и зафиксировать green
 
 ## 4. Backend/service: `GoodsTurnoverReport.totals()` + `GetGoodsTurnoverReportService`
 
-- [ ] 4.1 Написать тесты: агрегат `GoodsTurnoverReport.totals()` возвращает `GoodsTurnoverWarehouseTotal[]` по складам; `GetGoodsTurnoverReportService` восстанавливает агрегат через репозиторий (не только строки) и возвращает `{period, lines, totals}`
-- [ ] 4.2 Прогнать тесты из 4.1 и зафиксировать red
-- [ ] 4.3 Реализовать метод `totals()` на агрегате `GoodsTurnoverReport` и модифицировать `GetGoodsTurnoverReportService`
-- [ ] 4.4 Прогнать тесты из 4.1 и зафиксировать green, убедиться что существующее поле `lines` не изменило форму
+- [x] 4.1 Написать тесты: агрегат `GoodsTurnoverReport.totals()` возвращает `GoodsTurnoverWarehouseTotal[]` по складам; `GetGoodsTurnoverReportService` восстанавливает агрегат через репозиторий (не только строки) и возвращает `{period, lines, totals}`
+- [x] 4.2 Прогнать тесты из 4.1 и зафиксировать red
+- [x] 4.3 Реализовать метод `totals()` на агрегате `GoodsTurnoverReport` и модифицировать `GetGoodsTurnoverReportService`
+- [x] 4.4 Прогнать тесты из 4.1 и зафиксировать green, убедиться что существующее поле `lines` не изменило форму
 
 ## 5. Backend/shop: `GoodsTurnoverWarehouseTotal` + `GetGoodsTurnoverReportService` (BREAKING)
 
-- [ ] 5.1 Написать тесты: `GoodsTurnoverWarehouseTotal.calculate(lines)` (warehouse/shop, независимая реализация той же формулы, вызывается статически по образцу `TurnoverCoefficient`) и `GetGoodsTurnoverReportService` (shop) возвращает `{lines, totals}` вместо голого массива
-- [ ] 5.2 Прогнать тесты из 5.1 и зафиксировать red
-- [ ] 5.3 Реализовать `GoodsTurnoverWarehouseTotal` (warehouse/shop) и модифицировать `GetGoodsTurnoverReportService` (shop)
-- [ ] 5.4 Прогнать тесты из 5.1 и зафиксировать green
+- [x] 5.1 Написать тесты: `GoodsTurnoverWarehouseTotal.calculate(lines)` (warehouse/shop, независимая реализация той же формулы, вызывается статически по образцу `TurnoverCoefficient`) и `GetGoodsTurnoverReportService` (shop) возвращает `{lines, totals}` вместо голого массива
+- [x] 5.2 Прогнать тесты из 5.1 и зафиксировать red
+- [x] 5.3 Реализовать `GoodsTurnoverWarehouseTotal` (warehouse/shop) и модифицировать `GetGoodsTurnoverReportService` (shop)
+- [x] 5.4 Прогнать тесты из 5.1 и зафиксировать green
 
 ## 6. Backend/service: `TurnoverReportSnapshot` + `TURNOVER_REPORT_REPOSITORY` (accounting)
 
