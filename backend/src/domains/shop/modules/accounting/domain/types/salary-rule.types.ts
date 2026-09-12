@@ -122,6 +122,10 @@ export type TaskCompletionShopSalaryConfig = {
     // Сумма начисления по умолчанию — зеркало
     // domain/types/salary-rule.types.ts направления service.
     defaultAmount: number;
+    // Ссылки, прикрепляемые EnsureShopSalaryTaskForPeriodService к каждой
+    // АВТОСОЗДАННОЙ задаче регулярного правила. add-task-rule-task-lifecycle,
+    // зеркало service.
+    taskLinkTemplates: { url: string; label?: string }[];
 };
 
 export type TaskCompletionShopSalaryRule = {

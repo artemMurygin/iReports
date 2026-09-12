@@ -6,6 +6,8 @@ export type CreateTaskPanelProps = {
     open: boolean
     onOpenChange: (open: boolean) => void
     onCreated: (taskId: string) => void
+    /** add-task-rule-employee-assignee — прокидывается дальше в `CreateTaskForm`, см. её WHY. */
+    defaultAssigneeEmployeeId?: number | null
 }
 
 /**
@@ -17,11 +19,11 @@ export type CreateTaskPanelProps = {
  * `CreateTaskForm` has no header/close of its own (unlike `TaskStatusCard`), so this supplies a
  * visible `title` instead of `TaskDetailsPanel`'s `srOnlyTitle`.
  */
-export function CreateTaskPanel({ open, onOpenChange, onCreated }: CreateTaskPanelProps) {
+export function CreateTaskPanel({ open, onOpenChange, onCreated, defaultAssigneeEmployeeId = null }: CreateTaskPanelProps) {
     return (
         <SidePanel open={open} onOpenChange={onOpenChange} title="Новая задача">
             <div className="p-5">
-                <CreateTaskForm onCreated={onCreated} />
+                <CreateTaskForm onCreated={onCreated} defaultAssigneeEmployeeId={defaultAssigneeEmployeeId} />
             </div>
         </SidePanel>
     )

@@ -135,6 +135,15 @@ const usedProductSoldSalaryRuleSchema = z.object({
 // правила на новый период, не для самой первой задачи; isRecurring — разовая vs пересоздаваемая на
 // каждый период задача; taskIdByPeriod (только ответ) — карта "период → задача", читается, но не
 // редактируется формой.
+// add-task-rule-task-lifecycle — зеркало taskLinkTemplateSchema в salary-rule.ts (независимая
+// копия, issue #57).
+const shopTaskLinkTemplateSchema = z.object({
+    url: z.string().url(),
+    label: z.string().optional(),
+});
+
+export type ShopTaskLinkTemplate = z.infer<typeof shopTaskLinkTemplateSchema>;
+
 const taskCompletionShopSalaryConfigRequestSchema = z.object({
     taskId: z.string(),
     taskTitleTemplate: z.string(),
@@ -144,6 +153,7 @@ const taskCompletionShopSalaryConfigRequestSchema = z.object({
     // Сумма начисления по умолчанию — зеркало service (см.
     // taskCompletionSalaryConfigRequestSchema в salary-rule.ts), независимая копия (issue #57).
     defaultAmount: z.number().int().nonnegative(),
+    taskLinkTemplates: z.array(shopTaskLinkTemplateSchema).optional(),
 });
 
 export type TaskCompletionShopSalaryConfigRequest = z.infer<
@@ -227,6 +237,7 @@ export {
     usedProductSoldSalaryConfigSchema,
     taskCompletionShopSalaryConfigRequestSchema,
     taskCompletionShopSalaryConfigResponseSchema,
+    shopTaskLinkTemplateSchema,
     salaryRuleTypeInfoSchema as shopSalaryRuleTypeInfoSchema,
     salaryRuleTypesResponseSchema as shopSalaryRuleTypesResponseSchema,
 };

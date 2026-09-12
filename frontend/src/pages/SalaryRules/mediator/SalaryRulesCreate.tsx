@@ -97,6 +97,7 @@ export function SalaryRulesCreate() {
                 open={page.isCreatingTask}
                 onOpenChange={(open) => !open && page.cancelCreateTask()}
                 onCreated={page.handleTaskCreated}
+                defaultAssigneeEmployeeId={page.targetType === 'Employee' ? page.targetId : null}
             />
             <TaskDetailsPanel taskId={page.openTaskId} onClose={page.closeTaskDetails} />
         </>

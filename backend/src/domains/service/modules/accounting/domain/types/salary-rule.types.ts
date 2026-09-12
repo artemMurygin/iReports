@@ -103,6 +103,11 @@ export type TaskCompletionSalaryConfig = {
     // (см. SetTaskCompletionLineRewardHandler), но comment остаётся
     // обязательным.
     defaultAmount: number;
+    // Ссылки, прикрепляемые EnsureRuleTaskForPeriodService к каждой
+    // АВТОСОЗДАННОЙ задаче регулярного правила (не к самой первой — та
+    // заводится вручную, со своими произвольными ссылками, через POST
+    // /v1/tasks/:id/links). add-task-rule-task-lifecycle.
+    taskLinkTemplates: { url: string; label?: string }[];
 };
 
 export type TaskCompletionSalaryRule = {

@@ -113,6 +113,7 @@ export class TaskCompletionShop
             isRecurring: boolean;
             deadlineTemplate: string;
             defaultAmount: number;
+            taskLinkTemplates?: { url: string; label?: string }[];
         };
         const period = Period.current().getValue();
 
@@ -126,6 +127,7 @@ export class TaskCompletionShop
             isRecurring: config.isRecurring,
             deadlineTemplate: config.deadlineTemplate,
             defaultAmount: config.defaultAmount,
+            taskLinkTemplates: config.taskLinkTemplates ?? [],
         };
     }
 

@@ -201,6 +201,18 @@ const orderPayedSalaryRuleSchema = z.object({
 // ISO-дата (`YYYY-MM-DD`): для разового правила не используется (задача не пересоздаётся), для
 // регулярного используется только число месяца — дедлайн каждой новой задачи периода строится из
 // периода + этого дня.
+// add-task-rule-task-lifecycle — ссылки, которые EnsureRuleTaskForPeriodService прикрепляет к
+// каждой АВТОСОЗДАННОЙ задаче регулярного правила (не к самой первой — та заводится вручную, со
+// своими произвольными ссылками, через POST /v1/tasks/:id/links). Та же форма, что и
+// createTaskLinkRequestSchema в task.ts — независимая копия, а не импорт (contracts здесь следует
+// тому же принципу "своя копия на домен/фичу", что и остальной проект).
+const taskLinkTemplateSchema = z.object({
+    url: z.string().url(),
+    label: z.string().optional(),
+});
+
+export type TaskLinkTemplate = z.infer<typeof taskLinkTemplateSchema>;
+
 const taskCompletionSalaryConfigRequestSchema = z.object({
     taskId: z.string(),
     taskTitleTemplate: z.string(),
@@ -212,6 +224,7 @@ const taskCompletionSalaryConfigRequestSchema = z.object({
     // может изменить её при проведении (см.
     // setTaskCompletionLineRewardRequestSchema в salary-accrual.ts).
     defaultAmount: z.number().int().nonnegative(),
+    taskLinkTemplates: z.array(taskLinkTemplateSchema).optional(),
 });
 
 export type TaskCompletionSalaryConfigRequest = z.infer<
@@ -585,6 +598,7 @@ export {
     orderPayedSalaryConfigSchema,
     taskCompletionSalaryConfigRequestSchema,
     taskCompletionSalaryConfigResponseSchema,
+    taskLinkTemplateSchema,
     percentBorderSchema,
     percentBordersSchema,
     salaryBasisSchema,

@@ -253,7 +253,20 @@ describe('resolveRuleDraft — TaskCompletion', () => {
                 isRecurring: true,
                 deadlineTemplate: '2026-09-25',
                 defaultAmount: 5000,
+                taskLinkTemplates: [],
             })
+        }
+    })
+
+    // add-task-rule-task-lifecycle
+    it('carries taskLinkTemplates through unchanged', () => {
+        const linkTemplates = [{ url: 'https://example.com/1', label: 'Отчёт' }]
+        const result = resolveRuleDraft(
+            baseDraft({ type: 'TaskCompletion', taskId: 'task-1', price: '5000', taskLinkTemplates: linkTemplates }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'TaskCompletion') {
+            expect(result.data.config.taskLinkTemplates).toEqual(linkTemplates)
         }
     })
 
@@ -327,6 +340,7 @@ describe('draftFromRule — TaskCompletion', () => {
         expect(draft.isRecurring).toBe(true)
         expect(draft.deadlineTemplate).toBe('2026-09-25')
         expect(draft.price).toBe('5000')
+        expect(draft.taskLinkTemplates).toEqual([])
 
         const resolvedAgain = resolveRuleDraft(draft)
         expect(resolvedAgain.success).toBe(true)
@@ -335,6 +349,25 @@ describe('draftFromRule — TaskCompletion', () => {
             expect(resolvedAgain.data.config.taskDescriptionTemplate).toBe('Смотри требования в ТЗ')
             expect(resolvedAgain.data.config.defaultAmount).toBe(5000)
         }
+    })
+
+    // add-task-rule-task-lifecycle
+    it('round-trips taskLinkTemplates when the response carries them', () => {
+        const draft = draftFromRule({
+            id: 'rule-1',
+            type: 'TaskCompletion',
+            name: 'Обновить фото витрины',
+            targetRole: 'ENGINEER',
+            config: {
+                taskTitleTemplate: 'Обновить фото витрины',
+                isRecurring: true,
+                deadlineTemplate: '2026-09-25',
+                defaultAmount: 5000,
+                taskIdByPeriod: { '2026-09': 'task-1' },
+                taskLinkTemplates: [{ url: 'https://example.com/1', label: 'Отчёт' }],
+            },
+        })
+        expect(draft.taskLinkTemplates).toEqual([{ url: 'https://example.com/1', label: 'Отчёт' }])
     })
 
     it('defaults taskDescriptionTemplate to an empty string and taskId to "" when the map is empty', () => {

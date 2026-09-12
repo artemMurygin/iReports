@@ -7,6 +7,7 @@ import type {
 } from 'ireports-contracts'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 
 import {
     draftFromShopRule,
@@ -17,6 +18,7 @@ import {
     type RuleType,
 } from '@/features/SalaryRuleForm'
 
+import { api } from './api.ts'
 import { useUpdateMotivationSchema } from './useUpdateMotivationSchema.ts'
 import { useDeleteMotivationSchema } from './useDeleteMotivationSchema.ts'
 
@@ -51,6 +53,7 @@ export function useShopSchemaEditForm({
     orderTypesError,
 }: UseShopSchemaEditFormArgs) {
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [schemaName, setSchemaName] = useState(schema.name)
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const rules = useSalaryRulesDraft(resolveShopRuleDraft, schema.rules.map(draftFromShopRule))
@@ -79,6 +82,7 @@ export function useShopSchemaEditForm({
             { name: schemaName.trim(), rules: resolvedRules },
             {
                 onSuccess: () => {
+                    taskPanels.markTasksSaved()
                     toast.success('Изменения сохранены')
                     navigate('/salaries/rules')
                 },
@@ -87,7 +91,17 @@ export function useShopSchemaEditForm({
                 },
             },
         )
-    }, [canSave, navigate, resolvedRules, schemaName, updateSchema])
+    }, [canSave, navigate, resolvedRules, schemaName, taskPanels, updateSchema])
+
+    // add-task-rule-task-lifecycle — зеркало `service/model/useServiceSchemaEditForm.ts`'s
+    // `onDeleteRule`.
+    const onDeleteRule = useCallback(
+        async (ruleId: string) => {
+            await api.deleteSalaryRule(ruleId)
+            queryClient.invalidateQueries({ queryKey: ['motivation-schema', 'shop', schema.id] })
+        },
+        [queryClient, schema.id],
+    )
 
     const handleDelete = useCallback(() => {
         deleteSchema.mutate(undefined, {
@@ -111,6 +125,7 @@ export function useShopSchemaEditForm({
         isCreatingTask: taskPanels.isCreatingTask,
         cancelCreateTask: taskPanels.cancelCreateTask,
         handleTaskCreated: taskPanels.handleTaskCreated,
+        onDeleteRule,
         config: visibleConfig,
         allowedRolesByType,
         isRoleTypesLoading,

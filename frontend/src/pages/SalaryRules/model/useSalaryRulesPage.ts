@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useTaskLinkPanels } from '@/features/SalaryRuleForm'
 import { useDepartments, useEmployees, type TargetOption } from '@/features/TargetDirectory'
@@ -78,6 +78,14 @@ export function useSalaryRulesPage() {
 
     const savedSchemaId = active.savedSchemaId
     const mobileHintText = savedSchemaId ? `Схема сохранена, ID: ${savedSchemaId}` : 'Черновик · схема ещё не сохранена'
+
+    // add-task-rule-task-lifecycle — как только схема успешно сохранена (`savedSchemaId` появился),
+    // все задачи, созданные за время этой сессии формы, стали частью сохранённого правила и больше
+    // не "осиротевшие" — иначе unmount-эффект `useTaskLinkPanels` удалил бы их следом за навигацией
+    // со страницы после успешного сохранения.
+    useEffect(() => {
+        if (savedSchemaId) taskPanels.markTasksSaved()
+    }, [savedSchemaId, taskPanels])
 
     return {
         direction,

@@ -40,4 +40,13 @@ export const api = {
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить схему'))
             }),
+
+    // add-task-rule-task-lifecycle — зеркало `service/model/api.ts`'s `deleteSalaryRule`.
+    deleteSalaryRule: (ruleId: string): Promise<void> =>
+        apiInstance
+            .delete(`/v1/shop/accounting/salary-rules/${ruleId}`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить правило'))
+            }),
 }

@@ -136,5 +136,6 @@ export function buildTaskCompletionConfig(
         isRecurring: request.isRecurring,
         deadlineTemplate: request.deadlineTemplate,
         defaultAmount: request.defaultAmount,
+        taskLinkTemplates: request.taskLinkTemplates ?? [],
     };
 }

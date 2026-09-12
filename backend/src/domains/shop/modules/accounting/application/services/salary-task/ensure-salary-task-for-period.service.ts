@@ -8,6 +8,7 @@ import { Period } from '@/shared/domain/period.value-object';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import type { ShopSalaryRuleRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { CreateTaskCommand } from '@/modules/tasks/application/command/create-task/create-task.command';
+import { AddTaskLinkCommand } from '@/modules/tasks/application/command/add-task-link/add-task-link.command';
 import type {
     ShopSalaryRule,
     TaskCompletionShopSalaryConfig,
@@ -103,6 +104,18 @@ export class EnsureShopSalaryTaskForPeriodService {
                 direction: 'shop',
             }),
         );
+
+        // add-task-rule-task-lifecycle — зеркало сервиса направления service:
+        // ссылки шаблона прикрепляются отдельными AddTaskLinkCommand.
+        for (const link of config.taskLinkTemplates) {
+            await this.commandBus.execute(
+                new AddTaskLinkCommand({
+                    taskId,
+                    url: link.url,
+                    label: link.label,
+                }),
+            );
+        }
 
         // Свежий объект, структурно удовлетворяющий ShopSalaryRule (а не
         // мутация уже полученного rule "на месте") — тот же приём, что и у

@@ -337,6 +337,7 @@ describe('GetDepartmentSalaryReportService', () => {
                         config: {
                             taskIdByPeriod: { '2026-08': taskId },
                             taskTitleTemplate: 'Сдать отчёт по браку',
+                            taskLinkTemplates: [],
                             isRecurring: true,
                             deadlineTemplate: '2026-08-05',
                             defaultAmount: 5000,

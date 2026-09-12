@@ -35,6 +35,7 @@ describe('task-completion-statuses.builder', () => {
                             isRecurring: true,
                             deadlineTemplate: '2026-08-05',
                             defaultAmount: 5000,
+                            taskLinkTemplates: [],
                         },
                     },
                 }),

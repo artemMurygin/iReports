@@ -39,13 +39,34 @@ function isValidUrl(value: string): boolean {
  * прикрепляется отдельным последовательным запросом (`api.addLink`, см. WHY в `api.ts`) — задача уже
  * создана и видна независимо от исхода прикрепления ссылок, поэтому `onCreated` вызывается в любом
  * случае, а неудачные ссылки остаются в `linksError` для отображения.
+ *
+ * `defaultAssigneeEmployeeId` — add-task-rule-employee-assignee: когда форма открыта из карточки
+ * правила `TaskCompletion` (`features/SalaryRuleForm`'s "Создать задачу"), правило может ссылаться
+ * только на личную схему конкретного сотрудника (`TaskCompletionRequiresPersonalSchemaException`
+ * запрещает схему отдела), поэтому исполнитель новой задачи почти всегда совпадает с сотрудником
+ * схемы — страница передаёт его id сюда вместо `null`. Значение подставляется во время рендера (по
+ * образцу React'а "Adjusting state when a prop changes", не через `useEffect`+`setState` — на
+ * странице создания схемы (`pages/SalaryRules`) сотрудник может быть выбран уже ПОСЛЕ того, как эта
+ * форма смонтирована: панель рендерится безусловно, `CreateTaskPanel`'s `open` только скрывает её),
+ * поэтому `defaultAssigneeEmployeeId` отслеживается через `prevDefaultAssigneeEmployeeId` и
+ * применяется заново при каждом его изменении. Условие `draft.assigneeEmployeeId === null`
+ * подставляет значение только пока поле ещё пустое — если пользователь уже выбрал исполнителя сам
+ * (в т.ч. другого), более поздняя подстановка его не перезатирает.
  */
-export function useCreateTaskForm(onCreated?: (taskId: string) => void) {
-    const [draft, setDraft] = useState<CreateTaskDraft>(EMPTY_DRAFT)
+export function useCreateTaskForm(onCreated?: (taskId: string) => void, defaultAssigneeEmployeeId: number | null = null) {
+    const [draft, setDraft] = useState<CreateTaskDraft>(() => ({ ...EMPTY_DRAFT, assigneeEmployeeId: defaultAssigneeEmployeeId }))
     const [links, setLinks] = useState<DraftLink[]>([])
     const [linksError, setLinksError] = useState<Error | null>(null)
     const [isAttachingLinks, setIsAttachingLinks] = useState(false)
+    const [prevDefaultAssigneeEmployeeId, setPrevDefaultAssigneeEmployeeId] = useState(defaultAssigneeEmployeeId)
     const createTask = useCreateTask()
+
+    if (defaultAssigneeEmployeeId !== prevDefaultAssigneeEmployeeId) {
+        setPrevDefaultAssigneeEmployeeId(defaultAssigneeEmployeeId)
+        if (defaultAssigneeEmployeeId !== null && draft.assigneeEmployeeId === null) {
+            setDraft((prev) => ({ ...prev, assigneeEmployeeId: defaultAssigneeEmployeeId }))
+        }
+    }
 
     function patch(partial: Partial<CreateTaskDraft>) {
         setDraft((prev) => ({ ...prev, ...partial }))
@@ -79,7 +100,7 @@ export function useCreateTaskForm(onCreated?: (taskId: string) => void) {
             {
                 onSuccess: async (response) => {
                     const pendingLinks = links
-                    setDraft(EMPTY_DRAFT)
+                    setDraft({ ...EMPTY_DRAFT, assigneeEmployeeId: defaultAssigneeEmployeeId })
                     setLinks([])
 
                     if (pendingLinks.length > 0) {

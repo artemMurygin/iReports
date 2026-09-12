@@ -73,6 +73,7 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
                 isRecurring: draft.isRecurring,
                 deadlineTemplate: draft.deadlineTemplate,
                 defaultAmount: defaultAmount ?? Number.NaN,
+                taskLinkTemplates: draft.taskLinkTemplates,
             }
             break
         }
@@ -154,6 +155,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        taskLinkTemplates: [],
     }
 
     switch (rule.type) {
@@ -208,6 +210,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
                 taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
                 deadlineTemplate: rule.config.deadlineTemplate,
+                taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
             }
     }
 

@@ -17,6 +17,9 @@ export type CreateTaskFormProps = {
     onCreated?: (taskId: string) => void
     /** Текст кнопки отправки — по умолчанию «Создать задачу»; Шаг 1 мастера может захотеть «Далее». */
     submitLabel?: string
+    /** add-task-rule-employee-assignee — предзаполняет «Ответственного» этим сотрудником (см. WHY в
+     * `useCreateTaskForm.ts`); `null`/не передан — поле остаётся пустым, как раньше. */
+    defaultAssigneeEmployeeId?: number | null
 }
 
 /**
@@ -28,9 +31,15 @@ export type CreateTaskFormProps = {
  * запросами `POST /v1/tasks/:id/links` уже ПОСЛЕ создания задачи (add-task-salary-rule-links-comments,
  * см. WHY в `useCreateTaskForm.ts`), а не входят в тело `POST /v1/tasks`.
  */
-export function CreateTaskForm({ onCreated, submitLabel = 'Создать задачу' }: CreateTaskFormProps) {
-    const { draft, patch, links, addLink, removeLink, canSubmit, submit, isPending, error } =
-        useCreateTaskForm(onCreated)
+export function CreateTaskForm({
+    onCreated,
+    submitLabel = 'Создать задачу',
+    defaultAssigneeEmployeeId = null,
+}: CreateTaskFormProps) {
+    const { draft, patch, links, addLink, removeLink, canSubmit, submit, isPending, error } = useCreateTaskForm(
+        onCreated,
+        defaultAssigneeEmployeeId,
+    )
     const employees = useEmployees()
 
     return (

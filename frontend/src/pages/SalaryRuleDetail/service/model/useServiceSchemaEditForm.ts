@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import type { MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 
 import {
     draftFromRule,
@@ -12,6 +13,7 @@ import {
     type RuleType,
 } from '@/features/SalaryRuleForm'
 
+import { api } from './api.ts'
 import { useUpdateMotivationSchema } from './useUpdateMotivationSchema.ts'
 import { useDeleteMotivationSchema } from './useDeleteMotivationSchema.ts'
 
@@ -47,6 +49,7 @@ export function useServiceSchemaEditForm({
     orderTypesError,
 }: UseServiceSchemaEditFormArgs) {
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [schemaName, setSchemaName] = useState(schema.name)
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const rules = useSalaryRulesDraft(resolveRuleDraft, schema.rules.map(draftFromRule))
@@ -77,6 +80,7 @@ export function useServiceSchemaEditForm({
             { name: schemaName.trim(), rules: resolvedRules },
             {
                 onSuccess: () => {
+                    taskPanels.markTasksSaved()
                     toast.success('Изменения сохранены')
                     navigate('/salaries/rules')
                 },
@@ -85,7 +89,19 @@ export function useServiceSchemaEditForm({
                 },
             },
         )
-    }, [canSave, navigate, resolvedRules, schemaName, updateSchema])
+    }, [canSave, navigate, resolvedRules, schemaName, taskPanels, updateSchema])
+
+    // add-task-rule-task-lifecycle — каскадное удаление ОДНОГО уже сохранённого правила вместе с
+    // его задачей, немедленно (см. WHY в `TaskCompletionRuleFields.tsx`). Инвалидация схемы — на
+    // случай возврата на эту же страницу later/фонового рефетча; сама карточка правила убирается
+    // из списка локально (`onRuleRemoved`), без ожидания рефетча.
+    const onDeleteRule = useCallback(
+        async (ruleId: string) => {
+            await api.deleteSalaryRule(ruleId)
+            queryClient.invalidateQueries({ queryKey: ['motivation-schema', 'service', schema.id] })
+        },
+        [queryClient, schema.id],
+    )
 
     const handleDelete = useCallback(() => {
         deleteSchema.mutate(undefined, {
@@ -109,6 +125,7 @@ export function useServiceSchemaEditForm({
         isCreatingTask: taskPanels.isCreatingTask,
         cancelCreateTask: taskPanels.cancelCreateTask,
         handleTaskCreated: taskPanels.handleTaskCreated,
+        onDeleteRule,
         config: visibleConfig,
         allowedRolesByType,
         isRoleTypesLoading,

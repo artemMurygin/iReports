@@ -126,6 +126,11 @@ export type RuleDraft = {
      * парсинга/форматирования на стороне драфта. Read only for `TaskCompletion`; ignored
      * otherwise. */
     deadlineTemplate: string
+    /** `TaskCompletion.config.taskLinkTemplates` — ссылки, прикрепляемые к каждой АВТОСОЗДАННОЙ
+     * задаче регулярного правила (`EnsureRuleTaskForPeriodService`), не к самой первой (та уже
+     * создана вручную, со своими произвольными ссылками, на Шаге 1). Read only for `TaskCompletion`
+     * with `isRecurring === true`; ignored otherwise, add-task-rule-task-lifecycle. */
+    taskLinkTemplates: { url: string; label?: string }[]
 }
 
 /** Default 3 threshold rows — pre-filled with the mockup's own example values (`design/
@@ -160,6 +165,7 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        taskLinkTemplates: [],
     }
 }
 
@@ -185,5 +191,6 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        taskLinkTemplates: [],
     }
 }

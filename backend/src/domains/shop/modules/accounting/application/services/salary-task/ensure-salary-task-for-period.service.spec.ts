@@ -37,6 +37,7 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
             isRecurring: true,
             deadlineTemplate: '2026-01-25T18:00:00.000Z',
             defaultAmount: 5000,
+            taskLinkTemplates: [],
             ...config,
         },
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -162,6 +163,31 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
                 .taskIdByPeriod,
         ).toEqual({ '2026-10': 'task-99' });
     });
+
+    // add-task-rule-task-lifecycle
+    it('прикрепляет ссылки шаблона к новой задаче через AddTaskLinkCommand', async () => {
+        const { service, execute } = buildService({
+            rule: buildRuleFixture({
+                isRecurring: true,
+                taskLinkTemplates: [
+                    { url: 'https://example.com/1', label: 'Первая' },
+                ],
+            }),
+            createdTaskId: 'task-99',
+        });
+
+        await withRequestContext(() => service.ensure('rule-1', '2026-10', 77));
+
+        expect(execute).toHaveBeenCalledTimes(2);
+        expect(execute).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({
+                taskId: 'task-99',
+                url: 'https://example.com/1',
+                label: 'Первая',
+            }),
+        );
+    });
 });
 
 describe('filterRecurringTaskCompletionShopRules', () => {
@@ -186,6 +212,7 @@ describe('filterRecurringTaskCompletionShopRules', () => {
             isRecurring,
             deadlineTemplate: '2026-01-25T18:00:00.000Z',
             defaultAmount: 5000,
+            taskLinkTemplates: [],
         },
         updatedAt: new Date(),
         calculate: () => null,

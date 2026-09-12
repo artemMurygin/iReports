@@ -152,7 +152,20 @@ describe('resolveShopRuleDraft — TaskCompletion', () => {
                 isRecurring: true,
                 deadlineTemplate: '2026-09-25',
                 defaultAmount: 5000,
+                taskLinkTemplates: [],
             })
+        }
+    })
+
+    // add-task-rule-task-lifecycle
+    it('carries taskLinkTemplates through unchanged', () => {
+        const linkTemplates = [{ url: 'https://example.com/1', label: 'Отчёт' }]
+        const result = resolveShopRuleDraft(
+            baseDraft({ type: 'TaskCompletion', taskId: 'task-1', price: '5000', taskLinkTemplates: linkTemplates }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'TaskCompletion') {
+            expect(result.data.config.taskLinkTemplates).toEqual(linkTemplates)
         }
     })
 
@@ -218,6 +231,7 @@ describe('draftFromShopRule — TaskCompletion', () => {
         expect(draft.isRecurring).toBe(false)
         expect(draft.deadlineTemplate).toBe('2026-09-25')
         expect(draft.price).toBe('5000')
+        expect(draft.taskLinkTemplates).toEqual([])
 
         const resolvedAgain = resolveShopRuleDraft(draft)
         expect(resolvedAgain.success).toBe(true)
@@ -226,6 +240,25 @@ describe('draftFromShopRule — TaskCompletion', () => {
             expect(resolvedAgain.data.config.taskDescriptionTemplate).toBe('Сверить остатки по накладным')
             expect(resolvedAgain.data.config.defaultAmount).toBe(5000)
         }
+    })
+
+    // add-task-rule-task-lifecycle
+    it('round-trips taskLinkTemplates when the response carries them', () => {
+        const draft = draftFromShopRule({
+            id: 'shop-rule-1',
+            type: 'TaskCompletion',
+            name: 'Провести ревизию склада',
+            targetRole: 'OFFLINE_MANAGER',
+            config: {
+                taskTitleTemplate: 'Провести ревизию склада',
+                isRecurring: true,
+                deadlineTemplate: '2026-09-25',
+                defaultAmount: 5000,
+                taskIdByPeriod: { '2026-09': 'task-1' },
+                taskLinkTemplates: [{ url: 'https://example.com/1', label: 'Отчёт' }],
+            },
+        })
+        expect(draft.taskLinkTemplates).toEqual([{ url: 'https://example.com/1', label: 'Отчёт' }])
     })
 
     it('defaults taskDescriptionTemplate to an empty string and taskId to "" when the map is empty', () => {

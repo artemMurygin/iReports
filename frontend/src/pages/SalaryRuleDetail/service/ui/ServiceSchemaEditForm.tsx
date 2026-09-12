@@ -71,6 +71,7 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
         onSave: page.rules.trySaveExpanded,
         onOpenTask: page.onOpenTask,
         onCreateTask: page.onCreateTask,
+        onDeleteRule: page.onDeleteRule,
     }
 
     const rules = (
@@ -103,6 +104,7 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
                 open={page.isCreatingTask}
                 onOpenChange={(open) => !open && page.cancelCreateTask()}
                 onCreated={page.handleTaskCreated}
+                defaultAssigneeEmployeeId={page.target.type === 'Employee' ? page.target.id : null}
             />
             <TaskDetailsPanel taskId={page.openTaskId} onClose={page.closeTaskDetails} />
 

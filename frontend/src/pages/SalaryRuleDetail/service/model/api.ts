@@ -43,4 +43,16 @@ export const api = {
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить схему'))
             }),
+
+    // add-task-rule-task-lifecycle — удаляет ОДНО правило вместе с его задачей немедленно (не
+    // через PATCH .../motivation-schema/:id выше — тот делает полную замену набора правил и требует
+    // отдельного "Сохранить"). Используется только для уже сохранённого правила (`draft.ruleId`
+    // задан) — см. WHY в `TaskCompletionRuleFields.tsx`.
+    deleteSalaryRule: (ruleId: string): Promise<void> =>
+        apiInstance
+            .delete(`/v1/service/accounting/salary-rules/${ruleId}`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить правило'))
+            }),
 }

@@ -23,6 +23,7 @@ describe('EnsureRuleTaskForPeriodService', () => {
         isRecurring?: boolean;
         deadlineTemplate?: string;
         taskIdByPeriod?: Record<string, string>;
+        taskLinkTemplates?: { url: string; label?: string }[];
     }) =>
         withRequestContext(
             () =>
@@ -42,6 +43,8 @@ describe('EnsureRuleTaskForPeriodService', () => {
                             deadlineTemplate:
                                 overrides?.deadlineTemplate ?? '2026-01-15',
                             defaultAmount: 5000,
+                            taskLinkTemplates:
+                                overrides?.taskLinkTemplates ?? [],
                         },
                     },
                 }),
@@ -117,6 +120,40 @@ describe('EnsureRuleTaskForPeriodService', () => {
             expect(result).toBe('new-task-id');
             expect(rule.config.taskIdByPeriod['2026-09']).toBe('new-task-id');
             expect(update).toHaveBeenCalledWith(rule);
+        });
+    });
+
+    // add-task-rule-task-lifecycle
+    it('прикрепляет ссылки шаблона к новой задаче через AddTaskLinkCommand', async () => {
+        await withRequestContext(async () => {
+            const rule = buildRule({
+                isRecurring: true,
+                taskLinkTemplates: [
+                    { url: 'https://example.com/1', label: 'Первая' },
+                    { url: 'https://example.com/2' },
+                ],
+            });
+            const { service, execute } = buildService();
+
+            await service.ensure(rule, '2026-09', 555);
+
+            expect(execute).toHaveBeenCalledTimes(3);
+            expect(execute).toHaveBeenNthCalledWith(
+                2,
+                expect.objectContaining({
+                    taskId: 'new-task-id',
+                    url: 'https://example.com/1',
+                    label: 'Первая',
+                }),
+            );
+            expect(execute).toHaveBeenNthCalledWith(
+                3,
+                expect.objectContaining({
+                    taskId: 'new-task-id',
+                    url: 'https://example.com/2',
+                    label: undefined,
+                }),
+            );
         });
     });
 

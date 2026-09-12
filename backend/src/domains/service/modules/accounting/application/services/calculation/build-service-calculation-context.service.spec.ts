@@ -31,6 +31,7 @@ describe('BuildServiceCalculationContextService — taskCompletionStatuses', () 
                 config: {
                     taskIdByPeriod,
                     taskTitleTemplate: 'Собрать отчёт по браку за месяц',
+                    taskLinkTemplates: [],
                     isRecurring: true,
                     deadlineTemplate: '2026-08-05',
                     defaultAmount: 5000,

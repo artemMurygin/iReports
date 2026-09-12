@@ -21,7 +21,7 @@ import { TaskCompletionRuleFields, type TaskCompletionRuleFieldsProps } from './
  * `isRecurring === true`.
  */
 vi.mock('@/shared/api/axios.instance.ts', () => ({
-    api: { get: vi.fn() },
+    api: { get: vi.fn(), delete: vi.fn() },
 }))
 
 function makeDraft(patch: Partial<RuleDraft> = {}): RuleDraft {
@@ -40,6 +40,7 @@ function renderField(props: Partial<TaskCompletionRuleFieldsProps> & { draft: Ru
 describe('TaskCompletionRuleFields', () => {
     beforeEach(() => {
         vi.mocked(axiosInstance.get).mockReset()
+        vi.mocked(axiosInstance.delete).mockReset()
     })
 
     it('shows the linked task title (not its id) once it loads, and opens the details panel on click', async () => {
@@ -92,6 +93,47 @@ describe('TaskCompletionRuleFields', () => {
         expect(onChange).toHaveBeenCalledWith({ taskTitleTemplate: 'X' })
     })
 
+    // add-task-rule-task-lifecycle
+    describe('шаблон ссылок для новой задачи периода', () => {
+        it('не рендерится для разового правила', () => {
+            renderField({ draft: makeDraft({ isRecurring: false }) })
+
+            expect(screen.queryByText('Ссылки для новой задачи периода')).not.toBeInTheDocument()
+        })
+
+        it('добавляет ссылку в taskLinkTemplates для регулярного правила', async () => {
+            const user = userEvent.setup()
+            const onChange = vi.fn()
+            renderField({ draft: makeDraft({ isRecurring: true, taskLinkTemplates: [] }), onChange })
+
+            await user.click(screen.getByRole('button', { name: 'Добавить' }))
+            await user.type(screen.getByLabelText('Адрес ссылки'), 'https://example.com/report')
+            await user.click(screen.getByRole('button', { name: 'Добавить ссылку' }))
+
+            expect(onChange).toHaveBeenCalledWith({
+                taskLinkTemplates: [{ url: 'https://example.com/report', label: undefined }],
+            })
+        })
+
+        it('показывает уже добавленные ссылки и удаляет их по клику', async () => {
+            const user = userEvent.setup()
+            const onChange = vi.fn()
+            renderField({
+                draft: makeDraft({
+                    isRecurring: true,
+                    taskLinkTemplates: [{ url: 'https://example.com/1', label: 'Отчёт' }],
+                }),
+                onChange,
+            })
+
+            expect(screen.getByText('Отчёт')).toBeInTheDocument()
+
+            await user.click(screen.getByRole('button', { name: 'Удалить ссылку' }))
+
+            expect(onChange).toHaveBeenCalledWith({ taskLinkTemplates: [] })
+        })
+    })
+
     it('toggles isRecurring via the period tabs', async () => {
         const user = userEvent.setup()
         const onChange = vi.fn()
@@ -119,5 +161,83 @@ describe('TaskCompletionRuleFields', () => {
         })
 
         expect(screen.getByText('Задача ещё не создана')).toBeInTheDocument()
+    })
+
+    // add-task-rule-task-lifecycle: "Удалить задачу" полностью удаляет привязанную задачу
+    // (DELETE /v1/tasks/:id) и очищает draft.taskId, а не просто отвязывает её локально.
+    describe('удаление привязанной задачи', () => {
+        it('запрашивает подтверждение и удаляет задачу по клику на "Удалить"', async () => {
+            vi.mocked(axiosInstance.get).mockResolvedValue({ data: { id: 'task-42', title: 'Обновить фото витрины' } })
+            vi.mocked(axiosInstance.delete).mockResolvedValue({ data: undefined })
+            const onChange = vi.fn()
+            const user = userEvent.setup()
+            renderField({ draft: makeDraft(), onChange })
+            await waitFor(() => expect(screen.getByText('Обновить фото витрины')).toBeInTheDocument())
+
+            await user.click(screen.getByRole('button', { name: 'Удалить задачу' }))
+            expect(axiosInstance.delete).not.toHaveBeenCalled()
+            expect(screen.getByText('Удалить задачу «Обновить фото витрины»?')).toBeInTheDocument()
+
+            await user.click(screen.getByRole('button', { name: 'Удалить' }))
+
+            await waitFor(() => expect(axiosInstance.delete).toHaveBeenCalledWith('/v1/tasks/task-42'))
+            await waitFor(() => expect(onChange).toHaveBeenCalledWith({ taskId: '' }))
+        })
+
+        it('не удаляет задачу и не меняет draft, если отменить подтверждение', async () => {
+            vi.mocked(axiosInstance.get).mockResolvedValue({ data: { id: 'task-42', title: 'Обновить фото витрины' } })
+            const onChange = vi.fn()
+            const user = userEvent.setup()
+            renderField({ draft: makeDraft(), onChange })
+            await waitFor(() => expect(screen.getByText('Обновить фото витрины')).toBeInTheDocument())
+
+            await user.click(screen.getByRole('button', { name: 'Удалить задачу' }))
+            await user.click(screen.getByRole('button', { name: 'Отмена' }))
+
+            expect(axiosInstance.delete).not.toHaveBeenCalled()
+            expect(onChange).not.toHaveBeenCalled()
+            expect(screen.queryByText('Удалить задачу «Обновить фото витрины»?')).not.toBeInTheDocument()
+        })
+    })
+
+    // add-task-rule-task-lifecycle: для уже сохранённого правила (draft.ruleId задан) "Удалить
+    // задачу" не может просто очистить draft.taskId — правило TaskCompletion без задачи не может
+    // существовать персистентно, поэтому удаляется правило целиком, немедленно, через onDeleteRule.
+    describe('удаление задачи уже сохранённого правила (draft.ruleId задан)', () => {
+        it('вызывает onDeleteRule и onRuleRemoved вместо прямого удаления задачи', async () => {
+            vi.mocked(axiosInstance.get).mockResolvedValue({ data: { id: 'task-42', title: 'Обновить фото витрины' } })
+            const onChange = vi.fn()
+            const onDeleteRule = vi.fn().mockResolvedValue(undefined)
+            const onRuleRemoved = vi.fn()
+            const user = userEvent.setup()
+            const draft = makeDraft({ ruleId: 'rule-1' })
+            renderField({ draft, onChange, onDeleteRule, onRuleRemoved })
+            await waitFor(() => expect(screen.getByText('Обновить фото витрины')).toBeInTheDocument())
+
+            await user.click(screen.getByRole('button', { name: 'Удалить задачу' }))
+            expect(screen.getByText('Удалить задачу «Обновить фото витрины» вместе с правилом?')).toBeInTheDocument()
+
+            await user.click(screen.getByRole('button', { name: 'Удалить' }))
+
+            await waitFor(() => expect(onDeleteRule).toHaveBeenCalledWith('rule-1'))
+            await waitFor(() => expect(onRuleRemoved).toHaveBeenCalledTimes(1))
+            expect(axiosInstance.delete).not.toHaveBeenCalled()
+            expect(onChange).not.toHaveBeenCalledWith({ taskId: '' })
+        })
+
+        it('показывает ошибку и не вызывает onRuleRemoved, если onDeleteRule падает', async () => {
+            vi.mocked(axiosInstance.get).mockResolvedValue({ data: { id: 'task-42', title: 'Обновить фото витрины' } })
+            const onDeleteRule = vi.fn().mockRejectedValue(new Error('Сеть недоступна'))
+            const onRuleRemoved = vi.fn()
+            const user = userEvent.setup()
+            renderField({ draft: makeDraft({ ruleId: 'rule-1' }), onDeleteRule, onRuleRemoved })
+            await waitFor(() => expect(screen.getByText('Обновить фото витрины')).toBeInTheDocument())
+
+            await user.click(screen.getByRole('button', { name: 'Удалить задачу' }))
+            await user.click(screen.getByRole('button', { name: 'Удалить' }))
+
+            await waitFor(() => expect(screen.getByText(/Сеть недоступна/)).toBeInTheDocument())
+            expect(onRuleRemoved).not.toHaveBeenCalled()
+        })
     })
 })

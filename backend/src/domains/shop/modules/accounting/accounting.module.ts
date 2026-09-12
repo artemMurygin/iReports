@@ -106,8 +106,10 @@ import { EnsureShopSalaryTaskForPeriodService } from '@/domains/shop/modules/acc
 import { FindSalaryRuleForTaskService } from '@/domains/shop/modules/accounting/application/services/salary-task/find-salary-rule-for-task.service';
 import { FindSalaryAccrualForTaskService } from '@/domains/shop/modules/accounting/application/services/salary-task/find-salary-accrual-for-task.service';
 import { GetSalaryRuleService } from '@/domains/shop/modules/accounting/application/services/salary-task/get-salary-rule.service';
+import { DeleteShopSalaryRuleHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/delete-salary-rule.handler';
 import { GetShopSalaryRuleHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule.http.controller';
 import { GetShopSalaryRuleByTaskHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule-by-task.http.controller';
+import { DeleteShopSalaryRuleHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/delete-salary-rule.http.controller';
 import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-accrual/get-salary-accrual-line-by-task.http.controller';
 
 // Модуль accounting магазина (Фазы 12/13, issue #57/#64, персистентность и
@@ -288,6 +290,9 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         GetShopSalaryRuleHttpController,
         GetShopSalaryRuleByTaskHttpController,
         GetShopSalaryAccrualLineByTaskHttpController,
+        // add-task-rule-task-lifecycle — удаление правила + его задачи
+        // одной немедленной операцией.
+        DeleteShopSalaryRuleHttpController,
     ],
     providers: [
         ListShopSalaryRuleTypesService,
@@ -459,6 +464,7 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         FindSalaryRuleForTaskService,
         FindSalaryAccrualForTaskService,
         GetSalaryRuleService,
+        DeleteShopSalaryRuleHandler,
     ],
     exports: [
         SHOP_MOTIVATION_SCHEMA_REPOSITORY,

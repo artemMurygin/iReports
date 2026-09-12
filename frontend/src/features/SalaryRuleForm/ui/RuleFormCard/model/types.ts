@@ -38,6 +38,15 @@ export type RuleFormCardContext = {
     /** `TaskCompletion` only — opens the task creation side panel (`features/CreateTask`'s
      * `CreateTaskPanel`) for this draft when it has no task yet. See `onOpenTask`'s comment. */
     onCreateTask?: (draftId: string) => void
+    /** `TaskCompletion` only, add-task-rule-task-lifecycle — deletes ONE ALREADY-PERSISTED rule
+     * together with its task, immediately on the backend (`DELETE .../salary-rules/:ruleId`). Used
+     * by `TaskCompletionRuleFields`'s "Удалить задачу" only when `draft.ruleId` is set (the rule was
+     * loaded from an existing schema, not just added this session) — a `TaskCompletion` rule can't
+     * hold a cleared `taskId` in a valid persisted state, so deleting its task deletes the whole
+     * rule right away instead of leaving a client-only edit pending a later schema save. `undefined`
+     * on the schema-CREATE page (`pages/SalaryRules`), where no rule is persisted yet — every draft
+     * there has `ruleId === undefined`, so the callback is never invoked. */
+    onDeleteRule?: (ruleId: string) => Promise<void>
 }
 
 export type RuleFormCardProps = RuleFormCardContext & {

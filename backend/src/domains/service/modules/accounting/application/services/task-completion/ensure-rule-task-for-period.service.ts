@@ -3,6 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import { Period } from '@/shared/domain/period.value-object';
 import { CreateTaskCommand } from '@/modules/tasks/application/command/create-task/create-task.command';
+import { AddTaskLinkCommand } from '@/modules/tasks/application/command/add-task-link/add-task-link.command';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import type {
@@ -87,6 +88,20 @@ export class EnsureRuleTaskForPeriodService {
                 direction: 'service',
             }),
         );
+
+        // add-task-rule-task-lifecycle — ссылки шаблона прикрепляются отдельными
+        // AddTaskLinkCommand (ссылка — не поле CreateTaskCommand, а своя сущность
+        // TaskLink), тем же межмодульным путём accounting → tasks через CommandBus,
+        // что и создание самой задачи выше.
+        for (const link of config.taskLinkTemplates) {
+            await this.commandBus.execute(
+                new AddTaskLinkCommand({
+                    taskId,
+                    url: link.url,
+                    label: link.label,
+                }),
+            );
+        }
 
         // Мутация config напрямую (тот же объект, что и rule.config, см.
         // TaskCompletion.config getter) + локальный update(rule) —
