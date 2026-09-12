@@ -58,13 +58,19 @@ export function CategoryTreeSelect({ categories, selectedId, onChange }: Categor
                 {selectedId !== null ? (
                     <Chip
                         icon={<Layers />}
-                        className="border-brand-border bg-brand-soft text-ok-ink"
+                        // px-3/py-[9px] — та же геометрия триггера, что у `WarehouseSelect`
+                        // (`h-auto ... px-3 py-[9px]`) в этом же Filter Row: соседи в одной
+                        // строке должны быть одной высоты, а не расходиться на паддингах
+                        // дефолтного `Chip` (5px).
+                        className="border-brand-border bg-brand-soft px-3 py-[9px] text-ok-ink"
                         onRemove={() => onChange(null)}
                     >
                         {selectedLabel}
                     </Chip>
                 ) : (
-                    <Chip icon={<Layers />}>{selectedLabel}</Chip>
+                    <Chip icon={<Layers />} className="px-3 py-[9px]">
+                        {selectedLabel}
+                    </Chip>
                 )}
             </PopoverPrimitive.Trigger>
 

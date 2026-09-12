@@ -170,30 +170,25 @@ export function filterVisibleRows(
     return visible
 }
 
-// Палитра `Dot`-маркера корневых категорий (ui-design.md, `D3Sf4` — 6 цветов, циклически по
-// порядковому номеру корневой категории: `G7Vnt` #22C46A, `j6ASa3` #1D4ED8, `k4XXNl` #6D28D9,
-// `Tuh0k` #C97A2E, `eVR4N` #0EA5A5, `j6IhbC` #DB2777, дальше цикл повторяется — 7-я корневая
-// категория (`wd1x7`) снова #22C46A). Чисто декоративная деталь макета — не завязана на бизнес-
-// смысл конкретной категории, поэтому не токенизирована в `shared/ui-kit/tokens/theme.css`
-// (page-local, как и весь `Ledger Table`, см. ui-design.md "Новые компоненты UI Kit").
-export const ROOT_DOT_COLORS = ['#22C46A', '#1D4ED8', '#6D28D9', '#C97A2E', '#0EA5A5', '#DB2777']
-
-export function getRootDotColor(rootIndex: number): string {
-    return ROOT_DOT_COLORS[rootIndex % ROOT_DOT_COLORS.length]
-}
+// Точка-маркер корневых категорий раньше циклически красилась в 6 цветов по порядковому номеру
+// корневой категории — принятая ревизия дизайна (Pencil `WvSO6`, обновление 2026-09-10) отказалась
+// от «радуги» в пользу одноцветной точки `lg-ink` (см. `GoodsTurnoverTable.tsx`, `LG_INK_BG`).
+// `rootIndex` в `GoodsTurnoverTreeRow` остаётся — используется только для группировки строк по
+// настоящему корню (тесты `buildGoodsTurnoverTreeRows`), не для цвета.
 
 // Пороги цвета ячейки «Обор.» (ui-design.md/`D3Sf4`, вычитано по фактическим строкам мокапа —
-// `$ok-ink` от 1.20, `$ink` (обычный) от 0.85, `$warn-ink` от 0.65, `$danger` ниже: 0,64/0,61/0,58/
-// 0,56 -> danger; 0,68/0,71/0,73/0,84 -> warn-ink; 0,86...0,97 -> ink; 1,20+ -> ok-ink). Решение не
-// зафиксировано отдельным FR/UX в proposal.md/spec.md этого change — чисто визуальная деталь
-// готового макета, перенесена как задокументированное лучшее приближение к `D3Sf4`, а не
-// самостоятельно изобретённое бизнес-правило.
+// `$lg-pos` от 1.20, `$lg-ink` (обычный) от 0.85, `$lg-warn` от 0.65, `$lg-neg` ниже: 0,64/0,61/
+// 0,58/0,56 -> lg-neg; 0,68/0,71/0,73/0,84 -> lg-warn; 0,86...0,97 -> lg-ink; 1,20+ -> lg-pos).
+// Решение не зафиксировано отдельным FR/UX в proposal.md/spec.md этого change — чисто визуальная
+// деталь готового макета, перенесена как задокументированное лучшее приближение к `D3Sf4`, а не
+// самостоятельно изобретённое бизнес-правило. Цвета — те же page-local литералы, что и остальная
+// палитра `Ledger Table` (см. `GoodsTurnoverTable.tsx`).
 export function getRatioColorClass(ratio: number | null): string {
-    if (ratio === null) return 'text-ink-faint'
-    if (ratio >= 1.2) return 'text-ok-ink'
-    if (ratio >= 0.85) return 'text-ink'
-    if (ratio >= 0.65) return 'text-warn-ink'
-    return 'text-danger'
+    if (ratio === null) return 'text-[#8F96A1]'
+    if (ratio >= 1.2) return 'text-[#0A7A46]'
+    if (ratio >= 0.85) return 'text-[#14161A]'
+    if (ratio >= 0.65) return 'text-[#A85A00]'
+    return 'text-[#C8262C]'
 }
 
 // Итоговая строка «Итого» (ui-design.md, `tcWPr`) агрегирует расход/остаток по НАСТОЯЩИМ корневым

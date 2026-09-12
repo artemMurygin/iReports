@@ -10,6 +10,7 @@ const CATEGORIES: ListProductCategoriesResponse = [{ id: 10, name: 'Диспле
 function renderRow(overrides: Partial<React.ComponentProps<typeof GoodsTurnoverFilterRow>> = {}) {
     return render(
         <GoodsTurnoverFilterRow
+            tabs={null}
             warehouses={WAREHOUSES}
             warehouseId={1}
             onWarehouseChange={vi.fn()}
@@ -43,6 +44,7 @@ describe('GoodsTurnoverFilterRow', () => {
 
         rerender(
             <GoodsTurnoverFilterRow
+                tabs={null}
                 warehouses={WAREHOUSES}
                 warehouseId={1}
                 onWarehouseChange={vi.fn()}

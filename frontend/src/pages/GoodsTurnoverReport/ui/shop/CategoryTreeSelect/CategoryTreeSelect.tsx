@@ -47,13 +47,17 @@ export function ShopCategoryTreeSelect({ categories, selectedId, onChange }: Sho
                 {selectedId !== null ? (
                     <Chip
                         icon={<Layers />}
-                        className="border-brand-border bg-brand-soft text-ok-ink"
+                        // px-3/py-[9px] — та же геометрия, что у `WarehouseSelect` в этом Filter
+                        // Row (см. комментарий в `../../CategoryTreeSelect/CategoryTreeSelect.tsx`).
+                        className="border-brand-border bg-brand-soft px-3 py-[9px] text-ok-ink"
                         onRemove={() => onChange(null)}
                     >
                         {selectedLabel}
                     </Chip>
                 ) : (
-                    <Chip icon={<Layers />}>{selectedLabel}</Chip>
+                    <Chip icon={<Layers />} className="px-3 py-[9px]">
+                        {selectedLabel}
+                    </Chip>
                 )}
             </PopoverPrimitive.Trigger>
 

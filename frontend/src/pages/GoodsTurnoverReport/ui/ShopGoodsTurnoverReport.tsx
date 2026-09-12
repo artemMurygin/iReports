@@ -1,24 +1,32 @@
+import type { ReactNode } from 'react'
+
 import { RefreshTransitionLayout } from '@/shared/ui/RefreshTransitionLayout.tsx'
 
 import { useShopGoodsTurnoverReportPage } from '../model/shop/useShopGoodsTurnoverReportPage.ts'
 import { ShopGoodsTurnoverFilterRow } from './shop/FilterRow.tsx'
 import { ShopGoodsTurnoverReportBody } from './shop/GoodsTurnoverReportBody.tsx'
 
+export type ShopGoodsTurnoverReportProps = {
+    /** Переключатель «Сервис/Магазин» — владеет им `GoodsTurnoverReportPage.tsx`, эта вкладка
+     * только встраивает его в свой Filter Row (см. комментарий `tabs` в `FilterRow.tsx`). */
+    tabs: ReactNode
+}
+
 /**
  * Содержимое вкладки «Магазин» страницы `/goods-turnover-report` — портировано из `Goods
  * TurnoverReportPage.tsx`/`Layout.tsx` (направление `service`), но без общего `PageHeader`
- * (заголовок страницы и переключатель вкладок теперь одни на обе вкладки, см.
- * `GoodsTurnoverReportPage.tsx`) — сама вкладка отвечает только за свой Filter Row +
- * `RefreshTransitionLayout` + тело отчёта, `<main>`-обёртку страницы предоставляет медиатор.
- * Композиция `useShopGoodsTurnoverReportPage()` -> Filter Row + Body — тот же mediator-паттерн
- * без условного рендера («frontend/CLAUDE.md»), ветвление состояний целиком внутри
- * `ShopGoodsTurnoverReportBody`.
+ * (заголовок страницы теперь один на обе вкладки, см. `GoodsTurnoverReportPage.tsx`) — сама
+ * вкладка отвечает только за свой Filter Row + `RefreshTransitionLayout` + тело отчёта,
+ * `<main>`-обёртку страницы предоставляет медиатор. Композиция `useShopGoodsTurnoverReportPage()`
+ * -> Filter Row + Body — тот же mediator-паттерн без условного рендера («frontend/CLAUDE.md»),
+ * ветвление состояний целиком внутри `ShopGoodsTurnoverReportBody`.
  */
-export function ShopGoodsTurnoverReport() {
+export function ShopGoodsTurnoverReport({ tabs }: ShopGoodsTurnoverReportProps) {
     const page = useShopGoodsTurnoverReportPage()
 
     const filterRow = (
         <ShopGoodsTurnoverFilterRow
+            tabs={tabs}
             warehouses={page.warehouses}
             warehouseId={page.warehouseId}
             onWarehouseChange={page.setWarehouseId}

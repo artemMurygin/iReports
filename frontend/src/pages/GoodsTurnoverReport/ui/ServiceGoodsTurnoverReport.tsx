@@ -1,21 +1,30 @@
+import type { ReactNode } from 'react'
+
 import { RefreshTransitionLayout } from '@/shared/ui/RefreshTransitionLayout.tsx'
 
 import { useGoodsTurnoverReportPage } from '../model/useGoodsTurnoverReportPage.ts'
 import { GoodsTurnoverFilterRow } from './FilterRow.tsx'
 import { GoodsTurnoverReportBody } from './GoodsTurnoverReportBody.tsx'
 
+export type ServiceGoodsTurnoverReportProps = {
+    /** Переключатель «Сервис/Магазин» — владеет им `GoodsTurnoverReportPage.tsx`, эта вкладка
+     * только встраивает его в свой Filter Row (см. комментарий `tabs` в `FilterRow.tsx`). */
+    tabs: ReactNode
+}
+
 /**
- * Содержимое вкладки «Сервис» страницы `/goods-turnover-report` — выделено из прежнего тела
+ * Содержимое вкладки «Сервис» страницы `/goods-turnover-report» — выделено из прежнего тела
  * `GoodsTurnoverReportPage.tsx`/`Layout.tsx` при добавлении вкладки «Магазин» (merge
- * feat/shopTurnOverReport): общий `PageHeader` и переключатель вкладок теперь один на обе вкладки
+ * feat/shopTurnOverReport): общий `PageHeader` теперь один на обе вкладки
  * (`GoodsTurnoverReportPage.tsx`), эта вкладка отвечает только за свой Filter Row +
- * `RefreshTransitionLayout` + тело отчёта — поведение и разметка не изменились.
+ * `RefreshTransitionLayout` + тело отчёта.
  */
-export function ServiceGoodsTurnoverReport() {
+export function ServiceGoodsTurnoverReport({ tabs }: ServiceGoodsTurnoverReportProps) {
     const page = useGoodsTurnoverReportPage()
 
     const filterRow = (
         <GoodsTurnoverFilterRow
+            tabs={tabs}
             warehouses={page.warehouses}
             warehouseId={page.warehouseId}
             onWarehouseChange={page.setWarehouseId}

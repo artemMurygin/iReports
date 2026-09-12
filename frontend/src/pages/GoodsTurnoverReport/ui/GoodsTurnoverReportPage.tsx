@@ -21,6 +21,11 @@ const TABS: TabItem[] = [
  * свой запрос/фильтры/Refresh-переход, здесь только выбор, какая из них смонтирована (React не
  * держит стейт/не шлёт запросы немонтированной вкладки).
  *
+ * `Tabs` больше не рендерится отдельным блоком над вкладками — страница только владеет его
+ * состоянием (`tab`/`setTab`) и передаёт готовый элемент как `tabs` в смонтированную вкладку,
+ * которая встраивает его в свой Filter Row на одном уровне с фильтрами (см. `FilterRow.tsx`) — по
+ * запросу пользователя переключатель направления и фильтры должны жить в одном контейнере.
+ *
  * Без условного рендера внутри веток («медиатор/страница не должен содержать условного рендера» —
  * `frontend/CLAUDE.md`) — единственное ветвление здесь ровно то, что и определяет tab-switcher
  * (какой из двух самодостаточных view смонтирован), сами view ничего не решают снаружи.
@@ -28,14 +33,19 @@ const TABS: TabItem[] = [
 export function GoodsTurnoverReportPage() {
     const [tab, setTab] = useState<DirectionTab>('service')
 
+    const tabsSlot = <Tabs tabs={TABS} activeId={tab} onChange={(id) => setTab(id as DirectionTab)} />
+
     return (
         <main className="flex flex-1 flex-col gap-4 bg-canvas px-4 py-5 md:px-7 md:py-6">
             <PageHeader
                 title="Оборачиваемость товаров"
                 subtitle="Расход и остаток по категориям справочника и складам за месяц"
             />
-            <Tabs tabs={TABS} activeId={tab} onChange={(id) => setTab(id as DirectionTab)} />
-            {tab === 'service' ? <ServiceGoodsTurnoverReport /> : <ShopGoodsTurnoverReport />}
+            {tab === 'service' ? (
+                <ServiceGoodsTurnoverReport tabs={tabsSlot} />
+            ) : (
+                <ShopGoodsTurnoverReport tabs={tabsSlot} />
+            )}
         </main>
     )
 }

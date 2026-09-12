@@ -143,9 +143,9 @@ describe('GoodsTurnoverTable', () => {
         )
 
         const rowEl = screen.getByText('iPhone 14').closest('[data-slot="goods-turnover-row"]')
-        // Верхнеуровневая строка красится в жирный/цветную точку через `TOP_LEVEL_ROW_FILL`
-        // (`bg-[#ECF1EE]`) — здесь её быть не должно, строка не настоящий корень.
-        expect(rowEl?.className).not.toContain('ECF1EE')
+        // Верхнеуровневая строка красится в заливку `LG_GROUP` (`bg-[#F6F7F9]`) — здесь её быть
+        // не должно, строка не настоящий корень.
+        expect(rowEl?.className).not.toContain('F6F7F9')
     })
 
     it('does not treat a leaf category (no children) as clickable/collapsible', () => {

@@ -35,6 +35,8 @@
     --color-scrim: var(--uikit-scrim);
     --font-display: var(--uikit-font-display);
     --font-ui: var(--uikit-font-ui);
+    --font-lg-ui: var(--uikit-font-lg-ui);
+    --font-lg-num: var(--uikit-font-lg-num);
 }
 
 :root {
@@ -68,4 +70,12 @@
     --uikit-scrim: #01030659;
     --uikit-font-display: 'Montserrat Variable', sans-serif;
     --uikit-font-ui: 'Roboto Variable', sans-serif;
+    /* Ledger Table (страница «Оборачиваемость товаров», design/sallary-first-iteration.pen
+       WvSO6) — принятая ревизия дизайна (обновление 2026-09-10) поменяла типографику этой
+       ОДНОЙ таблицы на Inter/JetBrains Mono, отдельно от общего `font-ui`/`font-display`.
+       Только шрифты вынесены сюда как токены (по аналогии с font-ui/font-display); сами цвета
+       палитры `lg-*` остаются page-local константами в GoodsTurnoverTable.tsx — тот же принцип,
+       что и раньше для decorative-деталей этой таблицы. */
+    --uikit-font-lg-ui: 'Inter Variable', sans-serif;
+    --uikit-font-lg-num: 'JetBrains Mono Variable', monospace;
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { ShopStore } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw.ts'
@@ -9,6 +10,8 @@ import { PeriodStatusBadge } from '../PeriodStatusBadge.tsx'
 import { ShopWarehouseSelect } from './WarehouseSelect.tsx'
 
 export type ShopGoodsTurnoverFilterRowProps = {
+    /** См. комментарий `tabs` в `../FilterRow.tsx` (направление `service`) — тот же приём. */
+    tabs: ReactNode
     warehouses: ShopStore[]
     warehouseId: string | null
     onWarehouseChange: (warehouseId: string) => void
@@ -29,6 +32,7 @@ export type ShopGoodsTurnoverFilterRowProps = {
  * есть — она не завязана на направление/тип id, только на `isClosed`.
  */
 export function ShopGoodsTurnoverFilterRow({
+    tabs,
     warehouses,
     warehouseId,
     onWarehouseChange,
@@ -46,6 +50,8 @@ export function ShopGoodsTurnoverFilterRow({
             data-slot="shop-goods-turnover-filter-row"
             className={cn('flex flex-col gap-2 md:flex-row md:items-center md:gap-4', className)}
         >
+            <div className="shrink-0 md:border-r md:border-hairline md:pr-4">{tabs}</div>
+
             <div className="order-2 flex w-full items-center gap-2 md:order-1 md:w-auto md:gap-3">
                 <ShopWarehouseSelect warehouses={warehouses} selectedWarehouseId={warehouseId} onSelect={onWarehouseChange} />
                 <ShopCategoryTreeSelect categories={categories} selectedId={categoryId} onChange={onCategoryChange} />
