@@ -14,6 +14,7 @@ import { MobileSaveBar } from '../../ui/MobileSaveBar.tsx'
 import { PageHeader } from '../../ui/PageHeader.tsx'
 import { TargetSummaryCard } from '../../ui/TargetSummaryCard/TargetSummaryCard.tsx'
 import { useShopSchemaEditForm } from '../model/useShopSchemaEditForm.ts'
+import { DeleteMotivationSchemaDialog } from './DeleteMotivationSchemaDialog.tsx'
 
 export type ShopSchemaEditFormProps = {
     schema: ShopMotivationSchemaDetailResponse
@@ -39,6 +40,7 @@ export function ShopSchemaEditForm(props: ShopSchemaEditFormProps) {
             onSave={page.handleSave}
             canSave={page.canSave}
             isSubmitting={page.isSubmitting}
+            onDelete={page.openDeleteDialog}
         />
     )
 
@@ -105,6 +107,15 @@ export function ShopSchemaEditForm(props: ShopSchemaEditFormProps) {
                 onCreated={page.handleTaskCreated}
             />
             <TaskDetailsPanel taskId={page.openTaskId} onClose={page.closeTaskDetails} />
+
+            <DeleteMotivationSchemaDialog
+                open={page.isDeleteDialogOpen}
+                onOpenChange={page.onDeleteDialogOpenChange}
+                schemaName={page.schemaName}
+                onConfirm={page.handleDelete}
+                isPending={page.isDeleting}
+                error={page.deleteError}
+            />
         </>
     )
 }

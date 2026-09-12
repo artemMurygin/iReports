@@ -83,6 +83,17 @@ export interface MotivationSchemaRepositoryPort {
     // уже инициализированную схему, это ответственность PATCH/update()
     // выше, не create.
     initializeName(id: string, name: string): Promise<void>;
+
+    // Удаление схемы направления service целиком (FR1, FR3
+    // delete-motivation-schema): удаляет ВСЕ правила direction='service' у
+    // строки id, и саму строку motivation_schemas — но только если после
+    // этого у неё не осталось правил направления shop (та же общая строка
+    // может ещё принадлежать shop-схеме того же сотрудника/отдела, см.
+    // комментарий у serviceName в salary.prisma). Если правила shop
+    // остались, строка не удаляется — только очищается serviceName.
+    // Реализация — единая транзакция в infrastructure-слое, а не diff из
+    // хендлера (см. design.md, Decision 1, delete-motivation-schema).
+    deleteDirectionSchema(id: string): Promise<void>;
 }
 
 export const MOTIVATION_SCHEMA_REPOSITORY = Symbol(

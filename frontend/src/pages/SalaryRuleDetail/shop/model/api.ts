@@ -31,4 +31,13 @@ export const api = {
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить изменения схемы магазина'))
             }),
+
+    // FR2 delete-motivation-schema.
+    deleteMotivationSchema: (id: string): Promise<void> =>
+        apiInstance
+            .delete(`/v1/shop/accounting/motivation-schema/${id}`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить схему'))
+            }),
 }

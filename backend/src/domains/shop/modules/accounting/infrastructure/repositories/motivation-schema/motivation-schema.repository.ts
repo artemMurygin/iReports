@@ -208,4 +208,34 @@ export class ShopMotivationSchemaRepository
             }),
         );
     }
+
+    async deleteDirectionSchema(id: string): Promise<void> {
+        // FR2, FR3 delete-motivation-schema — зеркало
+        // MotivationSchemaRepository.deleteDirectionSchema сервисного
+        // accounting: удаление своей стороны общей строки
+        // motivation_schemas, атомарно в одной транзакции.
+        await this.write(null, async (client) => {
+            await client.salaryRule.deleteMany({
+                where: { motivationSchemaId: id, direction: 'shop' },
+            });
+
+            const remainingOtherDirectionRules = await client.salaryRule.count({
+                where: { motivationSchemaId: id, direction: { not: 'shop' } },
+            });
+
+            if (remainingOtherDirectionRules === 0) {
+                // Ни одно правило чужого направления не осталось — строка
+                // больше никому не принадлежит, удаляем её целиком.
+                await client.motivationSchema.delete({ where: { id } });
+                return;
+            }
+
+            // Строка ещё нужна направлению service — оставляем её и её
+            // правила нетронутыми, чистим только своё имя.
+            await client.motivationSchema.update({
+                where: { id },
+                data: { shopName: null },
+            });
+        });
+    }
 }

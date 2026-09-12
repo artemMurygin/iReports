@@ -1,4 +1,4 @@
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, Trash2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui-kit/atoms/Button'
 import { Breadcrumbs } from '@/shared/ui-kit/atoms/Breadcrumbs'
@@ -8,6 +8,7 @@ export type PageHeaderProps = {
     onSave: () => void
     canSave: boolean
     isSubmitting: boolean
+    onDelete: () => void
 }
 
 const BREADCRUMBS = [{ label: 'Зарплата' }, { label: 'Правила начисления', to: '/salaries/rules' }]
@@ -20,8 +21,13 @@ const BREADCRUMBS = [{ label: 'Зарплата' }, { label: 'Правила н�
  * остальных списковых страницах (`shared/ui-kit/organisms/PageHeader.tsx`), но заголовок
  * собран вручную здесь, т.к. тот компонент не поддерживает кнопку-действие рядом с заголовком в
  * нужной раскладке ("Сохранить" — единственная кнопка справа, без вторичной).
+ *
+ * Implements FR4 of delete-motivation-schema: «Удалить схему» — вторая, второстепенная кнопка
+ * рядом с «Сохранить изменения», видна на обоих breakpoint'ах (в отличие от «Сохранить», у
+ * которой на мобильном есть свой sticky-дубль `MobileSaveBar` — у удаления отдельного мобильного
+ * бара нет, поэтому кнопка здесь не скрывается `hidden md:inline-flex`).
  */
-export function PageHeader({ schemaName, onSave, canSave, isSubmitting }: PageHeaderProps) {
+export function PageHeader({ schemaName, onSave, canSave, isSubmitting, onDelete }: PageHeaderProps) {
     return (
         <div className="flex flex-col gap-3">
             <Breadcrumbs items={[...BREADCRUMBS, { label: schemaName || 'Схема' }]} />
@@ -36,10 +42,17 @@ export function PageHeader({ schemaName, onSave, canSave, isSubmitting }: PageHe
                     </p>
                 </div>
 
-                <Button onClick={onSave} disabled={!canSave} className="hidden md:inline-flex">
-                    {isSubmitting ? <Loader2 className="animate-spin" /> : <Check />}
-                    Сохранить изменения
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button type="button" variant="ghost" onClick={onDelete}>
+                        <Trash2 />
+                        Удалить схему
+                    </Button>
+
+                    <Button onClick={onSave} disabled={!canSave} className="hidden md:inline-flex">
+                        {isSubmitting ? <Loader2 className="animate-spin" /> : <Check />}
+                        Сохранить изменения
+                    </Button>
+                </div>
             </div>
         </div>
     )

@@ -34,4 +34,13 @@ export const api = {
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить изменения схемы'))
             }),
+
+    // FR1 delete-motivation-schema.
+    deleteMotivationSchema: (id: string): Promise<void> =>
+        apiInstance
+            .delete(`/v1/service/motivation-schema/${id}`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить схему'))
+            }),
 }

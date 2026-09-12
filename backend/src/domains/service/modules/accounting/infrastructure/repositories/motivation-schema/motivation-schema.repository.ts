@@ -196,6 +196,41 @@ export class MotivationSchemaRepository
         );
     }
 
+    async deleteDirectionSchema(id: string): Promise<void> {
+        // FR1, FR3 delete-motivation-schema: удаление своей стороны общей
+        // строки motivation_schemas, атомарно в одной транзакции.
+        await this.write(null, async (client) => {
+            await client.salaryRule.deleteMany({
+                where: { motivationSchemaId: id, direction: 'service' },
+            });
+
+            const remainingOtherDirectionRules = await client.salaryRule.count({
+                where: {
+                    motivationSchemaId: id,
+                    direction: { not: 'service' },
+                },
+            });
+
+            if (remainingOtherDirectionRules === 0) {
+                // Ни одно правило чужого направления не осталось — строка
+                // больше никому не принадлежит, удаляем её целиком. Связанные
+                // SalaryRule (если бы остались) удалились бы каскадом
+                // (onDelete: Cascade), но их уже нет — deleteMany выше
+                // подчистил свою сторону.
+                await client.motivationSchema.delete({ where: { id } });
+                return;
+            }
+
+            // Строка ещё нужна направлению shop — оставляем её и её правила
+            // нетронутыми, чистим только своё имя (см. комментарий у
+            // serviceName в salary.prisma).
+            await client.motivationSchema.update({
+                where: { id },
+                data: { serviceName: null },
+            });
+        });
+    }
+
     async initializeName(id: string, name: string): Promise<void> {
         // updateMany с условием serviceName: null в where — атомарная
         // "установить, только если ещё не установлено": повторный

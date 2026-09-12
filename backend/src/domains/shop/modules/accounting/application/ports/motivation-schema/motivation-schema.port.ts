@@ -83,6 +83,16 @@ export interface ShopMotivationSchemaRepositoryPort {
     // повторный POST с другим name НЕ переименовывает уже
     // инициализированную схему, это ответственность PATCH/update() выше.
     initializeName(id: string, name: string): Promise<void>;
+
+    // Удаление схемы направления shop целиком (FR2, FR3
+    // delete-motivation-schema) — зеркало
+    // MotivationSchemaRepositoryPort.deleteDirectionSchema сервисного
+    // accounting: удаляет ВСЕ правила direction='shop' у строки id, и саму
+    // строку motivation_schemas — но только если после этого у неё не
+    // осталось правил направления service (та же общая строка может ещё
+    // принадлежать service-схеме того же сотрудника/отдела). Если правила
+    // service остались, строка не удаляется — только очищается shopName.
+    deleteDirectionSchema(id: string): Promise<void>;
 }
 
 export const SHOP_MOTIVATION_SCHEMA_REPOSITORY = Symbol(

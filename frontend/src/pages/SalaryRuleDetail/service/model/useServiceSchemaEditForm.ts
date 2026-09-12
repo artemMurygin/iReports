@@ -13,6 +13,7 @@ import {
 } from '@/features/SalaryRuleForm'
 
 import { useUpdateMotivationSchema } from './useUpdateMotivationSchema.ts'
+import { useDeleteMotivationSchema } from './useDeleteMotivationSchema.ts'
 
 const NO_CATEGORIES: never[] = []
 
@@ -47,8 +48,10 @@ export function useServiceSchemaEditForm({
 }: UseServiceSchemaEditFormArgs) {
     const navigate = useNavigate()
     const [schemaName, setSchemaName] = useState(schema.name)
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const rules = useSalaryRulesDraft(resolveRuleDraft, schema.rules.map(draftFromRule))
     const updateSchema = useUpdateMotivationSchema(schema.id)
+    const deleteSchema = useDeleteMotivationSchema(schema.id)
 
     const { resolvedRules } = rules
     const canSave = schemaName.trim().length > 0 && rules.allDraftsValid && !updateSchema.isPending
@@ -84,6 +87,15 @@ export function useServiceSchemaEditForm({
         )
     }, [canSave, navigate, resolvedRules, schemaName, updateSchema])
 
+    const handleDelete = useCallback(() => {
+        deleteSchema.mutate(undefined, {
+            onSuccess: () => {
+                toast.success('Схема удалена')
+                navigate('/salaries/rules')
+            },
+        })
+    }, [deleteSchema, navigate])
+
     return {
         schemaName,
         onSchemaNameChange: setSchemaName,
@@ -110,5 +122,11 @@ export function useServiceSchemaEditForm({
         canSave,
         isSubmitting: updateSchema.isPending,
         handleSave,
+        isDeleteDialogOpen,
+        openDeleteDialog: useCallback(() => setDeleteDialogOpen(true), []),
+        onDeleteDialogOpenChange: setDeleteDialogOpen,
+        handleDelete,
+        isDeleting: deleteSchema.isPending,
+        deleteError: deleteSchema.error?.message ?? null,
     }
 }
