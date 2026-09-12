@@ -252,11 +252,11 @@ describe('buildGoodsTurnoverTreeRows with a full category directory', () => {
 
 describe('getRatioColorClass', () => {
     it('returns a distinct class for null, low, normal and high ratios', () => {
-        expect(getRatioColorClass(null)).toBe('text-[#8F96A1]')
-        expect(getRatioColorClass(0.5)).toBe('text-[#C8262C]')
-        expect(getRatioColorClass(0.7)).toBe('text-[#A85A00]')
-        expect(getRatioColorClass(0.9)).toBe('text-[#14161A]')
-        expect(getRatioColorClass(1.5)).toBe('text-[#0A7A46]')
+        expect(getRatioColorClass(null)).toBe('text-ink-muted')
+        expect(getRatioColorClass(0.5)).toBe('text-danger')
+        expect(getRatioColorClass(0.7)).toBe('text-warn-ink')
+        expect(getRatioColorClass(0.9)).toBe('text-ink')
+        expect(getRatioColorClass(1.5)).toBe('text-ok-ink')
     })
 })
 

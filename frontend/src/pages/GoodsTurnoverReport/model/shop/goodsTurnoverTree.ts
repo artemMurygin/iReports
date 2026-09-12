@@ -155,17 +155,17 @@ export function filterVisibleShopRows(
 }
 
 // Точка-маркер корневых категорий больше не красится по `rootIndex` (см. комментарий оригинала,
-// `../goodsTurnoverTree.ts`) — принятая ревизия дизайна использует одноцветную точку `lg-ink`.
+// `../goodsTurnoverTree.ts`) — принятая ревизия дизайна использует одноцветную точку `ink`.
 
 // Портировано из `../goodsTurnoverTree.ts` (`getRatioColorClass`) — та же шкала цвета
-// коэффициента оборачиваемости и та же page-local палитра `lg-*`, `coefficient` (контракт `shop`)
+// коэффициента оборачиваемости и те же общие токены UI Kit, `coefficient` (контракт `shop`)
 // вместо `turnoverRatio` (контракт `service`) — смысл значения (шт "оборотов" за месяц) идентичен.
 export function getShopRatioColorClass(ratio: number | null): string {
-    if (ratio === null) return 'text-[#8F96A1]'
-    if (ratio >= 1.2) return 'text-[#0A7A46]'
-    if (ratio >= 0.85) return 'text-[#14161A]'
-    if (ratio >= 0.65) return 'text-[#A85A00]'
-    return 'text-[#C8262C]'
+    if (ratio === null) return 'text-ink-muted'
+    if (ratio >= 1.2) return 'text-ok-ink'
+    if (ratio >= 0.85) return 'text-ink'
+    if (ratio >= 0.65) return 'text-warn-ink'
+    return 'text-danger'
 }
 
 export type ShopGoodsTurnoverSummary = {

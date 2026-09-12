@@ -172,23 +172,24 @@ export function filterVisibleRows(
 
 // Точка-маркер корневых категорий раньше циклически красилась в 6 цветов по порядковому номеру
 // корневой категории — принятая ревизия дизайна (Pencil `WvSO6`, обновление 2026-09-10) отказалась
-// от «радуги» в пользу одноцветной точки `lg-ink` (см. `GoodsTurnoverTable.tsx`, `LG_INK_BG`).
+// от «радуги» в пользу одноцветной точки `ink` (см. `GoodsTurnoverTable.tsx`, `LG_INK_BG`).
 // `rootIndex` в `GoodsTurnoverTreeRow` остаётся — используется только для группировки строк по
 // настоящему корню (тесты `buildGoodsTurnoverTreeRows`), не для цвета.
 
 // Пороги цвета ячейки «Обор.» (ui-design.md/`D3Sf4`, вычитано по фактическим строкам мокапа —
-// `$lg-pos` от 1.20, `$lg-ink` (обычный) от 0.85, `$lg-warn` от 0.65, `$lg-neg` ниже: 0,64/0,61/
-// 0,58/0,56 -> lg-neg; 0,68/0,71/0,73/0,84 -> lg-warn; 0,86...0,97 -> lg-ink; 1,20+ -> lg-pos).
+// `$ok-ink` от 1.20, `$ink` (обычный) от 0.85, `$warn-ink` от 0.65, `$danger` ниже: 0,64/0,61/
+// 0,58/0,56 -> danger; 0,68/0,71/0,73/0,84 -> warn-ink; 0,86...0,97 -> ink; 1,20+ -> ok-ink).
 // Решение не зафиксировано отдельным FR/UX в proposal.md/spec.md этого change — чисто визуальная
-// деталь готового макета, перенесена как задокументированное лучшее приближение к `D3Sf4`, а не
-// самостоятельно изобретённое бизнес-правило. Цвета — те же page-local литералы, что и остальная
-// палитра `Ledger Table` (см. `GoodsTurnoverTable.tsx`).
+// деталь готового макета, перенесена как задокументированное лучшее приближение к `D3Sf4`. Цвета —
+// общие токены UI Kit (`shared/ui-kit/tokens/theme.css`), как и остальная палитра `Ledger Table`
+// (см. `GoodsTurnoverTable.tsx`); для «нет данных» отдельного токена в макете нет — используется
+// `ink-muted`, как и для остальных второстепенных значений таблицы.
 export function getRatioColorClass(ratio: number | null): string {
-    if (ratio === null) return 'text-[#8F96A1]'
-    if (ratio >= 1.2) return 'text-[#0A7A46]'
-    if (ratio >= 0.85) return 'text-[#14161A]'
-    if (ratio >= 0.65) return 'text-[#A85A00]'
-    return 'text-[#C8262C]'
+    if (ratio === null) return 'text-ink-muted'
+    if (ratio >= 1.2) return 'text-ok-ink'
+    if (ratio >= 0.85) return 'text-ink'
+    if (ratio >= 0.65) return 'text-warn-ink'
+    return 'text-danger'
 }
 
 // Итоговая строка «Итого» (ui-design.md, `tcWPr`) агрегирует расход/остаток по НАСТОЯЩИМ корневым

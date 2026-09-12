@@ -26,29 +26,28 @@ export type GoodsTurnoverTableProps = {
 }
 
 // Ledger Table — принятая ревизия дизайна (Pencil design/sallary-first-iteration.pen, `WvSO6`
-// «Альтернатива A», обновление 2026-09-10). Первая версия (границы `#A9AFAA`, заливка группы
-// `#ECF1EE`, Roboto + IBM Plex Mono) была отвергнута — «слишком блёклая, зеленоватая, грязная».
-// Эта палитра (`lg-*` в имени, 1:1 с именами переменных .pen-файла) нейтрально-холодная и
-// page-local: не входит в `shared/ui-kit/tokens/theme.css` (кроме шрифтов, см. комментарий там)
-// — та же логика, что и раньше для декоративных деталей конкретно этой таблицы.
-const LG_INK = 'text-[#14161A]'
-const LG_INK_BG = 'bg-[#14161A]'
-const LG_INK_SOFT = 'text-[#5B626D]'
-const LG_INK_MUTED = 'text-[#6E7681]'
-// Граница структурных блоков (карточка целиком, низ шапки колонок, низ строки «Итого») — темнее.
-const LG_BORDER = 'border-[#DFE2E7]'
-// Разделитель строк тела таблицы и внутренних мини-метрик «Итого» — светлее, почти незаметный.
-const LG_LINE = 'border-[#EDEEF1]'
-const LG_LINE_X = 'divide-[#EDEEF1]'
+// «Альтернатива A»). Палитра — общие токены UI Kit (`shared/ui-kit/tokens/theme.css`), 1:1 с
+// цветами макета (`$ink`/`$ink-muted`/`$hairline`/`$canvas`/`$surface`/`$ink-faint`); отдельной
+// page-local палитры для этой таблицы больше нет — только шрифты (`font-lg-ui`/`font-lg-num`)
+// остаются особым случаем, см. комментарий в theme.css. Имена констант сохранены для читаемости
+// (документируют роль борта/фона), хотя часть из них теперь ссылается на один и тот же токен.
+const LG_INK = 'text-ink'
+const LG_INK_BG = 'bg-ink'
+const LG_INK_SOFT = 'text-ink-muted'
+const LG_INK_MUTED = 'text-ink-muted'
+// Граница структурных блоков (карточка целиком, низ шапки колонок, низ строки «Итого»).
+const LG_BORDER = 'border-hairline'
+// Разделитель строк тела таблицы и внутренних мини-метрик «Итого».
+const LG_LINE = 'border-hairline'
+const LG_LINE_X = 'divide-hairline'
 // Rail — вертикальная направляющая отступа вложенности (по одной на уровень предка).
-const LG_RAIL = 'border-[#E6E8EC]'
+const LG_RAIL = 'border-hairline'
 // Заливка строки верхнего уровня (категория 1-го уровня).
-const LG_GROUP = 'bg-[#F6F7F9]'
-const LG_CANVAS = 'bg-[#FBFBFC]'
-const LG_SURFACE = 'bg-[#FFFFFF]'
-// Маркер-«тире» у строк-листьев (без потомков) — светлее `lg-ink-faint`, не отдельная
-// переменная .pen-файла (разовое декоративное значение, как и раньше для таких деталей).
-const LG_DASH = 'bg-[#C4C9D1]'
+const LG_GROUP = 'bg-canvas'
+const LG_CANVAS = 'bg-canvas'
+const LG_SURFACE = 'bg-surface'
+// Маркер-«тире» у строк-листьев (без потомков).
+const LG_DASH = 'bg-ink-faint'
 
 const FONT_UI = 'font-lg-ui'
 const FONT_NUM = 'font-lg-num'
@@ -84,7 +83,7 @@ export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTu
         <div
             data-slot="goods-turnover-table"
             className={cn(
-                'overflow-hidden rounded-[10px] shadow-[0_1px_3px_0_rgba(20,26,36,0.06)]',
+                'overflow-hidden rounded-[10px] shadow-[0_1px_3px_0_rgba(1,3,6,0.06)]',
                 'border',
                 LG_BORDER,
                 LG_SURFACE,

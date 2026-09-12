@@ -25,20 +25,20 @@ export type ShopGoodsTurnoverTableProps = {
 }
 
 // Портировано без изменений из `../../GoodsTurnoverTable/GoodsTurnoverTable.tsx` (направление
-// `service`) — та же принятая ревизия палитры Ledger Table (page-local, кроме шрифтов
+// `service`) — та же ревизия палитры Ledger Table (общие токены UI Kit, кроме шрифтов
 // `font-lg-ui`/`font-lg-num` — см. комментарий оригинала и `shared/ui-kit/tokens/theme.css`).
-const LG_INK = 'text-[#14161A]'
-const LG_INK_BG = 'bg-[#14161A]'
-const LG_INK_SOFT = 'text-[#5B626D]'
-const LG_INK_MUTED = 'text-[#6E7681]'
-const LG_BORDER = 'border-[#DFE2E7]'
-const LG_LINE = 'border-[#EDEEF1]'
-const LG_LINE_X = 'divide-[#EDEEF1]'
-const LG_RAIL = 'border-[#E6E8EC]'
-const LG_GROUP = 'bg-[#F6F7F9]'
-const LG_CANVAS = 'bg-[#FBFBFC]'
-const LG_SURFACE = 'bg-[#FFFFFF]'
-const LG_DASH = 'bg-[#C4C9D1]'
+const LG_INK = 'text-ink'
+const LG_INK_BG = 'bg-ink'
+const LG_INK_SOFT = 'text-ink-muted'
+const LG_INK_MUTED = 'text-ink-muted'
+const LG_BORDER = 'border-hairline'
+const LG_LINE = 'border-hairline'
+const LG_LINE_X = 'divide-hairline'
+const LG_RAIL = 'border-hairline'
+const LG_GROUP = 'bg-canvas'
+const LG_CANVAS = 'bg-canvas'
+const LG_SURFACE = 'bg-surface'
+const LG_DASH = 'bg-ink-faint'
 
 const FONT_UI = 'font-lg-ui'
 const FONT_NUM = 'font-lg-num'
@@ -61,7 +61,7 @@ export function ShopGoodsTurnoverTable({ rows, categories = [], className }: Sho
         <div
             data-slot="shop-goods-turnover-table"
             className={cn(
-                'overflow-hidden rounded-[10px] shadow-[0_1px_3px_0_rgba(20,26,36,0.06)]',
+                'overflow-hidden rounded-[10px] shadow-[0_1px_3px_0_rgba(1,3,6,0.06)]',
                 'border',
                 LG_BORDER,
                 LG_SURFACE,
