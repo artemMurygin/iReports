@@ -72,7 +72,10 @@ describe('CustomApiRoappService.getGoodsFlowReport', () => {
 
     it('ответ, не проходящий Zod-валидацию, -> BadGatewayException', async () => {
         post.mockResolvedValueOnce({
-            data: { outcome: { quantity: 3 }, stock: { quantity: 10, sum: 5000 } },
+            data: {
+                outcome: { quantity: 3 },
+                stock: { quantity: 10, sum: 5000 },
+            },
         });
 
         const error = await service

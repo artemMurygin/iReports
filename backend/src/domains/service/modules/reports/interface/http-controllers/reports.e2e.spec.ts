@@ -268,7 +268,11 @@ describe('domains/service/modules/reports (e2e)', () => {
 
             await request(app.getHttpServer())
                 .get('/v1/service/reports/services')
-                .query({ from: '2026-02-01', to: '2026-02-28', categoryId: '1' })
+                .query({
+                    from: '2026-02-01',
+                    to: '2026-02-28',
+                    categoryId: '1',
+                })
                 .expect(200);
 
             expect(capturedFilter!.categoryIds).toEqual([1, 2]);

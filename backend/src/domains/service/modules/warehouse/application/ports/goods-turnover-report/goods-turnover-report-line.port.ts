@@ -17,10 +17,7 @@ export interface GoodsTurnoverReportLineRepositoryPort {
     // референс того же приёма). Пустой lines — валидный вызов (отчёт без
     // единой пары категория-склад с движением, теоретически), очищает
     // период до пустого набора строк.
-    replaceAll(
-        period: string,
-        lines: GoodsTurnoverReportLine[],
-    ): Promise<void>;
+    replaceAll(period: string, lines: GoodsTurnoverReportLine[]): Promise<void>;
 }
 
 export const GOODS_TURNOVER_REPORT_LINE_REPOSITORY = Symbol(

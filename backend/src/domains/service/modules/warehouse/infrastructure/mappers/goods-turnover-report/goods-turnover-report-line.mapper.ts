@@ -7,10 +7,10 @@ import { GoodsTurnoverReportLine } from '@/domains/service/modules/warehouse/dom
 import { GoodsFlowMetric } from '@/domains/service/modules/warehouse/domain/value-objects/goods-flow-metric.value-object';
 import { Period } from '@/shared/domain/period.value-object';
 
-export class GoodsTurnoverReportLineMapper
-    implements
-        Mapper<GoodsTurnoverReportLine, Prisma.GoodsTurnoverReportLineCreateInput>
-{
+export class GoodsTurnoverReportLineMapper implements Mapper<
+    GoodsTurnoverReportLine,
+    Prisma.GoodsTurnoverReportLineCreateInput
+> {
     toDomain(record: GoodsTurnoverReportLineRecord): GoodsTurnoverReportLine {
         return new GoodsTurnoverReportLine({
             id: record.id,

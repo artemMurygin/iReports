@@ -58,7 +58,7 @@ export function toAssortmentStockRow(
     const buyPrice = parsed.buyPrice;
     let buyPriceValue =
         typeof buyPrice === 'object' && buyPrice !== null && 'value' in buyPrice
-            ? asNumber((buyPrice as { value: unknown }).value)
+            ? asNumber(buyPrice.value)
             : undefined;
     if (buyPriceValue === undefined) {
         warn(

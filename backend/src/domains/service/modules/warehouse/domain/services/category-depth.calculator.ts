@@ -11,7 +11,9 @@ import { ProductCategory } from '../value-objects/product-category.value-object'
 export function calculateCategoryDepths(
     categories: ProductCategory[],
 ): Map<number, number> {
-    const byId = new Map(categories.map((category) => [category.getId(), category]));
+    const byId = new Map(
+        categories.map((category) => [category.getId(), category]),
+    );
     const depths = new Map<number, number>();
 
     const depthOf = (category: ProductCategory): number => {

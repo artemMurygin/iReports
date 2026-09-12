@@ -22,7 +22,9 @@ import {
 // WarehouseModule.
 //
 // Запуск: npm run build && node dist/src/scripts/recalcGoodsTurnoverOnce.js <период, например 2026-07>
-@Module({ imports: [EventEmitterModule.forRoot(), DatabaseModule, WarehouseModule] })
+@Module({
+    imports: [EventEmitterModule.forRoot(), DatabaseModule, WarehouseModule],
+})
 class RecalcOnceModule {}
 
 async function main() {

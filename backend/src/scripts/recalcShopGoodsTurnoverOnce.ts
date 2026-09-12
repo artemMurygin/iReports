@@ -25,7 +25,11 @@ import { runInSystemRequestContext } from '../shared/application/context/run-in-
 //
 // Запуск: npm run build && node dist/src/scripts/recalcShopGoodsTurnoverOnce.js 2026-06 2026-07
 @Module({
-    imports: [EventEmitterModule.forRoot(), DatabaseModule, ShopWarehouseModule],
+    imports: [
+        EventEmitterModule.forRoot(),
+        DatabaseModule,
+        ShopWarehouseModule,
+    ],
 })
 class RecalcShopOnceModule {}
 
@@ -64,15 +68,15 @@ async function main() {
             await syncService.uploadDemandsByMoment(from, to);
         }
 
-        console.log(
-            `Бэкфилл истории остатков от ${earliest.toISOString()}...`,
-        );
+        console.log(`Бэкфилл истории остатков от ${earliest.toISOString()}...`);
         await syncService.backfillHistoricalStockSnapshots(earliest);
 
         for (const period of periods) {
             const parsedPeriod = Period.create(period);
             await rebuildReport.rebuild(parsedPeriod);
-            console.log(`OK: отчёт по оборачиваемости магазина за ${period} пересчитан`);
+            console.log(
+                `OK: отчёт по оборачиваемости магазина за ${period} пересчитан`,
+            );
         }
     });
 

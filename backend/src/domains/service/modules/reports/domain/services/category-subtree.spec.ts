@@ -2,7 +2,12 @@ import { ServiceCategory } from '../value-objects/service-category.value-object'
 import { resolveCategorySubtreeIds } from './category-subtree';
 
 function category(id: number, parentId: number | null): ServiceCategory {
-    return ServiceCategory.create({ id, name: `Категория ${id}`, parentId, depth: 0 });
+    return ServiceCategory.create({
+        id,
+        name: `Категория ${id}`,
+        parentId,
+        depth: 0,
+    });
 }
 
 describe('resolveCategorySubtreeIds', () => {

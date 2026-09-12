@@ -50,8 +50,9 @@ describe('GetGoodsTurnoverReportService', () => {
     };
 
     it('период без сохранённых строк — пустой список, не ошибка', async () => {
-        const { service, findAllCategories, findAllWarehouses } =
-            buildService([]);
+        const { service, findAllCategories, findAllWarehouses } = buildService(
+            [],
+        );
 
         const result = await service.get('2026-01');
 
