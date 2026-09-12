@@ -32,8 +32,6 @@ export type DepartmentLedgerV2Props = {
  */
 export function DepartmentLedgerV2({
     report,
-    departmentName,
-    directionBreakdown,
     employeeSearch,
     className,
 }: DepartmentLedgerV2Props) {
@@ -49,11 +47,7 @@ export function DepartmentLedgerV2({
         >
             <DepartmentLedgerHeroV2
                 total={report.total}
-                employeeCount={report.employees.length}
-                departmentName={departmentName}
-                period={report.period}
                 isClosed={report.isClosed}
-                directionBreakdown={directionBreakdown}
             />
 
             <div className="flex items-center justify-between gap-3 border-b border-hairline bg-canvas px-3 py-2 md:px-5 md:py-2.5">

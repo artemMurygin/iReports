@@ -42,11 +42,10 @@ export function LedgerHero({ grandTotal, isClosed, period, className }: LedgerHe
             className={cn('flex flex-col gap-3 p-4 md:flex-row md:items-start md:justify-between md:gap-6 md:p-5', className)}
         >
             <div className="flex flex-col gap-1">
-                <span className="font-ui text-[11px] font-semibold text-ink-muted">Начислено всего · факт</span>
-                <span className="font-display text-[28px] font-bold tracking-[-0.4px] text-ink tabular-nums">
+                <span className="font-ui text-[11px] font-semibold text-ink-muted">Факт на текущий момент</span>
+                <span className="font-display text-[38px] font-bold tracking-[-0.4px] text-ink tabular-nums">
                     {formatCurrency(grandTotal.fact)}
                 </span>
-                <span className="font-ui text-xs text-ink-muted">Сервис + Магазин · {periodLabel}</span>
             </div>
 
             <div className="flex items-center justify-between gap-3 md:flex-col md:items-end md:gap-1">
@@ -60,16 +59,13 @@ export function LedgerHero({ grandTotal, isClosed, period, className }: LedgerHe
                         </PopoverTrigger>
                         <PopoverContent align="end" className="flex flex-col gap-2.5">
                             <p className="font-ui text-[13px] font-semibold text-ink">Как считается прогноз</p>
-                            <p className="font-ui text-xs text-ink-muted">
-                                Факт на сегодня + ожидаемые начисления по правилам до конца месяца.
-                            </p>
-                            <div className="flex flex-col gap-1 font-ui text-xs text-ink">
-                                <span className="font-semibold text-ink-muted">Учитывается:</span>
-                                <span>Закрытые и оплаченные заказы, выполненные задачи, проведённые продажи</span>
+                             <div className="flex flex-col gap-1 font-ui text-xs text-ink">
+                                <span className="font-semibold text-ink-muted">За продажи с плавующим процентом</span>
+                                <span>Прогноз = факт продаж * % по категории в прогнозе</span>
                             </div>
                             <div className="flex flex-col gap-1 font-ui text-xs text-ink">
-                                <span className="font-semibold text-ink-muted">Не учитывается:</span>
-                                <span>Брони без оплаты, возвраты, ручные корректировки</span>
+                                <span className="font-semibold text-ink-muted">За задачи</span>
+                                <span>Предполагается, что Вы выполните все задачи к концу периода</span>
                             </div>
                         </PopoverContent>
                     </Popover>

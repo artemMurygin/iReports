@@ -1,13 +1,11 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { DepartmentSalaryReportEmployee } from 'ireports-contracts'
-
 import { formatCurrency } from '@/features/SalesPlan'
-import { pluralizeRules } from '@/kernel/pluralizeRules.ts'
 import { cn } from '@/shared/lib/tw'
 import { Avatar, AvatarFallback } from '@/shared/ui-kit/atoms/Avatar'
 
-import { getRoleLabel } from '@/features/SalaryReportData'
+
 
 /** Общая ширина колонок "Факт, ₽"/"Прогноз, ₽" — единая для заголовка (`DepartmentLedgerV2`),
  * строки сотрудника и строки правила, чтобы суммы выстраивались в столбик по всей карточке
@@ -33,10 +31,7 @@ function getInitials(name: string): string {
         .join('')
 }
 
-function getEmployeeRoleLabel(employee: DepartmentSalaryReportEmployee): string | null {
-    const role = employee.rules[0]?.targetRole
-    return role ? getRoleLabel(role) : null
-}
+
 
 function formatAmountOrDash(value: number | null): string {
     return value === null ? '—' : formatCurrency(value)
@@ -67,9 +62,6 @@ export type DepartmentEmployeeGroupV2Props = {
  * попасть на отчёт конкретного сотрудника.
  */
 export function DepartmentEmployeeGroupV2({ employee }: DepartmentEmployeeGroupV2Props) {
-    const roleLabel = getEmployeeRoleLabel(employee)
-    const roleAndCount = [roleLabel, pluralizeRules(employee.rules.length)].filter(Boolean).join(' · ')
-
     return (
         <div data-slot="department-employee-group-v2" className="border-b border-hairline last:border-b-0">
             <Link
@@ -81,8 +73,8 @@ export function DepartmentEmployeeGroupV2({ employee }: DepartmentEmployeeGroupV
                         <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
                     </Avatar>
                     <span className="flex min-w-0 flex-col">
-                        <span className="truncate font-ui text-sm font-bold text-ink md:text-base">{employee.name}</span>
-                        <span className="truncate font-ui text-[11px] text-ink-muted">{roleAndCount}</span>
+                        <span className="truncate font-ui ">{employee.name}</span>
+        
                     </span>
                 </span>
 
