@@ -43,7 +43,7 @@ export function ServicesTableHeader({
             <div>
                 <h3 className="font-ui text-base font-bold text-ink">Услуги</h3>
                 <p className="mt-0.5 text-[12.5px] text-ink-muted">
-                    {pluralizeServices(totalServicesCount)} · выручка {fmtMoney(totalRevenue)}
+                    {pluralizeServices(totalServicesCount)} · выручка {fmtMoney(totalRevenue)} ₽
                 </p>
             </div>
             <div className="flex flex-wrap items-center gap-2.5">

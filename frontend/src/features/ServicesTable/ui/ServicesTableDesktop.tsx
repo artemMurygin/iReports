@@ -30,11 +30,11 @@ export function ServicesTableDesktop({ rows, startIndex, maxCount, columnVisibil
                         <th className="w-9 px-4 font-ui text-[11.5px] font-bold text-ink">#</th>
                         <th className="min-w-[220px] px-2 font-ui text-[11.5px] font-bold text-ink">Услуга</th>
                         <th className="w-[108px] px-2 font-ui text-[11.5px] font-bold text-ink">Продажи</th>
-                        <th className="w-[112px] px-2 font-ui text-[11.5px] font-bold text-ink">Тренд</th>
+                        <th className="w-[112px] px-2 text-center font-ui text-[11.5px] font-bold text-ink">Тренд</th>
                         {columns.map((column) => (
                             <th
                                 key={column.id}
-                                className="w-[128px] px-4 text-right font-ui text-[11.5px] font-bold text-ink"
+                                className="w-[128px] px-4 text-center font-ui text-[11.5px] font-bold text-ink"
                             >
                                 {column.label}
                             </th>
@@ -78,13 +78,13 @@ export function ServicesTableDesktop({ rows, startIndex, maxCount, columnVisibil
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-2 align-middle">
+                                <td className="px-2 text-center align-middle">
                                     <SparklineCell breakdown={row.breakdown} gradientId={`trend-${row.serviceId}`} />
                                 </td>
                                 {columns.map((column) => {
                                     const { text, colorClass } = formatOptionalColumnValue(row, column)
                                     return (
-                                        <td key={column.id} className="px-4 align-middle text-right">
+                                        <td key={column.id} className="px-4 align-middle text-center">
                                             <span className={cn('text-[14px] font-medium tabular-nums', colorClass)}>
                                                 {text}
                                             </span>

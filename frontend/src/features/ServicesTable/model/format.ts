@@ -1,11 +1,11 @@
-/** Компактная сумма в рублях — "12 300 ₽" / "1.4 млн ₽". Перенесено из старой `ServicesTable.tsx`
- * без изменений: это чистое форматирование, а не бизнес-логика. */
+/** Компактная сумма без знака валюты — "12 300" / "1.4 млн". Символ "₽" не добавляется здесь:
+ * в таблице услуг он остаётся только в заголовке (см. `ServicesTableHeader`), а не в каждой ячейке. */
 export function fmtMoney(n: number): string {
     if (n >= 1_000_000) {
         const v = n / 1_000_000
-        return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} млн ₽`
+        return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} млн`
     }
-    return n.toLocaleString('ru-RU') + ' ₽'
+    return n.toLocaleString('ru-RU')
 }
 
 /** Цвет колонки "Прибыль" по знаку — на новых токенах (`text-ok-ink`/`text-danger`/`text-ink-faint`)
