@@ -207,7 +207,10 @@ describe('buildSalaryReportRules', () => {
         expect(entry.sources[0].itemName).toBe('Замена экрана');
     });
 
-    // spec: service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
+    // Генерический механизм — используется TaskCompletion, пока задача
+    // периода ещё не заведена (spec:
+    // service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи,
+    // task-completion-progressive-visibility).
     it('не включает правило, чья строка отсутствует хотя бы в одном из режимов (FACT/PROGNOSE)', () => {
         const ruleA = PayPerHoursEntity.create({
             type: 'PayPerHour',

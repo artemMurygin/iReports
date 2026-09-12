@@ -8,12 +8,12 @@ import { Period } from '@/shared/domain/period.value-object';
 // replace-bitrix-task-integration, design.md решение 2/4/5 —
 // TaskCompletion.create() сохраняет request-only config.taskId в
 // config.taskIdByPeriod[текущийПериод] (никакого похода в tasks); calculate()
-// — spec service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
-// (строка отсутствует, пока связанная SalaryTask.isCompleted() не true —
-// код 'CLOSED_SUCCESSFULLY', не любой другой/терминальный статус) и
+// — spec service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи
+// (task-completion-progressive-visibility: null только пока задача периода
+// вообще не заведена; иначе PROGNOSE = defaultAmount сразу, FACT = 0 до
+// статуса «Выполнена» и далее не откатывается) и
 // #requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
-// (amount всегда равен config.defaultAmount, requiresManualInput всегда
-// true).
+// (requiresManualInput всегда true).
 const buildRule = () =>
     withRequestContext(() =>
         TaskCompletion.create({
@@ -33,6 +33,7 @@ const buildRule = () =>
 
 const buildContext = (
     erpData?: ServiceCalculationErpData,
+    mode: CalculationContext['mode'] = 'FACT',
 ): CalculationContext => ({
     employee: {
         id: 1,
@@ -45,7 +46,7 @@ const buildContext = (
         to: new Date('2026-08-31T23:59:59.999Z'),
         status: 'OPEN',
     },
-    mode: 'FACT',
+    mode,
     erpData,
     salesPerformance: null,
 });
@@ -95,19 +96,14 @@ describe('TaskCompletion', () => {
             expect(rule.calculate(buildContext(undefined))).toBeNull();
         });
 
-        it.each([
-            'NEW',
-            'IN_PROGRESS',
-            'DONE',
-            'REWORK',
-            'CLOSED_UNSUCCESSFULLY',
-        ])(
-            'возвращает null, когда SalaryTask.isCompleted() — false (статус %s)',
-            (status) => {
-                const rule = buildRule();
-
-                const line = rule.calculate(
-                    buildContext({
+        const buildLine = (
+            status: string,
+            mode: CalculationContext['mode'],
+        ) => {
+            const rule = buildRule();
+            const line = rule.calculate(
+                buildContext(
+                    {
                         serviceCompletedItems: [],
                         hoursWorked: { fact: 0, prognose: 0 },
                         taskCompletionStatuses: {
@@ -116,32 +112,59 @@ describe('TaskCompletion', () => {
                                 status,
                             }),
                         },
-                    }),
-                );
+                    },
+                    mode,
+                ),
+            );
+            return { rule, line };
+        };
 
-                expect(line).toBeNull();
+        // FR1 of task-completion-progressive-visibility: PROGNOSE =
+        // defaultAmount сразу, вне зависимости от статуса задачи.
+        it.each([
+            'NEW',
+            'IN_PROGRESS',
+            'DONE',
+            'CLOSED_SUCCESSFULLY',
+            'CLOSED_UNSUCCESSFULLY',
+            'REWORK',
+        ])('FR1: PROGNOSE = defaultAmount при любом статусе (%s)', (status) => {
+            const prognose = buildLine(status, 'PROGNOSE');
+
+            expect(prognose.line).not.toBeNull();
+            expect(prognose.line?.amount).toBe(5000);
+        });
+
+        // FR2: FACT = 0, пока задача не достигла статуса «Выполнена».
+        it.each(['NEW', 'IN_PROGRESS'])(
+            'FR2: FACT = 0, пока задача в статусе %s',
+            (status) => {
+                const fact = buildLine(status, 'FACT');
+
+                expect(fact.line).not.toBeNull();
+                expect(fact.line?.amount).toBe(0);
+                expect(fact.line?.requiresManualInput).toBe(true);
             },
         );
 
-        it('возвращает CalculationLine с amount из config.defaultAmount и requiresManualInput true, когда SalaryTask.isCompleted()', () => {
-            const rule = buildRule();
+        // FR3: FACT становится равен defaultAmount, начиная со статуса
+        // «Выполнена», и НЕ откатывается автоматически на более поздних
+        // статусах (все достижимы только через DONE).
+        it.each([
+            'DONE',
+            'CLOSED_SUCCESSFULLY',
+            'CLOSED_UNSUCCESSFULLY',
+            'REWORK',
+        ])('FR3: FACT = defaultAmount на статусе %s', (status) => {
+            const fact = buildLine(status, 'FACT');
 
-            const line = rule.calculate(
-                buildContext({
-                    serviceCompletedItems: [],
-                    hoursWorked: { fact: 0, prognose: 0 },
-                    taskCompletionStatuses: {
-                        [rule.id]: SalaryTask.create({
-                            taskId: 'task-777',
-                            status: 'CLOSED_SUCCESSFULLY',
-                        }),
-                    },
-                }),
-            );
+            expect(fact.line?.amount).toBe(5000);
+        });
 
-            expect(line).not.toBeNull();
+        it('requiresManualInput и sources не зависят от режима/статуса', () => {
+            const { rule, line } = buildLine('CLOSED_SUCCESSFULLY', 'FACT');
+
             expect(line?.ruleId).toBe(rule.id);
-            expect(line?.amount).toBe(5000);
             expect(line?.requiresManualInput).toBe(true);
             expect(line?.sources).toEqual([
                 {

@@ -36,7 +36,10 @@ describe('buildRuleBreakdown', () => {
         expect(buildRuleBreakdown([], [])).toEqual([]);
     });
 
-    // spec: service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
+    // Генерический механизм пропуска null-строки — используется TaskCompletion,
+    // пока задача периода ещё не заведена (spec:
+    // service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи,
+    // task-completion-progressive-visibility).
     it('пропускает правило, чья строка расчёта null — не вставляет пустую строку на его место', () => {
         const ruleA = PayPerHoursEntity.create({
             type: 'PayPerHour',

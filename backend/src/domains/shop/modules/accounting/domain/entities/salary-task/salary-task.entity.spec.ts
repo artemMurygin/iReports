@@ -47,4 +47,26 @@ describe('ShopSalaryTask', () => {
             expect(task.isCompleted()).toBe(false);
         });
     });
+
+    // FR2, FR3 of task-completion-progressive-visibility: факт строки
+    // правила капает на DONE и не сбрасывается автоматически на более
+    // поздних статусах (все достижимы только через DONE).
+    describe('isFactAccrued', () => {
+        it.each([
+            'DONE',
+            'CLOSED_SUCCESSFULLY',
+            'CLOSED_UNSUCCESSFULLY',
+            'REWORK',
+        ])('true для статуса %s', (status) => {
+            const task = ShopSalaryTask.create({ taskId: 'task-1', status });
+
+            expect(task.isFactAccrued()).toBe(true);
+        });
+
+        it.each(['NEW', 'IN_PROGRESS'])('false для статуса %s', (status) => {
+            const task = ShopSalaryTask.create({ taskId: 'task-1', status });
+
+            expect(task.isFactAccrued()).toBe(false);
+        });
+    });
 });

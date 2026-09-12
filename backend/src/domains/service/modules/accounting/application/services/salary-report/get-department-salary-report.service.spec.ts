@@ -392,9 +392,9 @@ describe('GetDepartmentSalaryReportService', () => {
             );
         });
 
-        it('задача ещё не закрыта успешно — строка отсутствует в отчёте (FACT и PROGNOSE)', async () => {
+        it('задача выполнена (DONE), но не закрыта успешно — факт уже капает', async () => {
             const employees = [{ id: 1, name: 'Иван Иванов' }];
-            const { schema } = buildTaskSchema(1, 'task-1');
+            const { schema, rule } = buildTaskSchema(1, 'task-1');
             const task = buildTask('task-1', 'DONE');
 
             const { service } = buildService({
@@ -405,10 +405,42 @@ describe('GetDepartmentSalaryReportService', () => {
 
             const report = await service.execute(1, '2026-08');
 
-            expect(report.employees[0].rules).toHaveLength(0);
+            expect(report.employees[0].rules).toHaveLength(1);
+            expect(report.employees[0].rules[0]).toEqual(
+                expect.objectContaining({
+                    ruleId: rule.id,
+                    amount: { fact: 5000, prognose: 5000 },
+                }),
+            );
+            expect(report.employees[0].total).toEqual({
+                fact: 5000,
+                prognose: 5000,
+            });
+        });
+
+        it('задача только заведена (NEW) — прогноз уже равен сумме начисления, факт = 0', async () => {
+            const employees = [{ id: 1, name: 'Иван Иванов' }];
+            const { schema, rule } = buildTaskSchema(1, 'task-1');
+            const task = buildTask('task-1', 'NEW');
+
+            const { service } = buildService({
+                employees,
+                schemas: [schema],
+                tasks: [task],
+            });
+
+            const report = await service.execute(1, '2026-08');
+
+            expect(report.employees[0].rules).toHaveLength(1);
+            expect(report.employees[0].rules[0]).toEqual(
+                expect.objectContaining({
+                    ruleId: rule.id,
+                    amount: { fact: 0, prognose: 5000 },
+                }),
+            );
             expect(report.employees[0].total).toEqual({
                 fact: 0,
-                prognose: 0,
+                prognose: 5000,
             });
         });
     });

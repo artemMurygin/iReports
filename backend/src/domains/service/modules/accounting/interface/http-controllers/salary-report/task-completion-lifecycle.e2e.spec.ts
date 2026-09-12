@@ -42,11 +42,13 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // HTTP-слоя src/modules/tasks (без мока /v1/tasks, только граница с БД
 // подменена на InMemoryTaskRepository — тот же приём, что и
 // tasks.e2e.spec.ts): create task → правило TaskCompletion со ссылкой на
-// неё → NEW→IN_PROGRESS→DONE→CLOSED_SUCCESSFULLY → строка начисления
-// появляется в отчёте сотрудника ТОЛЬКО на последнем переходе (spec:
-// service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения)
-// → открытие отчёта за новый период автосоздаёт задачу регулярного
-// правила (EnsureRuleTaskForPeriodService) и она видна в /tasks.
+// неё → NEW→IN_PROGRESS→DONE→CLOSED_SUCCESSFULLY → строка начисления видна
+// в отчёте сотрудника сразу, прогноз = сумме начисления с момента постановки
+// задачи, факт «капает» на статусе «Выполнена» и дальше не откатывается
+// (spec: service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи,
+// task-completion-progressive-visibility) → открытие отчёта за новый период
+// автосоздаёт задачу регулярного правила (EnsureRuleTaskForPeriodService) и
+// она видна в /tasks.
 //
 // Схема мотивации сама (MotivationSchema+TaskCompletion) заводится напрямую
 // через доменные фабрики в beforeAll — тем же приёмом, что и
@@ -272,12 +274,16 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         return report.rules.find((r) => r.type === 'TaskCompletion');
     }
 
-    it('строка TaskCompletion не видна в отчёте, пока задача не выполнена (NEW)', async () => {
+    it('строка TaskCompletion видна в отчёте сразу после создания задачи (NEW), прогноз = сумме начисления, факт = 0', async () => {
         const report = await getEmployeeReport(currentPeriod);
-        expect(findTaskCompletionRule(report)).toBeUndefined();
+        expect(findTaskCompletionRule(report)).toMatchObject({
+            type: 'TaskCompletion',
+            name: 'Премия за инвентаризацию',
+            amount: { fact: 0, prognose: 1500 },
+        });
     });
 
-    it('NEW → IN_PROGRESS (ответственный) — строка всё ещё не видна', async () => {
+    it('NEW → IN_PROGRESS (ответственный) — прогноз/факт без изменений', async () => {
         const toInProgress = await request(app.getHttpServer())
             .patch(`/v1/tasks/${initialTaskId}/status`)
             .send({ targetStatus: 'IN_PROGRESS' })
@@ -285,26 +291,17 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         expect((toInProgress.body as Task).status).toBe('IN_PROGRESS');
 
         const report = await getEmployeeReport(currentPeriod);
-        expect(findTaskCompletionRule(report)).toBeUndefined();
+        expect(findTaskCompletionRule(report)).toMatchObject({
+            amount: { fact: 0, prognose: 1500 },
+        });
     });
 
-    it('IN_PROGRESS → DONE (ответственный) — строка ещё не видна: DONE ≠ выполнено для целей начисления', async () => {
+    it('IN_PROGRESS → DONE (ответственный) — факт «капает», прогноз не меняется', async () => {
         const toDone = await request(app.getHttpServer())
             .patch(`/v1/tasks/${initialTaskId}/status`)
             .send({ targetStatus: 'DONE' })
             .expect(200);
         expect((toDone.body as Task).status).toBe('DONE');
-
-        const report = await getEmployeeReport(currentPeriod);
-        expect(findTaskCompletionRule(report)).toBeUndefined();
-    });
-
-    it('DONE → CLOSED_SUCCESSFULLY (руководитель) — строка появляется только теперь', async () => {
-        const toClosed = await request(app.getHttpServer())
-            .patch(`/v1/tasks/${initialTaskId}/status`)
-            .send({ targetStatus: 'CLOSED_SUCCESSFULLY' })
-            .expect(200);
-        expect((toClosed.body as Task).status).toBe('CLOSED_SUCCESSFULLY');
 
         const report = await getEmployeeReport(currentPeriod);
         const line = findTaskCompletionRule(report);
@@ -318,6 +315,19 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
                     id: initialTaskId,
                 }),
             ],
+        });
+    });
+
+    it('DONE → CLOSED_SUCCESSFULLY (руководитель) — без изменений в сумме, только адм. закрытие', async () => {
+        const toClosed = await request(app.getHttpServer())
+            .patch(`/v1/tasks/${initialTaskId}/status`)
+            .send({ targetStatus: 'CLOSED_SUCCESSFULLY' })
+            .expect(200);
+        expect((toClosed.body as Task).status).toBe('CLOSED_SUCCESSFULLY');
+
+        const report = await getEmployeeReport(currentPeriod);
+        expect(findTaskCompletionRule(report)).toMatchObject({
+            amount: { fact: 1500, prognose: 1500 },
         });
     });
 
@@ -354,10 +364,12 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
             title: 'Сдать ежемесячный отчёт по инвентаризации',
         });
 
-        // Новая строка правила за новый период ещё не видна — новая задача
-        // только что заведена в NEW, не выполнена (тот же инвариант, что и
-        // в первом тесте этого файла).
+        // Новая строка правила за новый период уже видна — новая задача
+        // только что заведена в NEW, прогноз = сумме начисления, факт = 0
+        // (тот же инвариант, что и в первом тесте этого файла).
         const reportForNextPeriod = await getEmployeeReport(nextPeriod);
-        expect(findTaskCompletionRule(reportForNextPeriod)).toBeUndefined();
+        expect(findTaskCompletionRule(reportForNextPeriod)).toMatchObject({
+            amount: { fact: 0, prognose: 1500 },
+        });
     });
 });

@@ -47,14 +47,29 @@ export class ShopSalaryTask extends Entity<SalaryTaskProps> {
         return this.props.status;
     }
 
-    // design.md Decision 3/5 — только CLOSED_SUCCESSFULLY запускает
-    // начисление правила TaskCompletion (не DONE — «Выполнена» — заявление
-    // ответственного, ещё не принятое руководителем, и не любой другой
-    // терминальный статус). Бизнес-правило "что считается выполненным для
-    // целей начисления" описано ЗДЕСЬ, локально в accounting, а не
-    // делегируется в TaskStatus/Task модуля tasks.
+    // «Закрыта успешно» — окончательное, проверенное руководителем
+    // завершение задачи (не путать с isFactAccrued() ниже — с
+    // task-completion-progressive-visibility факт строки TaskCompletionShop
+    // капает раньше, на «Выполнена», см. её комментарий). Бизнес-правило
+    // описано ЗДЕСЬ, локально в accounting, а не делегируется в
+    // TaskStatus/Task модуля tasks.
     isCompleted(): boolean {
         return this.props.status === 'CLOSED_SUCCESSFULLY';
+    }
+
+    // Implements FR2, FR3 of task-completion-progressive-visibility: факт
+    // «капает» с момента, когда задача хотя бы раз достигла статуса
+    // «Выполнена», и НЕ сбрасывается автоматически при последующих
+    // переходах — DONE/CLOSED_SUCCESSFULLY/CLOSED_UNSUCCESSFULLY/REWORK все
+    // достижимы ТОЛЬКО через «Выполнена», поэтому «не NEW и не IN_PROGRESS»
+    // эквивалентно «уже было выполнено хотя бы раз» для этой, стейтлес по
+    // текущему статусу, сущности. Если руководитель обнаружит, что работа
+    // по факту не была доведена до конца, он поправит сумму вручную при
+    // проведении начисления — это не автоматический откат.
+    isFactAccrued(): boolean {
+        return (
+            this.props.status !== 'NEW' && this.props.status !== 'IN_PROGRESS'
+        );
     }
 
     validate(): void {

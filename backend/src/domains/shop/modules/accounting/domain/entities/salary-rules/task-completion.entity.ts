@@ -17,7 +17,9 @@ import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/d
 // task-completion.entity.ts), независимая копия для направления shop
 // (issue #57 — не переиспользует ни один класс сервиса).
 //
-// spec: shop/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
+// spec: shop/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи
+// (task-completion-progressive-visibility — пересматривает прежнее решение
+// «не видно в прогнозе до выполнения»)
 //
 // В отличие от остальных типов правил магазина (ProductSold/
 // UsedProductSold/PayPerHour), TaskCompletionShop не матчит сотрудника по
@@ -133,26 +135,37 @@ export class TaskCompletionShop
 
     // spec: shop/accounting#requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
     //
-    // null, пока связанная задача не переведена в статус
-    // CLOSED_SUCCESSFULLY (design.md Decision 3/5 — статус приходит из
-    // ShopSalaryTask.isCompleted(), не запросом к tasks из самого правила,
-    // см. backend/CLAUDE.md — domain не имеет доступа к IO). Когда
-    // isCompleted() true — amount ВСЕГДА равен config.defaultAmount,
-    // requiresManualInput ВСЕГДА true — руководитель по-прежнему обязан
-    // явно подтвердить/изменить сумму и указать комментарий при проведении:
-    // действующая сумма живёт только на ShopSalaryAccrualLine (design.md
-    // Decision 5), calculate() её не читает и не пересчитывает.
+    // Implements FR1-FR3 of task-completion-progressive-visibility: null
+    // остаётся только когда задача этого периода вообще не заведена — раз
+    // заведена, строка присутствует в ОБОИХ проходах (FACT/PROGNOSE).
+    // PROGNOSE = config.defaultAmount СРАЗУ, вне зависимости от статуса
+    // задачи. FACT = 0, пока задача не достигла статуса «Выполнена»
+    // (ShopSalaryTask.isFactAccrued(), не запросом к tasks из самого
+    // правила, см. backend/CLAUDE.md — domain не имеет доступа к IO; сумма
+    // не откатывается автоматически при доработке/неуспешном закрытии).
+    // requiresManualInput ВСЕГДА true — при закрытии периода руководитель
+    // по-прежнему обязан подтвердить сумму и вправе уменьшить её с
+    // обязательным комментарием, если по факту сделано меньше: действующая
+    // сумма живёт только на ShopSalaryAccrualLine (design.md Decision 5),
+    // calculate() её не читает и не пересчитывает.
     calculate(context: ShopCalculationContext): CalculationLine | null {
         const erpData = context.erpData as ShopCalculationErpData | undefined;
         const salaryTask = erpData?.taskCompletionStatuses?.[this.id];
 
-        if (!salaryTask || !salaryTask.isCompleted()) {
+        if (!salaryTask) {
             return null;
         }
 
+        const amount =
+            context.mode === 'FACT'
+                ? salaryTask.isFactAccrued()
+                    ? this.props.config.defaultAmount
+                    : 0
+                : this.props.config.defaultAmount;
+
         return {
             ruleId: this.id,
-            amount: this.props.config.defaultAmount,
+            amount,
             requiresManualInput: true,
             sources: this.buildSources(salaryTask.taskId),
         };

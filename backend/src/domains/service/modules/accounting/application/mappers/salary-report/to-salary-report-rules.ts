@@ -31,10 +31,13 @@ import type { SalesPerformance } from '@/domains/service/modules/sales/domain/va
 // пропускает правила с null-строкой (см. его комментарий), поэтому
 // factBreakdown/prognoseBreakdown могут быть короче rules[] и не совпадать
 // друг с другом по длине/порядку — сведение идёт по ruleId через Map.
-// Правило, отсутствующее хотя бы в одной из двух карт (задача ещё не
-// выполнена ни в фактическом, ни в прогнозном проходе, либо выполнена
-// только в одном из них), в ответ не попадает — spec:
-// service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения.
+// Правило, отсутствующее хотя бы в одной из двух карт, в ответ не попадает —
+// для TaskCompletion (единственное правило, чей calculate() может вернуть
+// null) это происходит СИММЕТРИЧНО в обоих проходах — только пока задача
+// этого периода вообще не заведена (spec:
+// service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи,
+// task-completion-progressive-visibility) — как только задача заведена,
+// строка присутствует в обоих проходах с amount 0..defaultAmount.
 export function buildSalaryReportRules(
     rules: SalaryRule[],
     factLines: (CalculationLine | null)[],

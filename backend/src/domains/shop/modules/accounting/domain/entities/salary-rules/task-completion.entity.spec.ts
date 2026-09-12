@@ -7,11 +7,12 @@ import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/d
 // domains/service/modules/accounting/domain/entities/salary-rules/
 // task-completion.entity.spec.ts, независимая копия для направления shop
 // (issue #57): TaskCompletionShop.calculate() —
-// spec shop/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
-// (строка отсутствует в отчёте, пока задача не в статусе «Закрыта успешно»)
-// и #requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
-// (amount всегда равен config.defaultAmount; requiresManualInput всегда
-// true, design.md Decision 5).
+// spec shop/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи
+// (task-completion-progressive-visibility: null только пока задача периода
+// вообще не заведена; иначе PROGNOSE = defaultAmount сразу, FACT = 0 до
+// статуса «Выполнена» и далее не откатывается) и
+// #requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
+// (requiresManualInput всегда true, design.md Decision 5).
 const buildRule = () =>
     TaskCompletionShop.create({
         type: 'TaskCompletion',
@@ -29,6 +30,7 @@ const buildRule = () =>
 
 const buildContext = (
     erpData?: ShopCalculationErpData,
+    mode: ShopCalculationContext['mode'] = 'FACT',
 ): ShopCalculationContext => ({
     employee: {
         id: 1,
@@ -41,7 +43,7 @@ const buildContext = (
         to: new Date('2026-08-31T23:59:59.999Z'),
         status: 'OPEN',
     },
-    mode: 'FACT',
+    mode,
     erpData,
     salesPerformance: null,
 });
@@ -90,42 +92,73 @@ describe('TaskCompletionShop', () => {
             expect(rule.calculate(buildContext(undefined))).toBeNull();
         });
 
-        it('возвращает null, когда статус связанной задачи не CLOSED_SUCCESSFULLY (в т.ч. DONE)', () => {
+        const buildLine = (
+            status: string,
+            mode: ShopCalculationContext['mode'],
+        ) => {
             const rule = buildRule();
-
             const line = rule.calculate(
-                buildContext({
-                    productSoldItems: [],
-                    taskCompletionStatuses: {
-                        [rule.id]: ShopSalaryTask.create({
-                            taskId: 'task-1',
-                            status: 'DONE',
-                        }),
+                buildContext(
+                    {
+                        productSoldItems: [],
+                        taskCompletionStatuses: {
+                            [rule.id]: ShopSalaryTask.create({
+                                taskId: 'task-1',
+                                status,
+                            }),
+                        },
                     },
-                }),
+                    mode,
+                ),
             );
+            return { rule, line };
+        };
 
-            expect(line).toBeNull();
+        // FR1 of task-completion-progressive-visibility: PROGNOSE =
+        // defaultAmount сразу, вне зависимости от статуса задачи.
+        it.each([
+            'NEW',
+            'IN_PROGRESS',
+            'DONE',
+            'CLOSED_SUCCESSFULLY',
+            'CLOSED_UNSUCCESSFULLY',
+            'REWORK',
+        ])('FR1: PROGNOSE = defaultAmount при любом статусе (%s)', (status) => {
+            const prognose = buildLine(status, 'PROGNOSE');
+
+            expect(prognose.line).not.toBeNull();
+            expect(prognose.line?.amount).toBe(5000);
         });
 
-        it('возвращает CalculationLine с amount из config.defaultAmount и requiresManualInput true, когда статус CLOSED_SUCCESSFULLY', () => {
-            const rule = buildRule();
+        // FR2: FACT = 0, пока задача не достигла статуса «Выполнена».
+        it.each(['NEW', 'IN_PROGRESS'])(
+            'FR2: FACT = 0, пока задача в статусе %s',
+            (status) => {
+                const fact = buildLine(status, 'FACT');
 
-            const line = rule.calculate(
-                buildContext({
-                    productSoldItems: [],
-                    taskCompletionStatuses: {
-                        [rule.id]: ShopSalaryTask.create({
-                            taskId: 'task-1',
-                            status: 'CLOSED_SUCCESSFULLY',
-                        }),
-                    },
-                }),
-            );
+                expect(fact.line).not.toBeNull();
+                expect(fact.line?.amount).toBe(0);
+            },
+        );
 
-            expect(line).not.toBeNull();
+        // FR3: FACT становится равен defaultAmount, начиная со статуса
+        // «Выполнена», и НЕ откатывается автоматически на более поздних
+        // статусах.
+        it.each([
+            'DONE',
+            'CLOSED_SUCCESSFULLY',
+            'CLOSED_UNSUCCESSFULLY',
+            'REWORK',
+        ])('FR3: FACT = defaultAmount на статусе %s', (status) => {
+            const fact = buildLine(status, 'FACT');
+
+            expect(fact.line?.amount).toBe(5000);
+        });
+
+        it('requiresManualInput и sources не зависят от режима/статуса', () => {
+            const { rule, line } = buildLine('CLOSED_SUCCESSFULLY', 'FACT');
+
             expect(line?.ruleId).toBe(rule.id);
-            expect(line?.amount).toBe(5000);
             expect(line?.requiresManualInput).toBe(true);
             expect(line?.sources).toEqual([
                 {
@@ -142,7 +175,7 @@ describe('TaskCompletionShop', () => {
         // сумма в документе начисления: сумма живёт только на
         // ShopSalaryAccrualLine (design.md Decision 5), calculate() её не
         // читает и не пересчитывает вовсе.
-        it('всегда возвращает amount из config.defaultAmount и requiresManualInput true при повторных вызовах со статусом CLOSED_SUCCESSFULLY', () => {
+        it('всегда возвращает одинаковый amount при повторных вызовах со статусом CLOSED_SUCCESSFULLY', () => {
             const rule = buildRule();
             const context = buildContext({
                 productSoldItems: [],

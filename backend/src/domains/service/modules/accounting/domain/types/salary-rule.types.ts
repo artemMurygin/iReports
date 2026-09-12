@@ -160,12 +160,15 @@ export type SalaryRule = {
     readonly updatedAt: Date;
     // CalculationLine | null (а не всегда CalculationLine) — начиная с
     // TaskCompletion (см. tasks.md раздел 3), правило может не иметь строки
-    // расчёта вовсе, а не строку с нулевой суммой: null означает «правило
-    // ещё не готово к начислению за этот проход» (например, связанная
-    // задача ещё не переведена в статус «Закрыта успешно» — spec:
-    // service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения).
-    // Существующие типы правил (PayPerHour/ServiceCompleted/OrderPayed)
-    // продолжают всегда возвращать не-null CalculationLine.
+    // расчёта вовсе, а не строку с нулевой суммой: null означает «у правила
+    // ещё нет связанной задачи за этот период» (config.taskIdByPeriod без
+    // записи на текущий период) — spec:
+    // service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи
+    // (task-completion-progressive-visibility). Как только задача заведена,
+    // TaskCompletion.calculate() возвращает не-null строку в ОБОИХ проходах,
+    // а amount — 0 или config.defaultAmount по статусу задачи и режиму
+    // (FACT/PROGNOSE). Существующие типы правил (PayPerHour/ServiceCompleted/
+    // OrderPayed) продолжают всегда возвращать не-null CalculationLine.
     calculate(
         context: CalculationContext,
     ): CalculationLine | null | Promise<CalculationLine | null>;

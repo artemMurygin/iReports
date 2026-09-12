@@ -34,8 +34,11 @@ export interface RuleBreakdownLine {
 // PeriodCalculationOrchestrator.calculate) — строки идут в том же порядке,
 // что и правила схемы, поэтому сопоставление по индексу безопасно. Правило,
 // чья строка на этой позиции — null (см. SalaryRule.calculate()), пропускается
-// целиком: пустая строка на его место не вставляется — spec:
-// service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения.
+// целиком: пустая строка на его место не вставляется. Для TaskCompletion
+// (единственное правило, чей calculate() может вернуть null) это происходит
+// только пока задача этого периода вообще не заведена — spec:
+// service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи
+// (task-completion-progressive-visibility).
 export function buildRuleBreakdown(
     rules: SalaryRule[],
     lines: (CalculationLine | null)[],

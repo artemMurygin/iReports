@@ -16,8 +16,11 @@ import type { ServiceCalculationErpData } from '@/domains/service/modules/accoun
 // replace-bitrix-task-integration, design.md решение 2/4/5: правило «за
 // выполнение задачи» — единственный тип правила сервиса, чей calculate()
 // может вернуть null (см. domain/types/salary-rule.types.ts,
-// SalaryRule.calculate()) — spec:
-// service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения.
+// SalaryRule.calculate()), но ТОЛЬКО пока задача этого периода вообще не
+// заведена — spec:
+// service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи
+// (task-completion-progressive-visibility — пересматривает прежнее решение
+// «не видно в прогнозе до выполнения»).
 //
 // Связанная задача (модуль src/modules/tasks) не хранится в props правила
 // целиком и не читается репозиторием отсюда напрямую (правило не ходит в БД
@@ -68,15 +71,18 @@ export class TaskCompletion
 
     // spec: service/accounting#requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную
     //
-    // null — задача этого периода ещё не заведена (нет записи в
-    // erpData.taskCompletionStatuses за этот проход, см. builder) ИЛИ
-    // SalaryTask.isCompleted() связанной задачи — false (design.md решение
-    // 3: только статус «Закрыта успешно» запускает начисление, не
-    // «Выполнена» и не любой другой статус — бизнес-правило описано в самой
-    // SalaryTask, не здесь). amount ВСЕГДА равен config.defaultAmount
-    // (сумма по умолчанию, заданная при создании правила) —
-    // requiresManualInput ВСЕГДА true, руководитель по-прежнему обязан явно
-    // подтвердить/изменить сумму и указать комментарий при проведении
+    // Implements FR1-FR3 of task-completion-progressive-visibility: null
+    // остаётся только когда задача этого периода вообще не заведена (нет
+    // записи в erpData.taskCompletionStatuses, см. builder) — раз задача
+    // заведена, строка присутствует в ОБОИХ проходах (FACT/PROGNOSE).
+    // PROGNOSE = config.defaultAmount СРАЗУ, вне зависимости от статуса
+    // задачи (сотрудник видит ожидаемую сумму, как только задача
+    // поставлена). FACT = 0, пока задача не достигла статуса «Выполнена»
+    // (SalaryTask.isFactAccrued() — включает и более поздние статусы,
+    // сумма не откатывается автоматически при доработке/неуспешном
+    // закрытии). requiresManualInput ВСЕГДА true — при закрытии периода
+    // руководитель по-прежнему обязан подтвердить сумму, и вправе уменьшить
+    // её с обязательным комментарием, если по факту сделано меньше
     // (SetTaskCompletionLineReward); действующая сумма живёт только на
     // SalaryAccrualLine и не пересчитывается здесь (тот же принцип, что и
     // adjust() у других типов правил — не влияет на live-пересчёт открытого
@@ -86,13 +92,20 @@ export class TaskCompletion
             ServiceCalculationErpData | undefined;
 
         const entry = erpData?.taskCompletionStatuses?.[this.id];
-        if (!entry || !entry.isCompleted()) {
+        if (!entry) {
             return null;
         }
 
+        const amount =
+            context.mode === 'FACT'
+                ? entry.isFactAccrued()
+                    ? this.props.config.defaultAmount
+                    : 0
+                : this.props.config.defaultAmount;
+
         return {
             ruleId: this.id,
-            amount: this.props.config.defaultAmount,
+            amount,
             requiresManualInput: true,
             sources: this.buildSources(entry.taskId),
         };

@@ -100,7 +100,10 @@ describe('PeriodCalculationOrchestrator', () => {
         expect(PeriodCalculationOrchestrator.total(lines)).toBe(0);
     });
 
-    // spec: service/accounting#requirement-правило-за-выполнение-задачи-не-видно-в-прогнозе-до-выполнения
+    // Оркестратор должен уметь передать null сквозь себя для ЛЮБОГО правила
+    // с таким calculate() — сегодня это TaskCompletion, пока задача периода
+    // ещё не заведена (spec: service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи,
+    // task-completion-progressive-visibility).
     it('сохраняет null на позиции правила, чьё calculate() вернул null, не выбрасывая исключение и не схлопывая массив', async () => {
         const ruleA = PayPerHoursEntity.create({
             type: 'PayPerHour',
