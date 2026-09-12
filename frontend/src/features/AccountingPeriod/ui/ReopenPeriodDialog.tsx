@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Loader2, RotateCcw, TriangleAlert } from 'lucide-react'
+import { Bold, Loader2, RotateCcw, TriangleAlert } from 'lucide-react'
 import type { SalesDirection } from 'ireports-contracts'
 
 import { formatPeriodLabel, formatPeriodMonthGenitive } from '@/shared/lib/format.ts'
@@ -59,18 +59,11 @@ function ReopenPeriodDialog({
         <Modal
             open={open}
             onOpenChange={handleOpenChange}
-            title={`Переоткрыть ${formatPeriodLabel(period)} · ${DIRECTION_LABEL[direction]}`}
-            subtitle="Снапшот периода и черновики документов начисления будут удалены"
+            title={`Открыть период ${formatPeriodLabel(period)}`}
             className="max-md:top-auto max-md:bottom-0 max-md:left-0 max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0"
             footer={
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="min-w-0 flex-1 basis-48 font-ui text-[13px] text-ink-muted max-sm:hidden">
-                        Переоткрытие возможно, пока все документы в «Черновике»
-                    </span>
-                    <div className="flex shrink-0 items-center gap-2.5 max-sm:w-full">
-                        <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={isReopening}>
-                            Отмена
-                        </Button>
+                    <div className="flex shrink-0 gap-2.5 w-full items-center justify-between">
                         <Button
                             type="button"
                             variant="danger"
@@ -79,7 +72,10 @@ function ReopenPeriodDialog({
                             className="max-sm:flex-1"
                         >
                             {isReopening ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-                            {isReopening ? 'Переоткрываем…' : 'Переоткрыть месяц'}
+                            {isReopening ? 'Открываю...' : 'Открыть месяц повторно'}
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={isReopening}>
+                            Отмена
                         </Button>
                     </div>
                 </div>
@@ -87,9 +83,15 @@ function ReopenPeriodDialog({
         >
             <div className="flex flex-col gap-4">
                 <p className="font-ui text-[13px] leading-relaxed text-ink">
-                    План и факт снова будут считаться по текущим данным, часы {formatPeriodMonthGenitive(period)} станут
-                    редактируемыми, а созданные при закрытии черновики документов начисления будут удалены. Месяц можно
-                    будет закрыть заново.
+                    <p><b>Следующие документы будут пересчитываться:</b></p>
+                    <br/>
+                    <ul>
+                        <li>- План / факт продаж</li>
+                        <li>- Отчет по оборачиваемости</li>
+                        <li>- Отчет по зарплате</li>
+                    </ul>
+                    <br/>
+                    <p>График {formatPeriodMonthGenitive(period)} станет доступным для редактирования.</p>
                 </p>
 
                 {error !== null && error.kind === 'not-draft' && (
