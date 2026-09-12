@@ -5,7 +5,6 @@ import type { ServicesFilters } from '@/pages/ServicesReport/model/types.ts'
 import { api } from '@/pages/ServicesReport/model/api.ts'
 import { loadDataFromStorage, saveDataToStorage } from '@/shared/lib/storage.ts'
 import { useDebounce } from '@/shared/hooks/useDebounce.ts'
-import { resolveDescendantIds } from '@/pages/ServicesReport/model/categoryTree.ts'
 
 const DEBOUNCE_MS = 1000
 const STORAGE_KEY = 'filters:services-analytics'
@@ -43,11 +42,6 @@ export function useFilters() {
 
     const categories = useMemo(() => data ?? [], [data])
 
-    const resolvedCategoryIds = useMemo(() => {
-        if (!debouncedFilters.selectedCategoryId) return []
-        return resolveDescendantIds(categories, debouncedFilters.selectedCategoryId)
-    }, [debouncedFilters.selectedCategoryId, categories])
-
     return {
         filters,
         debouncedFilters,
@@ -56,7 +50,6 @@ export function useFilters() {
         setError,
         error,
         defaults,
-        resolvedCategoryIds,
         categories,
     }
 }

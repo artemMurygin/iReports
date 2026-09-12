@@ -22,7 +22,6 @@ export function ServicesAnalytics() {
         filters,
         debouncedFilters,
         isDebouncing,
-        resolvedCategoryIds,
         categories,
         setFilters,
         setError,
@@ -32,7 +31,6 @@ export function ServicesAnalytics() {
     const { services, series, isInitialLoad, isRefreshing, dataVersion } = useServicesAnalytics(
         debouncedFilters,
         categories,
-        resolvedCategoryIds,
         isDebouncing,
         setError,
     )

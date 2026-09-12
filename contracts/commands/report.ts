@@ -52,7 +52,7 @@ export type ListOrderTypesResponse = z.infer<
 
 // ==================== Аналитика проданных услуг ==================== //
 
-// Query-параметры множественного выбора (categoryIds/serviceIds) — тот же приём, что
+// Query-параметр множественного выбора (serviceIds) — тот же приём, что
 // queryNumbersArray в легаси getServicesSoldReportDTO (src/TODO/reports/dto/
 // getServicesSoldReport.dto.ts) и queryNumberArray в deal.ts.
 const queryNumberArray = z
@@ -61,11 +61,15 @@ const queryNumberArray = z
     .transform((val) => val.map(Number))
     .default([]);
 
+// categoryId — id ОДНОЙ выбранной категории (не список): клиент не обязан
+// сам разворачивать её поддерево перед отправкой (что раньше приводило к
+// огромным URL вида categoryIds=1&categoryIds=2&...) — раскрытие в id всех
+// подкатегорий делается на backend, см. resolveCategorySubtreeIds.
 const getServicesAnalyticsQuerySchema = z.object({
     from: z.string().min(1),
     to: z.string().min(1),
     groupBy: z.enum(['day', 'week', 'month']).default('day'),
-    categoryIds: queryNumberArray,
+    categoryId: z.coerce.number().int().positive().optional(),
     serviceIds: queryNumberArray,
 });
 export type GetServicesAnalyticsQuery = z.infer<

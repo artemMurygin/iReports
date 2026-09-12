@@ -219,13 +219,21 @@ describe('domains/service/modules/reports (e2e)', () => {
 
         it('передаёт диапазон дат и id-фильтры в порт, groupBy по умолчанию — day', async () => {
             seededRows = [];
+            seededCategories = [
+                ServiceCategory.create({
+                    id: 10,
+                    name: 'Замена экрана',
+                    parentId: null,
+                    depth: 0,
+                }),
+            ];
 
             await request(app.getHttpServer())
                 .get('/v1/service/reports/services')
                 .query({
                     from: '2026-02-01',
                     to: '2026-02-28',
-                    categoryIds: ['10', '20'],
+                    categoryId: '10',
                     serviceIds: ['1'],
                 })
                 .expect(200);
@@ -237,8 +245,33 @@ describe('domains/service/modules/reports (e2e)', () => {
             expect(capturedFilter!.range.getTo().toISOString()).toBe(
                 '2026-02-28T00:00:00.000Z',
             );
-            expect(capturedFilter!.categoryIds).toEqual([10, 20]);
+            expect(capturedFilter!.categoryIds).toEqual([10]);
             expect(capturedFilter!.serviceIds).toEqual([1]);
+        });
+
+        it('categoryId одной категории раскрывается на backend в её и подкатегорий id', async () => {
+            seededRows = [];
+            seededCategories = [
+                ServiceCategory.create({
+                    id: 1,
+                    name: 'Ремонт',
+                    parentId: null,
+                    depth: 0,
+                }),
+                ServiceCategory.create({
+                    id: 2,
+                    name: 'Замена экрана',
+                    parentId: 1,
+                    depth: 1,
+                }),
+            ];
+
+            await request(app.getHttpServer())
+                .get('/v1/service/reports/services')
+                .query({ from: '2026-02-01', to: '2026-02-28', categoryId: '1' })
+                .expect(200);
+
+            expect(capturedFilter!.categoryIds).toEqual([1, 2]);
         });
 
         it('id-фильтры по умолчанию пустые массивы, когда query-параметры не переданы', async () => {

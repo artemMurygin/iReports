@@ -19,15 +19,16 @@ export const api = {
                     }),
         }),
 
-    getServicesAnalytics: (filters: ServicesFilters, resolvedCategoryIds: number[]) => {
+    getServicesAnalytics: (filters: ServicesFilters) => {
         const {
             dateRange: { from, to },
             groupBy,
+            selectedCategoryId,
             serviceIds,
         } = filters
 
         return queryOptions({
-            queryKey: ['services', 'services-analytics', filters, resolvedCategoryIds],
+            queryKey: ['services', 'services-analytics', filters],
             queryFn: ({ signal }) =>
                 apiInstance
                     .get<ServicesAnalyticsResponse>('/v1/service/reports/services', {
@@ -36,7 +37,7 @@ export const api = {
                             from,
                             to,
                             groupBy,
-                            categoryIds: resolvedCategoryIds,
+                            categoryId: selectedCategoryId ? Number(selectedCategoryId) : undefined,
                             serviceIds: serviceIds.map(Number),
                         },
                     })

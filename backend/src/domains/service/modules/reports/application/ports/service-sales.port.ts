@@ -7,7 +7,7 @@ import { OrderType } from '../../domain/value-objects/order-type.value-object';
 // — тот же набор, что у легаси getServicesSoldReportDTO (src/TODO/reports/
 // dto/getServicesSoldReport.dto.ts): диапазон дат закрытия заказа +
 // категории/услуги.
-// spec: service/reports#requirement-отчёт-по-проданным-услугам-можно-ограничить-категориями-и-конкретными-услугами
+// spec: service/reports#requirement-отчёт-по-проданным-услугам-можно-ограничить-категорией-услуг-и-конкретными-услугами
 export interface ServiceSalesFilter {
     range: DateRange;
     categoryIds: number[];

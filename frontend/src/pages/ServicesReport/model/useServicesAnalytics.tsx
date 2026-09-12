@@ -7,7 +7,6 @@ import type { ServiceCategory, ServicesFilters } from '@/pages/ServicesReport/mo
 export function useServicesAnalytics(
     filters: ServicesFilters,
     categories: ServiceCategory[],
-    resolvedCategoryIds: number[],
     isDebouncing: boolean,
     setError: Dispatch<SetStateAction<string | null>>,
 ) {
@@ -17,7 +16,7 @@ export function useServicesAnalytics(
         isFetching,
         error: queryError,
     } = useQuery({
-        ...api.getServicesAnalytics(filters, resolvedCategoryIds),
+        ...api.getServicesAnalytics(filters),
         enabled: Boolean(filters.dateRange.from && filters.dateRange.to),
         placeholderData: keepPreviousData,
     })

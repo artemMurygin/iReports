@@ -30,7 +30,7 @@ export class GetServicesAnalyticsHttpController {
         return this.getServicesAnalytics.execute({
             range,
             groupBy: query.groupBy,
-            categoryIds: query.categoryIds,
+            categoryId: query.categoryId ?? null,
             serviceIds: query.serviceIds,
         });
     }

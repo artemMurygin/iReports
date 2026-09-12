@@ -10,12 +10,13 @@ import {
 } from '../../domain/value-objects/period-bucket.value-object';
 import { calculateServiceMetrics } from '../../domain/services/service-metrics.calculator';
 import { buildPeriodBreakdown } from '../../domain/services/period-breakdown.calculator';
+import { resolveCategorySubtreeIds } from '../../domain/services/category-subtree';
 import { toServiceAnalyticsItemResponse } from '../mappers/to-service-analytics-item-response';
 
 export interface GetServicesAnalyticsFilter {
     range: DateRange;
     groupBy: PeriodGranularity;
-    categoryIds: number[];
+    categoryId: number | null;
     serviceIds: number[];
 }
 
@@ -35,9 +36,20 @@ export class GetServicesAnalyticsService {
     async execute(
         filter: GetServicesAnalyticsFilter,
     ): Promise<GetServicesAnalyticsResponse> {
+        // Клиент передаёт только id выбранной категории — раскрытие её
+        // поддерева (а не полный список id от фронтенда) делается здесь,
+        // см. resolveCategorySubtreeIds.
+        const categoryIds =
+            filter.categoryId != null
+                ? resolveCategorySubtreeIds(
+                      await this.source.listCategories(),
+                      filter.categoryId,
+                  )
+                : [];
+
         const rows = await this.source.findByFilter({
             range: filter.range,
-            categoryIds: filter.categoryIds,
+            categoryIds,
             serviceIds: filter.serviceIds,
         });
 
