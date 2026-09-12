@@ -1,4 +1,4 @@
-import { Layers, Lock, X } from 'lucide-react'
+import { Layers, X } from 'lucide-react'
 import type { SalaryRuleDetail } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw.ts'
@@ -7,9 +7,8 @@ import { Badge } from '@/shared/ui-kit/atoms/Badge.tsx'
 import { Chip } from '@/shared/ui-kit/atoms/Chip.tsx'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton.tsx'
 import { SpecRow } from '@/shared/ui-kit/molecules/SpecRow.tsx'
-import { InlineNote } from '@/shared/ui-kit/molecules/InlineNote.tsx'
 
-import { DIRECTION_LABEL, ROLE_LABELS } from './labels.ts'
+import { DIRECTION_LABEL } from './labels.ts'
 import { getRuleParams } from './ruleParams.ts'
 
 /**
@@ -17,8 +16,7 @@ import { getRuleParams } from './ruleParams.ts'
  * карточка описания правила внутри панели (architecture.md, UI-компоненты: `SalaryRuleSummaryCard
  * { rule }` — `onClose` добавлен сверх перечисленных «основных» пропов, по тому же прецеденту, что
  * `TaskStatusCard`'s `onClose?`, tasks.md группа 27/architecture.md). Read-only: без кнопок
- * редактирования, только плашка «только для просмотра» (design.md Non-Goals — редактирование
- * остаётся на странице зарплатного правила).
+ * редактирования (design.md Non-Goals — редактирование остаётся на странице зарплатного правила).
  *
  * Рендерит собственный заголовок (название правила + подпись + крестик закрытия, узел `Header`/
  * `O3HrO`) сама, а не через `SidePanel`'s `title`-слот — тот же приём, что уже применяет
@@ -40,7 +38,7 @@ export function SalaryRuleSummaryCard({ rule, onClose, className }: SalaryRuleSu
             <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
                 <div className="min-w-0 flex-1">
                     <h2 className="truncate font-display text-[17px] font-bold text-ink">{rule.name}</h2>
-                    <p className="mt-[3px] font-ui text-xs text-ink-muted">Зарплатное правило · только просмотр</p>
+                    <p className="mt-[3px] font-ui text-xs text-ink-muted">Зарплатное правило</p>
                 </div>
                 {onClose && (
                     <IconButton aria-label="Закрыть панель правила" onClick={onClose} className="shrink-0">
@@ -56,19 +54,6 @@ export function SalaryRuleSummaryCard({ rule, onClose, className }: SalaryRuleSu
                     </Badge>
                     <Chip icon={<Layers />}>{DIRECTION_LABEL[rule.direction]}</Chip>
                 </div>
-
-                <div className="flex gap-5">
-                    <div className="flex-1">
-                        <p className="font-ui text-xs font-medium text-ink-muted">Роль</p>
-                        <p className="mt-1.5 font-ui text-sm font-medium text-ink">{ROLE_LABELS[rule.targetRole]}</p>
-                    </div>
-                    <div className="flex-1">
-                        <p className="font-ui text-xs font-medium text-ink-muted">Схема начисления</p>
-                        <p className="mt-1.5 font-ui text-sm font-medium text-ink">{rule.motivationSchemaName}</p>
-                    </div>
-                </div>
-
-                <div className="h-px w-full bg-hairline" />
 
                 {params.length > 0 && (
                     <div className="flex flex-col gap-2">
@@ -88,12 +73,6 @@ export function SalaryRuleSummaryCard({ rule, onClose, className }: SalaryRuleSu
                         </div>
                     </div>
                 )}
-
-                <div className="h-px w-full bg-hairline" />
-
-                <InlineNote icon={<Lock className="size-[15px] shrink-0 text-ink-muted" />}>
-                    Правило открыто только для просмотра. Изменить его можно на странице зарплатного правила.
-                </InlineNote>
             </div>
         </div>
     )

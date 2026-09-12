@@ -7,6 +7,7 @@ import { useCreateTaskForm } from '../model/useCreateTaskForm.ts'
 import { useEmployees } from '../model/useEmployees.ts'
 
 import { FieldError } from './FieldError.tsx'
+import { TaskLinksField } from './TaskLinksField.tsx'
 
 export type CreateTaskFormProps = {
     /** Вызывается после успешного создания задачи с её `id`. Общая страница `/tasks` (раздел 13
@@ -22,11 +23,14 @@ export type CreateTaskFormProps = {
  * replace-bitrix-task-integration, раздел 11 tasks.md (11.3) — самостоятельная форма создания
  * задачи: заголовок, описание (необязательно), дедлайн, ответственный (селект сотрудника). Не знает
  * ничего про зарплатные правила (design.md решение 2/4, specs/tasks/spec.md «Задача — полностью
- * самостоятельная сущность») — только `title`/`description`/`deadline`/`assigneeEmployeeId` из
- * `CreateTaskRequest`.
+ * самостоятельная сущность») — `title`/`description`/`deadline`/`assigneeEmployeeId` из
+ * `CreateTaskRequest`, плюс необязательные ссылки (`TaskLinksField`) — те прикрепляются отдельными
+ * запросами `POST /v1/tasks/:id/links` уже ПОСЛЕ создания задачи (add-task-salary-rule-links-comments,
+ * см. WHY в `useCreateTaskForm.ts`), а не входят в тело `POST /v1/tasks`.
  */
 export function CreateTaskForm({ onCreated, submitLabel = 'Создать задачу' }: CreateTaskFormProps) {
-    const { draft, patch, canSubmit, submit, isPending, error } = useCreateTaskForm(onCreated)
+    const { draft, patch, links, addLink, removeLink, canSubmit, submit, isPending, error } =
+        useCreateTaskForm(onCreated)
     const employees = useEmployees()
 
     return (
@@ -104,6 +108,8 @@ export function CreateTaskForm({ onCreated, submitLabel = 'Создать зад
                     </Select>
                 </div>
             </div>
+
+            <TaskLinksField links={links} onAddLink={addLink} onRemoveLink={removeLink} />
 
             <FieldError message={error?.message} />
 

@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { CreateTaskRequest, CreateTaskResponse, ListEmployeesResponse } from 'ireports-contracts'
+import type { CreateTaskRequest, CreateTaskResponse, ListEmployeesResponse, TaskLink } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError, extractApiErrorMessage } from '@/shared/errors/apiError.ts'
@@ -21,6 +21,12 @@ import { ApiError, extractApiErrorMessage } from '@/shared/errors/apiError.ts'
  * задокументирован в `features/SalaryRuleForm/service/model/api.ts`'s `getOrderTypes`. Отдельный
  * `queryKey`, не пересекающийся с `EMPLOYEES_QUERY_KEY` той фичи — эта фича не обязана знать о её
  * кэше и наоборот.
+ *
+ * `addLink` — своя копия `POST /v1/tasks/:id/links`, не импорт `features/TaskStatusControl`'s
+ * `linksApi` (тот же запрет кросс-импорта между `features/*`) — вызывается уже ПОСЛЕ успешного
+ * `createTask`, когда `taskId` уже известен, поэтому ссылки прикрепляются отдельными
+ * последовательными запросами, а не одним payload'ом (создание задачи остаётся единственным входом
+ * с фиксированным набором полей, design.md решение 1/4).
  */
 export const api = {
     createTask: (payload: CreateTaskRequest): Promise<CreateTaskResponse> =>
@@ -29,6 +35,14 @@ export const api = {
             .then((r) => r.data)
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось создать задачу'))
+            }),
+
+    addLink: (taskId: string, url: string, label?: string): Promise<TaskLink> =>
+        apiInstance
+            .post<TaskLink>(`/v1/tasks/${taskId}/links`, { url, label })
+            .then((r) => r.data)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось прикрепить ссылку'))
             }),
 
     getEmployees: () =>

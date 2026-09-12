@@ -1,40 +1,25 @@
 import { useState } from 'react'
-import { CircleAlert, Info, Link as LinkIcon, Plus, X } from 'lucide-react'
-import type { TaskLink } from 'ireports-contracts'
+import { CircleAlert, Link as LinkIcon, Plus, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui-kit/atoms/Button.tsx'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton.tsx'
 import { Input } from '@/shared/ui-kit/atoms/Input.tsx'
-import { cn } from '@/shared/lib/tw'
+
+type DraftLink = { url: string; label?: string }
+
+export type TaskLinksFieldProps = {
+    links: DraftLink[]
+    onAddLink: (url: string, label?: string) => void
+    onRemoveLink: (index: number) => void
+}
 
 /**
- * Pencil: `baDJe` (`ERP/Molecule/Link Row`, список), `F7ai0` (`Inline Note`, пустой список —
- * `r86qEK`), форма «Новая ссылка» с ошибкой адреса (`AbvRd`, `cW0k5`). architecture.md:
- * `TaskLinksSection` — `{ links, onAddLink, onRemoveLink }` (tasks.md группа 25).
- *
- * Валидация URL здесь — собственная, локальная (не проп извне, architecture.md не даёт компоненту
- * канал для ошибки хука `useTaskLinks`): форма должна показать ошибку сразу по клику «Добавить
- * ссылку», не дожидаясь сетевого round-trip, поэтому `isValidUrl` дублирует ту же проверку, что уже
- * есть в `useTaskLinks` (та же причина дублирования, что комментарий в самом хуке — приём уже принят
- * в этом фиче-модуле, не изобретаю новый).
+ * add-task-salary-rule-links-comments — прикрепление ссылок уже на шаге создания задачи, не только
+ * после (в отличие от `features/TaskStatusControl/ui/TaskLinksSection.tsx`, эта версия работает над
+ * локальным черновичным массивом `links`, без собственных сетевых запросов — у задачи ещё нет `id`,
+ * добавление/удаление меняют только черновик формы до `submit`).
  */
-function isValidUrl(value: string): boolean {
-    try {
-        new URL(value)
-        return true
-    } catch {
-        return false
-    }
-}
-
-export type TaskLinksSectionProps = {
-    links: TaskLink[]
-    onAddLink: (url: string, label?: string) => void
-    onRemoveLink: (linkId: string) => void
-    className?: string
-}
-
-export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: TaskLinksSectionProps) {
+export function TaskLinksField({ links, onAddLink, onRemoveLink }: TaskLinksFieldProps) {
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [url, setUrl] = useState('')
     const [label, setLabel] = useState('')
@@ -47,8 +32,10 @@ export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: 
         setUrlError(false)
     }
 
-    function handleSubmit() {
-        if (!isValidUrl(url)) {
+    function handleAdd() {
+        try {
+            new URL(url)
+        } catch {
             setUrlError(true)
             return
         }
@@ -57,8 +44,8 @@ export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: 
     }
 
     return (
-        <div data-slot="task-links-section" className={cn('flex w-full flex-col gap-3', className)}>
-            <div className="flex w-full items-center justify-between gap-2.5">
+        <div data-slot="create-task-links-field" className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2.5">
                 <p className="font-ui text-xs font-medium text-ink-muted">Ссылки</p>
                 {!isFormOpen && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setIsFormOpen(true)}>
@@ -68,32 +55,19 @@ export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: 
                 )}
             </div>
 
-            {links.length === 0 && !isFormOpen && (
-                <div className="flex w-full items-center gap-2 rounded-lg border border-hairline bg-canvas p-3">
-                    <Info className="size-[15px] shrink-0 text-ink-muted" />
-                    <p className="font-ui text-xs text-ink-muted">
-                        Ссылок пока нет — добавьте адрес файла или документа по задаче.
-                    </p>
-                </div>
-            )}
-
             {links.length > 0 && (
-                <div className="flex w-full flex-col gap-2">
-                    {links.map((link) => (
-                        <div key={link.id} className="flex w-full items-center gap-2.5 rounded-lg bg-canvas py-2 pr-2 pl-2.5">
+                <div className="flex flex-col gap-2">
+                    {links.map((link, index) => (
+                        <div
+                            key={`${link.url}-${index}`}
+                            className="flex w-full items-center gap-2.5 rounded-lg bg-canvas py-2 pr-2 pl-2.5"
+                        >
                             <LinkIcon className="size-[15px] shrink-0 text-ink-muted" />
-                            <a
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="min-w-0 flex-1 no-underline hover:underline"
-                            >
-                                <p className="truncate font-ui text-[13px] font-medium text-ink">
-                                    {link.label ?? link.url}
-                                </p>
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate font-ui text-[13px] font-medium text-ink">{link.label ?? link.url}</p>
                                 {link.label && <p className="truncate font-ui text-[11.5px] text-ink-muted">{link.url}</p>}
-                            </a>
-                            <IconButton aria-label="Удалить ссылку" size="sm" onClick={() => onRemoveLink(link.id)}>
+                            </div>
+                            <IconButton aria-label="Удалить ссылку" size="sm" onClick={() => onRemoveLink(index)}>
                                 <X className="size-3.5" />
                             </IconButton>
                         </div>
@@ -103,7 +77,6 @@ export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: 
 
             {isFormOpen && (
                 <div className="flex w-full flex-col gap-2 rounded-md bg-canvas p-3">
-                    <p className="font-ui text-xs font-semibold text-ink">Новая ссылка</p>
                     <div className="flex flex-col gap-1.5">
                         <Input
                             aria-label="Адрес ссылки"
@@ -132,7 +105,7 @@ export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: 
                         <Button type="button" variant="ghost" onClick={resetForm}>
                             Отмена
                         </Button>
-                        <Button type="button" onClick={handleSubmit}>
+                        <Button type="button" onClick={handleAdd}>
                             <Plus />
                             Добавить ссылку
                         </Button>

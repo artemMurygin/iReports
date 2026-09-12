@@ -7,9 +7,10 @@ import { SalaryRuleSummaryCard } from './SalaryRuleSummaryCard.tsx'
 
 /**
  * add-task-salary-rule-links-comments, tasks.md группа 29 (29.1) — по фреймам `XiJo6` (десктоп) и
- * `Nuezn` (мобильный, тот же контент). Проверяем: вид правила (бейдж), роль, направление (чип),
- * схема начисления, параметры (Spec Row), плашку «только для просмотра», отсутствие кнопок
- * редактирования/сохранения.
+ * `Nuezn` (мобильный, тот же контент). Проверяем: вид правила (бейдж), направление (чип), параметры
+ * (Spec Row), отсутствие кнопок редактирования/сохранения. Роль, схема начисления, «Задача периода»
+ * и плашка «только для просмотра» намеренно не отображаются (продуктовая правка после ui-design.md —
+ * пользователь счёл их лишними на этой панели).
  */
 const TASK_COMPLETION_RULE: SalaryRuleDetail = {
     id: 'rule-1',
@@ -28,13 +29,15 @@ const TASK_COMPLETION_RULE: SalaryRuleDetail = {
 }
 
 describe('SalaryRuleSummaryCard', () => {
-    it('показывает вид правила, роль, направление и схему начисления', () => {
+    it('показывает вид правила и направление, без роли и схемы начисления', () => {
         render(<SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} />)
 
         expect(screen.getByText('За выполнение задачи')).toBeInTheDocument()
-        expect(screen.getByText('Инженер')).toBeInTheDocument()
         expect(screen.getByText('Сервис')).toBeInTheDocument()
-        expect(screen.getByText('Инженеры')).toBeInTheDocument()
+        expect(screen.queryByText('Инженер')).not.toBeInTheDocument()
+        expect(screen.queryByText('Инженеры')).not.toBeInTheDocument()
+        expect(screen.queryByText('Роль')).not.toBeInTheDocument()
+        expect(screen.queryByText('Схема начисления')).not.toBeInTheDocument()
     })
 
     it('показывает направление "Шоп" для направления shop', () => {
@@ -43,20 +46,21 @@ describe('SalaryRuleSummaryCard', () => {
         expect(screen.getByText('Шоп')).toBeInTheDocument()
     })
 
-    it('показывает параметры разового правила «за выполнение задачи»', () => {
+    it('показывает параметры разового правила «за выполнение задачи», без строки дедлайна', () => {
         render(<SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} />)
 
         expect(screen.getByText('Вознаграждение')).toBeInTheDocument()
         expect(screen.getByText('12 000 ₽')).toBeInTheDocument()
         expect(screen.getByText('Периодичность')).toBeInTheDocument()
         expect(screen.getByText('Разовая')).toBeInTheDocument()
-        expect(screen.getByText('Дедлайн')).toBeInTheDocument()
-        expect(screen.getByText('30.09.2026')).toBeInTheDocument()
-        expect(screen.getByText('Задача периода')).toBeInTheDocument()
-        expect(screen.getByText('сентябрь 2026')).toBeInTheDocument()
+        // deadlineTemplate у разового правила содержательно не используется (форма создания
+        // правила его не запрашивает) и в реальных данных часто пустая строка — строка «Дедлайн»
+        // поэтому не показывается вовсе, а не рендерится пустой.
+        expect(screen.queryByText('Дедлайн')).not.toBeInTheDocument()
+        expect(screen.queryByText('Задача периода')).not.toBeInTheDocument()
     })
 
-    it('показывает "Ежемесячно" и день месяца для регулярного правила', () => {
+    it('показывает "Ежемесячно" и день месяца дедлайна для регулярного правила', () => {
         const recurringRule: SalaryRuleDetail = {
             ...TASK_COMPLETION_RULE,
             config: { ...TASK_COMPLETION_RULE.config, isRecurring: true, deadlineTemplate: '2026-09-25' },
@@ -65,15 +69,16 @@ describe('SalaryRuleSummaryCard', () => {
         render(<SalaryRuleSummaryCard rule={recurringRule} />)
 
         expect(screen.getByText('Ежемесячно')).toBeInTheDocument()
+        expect(screen.getByText('Дедлайн')).toBeInTheDocument()
         expect(screen.getByText('25-е число')).toBeInTheDocument()
     })
 
-    it('показывает плашку "только для просмотра"', () => {
+    it('не показывает плашку "только для просмотра"', () => {
         render(<SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} />)
 
         expect(
-            screen.getByText('Правило открыто только для просмотра. Изменить его можно на странице зарплатного правила.'),
-        ).toBeInTheDocument()
+            screen.queryByText('Правило открыто только для просмотра. Изменить его можно на странице зарплатного правила.'),
+        ).not.toBeInTheDocument()
     })
 
     it('не рендерит кнопки редактирования/сохранения', () => {
@@ -86,7 +91,7 @@ describe('SalaryRuleSummaryCard', () => {
         render(<SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} />)
 
         expect(screen.getByText('Обновить фото витрины')).toBeInTheDocument()
-        expect(screen.getByText('Зарплатное правило · только просмотр')).toBeInTheDocument()
+        expect(screen.getByText('Зарплатное правило')).toBeInTheDocument()
         expect(screen.queryByRole('button', { name: /Закрыть/ })).not.toBeInTheDocument()
     })
 

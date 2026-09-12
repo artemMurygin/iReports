@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { SalaryRuleDetail, SalaryRuleSummary, Task } from 'ireports-contracts'
@@ -229,8 +229,11 @@ describe('TasksPageMediator', () => {
             await waitFor(() =>
                 expect(axiosInstance.get).toHaveBeenCalledWith('/v1/service/accounting/salary-rules/rule-1', expect.anything()),
             )
-            expect(await screen.findByText('Зарплатное правило · только просмотр')).toBeInTheDocument()
-            expect(screen.getByText('Инженеры')).toBeInTheDocument()
+            // Карточка задачи становится `aria-hidden` под открытой поверх неё панелью —
+            // `getByRole('dialog')` видит только саму панель правила.
+            const rulePanel = await screen.findByRole('dialog')
+            expect(within(rulePanel).getByRole('heading', { name: RULE_DETAIL.name })).toBeInTheDocument()
+            expect(within(rulePanel).getByRole('button', { name: 'Закрыть панель правила' })).toBeInTheDocument()
         })
 
         it('"Закрыть" на панели правила скрывает её без затрагивания карточки задачи', async () => {
@@ -245,12 +248,14 @@ describe('TasksPageMediator', () => {
             await user.click(
                 await screen.findByRole('button', { name: /Задача: Обзвонить клиентов после диагностики/ }),
             )
-            await screen.findByText('Зарплатное правило · только просмотр')
+            await screen.findByRole('button', { name: 'Закрыть панель правила' })
 
             await user.click(screen.getByRole('button', { name: 'Закрыть панель правила' }))
 
+            // Кнопка закрытия панели правила — уникальный маркер её содержимого; её исчезновение
+            // подтверждает, что закрылась именно панель правила, а не карточка задачи.
             await waitFor(() =>
-                expect(screen.queryByText('Зарплатное правило · только просмотр')).not.toBeInTheDocument(),
+                expect(screen.queryByRole('button', { name: 'Закрыть панель правила' })).not.toBeInTheDocument(),
             )
             // Задача всё ещё открыта — закрытие панели правила не закрыло карточку задачи.
             expect(screen.getByText('Позвонить и уточнить впечатления')).toBeInTheDocument()

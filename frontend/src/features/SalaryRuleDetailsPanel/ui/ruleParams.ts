@@ -1,6 +1,6 @@
 import type { SalaryBasis, SalaryRuleDetail } from 'ireports-contracts'
 
-import { formatCurrency, formatPeriodLabel } from '@/shared/lib/format.ts'
+import { formatCurrency } from '@/shared/lib/format.ts'
 
 /**
  * add-task-salary-rule-links-comments, tasks.md группа 29 — построение списка `Spec Row` для
@@ -11,10 +11,17 @@ import { formatCurrency, formatPeriodLabel } from '@/shared/lib/format.ts'
  *
  * Панель открывается только для правил вида `TaskCompletion` (единственный тип, на который может
  * ссылаться задача — `SalaryRuleRepositoryPort.findByTaskId` фильтрует по нему, design.md решение
- * 4), поэтому именно эта ветка соответствует макету `XiJo6`/`Nuezn` один в один (4 строки:
- * Вознаграждение/Периодичность/Дедлайн/Задача периода). Остальные три типа обрабатываются здесь
- * для полноты (`GetSalaryRuleService.execute` — универсальный «правило по id», не завязанный на
- * задачу) без отдельного макета под них.
+ * 4): Вознаграждение/Периодичность/Дедлайн. Остальные три типа обрабатываются здесь для полноты
+ * (`GetSalaryRuleService.execute` — универсальный «правило по id», не завязанный на задачу) без
+ * отдельного макета под них.
+ *
+ * `deadline` показывается только для регулярного правила (`isRecurring: true`) — `deadlineTemplate`
+ * содержательно используется ТОЛЬКО для пересоздания задачи на новый период (см. WHY у
+ * `TaskCompletionSalaryConfigRequest.deadlineTemplate` в contracts/commands/salary-rule.ts); для
+ * разового правила форма создания/редактирования правила (`TaskCompletionRuleFields.tsx`) вообще не
+ * запрашивает и не валидирует это поле, поэтому оно в БД часто пустая строка — показывать такую
+ * строку в панели значило бы рендерить бессмысленный пустой «Дедлайн» вместо того, чтобы скрыть его,
+ * как уже делает сама форма.
  */
 export type RuleParamRow = {
     key: string
@@ -34,18 +41,6 @@ function formatDayOfMonth(isoDate: string): string {
     return Number.isFinite(day) && day > 0 ? `${day}-е число` : isoDate
 }
 
-function formatDate(isoDate: string): string {
-    const date = new Date(isoDate)
-    if (Number.isNaN(date.getTime())) return isoDate
-    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-function currentPeriodLabel(taskIdByPeriod: Record<string, string>): string | null {
-    const periods = Object.keys(taskIdByPeriod).sort()
-    const latest = periods.at(-1)
-    return latest ? formatPeriodLabel(latest) : null
-}
-
 export function getRuleParams(rule: SalaryRuleDetail): RuleParamRow[] {
     switch (rule.type) {
         case 'TaskCompletion': {
@@ -62,15 +57,9 @@ export function getRuleParams(rule: SalaryRuleDetail): RuleParamRow[] {
                     label: 'Периодичность',
                     value: config.isRecurring ? 'Ежемесячно' : 'Разовая',
                 },
-                {
-                    key: 'deadline',
-                    label: 'Дедлайн',
-                    value: config.isRecurring ? formatDayOfMonth(config.deadlineTemplate) : formatDate(config.deadlineTemplate),
-                },
             ]
-            const periodLabel = currentPeriodLabel(config.taskIdByPeriod)
-            if (periodLabel) {
-                rows.push({ key: 'period-task', label: 'Задача периода', value: periodLabel })
+            if (config.isRecurring) {
+                rows.push({ key: 'deadline', label: 'Дедлайн', value: formatDayOfMonth(config.deadlineTemplate) })
             }
             return rows
         }
