@@ -12,6 +12,11 @@ export interface TaskRepositoryPort {
     update(task: Task): Promise<void>;
     findById(id: string): Promise<Task | null>;
 
+    // Безвозвратное удаление задачи вместе с её комментариями/ссылками
+    // (add-task-rule-task-lifecycle) — не путать с cancelForRuleDeletion
+    // (мягкая отмена), см. DeleteTaskHandler.
+    delete(id: string): Promise<void>;
+
     // Единственный метод, который accounting (service/shop) вызывает
     // НАПРЯМУЮ, без Port/Adapter поверх (design.md Decision 5) — собирает
     // taskId из config.taskIdByPeriod своих правил и строит SalaryTask на

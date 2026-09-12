@@ -28,7 +28,14 @@ describe('TaskRepository', () => {
         const update = jest.fn();
         const findUnique = jest.fn();
         const findMany = jest.fn();
-        const client = { task: { create, update, findUnique, findMany } };
+        const deleteTask = jest.fn();
+        const deleteManyComments = jest.fn();
+        const deleteManyLinks = jest.fn();
+        const client = {
+            task: { create, update, findUnique, findMany, delete: deleteTask },
+            taskComment: { deleteMany: deleteManyComments },
+            taskLink: { deleteMany: deleteManyLinks },
+        };
         const db = {
             getClient: () => client,
             withTransaction: (callback: () => Promise<unknown>) => callback(),
@@ -40,6 +47,9 @@ describe('TaskRepository', () => {
             update,
             findUnique,
             findMany,
+            deleteTask,
+            deleteManyComments,
+            deleteManyLinks,
         };
     };
 
@@ -165,6 +175,32 @@ describe('TaskRepository', () => {
             });
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe('task-1');
+        });
+    });
+
+    describe('delete', () => {
+        it('удаляет комментарии, ссылки и саму задачу одной транзакцией', async () => {
+            const {
+                repository,
+                deleteTask,
+                deleteManyComments,
+                deleteManyLinks,
+            } = buildRepository();
+            deleteManyComments.mockResolvedValueOnce({});
+            deleteManyLinks.mockResolvedValueOnce({});
+            deleteTask.mockResolvedValueOnce({});
+
+            await repository.delete('task-1');
+
+            expect(deleteManyComments).toHaveBeenCalledWith({
+                where: { taskId: 'task-1' },
+            });
+            expect(deleteManyLinks).toHaveBeenCalledWith({
+                where: { taskId: 'task-1' },
+            });
+            expect(deleteTask).toHaveBeenCalledWith({
+                where: { id: 'task-1' },
+            });
         });
     });
 

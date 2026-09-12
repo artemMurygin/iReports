@@ -24,6 +24,11 @@ export class InMemoryTaskRepository implements TaskRepositoryPort {
         return Promise.resolve(this.store.get(id) ?? null);
     }
 
+    delete(id: string): Promise<void> {
+        this.store.delete(id);
+        return Promise.resolve();
+    }
+
     findManyByIds(ids: string[]): Promise<Task[]> {
         return Promise.resolve(
             ids

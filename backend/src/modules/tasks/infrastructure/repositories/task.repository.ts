@@ -38,7 +38,6 @@ export class TaskRepository
                     assigneeEmployeeId: task.assigneeEmployeeId,
                     status: task.status.code,
                     closedSuccessfullyAt: task.closedSuccessfullyAt,
-                    updatedAt: props.updatedAt,
                 },
             }),
         );
@@ -61,6 +60,18 @@ export class TaskRepository
             where: { id: { in: ids } },
         });
         return records.map((record) => this.mapper.toDomain(record));
+    }
+
+    async delete(id: string): Promise<void> {
+        // Комментарии/ссылки задачи — отдельные таблицы БЕЗ Prisma
+        // @relation/onDelete: Cascade (design.md решение 1 replace-bitrix-
+        // task-integration), поэтому чистим их сами в той же транзакции
+        // перед удалением самой задачи.
+        await this.write(null, async (client) => {
+            await client.taskComment.deleteMany({ where: { taskId: id } });
+            await client.taskLink.deleteMany({ where: { taskId: id } });
+            await client.task.delete({ where: { id } });
+        });
     }
 
     async findMany(filter: TaskListFilter): Promise<Task[]> {

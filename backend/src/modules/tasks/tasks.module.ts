@@ -5,6 +5,7 @@ import { ChangeTaskStatusHandler } from './application/command/change-task-statu
 import { AddTaskCommentHandler } from './application/command/add-task-comment/add-task-comment.handler';
 import { AddTaskLinkHandler } from './application/command/add-task-link/add-task-link.handler';
 import { RemoveTaskLinkHandler } from './application/command/remove-task-link/remove-task-link.handler';
+import { DeleteTaskHandler } from './application/command/delete-task/delete-task.handler';
 import { CancelTaskForRuleDeletionService } from './application/services/cancel-task-for-rule-deletion.service';
 import { ListTasksService } from './application/services/list-tasks.service';
 import { GetTaskService } from './application/services/get-task.service';
@@ -25,6 +26,7 @@ import { CreateTaskCommentHttpController } from './interface/http-controllers/cr
 import { ListTaskLinksHttpController } from './interface/http-controllers/list-task-links.http.controller';
 import { CreateTaskLinkHttpController } from './interface/http-controllers/create-task-link.http.controller';
 import { DeleteTaskLinkHttpController } from './interface/http-controllers/delete-task-link.http.controller';
+import { DeleteTaskHttpController } from './interface/http-controllers/delete-task.http.controller';
 
 // Сквозной модуль (design.md решение 1) — по прецеденту employee-balance
 // (полноценный модуль со своим HTTP), НЕ по прецеденту SalaryTask (общая
@@ -47,6 +49,7 @@ import { DeleteTaskLinkHttpController } from './interface/http-controllers/delet
         ListTaskLinksHttpController,
         CreateTaskLinkHttpController,
         DeleteTaskLinkHttpController,
+        DeleteTaskHttpController,
     ],
     providers: [
         CreateTaskHandler,
@@ -54,6 +57,7 @@ import { DeleteTaskLinkHttpController } from './interface/http-controllers/delet
         AddTaskCommentHandler,
         AddTaskLinkHandler,
         RemoveTaskLinkHandler,
+        DeleteTaskHandler,
         CancelTaskForRuleDeletionService,
         ListTasksService,
         GetTaskService,
