@@ -109,8 +109,7 @@ function pluralizeByForms(count: number, forms: readonly [string, string, string
  * `quantity`/`rate` — реальные поля строки (`calculationLineSchema`), единственное, что добавлено
  * сверх них клиентски, — счётное существительное по `line.type` (`RULE_UNIT_FORMS`) и суффикс
  * «/ч» у почасовой ставки (контракт не отдаёт отдельно единицу измерения ставки, но для
- * `PayPerHour` она всегда часы — тот же вывод, что делает `getRuleRate` в
- * `pages/SalaryReportV2/model/ruleRate.ts` для фиксированной ставки через `sources.length`).
+ * `PayPerHour` она всегда часы).
  * Без `quantity` (правило без измеримой базы, например премия за выполнение плана) — «фикс за
  * период», как в макете, а не выдуманное число.
  */

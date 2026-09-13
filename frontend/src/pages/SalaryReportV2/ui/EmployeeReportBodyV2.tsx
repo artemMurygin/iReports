@@ -1,59 +1,80 @@
+import { useState } from 'react'
+
 import { formatPeriodLabel } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
 
-import type { DirectionReportVM } from '@/features/SalaryReportData'
+import type {
+    DirectionReportVM,
+    SalaryDirection,
+    SalaryReportRule,
+    SalaryReportRuleWithDirection,
+} from '@/features/SalaryReportData'
 
+import { splitRulesByType } from '../model/groupRulesByType.ts'
+
+import { DirectionSourceCard } from './DirectionSourceCard.tsx'
 import type { EmployeeReportBodyV2Props } from './EmployeeReportBodyV2.types.ts'
-import { LedgerCard } from './LedgerCard.tsx'
 import { EmptyStateCard, ErrorStateCard } from './ReportStatusCard.tsx'
-import { SalesPlanCardV2 } from './SalesPlanCardV2.tsx'
+import { RuleGroupDetailsPanel } from './RuleGroupDetailsPanel.tsx'
+import { SalesPlanDetailsPanel } from './SalesPlanDetailsPanel.tsx'
+import { TaskSourceCard } from './TaskSourceCard.tsx'
+import { TotalsBentoCard } from './TotalsBentoCard.tsx'
 
-/** Скелетон на время `isLoading` — тот же защитный fallback, что и у старой
- * `pages/SalaryReport/ui/EmployeeReportBody.tsx`'s `EmployeeReportSkeleton` (на практике страничный
- * `Layout`'s `RefreshTransitionLayout` уже подменяет весь `body` на `SpinnerPageLg`, пока
- * `isInitialLoad` истинен — см. `ui/SalaryReportV2Page.tsx`), только силуэт под форму карточки-
- * гроссбуха вместо пары KPI-карточек. */
+/** Порядок направлений в бенто-раскладке — всегда "Сервис" перед "Магазин", независимо от порядка,
+ * в котором `report.directions[]` пришёл с бэкенда (см. `EmployeeReportVM`'s комментарий — массив
+ * длины 0/1/2 без гарантированного порядка). */
+const DIRECTION_ORDER: SalaryDirection[] = ['service', 'shop']
+
+/** Скелетон на время `isLoading` — силуэт под бенто-раскладку (карточка "Итого" + карточка
+ * "Источники", тот же приём, что и старый скелетон под карточку-гроссбух до этой правки). */
 function EmployeeReportSkeleton() {
     return (
-        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_404px]" aria-hidden>
-            <div className="h-[720px] animate-pulse rounded-xl border border-hairline bg-surface" />
-            <div className="hidden flex-col gap-4 xl:flex">
-                <div className="h-[296px] animate-pulse rounded-xl border border-hairline bg-surface" />
-                <div className="h-[296px] animate-pulse rounded-xl border border-hairline bg-surface" />
-            </div>
+        <div className="flex flex-col gap-4" aria-hidden>
+            <div className="h-[104px] animate-pulse rounded-xl border border-hairline bg-surface md:h-[112px]" />
+            <div className="h-[280px] animate-pulse rounded-xl border border-hairline bg-surface" />
         </div>
     )
 }
 
-/** Направление с реально загруженным планом продаж — хотя бы одна строка `salesPerformance`
- * (тот же приём, что и в старой `EmployeeReportBody`'s `hasSalesPerformance`). */
-function hasSalesPerformance(direction: DirectionReportVM): boolean {
-    return direction.salesPerformance.length > 0
-}
+/** Панель детализации группы правил (роль или задача) — открывается кликом по строке роли
+ * (`DirectionSourceCard`) или задачи (`TaskSourceCard`), см. `RuleGroupDetailsPanel`. */
+type RuleGroupPanelState = { title: string; rules: SalaryReportRule[]; direction: SalaryDirection } | null
 
 /**
- * Тело отчёта сотрудника — новый дизайн (Pencil: `wLtzp` "Зарплата сотрудника REFACTORING",
- * десктоп / `b63e8p`, мобайл; узел `H7Mz74` "Ledger · Зарплата" — см.
- * `EmployeeReportBodyV2.types.ts`'s комментарий с полной картой узлов). Сам решает, что показать
- * (пусто/ошибка/загрузка/данные) — тот же контракт состояний, что и у старого
- * `pages/SalaryReport/ui/EmployeeReportBody.tsx`, но одна карточка-гроссбух (`LedgerCard`) вместо
- * KPI-строки + отдельных секций направлений.
+ * Тело отчёта сотрудника — бенто-раскладка (Pencil: `design/sallary-first-iteration.pen`, узел
+ * `YCxrT` "Вариант C · Бенто-источники" — десктоп, `L2Ztk` "Вариант C · Моб. · Бенто-источники" —
+ * мобайл; см. полную карту узлов и контракт пропсов в `EmployeeReportBodyV2.types.ts`). Сам решает,
+ * что показать (пусто/ошибка/загрузка/данные) — тот же контракт состояний, что и раньше.
  *
- * Раскладка: `xl:`+ — grid из двух колонок (гроссбух слева, `fill`; план продаж справа,
- * фиксированные 404px, как в мокапе `wLtzp`'s `btCZn` "Columns"); ниже `xl:` — один вертикальный
- * стек в порядке `b63e8p` (гроссбух → карточки плана), тем же приёмом, что и у старой страницы.
+ * Собирает четыре карточки данных из уже готовых VM (`report`): `TotalsBentoCard` ("Итого"),
+ * `TaskSourceCard` ("Источник · Задачи" — `TaskCompletion`-правила ОБОИХ направлений сразу,
+ * `splitRulesByType` на каждом направлении + склейка с проставленным `direction`), и по одной
+ * `DirectionSourceCard` на направление с хотя бы одним ролевым (не-`TaskCompletion`) правилом.
+ * Клики по строкам ролей/задач и по ссылке "Подробнее" плана продаж открывают боковые панели
+ * (`RuleGroupDetailsPanel`/`SalesPlanDetailsPanel`) — их состояние ("какая панель открыта, с какими
+ * данными") — чисто презентационный `useState` этого компонента, не бизнес-состояние страницы.
+ *
+ * Раскладка: мобильный порядок (`xl:hidden`) — "Итого" -> "Сервис" -> "Магазин" -> "Задачи" одним
+ * вертикальным стеком; десктопный (`hidden xl:grid`, `L2Ztk`) — "Итого"+"Задачи" в левой колонке
+ * фиксированной ширины 448px, "Сервис"+"Магазин" в правой области. Обе раскладки рендерят одни и те
+ * же (стейтless) карточки в разном порядке/группировке — переключение через раздельные блоки, а не
+ * CSS `order`, потому что группировка карточек между раскладками, а не только их порядок, отличается
+ * (см. `EmployeeReportBodyV2.types.ts`'s комментарий).
  */
 export function EmployeeReportBodyV2({
     report,
     isLoading,
     errorMessage,
     isEmployeeSelected,
-    isRuleExpanded,
-    onToggleRule,
-    isDirectionExpanded,
-    onToggleDirection,
     className,
 }: EmployeeReportBodyV2Props) {
+    const [ruleGroupPanel, setRuleGroupPanel] = useState<RuleGroupPanelState>(null)
+    const [salesPlanDirection, setSalesPlanDirection] = useState<SalaryDirection | null>(null)
+
+    function handleOpenRuleGroup(title: string, rules: SalaryReportRule[], direction: SalaryDirection) {
+        setRuleGroupPanel({ title, rules, direction })
+    }
+
     if (!isEmployeeSelected) {
         return (
             <EmptyStateCard className={className}>Выберите сотрудника, чтобы увидеть отчёт по зарплате.</EmptyStateCard>
@@ -76,35 +97,87 @@ export function EmployeeReportBodyV2({
         )
     }
 
-    const plansToShow = report.directions.filter(hasSalesPerformance)
+    const taskRules: SalaryReportRuleWithDirection[] = report.directions.flatMap((direction) =>
+        splitRulesByType(direction.rules).taskRules.map((rule) => ({ ...rule, direction: direction.direction })),
+    )
+    const hasTaskCard = taskRules.length > 0
+
+    const directionCardsToShow: DirectionReportVM[] = DIRECTION_ORDER.map((direction) =>
+        report.directions.find((directionReport) => directionReport.direction === direction),
+    ).filter(
+        (direction): direction is DirectionReportVM =>
+            direction != null && splitRulesByType(direction.rules).roleRules.length > 0,
+    )
+    const hasDirectionCards = directionCardsToShow.length > 0
+
+    const salesPlanDirectionReport =
+        salesPlanDirection != null ? report.directions.find((d) => d.direction === salesPlanDirection) ?? null : null
 
     return (
-        <div
-            data-slot="employee-report-body-v2"
-            className={cn('grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_404px]', className)}
-        >
-            <LedgerCard
-                report={report}
-                isRuleExpanded={isRuleExpanded}
-                onToggleRule={onToggleRule}
-                isDirectionExpanded={isDirectionExpanded}
-                onToggleDirection={onToggleDirection}
-                className="min-w-0"
+        <div data-slot="employee-report-body-v2" className={cn('flex flex-col gap-4', className)}>
+            {/* Мобайл: Итого -> Сервис -> Магазин -> Задачи (см. `L2Ztk`). */}
+            <div className="flex flex-col gap-4 xl:hidden">
+                <TotalsBentoCard grandTotal={report.grandTotal} isClosed={report.isClosed} />
+
+                {directionCardsToShow.map((direction) => (
+                    <DirectionSourceCard
+                        key={direction.direction}
+                        direction={direction}
+                        onOpenRuleGroup={handleOpenRuleGroup}
+                        onOpenSalesPlan={setSalesPlanDirection}
+                    />
+                ))}
+
+                {hasTaskCard && <TaskSourceCard taskRules={taskRules} onOpenRuleGroup={handleOpenRuleGroup} />}
+            </div>
+
+            {/* Десктоп: Итого + Задачи слева (448px), Сервис/Магазин справа (см. `YCxrT`). */}
+            <div
+                className={cn(
+                    'hidden gap-4 xl:grid xl:items-start',
+                    hasDirectionCards ? 'xl:grid-cols-[448px_minmax(0,1fr)]' : 'xl:grid-cols-[448px]',
+                )}
+            >
+                <div className="flex flex-col gap-4">
+                    <TotalsBentoCard grandTotal={report.grandTotal} isClosed={report.isClosed} />
+                    {hasTaskCard && <TaskSourceCard taskRules={taskRules} onOpenRuleGroup={handleOpenRuleGroup} />}
+                </div>
+
+                {hasDirectionCards && (
+                    <div
+                        className={cn(
+                            'grid content-start gap-4',
+                            directionCardsToShow.length > 1 ? 'grid-cols-2' : 'grid-cols-1',
+                        )}
+                    >
+                        {directionCardsToShow.map((direction) => (
+                            <DirectionSourceCard
+                                key={direction.direction}
+                                direction={direction}
+                                onOpenRuleGroup={handleOpenRuleGroup}
+                                onOpenSalesPlan={setSalesPlanDirection}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <RuleGroupDetailsPanel
+                title={ruleGroupPanel?.title ?? ''}
+                rules={ruleGroupPanel?.rules ?? []}
+                direction={ruleGroupPanel?.direction ?? 'service'}
+                open={ruleGroupPanel !== null}
+                onClose={() => setRuleGroupPanel(null)}
             />
 
-            {plansToShow.length > 0 && (
-                <div className="flex min-w-0 flex-col gap-4">
-                    {plansToShow.map((directionReport) => (
-                        <SalesPlanCardV2
-                            key={directionReport.direction}
-                            label={directionReport.label}
-                            period={report.period}
-                            isPlanApproved={directionReport.isPlanApproved}
-                            salesPerformance={directionReport.salesPerformance}
-                        />
-                    ))}
-                </div>
-            )}
+            <SalesPlanDetailsPanel
+                label={salesPlanDirectionReport?.label ?? ''}
+                period={report.period}
+                isPlanApproved={salesPlanDirectionReport?.isPlanApproved ?? false}
+                salesPerformance={salesPlanDirectionReport?.salesPerformance ?? []}
+                open={salesPlanDirectionReport !== null}
+                onClose={() => setSalesPlanDirection(null)}
+            />
         </div>
     )
 }

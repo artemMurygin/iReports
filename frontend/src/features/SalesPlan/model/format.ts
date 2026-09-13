@@ -3,7 +3,7 @@
 // features/AccountingPeriod (диалог закрытия месяца), а кросс-импорты между
 // features запрещены линтингом (см. frontend/CLAUDE.md). Реэкспорт сохраняет
 // прежний публичный API этой фичи (`@/features/SalesPlan` — см. index.ts), которым
-// уже пользуются pages/SalesPlan и pages/SalaryReport.
+// уже пользуются pages/SalesPlan и pages/SalaryReportV2.
 export {
     formatPeriodLabel,
     formatPeriodMonthName,

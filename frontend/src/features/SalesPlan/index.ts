@@ -18,7 +18,7 @@ export type { SalesPlanRow, SalesPlanTotals } from './model/useSalesPlan.ts'
 export { useSalesPlanSelection } from './model/useSalesPlanSelection.ts'
 export type { SalesPlanSelection } from './model/useSalesPlanSelection.ts'
 export { useApproveSalesPlanRows } from './model/useApproveSalesPlanRows.ts'
-// Форматтеры денег/процентов тоже публичные — их переиспользует pages/SalaryReport
+// Форматтеры денег/процентов тоже публичные — их переиспользует pages/SalaryReportV2
 // (отчёт по зарплате), вместо дублирования тех же однострочников в новой странице.
 export {
     formatPeriodLabel,
@@ -31,6 +31,10 @@ export {
     formatPercentPrecise,
     formatSignedCurrency,
 } from './model/format.ts'
+// `pluralizeCategories` — переиспользуется бенто-карточкой `pages/SalaryReportV2/ui/
+// DirectionSourceCard.tsx` для компактной сводки мини-тизера плана продаж ("N категорий"), вместо
+// собственной копии той же словоформы.
+export { pluralizeCategories } from './model/format.ts'
 export { KpiRow } from './ui/KpiRow.tsx'
 export { SalesPlanTable } from './ui/SalesPlanTable.tsx'
 export { SalesPlanCardList } from './ui/SalesPlanCardList.tsx'

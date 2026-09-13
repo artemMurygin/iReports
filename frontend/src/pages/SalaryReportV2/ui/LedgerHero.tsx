@@ -13,7 +13,6 @@ import { DeltaBadge } from './DeltaBadge.tsx'
 export type LedgerHeroProps = {
     grandTotal: FactPrognoseAmount
     isClosed: boolean
-    period: string
     className?: string
 }
 
@@ -59,7 +58,7 @@ export function LedgerHero({ grandTotal, isClosed, className }: LedgerHeroProps)
                         <PopoverContent align="end" className="flex flex-col gap-2.5">
                             <p className="font-ui text-[13px] font-semibold text-ink">Как считается прогноз</p>
                              <div className="flex flex-col gap-1 font-ui text-xs text-ink">
-                                <span className="font-semibold text-ink-muted">За продажи с плавующим процентом</span>
+                                <span className="font-semibold text-ink-muted">За продажи с плавающим процентом</span>
                                 <span>Прогноз = факт продаж * % по категории в прогнозе</span>
                             </div>
                             <div className="flex flex-col gap-1 font-ui text-xs text-ink">

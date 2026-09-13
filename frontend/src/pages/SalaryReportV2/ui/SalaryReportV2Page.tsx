@@ -42,10 +42,6 @@ export function SalaryReportV2Page() {
         employeeReport,
         departmentReport,
         directionBreakdown,
-        toggleRule,
-        isRuleExpanded,
-        toggleDirection,
-        isDirectionExpanded,
         employeeName,
         employeeDepartmentName,
         isEmployeeIdentityLoading,
@@ -113,10 +109,6 @@ export function SalaryReportV2Page() {
                     scope={scope}
                     employeeReport={employeeReport}
                     isEmployeeSelected={isEmployeeSelected}
-                    isRuleExpanded={isRuleExpanded}
-                    onToggleRule={toggleRule}
-                    isDirectionExpanded={isDirectionExpanded}
-                    onToggleDirection={toggleDirection}
                     departmentReport={departmentReport}
                     isDepartmentSelected={isDepartmentSelected}
                     departmentName={departmentName}

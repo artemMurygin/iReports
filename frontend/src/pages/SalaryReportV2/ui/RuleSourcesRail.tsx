@@ -8,6 +8,7 @@ import { TaskStatusBadge } from '@/shared/ui-kit/atoms/TaskStatusBadge.tsx'
 import type { SalaryReportRule } from '@/features/SalaryReportData'
 
 import { LEDGER_CHEVRON_COL, LEDGER_VALUE_COL } from '../model/ledgerColumns.ts'
+import { pluralizeDocuments } from '../model/pluralizeDocuments.ts'
 
 export type RuleSourcesRailProps = {
     sources: SalaryReportRule['sources']
@@ -196,7 +197,7 @@ export function RuleSourcesRail({ sources, className }: RuleSourcesRailProps) {
                         onClick={() => setShowAll(true)}
                         className="flex min-w-0 flex-1 items-center gap-1 font-ui text-xs font-semibold text-info-ink hover:underline"
                     >
-                        ещё {hidden.length} {hidden.length === 1 ? 'документ' : 'документов'}
+                        ещё {pluralizeDocuments(hidden.length)}
                         <ChevronRight className="size-3.5 shrink-0" />
                     </button>
                     <span className={cn(LEDGER_VALUE_COL, 'font-ui text-xs font-bold text-ink tabular-nums')}>

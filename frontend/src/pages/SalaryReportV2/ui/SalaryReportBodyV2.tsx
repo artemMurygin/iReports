@@ -1,4 +1,4 @@
-import type { DepartmentReportVM, EmployeeReportVM, SalaryDirection, SalaryReportScope } from '@/features/SalaryReportData'
+import type { DepartmentReportVM, EmployeeReportVM, SalaryReportScope } from '@/features/SalaryReportData'
 
 import type { DepartmentDirectionBreakdown } from '../model/useDepartmentSalaryReportAll.ts'
 
@@ -10,10 +10,6 @@ export type SalaryReportBodyV2Props = {
 
     employeeReport: EmployeeReportVM | null
     isEmployeeSelected: boolean
-    isRuleExpanded: (key: string) => boolean
-    onToggleRule: (key: string) => void
-    isDirectionExpanded: (direction: SalaryDirection) => boolean
-    onToggleDirection: (direction: SalaryDirection) => void
 
     departmentReport: DepartmentReportVM | null
     isDepartmentSelected: boolean
@@ -36,10 +32,6 @@ export function SalaryReportBodyV2({
     scope,
     employeeReport,
     isEmployeeSelected,
-    isRuleExpanded,
-    onToggleRule,
-    isDirectionExpanded,
-    onToggleDirection,
     departmentReport,
     isDepartmentSelected,
     departmentName,
@@ -55,10 +47,6 @@ export function SalaryReportBodyV2({
                 isLoading={isLoading}
                 errorMessage={errorMessage}
                 isEmployeeSelected={isEmployeeSelected}
-                isRuleExpanded={isRuleExpanded}
-                onToggleRule={onToggleRule}
-                isDirectionExpanded={isDirectionExpanded}
-                onToggleDirection={onToggleDirection}
             />
         )
     }

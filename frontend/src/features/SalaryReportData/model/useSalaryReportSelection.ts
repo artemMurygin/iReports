@@ -32,23 +32,21 @@ function getCurrentPeriod(): string {
  * собирать несколько фич вместе), просто разворачивая результат этого хука в свой плоский объект
  * состояния и добавляя `employees`/`departments`.
  *
- * Разворачивание строк правил (в отчёте сотрудника и в отчёте отдела) — общий локальный `Set`-стейт
- * здесь, а не в каждом презентационном компоненте по отдельности: строка идентифицируется собственным
- * `ruleId` (ключ `${direction}:${ruleId}`), и оба режима используют одну и ту же пару хелперов
- * toggle/isExpanded независимо от текущего `scope`. Тот же `Set` обслуживает и разворот групп ролей
- * в отчёте сотрудника (`LedgerRoleGroup`, ключ `role:${direction}:${role}`, см. её комментарий) —
- * оба формата ключа структурно не пересекаются, отдельный `Set` под группы ролей не нужен. Строка
- * сотрудника в отчёте отдела (`DepartmentEmployeeGroupV2`) сама по себе НЕ разворачивается — это
- * ссылка на отдельный отчёт сотрудника, а не toggle (см. `SozIO`-редизайн,
- * `docs/salary-department-first-navigation`), поэтому отдельного `Set`-стейта для неё здесь нет.
+ * Разворачивание строк правил в отчёте отдела — общий локальный `Set`-стейт здесь, а не в
+ * презентационных компонентах: строка идентифицируется собственным `ruleId` (ключ
+ * `${direction}:${ruleId}`). Строка сотрудника в отчёте отдела (`DepartmentEmployeeGroupV2`) сама по
+ * себе НЕ разворачивается — это ссылка на отдельный отчёт сотрудника, а не toggle (см.
+ * `SozIO`-редизайн, `docs/salary-department-first-navigation`), поэтому отдельного `Set`-стейта для
+ * неё здесь нет. Бенто-раскладка отчёта сотрудника (`pages/SalaryReportV2/ui/EmployeeReportBodyV2.tsx`,
+ * узел `YCxrT`) больше не читает `isRuleExpanded`/`toggleRule` этого хука напрямую — её панель
+ * детализации (`RuleGroupDetailsPanel`) держит собственный локальный `Set` развёрнутых `ruleId`
+ * (при каждом открытии панели все правила свёрнуты), не завязанный на состояние отчёта отдела; сам
+ * хелпер здесь остаётся ровно для отчёта отдела, а не удалён как "больше не нужный".
  *
- * Блоки направлений в карточке-гроссбухе отчёта сотрудника (`LedgerDirectionBlock`) сворачиваются
- * той же общей схемой, но с ИНВЕРТИРОВАННОЙ семантикой `Set`'а — `collapsedDirectionKeys` хранит
- * СВЁРНУТЫЕ направления, а не развёрнутые (в отличие от `expandedRuleKeys` выше). По умолчанию
- * (до первого клика пользователя) "Сервис" развёрнут, а "Магазин" свёрнут — поэтому начальное
- * значение `Set` не пустое, а сразу содержит `'shop'` (не общий для обоих направлений дефолт,
- * как было бы с пустым `Set`). Ключ — сам `SalaryDirection` ('service' | 'shop'), без комбинирования
- * с id: направлений всего два, и оба всегда разные в пределах одного отчёта сотрудника.
+ * Раскрытие/свёртывание блоков направлений отчёта сотрудника (старая карточка-гроссбух,
+ * `LedgerDirectionBlock`) — убрано вместе с ней этой правкой (заменена бенто-карточками, у которых
+ * нет аналогичного сворачивания): `toggleDirection`/`isDirectionExpanded`/`collapsedDirectionKeys`
+ * здесь больше нет, ни один компонент их не читал (проверено `grep` по всему `frontend/src`).
  *
  * `options.initialScope`/`options.initialEmployeeId` — опциональные начальные значения (по
  * умолчанию `'employee'`/`null`). `pages/SalaryReportV2/model/useSalaryReportPage.ts` передаёт их
@@ -66,7 +64,6 @@ export function useSalaryReportSelection(options?: {
     const [departmentId, setDepartmentId] = useState<number | null>(null)
     const [direction, setDirection] = useState<SalaryDirection>('service')
     const [expandedRuleKeys, setExpandedRuleKeys] = useState<Set<string>>(new Set())
-    const [collapsedDirectionKeys, setCollapsedDirectionKeys] = useState<Set<SalaryDirection>>(() => new Set(['shop']))
 
     const employeeReportState = useEmployeeSalaryReport(scope === 'employee' ? employeeId : null, period)
     const departmentReportState = useDepartmentSalaryReport(
@@ -86,19 +83,6 @@ export function useSalaryReportSelection(options?: {
 
     function isRuleExpanded(key: string) {
         return expandedRuleKeys.has(key)
-    }
-
-    function toggleDirection(direction: SalaryDirection) {
-        setCollapsedDirectionKeys((prev) => {
-            const next = new Set(prev)
-            if (next.has(direction)) next.delete(direction)
-            else next.add(direction)
-            return next
-        })
-    }
-
-    function isDirectionExpanded(direction: SalaryDirection) {
-        return !collapsedDirectionKeys.has(direction)
     }
 
     const activeReportState = scope === 'employee' ? employeeReportState : departmentReportState
@@ -127,8 +111,6 @@ export function useSalaryReportSelection(options?: {
 
         toggleRule,
         isRuleExpanded,
-        toggleDirection,
-        isDirectionExpanded,
     }
 }
 
