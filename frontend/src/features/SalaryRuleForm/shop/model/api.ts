@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { CatalogResponse, SalaryRuleTypesResponse } from 'ireports-contracts'
+import type { CatalogResponse, SalaryRuleTypesResponse, ShopStoresResponse } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
@@ -38,6 +38,24 @@ export const api = {
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить категории каталога ' + error)
+                    }),
+        }),
+
+    // GET /v1/shop/warehouse/stores — справочник складов МойСклад (FR4 of
+    // add-department-head-salary-rules), для `WarehouseField` у правила `DepartmentTurnoverBonus`.
+    // Тот же эндпоинт, что `pages/GoodsTurnoverReport/model/shop/api.ts`'s `getStores` использует
+    // для фильтра склада — своя копия запроса здесь (features не могут импортировать pages/друг
+    // друга, frontend/CLAUDE.md), с отдельным `queryKey`.
+    getStores: () =>
+        queryOptions({
+            queryKey: ['salary-rules', 'shop', 'stores'],
+            staleTime: 30 * 60 * 1000,
+            queryFn: ({ signal }): Promise<ShopStoresResponse> =>
+                apiInstance
+                    .get<ShopStoresResponse>('/v1/shop/warehouse/stores', { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError('Не удалось загрузить справочник складов магазина ' + error)
                     }),
         }),
 }

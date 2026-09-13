@@ -15,6 +15,7 @@ import {
     useTaskLinkPanels,
     type RuleFormConfig,
     type RuleType,
+    type WarehouseFieldWarehouse,
 } from '@/features/SalaryRuleForm'
 
 import { useUpdateMotivationSchema } from './useUpdateMotivationSchema.ts'
@@ -31,6 +32,9 @@ export type UseShopSchemaEditFormArgs = {
     orderTypes: OrderTypeResponse[]
     isOrderTypesLoading: boolean
     orderTypesError: string | null
+    warehouses: WarehouseFieldWarehouse[]
+    isWarehousesLoading: boolean
+    warehousesError: string | null
 }
 
 /** Зеркало `service/model/useServiceSchemaEditForm.ts` — та же "фаза формы", смонтированная только
@@ -48,6 +52,9 @@ export function useShopSchemaEditForm({
     orderTypes,
     isOrderTypesLoading,
     orderTypesError,
+    warehouses,
+    isWarehousesLoading,
+    warehousesError,
 }: UseShopSchemaEditFormArgs) {
     const navigate = useNavigate()
     const [schemaName, setSchemaName] = useState(schema.name)
@@ -109,6 +116,9 @@ export function useShopSchemaEditForm({
         orderTypes,
         isOrderTypesLoading,
         orderTypesError,
+        warehouses,
+        isWarehousesLoading,
+        warehousesError,
         canSave,
         isSubmitting: updateSchema.isPending,
         handleSave,

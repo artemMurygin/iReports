@@ -1,6 +1,6 @@
 import type { CatalogCategoryResponse, MotivationRequest, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 
-import type { RuleFormConfig, RuleListState, RuleType } from '@/features/SalaryRuleForm'
+import type { RuleFormConfig, RuleListState, RuleType, WarehouseFieldWarehouse } from '@/features/SalaryRuleForm'
 
 /**
  * Направление схемы (`Блок · Направление` / `Direction Tabs` в макете `tSYIw`). Только "Сервис"
@@ -52,6 +52,13 @@ export type DirectionAdapter = {
     orderTypes: OrderTypeResponse[]
     isOrderTypesLoading: boolean
     orderTypesError: string | null
+    /** Справочник складов (FR4 of add-department-head-salary-rules) — для `WarehouseField` у
+     * правила `DepartmentTurnoverBonus`. Оба направления запрашивают свой собственный справочник
+     * (RemOnline у service, МойСклад у shop) — в отличие от `orderTypes`/`categories`, поле не
+     * пустует ни у одного направления. */
+    warehouses: WarehouseFieldWarehouse[]
+    isWarehousesLoading: boolean
+    warehousesError: string | null
     isSubmitting: boolean
     /** `id` из ответа своей мутации (`MotivationResponse`/`ShopMotivationResponse` — строка, см.
      * `contracts/commands/motivation-schema.ts`), `null` пока схема этого направления не сохранена. */

@@ -9,6 +9,7 @@ import {
     useCatalog,
     useSalaryRulesDraft,
     useShopSalaryRuleTypes,
+    useStores,
 } from '@/features/SalaryRuleForm'
 
 import type { DirectionAdapter, SchemaTarget } from '../../model/types.ts'
@@ -32,6 +33,7 @@ const NO_ORDER_TYPES: OrderTypeResponse[] = []
 export function useShopDirection(): DirectionAdapter {
     const ruleTypesQuery = useShopSalaryRuleTypes()
     const catalogQuery = useCatalog()
+    const storesQuery = useStores()
     const createSchema = useCreateShopMotivationSchema()
     const rules = useSalaryRulesDraft(resolveShopRuleDraft)
 
@@ -72,6 +74,9 @@ export function useShopDirection(): DirectionAdapter {
         orderTypes: NO_ORDER_TYPES,
         isOrderTypesLoading: false,
         orderTypesError: null,
+        warehouses: storesQuery.data ?? [],
+        isWarehousesLoading: storesQuery.isLoading,
+        warehousesError: storesQuery.error?.message ?? null,
         isSubmitting: createSchema.isPending,
         savedSchemaId: createSchema.isSuccess ? createSchema.data.id : null,
         submit,

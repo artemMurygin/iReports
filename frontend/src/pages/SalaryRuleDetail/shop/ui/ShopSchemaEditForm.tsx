@@ -6,7 +6,7 @@ import type {
 } from 'ireports-contracts'
 import { CreateTaskPanel } from '@/features/CreateTask'
 import { RuleList } from '@/features/SalaryRuleForm'
-import type { RuleFormConfig, RuleType } from '@/features/SalaryRuleForm'
+import type { RuleFormConfig, RuleType, WarehouseFieldWarehouse } from '@/features/SalaryRuleForm'
 import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 
 import { Layout } from '../../ui/Layout.tsx'
@@ -27,6 +27,9 @@ export type ShopSchemaEditFormProps = {
     orderTypes: OrderTypeResponse[]
     isOrderTypesLoading: boolean
     orderTypesError: string | null
+    warehouses: WarehouseFieldWarehouse[]
+    isWarehousesLoading: boolean
+    warehousesError: string | null
 }
 
 /** Зеркало `service/ui/ServiceSchemaEditForm.tsx` для направления "Магазин". */
@@ -64,6 +67,9 @@ export function ShopSchemaEditForm(props: ShopSchemaEditFormProps) {
         orderTypes: page.orderTypes,
         isOrderTypesLoading: page.isOrderTypesLoading,
         orderTypesError: page.orderTypesError,
+        warehouses: page.warehouses,
+        isWarehousesLoading: page.isWarehousesLoading,
+        warehousesError: page.warehousesError,
         onChange: page.rules.updateDraft,
         onChangeType: page.rules.changeType,
         onChangeBorder: page.rules.updateBorder,
