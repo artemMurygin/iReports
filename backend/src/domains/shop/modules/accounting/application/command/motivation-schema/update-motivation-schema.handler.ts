@@ -74,7 +74,14 @@ export class UpdateShopMotivationSchemaHandler implements ICommandHandler<
             // удалённого. Без этого различения TaskCompletion терял бы
             // привязку к своим задачам при КАЖДОМ PATCH схемы, даже если
             // само правило не менялось.
-            const oldRules = schema.getProps().rules;
+            // Деактивированные правила исключаются ДО diff'а — иначе PATCH
+            // без них в новом наборе трактовал бы их как "реально удалённые"
+            // (removedRules ниже) и физически стирал бы, вместе с их
+            // задачами Bitrix24/связью TaskCompletion, хотя soft-деактивация
+            // обязана оставлять правило в БД (см. WHY у ShopSalaryRule.isActive).
+            const oldRules = schema
+                .getProps()
+                .rules.filter((rule) => rule.isActive);
             const oldRulesById = new Map(
                 oldRules.map((rule) => [rule.id, rule]),
             );
@@ -136,7 +143,11 @@ export class UpdateShopMotivationSchemaHandler implements ICommandHandler<
                               rule,
                               oldRule as TaskCompletionShop,
                           )
-                        : ShopSalaryRuleFactory.restore(id, rule);
+                        : ShopSalaryRuleFactory.restore(
+                              id,
+                              rule,
+                              oldRule.isActive,
+                          );
                 await this.shopSalaryRuleRepo.update(entity);
             }
 

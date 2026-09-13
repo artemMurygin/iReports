@@ -103,6 +103,17 @@ export function useServiceSchemaEditForm({
         [queryClient, schema.id],
     )
 
+    // Soft-delete ОДНОГО уже сохранённого правила (см. WHY в `RuleFormCardHeader.tsx`) — тем же
+    // паттерном, что `onDeleteRule` выше: своя инвалидация схемы, локальное удаление карточки решает
+    // сам `RuleFormCardHeader` через уже существующий `onDelete`.
+    const onDeactivateRule = useCallback(
+        async (ruleId: string) => {
+            await api.deactivateSalaryRule(ruleId)
+            queryClient.invalidateQueries({ queryKey: ['motivation-schema', 'service', schema.id] })
+        },
+        [queryClient, schema.id],
+    )
+
     const handleDelete = useCallback(() => {
         deleteSchema.mutate(undefined, {
             onSuccess: () => {
@@ -126,6 +137,7 @@ export function useServiceSchemaEditForm({
         cancelCreateTask: taskPanels.cancelCreateTask,
         handleTaskCreated: taskPanels.handleTaskCreated,
         onDeleteRule,
+        onDeactivateRule,
         config: visibleConfig,
         allowedRolesByType,
         isRoleTypesLoading,

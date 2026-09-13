@@ -34,7 +34,10 @@ describe('DeleteSalaryRuleHandler', () => {
             defaultAmount: 5000,
         },
         updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+        isActive: true,
         calculate: () => null,
+        deactivate: () => {},
+        activate: () => {},
     });
 
     const buildHandler = (rule: SalaryRule | null) => {
@@ -126,7 +129,10 @@ describe('DeleteSalaryRuleHandler', () => {
                 targetRole: 'ENGINEER',
                 config: { price: 100 },
                 updatedAt: new Date(),
+                isActive: true,
                 calculate: () => null,
+                deactivate: () => {},
+                activate: () => {},
             };
             const { handler, deleteByIds, execute, cancel } =
                 buildHandler(rule);

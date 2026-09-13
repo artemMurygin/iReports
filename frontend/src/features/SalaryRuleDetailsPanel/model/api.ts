@@ -35,4 +35,24 @@ export const salaryRuleApi = {
                         throw new ApiError(extractApiErrorMessage(error, 'Не удалось загрузить зарплатное правило'))
                     }),
         }),
+
+    // Soft-деактивация/восстановление ОДНОГО правила (`isActive` на `SalaryRuleDetail` выше) —
+    // `POST .../salary-rules/:ruleId/{deactivate,activate}`, `204 No Content`. Единственное место
+    // в приложении, где неактивное правило вообще видно (обычный список правил схемы его скрывает),
+    // поэтому переключатель живёт здесь же, в `SalaryRuleDetailsPanel` — см. `useSalaryRuleActivation.ts`.
+    deactivate: (direction: SalesDirection, ruleId: string): Promise<void> =>
+        apiInstance
+            .post(`${salaryRuleBasePath(direction)}/${ruleId}/deactivate`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось деактивировать правило'))
+            }),
+
+    activate: (direction: SalesDirection, ruleId: string): Promise<void> =>
+        apiInstance
+            .post(`${salaryRuleBasePath(direction)}/${ruleId}/activate`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось активировать правило'))
+            }),
 }

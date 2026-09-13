@@ -124,6 +124,12 @@ export class EnsureShopSalaryTaskForPeriodService {
         // ShopSalaryRuleMapper.toPersistence(), поэтому плоский объект
         // достаточен и не зависит от того, какой конкретный класс вернул
         // findById().
+        // isActive — снимок с уже загруженного rule, а не мутация "на
+        // месте": deactivate()/activate() ниже реализованы через локальное
+        // замыкание вместо делегирования в rule.deactivate()/activate(),
+        // чтобы этот снимок не расходился с самим rule, если оба когда-либо
+        // будут держаться живыми одновременно.
+        let isActive = rule.isActive;
         const updatedRule: ShopSalaryRule = {
             id: rule.id,
             name: rule.name,
@@ -134,7 +140,16 @@ export class EnsureShopSalaryTaskForPeriodService {
                 taskIdByPeriod: { ...config.taskIdByPeriod, [period]: taskId },
             },
             updatedAt: rule.updatedAt,
+            get isActive() {
+                return isActive;
+            },
             calculate: (context) => rule.calculate(context),
+            deactivate: () => {
+                isActive = false;
+            },
+            activate: () => {
+                isActive = true;
+            },
         };
         await this.ruleRepo.update(updatedRule);
 

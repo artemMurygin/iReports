@@ -37,6 +37,7 @@ describe('task-completion-statuses.builder', () => {
                             defaultAmount: 5000,
                             taskLinkTemplates: [],
                         },
+                        isActive: true,
                     },
                 }),
         );

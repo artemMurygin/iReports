@@ -35,7 +35,10 @@ const buildNullRule = (id: string): ShopSalaryRule => ({
     targetRole: 'ONLINE_MANAGER',
     config: {} as ShopSalaryRule['config'],
     updatedAt: new Date(),
+    isActive: true,
     calculate: (): null => null,
+    deactivate: () => {},
+    activate: () => {},
 });
 
 describe('PeriodCalculationOrchestrator (shop)', () => {

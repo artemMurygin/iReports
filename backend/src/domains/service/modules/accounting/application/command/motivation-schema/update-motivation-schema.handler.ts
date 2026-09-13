@@ -68,7 +68,14 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
             // не новое взамен удалённого. Без этого различения TaskCompletion
             // терял бы привязанную задачу (отменялась и создавалась заново)
             // при КАЖДОМ PATCH схемы, даже если само правило не менялось.
-            const oldRules = schema.getProps().rules;
+            // Фронтенд больше не видит неактивные правила (см.
+            // MotivationSchemaMapper.toDetailResponse), поэтому они никогда
+            // не попадут в command.rules — без этой фильтрации diff-логика
+            // ниже ошибочно посчитала бы их removedRules и физически удалила
+            // бы при любом PATCH схемы.
+            const oldRules = schema
+                .getProps()
+                .rules.filter((rule) => rule.isActive);
             const oldRulesById = new Map(
                 oldRules.map((rule) => [rule.id, rule]),
             );
@@ -117,9 +124,14 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
             // иначе PATCH стёр бы привязку задач прошлых периодов
             // регулярного правила.
             for (const { id, rule } of keptRules) {
+                // isActive существующего правила передаётся явно — иначе
+                // SalaryRuleFactory.restore() молча сбросил бы его в true
+                // при каждом сохранении схемы (см. WHY у restore()).
+                const oldRule = oldRulesById.get(id);
                 const entity = SalaryRuleFactory.restore(
                     id,
-                    this.mergeTaskCompletionConfig(rule, oldRulesById.get(id)),
+                    this.mergeTaskCompletionConfig(rule, oldRule),
+                    oldRule?.isActive ?? true,
                 );
                 await this.salaryRuleRepo.update(entity);
             }

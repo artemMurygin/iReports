@@ -25,6 +25,8 @@ describe('MotivationSchemaMapper', () => {
                         type: 'PayPerHour',
                         name: 'Часы',
                         targetRole: 'ENGINEER',
+                        direction: 'service',
+                        isActive: true,
                         props: { price: 300 },
                         createdAt,
                         updatedAt,

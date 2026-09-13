@@ -31,6 +31,14 @@ const DOT_CLASS: Record<SalesDirection, string> = {
  * что и `LEDGER_CHEVRON_COL` в `pages/SalaryReportV2/ui/LedgerRuleRow.tsx`: мокап не рисует явный
  * аффорданс разворота, но `onToggleLine` должен быть заметен). Строка раскрывается аккордеоном в
  * источники (`AccrualLineSources`).
+ *
+ * `onOpenRule` (опционален — потребители, которым панель деталей правила не нужна, просто его не
+ * передают) вызывается тем же кликом по строке, что и `onToggleLine`: это два независимых действия
+ * (локальный аккордеон источников этой строки документа и общая боковая панель статического
+ * описания правила, `features/SalaryRuleDetailsPanel`) — они не конфликтуют, поэтому оба
+ * срабатывают на одном клике, а не требуют отдельного аффорданса. Сама таблица остаётся
+ * презентационной — открытие панели оркеструет страница (`pages/SalaryAccrualDocument`), таблица
+ * лишь сообщает `ruleId` строки.
  */
 export type AccrualLinesTableProps = {
     lines: SalaryAccrualLine[]
@@ -41,6 +49,8 @@ export type AccrualLinesTableProps = {
     documentStatus: SalaryAccrualStatus
     isLineExpanded: (id: string) => boolean
     onToggleLine: (id: string) => void
+    /** Клик по строке — открыть боковую панель деталей правила по её `ruleId`. */
+    onOpenRule?: (ruleId: string) => void
     /** «5 строк · начислено 0 из 5 · корректировок: 1» — подвал таблицы. */
     footerNote: string
     /** «Итого 68 400 ₽». */
@@ -56,6 +66,7 @@ function AccrualLinesTable({
     documentStatus,
     isLineExpanded,
     onToggleLine,
+    onOpenRule,
     footerNote,
     footerTotal,
     className,
@@ -102,11 +113,15 @@ function AccrualLinesTable({
                                     <div
                                         role="button"
                                         tabIndex={0}
-                                        onClick={() => onToggleLine(line.id)}
+                                        onClick={() => {
+                                            onToggleLine(line.id)
+                                            onOpenRule?.(line.ruleId)
+                                        }}
                                         onKeyDown={(event) => {
                                             if (event.key !== 'Enter' && event.key !== ' ') return
                                             event.preventDefault()
                                             onToggleLine(line.id)
+                                            onOpenRule?.(line.ruleId)
                                         }}
                                         aria-expanded={expanded}
                                         className={cn(

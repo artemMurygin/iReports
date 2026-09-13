@@ -50,6 +50,20 @@ export class TaskCompletionShop
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
+    // Soft-деактивация/реактивация (см. WHY у ShopSalaryRule.isActive) — та
+    // же прямая мутация props, что и у ShopMotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
+    }
+
     // design.md решение 4 — CreateShopSalaryRuleHandler больше не ходит в
     // Bitrix/tasks вообще: taskId приходит в теле запроса как часть
     // config (contracts: TaskCompletionShopSalaryConfigRequest,
@@ -66,6 +80,7 @@ export class TaskCompletionShop
                 type: 'TaskCompletion',
                 targetRole: rule.targetRole,
                 config: TaskCompletionShop.buildConfig(rule.config, {}),
+                isActive: true,
             },
         });
     }
@@ -94,6 +109,11 @@ export class TaskCompletionShop
                     rule.config,
                     existing.config.taskIdByPeriod,
                 ),
+                // isActive не редактируется этой формой — переносится с
+                // сохранившегося правила as is (см. WHY у
+                // UpdateShopMotivationSchemaHandler про фильтр oldRules по
+                // isActive перед diff'ом).
+                isActive: existing.isActive,
             },
         });
     }

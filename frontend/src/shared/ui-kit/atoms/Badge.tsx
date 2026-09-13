@@ -19,6 +19,10 @@ import { cn } from '@/shared/lib/tw'
  *   `features/SalaryRuleDetailsPanel/ui/SalaryRuleSummaryCard.tsx` (Pencil node `TY1It`/`n7Pn5Z`,
  *   "Вид правила" -> `PGyPp` instance, fill `$violet-soft`, label fill `$violet-ink` — see
  *   add-task-salary-rule-links-comments tasks.md группа 29).
+ * - `danger` — `danger-soft`/`danger`, added for the "Неактивно" pill on the same
+ *   `SalaryRuleSummaryCard.tsx` (soft-деактивация зарплатного правила) — same pair of tokens
+ *   `TaskStatusBadge`'s `CLOSED_UNSUCCESSFULLY` variant already uses (`bg-danger-soft text-danger`),
+ *   surfaced here as a reusable `Badge` tone instead of a one-off className.
  *
  * First-time build of this UI Kit atom from its `uDEum` base — no earlier page instanced it in
  * code yet (frontend/CLAUDE.md: new UI Kit components go in `shared/ui-kit/`, not `shared/ui/`).
@@ -31,6 +35,7 @@ const badgeVariants = cva(
                 brand: 'bg-brand-soft text-ok-ink',
                 neutral: 'bg-canvas text-ink-muted',
                 violet: 'bg-violet-soft text-violet-ink',
+                danger: 'bg-danger-soft text-danger',
             },
         },
         defaultVariants: {

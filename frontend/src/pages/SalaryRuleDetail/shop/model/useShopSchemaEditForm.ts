@@ -103,6 +103,15 @@ export function useShopSchemaEditForm({
         [queryClient, schema.id],
     )
 
+    // Зеркало `service/model/useServiceSchemaEditForm.ts`'s `onDeactivateRule`.
+    const onDeactivateRule = useCallback(
+        async (ruleId: string) => {
+            await api.deactivateSalaryRule(ruleId)
+            queryClient.invalidateQueries({ queryKey: ['motivation-schema', 'shop', schema.id] })
+        },
+        [queryClient, schema.id],
+    )
+
     const handleDelete = useCallback(() => {
         deleteSchema.mutate(undefined, {
             onSuccess: () => {
@@ -126,6 +135,7 @@ export function useShopSchemaEditForm({
         cancelCreateTask: taskPanels.cancelCreateTask,
         handleTaskCreated: taskPanels.handleTaskCreated,
         onDeleteRule,
+        onDeactivateRule,
         config: visibleConfig,
         allowedRolesByType,
         isRoleTypesLoading,

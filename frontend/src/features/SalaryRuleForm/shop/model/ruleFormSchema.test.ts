@@ -215,6 +215,7 @@ describe('draftFromShopRule — TaskCompletion', () => {
             type: 'TaskCompletion',
             name: 'Провести ревизию склада',
             targetRole: 'OFFLINE_MANAGER',
+            isActive: true,
             config: {
                 taskTitleTemplate: 'Провести ревизию склада ({месяц})',
                 taskDescriptionTemplate: 'Сверить остатки по накладным',
@@ -249,6 +250,7 @@ describe('draftFromShopRule — TaskCompletion', () => {
             type: 'TaskCompletion',
             name: 'Провести ревизию склада',
             targetRole: 'OFFLINE_MANAGER',
+            isActive: true,
             config: {
                 taskTitleTemplate: 'Провести ревизию склада',
                 isRecurring: true,
@@ -267,6 +269,7 @@ describe('draftFromShopRule — TaskCompletion', () => {
             type: 'TaskCompletion',
             name: 'Проверка витрины',
             targetRole: 'OFFLINE_MANAGER',
+            isActive: true,
             config: {
                 taskTitleTemplate: '',
                 isRecurring: true,

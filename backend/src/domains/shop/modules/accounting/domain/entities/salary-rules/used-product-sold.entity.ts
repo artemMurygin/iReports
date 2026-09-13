@@ -61,6 +61,10 @@ export class UsedProductSoldEntity
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
     static create(rule: CreateShopSalaryRuleProps): UsedProductSoldEntity {
         return new UsedProductSoldEntity({
             id: randomUUID(),
@@ -69,8 +73,19 @@ export class UsedProductSoldEntity
                 type: 'UsedProductSold',
                 targetRole: rule.targetRole,
                 config: rule.config as UsedProductSoldSalaryConfig,
+                isActive: true,
             },
         });
+    }
+
+    // Soft-деактивация/реактивация (см. WHY у ShopSalaryRule.isActive) — та
+    // же прямая мутация props, что и у ShopMotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
     }
 
     calculate(context: ShopCalculationContext): CalculationLine {

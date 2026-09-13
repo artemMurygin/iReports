@@ -65,11 +65,12 @@ export class ShopSalaryRuleRepository
     }
 
     async update(entity: ShopSalaryRule): Promise<void> {
-        const { name, targetRole, props } = this.mapper.toPersistence(entity);
+        const { name, targetRole, props, isActive } =
+            this.mapper.toPersistence(entity);
         await this.write(entity, (client) =>
             client.salaryRule.update({
                 where: { id: entity.id },
-                data: { name, targetRole, props },
+                data: { name, targetRole, props, isActive },
             }),
         );
     }

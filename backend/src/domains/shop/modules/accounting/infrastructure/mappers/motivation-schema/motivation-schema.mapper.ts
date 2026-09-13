@@ -113,7 +113,11 @@ export class ShopMotivationSchemaMapper implements Mapper<
         targetName: string,
     ): ShopMotivationSchemaDetailResponse {
         const props = entity.getProps();
-        const rules = props.rules;
+        // Soft-деактивированное правило не должно попасть в форму
+        // редактирования схемы — та же семантика, что и в расчёте
+        // (mergeEmployeeSalaryRules): деактивированное правило "пропадает из
+        // UI схемы, но не удаляется физически".
+        const rules = props.rules.filter((rule) => rule.isActive);
 
         return {
             id: props.id,
@@ -137,6 +141,7 @@ export class ShopMotivationSchemaMapper implements Mapper<
                         name: rule.name,
                         targetRole: rule.targetRole,
                         config: rule.config,
+                        isActive: rule.isActive,
                     }) as ShopSalaryRuleResponse,
             ),
             updatedAt: this.computeUpdatedAt(entity),

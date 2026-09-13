@@ -57,6 +57,32 @@ describe('SalaryRuleFactory', () => {
         expect(rule).toBeInstanceOf(TaskCompletion);
     });
 
+    it('restore() передаёт переданный isActive в восстановленную сущность', () => {
+        const activeRule = SalaryRuleFactory.restore(
+            'rule-1',
+            {
+                type: 'PayPerHour',
+                name: 'Почасовая ставка',
+                targetRole: 'ENGINEER',
+                config: { price: 100 },
+            },
+            true,
+        );
+        const inactiveRule = SalaryRuleFactory.restore(
+            'rule-2',
+            {
+                type: 'PayPerHour',
+                name: 'Почасовая ставка',
+                targetRole: 'ENGINEER',
+                config: { price: 100 },
+            },
+            false,
+        );
+
+        expect(activeRule.isActive).toBe(true);
+        expect(inactiveRule.isActive).toBe(false);
+    });
+
     it('выбрасывает NotFoundException для незарегистрированного типа', () => {
         withRequestContext(() => {
             expect(() =>

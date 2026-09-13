@@ -102,6 +102,7 @@ function buildSchema(
                 type: 'PayPerHour',
                 targetRole: 'ENGINEER',
                 config: { price: 250 },
+                isActive: true,
             },
         });
         return new MotivationSchema({

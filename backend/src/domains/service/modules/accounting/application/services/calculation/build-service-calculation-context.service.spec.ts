@@ -36,6 +36,7 @@ describe('BuildServiceCalculationContextService — taskCompletionStatuses', () 
                     deadlineTemplate: '2026-08-05',
                     defaultAmount: 5000,
                 },
+                isActive: true,
             },
         });
 

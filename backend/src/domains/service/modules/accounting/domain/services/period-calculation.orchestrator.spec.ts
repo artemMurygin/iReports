@@ -35,7 +35,10 @@ const buildPendingRule = (id = 'pending-rule'): SalaryRule => ({
     targetRole: 'ENGINEER',
     config: {} as SalaryRule['config'],
     updatedAt: new Date(),
+    isActive: true,
     calculate: () => null,
+    deactivate: () => {},
+    activate: () => {},
 });
 
 describe('PeriodCalculationOrchestrator', () => {

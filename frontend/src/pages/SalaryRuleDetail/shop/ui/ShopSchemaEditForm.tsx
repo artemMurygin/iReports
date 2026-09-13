@@ -74,6 +74,7 @@ export function ShopSchemaEditForm(props: ShopSchemaEditFormProps) {
         onOpenTask: page.onOpenTask,
         onCreateTask: page.onCreateTask,
         onDeleteRule: page.onDeleteRule,
+        onDeactivateRule: page.onDeactivateRule,
     }
 
     const rules = (

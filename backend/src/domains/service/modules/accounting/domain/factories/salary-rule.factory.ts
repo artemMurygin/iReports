@@ -23,7 +23,18 @@ export class SalaryRuleFactory {
     // (см. design.md Decision 6, add-task-based-salary-rule). Props строятся
     // тем же приёмом, что и у SalaryRuleMapper.toDomain/*Entity.create() —
     // {name, type, targetRole, config}, одинаково для всех типов правил.
-    static restore(id: string, rule: CreateSalaryRuleProps): SalaryRule {
+    //
+    // isActive — состояние УЖЕ существующего правила (не часть
+    // CreateSalaryRuleProps, см. WHY у SalaryRule.isActive), поэтому
+    // передаётся отдельным параметром вызывающим кодом
+    // (UpdateMotivationSchemaHandler читает его у старого правила) — без
+    // этого PATCH схемы молча сбрасывал бы isActive любого отредактированного
+    // на месте правила в true при каждом сохранении.
+    static restore(
+        id: string,
+        rule: CreateSalaryRuleProps,
+        isActive: boolean,
+    ): SalaryRule {
         const ruleClass = salaryRuleRegistry.get(rule.type);
         if (!ruleClass) {
             throw new NotFoundException('Зарплатное правило не найдено');
@@ -35,6 +46,7 @@ export class SalaryRuleFactory {
                 type: rule.type,
                 targetRole: rule.targetRole,
                 config: rule.config,
+                isActive,
             },
         });
     }

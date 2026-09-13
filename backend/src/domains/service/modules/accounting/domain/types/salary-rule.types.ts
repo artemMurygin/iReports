@@ -23,6 +23,8 @@ export type PayPerHourSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: PayPerHourSalaryConfig;
+    // Soft-деактивация правила — см. isActive у SalaryRule ниже.
+    isActive: boolean;
 };
 
 export type ServiceCompletedSalaryConfig = {
@@ -43,6 +45,8 @@ export type ServiceCompletedSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: ServiceCompletedSalaryConfig;
+    // Soft-деактивация правила — см. isActive у SalaryRule ниже.
+    isActive: boolean;
 };
 
 // За оплаченный заказ (Фаза 8) — расчёт опирается на исходные суммы заказа
@@ -76,6 +80,8 @@ export type OrderPayedSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: OrderPayedSalaryConfig;
+    // Soft-деактивация правила — см. isActive у SalaryRule ниже.
+    isActive: boolean;
 };
 
 // За выполнение задачи модуля src/modules/tasks (replace-bitrix-task-integration,
@@ -115,6 +121,8 @@ export type TaskCompletionSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: TaskCompletionSalaryConfig;
+    // Soft-деактивация правила — см. isActive у SalaryRule ниже.
+    isActive: boolean;
 };
 
 export type SalaryRuleConfig =
@@ -152,6 +160,12 @@ export type SalaryRule = {
     readonly type: string;
     readonly targetRole: TargetRole;
     readonly config: SalaryRuleConfig;
+    // Soft-деактивация зарплатного правила: деактивированное правило
+    // перестаёт участвовать в расчётах (mergeEmployeeSalaryRules,
+    // src/shared/domain/employee-salary-rules.ts) и пропадает из ответа GET
+    // .../motivation-schema/:id (MotivationSchemaMapper.toDetailResponse),
+    // но не удаляется физически — история его начислений сохраняется.
+    readonly isActive: boolean;
     // Отсутствовало до Фазы 6 — нужно ленивому кэшу расчёта (см.
     // domain/services/accounting-cache-freshness.ts), чтобы отличать версию
     // мотивационной схемы по факту правки правила, а не только самой схемы:
@@ -172,4 +186,9 @@ export type SalaryRule = {
     calculate(
         context: CalculationContext,
     ): CalculationLine | null | Promise<CalculationLine | null>;
+    // Soft-деактивация/реактивация (DeactivateSalaryRuleHandler/
+    // ReactivateSalaryRuleHandler) — прямая мутация isActive, тот же приём,
+    // что и MotivationSchema.rename().
+    deactivate(): void;
+    activate(): void;
 };

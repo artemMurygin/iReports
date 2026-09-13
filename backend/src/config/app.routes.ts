@@ -327,6 +327,12 @@ export const routesV1 = {
             salaryRules: {
                 byId: `${serviceAccountingRoot}/salary-rules/:ruleId`,
                 byTaskId: `${serviceAccountingRoot}/salary-rules/by-task/:taskId`,
+                // Soft-деактивация зарплатного правила — правило перестаёт
+                // участвовать в расчётах и пропадает из UI схемы, но не
+                // удаляется физически. Зеркало — shop.accounting.salaryRules
+                // ниже.
+                deactivate: `${serviceAccountingRoot}/salary-rules/:ruleId/deactivate`,
+                activate: `${serviceAccountingRoot}/salary-rules/:ruleId/activate`,
             },
             // Обратный поиск строки начисления по задаче (раздел 19
             // tasks.md, FindSalaryAccrualForTaskService) — зеркало
@@ -528,6 +534,11 @@ export const routesV1 = {
             salaryRules: {
                 byId: `${shopAccountingRoot}/salary-rules/:ruleId`,
                 byTaskId: `${shopAccountingRoot}/salary-rules/by-task/:taskId`,
+                // Soft-деактивация зарплатного правила — зеркалит
+                // service.accounting.salaryRules выше, в своём namespace
+                // shopAccountingRoot.
+                deactivate: `${shopAccountingRoot}/salary-rules/:ruleId/deactivate`,
+                activate: `${shopAccountingRoot}/salary-rules/:ruleId/activate`,
             },
             salaryAccrualLines: {
                 byTaskId: `${shopAccountingRoot}/salary-accrual-lines/by-task/:taskId`,

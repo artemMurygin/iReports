@@ -51,6 +51,10 @@ export class OrderPayedEntity
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
     static create(rule: CreateSalaryRuleProps): OrderPayedEntity {
         return new OrderPayedEntity({
             id: randomUUID(),
@@ -59,8 +63,19 @@ export class OrderPayedEntity
                 type: 'OrderPayed',
                 targetRole: rule.targetRole,
                 config: rule.config as OrderPayedSalaryConfig,
+                isActive: true,
             },
         });
+    }
+
+    // Soft-деактивация/реактивация (см. isActive у SalaryRule) — прямая
+    // мутация props, тот же приём, что и MotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
     }
 
     calculate(context: CalculationContext): CalculationLine {

@@ -4,6 +4,7 @@ import type { SalaryRuleDetail } from 'ireports-contracts'
 import { cn } from '@/shared/lib/tw.ts'
 import { ALL_RULE_TYPE_LABELS } from '@/kernel/ruleTypeLabels.ts'
 import { Badge } from '@/shared/ui-kit/atoms/Badge.tsx'
+import { Button } from '@/shared/ui-kit/atoms/Button.tsx'
 import { Chip } from '@/shared/ui-kit/atoms/Chip.tsx'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton.tsx'
 import { SpecRow } from '@/shared/ui-kit/molecules/SpecRow.tsx'
@@ -23,21 +24,42 @@ import { getRuleParams } from './ruleParams.ts'
  * `TaskStatusCard` внутри `TaskDetailsPanel` (`SidePanel` получает только `srOnlyTitle`): контент
  * появляется только после загрузки правила, поэтому во время `isLoading` заголовка нет вовсе (как
  * и у `TaskStatusControl`'s "Загрузка задачи…").
+ *
+ * `onToggleActive`/`isTogglingActive` — единственное исключение из read-only (design.md Non-Goals
+ * касался редактирования параметров правила, не soft-деактивации): `rule.isActive === false`
+ * рисует заметный бейдж «Неактивно» рядом с названием, а сам переключатель — кнопка «Деактивировать»/
+ * «Активировать», управляемая снаружи (`SalaryRuleDetailsPanel.tsx`, `useSalaryRuleActivation.ts`) —
+ * карточка остаётся презентационной и не знает про мутации/`direction`.
  */
 export type SalaryRuleSummaryCardProps = {
     rule: SalaryRuleDetail
     onClose?: () => void
+    onToggleActive?: () => void
+    isTogglingActive?: boolean
     className?: string
 }
 
-export function SalaryRuleSummaryCard({ rule, onClose, className }: SalaryRuleSummaryCardProps) {
+export function SalaryRuleSummaryCard({
+    rule,
+    onClose,
+    onToggleActive,
+    isTogglingActive,
+    className,
+}: SalaryRuleSummaryCardProps) {
     const params = getRuleParams(rule)
 
     return (
         <div data-slot="salary-rule-summary-card" className={cn('flex w-full flex-col bg-surface', className)}>
             <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
                 <div className="min-w-0 flex-1">
-                    <h2 className="truncate font-display text-[17px] font-bold text-ink">{rule.name}</h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="truncate font-display text-[17px] font-bold text-ink">{rule.name}</h2>
+                        {rule.isActive === false && (
+                            <Badge tone="danger" className="shrink-0">
+                                Неактивно
+                            </Badge>
+                        )}
+                    </div>
                     <p className="mt-[3px] font-ui text-xs text-ink-muted">Зарплатное правило</p>
                 </div>
                 {onClose && (
@@ -54,6 +76,17 @@ export function SalaryRuleSummaryCard({ rule, onClose, className }: SalaryRuleSu
                     </Badge>
                     <Chip icon={<Layers />}>{DIRECTION_LABEL[rule.direction]}</Chip>
                 </div>
+
+                {onToggleActive && (
+                    <Button
+                        variant={rule.isActive ? 'danger' : 'secondary'}
+                        className="w-full"
+                        onClick={onToggleActive}
+                        disabled={isTogglingActive}
+                    >
+                        {rule.isActive ? 'Деактивировать' : 'Активировать'}
+                    </Button>
+                )}
 
                 {params.length > 0 && (
                     <div className="flex flex-col gap-2">

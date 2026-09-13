@@ -183,6 +183,7 @@ describe('TasksPageMediator', () => {
             type: 'TaskCompletion',
             name: 'Задача: Обзвонить клиентов после диагностики',
             targetRole: 'ENGINEER',
+            isActive: true,
             config: {
                 taskTitleTemplate: 'Обзвонить клиентов',
                 isRecurring: false,

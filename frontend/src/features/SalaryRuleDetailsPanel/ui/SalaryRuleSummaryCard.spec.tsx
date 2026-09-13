@@ -26,6 +26,7 @@ const TASK_COMPLETION_RULE: SalaryRuleDetail = {
     },
     direction: 'service',
     motivationSchemaName: 'Инженеры',
+    isActive: true,
 }
 
 describe('SalaryRuleSummaryCard', () => {
@@ -103,5 +104,58 @@ describe('SalaryRuleSummaryCard', () => {
         await user.click(screen.getByRole('button', { name: /Закрыть панель правила/ }))
 
         expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('не показывает бейдж "Неактивно" для активного правила', () => {
+        render(<SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} />)
+
+        expect(screen.queryByText('Неактивно')).not.toBeInTheDocument()
+    })
+
+    it('показывает бейдж "Неактивно" рядом с названием, если rule.isActive === false', () => {
+        render(<SalaryRuleSummaryCard rule={{ ...TASK_COMPLETION_RULE, isActive: false }} />)
+
+        expect(screen.getByText('Неактивно')).toBeInTheDocument()
+    })
+
+    it('не рендерит кнопку-переключатель активности, если onToggleActive не передан', () => {
+        render(<SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} />)
+
+        expect(screen.queryByRole('button', { name: /Деактивировать|Активировать/ })).not.toBeInTheDocument()
+    })
+
+    it('показывает кнопку "Деактивировать" для активного правила и вызывает onToggleActive по клику', async () => {
+        const user = userEvent.setup()
+        const onToggleActive = vi.fn()
+        render(<SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} onToggleActive={onToggleActive} />)
+
+        const button = screen.getByRole('button', { name: 'Деактивировать' })
+        await user.click(button)
+
+        expect(onToggleActive).toHaveBeenCalledTimes(1)
+    })
+
+    it('показывает кнопку "Активировать" для неактивного правила и вызывает onToggleActive по клику', async () => {
+        const user = userEvent.setup()
+        const onToggleActive = vi.fn()
+        render(
+            <SalaryRuleSummaryCard
+                rule={{ ...TASK_COMPLETION_RULE, isActive: false }}
+                onToggleActive={onToggleActive}
+            />,
+        )
+
+        const button = screen.getByRole('button', { name: 'Активировать' })
+        await user.click(button)
+
+        expect(onToggleActive).toHaveBeenCalledTimes(1)
+    })
+
+    it('дизейблит кнопку-переключатель, пока isTogglingActive === true', () => {
+        render(
+            <SalaryRuleSummaryCard rule={TASK_COMPLETION_RULE} onToggleActive={vi.fn()} isTogglingActive={true} />,
+        )
+
+        expect(screen.getByRole('button', { name: 'Деактивировать' })).toBeDisabled()
     })
 })

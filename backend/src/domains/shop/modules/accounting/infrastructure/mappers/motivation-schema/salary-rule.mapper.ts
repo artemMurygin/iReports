@@ -59,7 +59,13 @@ export class ShopSalaryRuleMapper implements Mapper<
             id: record.id,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
-            props: { name: record.name, type, targetRole, config },
+            props: {
+                name: record.name,
+                type,
+                targetRole,
+                config,
+                isActive: record.isActive,
+            },
         });
     }
     toPersistence(
@@ -77,6 +83,7 @@ export class ShopSalaryRuleMapper implements Mapper<
             // См. комментарий у SalaryRule.direction в salary.prisma —
             // почему это поле не на MotivationSchema.
             direction: 'shop',
+            isActive: entity.isActive,
             props: entity.config,
             createdAt,
             updatedAt,

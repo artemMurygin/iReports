@@ -58,6 +58,10 @@ export class ProductSoldEntity
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
     // Entity.constructor вызывает validate() сам (см. entity.base.ts) —
     // невалидный FloatPercent (см. validate() ниже) бросает исключение уже
     // здесь, при создании.
@@ -69,8 +73,19 @@ export class ProductSoldEntity
                 type: 'ProductSold',
                 targetRole: rule.targetRole,
                 config: rule.config as ProductSoldSalaryConfig,
+                isActive: true,
             },
         });
+    }
+
+    // Soft-деактивация/реактивация (см. WHY у ShopSalaryRule.isActive) — та
+    // же прямая мутация props, что и у ShopMotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
     }
 
     calculate(context: ShopCalculationContext): CalculationLine {

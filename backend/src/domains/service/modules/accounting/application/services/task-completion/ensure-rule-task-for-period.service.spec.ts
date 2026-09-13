@@ -46,6 +46,7 @@ describe('EnsureRuleTaskForPeriodService', () => {
                             taskLinkTemplates:
                                 overrides?.taskLinkTemplates ?? [],
                         },
+                        isActive: true,
                     },
                 }),
         );

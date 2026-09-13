@@ -23,12 +23,20 @@ interface RulesHolder<TRule> {
 // разбивки в ответе отчёта (buildSalaryReportRules идёт по этому же
 // массиву), и «база сверху, надбавки снизу» читается естественнее.
 // Дублей ruleId между половинами быть не может — id правила это uuid.
-export function mergeEmployeeSalaryRules<TRule>(
+// Фильтр по isActive стоит именно здесь, а не у каждого вызывающего кода: это
+// единая точка входа к правилам сотрудника для ЛЮБОГО расчёта (отчёт,
+// закрытие периода, автосоздание задачи регулярного правила) во ОБОИХ
+// доменах разом — soft-деактивированное правило не должно попасть ни в один
+// из этих сценариев.
+export function mergeEmployeeSalaryRules<TRule extends { isActive: boolean }>(
     departmentSchema: RulesHolder<TRule> | null,
     personalSchema: RulesHolder<TRule> | null,
 ): TRule[] {
     return [
-        ...(departmentSchema?.getProps().rules ?? []),
-        ...(personalSchema?.getProps().rules ?? []),
+        ...(departmentSchema
+            ?.getProps()
+            .rules.filter((rule) => rule.isActive) ?? []),
+        ...(personalSchema?.getProps().rules.filter((rule) => rule.isActive) ??
+            []),
     ];
 }

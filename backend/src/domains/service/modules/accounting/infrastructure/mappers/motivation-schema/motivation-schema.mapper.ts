@@ -111,7 +111,10 @@ export class MotivationSchemaMapper implements Mapper<
         targetName: string,
     ): MotivationSchemaDetailResponse {
         const props = entity.getProps();
-        const rules = props.rules;
+        // Неактивные правила (soft-деактивация) не должны быть видны в UI
+        // схемы — фильтруются здесь, единственном месте, откуда их читает
+        // GetMotivationSchemaService.
+        const rules = props.rules.filter((rule) => rule.isActive);
 
         return {
             id: props.id,
@@ -139,6 +142,7 @@ export class MotivationSchemaMapper implements Mapper<
                         name: rule.name,
                         targetRole: rule.targetRole,
                         config: rule.config,
+                        isActive: rule.isActive,
                     }) as SalaryRuleResponse,
             ),
             updatedAt: this.computeUpdatedAt(entity).toISOString(),

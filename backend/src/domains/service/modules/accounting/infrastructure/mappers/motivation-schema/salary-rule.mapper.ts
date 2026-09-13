@@ -48,7 +48,13 @@ export class SalaryRuleMapper implements Mapper<
             id: record.id,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
-            props: { name: record.name, type, targetRole, config },
+            props: {
+                name: record.name,
+                type,
+                targetRole,
+                config,
+                isActive: record.isActive,
+            },
         });
     }
     toPersistence(
@@ -67,6 +73,7 @@ export class SalaryRuleMapper implements Mapper<
             // почему это поле не на MotivationSchema.
             direction: 'service',
             props: entity.config,
+            isActive: entity.isActive,
             createdAt,
             updatedAt,
         };

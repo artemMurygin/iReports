@@ -72,6 +72,7 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
         onOpenTask: page.onOpenTask,
         onCreateTask: page.onCreateTask,
         onDeleteRule: page.onDeleteRule,
+        onDeactivateRule: page.onDeactivateRule,
     }
 
     const rules = (

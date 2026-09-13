@@ -25,6 +25,8 @@ describe('ShopMotivationSchemaMapper', () => {
                         type: 'PayPerHour',
                         name: 'Часы',
                         targetRole: 'OFFLINE_MANAGER',
+                        direction: 'shop',
+                        isActive: true,
                         props: { price: 300 },
                         createdAt,
                         updatedAt,

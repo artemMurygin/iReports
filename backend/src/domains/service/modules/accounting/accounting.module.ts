@@ -44,6 +44,8 @@ import { FindSalaryRuleForTaskService } from '@/domains/service/modules/accounti
 import { FindSalaryAccrualForTaskService } from '@/domains/service/modules/accounting/application/services/task-completion/find-salary-accrual-for-task.service';
 import { GetSalaryRuleService } from '@/domains/service/modules/accounting/application/services/task-completion/get-salary-rule.service';
 import { DeleteSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/delete-salary-rule.handler';
+import { DeactivateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/deactivate-salary-rule.handler';
+import { ReactivateSalaryRuleHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/reactivate-salary-rule.handler';
 import { WORK_SCHEDULE_ENTRY_REPOSITORY } from '@/modules/work-schedule/application/ports/work-schedule-entry.port';
 import { WorkScheduleEntryRepository } from '@/modules/work-schedule/infrastructure/repositories/work-schedule-entry.repository';
 import { CreateMotivationSchemaHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/motivation-schema/create-motivation-schema.http.controller';
@@ -74,6 +76,8 @@ import { GetErpCashConfigHttpController } from '@/domains/service/modules/accoun
 import { GetSalaryRuleHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule.http.controller';
 import { GetSalaryRuleByTaskHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule-by-task.http.controller';
 import { DeleteSalaryRuleHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-rule/delete-salary-rule.http.controller';
+import { DeactivateSalaryRuleHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-rule/deactivate-salary-rule.http.controller';
+import { ReactivateSalaryRuleHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-rule/reactivate-salary-rule.http.controller';
 import { GetSalaryAccrualLineByTaskHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-accrual/get-salary-accrual-line-by-task.http.controller';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
@@ -246,6 +250,12 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         // add-task-rule-task-lifecycle — удаление правила + его задачи
         // одной немедленной операцией (см. WHY в самом контроллере/хендлере).
         DeleteSalaryRuleHttpController,
+        // Soft-деактивация/реактивация ОДНОГО правила направления service
+        // (см. WHY в контроллерах/хендлерах) — в отличие от
+        // DeleteSalaryRuleHttpController, не удаляет правило и не трогает
+        // связанные задачи.
+        DeactivateSalaryRuleHttpController,
+        ReactivateSalaryRuleHttpController,
     ],
     providers: [
         CreateMotivationSchemaHandler,
@@ -404,6 +414,8 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         FindSalaryAccrualForTaskService,
         GetSalaryRuleService,
         DeleteSalaryRuleHandler,
+        DeactivateSalaryRuleHandler,
+        ReactivateSalaryRuleHandler,
     ],
     // ACCOUNTING_PERIOD_REPOSITORY — экспортирован для модуля
     // domains/service/modules/warehouse (service-turnover-report,

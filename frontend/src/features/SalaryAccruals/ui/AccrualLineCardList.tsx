@@ -30,6 +30,10 @@ const DOT_CLASS: Record<SalesDirection, string> = {
  * явного шеврона-аффорданса в макете нет ни у одной строки (мокап рисует «Детализация» готово
  * развёрнутой только для примера), поэтому здесь, как и в `AccrualLinesTable`'s хвостовом столбце,
  * добавлен декоративный шеврон в конце «Низ»-строки — тот же документированный приём, что и там.
+ *
+ * `onOpenRule` — см. `AccrualLinesTable`'s JSDoc: тот же клик по карточке одновременно раскрывает
+ * локальный аккордеон источников и (если передан) открывает боковую панель деталей правила по
+ * `ruleId`. Компонент остаётся презентационным — оркестрацию панели ведёт страница.
  */
 export type AccrualLineCardListProps = {
     lines: SalaryAccrualLine[]
@@ -40,6 +44,8 @@ export type AccrualLineCardListProps = {
     documentStatus: SalaryAccrualStatus
     isLineExpanded: (id: string) => boolean
     onToggleLine: (id: string) => void
+    /** Клик по карточке — открыть боковую панель деталей правила по её `ruleId`. */
+    onOpenRule?: (ruleId: string) => void
     /** «5 строк · корректировок: 1» — подвал таблицы. */
     footerNote: string
     /** «Итого 68 400 ₽». */
@@ -55,6 +61,7 @@ function AccrualLineCardList({
     documentStatus,
     isLineExpanded,
     onToggleLine,
+    onOpenRule,
     footerNote,
     footerTotal,
     className,
@@ -89,11 +96,15 @@ function AccrualLineCardList({
                             <div
                                 role="button"
                                 tabIndex={0}
-                                onClick={() => onToggleLine(line.id)}
+                                onClick={() => {
+                                    onToggleLine(line.id)
+                                    onOpenRule?.(line.ruleId)
+                                }}
                                 onKeyDown={(event) => {
                                     if (event.key !== 'Enter' && event.key !== ' ') return
                                     event.preventDefault()
                                     onToggleLine(line.id)
+                                    onOpenRule?.(line.ruleId)
                                 }}
                                 aria-expanded={expanded}
                                 className="flex cursor-pointer flex-col gap-2 p-3 text-left transition-colors hover:bg-canvas"

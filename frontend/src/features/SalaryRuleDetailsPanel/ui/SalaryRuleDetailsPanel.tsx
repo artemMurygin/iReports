@@ -4,6 +4,7 @@ import { SidePanel } from '@/shared/ui-kit/organisms/SidePanel.tsx'
 import { Button } from '@/shared/ui-kit/atoms/Button.tsx'
 
 import { useSalaryRule } from '../model/useSalaryRule.ts'
+import { useSalaryRuleActivation } from '../model/useSalaryRuleActivation.ts'
 import { SalaryRuleSummaryCard } from './SalaryRuleSummaryCard.tsx'
 
 /**
@@ -12,7 +13,11 @@ import { SalaryRuleSummaryCard } from './SalaryRuleSummaryCard.tsx'
  * (architecture.md: `SalaryRuleDetailsPanel({ ruleId, direction, open, onClose })`),
  * реэкспортируется `index.ts`. Тот же `SidePanel`, что и `TaskDetailsPanel`
  * (`features/TaskStatusControl`) — read-only, без кнопок редактирования, футер только с «Закрыть»
- * (design.md Non-Goals: редактирование остаётся на странице зарплатного правила).
+ * (design.md Non-Goals: редактирование остаётся на странице зарплатного правила). Единственное
+ * исключение — soft-деактивация/восстановление ОДНОГО правила (`rule.isActive`, кнопка «Деактивировать»/
+ * «Активировать» в теле `SalaryRuleSummaryCard`, мутация — `useSalaryRuleActivation`): это единственное
+ * место в приложении, где неактивное правило вообще видно (обычный список правил схемы его скрывает),
+ * поэтому переключатель живёт здесь же, а не только на странице схемы.
  *
  * `ruleId`/`open` разведены (а не один `ruleId !== null`, как у `TaskDetailsPanel`) — так вызывающий
  * `useSalaryRulePanel()` (tasks.md группа 30) может закрыть панель, не немедленно теряя `ruleId`
@@ -58,6 +63,7 @@ type SalaryRuleDetailsPanelContentProps = {
 
 function SalaryRuleDetailsPanelContent({ ruleId, direction, onClose }: SalaryRuleDetailsPanelContentProps) {
     const { rule, isLoading, error } = useSalaryRule(ruleId, direction)
+    const { deactivate, activate, isPending } = useSalaryRuleActivation(ruleId, direction)
 
     if (isLoading) {
         return (
@@ -75,5 +81,12 @@ function SalaryRuleDetailsPanelContent({ ruleId, direction, onClose }: SalaryRul
         )
     }
 
-    return <SalaryRuleSummaryCard rule={rule} onClose={onClose} />
+    return (
+        <SalaryRuleSummaryCard
+            rule={rule}
+            onClose={onClose}
+            onToggleActive={rule.isActive ? deactivate : activate}
+            isTogglingActive={isPending}
+        />
+    )
 }

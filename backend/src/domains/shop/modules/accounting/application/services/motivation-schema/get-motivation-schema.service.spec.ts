@@ -126,4 +126,20 @@ describe('GetShopMotivationSchemaService', () => {
 
         expect(result.target.name).toBe('Неизвестно (id: 999)');
     });
+
+    // Soft-деактивированное правило пропадает из формы редактирования — та
+    // же семантика, что и в расчёте (mergeEmployeeSalaryRules): правило не
+    // удаляется физически, но не должно попасть в ответ GET
+    // .../motivation-schema/:id (см. WHY у ShopSalaryRule.isActive).
+    it('неактивное правило не возвращается в деталях схемы', async () => {
+        const schema = buildSchema(2, 'Employee', 1);
+        const [activeRule, inactiveRule] = schema.getProps().rules;
+        inactiveRule.deactivate();
+        const { service } = buildService(schema);
+
+        const result = await service.execute('schema-id');
+
+        expect(result.rules).toHaveLength(1);
+        expect(result.rules[0].id).toBe(activeRule.id);
+    });
 });

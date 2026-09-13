@@ -51,6 +51,10 @@ export class TaskCompletion
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
     // design.md решение 4: приходящий в теле запроса taskId (id уже
     // существующей, отдельно созданной задачи) просто сохраняется в
     // config.taskIdByPeriod[текущийПериод] — CreateSalaryRuleHandler не
@@ -65,8 +69,19 @@ export class TaskCompletion
                 config: buildTaskCompletionConfig(
                     rule.config as TaskCompletionSalaryConfigRequest,
                 ),
+                isActive: true,
             },
         });
+    }
+
+    // Soft-деактивация/реактивация (см. isActive у SalaryRule) — прямая
+    // мутация props, тот же приём, что и MotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
     }
 
     // spec: service/accounting#requirement-сумма-начисления-по-правилу-за-выполнение-задачи-задаётся-руководителем-вручную

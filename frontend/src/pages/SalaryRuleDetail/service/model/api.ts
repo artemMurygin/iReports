@@ -55,4 +55,17 @@ export const api = {
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить правило'))
             }),
+
+    // Soft-delete уже сохранённого правила — правило перестаёт участвовать в расчётах и пропадает
+    // из списка `rules` в `GET .../motivation-schema/:id` (см. `isActive` comment в
+    // `contracts/commands/salary-rule.ts`), но не удаляется физически. Не через `PATCH
+    // .../motivation-schema/:id` (тот делает полную замену набора правил) — отдельный эндпоинт,
+    // обратимый через `POST .../salary-rules/:ruleId/activate`.
+    deactivateSalaryRule: (ruleId: string): Promise<void> =>
+        apiInstance
+            .post(`/v1/service/accounting/salary-rules/${ruleId}/deactivate`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось деактивировать правило'))
+            }),
 }

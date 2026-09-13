@@ -31,7 +31,10 @@ describe('DeleteShopSalaryRuleHandler', () => {
             defaultAmount: 5000,
         },
         updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+        isActive: true,
         calculate: () => null,
+        deactivate: () => {},
+        activate: () => {},
     });
 
     const buildHandler = (rule: ShopSalaryRule | null) => {

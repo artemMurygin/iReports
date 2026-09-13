@@ -170,6 +170,38 @@ describe('ResolveEmployeeSalaryRulesService', () => {
         // отличать «есть только личная» от «есть обе», иначе появление или
         // удаление схемы отдела не инвалидировало бы кэш и сотрудник
         // продолжил бы считаться по прежнему набору правил.
+        // Soft-деактивация правила (mergeEmployeeSalaryRules,
+        // src/shared/domain/employee-salary-rules.ts) — неактивное правило
+        // личной схемы не должно попасть в объединённый набор, даже когда
+        // оно всё ещё персистентно.
+        it('неактивное правило личной схемы не попадает в объединённый список', async () => {
+            const inactiveRule = ServiceCompletedEntity.create({
+                type: 'ServiceCompleted',
+                name: 'Отключённая надбавка',
+                targetRole: 'ENGINEER',
+                config: { award: { type: 'ServiceFixed' } },
+            });
+            inactiveRule.deactivate();
+            const personal = withRequestContext(() =>
+                MotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: EMPLOYEE_ID,
+                    name: 'Личная надбавка',
+                    rules: [inactiveRule],
+                }),
+            );
+            const { service } = buildService({
+                personal,
+                department: departmentSchema(),
+            });
+
+            const { rules } = await service.forEmployee(EMPLOYEE_ID);
+
+            // Только активное правило отдела — деактивированное личное
+            // правило отфильтровано.
+            expect(rules.map((rule) => rule.type)).toEqual(['PayPerHour']);
+        });
+
         it('различает версии наборов «только личная» и «личная + отдел»', async () => {
             const personal = personalSchema();
             const onlyPersonal = await buildService({

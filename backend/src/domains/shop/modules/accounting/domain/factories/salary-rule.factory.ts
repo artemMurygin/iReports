@@ -24,9 +24,15 @@ export class ShopSalaryRuleFactory {
     // сохраняется, поэтому ShopSalaryRuleRepository.update() персистит
     // правку тем же id, не удаляя/пересоздавая строку — критично для
     // TaskCompletion (задача Bitrix24 остаётся привязанной к правилу).
+    // isActive — не редактируется формой PATCH .../motivation-schema/:id
+    // (см. UpdateShopMotivationSchemaHandler), поэтому переносится с
+    // сохранившегося правила явным параметром, а не читается из rule
+    // (CreateShopSalaryRuleProps не несёт этого поля вовсе, см.
+    // ShopSalaryRuleConfig — isActive не часть create-контракта).
     static restore(
         id: string,
         rule: CreateShopSalaryRuleProps,
+        isActive: boolean,
     ): ShopSalaryRule {
         const ruleClass = shopSalaryRuleRegistry.get(rule.type);
         if (!ruleClass) {
@@ -41,6 +47,7 @@ export class ShopSalaryRuleFactory {
                 type: rule.type,
                 targetRole: rule.targetRole,
                 config: rule.config,
+                isActive,
             },
         });
     }

@@ -30,6 +30,8 @@ describe('SalaryRuleMapper', () => {
                 type: 'PayPerHour',
                 name: 'Часы',
                 targetRole: 'ENGINEER',
+                direction: 'service',
+                isActive: true,
                 props: { price: 300 },
                 createdAt,
                 updatedAt,
@@ -59,6 +61,8 @@ describe('SalaryRuleMapper', () => {
                 type: 'ServiceCompleted',
                 name: 'Услуги',
                 targetRole: 'ENGINEER',
+                direction: 'service',
+                isActive: true,
                 props: { award: { type: 'ServiceFixed' } },
                 createdAt,
                 updatedAt,
@@ -76,6 +80,8 @@ describe('SalaryRuleMapper', () => {
                     type: 'Unknown',
                     name: 'Что-то',
                     targetRole: 'ENGINEER',
+                    direction: 'service',
+                    isActive: true,
                     props: {},
                     createdAt,
                     updatedAt,
@@ -91,6 +97,8 @@ describe('SalaryRuleMapper', () => {
                     type: 'PayPerHour',
                     name: 'Часы',
                     targetRole: 'ENGINEER',
+                    direction: 'service',
+                    isActive: true,
                     // price обязателен схемой payPerHourSalaryConfigSchema
                     props: {},
                     createdAt,
@@ -107,6 +115,8 @@ describe('SalaryRuleMapper', () => {
                     type: 'PayPerHour',
                     name: 'Часы',
                     targetRole: 'UNKNOWN_ROLE',
+                    direction: 'service',
+                    isActive: true,
                     props: { price: 300 },
                     createdAt,
                     updatedAt,
@@ -132,6 +142,7 @@ describe('SalaryRuleMapper', () => {
                 name: 'Часы',
                 targetRole: 'ENGINEER',
                 props: { price: 500 },
+                isActive: true,
             });
             expect(record.createdAt).toBeInstanceOf(Date);
             expect(record.updatedAt).toBeInstanceOf(Date);

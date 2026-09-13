@@ -55,6 +55,10 @@ export class PayPerHourShopEntity
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
     static create(rule: CreateShopSalaryRuleProps): PayPerHourShopEntity {
         return new PayPerHourShopEntity({
             id: randomUUID(),
@@ -63,8 +67,19 @@ export class PayPerHourShopEntity
                 type: 'PayPerHour',
                 targetRole: rule.targetRole,
                 config: rule.config as PayPerHourShopSalaryConfig,
+                isActive: true,
             },
         });
+    }
+
+    // Soft-деактивация/реактивация (см. WHY у ShopSalaryRule.isActive) — та
+    // же прямая мутация props, что и у ShopMotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
     }
 
     // erpData.hoursWorked несёт ОБА значения (fact/prognose) сразу — режим

@@ -60,6 +60,7 @@ export function RuleFormCard({
     onOpenTask,
     onCreateTask,
     onDeleteRule,
+    onDeactivateRule,
     onDelete,
     className,
 }: RuleFormCardProps) {
@@ -87,6 +88,7 @@ export function RuleFormCard({
                     categories={categories}
                     onCancel={handleCollapse}
                     onDelete={() => onDelete(draft.draftId)}
+                    onDeactivateRule={onDeactivateRule}
                 />
 
                 <div className="flex flex-col gap-3.5 p-3.5">

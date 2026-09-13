@@ -134,6 +134,39 @@ describe('GetMotivationSchemaService', () => {
         });
     });
 
+    // Soft-деактивация правила (MotivationSchemaMapper.toDetailResponse) —
+    // неактивное правило не должно попадать в ответ, даже если оно всё ещё
+    // персистентно.
+    it('неактивное правило не возвращается в деталях схемы', async () => {
+        await withRequestContext(async () => {
+            const activeRule = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Активное',
+                targetRole: 'ENGINEER',
+                config: { price: 100 },
+            });
+            const inactiveRule = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Неактивное',
+                targetRole: 'ENGINEER',
+                config: { price: 200 },
+            });
+            inactiveRule.deactivate();
+            const schema = MotivationSchema.create({
+                targetType: 'Employee',
+                targetId: 42,
+                name: 'Оклад',
+                rules: [activeRule, inactiveRule],
+            });
+            const { service } = buildService(schema);
+
+            const result = await service.execute(schema.id);
+
+            expect(result.rules).toHaveLength(1);
+            expect(result.rules[0].name).toBe('Активное');
+        });
+    });
+
     it('подставляет фоллбек-имя для targetId, не найденного в справочнике', async () => {
         await withRequestContext(async () => {
             const schema = buildSchema('Employee', 999, 1);

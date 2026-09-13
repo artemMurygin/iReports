@@ -14,8 +14,9 @@ import { SalaryRuleDetailsPanel } from './SalaryRuleDetailsPanel.tsx'
  * GET -> UI, включая состояния загрузки/ошибки и футер «Закрыть».
  */
 vi.mock('@/shared/api/axios.instance.ts', () => ({
-    api: { get: vi.fn() },
+    api: { get: vi.fn(), post: vi.fn() },
 }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const RULE_DETAIL = {
     id: 'rule-1',
@@ -31,10 +32,13 @@ const RULE_DETAIL = {
     },
     direction: 'service',
     motivationSchemaName: 'Инженеры',
+    isActive: true,
 }
 
-function renderPanel(props: Partial<ComponentProps<typeof SalaryRuleDetailsPanel>> = {}) {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+function renderPanel(
+    props: Partial<ComponentProps<typeof SalaryRuleDetailsPanel>> = {},
+    queryClient: QueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
     const onClose = vi.fn()
     render(
         <QueryClientProvider client={queryClient}>
@@ -47,12 +51,13 @@ function renderPanel(props: Partial<ComponentProps<typeof SalaryRuleDetailsPanel
             />
         </QueryClientProvider>,
     )
-    return { onClose }
+    return { onClose, queryClient }
 }
 
 describe('SalaryRuleDetailsPanel', () => {
     beforeEach(() => {
         vi.mocked(axiosInstance.get).mockReset()
+        vi.mocked(axiosInstance.post).mockReset()
     })
 
     it('ничего не запрашивает и не рендерит содержимое, пока ruleId === null', () => {
@@ -103,5 +108,53 @@ describe('SalaryRuleDetailsPanel', () => {
         await user.click(screen.getByRole('button', { name: 'Закрыть' }))
 
         await waitFor(() => expect(onClose).toHaveBeenCalled())
+    })
+
+    it('показывает бейдж "Неактивно" и кнопку "Активировать" для неактивного правила', async () => {
+        vi.mocked(axiosInstance.get).mockResolvedValue({ data: { ...RULE_DETAIL, isActive: false } })
+
+        renderPanel()
+        await screen.findByText('Обновить фото витрины')
+
+        expect(screen.getByText('Неактивно')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Активировать' })).toBeInTheDocument()
+    })
+
+    it('клик по "Деактивировать" вызывает POST .../deactivate и инвалидирует кэш правила и схемы', async () => {
+        const user = userEvent.setup()
+        vi.mocked(axiosInstance.get).mockResolvedValue({ data: RULE_DETAIL })
+        vi.mocked(axiosInstance.post).mockResolvedValue({ data: undefined })
+        const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+        renderPanel({}, queryClient)
+        await screen.findByText('Обновить фото витрины')
+
+        await user.click(screen.getByRole('button', { name: 'Деактивировать' }))
+
+        await waitFor(() =>
+            expect(axiosInstance.post).toHaveBeenCalledWith('/v1/service/accounting/salary-rules/rule-1/deactivate'),
+        )
+        await waitFor(() =>
+            expect(invalidateSpy).toHaveBeenCalledWith(
+                expect.objectContaining({ queryKey: expect.arrayContaining(['service', 'rule-1']) }),
+            ),
+        )
+        expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['motivation-schema'] }))
+    })
+
+    it('клик по "Активировать" вызывает POST .../activate', async () => {
+        const user = userEvent.setup()
+        vi.mocked(axiosInstance.get).mockResolvedValue({ data: { ...RULE_DETAIL, isActive: false } })
+        vi.mocked(axiosInstance.post).mockResolvedValue({ data: undefined })
+
+        renderPanel()
+        await screen.findByText('Обновить фото витрины')
+
+        await user.click(screen.getByRole('button', { name: 'Активировать' }))
+
+        await waitFor(() =>
+            expect(axiosInstance.post).toHaveBeenCalledWith('/v1/service/accounting/salary-rules/rule-1/activate'),
+        )
     })
 })

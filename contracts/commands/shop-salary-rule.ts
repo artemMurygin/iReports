@@ -207,12 +207,17 @@ const taskCompletionShopSalaryRuleResponseSchema = z.object({
     name: z.string(),
     targetRole: targetRoleSchema,
     config: taskCompletionShopSalaryConfigResponseSchema,
+    // Soft-деактивация зарплатного правила — правило не удаляется физически,
+    // а перестаёт участвовать в расчётах и пропадает из UI схемы. Только
+    // ответ — форма создания/редактирования правила им не управляет (см.
+    // request-схемы выше, где isActive отсутствует).
+    isActive: z.boolean(),
 });
 
 const shopSalaryRuleResponseSchema = z.discriminatedUnion('type', [
-    payPerHourShopSalaryRuleSchema.extend({ id: z.string() }),
-    productSoldSalaryRuleSchema.extend({ id: z.string() }),
-    usedProductSoldSalaryRuleSchema.extend({ id: z.string() }),
+    payPerHourShopSalaryRuleSchema.extend({ id: z.string(), isActive: z.boolean() }),
+    productSoldSalaryRuleSchema.extend({ id: z.string(), isActive: z.boolean() }),
+    usedProductSoldSalaryRuleSchema.extend({ id: z.string(), isActive: z.boolean() }),
     taskCompletionShopSalaryRuleResponseSchema,
 ]);
 

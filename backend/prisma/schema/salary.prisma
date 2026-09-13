@@ -71,6 +71,11 @@ model SalaryRule {
   // 'service' — обратная совместимость: все существующие на момент
   // миграции строки были созданы единственным на тот момент направлением.
   direction          String   @default("service")
+  // Soft-деактивация правила (фундамент фичи "soft-деактивация зарплатного
+  // правила"): деактивированное правило перестаёт участвовать в расчётах
+  // (см. mergeEmployeeSalaryRules в src/shared/domain/employee-salary-rules.ts)
+  // и пропадает из UI схемы, но не удаляется физически.
+  isActive           Boolean  @default(true)
   props              Json
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")

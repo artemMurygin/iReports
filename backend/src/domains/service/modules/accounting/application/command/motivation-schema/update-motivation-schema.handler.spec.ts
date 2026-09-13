@@ -196,6 +196,102 @@ describe('UpdateMotivationSchemaHandler', () => {
         });
     });
 
+    // Фронтенд не видит неактивные правила (MotivationSchemaMapper.toDetailResponse),
+    // поэтому PATCH никогда не приносит их id в command.rules — без фильтрации
+    // oldRules по isActive diff-логика ошибочно посчитала бы такое правило
+    // removedRules и физически удалила бы его при любом сохранении схемы.
+    it('PATCH без неактивного правила в теле НЕ удаляет его физически', async () => {
+        await withRequestContext(async () => {
+            const activeRule = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Активное правило',
+                targetRole: 'ENGINEER',
+                config: { price: 100 },
+            });
+            const inactiveRule = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Неактивное правило',
+                targetRole: 'ENGINEER',
+                config: { price: 200 },
+            });
+            inactiveRule.deactivate();
+            const existingSchema = MotivationSchema.create({
+                targetType: 'Employee',
+                targetId: 1,
+                name: 'Старое имя',
+                rules: [activeRule, inactiveRule],
+            });
+            const { handler, deleteByIds, updateRule } =
+                buildHandler(existingSchema);
+            const command = new UpdateMotivationSchemaCommand({
+                motivationSchemaId: existingSchema.id,
+                name: 'Новое имя',
+                rules: [
+                    {
+                        id: activeRule.id,
+                        type: 'PayPerHour',
+                        name: activeRule.name,
+                        targetRole: 'ENGINEER',
+                        config: { price: 100 },
+                    },
+                ],
+            });
+
+            await handler.execute(command);
+
+            // Неактивное правило не пришло в payload, но не должно попасть
+            // ни в deleteByIds (физическое удаление), ни рассматриваться как
+            // "убранное".
+            expect(deleteByIds).toHaveBeenCalledWith([]);
+            expect(updateRule).toHaveBeenCalledTimes(1);
+            expect(updateRule.mock.calls[0][0].id).toBe(activeRule.id);
+        });
+    });
+
+    // SalaryRuleFactory.restore() должен получать isActive СТАРОГО правила,
+    // а не хардкодить/сбрасывать его при каждом PATCH — активное
+    // отредактированное на месте правило обязано остаться активным (см. WHY
+    // у restore()). Неактивное старое правило не может пройти этим же путём
+    // (kept по id) — оно уже отфильтровано из oldRules ДО diff'а (см. тест
+    // выше "PATCH без неактивного правила..."), поэтому единственный
+    // реально достижимый случай kept-правила — активное.
+    it('отредактированное kept-правило сохраняет свой isActive после PATCH', async () => {
+        await withRequestContext(async () => {
+            const rule = PayPerHoursEntity.create({
+                type: 'PayPerHour',
+                name: 'Часы',
+                targetRole: 'ENGINEER',
+                config: { price: 100 },
+            });
+            const existingSchema = MotivationSchema.create({
+                targetType: 'Employee',
+                targetId: 1,
+                name: 'Старое имя',
+                rules: [rule],
+            });
+            const { handler, updateRule } = buildHandler(existingSchema);
+            const command = new UpdateMotivationSchemaCommand({
+                motivationSchemaId: existingSchema.id,
+                name: 'Новое имя',
+                rules: [
+                    {
+                        id: rule.id,
+                        type: 'PayPerHour',
+                        name: 'Часы (отредактировано)',
+                        targetRole: 'ENGINEER',
+                        config: { price: 300 },
+                    },
+                ],
+            });
+
+            await handler.execute(command);
+
+            expect(updateRule).toHaveBeenCalledTimes(1);
+            const [entity] = updateRule.mock.calls[0];
+            expect(entity.isActive).toBe(true);
+        });
+    });
+
     it('id совпадает со старым правилом, но тип изменился — старое удаляется, новое создаётся (не update)', async () => {
         await withRequestContext(async () => {
             const existingSchema = buildExistingSchema();
@@ -340,6 +436,7 @@ describe('UpdateMotivationSchemaHandler', () => {
                         deadlineTemplate: '2026-08-05',
                         defaultAmount: 5000,
                     },
+                    isActive: true,
                 },
             });
             const schema = MotivationSchema.create({

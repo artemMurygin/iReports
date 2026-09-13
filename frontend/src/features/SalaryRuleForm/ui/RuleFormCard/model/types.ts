@@ -47,6 +47,14 @@ export type RuleFormCardContext = {
      * on the schema-CREATE page (`pages/SalaryRules`), where no rule is persisted yet — every draft
      * there has `ruleId === undefined`, so the callback is never invoked. */
     onDeleteRule?: (ruleId: string) => Promise<void>
+    /** Деактивирует уже сохранённое правило (`draft.ruleId` задан) на бэкенде —
+     * `POST .../salary-rules/:ruleId/deactivate` (soft-delete: правило перестаёт участвовать в
+     * расчётах и пропадает из будущих `GET .../motivation-schema/:id`, см. `isActive` comment в
+     * `contracts/commands/salary-rule.ts`). `undefined` на странице создания схемы
+     * (`pages/SalaryRules`), где `draft.ruleId` всегда `undefined` — деактивировать там ещё нечего,
+     * кнопка не рендерится (см. `RuleFormCardHeader`). В отличие от `onDeleteRule` — применимо к
+     * правилу ЛЮБОГО типа, не только `TaskCompletion`, и не трогает связанную с правилом задачу. */
+    onDeactivateRule?: (ruleId: string) => Promise<void>
 }
 
 export type RuleFormCardProps = RuleFormCardContext & {

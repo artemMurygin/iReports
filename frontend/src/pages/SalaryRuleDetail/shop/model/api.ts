@@ -49,4 +49,13 @@ export const api = {
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось удалить правило'))
             }),
+
+    // Зеркало `service/model/api.ts`'s `deactivateSalaryRule`.
+    deactivateSalaryRule: (ruleId: string): Promise<void> =>
+        apiInstance
+            .post(`/v1/shop/accounting/salary-rules/${ruleId}/deactivate`)
+            .then(() => undefined)
+            .catch((error) => {
+                throw new ApiError(extractApiErrorMessage(error, 'Не удалось деактивировать правило'))
+            }),
 }

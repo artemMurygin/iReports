@@ -321,6 +321,7 @@ describe('draftFromRule — TaskCompletion', () => {
             type: 'TaskCompletion',
             name: 'Обновить фото витрины',
             targetRole: 'ENGINEER',
+            isActive: true,
             config: {
                 taskTitleTemplate: 'Обновить фото витрины ({месяц})',
                 taskDescriptionTemplate: 'Смотри требования в ТЗ',
@@ -358,6 +359,7 @@ describe('draftFromRule — TaskCompletion', () => {
             type: 'TaskCompletion',
             name: 'Обновить фото витрины',
             targetRole: 'ENGINEER',
+            isActive: true,
             config: {
                 taskTitleTemplate: 'Обновить фото витрины',
                 isRecurring: true,
@@ -376,6 +378,7 @@ describe('draftFromRule — TaskCompletion', () => {
             type: 'TaskCompletion',
             name: 'Проверка склада',
             targetRole: 'ENGINEER',
+            isActive: true,
             config: {
                 taskTitleTemplate: '',
                 isRecurring: false,

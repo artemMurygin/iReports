@@ -269,13 +269,24 @@ export type SalaryRuleRequest = z.infer<typeof salaryRuleRequestSchema>;
 // salaryRuleRequestSchema, плюс id (правило уже персистентно). Каждый
 // вариант расширяется отдельно (.extend на самой union-схеме zod не
 // поддерживает), чтобы `type` остался дискриминантом.
+// isActive — soft-деактивация правила (правило перестаёт участвовать в
+// расчётах и пропадает из ответа GET .../motivation-schema/:id, но не
+// удаляется физически, см. deactivate-salary-rule.command.ts на бэкенде).
+// Только ответ — клиент никогда не отправляет это поле, переключение только
+// через отдельные эндпоинты .../salary-rules/:ruleId/deactivate|activate, не
+// через PATCH схемы.
 const payPerHourSalaryRuleResponseSchema = payPerHourSalaryRuleSchema.extend({
     id: z.string(),
+    isActive: z.boolean(),
 });
 const serviceCompletedSalaryRuleResponseSchema =
-    serviceCompletedSalaryRuleSchema.extend({ id: z.string() });
+    serviceCompletedSalaryRuleSchema.extend({
+        id: z.string(),
+        isActive: z.boolean(),
+    });
 const orderPayedSalaryRuleResponseSchema = orderPayedSalaryRuleSchema.extend({
     id: z.string(),
+    isActive: z.boolean(),
 });
 // Не taskCompletionSalaryRuleSchema.extend({ id }) — config различается между запросом и ответом
 // (taskId vs taskIdByPeriod, см. taskCompletionSalaryConfigResponseSchema выше), поэтому вся форма
@@ -286,6 +297,7 @@ const taskCompletionSalaryRuleResponseSchema = z.object({
     name: z.string(),
     targetRole: targetRoleSchema,
     config: taskCompletionSalaryConfigResponseSchema,
+    isActive: z.boolean(),
 });
 
 const salaryRuleResponseSchema = z.discriminatedUnion('type', [

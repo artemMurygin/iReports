@@ -107,9 +107,13 @@ import { FindSalaryRuleForTaskService } from '@/domains/shop/modules/accounting/
 import { FindSalaryAccrualForTaskService } from '@/domains/shop/modules/accounting/application/services/salary-task/find-salary-accrual-for-task.service';
 import { GetSalaryRuleService } from '@/domains/shop/modules/accounting/application/services/salary-task/get-salary-rule.service';
 import { DeleteShopSalaryRuleHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/delete-salary-rule.handler';
+import { DeactivateShopSalaryRuleHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/deactivate-salary-rule.handler';
+import { ReactivateShopSalaryRuleHandler } from '@/domains/shop/modules/accounting/application/command/motivation-schema/reactivate-salary-rule.handler';
 import { GetShopSalaryRuleHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule.http.controller';
 import { GetShopSalaryRuleByTaskHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/get-salary-rule-by-task.http.controller';
 import { DeleteShopSalaryRuleHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/delete-salary-rule.http.controller';
+import { DeactivateShopSalaryRuleHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/deactivate-salary-rule.http.controller';
+import { ReactivateShopSalaryRuleHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-rule/reactivate-salary-rule.http.controller';
 import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/modules/accounting/interface/http-controllers/salary-accrual/get-salary-accrual-line-by-task.http.controller';
 
 // Модуль accounting магазина (Фазы 12/13, issue #57/#64, персистентность и
@@ -293,6 +297,11 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         // add-task-rule-task-lifecycle — удаление правила + его задачи
         // одной немедленной операцией.
         DeleteShopSalaryRuleHttpController,
+        // Soft-деактивация зарплатного правила — правило перестаёт
+        // участвовать в расчётах и пропадает из UI схемы, но не удаляется
+        // физически (в отличие от DeleteShopSalaryRuleHttpController выше).
+        DeactivateShopSalaryRuleHttpController,
+        ReactivateShopSalaryRuleHttpController,
     ],
     providers: [
         ListShopSalaryRuleTypesService,
@@ -465,6 +474,8 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         FindSalaryAccrualForTaskService,
         GetSalaryRuleService,
         DeleteShopSalaryRuleHandler,
+        DeactivateShopSalaryRuleHandler,
+        ReactivateShopSalaryRuleHandler,
     ],
     exports: [
         SHOP_MOTIVATION_SCHEMA_REPOSITORY,

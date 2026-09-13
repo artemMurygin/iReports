@@ -13,6 +13,8 @@ export type SalaryAccrualDocumentBodyProps = {
     progress: AccrualProgress
     isLineExpanded: (id: string) => boolean
     onToggleLine: (id: string) => void
+    /** Клик по строке начисления — открыть боковую панель деталей её правила. */
+    onOpenRule: (ruleId: string) => void
     footerNote: string
     footerNoteMobile: string
     footerTotal: string
@@ -34,6 +36,7 @@ export function SalaryAccrualDocumentBody({
     progress,
     isLineExpanded,
     onToggleLine,
+    onOpenRule,
     footerNote,
     footerNoteMobile,
     footerTotal,
@@ -59,6 +62,7 @@ export function SalaryAccrualDocumentBody({
                 documentStatus={document.status}
                 isLineExpanded={isLineExpanded}
                 onToggleLine={onToggleLine}
+                onOpenRule={onOpenRule}
                 footerNote={footerNote}
                 footerTotal={footerTotal}
                 className="hidden md:block"
@@ -71,6 +75,7 @@ export function SalaryAccrualDocumentBody({
                 documentStatus={document.status}
                 isLineExpanded={isLineExpanded}
                 onToggleLine={onToggleLine}
+                onOpenRule={onOpenRule}
                 footerNote={footerNoteMobile}
                 footerTotal={footerTotal}
                 className="md:hidden"

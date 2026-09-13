@@ -213,6 +213,86 @@ describe('UpdateShopMotivationSchemaHandler', () => {
         });
     });
 
+    it('kept-правило сохраняет isActive после PATCH', async () => {
+        await withRequestContext(async () => {
+            const schema = buildExistingSchema();
+            const oldRuleId = schema.getProps().rules[0].id;
+            const { handler, updateRule } = buildHandler(schema);
+            const command = new UpdateShopMotivationSchemaCommand({
+                motivationSchemaId: 'schema-id',
+                name: 'Новое название',
+                rules: [
+                    {
+                        id: oldRuleId,
+                        type: 'PayPerHour',
+                        name: 'Часы (отредактировано)',
+                        targetRole: 'ONLINE_MANAGER',
+                        config: { price: 250 },
+                    },
+                ],
+            });
+
+            await handler.execute(command);
+
+            expect(updateRule).toHaveBeenCalledTimes(1);
+            const [entity] = updateRule.mock.calls[0];
+            expect(entity.isActive).toBe(true);
+        });
+    });
+
+    // Деактивированное правило исключено из oldRules ДО diff'а
+    // (UpdateShopMotivationSchemaHandler), поэтому даже если оно не
+    // упомянуто в payload — оно не считается "реально удалённым" и не
+    // должно физически удаляться (см. WHY у ShopSalaryRule.isActive).
+    it('PATCH без неактивного правила не удаляет его физически', async () => {
+        await withRequestContext(async () => {
+            const activeRule = ShopSalaryRuleFactory.create({
+                type: 'PayPerHour',
+                name: 'Часы',
+                targetRole: 'ONLINE_MANAGER',
+                config: { price: 100 },
+            });
+            const inactiveRule = ShopSalaryRuleFactory.create({
+                type: 'PayPerHour',
+                name: 'Старое правило',
+                targetRole: 'ONLINE_MANAGER',
+                config: { price: 50 },
+            });
+            inactiveRule.deactivate();
+
+            const schema = new ShopMotivationSchema({
+                id: 'schema-id',
+                props: {
+                    target: {
+                        getType: () => 'Employee',
+                        getId: () => 1,
+                    } as unknown as ShopMotivationTarget,
+                    name: 'Старое название',
+                    rules: [activeRule, inactiveRule],
+                },
+            });
+
+            const { handler, deleteByIds } = buildHandler(schema);
+            const command = new UpdateShopMotivationSchemaCommand({
+                motivationSchemaId: 'schema-id',
+                name: 'Новое название',
+                rules: [
+                    {
+                        id: activeRule.id,
+                        type: 'PayPerHour',
+                        name: 'Часы',
+                        targetRole: 'ONLINE_MANAGER',
+                        config: { price: 100 },
+                    },
+                ],
+            });
+
+            await handler.execute(command);
+
+            expect(deleteByIds).toHaveBeenCalledWith([]);
+        });
+    });
+
     it('диспатчит CreateShopSalaryRuleCommand для каждого правила из payload', async () => {
         await withRequestContext(async () => {
             const schema = buildExistingSchema();
@@ -334,7 +414,10 @@ describe('UpdateShopMotivationSchemaHandler', () => {
                     defaultAmount: 5000,
                 },
                 updatedAt: new Date('2026-08-01T00:00:00.000Z'),
+                isActive: true,
                 calculate: () => null,
+                deactivate: () => {},
+                activate: () => {},
             };
             const schema = new ShopMotivationSchema({
                 id: 'schema-id',

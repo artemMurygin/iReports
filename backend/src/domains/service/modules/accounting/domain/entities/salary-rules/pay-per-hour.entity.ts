@@ -51,6 +51,10 @@ export class PayPerHoursEntity
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
     // сценарий "создать с нуля": id и даты всегда генерируются заново.
     static create(rule: CreateSalaryRuleProps): PayPerHoursEntity {
         return new PayPerHoursEntity({
@@ -60,8 +64,19 @@ export class PayPerHoursEntity
                 type: 'PayPerHour',
                 targetRole: rule.targetRole,
                 config: rule.config as PayPerHourSalaryConfig,
+                isActive: true,
             },
         });
+    }
+
+    // Soft-деактивация/реактивация (см. isActive у SalaryRule) — прямая
+    // мутация props, тот же приём, что и MotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
     }
 
     // spec: service/accounting#scenario-отсутствие-подходящих-часов-начисление-0-а-не-ошибка

@@ -31,6 +31,7 @@ export type PayPerHourShopSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: PayPerHourShopSalaryConfig;
+    isActive: boolean;
 };
 
 // ========================== За проданный товар ========================== //
@@ -65,6 +66,7 @@ export type ProductSoldSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: ProductSoldSalaryConfig;
+    isActive: boolean;
 };
 
 // ========================== Вознаграждение закупщику БУ техники ========================== //
@@ -89,6 +91,7 @@ export type UsedProductSoldSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: UsedProductSoldSalaryConfig;
+    isActive: boolean;
 };
 
 // ========================== За выполнение задачи ========================== //
@@ -133,6 +136,7 @@ export type TaskCompletionShopSalaryRule = {
     name: string;
     targetRole: TargetRole;
     config: TaskCompletionShopSalaryConfig;
+    isActive: boolean;
 };
 
 export type ShopSalaryRuleConfig =
@@ -169,7 +173,18 @@ export type ShopSalaryRule = {
     readonly targetRole: TargetRole;
     readonly config: ShopSalaryRuleConfig;
     readonly updatedAt: Date;
+    // Soft-деактивация зарплатного правила (фундамент фичи "soft-деактивация
+    // зарплатного правила") — деактивированное правило перестаёт участвовать
+    // в расчётах (см. mergeEmployeeSalaryRules,
+    // src/shared/domain/employee-salary-rules.ts) и пропадает из UI схемы, но
+    // не удаляется физически. Зеркало domains/service.
+    readonly isActive: boolean;
     calculate(
         context: ShopCalculationContext,
     ): CalculationLine | null | Promise<CalculationLine | null>;
+    // Soft-деактивация/реактивация (DeactivateShopSalaryRuleHandler/
+    // ReactivateShopSalaryRuleHandler) — прямая мутация isActive, тот же
+    // приём, что и ShopMotivationSchema.rename().
+    deactivate(): void;
+    activate(): void;
 };

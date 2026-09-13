@@ -41,7 +41,10 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
             ...config,
         },
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        isActive: true,
         calculate: () => null,
+        deactivate: () => {},
+        activate: () => {},
     });
 
     const buildService = (overrides?: {
@@ -198,7 +201,10 @@ describe('filterRecurringTaskCompletionShopRules', () => {
         targetRole: 'OFFLINE_MANAGER',
         config: { price: 100 },
         updatedAt: new Date(),
+        isActive: true,
         calculate: () => null,
+        deactivate: () => {},
+        activate: () => {},
     };
 
     const buildTaskRule = (isRecurring: boolean): ShopSalaryRule => ({
@@ -215,7 +221,10 @@ describe('filterRecurringTaskCompletionShopRules', () => {
             taskLinkTemplates: [],
         },
         updatedAt: new Date(),
+        isActive: true,
         calculate: () => null,
+        deactivate: () => {},
+        activate: () => {},
     });
 
     it('оставляет только регулярные TaskCompletion-правила', () => {

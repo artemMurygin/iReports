@@ -194,6 +194,54 @@ describe('ResolveShopEmployeeSalaryRulesService', () => {
 
             expect(both.schemasVersion).not.toBe(onlyPersonal.schemasVersion);
         });
+
+        // mergeEmployeeSalaryRules (src/shared/domain/employee-salary-rules.ts)
+        // фильтрует оба списка по isActive — soft-деактивированное правило не
+        // должно попасть ни в один расчётный сценарий (см. WHY у
+        // ShopSalaryRule.isActive).
+        it('неактивное правило не попадает в объединённый список', async () => {
+            const inactiveRule = PayPerHourShopEntity.create({
+                type: 'PayPerHour',
+                name: 'Старая ставка (деактивирована)',
+                targetRole: 'OFFLINE_MANAGER',
+                config: { price: 999 },
+            });
+            inactiveRule.deactivate();
+
+            const personal = withRequestContext(() =>
+                ShopMotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: EMPLOYEE_ID,
+                    name: 'Личная надбавка',
+                    rules: [
+                        ProductSoldEntity.create({
+                            type: 'ProductSold',
+                            name: 'Продажа товара',
+                            targetRole: 'OFFLINE_MANAGER',
+                            config: {
+                                category: null,
+                                award: {
+                                    type: 'FixedPercent',
+                                    percent: 5,
+                                    salaryBasis: 'REVENUE',
+                                },
+                            },
+                        }),
+                        inactiveRule,
+                    ],
+                }),
+            );
+
+            const { service } = buildService({
+                personal,
+                department: null,
+                departmentId: null,
+            });
+
+            const { rules } = await service.forEmployee(EMPLOYEE_ID);
+
+            expect(rules.map((rule) => rule.type)).toEqual(['ProductSold']);
+        });
     });
 
     describe('forDepartment', () => {

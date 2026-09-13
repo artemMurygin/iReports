@@ -42,6 +42,10 @@ export class ServiceCompletedEntity
         return this.props.config;
     }
 
+    get isActive(): boolean {
+        return this.props.isActive;
+    }
+
     // сценарий "создать с нуля": id и даты всегда генерируются заново.
     static create(rule: CreateSalaryRuleProps): ServiceCompletedEntity {
         return new ServiceCompletedEntity({
@@ -51,8 +55,19 @@ export class ServiceCompletedEntity
                 type: 'ServiceCompleted',
                 targetRole: rule.targetRole,
                 config: rule.config as ServiceCompletedSalaryConfig,
+                isActive: true,
             },
         });
+    }
+
+    // Soft-деактивация/реактивация (см. isActive у SalaryRule) — прямая
+    // мутация props, тот же приём, что и MotivationSchema.rename().
+    deactivate(): void {
+        this.props.isActive = false;
+    }
+
+    activate(): void {
+        this.props.isActive = true;
     }
 
     // Правило само определяет выборку по своей роли (Фаза 7): фильтрует
