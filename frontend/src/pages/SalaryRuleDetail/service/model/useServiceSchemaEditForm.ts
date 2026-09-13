@@ -11,6 +11,7 @@ import {
     useTaskLinkPanels,
     type RuleFormConfig,
     type RuleType,
+    type WarehouseFieldWarehouse,
 } from '@/features/SalaryRuleForm'
 
 import { api } from './api.ts'
@@ -28,6 +29,9 @@ export type UseServiceSchemaEditFormArgs = {
     orderTypes: OrderTypeResponse[]
     isOrderTypesLoading: boolean
     orderTypesError: string | null
+    warehouses: WarehouseFieldWarehouse[]
+    isWarehousesLoading: boolean
+    warehousesError: string | null
 }
 
 /**
@@ -47,6 +51,9 @@ export function useServiceSchemaEditForm({
     orderTypes,
     isOrderTypesLoading,
     orderTypesError,
+    warehouses,
+    isWarehousesLoading,
+    warehousesError,
 }: UseServiceSchemaEditFormArgs) {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -148,6 +155,9 @@ export function useServiceSchemaEditForm({
         orderTypes,
         isOrderTypesLoading,
         orderTypesError,
+        warehouses,
+        isWarehousesLoading,
+        warehousesError,
         canSave,
         isSubmitting: updateSchema.isPending,
         handleSave,

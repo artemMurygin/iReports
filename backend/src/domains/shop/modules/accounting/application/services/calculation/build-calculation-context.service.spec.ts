@@ -8,6 +8,11 @@ import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.
 import type { Task } from '@/modules/tasks/domain/entities/task.entity';
 import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { DepartmentPercentEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-percent.entity';
+import { DepartmentPlanBonusEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-plan-bonus.entity';
+import { DepartmentTurnoverBonusEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-turnover-bonus.entity';
+import { turnoverPerformanceScopeKey } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
+import type { ShopTurnoverPerformanceReaderPort } from '@/domains/shop/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
 
 // Юнит для BuildShopCalculationContextService (Фаза 13.5, issue #57) —
 // зеркало по духу спека сборки контекста сервиса (нет отдельного файла у
@@ -43,6 +48,9 @@ describe('BuildShopCalculationContextService', () => {
         // findManyByIds фейка TASK_REPOSITORY (src/modules/tasks),
         // переопределяемый тестами erpData.taskCompletionStatuses ниже.
         findManyByIds?: jest.Mock;
+        // Implements FR4 of add-department-head-salary-rules (tasks.md раздел 13) —
+        // мок SHOP_TURNOVER_PERFORMANCE_READER, переопределяемый тестами turnoverPerformance ниже.
+        turnoverFindForScope?: jest.Mock;
     }) => {
         const findEmployeeIdentities = jest.fn().mockResolvedValue([]);
         const findHoursWorked = jest
@@ -101,10 +109,18 @@ describe('BuildShopCalculationContextService', () => {
             findMany: jest.fn(),
         } as unknown as TaskRepositoryPort;
 
+        const turnoverFindForScope =
+            overrides?.turnoverFindForScope ??
+            jest.fn().mockResolvedValue(null);
+        const turnoverPerformanceReader: ShopTurnoverPerformanceReaderPort = {
+            findForScope: turnoverFindForScope,
+        };
+
         const service = new BuildShopCalculationContextService(
             dataSource,
             salesPerformanceReader,
             taskRepo,
+            turnoverPerformanceReader,
         );
 
         return {
@@ -119,6 +135,7 @@ describe('BuildShopCalculationContextService', () => {
             findEmployeeDepartmentId,
             resolveCategoryDescendantFolderIds,
             findForScope,
+            turnoverFindForScope,
         };
     };
 
@@ -431,6 +448,258 @@ describe('BuildShopCalculationContextService', () => {
 
             expect(findManyByIds).not.toHaveBeenCalled();
             expect(context.erpData.taskCompletionStatuses).toEqual({});
+        });
+    });
+
+    // Implements FR2-FR4 of add-department-head-salary-rules (tasks.md раздел 13, зеркало service —
+    // build-service-calculation-context.service.spec.ts).
+    describe('departmentSalesPerformance / turnoverPerformance', () => {
+        const buildFakeShopSalesPerformance = (
+            turnover: number,
+            margin: number,
+            percentCompletion: number,
+        ): ShopSalesPerformance =>
+            ({
+                getFact: () => ({
+                    getTurnover: () => turnover,
+                    getMargin: () => margin,
+                    getPercentCompletion: () => percentCompletion,
+                }),
+            }) as unknown as ShopSalesPerformance;
+
+        const percentBorders = [
+            {
+                name: 'A',
+                fromPlanPercent: 50,
+                multiplier: 0.5,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'B',
+                fromPlanPercent: 70,
+                multiplier: 1,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'C',
+                fromPlanPercent: 100,
+                multiplier: 1.5,
+                mode: 'FIX' as const,
+            },
+        ] as const;
+
+        const buildDepartmentPercentRule = (category: string | null) =>
+            DepartmentPercentEntity.create({
+                type: 'DepartmentPercent',
+                name: 'Процент от факта',
+                targetRole: 'DEPARTMENT_HEAD',
+                config: { salaryBasis: 'REVENUE', category, percent: 5 },
+            });
+
+        const buildDepartmentPlanBonusRule = (category: string | null) =>
+            DepartmentPlanBonusEntity.create({
+                type: 'DepartmentPlanBonus',
+                name: 'Бонус за план',
+                targetRole: 'DEPARTMENT_HEAD',
+                config: {
+                    salaryBasis: 'REVENUE',
+                    category,
+                    fixedAmount: 10000,
+                    percentBorders: [...percentBorders],
+                },
+            });
+
+        const buildDepartmentTurnoverBonusRule = (
+            warehouseId: string,
+            category: string | null,
+        ) =>
+            DepartmentTurnoverBonusEntity.create({
+                type: 'DepartmentTurnoverBonus',
+                name: 'Бонус за оборачиваемость',
+                targetRole: 'DEPARTMENT_HEAD',
+                config: {
+                    warehouseId,
+                    category,
+                    fixedAmount: 5000,
+                    planTurnoverRatio: 1,
+                    percentBorders: [...percentBorders],
+                },
+            });
+
+        describe('departmentSalesPerformance', () => {
+            it('null, если у сотрудника нет отдела', async () => {
+                const { service } = buildService({ departmentId: null });
+
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentPercentRule(null)],
+                );
+
+                expect(context.departmentSalesPerformance).toBeNull();
+            });
+
+            it('резолвит fact/percentCompletion по собственной category правила', async () => {
+                const performance = buildFakeShopSalesPerformance(
+                    100000,
+                    40000,
+                    80,
+                );
+                const { service, findForScope } = buildService({
+                    departmentId: 10,
+                    performanceByCategory: { 'cat-1': performance },
+                });
+
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentPercentRule('cat-1')],
+                );
+
+                expect(findForScope).toHaveBeenCalledWith(
+                    '2026-08',
+                    10,
+                    'cat-1',
+                );
+                expect(
+                    context.departmentSalesPerformance?.get('cat-1'),
+                ).toEqual({
+                    fact: { turnover: 100000, margin: 40000 },
+                    percentCompletion: 80,
+                });
+            });
+
+            it('категория без ShopSalesPerformance отсутствует в карте', async () => {
+                const { service } = buildService({
+                    departmentId: 10,
+                    performanceByCategory: {},
+                });
+
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentPercentRule('cat-1')],
+                );
+
+                expect(context.departmentSalesPerformance?.has('cat-1')).toBe(
+                    false,
+                );
+            });
+
+            it('дедуплицирует одинаковую category у нескольких правил — один запрос на неё', async () => {
+                const performance = buildFakeShopSalesPerformance(1, 1, 1);
+                const { service, findForScope } = buildService({
+                    departmentId: 10,
+                    performanceByCategory: { 'cat-1': performance },
+                });
+
+                await service.build(Period.create('2026-08'), 1, [
+                    buildDepartmentPercentRule('cat-1'),
+                    buildDepartmentPlanBonusRule('cat-1'),
+                ]);
+
+                const callsForCategory = findForScope.mock.calls.filter(
+                    ([, , category]: [string, number, string | null]) =>
+                        category === 'cat-1',
+                );
+                expect(callsForCategory).toHaveLength(1);
+            });
+
+            it('пустая карта, если в схеме нет правил уровня отдела по продажам', async () => {
+                const { service } = buildService({ departmentId: 10 });
+                const payPerHour = PayPerHourShopEntity.create({
+                    type: 'PayPerHour',
+                    name: 'Часы',
+                    targetRole: 'ONLINE_MANAGER',
+                    config: { price: 100 },
+                });
+
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [payPerHour],
+                );
+
+                expect(context.departmentSalesPerformance).toEqual(new Map());
+            });
+        });
+
+        describe('turnoverPerformance', () => {
+            it('резолвит факт по warehouseId+category правила DepartmentTurnoverBonus', async () => {
+                const turnoverFindForScope = jest.fn().mockResolvedValue(1.5);
+                const { service } = buildService({ turnoverFindForScope });
+                const rule = buildDepartmentTurnoverBonusRule('wh-1', 'cat-2');
+
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [rule],
+                );
+
+                expect(turnoverFindForScope).toHaveBeenCalledWith(
+                    '2026-08',
+                    'wh-1',
+                    'cat-2',
+                );
+                expect(
+                    context.turnoverPerformance.get(
+                        turnoverPerformanceScopeKey({
+                            warehouseId: 'wh-1',
+                            category: 'cat-2',
+                        }),
+                    ),
+                ).toBe(1.5);
+            });
+
+            it('дедуплицирует одинаковый scope у нескольких правил — один запрос', async () => {
+                const turnoverFindForScope = jest.fn().mockResolvedValue(2);
+                const { service } = buildService({ turnoverFindForScope });
+
+                await service.build(Period.create('2026-08'), 1, [
+                    buildDepartmentTurnoverBonusRule('wh-1', 'cat-2'),
+                    buildDepartmentTurnoverBonusRule('wh-1', 'cat-2'),
+                ]);
+
+                expect(turnoverFindForScope).toHaveBeenCalledTimes(1);
+            });
+
+            it('хранит null явно, если для scope недостаточно данных', async () => {
+                const turnoverFindForScope = jest.fn().mockResolvedValue(null);
+                const { service } = buildService({ turnoverFindForScope });
+                const key = turnoverPerformanceScopeKey({
+                    warehouseId: 'wh-1',
+                    category: null,
+                });
+
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [buildDepartmentTurnoverBonusRule('wh-1', null)],
+                );
+
+                expect(context.turnoverPerformance.has(key)).toBe(true);
+                expect(context.turnoverPerformance.get(key)).toBeNull();
+            });
+
+            it('пустая карта и без запросов, если в схеме нет DepartmentTurnoverBonus', async () => {
+                const turnoverFindForScope = jest.fn();
+                const { service } = buildService({ turnoverFindForScope });
+                const payPerHour = PayPerHourShopEntity.create({
+                    type: 'PayPerHour',
+                    name: 'Часы',
+                    targetRole: 'ONLINE_MANAGER',
+                    config: { price: 100 },
+                });
+
+                const context = await service.build(
+                    Period.create('2026-08'),
+                    1,
+                    [payPerHour],
+                );
+
+                expect(context.turnoverPerformance).toEqual(new Map());
+                expect(turnoverFindForScope).not.toHaveBeenCalled();
+            });
         });
     });
 });

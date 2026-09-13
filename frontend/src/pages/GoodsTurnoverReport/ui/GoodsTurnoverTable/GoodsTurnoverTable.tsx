@@ -1,15 +1,16 @@
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
+import type { GoodsTurnoverWarehouseTotalResponse } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw.ts'
 import { formatCurrency, formatNumber, formatRatio } from '@/shared/lib/format.ts'
 
 import {
     buildGoodsTurnoverTreeRows,
+    countRootCategories,
     filterVisibleRows,
     getRatioColorClass,
     pluralizeCategories,
-    summarizeGoodsTurnoverRows,
     type GoodsTurnoverRow,
     type GoodsTurnoverTreeRow,
     type ProductCategoryRef,
@@ -22,6 +23,14 @@ export type GoodsTurnoverTableProps = {
      * реальной глубины/родства строк, см. `buildGoodsTurnoverTreeRows`. Опущен => прежнее
      * поведение "родство только по `rows`" (без справочника под рукой — тесты). */
     categories?: ProductCategoryRef[]
+    /**
+     * Готовая итоговая запись «по складу» для строки «Итого» — из поля `totals` ответа
+     * `GET .../goods-turnover-report/:period` (Implements FR5 of add-department-head-salary-rules).
+     * `null`/не передан — склад ещё не встретился ни в одной записи `totals` (например, для него
+     * вообще нет строк отчёта за период) — рендерится плейсхолдер «—» вместо числа, не 0
+     * (см. `SummaryRow`).
+     */
+    total?: GoodsTurnoverWarehouseTotalResponse | null
     className?: string
 }
 
@@ -58,8 +67,7 @@ const FONT_NUM = 'font-lg-num'
  * своя строка «Итого» (3 мини-метрики), `Header Row`, затем рекурсивно развёрнутые строки дерева
  * категорий с `Rail`-отступами (по одному `Rail` 16px на уровень предка, без капа глубины) и
  * `Marker` (`Chevron` — у категории есть дочерние, `Dash` — лист), колонки расход/остаток
- * (шт/₽)/коэффициент («—» при `turnoverRatio: null`), футер со счётчиком категорий и повтором
- * агрегата.
+ * (шт/₽)/коэффициент («—» при `turnoverRatio: null`), футер со счётчиком категорий.
  *
  * Категории по умолчанию отсортированы по алфавиту на каждом уровне (`buildGoodsTurnoverTreeRows`)
  * и по умолчанию ВСЕ свёрнуты — разворачиваются кликом по строке; состояние `useExpandedCategories`
@@ -72,9 +80,9 @@ const FONT_NUM = 'font-lg-num'
  * отфильтрованный по складу/периоду), нужен только для корректной глубины/родства строк, чьи
  * настоящие предки не вернули данных за период (см. `buildGoodsTurnoverTreeRows`).
  */
-export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTurnoverTableProps) {
+export function GoodsTurnoverTable({ rows, categories = [], total = null, className }: GoodsTurnoverTableProps) {
     const treeRows = useMemo(() => buildGoodsTurnoverTreeRows(rows, categories), [rows, categories])
-    const summary = useMemo(() => summarizeGoodsTurnoverRows(rows, categories), [rows, categories])
+    const rootCategoriesCount = useMemo(() => countRootCategories(rows, categories), [rows, categories])
     const { isExpanded, toggle } = useExpandedCategories()
     const isCollapsed = useCallback((categoryId: number) => !isExpanded(categoryId), [isExpanded])
     const visibleRows = useMemo(() => filterVisibleRows(treeRows, isCollapsed), [treeRows, isCollapsed])
@@ -90,7 +98,7 @@ export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTu
                 className,
             )}
         >
-            <SummaryRow summary={summary} />
+            <SummaryRow total={total} />
             <HeaderRow />
             {visibleRows.length === 0 ? (
                 <div className={cn('px-5 py-6 text-center text-sm', FONT_UI, LG_INK_MUTED)}>Нет строк для выбранных фильтров</div>
@@ -99,21 +107,24 @@ export function GoodsTurnoverTable({ rows, categories = [], className }: GoodsTu
                     <TableRow key={row.categoryId} row={row} isCollapsed={isCollapsed(row.categoryId)} onToggle={toggle} />
                 ))
             )}
-            <Footer summary={summary} />
+            <Footer rootCategoriesCount={rootCategoriesCount} />
         </div>
     )
 }
 
-type SummaryRowProps = { summary: ReturnType<typeof summarizeGoodsTurnoverRows> }
+type SummaryRowProps = { total: GoodsTurnoverWarehouseTotalResponse | null }
 
-function SummaryRow({ summary }: SummaryRowProps) {
+// Implements FR5 of add-department-head-salary-rules: строка «Итого» рендерится напрямую из
+// готового `total` ответа API, без локального пересчёта по `rows` (формула переехала на backend,
+// см. комментарий в `model/goodsTurnoverTree.ts`).
+function SummaryRow({ total }: SummaryRowProps) {
     return (
         <div className={cn('grid grid-cols-3 divide-x', LG_LINE_X, 'border-b', LG_BORDER)}>
-            <SummaryMetric label="Расход запчастей · факт" value={formatCurrency(summary.outcomeSum)} />
-            <SummaryMetric label="Остаток на складе" value={formatCurrency(summary.stockSum)} />
+            <SummaryMetric label="Расход запчастей · факт" value={total === null ? '—' : formatCurrency(total.outcomeSum)} />
+            <SummaryMetric label="Остаток на складе" value={total === null ? '—' : formatCurrency(total.stockSum)} />
             <SummaryMetric
                 label="Оборачиваемость"
-                value={summary.turnoverRatio === null ? '—' : formatRatio(summary.turnoverRatio)}
+                value={total?.turnoverRatio == null ? '—' : formatRatio(total.turnoverRatio)}
             />
         </div>
     )
@@ -281,17 +292,11 @@ function Marker({ hasChildren, isTopLevel, isCollapsed }: { hasChildren: boolean
     )
 }
 
-function Footer({ summary }: { summary: ReturnType<typeof summarizeGoodsTurnoverRows> }) {
-    const totalRatioText = summary.turnoverRatio === null ? '—' : formatRatio(summary.turnoverRatio)
-
+function Footer({ rootCategoriesCount }: { rootCategoriesCount: number }) {
     return (
         <div className={cn('flex h-10 items-center justify-between gap-4 px-5', LG_CANVAS)}>
             <span className={cn('text-[11px]', FONT_UI, LG_INK_MUTED)}>
-                {summary.rootCategoriesCount} {pluralizeCategories(summary.rootCategoriesCount)}
-            </span>
-            <span className={cn('text-[11px] font-semibold tabular-nums', FONT_NUM, LG_INK)}>
-                Итого&nbsp;&nbsp;&nbsp;{formatCurrency(summary.outcomeSum)}&nbsp;&nbsp;·&nbsp;&nbsp;
-                {formatCurrency(summary.stockSum)}&nbsp;&nbsp;·&nbsp;&nbsp;{totalRatioText}
+                {rootCategoriesCount} {pluralizeCategories(rootCategoriesCount)}
             </span>
         </div>
     )

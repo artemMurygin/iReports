@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import type { ShopSalaryRule } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
+import type { ShopDepartmentCalculationContext } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
 import { BuildShopCalculationContextService } from '@/domains/shop/modules/accounting/application/services/calculation/build-calculation-context.service';
 import { PeriodCalculationOrchestrator as ShopPeriodCalculationOrchestrator } from '@/domains/shop/modules/accounting/domain/services/period-calculation.orchestrator';
 import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
@@ -237,27 +238,37 @@ export class GetShopEmployeeSalaryReportService {
             rules,
         );
 
+        // Implements FR2-FR4 of add-department-head-salary-rules — типизировано как
+        // ShopDepartmentCalculationContext (а не построено литералом прямо в каждом вызове), иначе
+        // departmentSalesPerformance/turnoverPerformance легко забыть заново: без них
+        // DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus правила молча считают 0.
+        const factContext: ShopDepartmentCalculationContext = {
+            employee: baseContext.employee,
+            period: baseContext.period,
+            erpData: baseContext.erpData,
+            mode: 'FACT',
+            salesPerformance: toShopSalesPerformanceContext(
+                baseContext.salesPerformanceByCategory,
+                'FACT',
+            ),
+            departmentSalesPerformance: baseContext.departmentSalesPerformance,
+            turnoverPerformance: baseContext.turnoverPerformance,
+        };
+        const prognoseContext: ShopDepartmentCalculationContext = {
+            employee: baseContext.employee,
+            period: baseContext.period,
+            erpData: baseContext.erpData,
+            mode: 'PROGNOSE',
+            salesPerformance: toShopSalesPerformanceContext(
+                baseContext.salesPerformanceByCategory,
+                'PROGNOSE',
+            ),
+            departmentSalesPerformance: baseContext.departmentSalesPerformance,
+            turnoverPerformance: baseContext.turnoverPerformance,
+        };
         const [factLines, prognoseLines] = await Promise.all([
-            ShopPeriodCalculationOrchestrator.calculate(rules, {
-                employee: baseContext.employee,
-                period: baseContext.period,
-                erpData: baseContext.erpData,
-                mode: 'FACT',
-                salesPerformance: toShopSalesPerformanceContext(
-                    baseContext.salesPerformanceByCategory,
-                    'FACT',
-                ),
-            }),
-            ShopPeriodCalculationOrchestrator.calculate(rules, {
-                employee: baseContext.employee,
-                period: baseContext.period,
-                erpData: baseContext.erpData,
-                mode: 'PROGNOSE',
-                salesPerformance: toShopSalesPerformanceContext(
-                    baseContext.salesPerformanceByCategory,
-                    'PROGNOSE',
-                ),
-            }),
+            ShopPeriodCalculationOrchestrator.calculate(rules, factContext),
+            ShopPeriodCalculationOrchestrator.calculate(rules, prognoseContext),
         ]);
 
         const factTotal = ShopPeriodCalculationOrchestrator.total(factLines);

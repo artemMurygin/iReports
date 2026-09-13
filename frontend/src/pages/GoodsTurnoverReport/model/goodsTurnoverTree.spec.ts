@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
     buildGoodsTurnoverTreeRows,
+    countRootCategories,
     filterVisibleRows,
     getRatioColorClass,
     pluralizeCategories,
-    summarizeGoodsTurnoverRows,
     type GoodsTurnoverRow,
 } from './goodsTurnoverTree.ts'
 
@@ -260,20 +260,25 @@ describe('getRatioColorClass', () => {
     })
 })
 
-describe('summarizeGoodsTurnoverRows', () => {
-    it('sums outcome/stock over root categories only, not the nested rollup rows', () => {
+// `summarizeGoodsTurnoverRows` (сумма/коэффициент root-категорий) удалена этим change
+// (add-department-head-salary-rules, FR5 — "Отчёт «Оборачиваемость»... сам возвращает готовую
+// итоговую строку по складу... Formula переезжает на backend, чтобы... frontend отчёта не
+// дублировал и не мог разойтись с зарплатным расчётом в формуле") — строка «Итого» теперь
+// рендерится из поля `totals` ответа API (`GoodsTurnoverTable`/`ShopGoodsTurnoverTable` читают
+// готовый `total`, см. их спеки), а не пересчитывается локально. `countRootCategories` ниже —
+// единственный оставшийся потребитель "настоящего корня" на фронтенде: футер таблицы («N
+// категорий») остаётся зависимым от текущего, уже отфильтрованного по складу/категории списка
+// `rows`, а не от `totals` (который не знает о фильтре по категории), поэтому его формула
+// (количество, не сумма) сохраняется как чистая функция.
+describe('countRootCategories', () => {
+    it('counts only true root categories, not the nested rollup rows', () => {
         const rows = [
-            row({ categoryId: 1, categoryParentId: null, outcomeSum: 100, stockSum: 200, stockQuantity: 4 }),
-            row({ categoryId: 2, categoryParentId: 1, outcomeSum: 60, stockSum: 120, stockQuantity: 2 }),
-            row({ categoryId: 3, categoryParentId: 1, outcomeSum: 40, stockSum: 80, stockQuantity: 2 }),
+            row({ categoryId: 1, categoryParentId: null }),
+            row({ categoryId: 2, categoryParentId: 1 }),
+            row({ categoryId: 3, categoryParentId: 1 }),
         ]
 
-        const summary = summarizeGoodsTurnoverRows(rows)
-
-        expect(summary.outcomeSum).toBe(100)
-        expect(summary.stockSum).toBe(200)
-        expect(summary.stockQuantity).toBe(4)
-        expect(summary.rootCategoriesCount).toBe(1)
+        expect(countRootCategories(rows)).toBe(1)
     })
 
     it('does not count an orphan (real parent missing a report line) as a root when a category directory is given', () => {
@@ -282,33 +287,13 @@ describe('summarizeGoodsTurnoverRows', () => {
             { id: 2, parentId: 1 },
         ]
         // У 1 (настоящего корня) нет строки за период — только у 2.
-        const rows = [row({ categoryId: 2, categoryParentId: 1, outcomeSum: 60, stockSum: 120 })]
+        const rows = [row({ categoryId: 2, categoryParentId: 1 })]
 
-        const summary = summarizeGoodsTurnoverRows(rows, categories)
-
-        expect(summary.rootCategoriesCount).toBe(0)
-        expect(summary.outcomeSum).toBe(0)
-        expect(summary.stockSum).toBe(0)
+        expect(countRootCategories(rows, categories)).toBe(0)
     })
 
-    it('returns turnoverRatio null when no root row has a computed ratio', () => {
-        const rows = [row({ categoryId: 1, categoryParentId: null, turnoverRatio: null })]
-
-        expect(summarizeGoodsTurnoverRows(rows).turnoverRatio).toBeNull()
-    })
-
-    it('weighs the aggregate ratio by stockSum across root rows with a computed ratio', () => {
-        const rows = [
-            row({ categoryId: 1, categoryParentId: null, stockSum: 100, turnoverRatio: 1 }),
-            row({ categoryId: 2, categoryParentId: null, stockSum: 300, turnoverRatio: 2 }),
-        ]
-
-        expect(summarizeGoodsTurnoverRows(rows).turnoverRatio).toBeCloseTo(1.75)
-    })
-
-    it('treats an empty input as zero totals with a null ratio', () => {
-        const summary = summarizeGoodsTurnoverRows([])
-        expect(summary).toEqual({ outcomeSum: 0, stockSum: 0, stockQuantity: 0, turnoverRatio: null, rootCategoriesCount: 0 })
+    it('treats an empty input as zero', () => {
+        expect(countRootCategories([])).toBe(0)
     })
 })
 

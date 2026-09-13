@@ -23,6 +23,7 @@ const ROLE_LABEL: Record<TargetRole, string> = {
     OFFLINE_PURCHASER: 'Офлайн-закупщик',
     OFFICE: 'Офис',
     SOLO_MANAGER: 'Соло-менеджер',
+    DEPARTMENT_HEAD: 'Руководитель направления',
 }
 
 const DIRECTION_LABEL: Record<TaskDirection, string> = {

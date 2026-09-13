@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { GoodsTurnoverWarehouseTotalResponse } from 'ireports-contracts'
 import type { GoodsTurnoverRow } from '../../model/goodsTurnoverTree.ts'
 import { GoodsTurnoverTable } from './GoodsTurnoverTable.tsx'
 
@@ -71,19 +72,36 @@ describe('GoodsTurnoverTable', () => {
         expect(screen.getByText('iPhone')).toBeInTheDocument()
     })
 
-    it('sums the summary row over root categories only (no double counting of the rollup)', () => {
+    // FR5 of add-department-head-salary-rules: строка «Итого» больше не пересчитывается локально
+    // (`summarizeGoodsTurnoverRows`, удалена этим change) — рендерится напрямую из готового `total`
+    // ответа API, переданного пропом.
+    it('renders the "Итого" row straight from the total prop, not recomputed from rows', () => {
+        const total: GoodsTurnoverWarehouseTotalResponse = {
+            warehouseId: 1,
+            outcomeSum: 100_000,
+            stockSum: 50_000,
+            stockQuantity: 10,
+            turnoverRatio: 1.5,
+        }
         render(
             <GoodsTurnoverTable
-                rows={[
-                    row({ categoryId: 1, categoryParentId: null, outcomeSum: 100_000, stockSum: 50_000, stockQuantity: 10 }),
-                    row({ categoryId: 2, categoryParentId: 1, outcomeSum: 60_000, stockSum: 30_000, stockQuantity: 6 }),
-                    row({ categoryId: 3, categoryParentId: 1, outcomeSum: 40_000, stockSum: 20_000, stockQuantity: 4 }),
-                ]}
+                // Строки заведомо с ДРУГИМИ числами (999), чтобы убедиться, что «Итого» не
+                // пересчитывается по ним локально, а берётся из `total`.
+                rows={[row({ categoryId: 1, categoryParentId: null, outcomeSum: 999, stockSum: 999, stockQuantity: 999 })]}
+                total={total}
             />,
         )
 
         expect(screen.getByText('100 000 ₽')).toBeInTheDocument()
         expect(screen.getByText('50 000 ₽')).toBeInTheDocument()
+        expect(screen.getByText('1,50')).toBeInTheDocument()
+        expect(screen.queryByText('999 ₽')).not.toBeInTheDocument()
+    })
+
+    it('renders a dash placeholder in the summary row when no total is given for the current warehouse', () => {
+        render(<GoodsTurnoverTable rows={[row({ categoryId: 1, categoryParentId: null })]} total={null} />)
+
+        expect(screen.getAllByText('—').length).toBeGreaterThan(0)
     })
 
     it('renders a fallback message instead of an empty table body when there are no rows', () => {

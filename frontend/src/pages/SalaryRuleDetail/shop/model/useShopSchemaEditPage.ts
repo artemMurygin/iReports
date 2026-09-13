@@ -5,6 +5,7 @@ import {
     useCatalog,
     useAllowedRolesByType,
     useShopSalaryRuleTypes,
+    useStores,
 } from '@/features/SalaryRuleForm'
 
 import { useMotivationSchema } from './useMotivationSchema.ts'
@@ -20,6 +21,7 @@ export function useShopSchemaEditPage(id: string) {
     const schemaQuery = useMotivationSchema(id)
     const ruleTypesQuery = useShopSalaryRuleTypes()
     const catalogQuery = useCatalog()
+    const storesQuery = useStores()
 
     const allowedRolesByType = useAllowedRolesByType(ruleTypesQuery.data)
 
@@ -37,5 +39,8 @@ export function useShopSchemaEditPage(id: string) {
         orderTypes: NO_ORDER_TYPES,
         isOrderTypesLoading: false,
         orderTypesError: null,
+        warehouses: storesQuery.data ?? [],
+        isWarehousesLoading: storesQuery.isLoading,
+        warehousesError: storesQuery.error?.message ?? null,
     }
 }

@@ -285,3 +285,153 @@ describe('draftFromShopRule — TaskCompletion', () => {
         expect(draft.price).toBe('3000')
     })
 })
+
+/**
+ * add-department-head-salary-rules, FR2-FR4 — shop mirror of `service/model/ruleFormSchema.test.ts`'s
+ * analogous `describe`s: same 3 config shapes (design.md — new rule types apply identically to both
+ * directions), except `salaryBasis` is drawn from the narrower `shopSalaryBasisSchema`
+ * (`REVENUE`/`MARGIN` only — no `SALARY_MINUS_ENGINEER_SALARY`, shop has no engineer role) and
+ * `DepartmentTurnoverBonus.config.warehouseId` is a MoySklad UUID `string`, not a RoApp `number`.
+ */
+describe('resolveShopRuleDraft — DepartmentPercent (FR2)', () => {
+    it('succeeds with salaryBasis, category null and percent', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'DepartmentPercent',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'MARGIN',
+                category: null,
+                percent: '5',
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentPercent') {
+            expect(result.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5 })
+        }
+    })
+
+    it('fails when percent is missing', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({ type: 'DepartmentPercent', targetRole: 'DEPARTMENT_HEAD', salaryBasis: 'REVENUE', percent: '' }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.percent).toBeTruthy()
+    })
+})
+
+describe('resolveShopRuleDraft — DepartmentPlanBonus (FR3)', () => {
+    it('succeeds with a fixed amount and exactly 3 valid percentBorders', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'DepartmentPlanBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'REVENUE',
+                category: null,
+                price: '10000',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentPlanBonus') {
+            expect(result.data.config.fixedAmount).toBe(10000)
+            expect(result.data.config.percentBorders).toHaveLength(3)
+        }
+    })
+
+    it('fails with only 2 percentBorders', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'DepartmentPlanBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'REVENUE',
+                price: '10000',
+                percentBorders: defaultBorders().slice(0, 2),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.thresholds).toContain('2')
+    })
+})
+
+describe('resolveShopRuleDraft — DepartmentTurnoverBonus (FR4)', () => {
+    it('succeeds with a string warehouseId (MoySklad UUID), plan ratio and exactly 3 percentBorders', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: 'wh-uuid-1',
+                category: null,
+                price: '15000',
+                planTurnoverRatio: '1.2',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (result.success && result.data.type === 'DepartmentTurnoverBonus') {
+            expect(result.data.config.warehouseId).toBe('wh-uuid-1')
+            expect(result.data.config.fixedAmount).toBe(15000)
+            expect(result.data.config.planTurnoverRatio).toBe(1.2)
+        }
+    })
+
+    it('fails when the warehouse is not selected', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: '',
+                price: '15000',
+                planTurnoverRatio: '1.2',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.warehouseId).toBeTruthy()
+    })
+
+    it('fails when the plan turnover ratio is missing', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'DepartmentTurnoverBonus',
+                targetRole: 'DEPARTMENT_HEAD',
+                warehouseId: 'wh-uuid-1',
+                price: '15000',
+                planTurnoverRatio: '',
+                percentBorders: defaultBorders(),
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) expect(result.errors.planTurnoverRatio).toBeTruthy()
+    })
+})
+
+describe('draftFromShopRule — department-level rule types round-trip (FR2-FR4)', () => {
+    it('DepartmentTurnoverBonus keeps warehouseId as a string', () => {
+        const draft = draftFromShopRule({
+            id: 'shop-rule-dep-1',
+            type: 'DepartmentTurnoverBonus',
+            name: 'Премия за оборачиваемость магазина',
+            targetRole: 'DEPARTMENT_HEAD',
+            config: {
+                warehouseId: 'wh-uuid-1',
+                category: null,
+                fixedAmount: 15000,
+                planTurnoverRatio: 1.2,
+                percentBorders: [
+                    { name: 'Ниже плана', fromPlanPercent: 0, multiplier: 0.5, mode: 'FIX' },
+                    { name: 'Выполнение плана', fromPlanPercent: 70, multiplier: 1, mode: 'LINEAR' },
+                    { name: 'Перевыполнение', fromPlanPercent: 120, multiplier: 1.2, mode: 'FIX' },
+                ],
+            },
+        })
+        expect(draft.warehouseId).toBe('wh-uuid-1')
+        expect(draft.planTurnoverRatio).toBe('1.2')
+        expect(draft.price).toBe('15000')
+
+        const resolvedAgain = resolveShopRuleDraft(draft)
+        expect(resolvedAgain.success).toBe(true)
+        if (resolvedAgain.success && resolvedAgain.data.type === 'DepartmentTurnoverBonus') {
+            expect(resolvedAgain.data.config.warehouseId).toBe('wh-uuid-1')
+        }
+    })
+})

@@ -125,6 +125,18 @@ describe('GET /v1/service/warehouse/goods-turnover-report/:period (e2e)', () => 
                     turnoverRatio: 2,
                 },
             ],
+            // add-department-head-salary-rules, FR5: категория 10 не настоящий корень (её
+            // parentId: 1 — не null), поэтому склад 1 попадает в totals нулевой записью — ни одна
+            // строка не суммируется.
+            totals: [
+                {
+                    warehouseId: 1,
+                    outcomeSum: 0,
+                    stockSum: 0,
+                    stockQuantity: 0,
+                    turnoverRatio: null,
+                },
+            ],
         });
         expect(capturedPeriod).toBe('2026-01');
     });
@@ -136,7 +148,11 @@ describe('GET /v1/service/warehouse/goods-turnover-report/:period (e2e)', () => 
             .get('/v1/service/warehouse/goods-turnover-report/2026-02')
             .expect(200);
 
-        expect(response.body).toEqual({ period: '2026-02', lines: [] });
+        expect(response.body).toEqual({
+            period: '2026-02',
+            lines: [],
+            totals: [],
+        });
     });
 
     it('400 при невалидном формате периода', async () => {

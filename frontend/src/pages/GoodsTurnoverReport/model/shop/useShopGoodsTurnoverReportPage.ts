@@ -25,6 +25,12 @@ function getCurrentPeriod(): string {
  * Статус периода читается из `AccountingPeriod` направления `shop`
  * (`useAccountingPeriod('shop', period)`, уже существующий `GET /v1/shop/accounting/period/
  * :period`) — тот же приём, что у `service`.
+ *
+ * FR5 of add-department-head-salary-rules (**BREAKING**): ответ `shopApi.getShopGoodsTurnoverReport`
+ * сменил форму с голого массива строк на `{lines, totals}` — `useQuery`'s `data` теперь весь этот
+ * объект (`report`), а не сам массив строк: `rows`/`denormalizedLines` строятся из `report.lines`,
+ * `total` — готовая запись `report.totals` для текущего `warehouseId`, без локального пересчёта
+ * (`summarizeShopGoodsTurnoverRows`, была в `model/shop/goodsTurnoverTree.ts`, удалена этим change).
  */
 export function useShopGoodsTurnoverReportPage() {
     const [period, setPeriod] = useState<string>(getCurrentPeriod)
@@ -35,7 +41,7 @@ export function useShopGoodsTurnoverReportPage() {
     const storesQuery = useQuery(shopApi.getStores())
 
     const {
-        data: lines,
+        data: report,
         dataUpdatedAt,
         isFetching,
         error: queryError,
@@ -56,8 +62,8 @@ export function useShopGoodsTurnoverReportPage() {
     const warehouseId = selectedWarehouseId ?? warehouses[0]?.id ?? null
 
     const denormalizedLines = useMemo(
-        () => denormalizeShopReportLines(lines ?? [], categories, warehouses),
-        [lines, categories, warehouses],
+        () => denormalizeShopReportLines(report?.lines ?? [], categories, warehouses),
+        [report, categories, warehouses],
     )
 
     const rows = useMemo<ShopGoodsTurnoverRow[]>(() => {
@@ -68,8 +74,14 @@ export function useShopGoodsTurnoverReportPage() {
         return byWarehouse.filter((line) => allowedIds.has(line.categoryId))
     }, [denormalizedLines, warehouseId, categoryId, categories])
 
+    // FR5 of add-department-head-salary-rules.
+    const total = useMemo(
+        () => report?.totals.find((t) => t.warehouseId === warehouseId) ?? null,
+        [report, warehouseId],
+    )
+
     const loading = isFetching
-    const isInitialLoad = loading && lines === undefined
+    const isInitialLoad = loading && report === undefined
     const isRefreshing = loading && !isInitialLoad
 
     const error =
@@ -86,8 +98,9 @@ export function useShopGoodsTurnoverReportPage() {
 
         categories,
         warehouses,
-        lines,
+        lines: report?.lines,
         rows,
+        total,
 
         isClosed,
         isInitialLoad,

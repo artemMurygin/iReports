@@ -3,6 +3,9 @@ import {
     payPerHourShopSalaryConfigSchema,
     productSoldSalaryConfigSchema,
     usedProductSoldSalaryConfigSchema,
+    departmentPercentShopSalaryConfigSchema,
+    departmentPlanBonusShopSalaryConfigSchema,
+    departmentTurnoverBonusShopSalaryConfigSchema,
 } from 'ireports-contracts';
 import { shopSalaryRuleRegistry } from '@/domains/shop/modules/accounting/domain/salary-rule-registry';
 
@@ -41,6 +44,10 @@ export const shopSalaryRuleConfigSchemaByType: Partial<
     ProductSold: productSoldSalaryConfigSchema,
     UsedProductSold: usedProductSoldSalaryConfigSchema,
     TaskCompletion: taskCompletionShopPersistedConfigSchema,
+    // Implements FR2-FR4 of add-department-head-salary-rules (tasks.md раздел 13).
+    DepartmentPercent: departmentPercentShopSalaryConfigSchema,
+    DepartmentPlanBonus: departmentPlanBonusShopSalaryConfigSchema,
+    DepartmentTurnoverBonus: departmentTurnoverBonusShopSalaryConfigSchema,
 };
 
 // Список типов берём из ключей реестра, а не хардкодим второй раз — так

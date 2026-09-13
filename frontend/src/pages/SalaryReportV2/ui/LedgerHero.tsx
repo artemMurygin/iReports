@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react'
 import type { FactPrognoseAmount } from 'ireports-contracts'
 
-import { formatCurrency, formatPeriodLabel, formatSignedCurrency } from '@/features/SalesPlan'
+import { formatCurrency, formatSignedCurrency } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui-kit/atoms/Popover'
@@ -31,8 +31,7 @@ export type LedgerHeroProps = {
  * разбивка ("Сервис — ожидаемые заказы до 31.08: +30 000 ₽" и т.п.) не бэкенд-агрегат, а
  * иллюстративные цифры мокапа; подставлять их как реальные данные было бы фабрикацией.
  */
-export function LedgerHero({ grandTotal, isClosed, period, className }: LedgerHeroProps) {
-    const periodLabel = formatPeriodLabel(period)
+export function LedgerHero({ grandTotal, isClosed, className }: LedgerHeroProps) {
     const prognoseValue = grandTotal.prognose ?? grandTotal.fact
     const delta = grandTotal.prognose !== null ? grandTotal.prognose - grandTotal.fact : 0
 

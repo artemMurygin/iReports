@@ -72,12 +72,37 @@ export type GoodsTurnoverReportLineResponse = z.infer<
     typeof goodsTurnoverReportLineSchema
 >;
 
+// Итоговая строка «по складу» (add-department-head-salary-rules, FR5) — сумма, количество и
+// коэффициент по всем НАСТОЯЩИМ корневым категориям склада (categoryParentId === null), по одной
+// записи на склад. Формула переезжает на backend с frontend (`summarizeGoodsTurnoverRows` —
+// pages/GoodsTurnoverReport/model/goodsTurnoverTree.ts), чтобы: (a) её мог переиспользовать
+// зарплатный расчёт правила DepartmentTurnoverBonus при category = null («весь склад», design.md
+// Decision 6); (b) frontend отчёта не дублировал и не мог разойтись с зарплатным расчётом в формуле.
+// warehouseId — обязателен: без него не отличить итог одного склада от другого в массиве totals.
+// turnoverRatio — средневзвешенный по остатку коэффициент (Σ ratio_i·stock_i / Σ stock_i, только
+// строки с посчитанным коэффициентом); null — ни одна корневая строка склада не имеет посчитанного
+// коэффициента (та же семантика null, что и у goodsTurnoverReportLineSchema.turnoverRatio выше).
+const goodsTurnoverWarehouseTotalSchema = z.object({
+    warehouseId: z.number(),
+    outcomeSum: z.number(),
+    stockSum: z.number(),
+    stockQuantity: z.number(),
+    turnoverRatio: z.number().nullable(),
+});
+export type GoodsTurnoverWarehouseTotalResponse = z.infer<
+    typeof goodsTurnoverWarehouseTotalSchema
+>;
+
 const getGoodsTurnoverReportResponseSchema = z.object({
     period: z.string(),
     // Пустой список строк — валидный ответ (месяц ещё ни разу не
     // пересчитан), не ошибка — фронтенд показывает состояние «отчёт ещё не
     // пересчитан» (ui-design.md, «Ключевые состояния»), а не карточку ошибки.
     lines: z.array(goodsTurnoverReportLineSchema),
+    // totals (add-department-head-salary-rules, FR5) — аддитивное поле поверх уже существующего
+    // {period, lines}: пустой массив вместе с пустым lines у ещё не пересчитанного периода, иначе
+    // по одной записи на каждый склад, встретившийся в lines.
+    totals: z.array(goodsTurnoverWarehouseTotalSchema),
 });
 export type GetGoodsTurnoverReportResponse = z.infer<
     typeof getGoodsTurnoverReportResponseSchema
@@ -89,5 +114,6 @@ export {
     warehouseSchema,
     listWarehousesResponseSchema,
     goodsTurnoverReportLineSchema,
+    goodsTurnoverWarehouseTotalSchema,
     getGoodsTurnoverReportResponseSchema,
 };

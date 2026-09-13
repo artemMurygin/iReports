@@ -7,6 +7,7 @@ import { buildRuleBreakdown } from '@/domains/shop/modules/accounting/domain/ser
 import { toShopSalesPerformanceContext } from '@/domains/shop/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
 import { BuildShopCalculationContextService } from './build-calculation-context.service';
 import { ResolveShopEmployeeSalaryRulesService } from './resolve-employee-salary-rules.service';
+import type { ShopDepartmentCalculationContext } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
 
 // FACT-срез направления shop по каждому сотруднику с зарплатными правилами
 // (личная схема и/или схема отдела). Вынесен из
@@ -40,7 +41,12 @@ export class CalculateShopSnapshotRowsService implements ShopSnapshotRowsCalcula
                 employeeId,
                 rules,
             );
-            const lines = await PeriodCalculationOrchestrator.calculate(rules, {
+            // Implements FR2-FR4 of add-department-head-salary-rules — типизировано как
+            // ShopDepartmentCalculationContext (а не построено литералом прямо в вызове), иначе
+            // departmentSalesPerformance/turnoverPerformance легко забыть заново: без них
+            // DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus правила молча считают 0
+            // (см. спек-файл теста рядом).
+            const context: ShopDepartmentCalculationContext = {
                 employee: base.employee,
                 period: base.period,
                 erpData: base.erpData,
@@ -49,7 +55,13 @@ export class CalculateShopSnapshotRowsService implements ShopSnapshotRowsCalcula
                     base.salesPerformanceByCategory,
                     'FACT',
                 ),
-            });
+                departmentSalesPerformance: base.departmentSalesPerformance,
+                turnoverPerformance: base.turnoverPerformance,
+            };
+            const lines = await PeriodCalculationOrchestrator.calculate(
+                rules,
+                context,
+            );
             rows.push({
                 employeeId,
                 total: PeriodCalculationOrchestrator.total(lines),

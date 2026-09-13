@@ -47,6 +47,7 @@ export function ShopGoodsTurnoverReport({ tabs }: ShopGoodsTurnoverReportProps) 
             lines={page.lines}
             rows={page.rows}
             categories={page.categories}
+            total={page.total}
         />
     )
 

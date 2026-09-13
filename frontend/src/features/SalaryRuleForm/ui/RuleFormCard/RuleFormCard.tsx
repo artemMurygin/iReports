@@ -52,6 +52,9 @@ export function RuleFormCard({
     orderTypes,
     isOrderTypesLoading,
     orderTypesError,
+    warehouses,
+    isWarehousesLoading,
+    warehousesError,
     onChange,
     onChangeType,
     onChangeBorder,
@@ -71,6 +74,7 @@ export function RuleFormCard({
         showCategory,
         showOrderTypeIds,
         showTaskFields,
+        showDepartmentFields,
         patchDraft,
         changeBorder,
         handleTypeChange,
@@ -107,17 +111,24 @@ export function RuleFormCard({
                         isOrderTypesLoading={isOrderTypesLoading}
                         orderTypesError={orderTypesError}
                         showOrderTypeIds={showOrderTypeIds}
+                        onChangeBorder={changeBorder}
+                        warehouses={warehouses}
+                        isWarehousesLoading={isWarehousesLoading}
+                        warehousesError={warehousesError}
                         onChange={patchDraft}
                         onChangeType={handleTypeChange}
                     />
 
-                    <div className="h-px w-full bg-hairline" />
-
                     {/* Тип-зависимое тело: у `PayPerHour` — единственное поле ставки, у
                         `TaskCompletion` (`config.taskRuleTypes`) — описание/периодичность/дедлайн
                         задачи Bitrix24 вместо "вознаграждения" (сумма вводится вручную позже, см.
-                        `SalaryAccruals`, раздел 24), у остальных типов — блок «Вариант награды» с
-                        под-полями выбранного варианта. */}
+                        `SalaryAccruals`, раздел 24), у 3 новых видов уровня отдела/направления
+                        (`showDepartmentFields`, add-department-head-salary-rules FR2-FR4) — тело уже
+                        целиком отрисовано `RuleFormCardFields` выше (своя собственная разделительная
+                        полоса на каждую ветку), поэтому здесь не рендерится ничего — у остальных типов
+                        — блок «Вариант награды» с под-полями выбранного варианта. */}
+                    {!showDepartmentFields && <div className="h-px w-full bg-hairline" />}
+
                     {draft.type === 'PayPerHour' ? (
                         <AmountField
                             label="Ставка, ₽ / час"
@@ -136,7 +147,7 @@ export function RuleFormCard({
                             onDeleteRule={onDeleteRule}
                             onRuleRemoved={() => onDelete(draft.draftId)}
                         />
-                    ) : (
+                    ) : showDepartmentFields ? null : (
                         <AwardSection
                             draft={draft}
                             config={config}

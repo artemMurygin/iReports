@@ -2,6 +2,7 @@ import {
     useAllowedRolesByType,
     useOrderTypes,
     useSalaryRuleTypes,
+    useWarehouses,
     SERVICE_RULE_FORM_CONFIG,
 } from '@/features/SalaryRuleForm'
 
@@ -18,6 +19,7 @@ export function useServiceSchemaEditPage(id: string) {
     const schemaQuery = useMotivationSchema(id)
     const ruleTypesQuery = useSalaryRuleTypes()
     const orderTypesQuery = useOrderTypes()
+    const warehousesQuery = useWarehouses()
 
     const allowedRolesByType = useAllowedRolesByType(ruleTypesQuery.data)
 
@@ -32,5 +34,8 @@ export function useServiceSchemaEditPage(id: string) {
         orderTypes: orderTypesQuery.data ?? [],
         isOrderTypesLoading: orderTypesQuery.isLoading,
         orderTypesError: orderTypesQuery.error?.message ?? null,
+        warehouses: warehousesQuery.data ?? [],
+        isWarehousesLoading: warehousesQuery.isLoading,
+        warehousesError: warehousesQuery.error?.message ?? null,
     }
 }

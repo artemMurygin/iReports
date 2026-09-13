@@ -1,5 +1,6 @@
 import { GetGoodsTurnoverReportService } from './get-goods-turnover-report.service';
 import type { GoodsTurnoverReportRepositoryPort } from '@/domains/shop/modules/warehouse/application/ports/goods-turnover-report/goods-turnover-report.port';
+import type { ProductCategoryRepositoryPort } from '@/domains/shop/modules/warehouse/application/ports/product-category/product-category.port';
 import { GoodsTurnoverReportLine } from '@/domains/shop/modules/warehouse/domain/entities/goods-turnover-report-line/goods-turnover-report-line.entity';
 import { Money } from '@/domains/shop/modules/warehouse/domain/value-objects/money.value-object';
 import { Period } from '@/shared/domain/period.value-object';
@@ -27,8 +28,13 @@ function line(props: {
 function buildService(options: {
     currentLines?: GoodsTurnoverReportLine[];
     previousLines?: GoodsTurnoverReportLine[];
+    rootCategoryIds?: string[];
 }) {
-    const { currentLines = [], previousLines = [] } = options;
+    const {
+        currentLines = [],
+        previousLines = [],
+        rootCategoryIds = [],
+    } = options;
 
     const findByPeriod = jest.fn((period: Period) => {
         return Promise.resolve(
@@ -41,10 +47,19 @@ function buildService(options: {
         findByPeriod,
         replaceForPeriod: jest.fn().mockResolvedValue(undefined),
     };
+    const findRootIds = jest
+        .fn<Promise<Set<string>>, []>()
+        .mockResolvedValue(new Set(rootCategoryIds));
+    const categoryRepository: ProductCategoryRepositoryPort = {
+        findRootIds,
+    };
 
-    const service = new GetGoodsTurnoverReportService(repository);
+    const service = new GetGoodsTurnoverReportService(
+        repository,
+        categoryRepository,
+    );
 
-    return { service, findByPeriod };
+    return { service, findByPeriod, findRootIds };
 }
 
 const CURRENT = Period.create('2026-08');
@@ -83,9 +98,9 @@ describe('GetGoodsTurnoverReportService.getReport', () => {
 
         const result = await service.getReport(CURRENT);
 
-        expect(result).toHaveLength(1);
+        expect(result.lines).toHaveLength(1);
         // (10000 + 20000) / 2 = 15000; 30000 / 15000 = 2
-        expect(result[0].coefficient).toBe(2);
+        expect(result.lines[0].coefficient).toBe(2);
     });
 
     it('строки без пары в предыдущем периоде -> coefficient: null, а не 0', async () => {
@@ -104,8 +119,8 @@ describe('GetGoodsTurnoverReportService.getReport', () => {
 
         const result = await service.getReport(CURRENT);
 
-        expect(result).toHaveLength(1);
-        expect(result[0].coefficient).toBeNull();
+        expect(result.lines).toHaveLength(1);
+        expect(result.lines[0].coefficient).toBeNull();
     });
 
     it('фильтрует результат по warehouseId, если он указан', async () => {
@@ -126,8 +141,8 @@ describe('GetGoodsTurnoverReportService.getReport', () => {
 
         const result = await service.getReport(CURRENT, 'warehouse-2');
 
-        expect(result).toHaveLength(1);
-        expect(result[0].warehouseId).toBe('warehouse-2');
+        expect(result.lines).toHaveLength(1);
+        expect(result.lines[0].warehouseId).toBe('warehouse-2');
     });
 
     it('без warehouseId возвращает строки всех складов', async () => {
@@ -148,7 +163,7 @@ describe('GetGoodsTurnoverReportService.getReport', () => {
 
         const result = await service.getReport(CURRENT);
 
-        expect(result).toHaveLength(2);
+        expect(result.lines).toHaveLength(2);
     });
 
     it('маппит плоскую структуру DTO из строки отчёта', async () => {
@@ -168,7 +183,7 @@ describe('GetGoodsTurnoverReportService.getReport', () => {
 
         const result = await service.getReport(CURRENT);
 
-        expect(result[0]).toEqual({
+        expect(result.lines[0]).toEqual({
             categoryId: 'category-1',
             warehouseId: 'warehouse-1',
             turnoverQuantity: 3,
@@ -176,6 +191,91 @@ describe('GetGoodsTurnoverReportService.getReport', () => {
             stockQuantity: 7,
             stockSum: 70_000,
             coefficient: null,
+        });
+    });
+
+    // add-department-head-salary-rules, tasks.md задача 5.1 (FR5, BREAKING): ответ возвращает
+    // {lines, totals} вместо голого массива — totals суммирует только строки настоящих корневых
+    // категорий (rootCategoryIds из ProductCategoryRepositoryPort.findRootIds()), по одной записи
+    // на каждый склад, встретившийся в lines.
+    describe('totals', () => {
+        it('суммирует только строки настоящих корневых категорий, не дочерние', async () => {
+            const { service } = buildService({
+                currentLines: [
+                    line({
+                        period: CURRENT,
+                        categoryId: 'root-1',
+                        warehouseId: 'warehouse-1',
+                        turnoverSum: 100,
+                        stockSum: 200,
+                    }),
+                    line({
+                        period: CURRENT,
+                        categoryId: 'child-1',
+                        warehouseId: 'warehouse-1',
+                        turnoverSum: 60,
+                        stockSum: 120,
+                    }),
+                ],
+                rootCategoryIds: ['root-1'],
+            });
+
+            const result = await service.getReport(CURRENT);
+
+            expect(result.totals).toEqual([
+                {
+                    warehouseId: 'warehouse-1',
+                    turnoverSum: 100,
+                    stockSum: 200,
+                    stockQuantity: 0,
+                    coefficient: null,
+                },
+            ]);
+        });
+
+        it('по одной записи на каждый склад, встретившийся в lines, включая склад без корневых строк', async () => {
+            const { service } = buildService({
+                currentLines: [
+                    line({
+                        period: CURRENT,
+                        categoryId: 'root-1',
+                        warehouseId: 'warehouse-1',
+                        turnoverSum: 100,
+                        stockSum: 200,
+                    }),
+                    line({
+                        period: CURRENT,
+                        categoryId: 'child-of-root-1',
+                        warehouseId: 'warehouse-2',
+                        turnoverSum: 999,
+                        stockSum: 999,
+                    }),
+                ],
+                rootCategoryIds: ['root-1'],
+            });
+
+            const result = await service.getReport(CURRENT);
+
+            expect(result.totals.map((t) => t.warehouseId).sort()).toEqual([
+                'warehouse-1',
+                'warehouse-2',
+            ]);
+            const warehouse2 = result.totals.find(
+                (t) => t.warehouseId === 'warehouse-2',
+            );
+            expect(warehouse2).toMatchObject({
+                turnoverSum: 0,
+                stockSum: 0,
+                coefficient: null,
+            });
+        });
+
+        it('пустой период — totals пустой массив', async () => {
+            const { service } = buildService({ currentLines: [] });
+
+            const result = await service.getReport(CURRENT);
+
+            expect(result.totals).toEqual([]);
         });
     });
 });

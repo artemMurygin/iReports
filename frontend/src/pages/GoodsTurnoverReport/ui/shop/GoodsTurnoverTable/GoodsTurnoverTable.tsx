@@ -1,15 +1,16 @@
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
+import type { ShopGoodsTurnoverWarehouseTotal } from 'ireports-contracts'
 
 import { cn } from '@/shared/lib/tw.ts'
 import { formatCurrency, formatNumber, formatRatio } from '@/shared/lib/format.ts'
 
 import {
     buildShopGoodsTurnoverTreeRows,
+    countShopRootCategories,
     filterVisibleShopRows,
     getShopRatioColorClass,
     pluralizeShopCategories,
-    summarizeShopGoodsTurnoverRows,
     type ShopGoodsTurnoverRow,
     type ShopGoodsTurnoverTreeRow,
 } from '../../../model/shop/goodsTurnoverTree.ts'
@@ -21,6 +22,12 @@ export type ShopGoodsTurnoverTableProps = {
     /** Полный (плоский) каталог категорий — источник истины для реальной глубины/родства строк,
      * см. `buildShopGoodsTurnoverTreeRows`. */
     categories?: ShopCategoryRef[]
+    /**
+     * Готовая итоговая запись «по складу» для строки «Итого» — из поля `totals` ответа
+     * `GET .../goods-turnover-report/:period` (Implements FR5 of add-department-head-salary-rules,
+     * BREAKING форма ответа `{lines, totals}`). `null`/не передан — плейсхолдер «—», см. `SummaryRow`.
+     */
+    total?: ShopGoodsTurnoverWarehouseTotal | null
     className?: string
 }
 
@@ -50,9 +57,9 @@ const FONT_NUM = 'font-lg-num'
  * полей контракта (`turnoverQuantity`/`turnoverSum`/`coefficient` вместо `outcomeQuantity`/
  * `outcomeSum`/`turnoverRatio`) — визуально и по поведению идентична оригиналу.
  */
-export function ShopGoodsTurnoverTable({ rows, categories = [], className }: ShopGoodsTurnoverTableProps) {
+export function ShopGoodsTurnoverTable({ rows, categories = [], total = null, className }: ShopGoodsTurnoverTableProps) {
     const treeRows = useMemo(() => buildShopGoodsTurnoverTreeRows(rows, categories), [rows, categories])
-    const summary = useMemo(() => summarizeShopGoodsTurnoverRows(rows, categories), [rows, categories])
+    const rootCategoriesCount = useMemo(() => countShopRootCategories(rows, categories), [rows, categories])
     const { isExpanded, toggle } = useExpandedShopCategories()
     const isCollapsed = useCallback((categoryId: string) => !isExpanded(categoryId), [isExpanded])
     const visibleRows = useMemo(() => filterVisibleShopRows(treeRows, isCollapsed), [treeRows, isCollapsed])
@@ -68,7 +75,7 @@ export function ShopGoodsTurnoverTable({ rows, categories = [], className }: Sho
                 className,
             )}
         >
-            <SummaryRow summary={summary} />
+            <SummaryRow total={total} />
             <HeaderRow />
             {visibleRows.length === 0 ? (
                 <div className={cn('px-5 py-6 text-center text-sm', FONT_UI, LG_INK_MUTED)}>Нет строк для выбранных фильтров</div>
@@ -77,21 +84,24 @@ export function ShopGoodsTurnoverTable({ rows, categories = [], className }: Sho
                     <TableRow key={row.categoryId} row={row} isCollapsed={isCollapsed(row.categoryId)} onToggle={toggle} />
                 ))
             )}
-            <Footer summary={summary} />
+            <Footer rootCategoriesCount={rootCategoriesCount} />
         </div>
     )
 }
 
-type SummaryRowProps = { summary: ReturnType<typeof summarizeShopGoodsTurnoverRows> }
+type SummaryRowProps = { total: ShopGoodsTurnoverWarehouseTotal | null }
 
-function SummaryRow({ summary }: SummaryRowProps) {
+// Implements FR5 of add-department-head-salary-rules: строка «Итого» рендерится напрямую из
+// готового `total` ответа API (`{lines, totals}`, BREAKING), без локального пересчёта по `rows` —
+// см. комментарий в `model/shop/goodsTurnoverTree.ts`.
+function SummaryRow({ total }: SummaryRowProps) {
     return (
         <div className={cn('grid grid-cols-3 divide-x', LG_LINE_X, 'border-b', LG_BORDER)}>
-            <SummaryMetric label="Расход товаров · факт" value={formatCurrency(summary.turnoverSum)} />
-            <SummaryMetric label="Остаток на складе" value={formatCurrency(summary.stockSum)} />
+            <SummaryMetric label="Расход товаров · факт" value={total === null ? '—' : formatCurrency(total.turnoverSum)} />
+            <SummaryMetric label="Остаток на складе" value={total === null ? '—' : formatCurrency(total.stockSum)} />
             <SummaryMetric
                 label="Оборачиваемость"
-                value={summary.coefficient === null ? '—' : formatRatio(summary.coefficient)}
+                value={total?.coefficient == null ? '—' : formatRatio(total.coefficient)}
             />
         </div>
     )
@@ -259,17 +269,11 @@ function Marker({ hasChildren, isTopLevel, isCollapsed }: { hasChildren: boolean
     )
 }
 
-function Footer({ summary }: { summary: ReturnType<typeof summarizeShopGoodsTurnoverRows> }) {
-    const totalRatioText = summary.coefficient === null ? '—' : formatRatio(summary.coefficient)
-
+function Footer({ rootCategoriesCount }: { rootCategoriesCount: number }) {
     return (
         <div className={cn('flex h-10 items-center justify-between gap-4 px-5', LG_CANVAS)}>
             <span className={cn('text-[11px]', FONT_UI, LG_INK_MUTED)}>
-                {summary.rootCategoriesCount} {pluralizeShopCategories(summary.rootCategoriesCount)}
-            </span>
-            <span className={cn('text-[11px] font-semibold tabular-nums', FONT_NUM, LG_INK)}>
-                Итого&nbsp;&nbsp;&nbsp;{formatCurrency(summary.turnoverSum)}&nbsp;&nbsp;·&nbsp;&nbsp;
-                {formatCurrency(summary.stockSum)}&nbsp;&nbsp;·&nbsp;&nbsp;{totalRatioText}
+                {rootCategoriesCount} {pluralizeShopCategories(rootCategoriesCount)}
             </span>
         </div>
     )

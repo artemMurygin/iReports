@@ -15,8 +15,12 @@ describe('GetGoodsTurnoverReportHttpController', () => {
         coefficient: null,
     };
 
+    // add-department-head-salary-rules, FR5 (BREAKING): сервис теперь возвращает {lines, totals}
+    // вместо голого массива — контроллер пробрасывает его как есть, без собственной логики.
+    const reportResult = { lines: [line], totals: [] };
+
     it('парсит :period в Period и делегирует сервису, не подставляя warehouseId, когда его нет в query', async () => {
-        const getReport = jest.fn().mockResolvedValue([line]);
+        const getReport = jest.fn().mockResolvedValue(reportResult);
         const service = {
             getReport,
         } as unknown as GetGoodsTurnoverReportService;
@@ -33,11 +37,11 @@ describe('GetGoodsTurnoverReportHttpController', () => {
         ];
         expect(periodArg.getValue()).toBe('2026-08');
         expect(warehouseIdArg).toBeUndefined();
-        expect(result).toEqual([line]);
+        expect(result).toEqual(reportResult);
     });
 
     it('пробрасывает warehouseId из query в сервис', async () => {
-        const getReport = jest.fn().mockResolvedValue([line]);
+        const getReport = jest.fn().mockResolvedValue(reportResult);
         const service = {
             getReport,
         } as unknown as GetGoodsTurnoverReportService;

@@ -56,7 +56,7 @@ describe('GetGoodsTurnoverReportService', () => {
 
         const result = await service.get('2026-01');
 
-        expect(result).toEqual({ period: '2026-01', lines: [] });
+        expect(result).toEqual({ period: '2026-01', lines: [], totals: [] });
         // Справочники не нужны, если строк нет — нечего денормализовать.
         expect(findAllCategories).not.toHaveBeenCalled();
         expect(findAllWarehouses).not.toHaveBeenCalled();
@@ -74,10 +74,15 @@ describe('GetGoodsTurnoverReportService', () => {
         const { service } = buildService(
             [line],
             [
+                // Категория 10 — настоящий корень (parentId: null) этой строки, не совпадает с
+                // parentId: 1, денормализованным в ответ строки (id 1 — отдельная, несвязанная
+                // категория-родитель по справочнику имени/parentId строки; здесь важно различить
+                // "категория строки" и "корень для totals", поэтому сама категория 10 задана
+                // корневой явно).
                 ProductCategory.create({
                     id: 10,
                     name: 'Аккумуляторы',
-                    parentId: 1,
+                    parentId: null,
                 }),
             ],
             [Warehouse.create({ id: 1, name: 'Основной склад' })],
@@ -91,7 +96,7 @@ describe('GetGoodsTurnoverReportService', () => {
                 {
                     categoryId: 10,
                     categoryName: 'Аккумуляторы',
-                    categoryParentId: 1,
+                    categoryParentId: null,
                     warehouseId: 1,
                     warehouseName: 'Основной склад',
                     outcomeQuantity: 5,
@@ -102,7 +107,64 @@ describe('GetGoodsTurnoverReportService', () => {
                     turnoverRatio: 2,
                 },
             ],
+            totals: [
+                {
+                    warehouseId: 1,
+                    outcomeSum: 5000,
+                    stockSum: 2000,
+                    stockQuantity: 2,
+                    turnoverRatio: 2,
+                },
+            ],
         });
+    });
+
+    // add-department-head-salary-rules, tasks.md задача 4.1, FR5: totals строится по строкам
+    // настоящих корневых категорий (parentId === null в справочнике), не по всем строкам — иначе
+    // сумма дочерней категории задвоила бы сумму родителя.
+    it('totals суммирует только строки настоящих корневых категорий, не дочерние', async () => {
+        const rootLine = GoodsTurnoverReportLine.create({
+            period: '2026-01',
+            categoryId: 1,
+            warehouseId: 1,
+            outcome: GoodsFlowMetric.create(0, 100),
+            stock: GoodsFlowMetric.create(0, 200),
+        });
+        const childLine = GoodsTurnoverReportLine.create({
+            period: '2026-01',
+            categoryId: 2,
+            warehouseId: 1,
+            outcome: GoodsFlowMetric.create(0, 60),
+            stock: GoodsFlowMetric.create(0, 120),
+        });
+        const { service } = buildService(
+            [rootLine, childLine],
+            [
+                ProductCategory.create({
+                    id: 1,
+                    name: 'Корень',
+                    parentId: null,
+                }),
+                ProductCategory.create({
+                    id: 2,
+                    name: 'Дочерняя',
+                    parentId: 1,
+                }),
+            ],
+            [Warehouse.create({ id: 1, name: 'Основной склад' })],
+        );
+
+        const result = await service.get('2026-01');
+
+        expect(result.totals).toEqual([
+            {
+                warehouseId: 1,
+                outcomeSum: 100,
+                stockSum: 200,
+                stockQuantity: 0,
+                turnoverRatio: null,
+            },
+        ]);
     });
 
     it('строка ссылается на категорию/склад, отсутствующие в справочнике — денормализуется пустой строкой, не падает', async () => {

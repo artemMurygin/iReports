@@ -31,6 +31,9 @@ export function ShopSchemaEdit({ id }: ShopSchemaEditProps) {
                     orderTypes={page.orderTypes}
                     isOrderTypesLoading={page.isOrderTypesLoading}
                     orderTypesError={page.orderTypesError}
+                    warehouses={page.warehouses}
+                    isWarehousesLoading={page.isWarehousesLoading}
+                    warehousesError={page.warehousesError}
                 />
             )}
         </RefreshTransitionLayout>

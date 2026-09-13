@@ -8,6 +8,8 @@ import type { ProductCategoryRepositoryPort } from '@/domains/service/modules/wa
 import { WAREHOUSE_REPOSITORY } from '@/domains/service/modules/warehouse/application/ports/warehouse/warehouse.port';
 import type { WarehouseRepositoryPort } from '@/domains/service/modules/warehouse/application/ports/warehouse/warehouse.port';
 import { toGoodsTurnoverReportLineResponse } from '@/domains/service/modules/warehouse/application/mappers/goods-turnover-report/to-goods-turnover-report-line-response';
+import { toGoodsTurnoverWarehouseTotalResponse } from '@/domains/service/modules/warehouse/application/mappers/goods-turnover-report/to-goods-turnover-warehouse-total-response';
+import { GoodsTurnoverReport } from '@/domains/service/modules/warehouse/domain/entities/goods-turnover-report/goods-turnover-report.entity';
 
 // Read-side отчёта по оборачиваемости (GET /v1/service/warehouse/
 // goods-turnover-report/:period, задача 10, architecture.md
@@ -34,12 +36,17 @@ export class GetGoodsTurnoverReportService {
         private readonly warehouseRepo: WarehouseRepositoryPort,
     ) {}
 
+    /**
+     * Implements FR5 of add-department-head-salary-rules.
+     * Возвращает `{period, lines, totals}` — `totals` строится вызовом
+     * `GoodsTurnoverReport.totals()` поверх восстановленного агрегата, не инлайн-суммированием.
+     */
     async get(period: string): Promise<GetGoodsTurnoverReportResponse> {
         const periodValue = Period.create(period).getValue();
 
         const lines = await this.lineRepo.findByPeriod(periodValue);
         if (lines.length === 0) {
-            return { period: periodValue, lines: [] };
+            return { period: periodValue, lines: [], totals: [] };
         }
 
         const [categories, warehouses] = await Promise.all([
@@ -53,6 +60,20 @@ export class GetGoodsTurnoverReportService {
             warehouses.map((warehouse) => [warehouse.getId(), warehouse]),
         );
 
+        // Восстанавливает сам агрегат (не только плоский список строк) — FR5, design.md Decision
+        // 6a: сумма/коэффициент по складу больше не считаются инлайн в этом сервисе, а вызовом
+        // метода агрегата .totals().
+        const report = GoodsTurnoverReport.create({
+            period: periodValue,
+            lines,
+        });
+        const rootCategoryIds = new Set(
+            categories
+                .filter((category) => category.getParentId() === null)
+                .map((category) => category.getId()),
+        );
+        const totals = report.totals(rootCategoryIds);
+
         return {
             period: periodValue,
             lines: lines.map((line) =>
@@ -62,6 +83,7 @@ export class GetGoodsTurnoverReportService {
                     warehouseById.get(line.warehouseId),
                 ),
             ),
+            totals: totals.map(toGoodsTurnoverWarehouseTotalResponse),
         };
     }
 }

@@ -168,38 +168,17 @@ export function getShopRatioColorClass(ratio: number | null): string {
     return 'text-danger'
 }
 
-export type ShopGoodsTurnoverSummary = {
-    turnoverSum: number
-    stockSum: number
-    stockQuantity: number
-    coefficient: number | null
-    rootCategoriesCount: number
-}
-
-/** Портировано из `summarizeGoodsTurnoverRows` (`../goodsTurnoverTree.ts`) — та же формула
- * (сумма по НАСТОЯЩИМ корневым категориям, средневзвешенный по остатку коэффициент), см.
- * комментарий оригинала за полным обоснованием. */
-export function summarizeShopGoodsTurnoverRows(
-    rows: ShopGoodsTurnoverRow[],
-    categories: ShopCategoryRef[] = [],
-): ShopGoodsTurnoverSummary {
+// `summarizeShopGoodsTurnoverRows` (была здесь) удалена задачей 18 change
+// add-department-head-salary-rules (FR5, BREAKING для shop): формула переехала на backend, ответ
+// `GET .../goods-turnover-report/:period` теперь `{lines, totals}` — `ShopGoodsTurnoverTable`
+// рендерит «Итого» из готовой записи `totals` (проп `total`), см. комментарий над
+// `countRootCategories` в `../goodsTurnoverTree.ts` (направление `service`) за полным обоснованием
+// — здесь то же самое, зеркально по shop-контракту.
+export function countShopRootCategories(rows: ShopGoodsTurnoverRow[], categories: ShopCategoryRef[] = []): number {
     const realParentById = new Map<string, string | null>(rows.map((row) => [row.categoryId, row.categoryParentId]))
     for (const category of categories) realParentById.set(category.id, category.parentId)
 
-    const rootRows = rows.filter((row) => (realParentById.get(row.categoryId) ?? null) === null)
-
-    const turnoverSum = rootRows.reduce((sum, row) => sum + row.turnoverSum, 0)
-    const stockSum = rootRows.reduce((sum, row) => sum + row.stockSum, 0)
-    const stockQuantity = rootRows.reduce((sum, row) => sum + row.stockQuantity, 0)
-
-    const withRatio = rootRows.filter((row): row is ShopGoodsTurnoverRow & { coefficient: number } => row.coefficient !== null)
-    const ratioWeight = withRatio.reduce((sum, row) => sum + row.stockSum, 0)
-    const coefficient =
-        withRatio.length === 0 || ratioWeight === 0
-            ? null
-            : withRatio.reduce((sum, row) => sum + row.coefficient * row.stockSum, 0) / ratioWeight
-
-    return { turnoverSum, stockSum, stockQuantity, coefficient, rootCategoriesCount: rootRows.length }
+    return rows.filter((row) => (realParentById.get(row.categoryId) ?? null) === null).length
 }
 
 // Портировано без изменений из `../goodsTurnoverTree.ts` (`pluralizeCategories`).

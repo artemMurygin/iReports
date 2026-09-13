@@ -14,8 +14,19 @@ export { RULE_TYPE_LABELS }
 /** Порядок типов в селекте «Тип правила» направления «Сервис» — живёт здесь, рядом с остальными
  * сервисными наборами, а не в направление-агностичном `core/model/ruleDraft.ts`. `TaskCompletion` —
  * последний в списке (node `j6df4e`, tasks.md раздел 20), тот же порядок, что и в `wV3fv`'s "Тип
- * правила" select. */
-export const RULE_TYPE_ORDER: ServiceRuleType[] = ['PayPerHour', 'ServiceCompleted', 'OrderPayed', 'TaskCompletion']
+ * правила" select. `DepartmentPercent`/`DepartmentPlanBonus`/`DepartmentTurnoverBonus`
+ * (add-department-head-salary-rules, FR2-FR4) вставлены перед `TaskCompletion`, чтобы тот
+ * оставался последним — тот же порядок, в котором ui-design.md показывает 3 новых карточки-примера
+ * (FR2 → FR3 → FR4). */
+export const RULE_TYPE_ORDER: ServiceRuleType[] = [
+    'PayPerHour',
+    'ServiceCompleted',
+    'OrderPayed',
+    'DepartmentPercent',
+    'DepartmentPlanBonus',
+    'DepartmentTurnoverBonus',
+    'TaskCompletion',
+]
 
 /** Pencil `tSYIw` → `Salary Basis` / `Basis Tabs` — 3-tab segmented control, same shape
  * `SegmentedControl` already renders for "Направление" and the borders' "Режим" tabs. */
@@ -37,6 +48,13 @@ export const SALARY_BASIS_OPTIONS: SegmentedControlOption<SalaryBasisValue>[] = 
 export const AWARD_OPTIONS_BY_TYPE: Record<ServiceRuleType, AwardOptionConfig[]> = {
     PayPerHour: [],
     TaskCompletion: [],
+    // add-department-head-salary-rules (FR2-FR4) — тот же приём, что и у `PayPerHour`/
+    // `TaskCompletion`: у этих 3 типов вообще нет "Вариант награды" (ui-design.md «Отклонения»),
+    // их собственные поля рендерятся отдельной веткой `RuleFormCardFields`, не через
+    // `AwardSection`/этот список.
+    DepartmentPercent: [],
+    DepartmentPlanBonus: [],
+    DepartmentTurnoverBonus: [],
     ServiceCompleted: [
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за выполненную услугу' },
         {

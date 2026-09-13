@@ -17,6 +17,7 @@ import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/sale
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
+import { DepartmentPercentEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-percent.entity';
 import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
 import { ArgumentInvalidException } from '@/shared/exceptions';
@@ -67,6 +68,8 @@ describe('GetShopEmployeeSalaryReportService', () => {
         shopPlans?: ShopSalesPlan[];
         shopErpData?: Partial<ShopCalculationErpData>;
         shopSalesPerformanceDetail?: unknown;
+        departmentSalesPerformance?: unknown;
+        turnoverPerformance?: unknown;
         shopIdentities?: {
             system: string;
             identifierType: string;
@@ -202,6 +205,14 @@ describe('GetShopEmployeeSalaryReportService', () => {
                         overrides?.shopSalesPerformanceDetail
                             ? [overrides.shopSalesPerformanceDetail]
                             : [],
+                    // Implements FR2-FR4 of add-department-head-salary-rules — по умолчанию пустые,
+                    // как и у настоящего BuildShopCalculationContextService при схеме без
+                    // department-правил; переопределяются тестом ниже, проверяющим, что оба поля
+                    // реально доходят до rule.calculate().
+                    departmentSalesPerformance:
+                        overrides?.departmentSalesPerformance ?? new Map(),
+                    turnoverPerformance:
+                        overrides?.turnoverPerformance ?? new Map(),
                 }),
             ),
             findSalesPerformanceForEmployee: jest.fn().mockResolvedValue(null),
@@ -565,6 +576,56 @@ describe('GetShopEmployeeSalaryReportService', () => {
                 },
             ]);
             expect(report.isPlanApproved).toBe(true);
+        });
+    });
+
+    // Implements FR2-FR4 of add-department-head-salary-rules.
+    //
+    // buildOpenDirection() строит два CalculationContext (FACT/PROGNOSE) перечислением полей явно,
+    // а не спредом полного baseContext — departmentSalesPerformance/turnoverPerformance, которые
+    // BuildShopCalculationContextService уже резолвит, должны доходить до
+    // rule.calculate() DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus правил, иначе
+    // те молча считают 0 (design.md Q2, "no data for scope → 0, no throw").
+    describe('departmentSalesPerformance / turnoverPerformance доходят до rule.calculate()', () => {
+        it('DepartmentPercent считает по departmentSalesPerformance из контекста', async () => {
+            const rule = withRequestContext(() =>
+                DepartmentPercentEntity.create({
+                    type: 'DepartmentPercent',
+                    name: 'Процент от факта',
+                    targetRole: 'DEPARTMENT_HEAD',
+                    config: {
+                        salaryBasis: 'REVENUE',
+                        category: 'cat-1',
+                        percent: 10,
+                    },
+                }),
+            );
+            const shopSchema = withRequestContext(() =>
+                ShopMotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: 42,
+                    name: 'Руководитель отдела',
+                    rules: [rule],
+                }),
+            );
+
+            const { service } = buildService({
+                shopSchema,
+                // fact.turnover=100000 * percent 10% = 10000
+                departmentSalesPerformance: new Map([
+                    [
+                        'cat-1',
+                        {
+                            fact: { turnover: 100000, margin: 0 },
+                            percentCompletion: 80,
+                        },
+                    ],
+                ]),
+            });
+
+            const report = await service.execute(42, '2026-08');
+
+            expect(report.total).toEqual({ fact: 10000, prognose: 10000 });
         });
     });
 

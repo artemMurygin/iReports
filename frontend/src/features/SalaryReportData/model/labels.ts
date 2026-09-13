@@ -9,6 +9,9 @@ import { ALL_RULE_TYPE_LABELS } from '@/kernel/ruleTypeLabels.ts'
  * в единственном числе, как показывает Pencil `b6mfxv`'s "Role" ячейки, а не "Менеджер заказов").
  * Общий на оба направления enum (см. `contracts/commands/salary-rule.ts`), поэтому карта покрывает
  * весь `TargetRole`, а не только роли, реально видимые в отчёте отдела/сотрудника.
+ * `DEPARTMENT_HEAD` — add-department-head-salary-rules, FR1 («руководитель направления»): та же
+ * формулировка, что `features/SalaryRuleForm`'s `ROLE_LABELS` (независимая копия, см. комментарий
+ * выше про копии между слоями).
  */
 export const ROLE_LABELS: Record<TargetRole, string> = {
     ENGINEER: 'Инженер',
@@ -19,6 +22,7 @@ export const ROLE_LABELS: Record<TargetRole, string> = {
     OFFLINE_PURCHASER: 'Офлайн-закупщик',
     OFFICE: 'Офис',
     SOLO_MANAGER: 'Соло-менеджер',
+    DEPARTMENT_HEAD: 'Руководитель направления',
 }
 
 /** `role` — строго `TargetRole` по контракту, поэтому не нуждается в fallback-ветке (в отличие от

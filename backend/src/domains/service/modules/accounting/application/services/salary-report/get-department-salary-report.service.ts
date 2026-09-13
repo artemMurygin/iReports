@@ -3,9 +3,13 @@ import type {
     DepartmentSalaryReportResponse,
     EmployeeSalaryReportRule,
 } from 'ireports-contracts';
-import type { CalculationContext } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import {
+    SalaryRule,
+    type DepartmentPercentSalaryConfig,
+    type DepartmentPlanBonusSalaryConfig,
+    type DepartmentTurnoverBonusSalaryConfig,
+} from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
 import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-salary-report-rules';
@@ -39,6 +43,16 @@ import {
     taskCompletionFreshnessStamp,
     taskCompletionStatusesFromTasks,
 } from '@/domains/service/modules/accounting/application/services/calculation/task-completion-statuses.builder';
+import { TURNOVER_PERFORMANCE_READER } from '@/domains/service/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
+import type { TurnoverPerformanceReaderPort } from '@/domains/service/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
+import type {
+    DepartmentSalesPerformanceByCategory,
+    DepartmentSalesPerformanceEntry,
+    ServiceCalculationContext,
+    TurnoverPerformanceByScope,
+    TurnoverPerformanceScope,
+} from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
+import { turnoverPerformanceScopeKey } from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
 
 interface EmployeeCalculationResult {
     factLines: (CalculationLine | null)[];
@@ -108,6 +122,11 @@ export class GetDepartmentSalaryReportService {
         private readonly ensureRuleTask: EnsureRuleTaskForPeriodService,
         @Inject(TASK_REPOSITORY)
         private readonly taskRepo: TaskRepositoryPort,
+        // Implements FR4 of add-department-head-salary-rules — зеркало
+        // BuildServiceCalculationContextService, здесь резолвится один раз на весь отдел
+        // (resolveTurnoverPerformance ниже), а не на сотрудника.
+        @Inject(TURNOVER_PERFORMANCE_READER)
+        private readonly turnoverPerformanceReader: TurnoverPerformanceReaderPort,
     ) {}
 
     async execute(
@@ -291,6 +310,27 @@ export class GetDepartmentSalaryReportService {
             taskCompletionTasks.map((ref) => [ref.ruleId, ref]),
         );
 
+        // Implements FR2-FR4 of add-department-head-salary-rules.
+        //
+        // departmentSalesPerformance/turnoverPerformance — ОДИН батч на весь отдел (тот же принцип
+        // "не должно быть N+1", что и у taskCompletionStatuses выше), по union
+        // category/(warehouseId, category) DepartmentPercent/DepartmentPlanBonus/
+        // DepartmentTurnoverBonus-правил ВСЕХ сотрудников отдела (allRules, уже собранный выше) — а
+        // не через BuildServiceCalculationContextService (этот отчёт строит erpData/SalesPerformance
+        // сам, батчем на отдел, см. шапку файла). Обе карты не зависят от employeeId, поэтому одни и
+        // те же переиспользуются для каждого сотрудника ниже (зеркало
+        // resolveDepartmentSalesPerformance/resolveTurnoverPerformance у
+        // BuildServiceCalculationContextService).
+        const [departmentSalesPerformance, turnoverPerformance] =
+            await Promise.all([
+                this.resolveDepartmentSalesPerformance(
+                    period,
+                    departmentId,
+                    allRules,
+                ),
+                this.resolveTurnoverPerformance(period, allRules),
+            ]);
+
         const contributions = new Map<number, DirectionContribution>();
 
         for (const employee of employees) {
@@ -344,6 +384,10 @@ export class GetDepartmentSalaryReportService {
                     // других сотрудников безвредны.
                     taskCompletionStatuses,
                 } satisfies ServiceCalculationErpData,
+                // Implements FR2-FR4 of add-department-head-salary-rules — те же две карты для
+                // каждого сотрудника отдела (см. WHY у batch-резолва выше).
+                departmentSalesPerformance,
+                turnoverPerformance,
             };
 
             const { factLines, prognoseLines } = await this.calculateEmployee(
@@ -375,7 +419,10 @@ export class GetDepartmentSalaryReportService {
         period: string,
         freshnessStamp: string,
         rules: SalaryRule[],
-        baseContext: Omit<CalculationContext, 'mode' | 'salesPerformance'>,
+        baseContext: Omit<
+            ServiceCalculationContext,
+            'mode' | 'salesPerformance'
+        >,
         salesPerformanceDetail: SalesPerformance | null,
     ): Promise<EmployeeCalculationResult> {
         const cached = await this.cacheRepo.find('service', period, employeeId);
@@ -414,5 +461,144 @@ export class GetDepartmentSalaryReportService {
         });
 
         return { factLines, prognoseLines };
+    }
+
+    // Implements FR2-FR3 of add-department-head-salary-rules — зеркало
+    // BuildServiceCalculationContextService.resolveDepartmentSalesPerformance, но по union category
+    // ВСЕХ схем отдела (allRules) разом, а не по схеме одного сотрудника: этот отчёт уже знает
+    // departmentId параметром execute(), поэтому карта строится безусловно (в отличие от
+    // BuildServiceCalculationContextService, где departmentId может быть null при отсутствии отдела
+    // у сотрудника — здесь такого случая нет, отчёт всегда вызывается для конкретного отдела).
+    private async resolveDepartmentSalesPerformance(
+        period: string,
+        departmentId: number,
+        rules: SalaryRule[],
+    ): Promise<DepartmentSalesPerformanceByCategory> {
+        const categories =
+            this.collectDepartmentSalesPerformanceCategories(rules);
+        const result: DepartmentSalesPerformanceByCategory = new Map();
+        if (categories.size === 0) {
+            return result;
+        }
+
+        const entries = await Promise.all(
+            [...categories].map(
+                async (category) =>
+                    [
+                        category,
+                        await this.salesPerformanceReader.findForScope(
+                            'service',
+                            period,
+                            departmentId,
+                            category,
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [category, performance] of entries) {
+            if (performance) {
+                result.set(
+                    category,
+                    this.toDepartmentSalesPerformanceEntry(performance),
+                );
+            }
+        }
+        return result;
+    }
+
+    private collectDepartmentSalesPerformanceCategories(
+        rules: SalaryRule[],
+    ): Set<string | null> {
+        const categories = new Set<string | null>();
+        for (const rule of rules) {
+            if (
+                rule.type !== 'DepartmentPercent' &&
+                rule.type !== 'DepartmentPlanBonus'
+            ) {
+                continue;
+            }
+            const config = rule.config as
+                DepartmentPercentSalaryConfig | DepartmentPlanBonusSalaryConfig;
+            categories.add(config.category);
+        }
+        return categories;
+    }
+
+    private toDepartmentSalesPerformanceEntry(
+        performance: SalesPerformance,
+    ): DepartmentSalesPerformanceEntry {
+        const fact = performance.getFact();
+        return {
+            fact: { turnover: fact.getTurnover(), margin: fact.getMargin() },
+            percentCompletion: fact.getPercentCompletion(),
+        };
+    }
+
+    // Implements FR4 of add-department-head-salary-rules — зеркало
+    // BuildServiceCalculationContextService.resolveTurnoverPerformance, по union
+    // (warehouseId, category) ВСЕХ схем отдела разом.
+    private async resolveTurnoverPerformance(
+        period: string,
+        rules: SalaryRule[],
+    ): Promise<TurnoverPerformanceByScope> {
+        const scopes = this.collectTurnoverPerformanceScopes(rules);
+        const result: TurnoverPerformanceByScope = new Map();
+        if (scopes.length === 0) {
+            return result;
+        }
+
+        const entries = await Promise.all(
+            scopes.map(
+                async (scope) =>
+                    [
+                        turnoverPerformanceScopeKey(scope),
+                        await this.turnoverPerformanceReader.findForScope(
+                            period,
+                            scope.warehouseId,
+                            this.toRoappCategoryId(scope.category),
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [key, ratio] of entries) {
+            result.set(key, ratio);
+        }
+        return result;
+    }
+
+    // Тот же мост string → RoApp category id, что и в
+    // BuildServiceCalculationContextService.toRoappCategoryId (см. подробный комментарий там,
+    // "PRE-EXISTING CROSS-GROUP TYPE GAP") — TurnoverPerformanceReaderPort.findForScope принимает
+    // категорию уже распарсенным числом.
+    private toRoappCategoryId(category: string | null): number | null {
+        if (category === null) {
+            return null;
+        }
+        const parsed = Number(category);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    private collectTurnoverPerformanceScopes(
+        rules: SalaryRule[],
+    ): TurnoverPerformanceScope[] {
+        const seenKeys = new Set<string>();
+        const scopes: TurnoverPerformanceScope[] = [];
+        for (const rule of rules) {
+            if (rule.type !== 'DepartmentTurnoverBonus') {
+                continue;
+            }
+            const config = rule.config as DepartmentTurnoverBonusSalaryConfig;
+            const scope: TurnoverPerformanceScope = {
+                warehouseId: config.warehouseId,
+                category: config.category,
+            };
+            const key = turnoverPerformanceScopeKey(scope);
+            if (seenKeys.has(key)) {
+                continue;
+            }
+            seenKeys.add(key);
+            scopes.push(scope);
+        }
+        return scopes;
     }
 }

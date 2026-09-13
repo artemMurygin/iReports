@@ -192,51 +192,25 @@ export function getRatioColorClass(ratio: number | null): string {
     return 'text-danger'
 }
 
-// Итоговая строка «Итого» (ui-design.md, `tcWPr`) агрегирует расход/остаток по НАСТОЯЩИМ корневым
-// (реальный `parentId: null` в справочнике категорий, а не просто "родителя нет в `rows`" — та же
-// поправка, что и в `buildGoodsTurnoverTreeRows` выше) категориям, а не по всем строкам —
-// подтверждено арифметикой самого мокапа (`D3Sf4`): сумма `outcomeSum` дочерних категорий каждой
-// корневой категории в точности равна `outcomeSum` самой корневой строки (напр. "Дисплеи" 186 400
-// = "iPhone" 128 300 + "iPad" 41 200 + "MacBook" 16 900 - с точностью округления; "Корпусные
-// детали" 62 800 = "Задние крышки" 41 200 + "Рамки и шасси" 21 600), т.е. бэкенд
-// (`BuildGoodsTurnoverReportService`/RemOnline `getGoodsFlowReport` по `category_id` родителя) уже
-// отдаёт в строке родительской категории агрегат по всему поддереву. Суммирование ВСЕХ строк
-// (а не только корневых) задвоило бы каждую сумму на глубину дерева. Категория, чей настоящий
-// корень-предок не вернул данные за период (частичный успех бэкенда), в сумму не попадает — её
-// агрегат просто неизвестен без строки корня, досчитывать его снизу вверх было бы отдельным,
-// самостоятельно изобретённым бизнес-правилом.
-export type GoodsTurnoverSummary = {
-    outcomeSum: number
-    stockSum: number
-    stockQuantity: number
-    turnoverRatio: number | null
-    rootCategoriesCount: number
-}
-
-export function summarizeGoodsTurnoverRows(rows: GoodsTurnoverRow[], categories: ProductCategoryRef[] = []): GoodsTurnoverSummary {
+// Итоговая строка «Итого» (ui-design.md, `tcWPr`) больше НЕ пересчитывается здесь
+// (`summarizeGoodsTurnoverRows`, была тут — удалена задачей 18 change
+// add-department-head-salary-rules, FR5): формула «сумма по настоящим корневым строкам +
+// средневзвешенный по остатку коэффициент» переехала на backend (`GoodsTurnoverReport.totals()`,
+// `domains/service/modules/warehouse`) — ответ `GET .../goods-turnover-report/:period` теперь сам
+// отдаёт готовую запись по складу в поле `totals`. `GoodsTurnoverTable`/`GoodsTurnoverReportBody`
+// рендерят строку «Итого» из `total: GoodsTurnoverWarehouseTotalResponse | null` (проп), который
+// вызывающая сторона (`useGoodsTurnoverReportPage`) достаёт из `report.totals` по текущему
+// `warehouseId` — без локального пересчёта по `rows` (риск расхождения формулы, отмеченный в
+// design.md, устранён). `countRootCategories` ниже — единственное, что осталось от прежнего
+// `summarizeGoodsTurnoverRows` на фронтенде: футер таблицы («N категорий») по-прежнему считается от
+// уже отфильтрованных по складу/категории `rows`, а не от `totals` (который не знает о фильтре по
+// категории и всегда о целом складе) — это число категорий, а не денежная сумма, поэтому не входит
+// в перечень FR5.
+export function countRootCategories(rows: GoodsTurnoverRow[], categories: ProductCategoryRef[] = []): number {
     const realParentById = new Map<number, number | null>(rows.map((row) => [row.categoryId, row.categoryParentId]))
     for (const category of categories) realParentById.set(category.id, category.parentId)
 
-    const rootRows = rows.filter((row) => (realParentById.get(row.categoryId) ?? null) === null)
-
-    const outcomeSum = rootRows.reduce((sum, row) => sum + row.outcomeSum, 0)
-    const stockSum = rootRows.reduce((sum, row) => sum + row.stockSum, 0)
-    const stockQuantity = rootRows.reduce((sum, row) => sum + row.stockQuantity, 0)
-
-    // Средневзвешенный (по остатку в ₽) коэффициент по строкам с уже посчитанным `turnoverRatio`
-    // (`GoodsTurnoverReportLine.calcRatio`, бэкенд) — сам по себе аггрегированный коэффициент не
-    // пересчитывается по формуле "расход / средний остаток" заново на фронтенде, потому что
-    // остаток ПРОШЛОГО периода (нужен для этой формулы) в `GetGoodsTurnoverReportResponse` не
-    // отдаётся вовсе (только текущий месяц) — переиспользуем то, что уже посчитал бэкенд по
-    // каждой корневой категории.
-    const withRatio = rootRows.filter((row): row is GoodsTurnoverRow & { turnoverRatio: number } => row.turnoverRatio !== null)
-    const ratioWeight = withRatio.reduce((sum, row) => sum + row.stockSum, 0)
-    const turnoverRatio =
-        withRatio.length === 0 || ratioWeight === 0
-            ? null
-            : withRatio.reduce((sum, row) => sum + row.turnoverRatio * row.stockSum, 0) / ratioWeight
-
-    return { outcomeSum, stockSum, stockQuantity, turnoverRatio, rootCategoriesCount: rootRows.length }
+    return rows.filter((row) => (realParentById.get(row.categoryId) ?? null) === null).length
 }
 
 export function pluralizeCategories(count: number): string {

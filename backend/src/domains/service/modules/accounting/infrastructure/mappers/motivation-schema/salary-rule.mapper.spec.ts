@@ -1,6 +1,9 @@
 import { SalaryRuleMapper } from './salary-rule.mapper';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ServiceCompletedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/service-completed.entity';
+import { DepartmentPercentEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/department-percent.entity';
+import { DepartmentPlanBonusEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/department-plan-bonus.entity';
+import { DepartmentTurnoverBonusEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/department-turnover-bonus.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 
 const buildContext = (): CalculationContext => ({
@@ -70,6 +73,108 @@ describe('SalaryRuleMapper', () => {
 
             expect(entity).toBeInstanceOf(ServiceCompletedEntity);
             expect(entity.config).toEqual({ award: { type: 'ServiceFixed' } });
+        });
+
+        // Implements FR2 of add-department-head-salary-rules (tasks.md раздел 12).
+        it('восстанавливает DepartmentPercentEntity из записи БД', () => {
+            const entity = mapper.toDomain({
+                id: 'rule-6',
+                motivationSchemaId: 'schema-1',
+                type: 'DepartmentPercent',
+                name: 'Процент от факта',
+                targetRole: 'DEPARTMENT_HEAD',
+                props: { salaryBasis: 'REVENUE', category: null, percent: 5 },
+                createdAt,
+                updatedAt,
+            });
+
+            expect(entity).toBeInstanceOf(DepartmentPercentEntity);
+            expect(entity.config).toEqual({
+                salaryBasis: 'REVENUE',
+                category: null,
+                percent: 5,
+            });
+        });
+
+        // Implements FR3 of add-department-head-salary-rules (tasks.md раздел 12).
+        it('восстанавливает DepartmentPlanBonusEntity из записи БД', () => {
+            const entity = mapper.toDomain({
+                id: 'rule-7',
+                motivationSchemaId: 'schema-1',
+                type: 'DepartmentPlanBonus',
+                name: 'Бонус за план',
+                targetRole: 'DEPARTMENT_HEAD',
+                props: {
+                    salaryBasis: 'REVENUE',
+                    category: null,
+                    fixedAmount: 10000,
+                    percentBorders: [
+                        {
+                            name: 'A',
+                            fromPlanPercent: 50,
+                            multiplier: 0.5,
+                            mode: 'FIX',
+                        },
+                        {
+                            name: 'B',
+                            fromPlanPercent: 70,
+                            multiplier: 1,
+                            mode: 'FIX',
+                        },
+                        {
+                            name: 'C',
+                            fromPlanPercent: 100,
+                            multiplier: 1.5,
+                            mode: 'FIX',
+                        },
+                    ],
+                },
+                createdAt,
+                updatedAt,
+            });
+
+            expect(entity).toBeInstanceOf(DepartmentPlanBonusEntity);
+        });
+
+        // Implements FR4 of add-department-head-salary-rules (tasks.md раздел 12).
+        it('восстанавливает DepartmentTurnoverBonusEntity из записи БД', () => {
+            const entity = mapper.toDomain({
+                id: 'rule-8',
+                motivationSchemaId: 'schema-1',
+                type: 'DepartmentTurnoverBonus',
+                name: 'Бонус за оборачиваемость',
+                targetRole: 'DEPARTMENT_HEAD',
+                props: {
+                    warehouseId: 1,
+                    category: null,
+                    fixedAmount: 5000,
+                    planTurnoverRatio: 1,
+                    percentBorders: [
+                        {
+                            name: 'A',
+                            fromPlanPercent: 50,
+                            multiplier: 0.5,
+                            mode: 'FIX',
+                        },
+                        {
+                            name: 'B',
+                            fromPlanPercent: 70,
+                            multiplier: 1,
+                            mode: 'FIX',
+                        },
+                        {
+                            name: 'C',
+                            fromPlanPercent: 100,
+                            multiplier: 1.5,
+                            mode: 'FIX',
+                        },
+                    ],
+                },
+                createdAt,
+                updatedAt,
+            });
+
+            expect(entity).toBeInstanceOf(DepartmentTurnoverBonusEntity);
         });
 
         it('выбрасывает ошибку для неизвестного type', () => {
@@ -146,6 +251,25 @@ describe('SalaryRuleMapper', () => {
             });
             expect(record.createdAt).toBeInstanceOf(Date);
             expect(record.updatedAt).toBeInstanceOf(Date);
+        });
+
+        // Implements FR2 of add-department-head-salary-rules (tasks.md раздел 12).
+        it('сериализует DepartmentPercentEntity в формат для записи в БД', () => {
+            const entity = DepartmentPercentEntity.create({
+                type: 'DepartmentPercent',
+                name: 'Процент от факта',
+                targetRole: 'DEPARTMENT_HEAD',
+                config: { salaryBasis: 'REVENUE', category: null, percent: 5 },
+            });
+
+            const record = mapper.toPersistence(entity);
+
+            expect(record).toMatchObject({
+                id: entity.id,
+                type: 'DepartmentPercent',
+                targetRole: 'DEPARTMENT_HEAD',
+                props: { salaryBasis: 'REVENUE', category: null, percent: 5 },
+            });
         });
     });
 });

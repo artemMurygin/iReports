@@ -24,7 +24,9 @@ export const ACCRUAL_LINE_STATUS_LABEL: Record<SalaryAccrualLineStatus, string> 
 }
 
 /** Человекочитаемые роли — та же карта, что pages/SalaryReport/model/labels.ts (см. её
- * комментарий про допустимость копий этой карты между слоями). */
+ * комментарий про допустимость копий этой карты между слоями). `DEPARTMENT_HEAD` —
+ * add-department-head-salary-rules, FR1 («руководитель направления»): та же формулировка, что
+ * `features/SalaryRuleForm`'s `ROLE_LABELS` (независимая копия, см. комментарий там). */
 export const ROLE_LABEL: Record<TargetRole, string> = {
     ENGINEER: 'Инженер',
     ONLINE_MANAGER: 'Онлайн-менеджер',
@@ -34,6 +36,7 @@ export const ROLE_LABEL: Record<TargetRole, string> = {
     OFFLINE_PURCHASER: 'Офлайн-закупщик',
     OFFICE: 'Офис',
     SOLO_MANAGER: 'Соло-менеджер',
+    DEPARTMENT_HEAD: 'Руководитель направления',
 }
 
 /** База начисления процентных правил (`salaryBasis`, contracts/commands/salary-rule.ts) —

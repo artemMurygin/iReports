@@ -4,7 +4,13 @@ import type { TargetRole } from 'ireports-contracts'
 import type { RuleFieldErrors } from '../../../model/formNumberUtils.ts'
 import type { RuleFormConfig } from '../../../model/ruleFormConfig.ts'
 import type { RuleSaveOutcome } from '../../../model/ruleResolver.ts'
-import type { AwardKind, BorderDraft, RuleDraft, RuleType } from '../../../model/ruleDraft.ts'
+import {
+    DEPARTMENT_RULE_TYPES,
+    type AwardKind,
+    type BorderDraft,
+    type RuleDraft,
+    type RuleType,
+} from '../../../model/ruleDraft.ts'
 
 export type UseRuleFormCardParams = {
     draft: RuleDraft
@@ -44,6 +50,12 @@ export function useRuleFormCard({
     const showCategory = config.categoryRuleTypes.includes(draft.type)
     const showOrderTypeIds = config.orderTypeRuleTypes.includes(draft.type)
     const showTaskFields = config.taskRuleTypes.includes(draft.type)
+    /** add-department-head-salary-rules (FR2-FR4) — not config-driven like the flags above: these 3
+     * types behave identically for both directions (proposal.md: "применяются одинаково к обоим
+     * направлениям"), so `DEPARTMENT_RULE_TYPES` is a plain shared constant, not a per-direction
+     * `RuleFormConfig` list. `RuleFormCard.tsx` uses this to skip `AwardSection` — the fields
+     * themselves are rendered by `RuleFormCardFields.tsx`. */
+    const showDepartmentFields = DEPARTMENT_RULE_TYPES.includes(draft.type)
 
     function patchDraft(patch: Partial<RuleDraft>) {
         onChange(draft.draftId, patch)
@@ -83,7 +95,11 @@ export function useRuleFormCard({
      */
     function handleCollapse() {
         const isDirty = draft.name.trim() !== '' || draft.targetRole !== '' || draft.price.trim() !== ''
-        if (!draft.confirmed && isDirty && !window.confirm('Свернуть без сохранения? Введённые данные правила будут потеряны.')) {
+        if (
+            !draft.confirmed &&
+            isDirty &&
+            !window.confirm('Свернуть без сохранения? Введённые данные правила будут потеряны.')
+        ) {
             return
         }
         onCancel()
@@ -96,6 +112,7 @@ export function useRuleFormCard({
         showCategory,
         showOrderTypeIds,
         showTaskFields,
+        showDepartmentFields,
         patchDraft,
         changeBorder,
         handleTypeChange,

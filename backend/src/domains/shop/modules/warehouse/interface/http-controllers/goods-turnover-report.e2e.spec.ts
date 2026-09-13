@@ -8,6 +8,8 @@ import { ShopWarehouseModule } from '@/domains/shop/modules/warehouse/warehouse.
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { GOODS_TURNOVER_REPORT_REPOSITORY } from '@/domains/shop/modules/warehouse/application/ports/goods-turnover-report/goods-turnover-report.port';
 import type { GoodsTurnoverReportRepositoryPort } from '@/domains/shop/modules/warehouse/application/ports/goods-turnover-report/goods-turnover-report.port';
+import { PRODUCT_CATEGORY_REPOSITORY } from '@/domains/shop/modules/warehouse/application/ports/product-category/product-category.port';
+import type { ProductCategoryRepositoryPort } from '@/domains/shop/modules/warehouse/application/ports/product-category/product-category.port';
 import { GoodsTurnoverReportLine } from '@/domains/shop/modules/warehouse/domain/entities/goods-turnover-report-line/goods-turnover-report-line.entity';
 import { Period } from '@/shared/domain/period.value-object';
 import { Money } from '@/domains/shop/modules/warehouse/domain/value-objects/money.value-object';
@@ -32,6 +34,13 @@ describe('GET /v1/shop/warehouse/goods-turnover-report/:period (e2e)', () => {
             linesByPeriod.set(period.getValue(), lines);
             return Promise.resolve();
         },
+    };
+
+    // add-department-head-salary-rules, FR5 (BREAKING): totals требует ProductCategoryRepositoryPort
+    // — по умолчанию пустой набор корневых категорий (все строки — не корневые, totals нулевые).
+    let rootCategoryIds = new Set<string>();
+    const fakeCategoryRepository: ProductCategoryRepositoryPort = {
+        findRootIds: () => Promise.resolve(rootCategoryIds),
     };
 
     const buildLine = (
@@ -77,6 +86,8 @@ describe('GET /v1/shop/warehouse/goods-turnover-report/:period (e2e)', () => {
         })
             .overrideProvider(GOODS_TURNOVER_REPORT_REPOSITORY)
             .useValue(fakeRepository)
+            .overrideProvider(PRODUCT_CATEGORY_REPOSITORY)
+            .useValue(fakeCategoryRepository)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -93,6 +104,7 @@ describe('GET /v1/shop/warehouse/goods-turnover-report/:period (e2e)', () => {
 
     afterEach(() => {
         linesByPeriod.clear();
+        rootCategoryIds = new Set();
     });
 
     it('coefficient: null, когда строки за предыдущий период нет', async () => {
@@ -105,7 +117,7 @@ describe('GET /v1/shop/warehouse/goods-turnover-report/:period (e2e)', () => {
             .expect(200);
         const body = response.body as ShopGoodsTurnoverReportResponse;
 
-        expect(body).toEqual([
+        expect(body.lines).toEqual([
             {
                 categoryId: 'folder-1',
                 warehouseId: 'warehouse-1',
@@ -133,7 +145,7 @@ describe('GET /v1/shop/warehouse/goods-turnover-report/:period (e2e)', () => {
 
         // turnoverSum(2026-08) / ((stockSum(2026-07) + stockSum(2026-08)) / 2)
         // = 10000 / ((4000 + 6000) / 2) = 10000 / 5000 = 2
-        expect(body[0].coefficient).toBe(2);
+        expect(body.lines[0].coefficient).toBe(2);
     });
 
     it('фильтрует по warehouseId в query', async () => {
@@ -149,16 +161,41 @@ describe('GET /v1/shop/warehouse/goods-turnover-report/:period (e2e)', () => {
             .expect(200);
         const body = response.body as ShopGoodsTurnoverReportResponse;
 
-        expect(body).toHaveLength(1);
-        expect(body[0].warehouseId).toBe('warehouse-2');
+        expect(body.lines).toHaveLength(1);
+        expect(body.lines[0].warehouseId).toBe('warehouse-2');
     });
 
-    it('для периода без строк отчёта возвращает пустой массив', async () => {
+    it('для периода без строк отчёта возвращает пустые lines и totals', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/shop/warehouse/goods-turnover-report/2026-08')
             .expect(200);
 
-        expect(response.body).toEqual([]);
+        expect(response.body).toEqual({ lines: [], totals: [] });
+    });
+
+    // add-department-head-salary-rules, FR5 (BREAKING): totals — по одной записи на склад,
+    // суммирующей только строки настоящих корневых категорий (findRootIds()).
+    it('totals суммирует только строки настоящих корневых категорий', async () => {
+        linesByPeriod.set('2026-08', [
+            buildLine('2026-08', 'root-1', 'warehouse-1', 10_000, 6_000),
+            buildLine('2026-08', 'child-1', 'warehouse-1', 5_000, 3_000),
+        ]);
+        rootCategoryIds = new Set(['root-1']);
+
+        const response = await request(app.getHttpServer())
+            .get('/v1/shop/warehouse/goods-turnover-report/2026-08')
+            .expect(200);
+        const body = response.body as ShopGoodsTurnoverReportResponse;
+
+        expect(body.totals).toEqual([
+            {
+                warehouseId: 'warehouse-1',
+                turnoverSum: 10_000,
+                stockSum: 6_000,
+                stockQuantity: 1,
+                coefficient: null,
+            },
+        ]);
     });
 
     it('отклоняет период не в формате YYYY-MM', async () => {

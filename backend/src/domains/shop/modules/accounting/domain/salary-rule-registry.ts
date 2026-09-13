@@ -2,6 +2,9 @@ import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/e
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
 import { UsedProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/used-product-sold.entity';
 import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
+import { DepartmentPercentEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-percent.entity';
+import { DepartmentPlanBonusEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-plan-bonus.entity';
+import { DepartmentTurnoverBonusEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-turnover-bonus.entity';
 import {
     ShopSalaryRuleClass,
     ShopSalaryRuleTypes,
@@ -24,4 +27,8 @@ export const shopSalaryRuleRegistry = new Map<
     ['UsedProductSold', UsedProductSoldEntity],
     // Раздел 15 tasks.md (add-task-based-salary-rule).
     ['TaskCompletion', TaskCompletionShop],
+    // Implements FR2-FR4 of add-department-head-salary-rules (tasks.md раздел 13).
+    ['DepartmentPercent', DepartmentPercentEntity],
+    ['DepartmentPlanBonus', DepartmentPlanBonusEntity],
+    ['DepartmentTurnoverBonus', DepartmentTurnoverBonusEntity],
 ]);

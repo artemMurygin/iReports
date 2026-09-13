@@ -122,6 +122,9 @@ export function useSalaryRulesPage() {
         orderTypes: active.orderTypes,
         isOrderTypesLoading: active.isOrderTypesLoading,
         orderTypesError: active.orderTypesError,
+        warehouses: active.warehouses,
+        isWarehousesLoading: active.isWarehousesLoading,
+        warehousesError: active.warehousesError,
         ruleCount: active.rules.drafts.length,
 
         canSubmit,

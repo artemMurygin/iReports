@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Bold, Loader2, RotateCcw, TriangleAlert } from 'lucide-react'
+import { Loader2, RotateCcw, TriangleAlert } from 'lucide-react'
 import type { SalesDirection } from 'ireports-contracts'
 
 import { formatPeriodLabel, formatPeriodMonthGenitive } from '@/shared/lib/format.ts'
@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui-kit/atoms/Button'
 import { Modal } from '@/shared/ui-kit/organisms/Modal'
 
 import { classifyReopenPeriodError } from '../model/closePeriodErrors.ts'
-import { ACCRUAL_STATUS_LABEL, DIRECTION_LABEL } from '../model/labels.ts'
+import { ACCRUAL_STATUS_LABEL } from '../model/labels.ts'
 import { useReopenPeriod } from '../model/usePeriodMutations.ts'
 
 export type ReopenPeriodDialogProps = {

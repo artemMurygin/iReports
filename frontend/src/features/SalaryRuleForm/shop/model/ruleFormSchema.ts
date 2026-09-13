@@ -5,7 +5,12 @@ import {
 } from 'ireports-contracts'
 
 import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
-import { buildOrderPayedAward } from '../../model/ruleAwards.ts'
+import {
+    buildDepartmentPercentConfig,
+    buildDepartmentPlanBonusConfig,
+    buildDepartmentTurnoverBonusConfig,
+    buildOrderPayedAward,
+} from '../../model/ruleAwards.ts'
 import { defaultBorders, type BorderDraft, type RuleDraft } from '../../model/ruleDraft.ts'
 
 /**
@@ -96,6 +101,21 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
             }
             break
         }
+        // add-department-head-salary-rules, FR2-FR4 — зеркало сервисной ветки
+        // (`service/model/ruleFormSchema.ts`'s `case 'DepartmentPercent'`/etc.), те же общие билдеры
+        // из `core/model/ruleAwards.ts`.
+        case 'DepartmentPercent':
+            config = buildDepartmentPercentConfig(draft, errors)
+            break
+        case 'DepartmentPlanBonus':
+            config = buildDepartmentPlanBonusConfig(draft, errors)
+            break
+        case 'DepartmentTurnoverBonus':
+            // 'string' — shop.config.warehouseId — MoySklad UUID (см.
+            // `departmentTurnoverBonusShopSalaryConfigSchema`, `contracts/commands/shop-salary-rule.ts`),
+            // в отличие от `number` у сервиса.
+            config = buildDepartmentTurnoverBonusConfig(draft, errors, 'string')
+            break
         default:
             // `draft.type` is the shared `RuleType` union (`core/model/ruleDraft.ts`) — the service-only
             // literals (`ServiceCompleted`/`OrderPayed`) never reach this resolver in practice (the
@@ -173,6 +193,8 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         isRecurring: false,
         deadlineTemplate: '',
         taskLinkTemplates: [],
+        warehouseId: '',
+        planTurnoverRatio: '',
     }
 
     switch (rule.type) {
@@ -220,6 +242,37 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
                 isRecurring: rule.config.isRecurring,
                 deadlineTemplate: rule.config.deadlineTemplate,
                 taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
+            }
+
+        // add-department-head-salary-rules, FR2-FR4 — зеркало `service/model/ruleFormSchema.ts`'s
+        // одноимённых веток `draftFromRule`; `warehouseId` остаётся строкой как есть (MoySklad UUID,
+        // не парсится в число, в отличие от сервисного `String(rule.config.warehouseId)`, который
+        // тут же строкой и был).
+        case 'DepartmentPercent':
+            return {
+                ...base,
+                salaryBasis: rule.config.salaryBasis,
+                category: rule.config.category,
+                percent: String(rule.config.percent),
+            }
+
+        case 'DepartmentPlanBonus':
+            return {
+                ...base,
+                salaryBasis: rule.config.salaryBasis,
+                category: rule.config.category,
+                price: String(rule.config.fixedAmount),
+                percentBorders: bordersFromResponse(rule.config.percentBorders),
+            }
+
+        case 'DepartmentTurnoverBonus':
+            return {
+                ...base,
+                category: rule.config.category,
+                price: String(rule.config.fixedAmount),
+                warehouseId: rule.config.warehouseId,
+                planTurnoverRatio: String(rule.config.planTurnoverRatio),
+                percentBorders: bordersFromResponse(rule.config.percentBorders),
             }
     }
 

@@ -15,11 +15,18 @@ import type { TargetRole } from '@/domains/shop/modules/accounting/domain/types/
 // входит по той же причине, что и в service-каталоге: список — фиксированный
 // литерал, появление OFFICE в targetRoleSchema его не расширяет, а роль
 // нужна графику работы, а не зарплатным правилам магазина.
+//
+// DEPARTMENT_HEAD (FR1 add-department-head-salary-rules) — «руководитель направления»: единственная
+// цель добавления в каталог — чтобы UI показывал роль как опцию для 3 новых видов правила уровня
+// отдела (DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus, design.md Decision 4).
+// Каталог не различает типы правил (см. listShopSalaryRuleTypes ниже), поэтому роль видна и у
+// существующих 4 транзакционных видов правил магазина без эффекта на их role-source.ts.
 const ALL_SHOP_ROLES: TargetRole[] = [
     'ONLINE_MANAGER',
     'OFFLINE_MANAGER',
     'ONLINE_PURCHASER',
     'OFFLINE_PURCHASER',
+    'DEPARTMENT_HEAD',
 ];
 
 export interface ShopSalaryRuleTypeCatalogEntry {

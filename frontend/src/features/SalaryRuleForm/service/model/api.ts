@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { OrderTypeResponse, SalaryRuleTypesResponse } from 'ireports-contracts'
+import type { ListWarehousesResponse, OrderTypeResponse, SalaryRuleTypesResponse } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
@@ -45,6 +45,24 @@ export const api = {
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить типы заказов ' + error)
+                    }),
+        }),
+
+    // GET /v1/service/warehouse/warehouses — справочник складов RemOnline (FR4 of
+    // add-department-head-salary-rules), для `WarehouseField` у правила `DepartmentTurnoverBonus`.
+    // Тот же эндпоинт, что `pages/GoodsTurnoverReport/model/api.ts`'s `getWarehouses` использует для
+    // фильтра склада — своя копия запроса здесь (features не могут импортировать pages/друг друга,
+    // frontend/CLAUDE.md), с отдельным `queryKey`.
+    getWarehouses: () =>
+        queryOptions({
+            queryKey: ['salary-rules', 'service', 'warehouses'],
+            staleTime: 30 * 60 * 1000,
+            queryFn: ({ signal }): Promise<ListWarehousesResponse> =>
+                apiInstance
+                    .get<ListWarehousesResponse>('/v1/service/warehouse/warehouses', { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError('Не удалось загрузить справочник складов ' + error)
                     }),
         }),
 }

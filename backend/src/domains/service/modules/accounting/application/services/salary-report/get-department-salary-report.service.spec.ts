@@ -10,6 +10,9 @@ import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/ap
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { DepartmentPercentEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/department-percent.entity';
+import { DepartmentTurnoverBonusEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/department-turnover-bonus.entity';
+import type { TurnoverPerformanceReaderPort } from '@/domains/service/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
@@ -62,6 +65,12 @@ describe('GetDepartmentSalaryReportService', () => {
             { employeeId: number; total: number; lines: never[] }
         >;
         tasks?: Task[];
+        // Implements FR2-FR4 of add-department-head-salary-rules — переопределяет
+        // SalesPerformanceReaderPort.findForScope() под конкретную category (department-wide
+        // findForScope(..., null) продолжает возвращать null, как и раньше).
+        findForScopeByCategory?: Map<string, unknown>;
+        // Implements FR4 of add-department-head-salary-rules.
+        turnoverFindForScope?: jest.Mock;
     }) => {
         const findEmployeesInDepartment = jest
             .fn()
@@ -100,10 +109,33 @@ describe('GetDepartmentSalaryReportService', () => {
             findHoursWorkedForEmployees,
         };
 
-        const findForScope = jest.fn().mockResolvedValue(null);
+        const findForScope = jest
+            .fn()
+            .mockImplementation(
+                (
+                    _direction: string,
+                    _period: string,
+                    _departmentId: number,
+                    category: string | null,
+                ) =>
+                    Promise.resolve(
+                        (category !== null &&
+                            overrides.findForScopeByCategory?.get(category)) ||
+                            null,
+                    ),
+            );
         const salesPerformanceReader: SalesPerformanceReaderPort = {
             listForPeriod: jest.fn().mockResolvedValue([]),
             findForScope,
+        };
+
+        // Implements FR4 of add-department-head-salary-rules — фейк порта, которым
+        // GetDepartmentSalaryReportService резолвит turnoverPerformance department-shared правил
+        // DepartmentTurnoverBonus (зеркало BuildServiceCalculationContextService).
+        const turnoverFindForScope =
+            overrides.turnoverFindForScope ?? jest.fn().mockResolvedValue(null);
+        const turnoverPerformanceReader: TurnoverPerformanceReaderPort = {
+            findForScope: turnoverFindForScope,
         };
 
         const findByEmployees = jest
@@ -217,6 +249,7 @@ describe('GetDepartmentSalaryReportService', () => {
             salaryRulesResolver,
             ensureRuleTask,
             taskRepo,
+            turnoverPerformanceReader,
         );
 
         return {
@@ -229,6 +262,7 @@ describe('GetDepartmentSalaryReportService', () => {
             findForScope,
             findManyByKey,
             findManyByIds,
+            turnoverFindForScope,
         };
     };
 
@@ -523,5 +557,134 @@ describe('GetDepartmentSalaryReportService', () => {
         expect(report.employees).toEqual([]);
         expect(report.total).toEqual({ fact: 0, prognose: 0 });
         expect(report.isClosed).toBe(false);
+    });
+
+    // Implements FR2-FR4 of add-department-head-salary-rules.
+    //
+    // buildOpenContributions() собирает employeeContext вручную (не через
+    // BuildServiceCalculationContextService) — раньше он не резолвил
+    // departmentSalesPerformance/turnoverPerformance вовсе, поэтому
+    // DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus-правила отдела молча считали 0
+    // (design.md Q2, "no data for scope → 0, no throw" fallback).
+    describe('departmentSalesPerformance / turnoverPerformance доходят до rule.calculate()', () => {
+        const percentBorders = [
+            {
+                name: 'A',
+                fromPlanPercent: 50,
+                multiplier: 0.5,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'B',
+                fromPlanPercent: 70,
+                multiplier: 1,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'C',
+                fromPlanPercent: 100,
+                multiplier: 1.5,
+                mode: 'FIX' as const,
+            },
+        ];
+
+        const fakePerformance = (
+            turnover: number,
+            margin: number,
+            percentCompletion: number,
+        ) => ({
+            getFact: () => ({
+                getTurnover: () => turnover,
+                getMargin: () => margin,
+                getPercentCompletion: () => percentCompletion,
+            }),
+        });
+
+        it('DepartmentPercent считает по departmentSalesPerformance, резолвленной для отдела', async () => {
+            const employees = [{ id: 1, name: 'Иван Иванов' }];
+            const rule = withRequestContext(() =>
+                DepartmentPercentEntity.create({
+                    type: 'DepartmentPercent',
+                    name: 'Процент от факта',
+                    targetRole: 'DEPARTMENT_HEAD',
+                    config: {
+                        salaryBasis: 'REVENUE',
+                        category: 'cat-1',
+                        percent: 10,
+                    },
+                }),
+            );
+            const schema = withRequestContext(() =>
+                MotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: 1,
+                    name: 'Руководитель отдела',
+                    rules: [rule],
+                }),
+            );
+
+            const { service } = buildService({
+                employees,
+                schemas: [schema],
+                // fact.turnover=100000 * percent 10% = 10000
+                findForScopeByCategory: new Map([
+                    ['cat-1', fakePerformance(100000, 0, 80)],
+                ]),
+            });
+
+            const report = await service.execute(1, '2026-08');
+
+            expect(report.employees[0].total).toEqual({
+                fact: 10000,
+                prognose: 10000,
+            });
+        });
+
+        it('DepartmentTurnoverBonus считает по turnoverPerformance, резолвленной для отдела', async () => {
+            const employees = [{ id: 1, name: 'Иван Иванов' }];
+            const rule = withRequestContext(() =>
+                DepartmentTurnoverBonusEntity.create({
+                    type: 'DepartmentTurnoverBonus',
+                    name: 'Бонус за оборачиваемость',
+                    targetRole: 'DEPARTMENT_HEAD',
+                    config: {
+                        warehouseId: 7,
+                        category: null,
+                        fixedAmount: 10000,
+                        planTurnoverRatio: 1,
+                        percentBorders: [...percentBorders],
+                    },
+                }),
+            );
+            const schema = withRequestContext(() =>
+                MotivationSchema.create({
+                    targetType: 'Employee',
+                    targetId: 1,
+                    name: 'Руководитель отдела',
+                    rules: [rule],
+                }),
+            );
+            // factRatio=1 совпадает с planTurnoverRatio=1 -> percentCompletion=100 -> порог C,
+            // множитель 1.5 -> 10000 * 1.5 = 15000.
+            const turnoverFindForScope = jest.fn().mockResolvedValue(1);
+
+            const { service } = buildService({
+                employees,
+                schemas: [schema],
+                turnoverFindForScope,
+            });
+
+            const report = await service.execute(1, '2026-08');
+
+            expect(turnoverFindForScope).toHaveBeenCalledWith(
+                '2026-08',
+                7,
+                null,
+            );
+            expect(report.employees[0].total).toEqual({
+                fact: 15000,
+                prognose: 15000,
+            });
+        });
     });
 });

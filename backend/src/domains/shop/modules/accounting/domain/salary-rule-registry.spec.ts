@@ -3,6 +3,9 @@ import { PayPerHourShopEntity } from './entities/salary-rules/pay-per-hour.entit
 import { ProductSoldEntity } from './entities/salary-rules/product-sold.entity';
 import { UsedProductSoldEntity } from './entities/salary-rules/used-product-sold.entity';
 import { TaskCompletionShop } from './entities/salary-rules/task-completion.entity';
+import { DepartmentPercentEntity } from './entities/salary-rules/department-percent.entity';
+import { DepartmentPlanBonusEntity } from './entities/salary-rules/department-plan-bonus.entity';
+import { DepartmentTurnoverBonusEntity } from './entities/salary-rules/department-turnover-bonus.entity';
 import { salaryRuleRegistry } from '@/domains/service/modules/accounting/domain/salary-rule-registry';
 
 describe('shopSalaryRuleRegistry', () => {
@@ -20,10 +23,20 @@ describe('shopSalaryRuleRegistry', () => {
         expect(shopSalaryRuleRegistry.get('TaskCompletion')).toBe(
             TaskCompletionShop,
         );
+        // Implements FR2-FR4 of add-department-head-salary-rules (tasks.md раздел 13).
+        expect(shopSalaryRuleRegistry.get('DepartmentPercent')).toBe(
+            DepartmentPercentEntity,
+        );
+        expect(shopSalaryRuleRegistry.get('DepartmentPlanBonus')).toBe(
+            DepartmentPlanBonusEntity,
+        );
+        expect(shopSalaryRuleRegistry.get('DepartmentTurnoverBonus')).toBe(
+            DepartmentTurnoverBonusEntity,
+        );
     });
 
-    it('не содержит лишних типов (раздел 15 — PayPerHour, ProductSold, UsedProductSold, TaskCompletion)', () => {
-        expect(shopSalaryRuleRegistry.size).toBe(4);
+    it('не содержит лишних типов (раздел 15 — PayPerHour, ProductSold, UsedProductSold, TaskCompletion; раздел 13 — 3 новых вида уровня отдела)', () => {
+        expect(shopSalaryRuleRegistry.size).toBe(7);
     });
 
     // issue #61: "GET списка типов правил возвращает разные наборы для

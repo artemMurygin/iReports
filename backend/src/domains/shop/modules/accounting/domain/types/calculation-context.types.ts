@@ -34,3 +34,56 @@ export type ShopCalculationContext = Omit<
 > & {
     salesPerformance: ShopSalesPerformanceByCategory | null;
 };
+
+// Implements FR2-FR4 of add-department-head-salary-rules.
+//
+// Расширение ShopCalculationContext (выше) для 3 новых видов правила уровня отдела/направления
+// (design.md Decision 3, зеркало domains/service/modules/accounting/domain/types/
+// calculation-context.types.ts) — ТОЛЬКО ДОБАВЛЯЕТ новые поля, не переопределяет существующее
+// salesPerformance: те 4 существующих вида правил магазина (PayPerHour/ProductSold/UsedProductSold/
+// TaskCompletion) продолжают читать его без изменений. departmentSalesPerformance/
+// turnoverPerformance ниже — вход ТОЛЬКО для DepartmentPercentEntity/DepartmentPlanBonusEntity/
+// DepartmentTurnoverBonusEntity магазина.
+
+// Факт ShopSalesPerformance за период — DepartmentPercentEntity (FR2) нужен именно факт (turnover/
+// margin), а не только готовый percentCompletion, который используют DepartmentPlanBonusEntity (FR3)
+// и существующие 4 вида правил.
+export interface DepartmentSalesPerformanceEntry {
+    fact: { turnover: number; margin: number };
+    percentCompletion: number;
+}
+
+// Карта factory/percentCompletion по category правила уровня отдела (FR2/FR3) — по аналогии с уже
+// существующей ShopSalesPerformanceByCategory выше: category правила резолвится независимо от
+// department-wide ShopSalesPerformanceByCategory, чтобы каждое DepartmentPercent/DepartmentPlanBonus
+// правило схемы читало факт именно своей категории. Ключ null — «весь магазин/направление». Категория,
+// для которой SalesPerformance не резолвится, в карте отсутствует — правило начисляет 0 (design.md
+// Q2), а не бросает ошибку.
+export type DepartmentSalesPerformanceByCategory = Map<
+    string | null,
+    DepartmentSalesPerformanceEntry
+>;
+
+// Скоуп факта оборачиваемости для DepartmentTurnoverBonus (FR4) — склад (MoySklad UUID) обязателен,
+// категория опциональна (design.md Decision 2); null category — итог по всему складу.
+export interface TurnoverPerformanceScope {
+    warehouseId: string;
+    category: string | null;
+}
+
+// Факт коэффициента оборачиваемости, пред-резолвленный BuildShopCalculationContextService через
+// SHOP_TURNOVER_PERFORMANCE_READER для каждого уникального (warehouseId, category) правил
+// DepartmentTurnoverBonus схемы сотрудника. Ключ — turnoverPerformanceScopeKey() ниже. Значение null
+// — недостаточно данных: правило начисляет 0 (design.md Q2), а не бросает ошибку.
+export type TurnoverPerformanceByScope = Map<string, number | null>;
+
+export function turnoverPerformanceScopeKey(
+    scope: TurnoverPerformanceScope,
+): string {
+    return `${scope.warehouseId}:${scope.category ?? ''}`;
+}
+
+export type ShopDepartmentCalculationContext = ShopCalculationContext & {
+    departmentSalesPerformance: DepartmentSalesPerformanceByCategory | null;
+    turnoverPerformance: TurnoverPerformanceByScope;
+};

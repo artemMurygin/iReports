@@ -15,12 +15,19 @@ const SERVICE_SALARY_RULE_TYPES = [
     'ServiceCompleted',
     'OrderPayed',
     'TaskCompletion',
+    // Раздел 12 tasks.md (add-department-head-salary-rules).
+    'DepartmentPercent',
+    'DepartmentPlanBonus',
+    'DepartmentTurnoverBonus',
 ];
 
 describe('listShopSalaryRuleTypes', () => {
-    it('отдаёт только зарегистрированные типы правил магазина (раздел 15 — 4 типа вместо 3 после регистрации TaskCompletion)', () => {
+    it('отдаёт только зарегистрированные типы правил магазина (раздел 15 — 4 типа вместо 3 после регистрации TaskCompletion; раздел 13 — ещё 3 новых вида уровня отдела)', () => {
         const types = listShopSalaryRuleTypes().map((entry) => entry.type);
         expect(types.sort()).toEqual([
+            'DepartmentPercent',
+            'DepartmentPlanBonus',
+            'DepartmentTurnoverBonus',
             'PayPerHour',
             'ProductSold',
             'TaskCompletion',
@@ -36,6 +43,9 @@ describe('listShopSalaryRuleTypes', () => {
                     'OFFLINE_MANAGER',
                     'ONLINE_PURCHASER',
                     'OFFLINE_PURCHASER',
+                    // FR1 add-department-head-salary-rules — «руководитель направления» доступен
+                    // как опция роли для 3 новых видов правил (design.md Decision 4).
+                    'DEPARTMENT_HEAD',
                 ]),
             );
         }

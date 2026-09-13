@@ -18,6 +18,14 @@ export type { ServiceRuleType, ShopRuleType }
  */
 export type RuleType = ServiceRuleType | ShopRuleType
 
+/** The 3 department-level rule types from add-department-head-salary-rules (FR2-FR4) — common to
+ * both directions (same literal type names, `kernel/ruleTypeLabels.ts`). Unlike every other
+ * `RuleType`, none of these 3 offers an award-variant selector at all (ui-design.md
+ * «Отклонения»): `core/ui/RuleFormCard`'s `RuleFormCard.tsx` reads this list to skip rendering
+ * `AwardSection` for them — their own fixed field set is rendered entirely by
+ * `RuleFormCardFields.tsx` instead (Implements FR2, FR3, FR4). */
+export const DEPARTMENT_RULE_TYPES: RuleType[] = ['DepartmentPercent', 'DepartmentPlanBonus', 'DepartmentTurnoverBonus']
+
 /** Union of every `award.type` across the 3 award-bearing rule types — which subset applies to a
  * given `RuleType` is `service/model/ruleTypes.ts`'s `AWARD_OPTIONS_BY_TYPE`. */
 export type AwardKind = 'Fixed' | 'ServiceFixed' | 'ServicePercent' | 'FixedPercent' | 'FloatPercent'
@@ -65,12 +73,14 @@ export type RuleDraft = {
     type: RuleType
     name: string
     targetRole: TargetRole | ''
-    /** `PayPerHour.config.price`, award `Fixed.price` and `TaskCompletion.config.defaultAmount`
-     * share this field (only one is ever read, depending on `type`/`awardKind`) — same "money as
-     * text, parsed on submit" shape for all three. */
+    /** `PayPerHour.config.price`, award `Fixed.price`, `TaskCompletion.config.defaultAmount` and
+     * `DepartmentPlanBonus`/`DepartmentTurnoverBonus`'s `config.fixedAmount` (add-department-head-
+     * salary-rules, FR3/FR4) share this field (only one is ever read, depending on `type`/
+     * `awardKind`) — same "money as text, parsed on submit" shape for all of them. */
     price: string
     awardKind: AwardKind | ''
-    /** `ServicePercent.percent` / `FixedPercent.percent`. */
+    /** `ServicePercent.percent` / `FixedPercent.percent` / `DepartmentPercent.config.percent`
+     * (add-department-head-salary-rules, FR2). */
     percent: string
     /** `FloatPercent.basePercent` (`OrderPayed`/`ProductSold` only). */
     basePercent: string
@@ -131,6 +141,20 @@ export type RuleDraft = {
      * создана вручную, со своими произвольными ссылками, на Шаге 1). Read only for `TaskCompletion`
      * with `isRecurring === true`; ignored otherwise, add-task-rule-task-lifecycle. */
     taskLinkTemplates: { url: string; label?: string }[]
+    /** `DepartmentTurnoverBonus.config.warehouseId` (add-department-head-salary-rules, FR4) — id
+     * склада, обязательное поле (design.md Decision 2: оборачиваемость скоуплена по категории ×
+     * складу, автоматической привязки сотрудник→склад нет). Текстом, как и остальные числовые/id
+     * поля драфта — `service/model/ruleFormSchema.ts` парсит его как `number` (RoApp warehouse id),
+     * `shop/model/ruleFormSchema.ts` оставляет как есть (MoySklad UUID), см.
+     * `ruleAwards.ts`'s `buildDepartmentTurnoverBonusConfig`'s `warehouseIdKind` param. `''` —
+     * «склад не выбран», единственное состояние, в котором резолвер отказывает. Read only for
+     * `DepartmentTurnoverBonus`; ignored otherwise. */
+    warehouseId: string
+    /** `DepartmentTurnoverBonus.config.planTurnoverRatio` (FR4) — план коэффициента оборачиваемости,
+     * хранится прямо в конфигурации правила, а не как отдельная сущность (design.md Decision 2).
+     * Текст, парсится на сабмите как и остальные числовые поля драфта. Read only for
+     * `DepartmentTurnoverBonus`; ignored otherwise. */
+    planTurnoverRatio: string
 }
 
 /** Default 3 threshold rows — pre-filled with the mockup's own example values (`design/
@@ -166,6 +190,8 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         isRecurring: false,
         deadlineTemplate: '',
         taskLinkTemplates: [],
+        warehouseId: '',
+        planTurnoverRatio: '',
     }
 }
 
@@ -192,5 +218,7 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         isRecurring: false,
         deadlineTemplate: '',
         taskLinkTemplates: [],
+        warehouseId: '',
+        planTurnoverRatio: '',
     }
 }
