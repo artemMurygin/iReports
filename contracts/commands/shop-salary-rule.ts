@@ -80,6 +80,22 @@ const productSoldSalaryConfigSchema = z.object({
             salaryBasis: shopSalaryBasisSchema,
             percentBorders: percentBordersSchema,
         }),
+        // "Продажа товара Б/У" (вариант награды `ProductSold`, а не отдельный тип правила — не
+        // путать с `UsedProductSold` ниже, тем про закупщиков) — та же формула FloatPercent, но с
+        // порогом по МАРЖЕ конкретной позиции: маржа >= marginThreshold считается по FloatPercent
+        // (basePercent × множитель плана), с минимальной суммой floorAmount; маржа < marginThreshold
+        // — фиксированный процент от цены продажи (REVENUE), lowMarginPercent, вместо базовой
+        // формулы. Расчёт идёт по каждой позиции отдельно (см. product-sold.entity.ts), не
+        // агрегированно.
+        z.object({
+            type: z.literal('FloatPercentMarginFloor'),
+            basePercent: z.number(),
+            salaryBasis: shopSalaryBasisSchema,
+            percentBorders: percentBordersSchema,
+            marginThreshold: z.number(),
+            floorAmount: z.number(),
+            lowMarginPercent: z.number(),
+        }),
     ]),
 });
 

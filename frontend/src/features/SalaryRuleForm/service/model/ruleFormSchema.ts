@@ -179,6 +179,9 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',
+        marginThreshold: '',
+        floorAmount: '',
+        lowMarginPercent: '',
     }
 
     switch (rule.type) {
@@ -187,7 +190,11 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
 
         case 'ServiceCompleted': {
             const award = rule.config.award
-            const withAward: RuleDraft = { ...base, awardKind: award.type, orderTypeIds: rule.config.orderTypeIds ?? [] }
+            const withAward: RuleDraft = {
+                ...base,
+                awardKind: award.type,
+                orderTypeIds: rule.config.orderTypeIds ?? [],
+            }
             switch (award.type) {
                 case 'Fixed':
                     return { ...withAward, price: String(award.price) }
@@ -201,7 +208,11 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
 
         case 'OrderPayed': {
             const award = rule.config.award
-            const withAward: RuleDraft = { ...base, awardKind: award.type, orderTypeIds: rule.config.orderTypeIds ?? [] }
+            const withAward: RuleDraft = {
+                ...base,
+                awardKind: award.type,
+                orderTypeIds: rule.config.orderTypeIds ?? [],
+            }
             switch (award.type) {
                 case 'Fixed':
                     return { ...withAward, price: String(award.price) }

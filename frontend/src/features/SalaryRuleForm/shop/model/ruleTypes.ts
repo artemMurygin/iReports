@@ -61,6 +61,11 @@ export const SHOP_AWARD_OPTIONS_BY_TYPE: Record<ShopRuleType, AwardOptionConfig[
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за проданный товар' },
         { kind: 'FixedPercent', title: 'Фиксированный процент', description: 'Процент от выбранной базы' },
         { kind: 'FloatPercent', title: 'Плавающий процент', description: 'Базовый процент и 3 порога плана' },
+        {
+            kind: 'FloatPercentMarginFloor',
+            title: 'Продажа товара Б/У',
+            description: 'Плавающий процент с минимальной суммой при высокой марже, иначе % от цены',
+        },
     ],
     UsedProductSold: [
         { kind: 'Fixed', title: 'Фиксированная сумма', description: 'Одна и та же сумма за проданное Б/У устройство' },

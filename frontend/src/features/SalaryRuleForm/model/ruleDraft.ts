@@ -27,8 +27,11 @@ export type RuleType = ServiceRuleType | ShopRuleType
 export const DEPARTMENT_RULE_TYPES: RuleType[] = ['DepartmentPercent', 'DepartmentPlanBonus', 'DepartmentTurnoverBonus']
 
 /** Union of every `award.type` across the 3 award-bearing rule types — which subset applies to a
- * given `RuleType` is `service/model/ruleTypes.ts`'s `AWARD_OPTIONS_BY_TYPE`. */
-export type AwardKind = 'Fixed' | 'ServiceFixed' | 'ServicePercent' | 'FixedPercent' | 'FloatPercent'
+ * given `RuleType` is `service/model/ruleTypes.ts`'s `AWARD_OPTIONS_BY_TYPE`. `FloatPercentMarginFloor`
+ * — shop `ProductSold`-only ("Продажа товара Б/У", `shop/model/ruleTypes.ts`'s `SHOP_AWARD_OPTIONS_BY_TYPE`),
+ * see `productSoldSalaryConfigSchema.award` (`contracts/commands/shop-salary-rule.ts`). */
+export type AwardKind =
+    'Fixed' | 'ServiceFixed' | 'ServicePercent' | 'FixedPercent' | 'FloatPercent' | 'FloatPercentMarginFloor'
 
 export type BorderMode = 'FIX' | 'LINEAR'
 
@@ -155,6 +158,20 @@ export type RuleDraft = {
      * Текст, парсится на сабмите как и остальные числовые поля драфта. Read only for
      * `DepartmentTurnoverBonus`; ignored otherwise. */
     planTurnoverRatio: string
+    /** `FloatPercentMarginFloor.marginThreshold` ("Продажа товара Б/У", shop `ProductSold`-only) —
+     * порог по марже КОНКРЕТНОЙ проданной позиции: при profit >= порога считается по FloatPercent
+     * (basePercent/percentBorders выше), иначе — `lowMarginPercent` ниже. Read only for `ProductSold`
+     * with `awardKind === 'FloatPercentMarginFloor'`; ignored otherwise. */
+    marginThreshold: string
+    /** `FloatPercentMarginFloor.floorAmount` — минимальная сумма начисления за позицию, когда её
+     * маржа >= `marginThreshold`, но посчитанная по FloatPercent сумма меньше этого порога. Read
+     * only for `ProductSold` with `awardKind === 'FloatPercentMarginFloor'`; ignored otherwise. */
+    floorAmount: string
+    /** `FloatPercentMarginFloor.lowMarginPercent` — процент от цены продажи позиции (REVENUE),
+     * которым заменяется базовая формула FloatPercent, когда маржа позиции ниже `marginThreshold`.
+     * Read only for `ProductSold` with `awardKind === 'FloatPercentMarginFloor'`; ignored
+     * otherwise. */
+    lowMarginPercent: string
 }
 
 /** Default 3 threshold rows — pre-filled with the mockup's own example values (`design/
@@ -192,6 +209,9 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',
+        marginThreshold: '',
+        floorAmount: '',
+        lowMarginPercent: '',
     }
 }
 
@@ -220,5 +240,8 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',
+        marginThreshold: '',
+        floorAmount: '',
+        lowMarginPercent: '',
     }
 }

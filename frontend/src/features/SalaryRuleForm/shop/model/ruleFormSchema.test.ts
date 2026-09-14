@@ -90,6 +90,107 @@ describe('resolveShopRuleDraft — ProductSold', () => {
         expect(result.success).toBe(false)
         if (!result.success) expect(result.errors.thresholds).toContain('2')
     })
+
+    it('FloatPercentMarginFloor ("Продажа товара Б/У") succeeds with all its own fields plus the FloatPercent fields', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'ProductSold',
+                awardKind: 'FloatPercentMarginFloor',
+                basePercent: '10',
+                salaryBasis: 'MARGIN',
+                percentBorders: defaultBorders(),
+                category: null,
+                marginThreshold: '1000',
+                floorAmount: '500',
+                lowMarginPercent: '0.5',
+            }),
+        )
+        expect(result.success).toBe(true)
+        if (
+            result.success &&
+            result.data.type === 'ProductSold' &&
+            result.data.config.award.type === 'FloatPercentMarginFloor'
+        ) {
+            expect(result.data.config.award).toEqual({
+                type: 'FloatPercentMarginFloor',
+                basePercent: 10,
+                salaryBasis: 'MARGIN',
+                percentBorders: defaultBorders().map((border) => ({
+                    name: border.name,
+                    fromPlanPercent: Number(border.fromPlanPercent),
+                    multiplier: Number(border.multiplier),
+                    mode: border.mode,
+                })),
+                marginThreshold: 1000,
+                floorAmount: 500,
+                lowMarginPercent: 0.5,
+            })
+        }
+    })
+
+    it('FloatPercentMarginFloor fails when marginThreshold/floorAmount/lowMarginPercent are missing', () => {
+        const result = resolveShopRuleDraft(
+            baseDraft({
+                type: 'ProductSold',
+                awardKind: 'FloatPercentMarginFloor',
+                basePercent: '10',
+                salaryBasis: 'MARGIN',
+                percentBorders: defaultBorders(),
+                category: null,
+                marginThreshold: '',
+                floorAmount: '',
+                lowMarginPercent: '',
+            }),
+        )
+        expect(result.success).toBe(false)
+        if (!result.success) {
+            expect(result.errors.marginThreshold).toBeTruthy()
+            expect(result.errors.floorAmount).toBeTruthy()
+            expect(result.errors.lowMarginPercent).toBeTruthy()
+        }
+    })
+
+    it('FloatPercentMarginFloor round-trips through draftFromShopRule', () => {
+        const draft = draftFromShopRule({
+            id: 'shop-rule-used-1',
+            type: 'ProductSold',
+            name: 'Продажа товара Б/У',
+            targetRole: 'OFFLINE_MANAGER',
+            isActive: true,
+            config: {
+                category: null,
+                award: {
+                    type: 'FloatPercentMarginFloor',
+                    basePercent: 10,
+                    salaryBasis: 'MARGIN',
+                    percentBorders: [
+                        { name: 'Ниже плана', fromPlanPercent: 0, multiplier: 0.5, mode: 'FIX' },
+                        { name: 'Выполнение плана', fromPlanPercent: 70, multiplier: 1, mode: 'LINEAR' },
+                        { name: 'Перевыполнение', fromPlanPercent: 120, multiplier: 1.2, mode: 'FIX' },
+                    ],
+                    marginThreshold: 1000,
+                    floorAmount: 500,
+                    lowMarginPercent: 0.5,
+                },
+            },
+        })
+        expect(draft.awardKind).toBe('FloatPercentMarginFloor')
+        expect(draft.marginThreshold).toBe('1000')
+        expect(draft.floorAmount).toBe('500')
+        expect(draft.lowMarginPercent).toBe('0.5')
+
+        const resolvedAgain = resolveShopRuleDraft(draft)
+        expect(resolvedAgain.success).toBe(true)
+        if (
+            resolvedAgain.success &&
+            resolvedAgain.data.type === 'ProductSold' &&
+            resolvedAgain.data.config.award.type === 'FloatPercentMarginFloor'
+        ) {
+            expect(resolvedAgain.data.config.award.marginThreshold).toBe(1000)
+            expect(resolvedAgain.data.config.award.floorAmount).toBe(500)
+            expect(resolvedAgain.data.config.award.lowMarginPercent).toBe(0.5)
+        }
+    })
 })
 
 describe('resolveShopRuleDraft — UsedProductSold has no FloatPercent', () => {
@@ -312,7 +413,12 @@ describe('resolveShopRuleDraft — DepartmentPercent (FR2)', () => {
 
     it('fails when percent is missing', () => {
         const result = resolveShopRuleDraft(
-            baseDraft({ type: 'DepartmentPercent', targetRole: 'DEPARTMENT_HEAD', salaryBasis: 'REVENUE', percent: '' }),
+            baseDraft({
+                type: 'DepartmentPercent',
+                targetRole: 'DEPARTMENT_HEAD',
+                salaryBasis: 'REVENUE',
+                percent: '',
+            }),
         )
         expect(result.success).toBe(false)
         if (!result.success) expect(result.errors.percent).toBeTruthy()

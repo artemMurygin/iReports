@@ -188,20 +188,76 @@ export class ProductSoldEntity
                     ),
                 };
             }
+            case 'FloatPercentMarginFloor': {
+                // "Продажа товара Б/У" — тот же fail closed, что и у обычного FloatPercent
+                // (см. комментарий там): нет записи по своей категории в карте
+                // salesPerformance — вся строка нулевая, а не только "верхняя" (по марже) часть
+                // позиций, чтобы не платить по недоверенному наполовину контексту.
+                const percentCompletion = context.salesPerformance?.get(
+                    this.props.config.category,
+                );
+                if (percentCompletion === undefined) {
+                    return {
+                        ruleId: this.id,
+                        salaryBasis: award.salaryBasis,
+                        quantity: 0,
+                        rate: 0,
+                        amount: 0,
+                        sources: [],
+                    };
+                }
+                const multiplier = FloatPercentSchedule.create(
+                    award.percentBorders,
+                ).resolveMultiplier(percentCompletion);
+                // spec: shop/accounting#requirement-порог-по-марже-позиции-переопределяет-формулу-floatpercent
+                //
+                // Порог сравнивается с МАРЖЕЙ КОНКРЕТНОЙ позиции (item.profit), а не с суммарной
+                // базой правила — поэтому, в отличие от остальных award, расчёт идёт per-item, а
+                // не через sumBasis() по всей выборке.
+                const amountForItem = (
+                    item: ShopProductSoldErpItem,
+                ): number => {
+                    if (item.profit >= award.marginThreshold) {
+                        const base = this.basisAmount(item, award.salaryBasis);
+                        const floatAmount = Money.roundRubles(
+                            (base * award.basePercent * multiplier) / 100,
+                        ).getValue();
+                        return Math.max(floatAmount, award.floorAmount);
+                    }
+                    return Money.roundRubles(
+                        (item.sum * award.lowMarginPercent) / 100,
+                    ).getValue();
+                };
+                const amount = matched.reduce(
+                    (sum, item) => sum + amountForItem(item),
+                    0,
+                );
+                return {
+                    ruleId: this.id,
+                    salaryBasis: award.salaryBasis,
+                    quantity: totalQuantity,
+                    rate: award.basePercent * multiplier,
+                    amount,
+                    sources: this.buildSources(matched, amountForItem),
+                };
+            }
         }
     }
 
     // Fixed/FixedPercent не имеют собственных инвариантов сверх формы,
-    // уже проверенной zod-схемой на границе — только FloatPercent несёт
-    // percentBorders с семантическими инвариантами (порядок/уникальность/
-    // диапазон), которые форма выразить не может, см.
-    // FloatPercentSchedule.create(). Вызывается автоматически конструктором
-    // Entity (entity.base.ts) — и при create() (создание через API), и при
-    // конструировании в ShopSalaryRuleMapper.toDomain() (fail closed при
-    // чтении из БД) — отдельно вызывать не нужно.
+    // уже проверенной zod-схемой на границе — только FloatPercent и
+    // FloatPercentMarginFloor несут percentBorders с семантическими
+    // инвариантами (порядок/уникальность/диапазон), которые форма выразить
+    // не может, см. FloatPercentSchedule.create(). Вызывается автоматически
+    // конструктором Entity (entity.base.ts) — и при create() (создание через
+    // API), и при конструировании в ShopSalaryRuleMapper.toDomain() (fail
+    // closed при чтении из БД) — отдельно вызывать не нужно.
     validate(): void {
         const award = this.props.config.award;
-        if (award.type === 'FloatPercent') {
+        if (
+            award.type === 'FloatPercent' ||
+            award.type === 'FloatPercentMarginFloor'
+        ) {
             FloatPercentSchedule.create(award.percentBorders);
         }
     }

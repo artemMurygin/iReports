@@ -8,6 +8,7 @@ import { PercentSliderField } from '../../PercentSliderField'
 import { AmountField } from './AmountField.tsx'
 import { FieldError } from './FieldError.tsx'
 import { FloatPercentFields } from './FloatPercentFields.tsx'
+import { FloatPercentMarginFloorFields } from './FloatPercentMarginFloorFields.tsx'
 import { SalaryBasisField } from './SalaryBasisField.tsx'
 
 export type AwardSectionProps = {
@@ -102,6 +103,16 @@ export function AwardSection({
 
             {draft.awardKind === 'FloatPercent' && (
                 <FloatPercentFields
+                    draft={draft}
+                    config={config}
+                    errors={errors}
+                    onChange={onChange}
+                    onChangeBorder={onChangeBorder}
+                />
+            )}
+
+            {draft.awardKind === 'FloatPercentMarginFloor' && (
+                <FloatPercentMarginFloorFields
                     draft={draft}
                     config={config}
                     errors={errors}

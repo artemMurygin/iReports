@@ -35,6 +35,11 @@ export type RuleFieldErrors = Partial<
         // own required fields, see `ruleAwards.ts`'s `buildDepartmentTurnoverBonusConfig`.
         | 'warehouseId'
         | 'planTurnoverRatio'
+        // `FloatPercentMarginFloor`'s own fields ("Продажа товара Б/У", shop `ProductSold`-only),
+        // see `shop/model/ruleFormSchema.ts`'s `buildProductSoldMarginFloorAward`.
+        | 'marginThreshold'
+        | 'floorAmount'
+        | 'lowMarginPercent'
         // replace-bitrix-task-integration, раздел 14 tasks.md — `taskId` приходит от мастера
         // (Шаг 1) и в норме уже заполнен к моменту, когда форма правила вообще видна; ошибка тут
         // — защита от регрессии (см. `resolveRuleDraft`'s `case 'TaskCompletion'`), не то, что
