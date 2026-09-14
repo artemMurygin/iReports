@@ -152,6 +152,9 @@ export class ServiceCalculationDataRepository
             where: { closedAt: { gte: from, lte: to } },
             select: { id: true, status: { select: { grupName: true } } },
         });
+        const debugStatusCatalog = await this.client.roappOrderStatus.findMany({
+            select: { name: true, grupName: true },
+        });
         console.log(
             '[FLOAT_PERCENT_DEBUG] ServiceCalculationDataRepository.findOrderPayedItems: заказы в периоде без фильтра статуса',
             {
@@ -166,6 +169,7 @@ export class ServiceCalculationDataRepository
                     ),
                 ],
                 paidOrderStatusGroups: PAID_ORDER_STATUS_GROUPS,
+                fullStatusCatalog: debugStatusCatalog,
             },
         );
 
