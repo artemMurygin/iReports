@@ -36,15 +36,6 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
         // spec: service/sales#requirement-факт-и-прогноз-продаж-поддерживаются-только-для-направления-сервис
         //
         // Источник ERP-факта для shop появится в Фазе 11.
-
-        console.log(
-            '[SALES_FACT_DEBUG] GetSalesPerformanceService.listForPeriod: вход',
-            {
-                direction,
-                period,
-            },
-        );
-
         if (direction !== 'service') {
             throw new SalesPerformanceDirectionNotSupportedException(direction);
         }
@@ -60,21 +51,6 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
             this.ensureSalesPlans.ensureOrdered(direction, period),
             this.factSource.aggregate(period),
         ]);
-
-        console.log(
-            '[SALES_FACT_DEBUG] GetSalesPerformanceService.listForPeriod: планы и факты',
-            {
-                plansCount: orderedPlans.length,
-                plans: orderedPlans.map(({ plan }) => ({
-                    department: plan.department,
-                    category: plan.category,
-                    orderTypeIds: plan.orderTypeIds,
-                    turnover: plan.turnover,
-                })),
-                factsCount: facts.length,
-                facts,
-            },
-        );
 
         // Бакеты факта сгруппированы только по отделу здесь — какие из них
         // относятся к конкретной строке плана, решает сама строка ниже
@@ -115,24 +91,6 @@ export class GetSalesPerformanceService implements SalesPerformanceReaderPort {
                 quantity: erp.quantity,
                 planTurnover: plan.turnover,
             });
-
-            console.log(
-                '[SALES_FACT_DEBUG] GetSalesPerformanceService.listForPeriod: строка плана',
-                {
-                    department: plan.department,
-                    category: plan.category,
-                    orderTypeIds: plan.orderTypeIds,
-                    departmentFactsCount: departmentFacts.length,
-                    matchingBucketsCount: matching.length,
-                    erp,
-                    fact: {
-                        turnover: fact.getTurnover(),
-                        margin: fact.getMargin(),
-                        quantity: fact.getQuantity(),
-                        percentCompletion: fact.getPercentCompletion(),
-                    },
-                },
-            );
             const prognose = SalesPrognose.forPeriod(
                 {
                     turnover: fact.getTurnover(),

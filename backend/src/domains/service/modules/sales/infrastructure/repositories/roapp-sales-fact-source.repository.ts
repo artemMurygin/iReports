@@ -56,15 +56,6 @@ export class RoappSalesFactSourceRepository
     async aggregate(period: string): Promise<ServiceSalesFactErpAggregate[]> {
         const { from, to } = Period.create(period).getBounds();
 
-        console.log(
-            '[SALES_FACT_DEBUG] RoappSalesFactSourceRepository.aggregate: период',
-            {
-                period,
-                from,
-                to,
-            },
-        );
-
         const orders = await this.client.roappOrder.findMany({
             where: {
                 closedAt: { gte: from, lte: to },
@@ -82,11 +73,6 @@ export class RoappSalesFactSourceRepository
             },
         });
 
-        console.log(
-            '[SALES_FACT_DEBUG] RoappSalesFactSourceRepository.aggregate: найдено заказов (closedAt в периоде, payed IS NOT NULL)',
-            orders.length,
-        );
-
         // Ключ бакета — (departmentId, orderTypeId): один заказ всегда
         // попадает ровно в один бакет, GetSalesPerformanceService потом
         // суммирует нужные бакеты одного отдела по SalesPlan.orderTypeIds.
@@ -100,11 +86,9 @@ export class RoappSalesFactSourceRepository
                 quantity: number;
             }
         >();
-        let skippedWithoutDepartment = 0;
         for (const order of orders) {
             const departmentId = order.closedBy?.bitrixEmployee?.departmentId;
             if (!departmentId) {
-                skippedWithoutDepartment += 1;
                 continue;
             }
             const key = `${departmentId}:${order.orderTypeId}`;
@@ -121,19 +105,9 @@ export class RoappSalesFactSourceRepository
             byDepartmentAndOrderType.set(key, bucket);
         }
 
-        const result = [...byDepartmentAndOrderType.values()].map((agg) => ({
+        return [...byDepartmentAndOrderType.values()].map((agg) => ({
             category: null,
             ...agg,
         }));
-
-        console.log(
-            '[SALES_FACT_DEBUG] RoappSalesFactSourceRepository.aggregate: результат',
-            {
-                skippedWithoutDepartment,
-                buckets: result,
-            },
-        );
-
-        return result;
     }
 }

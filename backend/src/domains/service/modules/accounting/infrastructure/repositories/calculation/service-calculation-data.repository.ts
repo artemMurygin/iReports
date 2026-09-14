@@ -200,7 +200,14 @@ export class ServiceCalculationDataRepository
             where: { id: bitrixEmployeeId },
             select: { departmentId: true },
         });
-        return record?.departmentId ?? null;
+        const departmentId = record?.departmentId ?? null;
+
+        console.log(
+            '[FLOAT_PERCENT_DEBUG] ServiceCalculationDataRepository.findEmployeeDepartmentId',
+            { bitrixEmployeeId, found: record !== null, departmentId },
+        );
+
+        return departmentId;
     }
 
     async findEmployeesInDepartment(

@@ -126,16 +126,15 @@ export class BuildServiceCalculationContextService {
             ),
         ]);
 
-        const [salesPerformanceDetail, departmentSalesPerformance, turnoverPerformance] =
-            await Promise.all([
-                this.findSalesPerformance(period, departmentId),
-                this.resolveDepartmentSalesPerformance(
-                    period,
-                    departmentId,
-                    rules,
-                ),
-                this.resolveTurnoverPerformance(period, rules),
-            ]);
+        const [
+            salesPerformanceDetail,
+            departmentSalesPerformance,
+            turnoverPerformance,
+        ] = await Promise.all([
+            this.findSalesPerformance(period, departmentId),
+            this.resolveDepartmentSalesPerformance(period, departmentId, rules),
+            this.resolveTurnoverPerformance(period, rules),
+        ]);
 
         return {
             employee: { ...base.employee, identities },
@@ -165,14 +164,32 @@ export class BuildServiceCalculationContextService {
         departmentId: number | null,
     ): Promise<SalesPerformance | null> {
         if (departmentId == null) {
+            console.log(
+                '[FLOAT_PERCENT_DEBUG] BuildServiceCalculationContextService.findSalesPerformance: departmentId=null, возвращаю null',
+                { period: period.getValue() },
+            );
             return null;
         }
-        return this.salesPerformanceReader.findForScope(
+        const performance = await this.salesPerformanceReader.findForScope(
             'service',
             period.getValue(),
             departmentId,
             null,
         );
+
+        console.log(
+            '[FLOAT_PERCENT_DEBUG] BuildServiceCalculationContextService.findSalesPerformance',
+            {
+                period: period.getValue(),
+                departmentId,
+                found: performance !== null,
+                percentCompletion: performance
+                    ? performance.getFact().getPercentCompletion()
+                    : null,
+            },
+        );
+
+        return performance;
     }
 
     // Лёгкий путь для попадания в ленивый кэш расчёта (Фаза 9,
@@ -207,9 +224,8 @@ export class BuildServiceCalculationContextService {
             return null;
         }
 
-        const categories = this.collectDepartmentSalesPerformanceCategories(
-            rules,
-        );
+        const categories =
+            this.collectDepartmentSalesPerformanceCategories(rules);
         const result: DepartmentSalesPerformanceByCategory = new Map();
         if (categories.size === 0) {
             return result;
@@ -231,7 +247,10 @@ export class BuildServiceCalculationContextService {
         );
         for (const [category, performance] of entries) {
             if (performance) {
-                result.set(category, this.toDepartmentSalesPerformanceEntry(performance));
+                result.set(
+                    category,
+                    this.toDepartmentSalesPerformanceEntry(performance),
+                );
             }
         }
         return result;
@@ -249,8 +268,7 @@ export class BuildServiceCalculationContextService {
                 continue;
             }
             const config = rule.config as
-                | DepartmentPercentSalaryConfig
-                | DepartmentPlanBonusSalaryConfig;
+                DepartmentPercentSalaryConfig | DepartmentPlanBonusSalaryConfig;
             categories.add(config.category);
         }
         return categories;
