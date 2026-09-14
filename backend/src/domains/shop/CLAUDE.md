@@ -126,8 +126,12 @@ domains/shop/
 
 - Роли правил: `ONLINE_MANAGER`/`OFFLINE_MANAGER` — на уровне **отгрузки**
   (`MoySkladDemand.onlineManagerId`/`offlineManagerId`, `role-source.ts`); `ONLINE_PURCHASER`/
-  `OFFLINE_PURCHASER` — на уровне **товарной позиции**
-  (`MoySkladDemandPosition.onlinePurchaserId`/`offlinePurchaserId`). `salaryBasis`:
+  `OFFLINE_PURCHASER` — на уровне **карточки товара**
+  (`MoySkladProduct.onlinePurchaserId`/`offlinePurchaserId`; изначальное предположение Фазы 10 —
+  уровень товарной позиции — не подтвердилось, МойСклад не поддерживает кастомные атрибуты на
+  строке позиции документа, см. комментарий над полем в `moySklad.prisma`).
+  `calculation-data.repository.ts` резолвит их join'ом на продукт позиции при построении
+  `productSoldItems`. `salaryBasis`:
   `REVENUE` (`sum`)/`MARGIN` (`profit`) — `SALARY_MINUS_ENGINEER_SALARY` в магазине не существует.
 - Категория правила раскрывается до потомков через
   `ProductFolderTreeService.resolveDescendantFolderIds` заранее application-слоем
@@ -203,7 +207,7 @@ domains/shop/
 ## Данные и тесты
 
 - Prisma-схема: `prisma/schema/moySklad.prisma` (собственные таблицы `moySklad*`, включая поля
-  закупщиков `onlinePurchaserId`/`offlinePurchaserId` на `moySkladDemandPosition` и `pathName`-индекс
+  закупщиков `onlinePurchaserId`/`offlinePurchaserId` на `moySkladProducts` и `pathName`-индекс
   (`text_pattern_ops`) на `moySkladProductFolder`) и `prisma/schema/sales.prisma`
   (`SalesPlan`/`SalesPlanTemplate`, общие с `service` через поле `direction`).
 - Тесты интеграций: `integrations/moySklad/moysklad.service.spec.ts`. `sync/moySklad` тестами

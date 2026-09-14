@@ -39,8 +39,12 @@ export interface ShopProductSoldErpItem {
     // отдельного join на уровне домена.
     onlineManagerId: string | null;
     offlineManagerId: string | null;
-    // Закупщик БУ техники — уровень ТОВАРНОЙ ПОЗИЦИИ, а не отгрузки (Фаза
-    // 10/13, issue #62/#63). UsedProductSold матчит роль ONLINE_PURCHASER/
+    // Закупщик БУ техники — доп. поле КАРТОЧКИ ТОВАРА (MoySkladProduct),
+    // не позиции и не отгрузки (Фаза 10/13, issue #62/#63; изначальное
+    // предположение "уровень позиции" не подтвердилось — см. комментарий
+    // над MoySkladProduct.onlinePurchaserId в moySklad.prisma). Репозиторий
+    // (calculation-data.repository.ts) резолвит эти поля join'ом на продукт
+    // позиции. UsedProductSold матчит роль ONLINE_PURCHASER/
     // OFFLINE_PURCHASER по этим же двум полям того же массива
     // productSoldItems, что использует ProductSold для менеджерских
     // ролей — issue #63: "переиспользуй тот же источник данных, что и

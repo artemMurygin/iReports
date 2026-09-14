@@ -24,7 +24,7 @@ import { buildErpDemandLink } from '../../services/erp-demand-link-builder';
 // ProductSoldEntity по структуре (category/award/salaryBasis/дедупликация),
 // но независимая реализация (issue #57) и три содержательных отличия:
 //
-// 1. Роль — ONLINE_PURCHASER/OFFLINE_PURCHASER, уровень ТОВАРНОЙ ПОЗИЦИИ
+// 1. Роль — ONLINE_PURCHASER/OFFLINE_PURCHASER, уровень КАРТОЧКИ ТОВАРА
 //    (employeeMatchesShopPurchaserRole), а не отгрузки.
 // 2. award — только Fixed/FixedPercent, БЕЗ FloatPercent.
 // 3. Источник данных — тот же erpData.productSoldItems, что и у

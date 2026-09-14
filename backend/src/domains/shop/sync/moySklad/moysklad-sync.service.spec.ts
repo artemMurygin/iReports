@@ -1,5 +1,6 @@
 import { MoySkladSyncService } from './moysklad-sync.service';
 import { DemandSchema } from '../../integrations/moySklad/schemas/demands.schema';
+import { ProductSchema } from '../../integrations/moySklad/schemas/products.schema';
 import { PURCHASER_ATTRIBUTE_NAME } from './moysklad-sync.mappers';
 import type { MoyskladService } from '../../integrations/moySklad/moysklad.service';
 import type { DatabaseService } from '@/infrustructure/database/database.service';
@@ -22,10 +23,6 @@ const metaWrapper = (type: string, href?: string) => ({
     meta: meta(type, href),
 });
 
-// issue #48/#49/#51 (Фаза 10): синк отгрузок должен сохранять доп. поля
-// закупщиков БУ техники на уровне позиции — у каждой позиции свой
-// закупщик, в одной отгрузке могут быть разные (см.
-// docs/payroll/prd-payroll-calculation.md, раздел "Роли магазина").
 function buildDemandFixture() {
     return DemandSchema.parse({
         accountId: 'acc-1',
@@ -55,18 +52,6 @@ function buildDemandFixture() {
                     discount: 0,
                     vat: 0,
                     vatEnabled: false,
-                    attributes: [
-                        {
-                            meta: meta('attributemetadata'),
-                            id: 'attr-online-purchaser',
-                            name: PURCHASER_ATTRIBUTE_NAME.ONLINE,
-                            type: 'employee',
-                            value: metaWrapper(
-                                'employee',
-                                'https://api.moysklad.ru/api/remap/1.2/entity/employee/purchaser-employee-1',
-                            ),
-                        },
-                    ],
                     assortment: {
                         meta: meta('product'),
                         id: 'product-1',
@@ -89,15 +74,6 @@ function buildDemandFixture() {
                     discount: 0,
                     vat: 0,
                     vatEnabled: false,
-                    attributes: [
-                        {
-                            meta: meta('attributemetadata'),
-                            id: 'attr-online-purchaser',
-                            name: PURCHASER_ATTRIBUTE_NAME.ONLINE,
-                            type: 'string',
-                            value: 'Петров П.П.',
-                        },
-                    ],
                     assortment: {
                         meta: meta('product'),
                         id: 'product-2',
@@ -163,6 +139,96 @@ describe('MoySkladSyncService.uploadStores (D2)', () => {
     });
 });
 
+// Закупщик БУ техники — доп. поле КАРТОЧКИ ТОВАРА, а не позиции отгрузки
+// (см. комментарий над MoySkladProduct.onlinePurchaserId в moySklad.prisma:
+// изначальное предположение "уровень позиции" не подтвердилось — МойСклад
+// не поддерживает кастомные атрибуты на строке позиции документа).
+describe('MoySkladSyncService.uploadProducts', () => {
+    const buildService = () => {
+        const upsert = jest.fn().mockResolvedValue({});
+        const db = {
+            moySkladProduct: { upsert },
+        } as unknown as DatabaseService;
+        const moySklad = {
+            fetchProducts: jest.fn(function* () {
+                yield [
+                    ProductSchema.parse({
+                        id: 'product-1',
+                        name: 'iPhone 12 (БУ)',
+                        externalCode: 'ext-1',
+                        updated: '2026-08-05 10:00:00',
+                        archived: false,
+                        attributes: [
+                            {
+                                meta: {
+                                    href: 'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1/attributes/attr-online-purchaser',
+                                    type: 'attributemetadata',
+                                    mediaType: 'application/json',
+                                },
+                                id: 'attr-online-purchaser',
+                                name: PURCHASER_ATTRIBUTE_NAME.ONLINE,
+                                type: 'employee',
+                                value: {
+                                    meta: {
+                                        href: 'https://api.moysklad.ru/api/remap/1.2/entity/employee/purchaser-employee-1',
+                                        type: 'employee',
+                                        mediaType: 'application/json',
+                                    },
+                                },
+                            },
+                        ],
+                    }),
+                    ProductSchema.parse({
+                        id: 'product-2',
+                        name: 'iPhone 13 (БУ)',
+                        externalCode: 'ext-2',
+                        updated: '2026-08-05 10:00:00',
+                        archived: false,
+                        attributes: [
+                            {
+                                meta: {
+                                    href: 'https://api.moysklad.ru/api/remap/1.2/entity/product/product-2/attributes/attr-offline-purchaser',
+                                    type: 'attributemetadata',
+                                    mediaType: 'application/json',
+                                },
+                                id: 'attr-offline-purchaser',
+                                name: PURCHASER_ATTRIBUTE_NAME.OFFLINE,
+                                type: 'string',
+                                value: 'Петров П.П.',
+                            },
+                        ],
+                    }),
+                ];
+            }),
+        } as unknown as MoyskladService;
+
+        const service = new MoySkladSyncService(db, moySklad);
+        return { service, upsert };
+    };
+
+    it('резолвит закупщика из доп. поля товара (employee и string варианты значения)', async () => {
+        const { service, upsert } = buildService();
+
+        await service.uploadProducts();
+
+        expect(upsert).toHaveBeenCalledTimes(2);
+
+        const calls = upsert.mock.calls as unknown as Array<
+            [{ where: { id: string }; create: Record<string, unknown> }]
+        >;
+        const call1 = calls.find((c) => c[0].where.id === 'product-1')![0];
+        const call2 = calls.find((c) => c[0].where.id === 'product-2')![0];
+
+        // employee-тип атрибута — id сотрудника МойСклад извлечён из href.
+        expect(call1.create.onlinePurchaserId).toBe('purchaser-employee-1');
+        expect(call1.create.offlinePurchaserId).toBeNull();
+
+        // string-тип атрибута — голое строковое значение как есть.
+        expect(call2.create.offlinePurchaserId).toBe('Петров П.П.');
+        expect(call2.create.onlinePurchaserId).toBeNull();
+    });
+});
+
 describe('MoySkladSyncService.uploadDemand (Фаза 10)', () => {
     const buildService = () => {
         const createManyPositions = jest.fn().mockResolvedValue({ count: 2 });
@@ -199,7 +265,10 @@ describe('MoySkladSyncService.uploadDemand (Фаза 10)', () => {
         return { service, tx, createManyPositions };
     };
 
-    it('сохраняет доп. поля закупщика для каждой позиции отдельно (employee и string варианты значения)', async () => {
+    // Закупщик БУ техники больше не резолвится на уровне позиции (см.
+    // MoySkladSyncService.uploadProducts ниже) — позиция несёт только
+    // привязку к товару/сумму/себестоимость.
+    it('сохраняет позиции отгрузки с привязкой к товару', async () => {
         const { service, createManyPositions } = buildService();
         const demand = buildDemandFixture();
 
@@ -215,25 +284,15 @@ describe('MoySkladSyncService.uploadDemand (Фаза 10)', () => {
         const call = createManyPositions.mock.calls[0] as [{ data: unknown }];
         const rows = call[0].data as Array<{
             id: string;
-            onlinePurchaserId: string | null;
-            offlinePurchaserId: string | null;
+            productId: string | null;
+            sum: number;
         }>;
 
         const position1 = rows.find((r) => r.id === 'position-1');
         const position2 = rows.find((r) => r.id === 'position-2');
 
-        // employee-тип атрибута — id сотрудника МойСклад извлечён из href.
-        expect(position1?.onlinePurchaserId).toBe('purchaser-employee-1');
-        expect(position1?.offlinePurchaserId).toBeNull();
-
-        // string-тип атрибута — голое строковое значение как есть.
-        expect(position2?.onlinePurchaserId).toBe('Петров П.П.');
-        expect(position2?.offlinePurchaserId).toBeNull();
-
-        // Разные закупщики в одной отгрузке — не задваиваются и не путаются.
-        expect(position1?.onlinePurchaserId).not.toBe(
-            position2?.onlinePurchaserId,
-        );
+        expect(position1?.productId).toBe('product-1');
+        expect(position2?.productId).toBe('product-2');
     });
 
     // spec: shop-turnover-report D3 — storeId уже приходит в ответе МойСклад
