@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import type {
+    ListEmployeesWithServiceAccountResponse,
     MonthlyWorkScheduleResponse,
     ReorderEmployeesRequest,
     ReorderEmployeesResponse,
@@ -50,6 +51,27 @@ export const api = {
             .catch((error) => {
                 throw new ApiError(extractApiErrorMessage(error, 'Не удалось сохранить день графика'))
             }),
+
+    // GET /v1/directory/employees/service-accounts, а НЕ features/TargetDirectory's useEmployees()
+    // (GET .../employees без служебных аккаунтов): таблица графика (GET /v1/work-schedule) сама
+    // показывает служебные аккаунты (см. GetMonthlyWorkScheduleService.execute,
+    // includeServiceAccounts: true) — `buildReorderPayload` должен строить "полный порядок компании"
+    // (`fullOrderIds`) из списка, где эти сотрудники тоже присутствуют, иначе строка со служебным
+    // аккаунтом (или соседняя с ней) тихо выпадает из payload реордера и её order не сохраняется.
+    getEmployeesWithServiceAccount: () =>
+        queryOptions({
+            queryKey: ['work-schedule', 'employees-with-service-account'],
+            staleTime: 5 * 60 * 1000,
+            queryFn: ({ signal }): Promise<ListEmployeesWithServiceAccountResponse> =>
+                apiInstance
+                    .get<ListEmployeesWithServiceAccountResponse>('/v1/directory/employees/service-accounts', {
+                        signal,
+                    })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError(extractApiErrorMessage(error, 'Не удалось загрузить список сотрудников'))
+                    }),
+        }),
 
     // PATCH /v1/directory/employees/order (docs/employee-ordering-and-salary-filter, Фаза 1) —
     // drag-n-drop сотрудников на этой странице (Фаза 2, `useReorderEmployees.ts`). Доступен любому

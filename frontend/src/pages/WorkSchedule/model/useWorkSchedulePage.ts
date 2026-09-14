@@ -4,7 +4,7 @@ import { arrayMove } from '@dnd-kit/sortable'
 import { useSearchParams } from 'react-router-dom'
 import type { MonthlyWorkScheduleResponse } from 'ireports-contracts'
 
-import { useDepartments, useEmployees } from '@/features/TargetDirectory'
+import { useDepartments } from '@/features/TargetDirectory'
 
 import { api } from './api.ts'
 import { parseHighlightedEmployeeId } from './employeeHighlight.ts'
@@ -108,11 +108,14 @@ export function useWorkSchedulePage() {
         [baseEmployees, orderOverride],
     )
 
-    // Полный, не отфильтрованный по отделу справочник (тот же кэш, что питает `pages/SalaryRules`'
-    // выбор сотрудника/`pages/SalaryReportV2`/`pages/EmployeeBalance`, см. `useReorderEmployees`'s
-    // комментарий) — нужен `buildReorderPayload`, чтобы корректно пересчитать `order` даже когда
-    // таблица графика показывает только ОДИН отфильтрованный отдел (см. её собственный комментарий).
-    const allEmployeesQuery = useEmployees()
+    // Полный, не отфильтрованный по отделу справочник — нужен `buildReorderPayload`, чтобы корректно
+    // пересчитать `order` даже когда таблица графика показывает только ОДИН отфильтрованный отдел
+    // (см. её собственный комментарий). Обязательно `getEmployeesWithServiceAccount` (а не
+    // `features/TargetDirectory`'s `useEmployees()`, который служебные аккаунты исключает) — иначе
+    // сотрудник-служебный аккаунт (таблица графика их показывает, см.
+    // `GetMonthlyWorkScheduleService.execute`) отсутствовал бы в `fullOrderIds` и тихо выпадал бы из
+    // payload реордера при перетаскивании рядом с ним (см. `api.ts`'s комментарий на этом запросе).
+    const allEmployeesQuery = useQuery(api.getEmployeesWithServiceAccount())
     const reorderEmployeesMutation = useReorderEmployees()
     // Перетаскивание недоступно, пока полный справочник ещё не загрузился — без него
     // `buildReorderPayload` не может безопасно посчитать `order` (см. её комментарий).
