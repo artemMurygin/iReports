@@ -6,6 +6,7 @@ export type PercentSliderFieldProps = {
     onValueChange: (value: string) => void
     min?: number
     max?: number
+    step?: number
     className?: string
 }
 
@@ -28,6 +29,7 @@ export function PercentSliderField({
     onValueChange,
     min = 1,
     max = 100,
+    step = 1,
     className,
 }: PercentSliderFieldProps) {
     const numeric = Number(value.replace(',', '.'))
@@ -52,6 +54,7 @@ export function PercentSliderField({
                     onValueChange={(next) => onValueChange(String(next))}
                     min={min}
                     max={max}
+                    step={step}
                 />
 
                 <div className="flex w-full items-center justify-between gap-2">
