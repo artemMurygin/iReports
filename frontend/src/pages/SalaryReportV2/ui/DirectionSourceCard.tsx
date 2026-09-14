@@ -1,11 +1,11 @@
+import { useMemo } from 'react'
 import { ArrowRight, ChevronRight } from 'lucide-react'
-import type { FactPrognoseAmount } from 'ireports-contracts'
+import type { FactPrognoseAmount, SalesPerformanceSummary } from 'ireports-contracts'
 
 import { AccrualStatusBadge } from '@/features/SalaryAccruals'
-import { formatCurrency, pluralizeCategories } from '@/features/SalesPlan'
+import { formatCurrency, useShopCategoryNames } from '@/features/SalesPlan'
 import { pluralizeRules } from '@/kernel/pluralizeRules.ts'
 import { cn } from '@/shared/lib/tw'
-import { CellProgress } from '@/shared/ui-kit/molecules/CellProgress.tsx'
 
 import {
     getRoleLabel,
@@ -18,6 +18,8 @@ import {
 import { groupRulesByRole, type RuleRoleGroup } from '../model/groupRulesByRole.ts'
 import { splitRulesByType } from '../model/groupRulesByType.ts'
 import { pluralizeRoles } from '../model/pluralizeRoles.ts'
+
+import { CategoryPlanDonut } from './CategoryPlanDonut.tsx'
 
 export type DirectionSourceCardProps = {
     /** Отчёт направления — карточка сама делит `direction.rules` на ролевые/задачные
@@ -64,15 +66,14 @@ function calcRoleProgressPercent(total: FactPrognoseAmount): number {
     return Math.max(0, Math.min(100, (total.fact / prognoseValue) * 100))
 }
 
-/** "Выполнение плана" направления по обороту (факт/план) — та же формула, что и footer
- * `SalesPlanDetailsPanel` ("Выполнение плана X%"), пересчитана здесь локально для компактного
- * мини-тизера карточки (не переиспользована оттуда напрямую — там она замыкает JSX самого компонента
- * панели, а не отдельно экспортируемая функция). 0%, если план направления нулевой (деление на 0 не
+const ALL_CATEGORIES_LABEL = 'Все категории'
+
+/** Прогноз по выручке относительно плана категории — та же формула, что и `SalesPlanCategoryRow`'s
+ * `forecastPercent` (не переиспользована оттуда напрямую — там она инлайн в JSX компонента строки,
+ * а не отдельно экспортируемая функция). 0%, если план категории нулевой (деление на 0 не
  * подменяется на 100%/NaN). */
-function calcPlanCompletionPercent(direction: DirectionReportVM): number {
-    const totalFactTurnover = direction.salesPerformance.reduce((sum, row) => sum + row.fact.turnover, 0)
-    const totalPlanTurnover = direction.salesPerformance.reduce((sum, row) => sum + row.plan.turnover, 0)
-    return totalPlanTurnover === 0 ? 0 : Math.round((totalFactTurnover / totalPlanTurnover) * 100)
+function calcForecastPercent(summary: SalesPerformanceSummary): number {
+    return summary.plan.turnover === 0 ? 0 : Math.round((summary.prognose.turnover / summary.plan.turnover) * 100)
 }
 
 type RoleRowProps = {
@@ -156,17 +157,32 @@ function RoleRow({ group, direction, onOpen }: RoleRowProps) {
  * `RuleGroupDetailsPanel` через `onOpenRuleGroup` с ВСЕЙ группой правил роли (пользователь явно
  * потребовал эту группировку — одна роль может нести несколько зарплатных правил).
  *
- * Мини-тизер плана продаж под строками ролей (если `salesPerformance.length > 0`) — НЕ повторяет
- * донат-визуализацию мокапа по категориям (явный запрет — "не изобретай тяжёлую визуализацию"):
- * вместо неё компактная сводка — переиспользованный `CellProgress` (`compact`, единственный готовый
- * прогресс-индикатор в `shared/ui-kit`, точка выполнения плана по обороту факт/план) + счётчик
- * категорий + ссылка "Подробнее", открывающая `SalesPlanDetailsPanel` через `onOpenSalesPlan`.
+ * Мини-тизер плана продаж под строками ролей (если `salesPerformance.length > 0`) — горизонтальная
+ * лента кольцевых мини-диаграмм по категории (`CategoryPlanDonut`, Pencil: `dhl7h`/`A1xsm`'s
+ * `Категории` — `aB1Lq` "Сервис" рисует одну категорию без скролла, `rfz9M` "Магазин" — 7 категорий
+ * в горизонтальной прокрутке с fade-маской у правого края) + ссылка "Подробнее", открывающая
+ * `SalesPlanDetailsPanel` через `onOpenSalesPlan`. Раньше здесь была компактная сводка через
+ * `CellProgress` вместо кольцевых диаграмм — это было ошибочным упрощением (см. историю правок),
+ * донат из мокапа визуализирует ту же реальную пару факт/прогноз по каждой категории, а не
+ * выдуманную метрику, так что заменять его линейным баром смысла не было.
  */
 export function DirectionSourceCard({ direction, onOpenRuleGroup, onOpenSalesPlan, className }: DirectionSourceCardProps) {
     const { roleRules } = splitRulesByType(direction.rules)
     const roleGroups = groupRulesByRole(roleRules, direction.direction)
     const total = sumAllFactPrognose(roleRules.map((rule) => rule.amount))
     const hasSalesPerformance = direction.salesPerformance.length > 0
+    const categoryNameById = useShopCategoryNames()
+
+    const categoryDonuts = useMemo(
+        () =>
+            direction.salesPerformance.map((summary) => ({
+                key: summary.category ?? 'all',
+                label: summary.category === null ? ALL_CATEGORIES_LABEL : (categoryNameById.get(summary.category) ?? summary.category),
+                factPercent: summary.percentCompletion,
+                forecastPercent: calcForecastPercent(summary),
+            })),
+        [direction.salesPerformance, categoryNameById],
+    )
 
     return (
         <div
@@ -210,7 +226,7 @@ export function DirectionSourceCard({ direction, onOpenRuleGroup, onOpenSalesPla
             )}
 
             {hasSalesPerformance && (
-                <div className="flex flex-col gap-2 border-t border-hairline pt-3">
+                <div className="flex flex-col gap-3 border-t border-hairline pt-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-ui text-[10px] font-semibold tracking-wide text-ink-muted uppercase">
                             План продаж · {direction.label}
@@ -223,21 +239,33 @@ export function DirectionSourceCard({ direction, onOpenRuleGroup, onOpenSalesPla
                         >
                             {direction.isPlanApproved ? 'Утверждён' : 'Не утверждён'}
                         </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <CellProgress percent={calcPlanCompletionPercent(direction)} size="compact" />
-                        <span className="shrink-0 font-ui text-[11px] text-ink-muted">
-                            {direction.salesPerformance.length} {pluralizeCategories(direction.salesPerformance.length)}
-                        </span>
                         <button
                             type="button"
                             onClick={() => onOpenSalesPlan(direction.direction)}
-                            className="flex items-center gap-1 font-ui text-[11px] font-semibold text-info-ink hover:underline"
+                            className="ml-auto flex items-center gap-1 font-ui text-[11px] font-semibold text-info-ink hover:underline"
                         >
                             Подробнее
                             <ArrowRight className="size-3 shrink-0" />
                         </button>
+                    </div>
+
+                    <div className="relative">
+                        <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            {categoryDonuts.map((donut) => (
+                                <CategoryPlanDonut
+                                    key={donut.key}
+                                    label={donut.label}
+                                    factPercent={donut.factPercent}
+                                    forecastPercent={donut.forecastPercent}
+                                />
+                            ))}
+                        </div>
+                        {categoryDonuts.length > 4 && (
+                            <div
+                                className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface to-transparent"
+                                aria-hidden
+                            />
+                        )}
                     </div>
                 </div>
             )}
