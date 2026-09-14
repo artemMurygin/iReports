@@ -9,13 +9,18 @@
 FROM node:22-alpine AS builder
 WORKDIR /repo
 
-# ireports-contracts собирается отдельно от своего собственного package.json — frontend НЕ входит
-# в корневые npm workspaces (frontend/CLAUDE.md: "ставится независимо"), поэтому здесь нет общего
-# `npm ci` в корне, как у backend. `npm install`, а не `npm ci` — у contracts/ нет своего
-# package-lock.json (он часть корневых npm workspaces, лочится в корневом package-lock.json), а
-# `npm ci` требует lock-файл рядом с package.json.
+# ireports-contracts собирается отдельно от frontend (frontend/CLAUDE.md: "ставится независимо" —
+# сам frontend НЕ входит в корневые npm workspaces), но у contracts/ нет своего lock-файла — он
+# залочен в корневом package-lock.json (npm workspaces). Поэтому здесь, как и в backend/docker/
+# Dockerfile, ставим через корневой `npm ci` (детерминированно, по общему lock-файлу), а не через
+# `npm install` внутри contracts/ — там npm сам пересчитывает граф зависимостей с нуля, что на
+# практике упиралось в баг npm/Arborist ("Cannot read properties of null (reading 'edgesOut')")
+# и молча ронял билд образа.
+COPY package.json package-lock.json ./
+COPY contracts/package.json contracts/package.json
+RUN HUSKY=0 npm ci
 COPY contracts contracts
-RUN cd contracts && npm install && npm run build
+RUN npm run build --workspace=contracts
 
 COPY frontend frontend
 WORKDIR /repo/frontend
