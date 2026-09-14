@@ -66,9 +66,26 @@ describe('BitrixSyncService', () => {
                 update: {
                     firstName: 'Иван',
                     lastName: 'Иванов',
+                    departmentId: 7,
                     isActive: true,
                 },
             });
+        });
+
+        // Баг: departmentId раньше присутствовал только в ветке create — смена
+        // отдела сотрудника в Bitrix24 не подхватывалась ни для одного из путей
+        // синка (Initial Upload, часовой BitrixCatalogsSyncCron), потому что
+        // существующая строка всегда шла через update.
+        it('переписывает departmentId уже существующего сотрудника при апдейте', async () => {
+            const { service, upsert } = createService();
+
+            await service.upsertEmployeeRecord(buildUser());
+
+            expect(upsert).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    update: expect.objectContaining({ departmentId: 7 }),
+                }),
+            );
         });
 
         // spec: auth#self-heal-bitrix-employee — обнаруженный реальный баг: первый

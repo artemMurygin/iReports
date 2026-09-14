@@ -132,10 +132,15 @@ export class BitrixSyncService {
             },
             // isActive — признак увольнения для документов начисления
             // (PRD 1 docs/payroll-closing-and-accrual); отсутствие поля в
-            // ответе трактуется как «активен».
+            // ответе трактуется как «активен». departmentId — тоже
+            // переписывается при апдейте (баг: раньше присутствовал только
+            // в create, поэтому смена отдела сотрудника в Bitrix24 не
+            // подхватывалась ни ручным Initial Upload, ни часовым
+            // BitrixCatalogsSyncCron для уже существующих строк).
             update: {
                 firstName: e.NAME ?? '',
                 lastName: e.LAST_NAME ?? '',
+                departmentId,
                 isActive: e.ACTIVE !== false,
             },
         });
