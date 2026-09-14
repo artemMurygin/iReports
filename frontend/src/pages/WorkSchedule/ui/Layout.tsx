@@ -5,7 +5,7 @@ import { RefreshTransitionLayout } from '@/shared/ui/RefreshTransitionLayout.tsx
 type Props = {
     isInitialLoad?: boolean
     isRefreshing?: boolean
-    dataVersion?: number
+    dataVersion?: number | string
     header?: ReactNode
     error?: string | null
     body?: ReactNode

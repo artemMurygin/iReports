@@ -75,7 +75,6 @@ export function useWorkSchedulePage() {
         data,
         isFetching,
         error: queryError,
-        dataUpdatedAt,
     } = useQuery({ ...api.getMonthlySchedule(month, effectiveDepartmentId), placeholderData: keepPreviousData })
 
     const baseEmployees = data?.employees ?? EMPTY_EMPLOYEES
@@ -174,7 +173,12 @@ export function useWorkSchedulePage() {
         todayLabel: formatFullDateLabel(todayIso),
         isInitialLoad,
         isRefreshing,
-        dataVersion: dataUpdatedAt,
+        // `scopeKey` (месяц+отдел), а НЕ `dataUpdatedAt`: `dataVersion` используется как React `key`
+        // в `RefreshTransitionLayout` (`AnimatePresence`), поэтому смена `dataUpdatedAt` на каждый
+        // рефетч (в т.ч. после PUT одной ячейки, см. `useSaveWorkScheduleEntry`) размонтировала бы и
+        // заново монтировала ВСЮ таблицу графика при каждом сохранении дня — `scopeKey` меняется
+        // только когда реально сменился месяц/отдел, что и была исходная цель этой анимации.
+        dataVersion: scopeKey,
         error: queryError?.message ?? null,
         canReorderEmployees,
         onReorderEmployees: handleReorderEmployees,

@@ -5,7 +5,7 @@ import { SpinnerPageLg } from '@/shared/ui/SpinnerPageLg'
 type Props = {
     isInitialLoad?: boolean
     isRefreshing?: boolean
-    dataVersion?: number
+    dataVersion?: number | string
     loadingLabel?: string
     className?: string
     children?: ReactNode
