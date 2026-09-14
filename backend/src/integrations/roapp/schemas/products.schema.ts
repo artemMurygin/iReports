@@ -21,8 +21,8 @@ export const ProductSchema = z
     id: z.number().int().positive(),
     title: z.string(),
     description: z.string(),
-    code: z.string(),
-    sku: z.string(),
+    code: z.string().nullable(),
+    sku: z.string().nullable(),
     uom_id: z.number().int(),
     category_id: z.number().int(),
 
