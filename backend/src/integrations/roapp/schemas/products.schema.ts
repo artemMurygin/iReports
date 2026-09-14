@@ -43,10 +43,10 @@ export const ProductSchema = z
       }),
     ), // в данных пусто, реальная структура неизвестна
 
-    is_dimensions_weight_enabled: z.boolean(),
-    is_expiration_tracking_enabled: z.boolean(),
-    is_expiring_soon_alert_enabled: z.boolean(),
-    is_critical_alert_enabled: z.boolean(),
+    is_dimensions_weight_enabled: z.boolean().default(false),
+    is_expiration_tracking_enabled: z.boolean().default(false),
+    is_expiring_soon_alert_enabled: z.boolean().default(false),
+    is_critical_alert_enabled: z.boolean().default(false),
 
     default_supplier_id: z.number().int().nullable(),
   })
