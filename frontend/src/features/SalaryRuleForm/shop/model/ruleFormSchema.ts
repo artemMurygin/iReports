@@ -4,7 +4,7 @@ import {
     type ShopSalaryRuleResponse,
 } from 'ireports-contracts'
 
-import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
+import { buildPercentBorders, parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
 import {
     buildDepartmentPercentConfig,
     buildDepartmentPlanBonusConfig,
@@ -48,6 +48,50 @@ function buildUsedProductSoldAward(draft: RuleDraft, errors: RuleFieldErrors): u
     }
 }
 
+/**
+ * "Продажа товара Б/У" — 4-й вариант награды `ProductSold` (`FloatPercentMarginFloor`), только для
+ * shop. Не переиспользует `buildOrderPayedAward` — та функция общая с сервисным `OrderPayed`, у
+ * которого этого варианта нет вовсе (см. её комментарий про "byte-for-byte identical" 3-вариантную
+ * форму), поэтому 4-й вариант живёт локально в этом файле, а не расширяет общий билдер.
+ */
+function buildProductSoldMarginFloorAward(draft: RuleDraft, errors: RuleFieldErrors): unknown {
+    const basePercent = parseNumber(draft.basePercent)
+    if (basePercent === undefined) errors.basePercent = 'Укажите базовый процент'
+    if (!draft.salaryBasis) errors.salaryBasis = 'Выберите базу начисления'
+    const percentBorders = buildPercentBorders(draft.percentBorders, errors)
+
+    const marginThreshold = parseNumber(draft.marginThreshold)
+    if (marginThreshold === undefined) errors.marginThreshold = 'Укажите порог маржи'
+
+    const floorAmount = parseNumber(draft.floorAmount)
+    if (floorAmount === undefined) errors.floorAmount = 'Укажите минимальную сумму'
+
+    const lowMarginPercent = parseNumber(draft.lowMarginPercent)
+    if (lowMarginPercent === undefined) {
+        errors.lowMarginPercent = 'Укажите процент при марже ниже порога'
+    }
+
+    return {
+        type: 'FloatPercentMarginFloor',
+        basePercent: basePercent ?? Number.NaN,
+        salaryBasis: draft.salaryBasis || 'REVENUE',
+        percentBorders,
+        marginThreshold: marginThreshold ?? Number.NaN,
+        floorAmount: floorAmount ?? Number.NaN,
+        lowMarginPercent: lowMarginPercent ?? Number.NaN,
+    }
+}
+
+/** `ProductSold`'s award — `FloatPercentMarginFloor` ("Продажа товара Б/У") is shop-only, so it's
+ * intercepted here before falling back to the shared `buildOrderPayedAward` for the other 3
+ * variants (`Fixed`/`FixedPercent`/`FloatPercent`, identical to service `OrderPayed`). */
+function buildProductSoldAward(draft: RuleDraft, errors: RuleFieldErrors): unknown {
+    if (draft.awardKind === 'FloatPercentMarginFloor') {
+        return buildProductSoldMarginFloorAward(draft, errors)
+    }
+    return buildOrderPayedAward(draft, errors)
+}
+
 export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResult {
     const errors: RuleFieldErrors = {}
 
@@ -66,7 +110,7 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
         // `RuleDraft.category`), so it's already a valid `productSoldSalaryConfigSchema.category` /
         // `usedProductSoldSalaryConfigSchema.category` value with no extra required-field check.
         case 'ProductSold':
-            config = { category: draft.category, award: buildOrderPayedAward(draft, errors) }
+            config = { category: draft.category, award: buildProductSoldAward(draft, errors) }
             break
         case 'UsedProductSold':
             config = { category: draft.category, award: buildUsedProductSoldAward(draft, errors) }
@@ -195,6 +239,9 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',
+        marginThreshold: '',
+        floorAmount: '',
+        lowMarginPercent: '',
     }
 
     switch (rule.type) {
@@ -215,6 +262,16 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
                         basePercent: String(award.basePercent),
                         salaryBasis: award.salaryBasis,
                         percentBorders: bordersFromResponse(award.percentBorders),
+                    }
+                case 'FloatPercentMarginFloor':
+                    return {
+                        ...withAward,
+                        basePercent: String(award.basePercent),
+                        salaryBasis: award.salaryBasis,
+                        percentBorders: bordersFromResponse(award.percentBorders),
+                        marginThreshold: String(award.marginThreshold),
+                        floorAmount: String(award.floorAmount),
+                        lowMarginPercent: String(award.lowMarginPercent),
                     }
             }
             break

@@ -448,6 +448,157 @@ describe('ProductSoldEntity', () => {
         });
     });
 
+    describe('award FloatPercentMarginFloor ("Продажа товара Б/У")', () => {
+        const percentBorders = [
+            {
+                name: 'A',
+                fromPlanPercent: 50,
+                multiplier: 0.5,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'B',
+                fromPlanPercent: 80,
+                multiplier: 1,
+                mode: 'FIX' as const,
+            },
+            {
+                name: 'C',
+                fromPlanPercent: 100,
+                multiplier: 1.5,
+                mode: 'FIX' as const,
+            },
+        ];
+
+        const buildRule = () =>
+            ProductSoldEntity.create({
+                type: 'ProductSold',
+                name: 'Продажа товара Б/У',
+                targetRole: 'ONLINE_MANAGER',
+                config: {
+                    category: null,
+                    award: {
+                        type: 'FloatPercentMarginFloor',
+                        basePercent: 10,
+                        salaryBasis: 'MARGIN',
+                        percentBorders,
+                        marginThreshold: 1000,
+                        floorAmount: 500,
+                        lowMarginPercent: 0.5,
+                    },
+                },
+            });
+
+        it('маржа >= порога, но посчитанная сумма ниже пола — округляет до floorAmount', () => {
+            const items = [
+                buildItem({
+                    sum: 20000,
+                    profit: 1000,
+                    onlineManagerId: 'employee-42',
+                }),
+            ];
+
+            const line = buildRule().calculate(
+                buildContext(items, {
+                    salesPerformance: new Map([[null, 100]]),
+                }),
+            );
+
+            // 1000 * 10% * 1.5 = 150 -> ниже floorAmount (500) -> платим 500.
+            expect(line.amount).toBe(500);
+        });
+
+        it('маржа >= порога, посчитанная сумма выше пола — платит саму сумму, не floorAmount', () => {
+            const items = [
+                buildItem({
+                    sum: 20000,
+                    profit: 10000,
+                    onlineManagerId: 'employee-42',
+                }),
+            ];
+
+            const line = buildRule().calculate(
+                buildContext(items, {
+                    salesPerformance: new Map([[null, 100]]),
+                }),
+            );
+
+            // 10000 * 10% * 1.5 = 1500 -> выше floorAmount (500) -> платим 1500.
+            expect(line.amount).toBe(1500);
+        });
+
+        it('маржа < порога — платит lowMarginPercent от цены продажи (REVENUE), а не по FloatPercent', () => {
+            const items = [
+                buildItem({
+                    sum: 20000,
+                    profit: 999,
+                    onlineManagerId: 'employee-42',
+                }),
+            ];
+
+            const line = buildRule().calculate(
+                buildContext(items, {
+                    salesPerformance: new Map([[null, 100]]),
+                }),
+            );
+
+            // 0.5% от 20000 = 100, независимо от маржи/базового процента.
+            expect(line.amount).toBe(100);
+        });
+
+        it('расчёт идёт по каждой позиции отдельно — разные позиции могут попасть в разные ветки', () => {
+            const items = [
+                buildItem({
+                    positionId: 'p-high-margin',
+                    sum: 20000,
+                    profit: 10000,
+                    onlineManagerId: 'employee-42',
+                }),
+                buildItem({
+                    positionId: 'p-low-margin',
+                    sum: 20000,
+                    profit: 999,
+                    onlineManagerId: 'employee-42',
+                }),
+            ];
+
+            const line = buildRule().calculate(
+                buildContext(items, {
+                    salesPerformance: new Map([[null, 100]]),
+                }),
+            );
+
+            // 1500 (высокая маржа, FloatPercent) + 100 (низкая маржа, 0.5% от sum) = 1600.
+            expect(line.amount).toBe(1600);
+            expect(line.sources).toEqual([
+                expect.objectContaining({ id: 'p-high-margin', amount: 1500 }),
+                expect.objectContaining({ id: 'p-low-margin', amount: 100 }),
+            ]);
+        });
+
+        it('нет записи по своей категории в карте salesPerformance — fail closed (вся строка нулевая)', () => {
+            const items = [
+                buildItem({
+                    sum: 20000,
+                    profit: 10000,
+                    onlineManagerId: 'employee-42',
+                }),
+            ];
+
+            const rule = buildRule();
+            const line = rule.calculate(buildContext(items));
+
+            expect(line).toEqual({
+                ruleId: rule.id,
+                salaryBasis: 'MARGIN',
+                quantity: 0,
+                rate: 0,
+                amount: 0,
+                sources: [],
+            });
+        });
+    });
+
     describe('категория', () => {
         it('без категории (null) учитывает все товары', () => {
             const rule = ProductSoldEntity.create({

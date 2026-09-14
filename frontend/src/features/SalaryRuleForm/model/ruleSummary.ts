@@ -35,6 +35,8 @@ function summarizeAward(draft: RuleDraft): string {
             return `${formatNumber(draft.percent)}% от базы «${draft.salaryBasis ? SALARY_BASIS_LABELS[draft.salaryBasis] : '—'}»`
         case 'FloatPercent':
             return `Плавающий процент, база ${formatNumber(draft.basePercent)}%`
+        case 'FloatPercentMarginFloor':
+            return `Продажа Б/У: порог маржи ${formatNumber(draft.marginThreshold)} ₽, минимум ${formatNumber(draft.floorAmount)} ₽`
         default:
             return 'Вариант награды не выбран'
     }

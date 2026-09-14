@@ -58,6 +58,21 @@ export type ProductSoldSalaryConfig = {
               basePercent: number;
               salaryBasis: ShopSalaryBasis;
               percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+          }
+        // "Продажа товара Б/У" — вариант награды ProductSold (не отдельный тип правила, не путать
+        // с UsedProductSoldSalaryConfig ниже — тот про закупщиков). Формула FloatPercent с порогом
+        // по марже КОНКРЕТНОЙ позиции: profit >= marginThreshold считается по FloatPercent
+        // (basePercent × множитель плана), но не ниже floorAmount; profit < marginThreshold —
+        // lowMarginPercent от sum (REVENUE) позиции вместо базовой формулы. См.
+        // product-sold.entity.ts — расчёт per-item, а не агрегированно по всем позициям правила.
+        | {
+              type: 'FloatPercentMarginFloor';
+              basePercent: number;
+              salaryBasis: ShopSalaryBasis;
+              percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+              marginThreshold: number;
+              floorAmount: number;
+              lowMarginPercent: number;
           };
 };
 
