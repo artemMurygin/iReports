@@ -164,32 +164,14 @@ export class BuildServiceCalculationContextService {
         departmentId: number | null,
     ): Promise<SalesPerformance | null> {
         if (departmentId == null) {
-            console.log(
-                '[FLOAT_PERCENT_DEBUG] BuildServiceCalculationContextService.findSalesPerformance: departmentId=null, возвращаю null',
-                { period: period.getValue() },
-            );
             return null;
         }
-        const performance = await this.salesPerformanceReader.findForScope(
+        return this.salesPerformanceReader.findForScope(
             'service',
             period.getValue(),
             departmentId,
             null,
         );
-
-        console.log(
-            '[FLOAT_PERCENT_DEBUG] BuildServiceCalculationContextService.findSalesPerformance',
-            {
-                period: period.getValue(),
-                departmentId,
-                found: performance !== null,
-                percentCompletion: performance
-                    ? performance.getFact().getPercentCompletion()
-                    : null,
-            },
-        );
-
-        return performance;
     }
 
     // Лёгкий путь для попадания в ленивый кэш расчёта (Фаза 9,

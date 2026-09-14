@@ -13,18 +13,20 @@ describe('isPaidOrderStatusGroup', () => {
     // Регрессия на «OrderPayed всегда ноль»: список был заглушкой
     // ('Готово'/'Оплачен'/'Выполнен'), не пересекавшейся с реальными
     // grup_name аккаунта RemOnline ни на одну строку — правило молча
-    // считалось в ноль вместо того, чтобы упасть. Проверка приколачивает
-    // фактическое значение справочника, чтобы заглушка не вернулась
-    // незамеченной.
+    // считалось в ноль вместо того, чтобы упасть. Тот же класс регрессии
+    // повторился позже, когда аккаунт RemOnline сменил язык интерфейса на
+    // английский ('Закрытые успешно' → 'Closed' и т.п. 1:1) — список
+    // остался русским. Проверка приколачивает текущее фактическое значение
+    // справочника, чтобы ни та, ни эта заглушка не вернулись незамеченными.
     it('распознаёт реальную группу справочника RemOnline', () => {
-        expect(isPaidOrderStatusGroup('Закрытые успешно')).toBe(true);
+        expect(isPaidOrderStatusGroup('Closed')).toBe(true);
     });
 
     it('отклоняет группы незакрытых и неуспешных заказов', () => {
-        expect(isPaidOrderStatusGroup('В работе')).toBe(false);
+        expect(isPaidOrderStatusGroup('In progress')).toBe(false);
         // Ремонт сделан, но заказ не закрыт и деньги не получены.
-        expect(isPaidOrderStatusGroup('Готовые')).toBe(false);
-        expect(isPaidOrderStatusGroup('Закрытые неуспешно')).toBe(false);
+        expect(isPaidOrderStatusGroup('Done')).toBe(false);
+        expect(isPaidOrderStatusGroup('Dropped off')).toBe(false);
     });
 
     it('отклоняет null/undefined', () => {

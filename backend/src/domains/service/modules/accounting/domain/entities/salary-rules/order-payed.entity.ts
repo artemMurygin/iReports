@@ -88,25 +88,6 @@ export class OrderPayedEntity
         );
         const award = this.props.config.award;
 
-        if (award.type === 'FloatPercent') {
-            console.log(
-                '[FLOAT_PERCENT_DEBUG] OrderPayedEntity.calculate: матчинг заказов',
-                {
-                    ruleId: this.id,
-                    targetRole: this.targetRole,
-                    itemsTotal: items.length,
-                    matchedCount: matched.length,
-                    employeeIdentities: context.employee.identities,
-                    sampleItems: items.slice(0, 5).map((item) => ({
-                        orderId: item.orderId,
-                        managerId: item.managerId,
-                        onlineManager: item.onlineManager,
-                        engineerIds: item.engineerIds,
-                    })),
-                },
-            );
-        }
-
         switch (award.type) {
             case 'Fixed': {
                 const amount = award.price * matched.length;
@@ -137,22 +118,7 @@ export class OrderPayedEntity
                 };
             }
             case 'FloatPercent': {
-                console.log(
-                    '[FLOAT_PERCENT_DEBUG] OrderPayedEntity.calculate: FloatPercent',
-                    {
-                        ruleId: this.id,
-                        ruleName: this.name,
-                        targetRole: this.targetRole,
-                        matchedCount: matched.length,
-                        salesPerformance: context.salesPerformance,
-                        percentBorders: award.percentBorders,
-                    },
-                );
                 if (!context.salesPerformance) {
-                    console.log(
-                        '[FLOAT_PERCENT_DEBUG] OrderPayedEntity.calculate: salesPerformance отсутствует, бросаю SalesPerformanceRequiredException',
-                        { ruleId: this.id, period: context.period.period },
-                    );
                     throw new SalesPerformanceRequiredException(
                         context.period.period,
                     );
@@ -164,18 +130,6 @@ export class OrderPayedEntity
                 const base = this.sumBasis(matched, award.salaryBasis);
                 const amount = roundRubles(
                     (base * award.basePercent * multiplier) / 100,
-                );
-                console.log(
-                    '[FLOAT_PERCENT_DEBUG] OrderPayedEntity.calculate: результат FloatPercent',
-                    {
-                        ruleId: this.id,
-                        percentCompletion:
-                            context.salesPerformance.percentCompletion,
-                        multiplier,
-                        base,
-                        basePercent: award.basePercent,
-                        amount,
-                    },
                 );
                 return {
                     ruleId: this.id,

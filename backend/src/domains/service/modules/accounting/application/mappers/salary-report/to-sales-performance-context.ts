@@ -18,10 +18,6 @@ export function toSalesPerformanceContext(
     mode: SalaryCalculationMode,
 ): SalesPerformanceContext | null {
     if (!performance) {
-        console.log(
-            '[FLOAT_PERCENT_DEBUG] toSalesPerformanceContext: performance=null, возвращаю null',
-            { mode },
-        );
         return null;
     }
     const percentCompletion =
@@ -29,16 +25,9 @@ export function toSalesPerformanceContext(
             ? performance.getPrognose().getPercentCompletion()
             : performance.getFact().getPercentCompletion();
 
-    const result = {
+    return {
         department: performance.getDepartment(),
         category: performance.getCategory(),
         percentCompletion,
     };
-
-    console.log('[FLOAT_PERCENT_DEBUG] toSalesPerformanceContext', {
-        mode,
-        result,
-    });
-
-    return result;
 }
