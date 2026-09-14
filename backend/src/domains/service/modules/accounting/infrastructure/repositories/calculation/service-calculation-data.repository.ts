@@ -148,6 +148,27 @@ export class ServiceCalculationDataRepository
         from: Date,
         to: Date,
     ): Promise<OrderPayedErpItem[]> {
+        const debugAllClosed = await this.client.roappOrder.findMany({
+            where: { closedAt: { gte: from, lte: to } },
+            select: { id: true, status: { select: { grupName: true } } },
+        });
+        console.log(
+            '[FLOAT_PERCENT_DEBUG] ServiceCalculationDataRepository.findOrderPayedItems: заказы в периоде без фильтра статуса',
+            {
+                from,
+                to,
+                totalClosedInPeriod: debugAllClosed.length,
+                distinctGrupNames: [
+                    ...new Set(
+                        debugAllClosed.map(
+                            (order) => order.status?.grupName ?? null,
+                        ),
+                    ),
+                ],
+                paidOrderStatusGroups: PAID_ORDER_STATUS_GROUPS,
+            },
+        );
+
         const rows = await this.client.roappOrder.findMany({
             where: {
                 closedAt: { gte: from, lte: to },
