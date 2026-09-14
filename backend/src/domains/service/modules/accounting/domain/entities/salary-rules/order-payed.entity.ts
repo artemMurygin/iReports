@@ -88,6 +88,25 @@ export class OrderPayedEntity
         );
         const award = this.props.config.award;
 
+        if (award.type === 'FloatPercent') {
+            console.log(
+                '[FLOAT_PERCENT_DEBUG] OrderPayedEntity.calculate: матчинг заказов',
+                {
+                    ruleId: this.id,
+                    targetRole: this.targetRole,
+                    itemsTotal: items.length,
+                    matchedCount: matched.length,
+                    employeeIdentities: context.employee.identities,
+                    sampleItems: items.slice(0, 5).map((item) => ({
+                        orderId: item.orderId,
+                        managerId: item.managerId,
+                        onlineManager: item.onlineManager,
+                        engineerIds: item.engineerIds,
+                    })),
+                },
+            );
+        }
+
         switch (award.type) {
             case 'Fixed': {
                 const amount = award.price * matched.length;
