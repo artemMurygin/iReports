@@ -37,6 +37,9 @@ export function FloatPercentFields({ draft, config, errors, onChange, onChangeBo
                         label="Базовый процент"
                         value={draft.basePercent}
                         onValueChange={(value) => onChange({ basePercent: value })}
+                        min={0}
+                        max={50}
+                        step={0.5}
                     />
                     <SalaryBasisField
                         options={config.salaryBasisOptions}
