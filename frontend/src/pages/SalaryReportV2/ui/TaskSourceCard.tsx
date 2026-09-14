@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/tw'
 import { pluralizeRules } from '@/kernel/pluralizeRules.ts'
 
 import { sumAllFactPrognose } from '@/features/SalaryReportData'
-import type { SalaryDirection, SalaryReportRule, SalaryReportRuleWithDirection } from '@/features/SalaryReportData'
+import type { SalaryReportRule, SalaryReportRuleWithDirection } from '@/features/SalaryReportData'
 
 export type TaskSourceCardProps = {
     /**
@@ -13,15 +13,20 @@ export type TaskSourceCardProps = {
      * их через `splitRulesByType` фундамента по каждому направлению и склеивает результаты) —
      * реэкспортированный контрактный тип `SalaryReportRuleWithDirection` (`SalaryReportRule &
      * { direction }`), уже заведённый в `features/SalaryReportData/model/types.ts` именно под этот
-     * случай ("сведённый отчёт сотрудника, оба направления вперемешку"): сам `SalaryReportRule` не
-     * хранит направление, а панель детализации (`onOpenRuleGroup`) должна открыться с правильным
-     * `direction` конкретного правила, поэтому направление проставляется на уровне каждого правила,
-     * а не передаётся одним общим пропом карточки.
+     * случай ("сведённый отчёт сотрудника, оба направления вперемешку").
      */
     taskRules: SalaryReportRuleWithDirection[]
-    /** Открыть панель детализации ОДНОГО задачного правила (`rules.length === 1` в
-     * `RuleGroupDetailsPanel` — ожидаемый случай для задачи, см. её JSDoc). */
-    onOpenRuleGroup: (title: string, rules: SalaryReportRule[], direction: SalaryDirection) => void
+    /**
+     * Открыть карточку самой задачи (`features/TaskStatusControl`'s `TaskDetailsPanel`), а не
+     * сводку правила: клик по строке задачи должен вести к задаче напрямую (в отличие от строки
+     * роли в `DirectionSourceCard`, у которой нет единственной "своей" задачи и которая по-прежнему
+     * открывает `RuleGroupDetailsPanel`). `taskId` — `rule.sources[0].id` (у `TaskCompletion`
+     * `calculate()` кладёт единственный источник `{type:'taskCompletion', id: taskId}` — см.
+     * backend `task-completion.entity.ts`'s `buildSources`; правило не попадает в отчёт вовсе, пока
+     * `calculate()` возвращает `null` — то есть пока задача периода не заведена, см. `sources`
+     * непусты у каждого правила, дошедшего сюда).
+     */
+    onOpenTask: (taskId: string) => void
     className?: string
 }
 
@@ -65,9 +70,8 @@ const TASK_VALUE_COL = 'w-16 shrink-0 text-right md:w-20'
  * дополнительный оттенок, раз в ките уже есть подходящий по смыслу "третий" цвет.
  *
  * Строки правил ЗДЕСЬ НЕ раскрывающиеся (в отличие от `LedgerRuleRow` в карточке-гроссбухе) — клик
- * по строке целиком открывает `RuleGroupDetailsPanel` через `onOpenRuleGroup(rule.name, [rule],
- * rule.direction)` (единственное правило в массиве — тот самый ожидаемый случай "детализации
- * задачи", см. JSDoc `RuleGroupDetailsPanel`).
+ * по строке целиком открывает карточку задачи (`onOpenTask(rule.sources[0].id)`), а не сводку
+ * правила.
  *
  * Раскладка строки — два варианта по ширине (мокап сам их различает): `md:`+ повторяет десктопный
  * `ydIk9` (одна строка: название/трек/факт/прогноз/шеврон), ниже `md:` — мобильный `V2Q6nf`
@@ -78,7 +82,7 @@ const TASK_VALUE_COL = 'w-16 shrink-0 text-right md:w-20'
  * трогается этим файлом), а собственный запас карточки: интегратору стоит проверить итоговую
  * ширину колонки при подключении.
  */
-export function TaskSourceCard({ taskRules, onOpenRuleGroup, className }: TaskSourceCardProps) {
+export function TaskSourceCard({ taskRules, onOpenTask, className }: TaskSourceCardProps) {
     const taskCount = taskRules.reduce((sum, rule) => sum + rule.sources.length, 0)
     const total = sumAllFactPrognose(taskRules.map((rule) => rule.amount))
 
@@ -115,11 +119,12 @@ export function TaskSourceCard({ taskRules, onOpenRuleGroup, className }: TaskSo
                 <div className="flex flex-col border-t border-hairline">
                     {taskRules.map((rule) => {
                         const percent = computeTrackPercent(rule)
+                        const taskId = rule.sources[0]?.id
                         return (
                             <button
                                 key={rule.ruleId}
                                 type="button"
-                                onClick={() => onOpenRuleGroup(rule.name, [rule], rule.direction)}
+                                onClick={() => taskId != null && onOpenTask(String(taskId))}
                                 className="flex flex-col gap-1.5 border-b border-hairline py-2.5 text-left transition-colors last:border-b-0 hover:bg-canvas md:flex-row md:items-center md:gap-2"
                             >
                                 {/* Десктоп (`md:`+): одна строка — название/трек/факт/прогноз/шеврон, как `ydIk9`. */}

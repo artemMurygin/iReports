@@ -12,6 +12,7 @@ import type {
 } from 'ireports-contracts';
 import { DatabaseService } from '@/infrustructure/database/database.service';
 import { AccountingModule } from '@/domains/service/modules/accounting/accounting.module';
+import { TaskCompletionAutoCreationCron } from '@/domains/service/modules/accounting/infrastructure/cron/task-completion-auto-creation.cron';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import type { MotivationSchemaRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
@@ -28,6 +29,8 @@ import { SALES_PLAN_REPOSITORY } from '@/domains/service/modules/sales/applicati
 import type { SalesPlanRepositoryPort } from '@/domains/service/modules/sales/application/ports/sales-plan.port';
 import { SERVICE_CALCULATION_DATA } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
 import type { ServiceCalculationDataPort } from '@/domains/service/modules/accounting/application/ports/calculation/service-calculation-data.port';
+import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
+import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { TASK_REPOSITORY } from '@/modules/tasks/application/ports/task.repository.port';
 import { InMemoryTaskRepository } from '@/modules/tasks/infrastructure/repositories/in-memory-task.repository';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
@@ -46,9 +49,11 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // в отчёте сотрудника сразу, прогноз = сумме начисления с момента постановки
 // задачи, факт «капает» на статусе «Выполнена» и дальше не откатывается
 // (spec: service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи,
-// task-completion-progressive-visibility) → открытие отчёта за новый период
-// автосоздаёт задачу регулярного правила (EnsureRuleTaskForPeriodService) и
-// она видна в /tasks.
+// task-completion-progressive-visibility) → TaskCompletionAutoCreationCron
+// (1 числа в 10:00, вызывается в тесте напрямую в обход @ProdCron)
+// автосоздаёт задачу регулярного правила на новый период (EnsureRuleTaskForPeriodService) и
+// она видна в /tasks. Открытие отчёта САМО задачу больше не создаёт (см.
+// WHY в GetEmployeeSalaryReportService) — только читает уже существующую.
 //
 // Схема мотивации сама (MotivationSchema+TaskCompletion) заводится напрямую
 // через доменные фабрики в beforeAll — тем же приёмом, что и
@@ -60,6 +65,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 // покрыта create-salary-rule.handler.spec.ts и соседними юнит-тестами.
 describe('Жизненный цикл задачи TaskCompletion и её видимость в отчёте (e2e)', () => {
     let app: INestApplication<Server>;
+    let cron: TaskCompletionAutoCreationCron;
     const employeeId = 777;
     const taskRepo = new InMemoryTaskRepository();
     const schemas = new Map<number, MotivationSchema>();
@@ -146,6 +152,16 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         findEmployeeIdentitiesForEmployees: () => Promise.resolve(new Map()),
         findHoursWorkedForEmployees: () => Promise.resolve(new Map()),
     };
+    // Нужен только TaskCompletionAutoCreationCron →
+    // ResolveEmployeeSalaryRulesService.forAllTargets() (findServiceAccountEmployeeIds) —
+    // остальные методы порта в этом сценарии не задействуются.
+    const fakeDirectoryRepo: DirectoryRepositoryPort = {
+        findDepartments: () => Promise.resolve([]),
+        findEmployees: () => Promise.resolve([]),
+        updateEmployeesOrder: () => Promise.resolve(),
+        findServiceAccountEmployeeIds: () => Promise.resolve(new Set()),
+        setServiceAccount: () => Promise.resolve(null),
+    };
     // См. WHY у одноимённого блока в get-employee-salary-report.e2e.spec.ts —
     // AccountingModule конструирует провайдеров, которым нужен реальный
     // UNIT_OF_WORK/DatabaseService (DatabaseModule, @Global), даже когда
@@ -187,9 +203,16 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(SERVICE_CALCULATION_DATA)
             .useValue(fakeServiceCalculationData)
+            .overrideProvider(DIRECTORY_REPOSITORY)
+            .useValue(fakeDirectoryRepo)
             .overrideProvider(TASK_REPOSITORY)
             .useValue(taskRepo)
             .compile();
+
+        // Инстанс крона берётся из того же moduleRef, что и сам app — @ProdCron
+        // не мешает вызвать run() напрямую (см. prod-cron.decorator.ts: он лишь
+        // решает, регистрировать ли расписание @Cron, метод остаётся обычным).
+        cron = moduleRef.get(TaskCompletionAutoCreationCron);
 
         app = moduleRef.createNestApplication();
         app.use((req: unknown, res: unknown, next: () => void) =>
@@ -331,7 +354,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         });
     });
 
-    it('открытие отчёта за новый период автосоздаёт задачу регулярного правила — видна в /tasks', async () => {
+    it('крон 1 числа автосоздаёт задачу регулярного правила на новый период — видна в /tasks', async () => {
         // Period не несёт .next() (только .previous()) — считаем следующий
         // месяц напрямую, тем же UTC-трюком, что и Period.previous().
         const [year, month] = currentPeriod.split('-').map(Number);
@@ -341,10 +364,21 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         ).getValue();
         expect(rule.config.taskIdByPeriod[nextPeriod]).toBeUndefined();
 
-        // GetEmployeeSalaryReportService.buildOpenServiceDirection →
-        // ensureTaskCompletionTasks → EnsureRuleTaskForPeriodService.ensure()
-        // — единственный триггер (см. WHY в самом сервисе).
-        await getEmployeeReport(nextPeriod);
+        // Открытие отчёта за nextPeriod само по себе задачу не создаёт (см.
+        // WHY в GetEmployeeSalaryReportService) — единственный триггер
+        // теперь TaskCompletionAutoCreationCron.run(), вызванный здесь
+        // напрямую вместо ожидания реального расписания. run() сам берёт
+        // период из Period.current() (1 число месяца в проде) — тест не
+        // может перемотать системные часы на границу месяца, поэтому
+        // подменяет Period.current() на nextPeriod только на время вызова.
+        const periodSpy = jest
+            .spyOn(Period, 'current')
+            .mockReturnValue(Period.create(nextPeriod));
+        try {
+            await cron.run();
+        } finally {
+            periodSpy.mockRestore();
+        }
 
         const newTaskId = rule.config.taskIdByPeriod[nextPeriod];
         expect(newTaskId).toEqual(expect.any(String));

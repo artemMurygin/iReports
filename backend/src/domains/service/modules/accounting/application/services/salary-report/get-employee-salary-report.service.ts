@@ -2,16 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { CalculationLine } from '@/shared/domain/calculation-line';
-import { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import type { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { ServiceCalculationContext } from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
 import { PeriodCalculationOrchestrator } from '@/domains/service/modules/accounting/domain/services/period-calculation.orchestrator';
 import { BuildServiceCalculationContextService } from '@/domains/service/modules/accounting/application/services/calculation/build-service-calculation-context.service';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
-import {
-    EnsureRuleTaskForPeriodService,
-    filterRecurringTaskCompletionRules,
-} from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
 import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-sales-performance-context';
 import {
     isSalesPerformancePlanApproved,
@@ -93,7 +89,6 @@ export class GetEmployeeSalaryReportService {
         private readonly taskRepo: TaskRepositoryPort,
         private readonly contextBuilder: BuildServiceCalculationContextService,
         private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
-        private readonly ensureRuleTask: EnsureRuleTaskForPeriodService,
     ) {}
 
     async execute(
@@ -189,14 +184,16 @@ export class GetEmployeeSalaryReportService {
         const { rules, schemasVersion } =
             await this.salaryRulesResolver.forEmployee(employeeId);
 
-        // replace-bitrix-task-integration, design.md решение 4 — ленивое
-        // достраивание задачи регулярного TaskCompletion-правила ДО расчёта:
-        // единственный оставшийся триггер (прежний
-        // TaskCompletionAutoCreationCron/@ProdCron удалён — не тикает вне
-        // прода, поэтому первое открытие отчёта за новый период было и
-        // остаётся единственной гарантией, что задача вообще будет заведена
-        // в dev/только что развёрнутом окружении).
-        await this.ensureTaskCompletionTasks(rules, period, employeeId);
+        // replace-bitrix-task-integration, design.md решение 4 — задача
+        // регулярного TaskCompletion-правила на новый период заводится
+        // ТОЛЬКО TaskCompletionAutoCreationCron (1 числа в 10:00, см.
+        // accounting.module.ts). Ленивого достраивания здесь больше нет:
+        // оно позволяло сотруднику, открывшему отчёт за произвольный
+        // прошедший период, задним числом насоздавать задачи за все такие
+        // периоды — нежелательное поведение, не только "подстраховка".
+        // Следствие: в dev/окружениях без ENABLE_CRON=true (см.
+        // prod-cron.decorator.ts) задача для регулярного правила не
+        // появится, пока крон не будет запущен явно.
 
         // Статусы связанных задач нужны и расчёту (через contextBuilder
         // ниже), и штампу свежести кэша (см. taskCompletionFreshnessStamp)
@@ -351,22 +348,6 @@ export class GetEmployeeSalaryReportService {
             salesPlanStamp: AccountingCacheFreshness.dateStamp(salesPlanAt),
             taskCompletionStamp,
         });
-    }
-
-    // По всем активным регулярным TaskCompletion-правилам сотрудника
-    // (личным + отдела, см. rules выше). Разовые правила не нуждаются в
-    // ensure() здесь — их задача создаётся один раз, вручную, вместе с
-    // самим правилом.
-    private async ensureTaskCompletionTasks(
-        rules: SalaryRule[],
-        period: string,
-        employeeId: number,
-    ): Promise<void> {
-        await Promise.all(
-            filterRecurringTaskCompletionRules(rules).map((rule) =>
-                this.ensureRuleTask.ensure(rule, period, employeeId),
-            ),
-        );
     }
 }
 

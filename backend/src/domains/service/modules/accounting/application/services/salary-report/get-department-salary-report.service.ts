@@ -15,10 +15,6 @@ import { toSalesPerformanceContext } from '@/domains/service/modules/accounting/
 import { buildSalaryReportRules } from '@/domains/service/modules/accounting/application/mappers/salary-report/to-salary-report-rules';
 import { AccountingCacheFreshness } from '@/domains/service/modules/accounting/domain/services/accounting-cache-freshness';
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
-import {
-    EnsureRuleTaskForPeriodService,
-    filterRecurringTaskCompletionRules,
-} from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
 import { Period } from '@/shared/domain/period.value-object';
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
@@ -119,7 +115,6 @@ export class GetDepartmentSalaryReportService {
         @Inject(SALES_PLAN_REPOSITORY)
         private readonly salesPlanRepo: SalesPlanRepositoryPort,
         private readonly salaryRulesResolver: ResolveEmployeeSalaryRulesService,
-        private readonly ensureRuleTask: EnsureRuleTaskForPeriodService,
         @Inject(TASK_REPOSITORY)
         private readonly taskRepo: TaskRepositoryPort,
         // Implements FR4 of add-department-head-salary-rules — зеркало
@@ -337,13 +332,12 @@ export class GetDepartmentSalaryReportService {
             const resolved = salaryRulesByEmployee.get(employee.id);
             const rules = resolved?.rules ?? [];
 
-            // Тот же ленивый вызов, что и GetEmployeeSalaryReportService,
-            // здесь на каждого сотрудника отдела.
-            await Promise.all(
-                filterRecurringTaskCompletionRules(rules).map((rule) =>
-                    this.ensureRuleTask.ensure(rule, period, employee.id),
-                ),
-            );
+            // Задача регулярного TaskCompletion-правила на новый период
+            // заводится только TaskCompletionAutoCreationCron (1 числа в
+            // 10:00, см. accounting.module.ts) — см. WHY в
+            // GetEmployeeSalaryReportService: ленивое достраивание отсюда
+            // убрано, чтобы открытие отчёта за прошедший период не
+            // насоздавало задним числом задачи за все такие периоды.
 
             const employeeTaskCompletionTasks = rules
                 .filter((rule) => rule.type === 'TaskCompletion')

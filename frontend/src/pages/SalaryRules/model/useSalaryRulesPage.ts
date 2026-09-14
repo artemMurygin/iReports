@@ -77,7 +77,7 @@ export function useSalaryRulesPage() {
     }, [canSubmit, schemaName, submit, targetId, targetType])
 
     const savedSchemaId = active.savedSchemaId
-    const mobileHintText = savedSchemaId ? `Схема сохранена, ID: ${savedSchemaId}` : 'Черновик · схема ещё не сохранена'
+    const mobileHintText = savedSchemaId ? `Схема сохранена.` : 'Черновик · схема ещё не сохранена'
 
     // add-task-rule-task-lifecycle — как только схема успешно сохранена (`savedSchemaId` появился),
     // все задачи, созданные за время этой сессии формы, стали частью сохранённого правила и больше

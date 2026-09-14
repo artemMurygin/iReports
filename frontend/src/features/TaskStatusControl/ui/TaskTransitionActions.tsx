@@ -11,12 +11,15 @@ import {
 } from '../model/transitionActions.ts'
 
 /**
- * Pencil: `l1j1ik`/`Блок · Действия` (kf1uq — один праймари-экшен), `LTz4i` (QpFcx — праймари-экшен
- * + строка из двух вторичных). Кнопки собраны напрямую (не через `shared/ui-kit/atoms/Button.tsx`)
- * — тот атом не параметризует `violet-soft`/`danger-soft`-заливки «На доработку»/«Закрыть
- * неуспешно», а расширять его этой задаче не входит в её область (`НЕ ТРОГАЙ shared/ui-kit`).
- * `CLOSED_SUCCESSFULLY`/`CLOSED_UNSUCCESSFULLY` (`getTransitionActions` -> `[]`) рендерят `null` —
- * `TaskStatusCard` в этом случае показывает отдельную пометку результата вместо этого блока.
+ * Pencil `Q7v9pt`'s `U1bl6` (`Кнопки`) — для `DONE` все три действия перехода рисуются в один ряд
+ * равной ширины (не «праймари сверху + два вторичных снизу», как раньше): `На доработку`/
+ * `Закрыть неуспешно` — не залитые `violet-soft`/`danger-soft` пилюли, а обведённые белые кнопки
+ * (`border-hairline bg-surface`) с цветной иконкой/подписью — тот же приём, что уже даёт
+ * `Button.tsx`'s `danger`-вариант. Единый `actions.map(...)` в строку работает и для одиночного
+ * действия (`NEW`/`IN_PROGRESS`/`REWORK`) — `flex-1` на единственной кнопке в `flex`-ряду даёт
+ * ту же полную ширину, что раньше давал отдельный `w-full`-праймари. Кнопки собраны напрямую
+ * (не через `shared/ui-kit/atoms/Button.tsx`) — тот атом не параметризует обводку с цветной
+ * иконкой для двух тонов сразу (`НЕ ТРОГАЙ shared/ui-kit`).
  */
 const ICON_BY_NAME: Record<TransitionAction['icon'], LucideIcon> = {
     play: Play,
@@ -27,8 +30,8 @@ const ICON_BY_NAME: Record<TransitionAction['icon'], LucideIcon> = {
 
 const TONE_CLASS: Record<TransitionTone, string> = {
     brand: 'bg-brand text-brand-foreground hover:bg-brand-strong',
-    violet: 'bg-violet-soft text-violet-ink hover:brightness-95',
-    danger: 'bg-danger-soft text-danger hover:brightness-95',
+    violet: 'border border-hairline bg-surface text-violet-ink hover:bg-violet-soft',
+    danger: 'border border-hairline bg-surface text-danger hover:bg-danger-soft',
 }
 
 export type TaskTransitionActionsProps = {
@@ -48,26 +51,20 @@ export function TaskTransitionActions({
     if (actions.length === 0) return null
 
     const hint = getTransitionHint(status)
-    const [primary, ...secondary] = actions
 
     return (
-        <div data-slot="task-transition-actions" className={cn('flex flex-col gap-3', className)}>
-            {hint && <p className="font-ui text-xs leading-snug text-ink-muted">{hint}</p>}
-            <div className="flex flex-col gap-2">
-                <TransitionButton action={primary} isPending={isPending} onTransition={onTransition} />
-                {secondary.length > 0 && (
-                    <div className="flex gap-2">
-                        {secondary.map((action) => (
-                            <TransitionButton
-                                key={action.targetStatus}
-                                action={action}
-                                isPending={isPending}
-                                onTransition={onTransition}
-                                className="flex-1"
-                            />
-                        ))}
-                    </div>
-                )}
+        <div data-slot="task-transition-actions" className={cn('flex flex-col gap-2', className)}>
+            {hint && <p className="font-ui text-[11px] leading-snug text-ink-muted">{hint}</p>}
+            <div className="flex gap-2">
+                {actions.map((action) => (
+                    <TransitionButton
+                        key={action.targetStatus}
+                        action={action}
+                        isPending={isPending}
+                        onTransition={onTransition}
+                        className="flex-1"
+                    />
+                ))}
             </div>
         </div>
     )
@@ -91,7 +88,7 @@ function TransitionButton({
             disabled={isPending}
             onClick={() => onTransition(action.targetStatus)}
             className={cn(
-                'inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] px-4 font-ui text-[13px] font-medium transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:size-[15px] [&_svg]:shrink-0',
+                'inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-[8px] px-3 font-ui text-xs font-semibold transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:size-[15px] [&_svg]:shrink-0',
                 TONE_CLASS[action.tone],
                 className,
             )}

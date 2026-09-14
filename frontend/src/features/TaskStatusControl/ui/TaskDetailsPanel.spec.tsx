@@ -73,4 +73,20 @@ describe('TaskDetailsPanel', () => {
 
         expect(onOpenSalaryRule).toHaveBeenCalledWith({ ruleId: 'rule-1', direction: 'service' })
     })
+
+    // Поле комментария рендерится через `SidePanel`'s `footer` (`TaskCommentComposerContainer`), не
+    // внутри `TaskStatusControl` — этот тест проверяет именно эту точку интеграции, не дублируя
+    // `TaskCommentComposer.spec.tsx`'s юнит-тесты валидации/очистки поля.
+    it('поле комментария в футере отправляет POST /v1/tasks/:id/comments', async () => {
+        const user = userEvent.setup()
+        mockTaskWithRule()
+        vi.mocked(axiosInstance.post).mockResolvedValueOnce({ data: {} })
+        renderPanel()
+
+        await screen.findByText('Задача: Обновить фото витрины')
+        await user.type(screen.getByLabelText('Написать комментарий'), 'Проверка футера')
+        await user.click(screen.getByRole('button', { name: /Отправить/ }))
+
+        expect(axiosInstance.post).toHaveBeenCalledWith('/v1/tasks/task-1/comments', { text: 'Проверка футера' })
+    })
 })

@@ -40,6 +40,7 @@ import { CalculateServiceSnapshotRowsService } from '@/domains/service/modules/a
 import { ErpPeriodSyncRunner } from '@/shared/application/services/erp-period-sync-runner.service';
 import { EnsurePeriodNotClosedService } from '@/domains/service/modules/accounting/application/services/accounting-period/ensure-period-not-closed.service';
 import { EnsureRuleTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
+import { TaskCompletionAutoCreationCron } from '@/domains/service/modules/accounting/infrastructure/cron/task-completion-auto-creation.cron';
 import { FindSalaryRuleForTaskService } from '@/domains/service/modules/accounting/application/services/task-completion/find-salary-rule-for-task.service';
 import { FindSalaryAccrualForTaskService } from '@/domains/service/modules/accounting/application/services/task-completion/find-salary-accrual-for-task.service';
 import { GetSalaryRuleService } from '@/domains/service/modules/accounting/application/services/task-completion/get-salary-rule.service';
@@ -300,12 +301,15 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         ResolveEmployeeSalaryRulesService,
         // replace-bitrix-task-integration, design.md решение 4 —
         // идемпотентное автосоздание/пересоздание задачи регулярного
-        // правила TaskCompletion на новый расчётный период. Единственный
-        // вход — ленивый вызов из GetEmployeeSalaryReportService/
-        // GetDepartmentSalaryReportService (см. там) при открытии отчёта;
-        // прежний отдельный @ProdCron (TaskCompletionAutoCreationCron)
-        // удалён — его функцию полностью заменяет этот ленивый вызов.
+        // правила TaskCompletion на новый расчётный период. Два входа: 1
+        // числа в 10:00 через TaskCompletionAutoCreationCron (ниже,
+        // заблаговременно, только в проде — @ProdCron) и ленивый вызов из
+        // GetEmployeeSalaryReportService/GetDepartmentSalaryReportService
+        // (см. там) при открытии отчёта — подстраховка для dev/окружений
+        // без ENABLE_CRON=true. ensure() идемпотентен, поэтому оба входа не
+        // конфликтуют.
         EnsureRuleTaskForPeriodService,
+        TaskCompletionAutoCreationCron,
         ListSalaryRuleTypesService,
         ListSalaryAccrualsService,
         GetSalaryAccrualService,

@@ -25,7 +25,6 @@ import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import type { SalaryAccrualStatus } from 'ireports-contracts';
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
-import type { EnsureRuleTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
 import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
 
 // Отчёт сотрудника направления service (Фаза 13.5, см.
@@ -221,14 +220,6 @@ describe('GetEmployeeSalaryReportService', () => {
             findLineByTaskId: jest.fn().mockResolvedValue(null),
         } as unknown as SalaryAccrualRepositoryPort;
 
-        // Ленивое достраивание задачи регулярного TaskCompletion-правила; ни
-        // один фикстурный набор правил этого файла его не содержит, поэтому
-        // ensure() ни разу не вызывается — мок без поведения достаточен,
-        // лишь бы конструктор получил объект нужного типа.
-        const ensureRuleTask = {
-            ensure: jest.fn(),
-        } as unknown as EnsureRuleTaskForPeriodService;
-
         // Задачи TaskCompletion-правил, читаемые для штампа свежести кэша
         // (taskCompletionFreshnessStamp); ни один фикстурный набор правил
         // этого файла TaskCompletion не содержит, поэтому findManyByIds
@@ -247,7 +238,6 @@ describe('GetEmployeeSalaryReportService', () => {
             taskRepo,
             contextBuilder,
             salaryRulesResolver,
-            ensureRuleTask,
         );
 
         return {

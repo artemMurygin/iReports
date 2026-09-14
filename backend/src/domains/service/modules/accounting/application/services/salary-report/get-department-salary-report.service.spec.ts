@@ -16,7 +16,6 @@ import type { TurnoverPerformanceReaderPort } from '@/domains/service/modules/ac
 import { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { withRequestContext } from '@/shared/testing/with-request-context';
-import type { EnsureRuleTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
 import type { TaskRepositoryPort } from '@/modules/tasks/application/ports/task.repository.port';
 import { TaskCompletion } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import { Task } from '@/modules/tasks/domain/entities/task.entity';
@@ -215,13 +214,6 @@ describe('GetDepartmentSalaryReportService', () => {
             findByDirectionAndPeriod: jest.fn().mockResolvedValue([]),
         };
 
-        // См. WHY у ensureRuleTask в get-employee-salary-report.service.spec.ts:
-        // фикстуры этого файла не содержат TaskCompletion-правил, ensure()
-        // не вызывается.
-        const ensureRuleTask = {
-            ensure: jest.fn(),
-        } as unknown as EnsureRuleTaskForPeriodService;
-
         // erpData.taskCompletionStatuses отдела: батч-запрос ОДИН раз на
         // весь отдел (см. WHY в GetDepartmentSalaryReportService), не по
         // одному на сотрудника — фикстуры этого файла без `tasks` не
@@ -247,7 +239,6 @@ describe('GetDepartmentSalaryReportService', () => {
             domainSyncStatus,
             salesPlanRepo,
             salaryRulesResolver,
-            ensureRuleTask,
             taskRepo,
             turnoverPerformanceReader,
         );

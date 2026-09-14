@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { CircleAlert, Info, Link as LinkIcon, Plus, X } from 'lucide-react'
+import { CircleAlert, Link as LinkIcon, Plus, X } from 'lucide-react'
 import type { TaskLink } from 'ireports-contracts'
 
 import { Button } from '@/shared/ui-kit/atoms/Button.tsx'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton.tsx'
 import { Input } from '@/shared/ui-kit/atoms/Input.tsx'
+import { InlineNote } from '@/shared/ui-kit/molecules/InlineNote.tsx'
 import { cn } from '@/shared/lib/tw'
+
+import { SECTION_LABEL_CLASS } from './sectionLabel.ts'
 
 /**
  * Pencil: `baDJe` (`ERP/Molecule/Link Row`, список), `F7ai0` (`Inline Note`, пустой список —
@@ -59,22 +62,23 @@ export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: 
     return (
         <div data-slot="task-links-section" className={cn('flex w-full flex-col gap-3', className)}>
             <div className="flex w-full items-center justify-between gap-2.5">
-                <p className="font-ui text-xs font-medium text-ink-muted">Ссылки</p>
+                <p className={SECTION_LABEL_CLASS}>Ссылки</p>
                 {!isFormOpen && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsFormOpen(true)}>
-                        <Plus className="size-[13px]" />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsFormOpen(true)}
+                        className="text-info-ink hover:bg-info-soft hover:text-info-ink [&_svg]:text-info-ink"
+                    >
+                        <Plus className="size-[12px]" />
                         Добавить
                     </Button>
                 )}
             </div>
 
             {links.length === 0 && !isFormOpen && (
-                <div className="flex w-full items-center gap-2 rounded-lg border border-hairline bg-canvas p-3">
-                    <Info className="size-[15px] shrink-0 text-ink-muted" />
-                    <p className="font-ui text-xs text-ink-muted">
-                        Ссылок пока нет — добавьте адрес файла или документа по задаче.
-                    </p>
-                </div>
+                <InlineNote>Ссылок пока нет — добавьте адрес файла или документа по задаче.</InlineNote>
             )}
 
             {links.length > 0 && (
@@ -88,7 +92,7 @@ export function TaskLinksSection({ links, onAddLink, onRemoveLink, className }: 
                                 rel="noopener noreferrer"
                                 className="min-w-0 flex-1 no-underline hover:underline"
                             >
-                                <p className="truncate font-ui text-[13px] font-medium text-ink">
+                                <p className="truncate font-ui text-[13px] font-semibold text-ink">
                                     {link.label ?? link.url}
                                 </p>
                                 {link.label && <p className="truncate font-ui text-[11.5px] text-ink-muted">{link.url}</p>}

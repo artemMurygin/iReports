@@ -35,7 +35,11 @@ export function TaskStatusControl({ taskId, onClose, onOpenSalaryRule, className
     const { data: task, isLoading, isError, error } = useTask(taskId)
     const transition = useTaskTransition(taskId)
     const assigneeName = useAssigneeName(task?.assigneeEmployeeId ?? -1)
-    const { comments, addComment, isAdding } = useTaskComments(taskId)
+    // `addComment`/`isAdding` не идут в `TaskStatusCard` — поле комментария рендерится отдельно,
+    // в `SidePanel`'s `footer` (`TaskDetailsPanel`'s `TaskCommentComposerContainer`, свой экземпляр
+    // `useTaskComments` для того же `taskId`, см. её JSDoc), а не здесь. Список комментариев
+    // по-прежнему приходит отсюда.
+    const { comments } = useTaskComments(taskId)
     const { links, addLink, removeLink } = useTaskLinks(taskId)
     const salaryReference = useTaskSalaryReference({ id: taskId, direction: task?.direction ?? null })
 
@@ -68,8 +72,6 @@ export function TaskStatusControl({ taskId, onClose, onOpenSalaryRule, className
                 onTransition={handleTransition}
                 onClose={onClose}
                 comments={comments}
-                onAddComment={addComment}
-                isAddingComment={isAdding}
                 links={links}
                 onAddLink={addLink}
                 onRemoveLink={removeLink}

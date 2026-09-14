@@ -13,6 +13,10 @@ import { cn } from '@/shared/lib/tw'
  * architecture.md: `SalaryRuleSummaryBlock` — `{ summary, accrual, onOpen? }`. `direction` — отдельный
  * проп (не входит в `SalaryRuleSummary`, design.md: панель правила открывается с `ruleId`+`direction`,
  * который резолвит `useTaskSalaryReference`, не сама сводка правила).
+ *
+ * Иконка блока — нейтральная `canvas`/`ink-muted` (не `violet-soft`/`violet-ink`, как раньше):
+ * сверено с Pencil `Q7v9pt`'s `o3xlq` (`Icon Box`) — та же нейтральная коробка, что и остальные
+ * служебные иконки этой карточки задачи.
  */
 const ROLE_LABEL: Record<TargetRole, string> = {
     ENGINEER: 'Инженер',
@@ -61,11 +65,11 @@ export function SalaryRuleSummaryBlock({ summary, accrual, direction, onOpen, cl
     const body = (
         <>
             <div className="flex w-full items-center gap-2.5 p-3">
-                <div className="flex size-[30px] shrink-0 items-center justify-center rounded-lg bg-violet-soft">
-                    <ScrollText className="size-4 text-violet-ink" />
+                <div className="flex size-[30px] shrink-0 items-center justify-center rounded-lg bg-canvas">
+                    <ScrollText className="size-4 text-ink-muted" />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="truncate font-ui text-[13px] font-semibold text-ink">{summary.name}</p>
+                    <p className="truncate font-ui text-[13px] font-bold text-ink">{summary.name}</p>
                     <p className="mt-[3px] truncate font-ui text-[11.5px] text-ink-muted">{meta}</p>
                 </div>
                 {onOpen && <ChevronRight className="size-4 shrink-0 text-ink-faint" />}

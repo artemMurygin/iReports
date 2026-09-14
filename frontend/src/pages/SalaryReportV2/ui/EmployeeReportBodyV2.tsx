@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 import { formatPeriodLabel } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
 
@@ -36,9 +37,14 @@ function EmployeeReportSkeleton() {
     )
 }
 
-/** Панель детализации группы правил (роль или задача) — открывается кликом по строке роли
- * (`DirectionSourceCard`) или задачи (`TaskSourceCard`), см. `RuleGroupDetailsPanel`. */
-type RuleGroupPanelState = { title: string; rules: SalaryReportRule[]; direction: SalaryDirection } | null
+/** Панель детализации группы правил роли — открывается кликом по строке роли
+ * (`DirectionSourceCard`), см. `RuleGroupDetailsPanel`. Строка задачи (`TaskSourceCard`) больше не
+ * использует эту панель — клик по ней открывает саму задачу (`openTaskId` ниже) напрямую. */
+type RuleGroupPanelState = {
+    title: string
+    rules: SalaryReportRule[]
+    direction: SalaryDirection
+} | null
 
 /**
  * Тело отчёта сотрудника — бенто-раскладка (Pencil: `design/sallary-first-iteration.pen`, узел
@@ -50,9 +56,10 @@ type RuleGroupPanelState = { title: string; rules: SalaryReportRule[]; direction
  * `TaskSourceCard` ("Источник · Задачи" — `TaskCompletion`-правила ОБОИХ направлений сразу,
  * `splitRulesByType` на каждом направлении + склейка с проставленным `direction`), и по одной
  * `DirectionSourceCard` на направление с хотя бы одним ролевым (не-`TaskCompletion`) правилом.
- * Клики по строкам ролей/задач и по ссылке "Подробнее" плана продаж открывают боковые панели
- * (`RuleGroupDetailsPanel`/`SalesPlanDetailsPanel`) — их состояние ("какая панель открыта, с какими
- * данными") — чисто презентационный `useState` этого компонента, не бизнес-состояние страницы.
+ * Клик по строке роли и по ссылке "Подробнее" плана продаж открывают боковые панели
+ * (`RuleGroupDetailsPanel`/`SalesPlanDetailsPanel`); клик по строке задачи открывает саму задачу
+ * (`features/TaskStatusControl`'s `TaskDetailsPanel`, `openTaskId`) — не сводку правила. Всё это —
+ * чисто презентационный `useState` этого компонента, не бизнес-состояние страницы.
  *
  * Раскладка: мобильный порядок (`xl:hidden`) — "Итого" -> "Сервис" -> "Магазин" -> "Задачи" одним
  * вертикальным стеком; десктопный (`hidden xl:grid`, `L2Ztk`) — "Итого"+"Задачи" в левой колонке
@@ -70,8 +77,9 @@ export function EmployeeReportBodyV2({
 }: EmployeeReportBodyV2Props) {
     const [ruleGroupPanel, setRuleGroupPanel] = useState<RuleGroupPanelState>(null)
     const [salesPlanDirection, setSalesPlanDirection] = useState<SalaryDirection | null>(null)
+    const [openTaskId, setOpenTaskId] = useState<string | null>(null)
 
-    function handleOpenRuleGroup(title: string, rules: SalaryReportRule[], direction: SalaryDirection) {
+    function handleOpenRoleGroup(title: string, rules: SalaryReportRule[], direction: SalaryDirection) {
         setRuleGroupPanel({ title, rules, direction })
     }
 
@@ -123,12 +131,12 @@ export function EmployeeReportBodyV2({
                     <DirectionSourceCard
                         key={direction.direction}
                         direction={direction}
-                        onOpenRuleGroup={handleOpenRuleGroup}
+                        onOpenRuleGroup={handleOpenRoleGroup}
                         onOpenSalesPlan={setSalesPlanDirection}
                     />
                 ))}
 
-                {hasTaskCard && <TaskSourceCard taskRules={taskRules} onOpenRuleGroup={handleOpenRuleGroup} />}
+                {hasTaskCard && <TaskSourceCard taskRules={taskRules} onOpenTask={setOpenTaskId} />}
             </div>
 
             {/* Десктоп: Итого + Задачи слева (448px), Сервис/Магазин справа (см. `YCxrT`). */}
@@ -140,7 +148,7 @@ export function EmployeeReportBodyV2({
             >
                 <div className="flex flex-col gap-4">
                     <TotalsBentoCard grandTotal={report.grandTotal} isClosed={report.isClosed} />
-                    {hasTaskCard && <TaskSourceCard taskRules={taskRules} onOpenRuleGroup={handleOpenRuleGroup} />}
+                    {hasTaskCard && <TaskSourceCard taskRules={taskRules} onOpenTask={setOpenTaskId} />}
                 </div>
 
                 {hasDirectionCards && (
@@ -154,7 +162,7 @@ export function EmployeeReportBodyV2({
                             <DirectionSourceCard
                                 key={direction.direction}
                                 direction={direction}
-                                onOpenRuleGroup={handleOpenRuleGroup}
+                                onOpenRuleGroup={handleOpenRoleGroup}
                                 onOpenSalesPlan={setSalesPlanDirection}
                             />
                         ))}
@@ -166,12 +174,16 @@ export function EmployeeReportBodyV2({
                 title={ruleGroupPanel?.title ?? ''}
                 rules={ruleGroupPanel?.rules ?? []}
                 direction={ruleGroupPanel?.direction ?? 'service'}
+                period={report.period}
                 open={ruleGroupPanel !== null}
                 onClose={() => setRuleGroupPanel(null)}
             />
 
+            <TaskDetailsPanel taskId={openTaskId} onClose={() => setOpenTaskId(null)} />
+
             <SalesPlanDetailsPanel
                 label={salesPlanDirectionReport?.label ?? ''}
+                direction={salesPlanDirectionReport?.direction ?? 'service'}
                 period={report.period}
                 isPlanApproved={salesPlanDirectionReport?.isPlanApproved ?? false}
                 salesPerformance={salesPlanDirectionReport?.salesPerformance ?? []}

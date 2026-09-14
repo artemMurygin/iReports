@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { ArrowRight, ChevronRight, Info } from 'lucide-react'
-import type { FactPrognoseAmount, SalesPerformanceSummary } from 'ireports-contracts'
+import type { SalesPerformanceSummary } from 'ireports-contracts'
 
 import { AccrualStatusBadge } from '@/features/SalaryAccruals'
 import { formatCurrency, useShopCategoryNames } from '@/features/SalesPlan'
@@ -45,8 +45,9 @@ export type DirectionSourceCardProps = {
  * `DOT_CLASS`): зелёный `brand-strong` у "Сервис", фиолетовый `violet-ink` у "Магазин". Мокап
  * (`YCxrT`'s `rfz9M`) рисует "Магазин" синим (`#3B82F6`) — не подхвачено намеренно, чтобы карточка
  * не расходилась цветом с остальной карточкой-гроссбухом слева (`LedgerCard`), где "Магазин" уже
- * фиолетовый. */
-const DOT_CLASS: Record<SalaryDirection, string> = {
+ * фиолетовый. Экспортирована — `SalesPlanDetailsPanel` (Pencil `BvW3A`) красит той же точкой шапку
+ * своей панели детализации плана продаж, чтобы не заводить четвёртую копию этой карты цветов. */
+export const DOT_CLASS: Record<SalaryDirection, string> = {
     service: 'bg-brand-strong',
     shop: 'bg-violet-ink',
 }
@@ -60,12 +61,15 @@ const TRACK_FILL_CLASS: Record<SalaryDirection, string> = {
     shop: 'bg-violet-ink',
 }
 
-/** `clamp(факт/прогноз группы * 100, 0, 100)`, прогноз `null`/`0` — считается полностью выполненным
- * (100%): нет числа, на которое можно поделить, а сам факт уже начислен целиком. */
-function calcRoleProgressPercent(total: FactPrognoseAmount): number {
-    const prognoseValue = total.prognose ?? total.fact
-    if (prognoseValue <= 0) return 100
-    return Math.max(0, Math.min(100, (total.fact / prognoseValue) * 100))
+/** Доля факта роли в общем факте направления (`clamp(факт роли / факт направления * 100, 0, 100)`)
+ * — трек и подпись строки роли показывают структуру начисления направления ("какую долю всей
+ * фактической зарплаты направления даёт эта роль"), а не выполнение прогноза самой роли (как было
+ * раньше — деление на прогноз роли путало "выполнение плана" с "вкладом в направление", а прогноз
+ * роли и так уже показан отдельным числом справа). Факт направления `0` (начислений ещё нет вовсе)
+ * — трек остаётся пустым, а не 100%/NaN. */
+function calcRoleSharePercent(roleFact: number, directionTotalFact: number): number {
+    if (directionTotalFact <= 0) return 0
+    return Math.max(0, Math.min(100, (roleFact / directionTotalFact) * 100))
 }
 
 const ALL_CATEGORIES_LABEL = 'Все категории'
@@ -81,6 +85,9 @@ function calcForecastPercent(summary: SalesPerformanceSummary): number {
 type RoleRowProps = {
     group: RuleRoleGroup
     direction: SalaryDirection
+    /** Факт направления целиком (`DirectionSourceCard`'s `total.fact`, ТОЛЬКО ролевые правила) —
+     * знаменатель доли роли в треке (см. `calcRoleSharePercent`). */
+    directionTotalFact: number
     onOpen: () => void
 }
 
@@ -90,10 +97,15 @@ type RoleRowProps = {
  * (`onOpenRuleGroup`) — это НЕ аккордеон разворота на месте (в отличие от `LedgerRoleGroup` в
  * карточке-гроссбухе слева), поэтому хвостовой индикатор — статичный `ChevronRight`, а не
  * вращающийся `ChevronDown`.
+ *
+ * Трек/процент — доля факта этой роли в общем факте направления (`calcRoleSharePercent`), не
+ * выполнение прогноза самой роли (по прямому запросу пользователя: "статус бар ... должен отражать
+ * % от всей фактической зарплаты направления") — прогноз роли по-прежнему показан отдельным числом
+ * справа, просто больше не участвует в проценте/треке.
  */
-function RoleRow({ group, direction, onOpen }: RoleRowProps) {
+function RoleRow({ group, direction, directionTotalFact, onOpen }: RoleRowProps) {
     const total = sumAllFactPrognose(group.rules.map((rule) => rule.amount))
-    const percent = calcRoleProgressPercent(total)
+    const percent = calcRoleSharePercent(total.fact, directionTotalFact)
     const prognoseText = total.prognose === null ? '—' : formatCurrency(total.prognose)
     const label = getRoleLabel(group.role)
 
@@ -125,8 +137,11 @@ function RoleRow({ group, direction, onOpen }: RoleRowProps) {
                 </span>
             </span>
 
-            {/* Десктоп: один ряд — имя / трек / факт / прогноз / шеврон. */}
-            <span className="hidden w-[104px] shrink-0 truncate font-ui text-xs text-ink md:block">{label}</span>
+            {/* Десктоп: один ряд — имя / трек / факт / прогноз / шеврон. Имя — единственная
+            растягивающаяся колонка (flex-1): она забирает всё свободное место, которое иначе
+            осталось бы пустым справа от фиксированных track/факт/прогноз/шеврон, и тем самым не
+            обрезает длинные названия ролей раньше, чем реально нужно. */}
+            <span className="hidden min-w-0 flex-1 truncate font-ui text-xs text-ink md:block">{label}</span>
             <div className="hidden h-1.5 w-[76px] shrink-0 overflow-hidden rounded-full bg-hairline md:block">
                 <div
                     className={cn('h-full rounded-full', TRACK_FILL_CLASS[direction])}
@@ -221,6 +236,7 @@ export function DirectionSourceCard({ direction, onOpenRuleGroup, onOpenSalesPla
                             key={group.role}
                             group={group}
                             direction={direction.direction}
+                            directionTotalFact={total.fact}
                             onOpen={() => onOpenRuleGroup(getRoleLabel(group.role), group.rules, direction.direction)}
                         />
                     ))}
