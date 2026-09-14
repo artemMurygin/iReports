@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
-import { ArrowRight, ChevronRight } from 'lucide-react'
+import { ArrowRight, ChevronRight, Info } from 'lucide-react'
 import type { FactPrognoseAmount, SalesPerformanceSummary } from 'ireports-contracts'
 
 import { AccrualStatusBadge } from '@/features/SalaryAccruals'
 import { formatCurrency, useShopCategoryNames } from '@/features/SalesPlan'
 import { pluralizeRules } from '@/kernel/pluralizeRules.ts'
 import { cn } from '@/shared/lib/tw'
+import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui-kit/atoms/Popover'
 
 import {
     getRoleLabel,
@@ -239,6 +241,20 @@ export function DirectionSourceCard({ direction, onOpenRuleGroup, onOpenSalesPla
                         >
                             {direction.isPlanApproved ? 'Утверждён' : 'Не утверждён'}
                         </span>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <IconButton size="sm" aria-label="Как читать диаграмму категории">
+                                    <Info />
+                                </IconButton>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="flex flex-col gap-1.5">
+                                <p className="font-ui text-[13px] font-semibold text-ink">Как читать диаграмму</p>
+                                <p className="font-ui text-xs text-ink-muted">
+                                    Внутреннее кольцо — выполнение плана по факту, внешнее — прогноз к концу
+                                    периода. Число в центре — % выполнения по факту.
+                                </p>
+                            </PopoverContent>
+                        </Popover>
                         <button
                             type="button"
                             onClick={() => onOpenSalesPlan(direction.direction)}
