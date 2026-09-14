@@ -12,13 +12,17 @@ import {
 // BitrixDepartment, а не на что-либо в RoApp/RemOnline):
 //
 // - **Отдел заказа** определяется через сотрудника, закрывшего заказ
-//   (RoappOrder.closedBy → RoappEmployee.bitrixEmployee →
-//   BitrixEmployee.departmentId). Используется существующая Prisma-связь
-//   через историческое уникальное поле BitrixEmployee.roappId, а не
-//   батч-резолвер через EmployeeIdentity (Фаза 2): миграция Фазы 2
-//   гарантирует, что все связи, существовавшие на момент миграции, туда
-//   попали, а полноценный маппинг "роль правила → поле ERP" для новых
-//   связей — предмет Фазы 7, а не этой. Заказ, чей закрывший сотрудник не
+//   (RoappOrder.closedById → EmployeeIdentity(system=ROAPP,
+//   identifierType=EMPLOYEE_ID, externalId=closedById) → BitrixEmployee →
+//   departmentId). Читаем таблицу employeeIdentity напрямую через Prisma,
+//   как ServiceCalculationDataRepository.findEmployeeIdentities (см.
+//   domains/service/modules/accounting/infrastructure/repositories/
+//   calculation/service-calculation-data.repository.ts) — EmployeeIdentityModule
+//   не экспортирует репозиторий/DI-токен наружу. Историческое уникальное
+//   поле BitrixEmployee.roappId (использовалось здесь раньше) ничем в
+//   текущем коде не заполняется — на любой БД, где сотрудники синканы уже
+//   после миграции Фазы 2, оно пустое, и отдел никогда не резолвился, из-за
+//   чего факт был всегда нулевым. Заказ, чей закрывший сотрудник не
 //   сопоставлен ни с каким Bitrix-отделом, не входит ни в один SalesFact
 //   (а не попадает в "виртуальный" безымянный отдел).
 // - **"Оплаченный и закрытый" заказ** — заказ с непустым `payed` и
@@ -39,11 +43,11 @@ import {
 //   только бакеты нужных ей типов заказов (SalesPlan.orderTypeIds), не
 //   трогая семантику department/category выше.
 //
-// Один запрос на весь период (без N+1 по строкам плана), JS-агрегация по
+// Один запрос на заказы периода + один батч-запрос identities + один
+// батч-запрос сотрудников (без N+1 по строкам плана), JS-агрегация по
 // (отделу, типу заказа) — набор заказов за месяц не настолько велик, чтобы
-// это было проблемой производительности; GROUP BY по полю через двойную
-// relation (closedBy → bitrixEmployee) в чистом Prisma без raw SQL не
-// выразить.
+// это было проблемой производительности; GROUP BY по полю через связку
+// employeeIdentity → bitrixEmployee в чистом Prisma без raw SQL не выразить.
 @Injectable()
 export class RoappSalesFactSourceRepository
     extends PrismaRepository
@@ -60,18 +64,49 @@ export class RoappSalesFactSourceRepository
             where: {
                 closedAt: { gte: from, lte: to },
                 payed: { not: null },
+                closedById: { not: null },
             },
             select: {
                 payed: true,
                 cost: true,
                 orderTypeId: true,
-                closedBy: {
-                    select: {
-                        bitrixEmployee: { select: { departmentId: true } },
-                    },
-                },
+                closedById: true,
             },
         });
+
+        const closedByIds = [
+            ...new Set(
+                orders
+                    .map((order) => order.closedById)
+                    .filter((id): id is number => id != null),
+            ),
+        ];
+        const identities = await this.client.employeeIdentity.findMany({
+            where: {
+                system: 'ROAPP',
+                identifierType: 'EMPLOYEE_ID',
+                externalId: { in: closedByIds.map(String) },
+            },
+            select: { externalId: true, bitrixEmployeeId: true },
+        });
+        const bitrixEmployeeIdByRoappId = new Map(
+            identities.map((identity) => [
+                identity.externalId,
+                identity.bitrixEmployeeId,
+            ]),
+        );
+        const bitrixEmployees = await this.client.bitrixEmployee.findMany({
+            where: {
+                id: { in: [...new Set(bitrixEmployeeIdByRoappId.values())] },
+            },
+            select: { id: true, departmentId: true },
+        });
+        const departmentByBitrixEmployeeId = new Map(
+            bitrixEmployees.map((employee) => [
+                employee.id,
+                employee.departmentId,
+            ]),
+        );
 
         // Ключ бакета — (departmentId, orderTypeId): один заказ всегда
         // попадает ровно в один бакет, GetSalesPerformanceService потом
@@ -87,7 +122,13 @@ export class RoappSalesFactSourceRepository
             }
         >();
         for (const order of orders) {
-            const departmentId = order.closedBy?.bitrixEmployee?.departmentId;
+            const bitrixEmployeeId = bitrixEmployeeIdByRoappId.get(
+                String(order.closedById),
+            );
+            const departmentId =
+                bitrixEmployeeId != null
+                    ? departmentByBitrixEmployeeId.get(bitrixEmployeeId)
+                    : undefined;
             if (!departmentId) {
                 continue;
             }
