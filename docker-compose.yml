@@ -14,8 +14,8 @@ services:
       timeout: 5s
       retries: 5
     # Uncomment to expose DB port for local debugging:
-    # ports:
-    #   - "5432:5432"
+      ports:
+        - "5433:5432"
 
   redis:
     image: redis:7-alpine
@@ -27,9 +27,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # Uncomment to expose Redis port for local debugging:
-    # ports:
-    #   - "6379:6379"
+      ports:
+        - "6379:6379"
 
   backend:
     build:
