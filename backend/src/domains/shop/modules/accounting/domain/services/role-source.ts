@@ -12,10 +12,12 @@ import type { TargetRole } from '../types/salary-rule.types';
 // - ONLINE_MANAGER / OFFLINE_MANAGER — лежат на уровне ОТГРУЗКИ
 //   (MoySkladDemand.onlineManagerId/offlineManagerId) — продавец один на
 //   весь чек.
-// - ONLINE_PURCHASER / OFFLINE_PURCHASER — лежат на уровне ТОВАРНОЙ
-//   ПОЗИЦИИ (MoySkladDemandPosition.onlinePurchaserId/offlinePurchaserId,
-//   Фаза 10) — закупщик БУ техники свой у каждого устройства, в одном чеке
-//   могут быть два БУ-айфона, выкупленные разными людьми. Используется
+// - ONLINE_PURCHASER / OFFLINE_PURCHASER — лежат на уровне КАРТОЧКИ ТОВАРА
+//   (MoySkladProduct.onlinePurchaserId/offlinePurchaserId) — закупщик БУ
+//   техники свой у каждого устройства, в одном чеке могут быть два
+//   БУ-айфона, выкупленные разными людьми. Изначальное предположение (Фаза
+//   10) было "уровень товарной позиции" — не подтвердилось, см. комментарий
+//   над MoySkladProduct.onlinePurchaserId в moySklad.prisma. Используется
 //   UsedProductSold (Фаза 13) — ProductSold (Фаза 12) работает исключительно
 //   с ролями отгрузки.
 //
@@ -25,7 +27,7 @@ export interface ShopDemandRoleFields {
     offlineManagerId: string | null;
 }
 
-export interface ShopPositionPurchaserRoleFields {
+export interface ShopPurchaserRoleFields {
     onlinePurchaserId: string | null;
     offlinePurchaserId: string | null;
 }
@@ -36,7 +38,7 @@ type ShopRoleSource =
           field: 'onlineManagerId' | 'offlineManagerId';
       }
     | {
-          kind: 'POSITION_PURCHASER_FIELD';
+          kind: 'PRODUCT_PURCHASER_FIELD';
           field: 'onlinePurchaserId' | 'offlinePurchaserId';
           identifierType:
               | 'MOY_SKLAD_ONLINE_PURCHASER_FIELD'
@@ -51,13 +53,13 @@ export function resolveShopRoleSource(role: TargetRole): ShopRoleSource {
             return { kind: 'DEMAND_MANAGER_FIELD', field: 'offlineManagerId' };
         case 'ONLINE_PURCHASER':
             return {
-                kind: 'POSITION_PURCHASER_FIELD',
+                kind: 'PRODUCT_PURCHASER_FIELD',
                 field: 'onlinePurchaserId',
                 identifierType: 'MOY_SKLAD_ONLINE_PURCHASER_FIELD',
             };
         case 'OFFLINE_PURCHASER':
             return {
-                kind: 'POSITION_PURCHASER_FIELD',
+                kind: 'PRODUCT_PURCHASER_FIELD',
                 field: 'offlinePurchaserId',
                 identifierType: 'MOY_SKLAD_OFFLINE_PURCHASER_FIELD',
             };
@@ -91,19 +93,19 @@ export function employeeMatchesShopDemandRole(
     return value !== null && hasMoySkladEmployeeIdentity(employee, value);
 }
 
-// Совпадает ли сотрудник с ролью закупщика, определяемой на уровне ТОВАРНОЙ
-// ПОЗИЦИИ (ONLINE_PURCHASER/OFFLINE_PURCHASER). Используется будущим
-// UsedProductSold (Фаза 13) — уже реализовано здесь, чтобы каталог ролей
-// был полным с Фазы 12 (см. заголовок файла).
+// Совпадает ли сотрудник с ролью закупщика, определяемой на уровне КАРТОЧКИ
+// ТОВАРА (ONLINE_PURCHASER/OFFLINE_PURCHASER). Используется UsedProductSold
+// (Фаза 13) — уже реализовано здесь, чтобы каталог ролей был полным с
+// Фазы 12 (см. заголовок файла).
 export function employeeMatchesShopPurchaserRole(
     employee: CalculationEmployee,
     role: TargetRole,
-    fields: ShopPositionPurchaserRoleFields,
+    fields: ShopPurchaserRoleFields,
 ): boolean {
     const source = resolveShopRoleSource(role);
-    if (source.kind !== 'POSITION_PURCHASER_FIELD') {
+    if (source.kind !== 'PRODUCT_PURCHASER_FIELD') {
         throw new ArgumentInvalidException(
-            `Роль "${role}" определяется не на уровне товарной позиции, а на уровне отгрузки`,
+            `Роль "${role}" определяется не на уровне товара, а на уровне отгрузки`,
         );
     }
     const value = fields[source.field];

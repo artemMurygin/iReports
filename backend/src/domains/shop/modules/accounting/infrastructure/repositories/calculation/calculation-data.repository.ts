@@ -95,9 +95,13 @@ export class ShopCalculationDataRepository
                 quantity: true,
                 sum: true,
                 profit: true,
-                onlinePurchaserId: true,
-                offlinePurchaserId: true,
-                product: { select: { folderId: true } },
+                product: {
+                    select: {
+                        folderId: true,
+                        onlinePurchaserId: true,
+                        offlinePurchaserId: true,
+                    },
+                },
                 service: { select: { folderId: true } },
                 demand: {
                     select: {
@@ -123,8 +127,11 @@ export class ShopCalculationDataRepository
             profit: position.profit,
             onlineManagerId: position.demand.onlineManagerId,
             offlineManagerId: position.demand.offlineManagerId,
-            onlinePurchaserId: position.onlinePurchaserId,
-            offlinePurchaserId: position.offlinePurchaserId,
+            // Закупщик БУ техники — доп. поле карточки товара, а не позиции
+            // отгрузки (см. MoySkladProduct.onlinePurchaserId); услуги
+            // закупщика не имеют.
+            onlinePurchaserId: position.product?.onlinePurchaserId ?? null,
+            offlinePurchaserId: position.product?.offlinePurchaserId ?? null,
         }));
     }
 

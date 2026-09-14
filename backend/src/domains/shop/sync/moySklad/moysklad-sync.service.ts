@@ -103,8 +103,18 @@ export class MoySkladSyncService {
         try {
             for await (const batch of this.moySklad.fetchProducts()) {
                 await Promise.all(
-                    batch.map((p) =>
-                        this.db.moySkladProduct.upsert({
+                    batch.map((p) => {
+                        // spec: shop/moysklad-sync#requirement-закупщик-бу-техники-резолвится-по-значению-доп-поля-карточки-товара
+                        const onlinePurchaserId = extractPurchaserExternalId(
+                            p.attributes,
+                            PURCHASER_ATTRIBUTE_NAME.ONLINE,
+                        );
+                        const offlinePurchaserId = extractPurchaserExternalId(
+                            p.attributes,
+                            PURCHASER_ATTRIBUTE_NAME.OFFLINE,
+                        );
+
+                        return this.db.moySkladProduct.upsert({
                             where: { id: p.id },
                             create: {
                                 id: p.id,
@@ -119,6 +129,8 @@ export class MoySkladSyncService {
                                 ),
                                 archived: p.archived,
                                 updatedAt: new Date(p.updatedAt),
+                                onlinePurchaserId,
+                                offlinePurchaserId,
                             },
                             update: {
                                 name: p.name,
@@ -132,9 +144,11 @@ export class MoySkladSyncService {
                                 ),
                                 archived: p.archived,
                                 updatedAt: new Date(p.updatedAt),
+                                onlinePurchaserId,
+                                offlinePurchaserId,
                             },
-                        }),
-                    ),
+                        });
+                    }),
                 );
                 log.tick(batch.length);
             }
@@ -603,16 +617,6 @@ export class MoySkladSyncService {
                     const profit = sum - cost;
                     const assortmentType = p.assortment!.meta.type;
 
-                    // spec: shop/moysklad-sync#requirement-закупщик-бу-техники-резолвится-по-значению-доп-поля-позиции-независимо-от-менеджера-отгрузки
-                    const onlinePurchaserId = extractPurchaserExternalId(
-                        p.attributes,
-                        PURCHASER_ATTRIBUTE_NAME.ONLINE,
-                    );
-                    const offlinePurchaserId = extractPurchaserExternalId(
-                        p.attributes,
-                        PURCHASER_ATTRIBUTE_NAME.OFFLINE,
-                    );
-
                     return {
                         id: p.id,
                         demandId: demand.id,
@@ -632,8 +636,6 @@ export class MoySkladSyncService {
                         sum,
                         cost,
                         profit,
-                        onlinePurchaserId,
-                        offlinePurchaserId,
                     };
                 });
 

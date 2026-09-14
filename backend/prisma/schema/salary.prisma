@@ -1,7 +1,7 @@
 model MotivationSchema {
-  id         String   @id
-  targetType String   @map("target_type")
-  targetId   Int      @map("target_id")
+  id          String   @id
+  targetType  String   @map("target_type")
+  targetId    Int      @map("target_id")
   // Legacy общее поле, оставлено для обратной совместимости и как
   // историческое значение на момент первой миграции ниже — начиная с неё
   // ни один из направленческих путей (create/PATCH) больше не пишет сюда.
@@ -9,7 +9,7 @@ model MotivationSchema {
   // serviceName/shopName ниже (через MotivationSchemaMapper/
   // ShopMotivationSchemaMapper, у которых уже есть фолбэк на это поле для
   // строк, заведённых до миграции add_motivation_schema_direction_name).
-  name       String
+  name        String
   // Название схемы, как его видит направление service — независимое от
   // shopName ниже поле (кросс-направленческий баг переименования, QA
   // Фаза "Редактирование зарплатных схем": один motivation_schemas может
@@ -23,13 +23,13 @@ model MotivationSchema {
   // (см. мапперы). Пишется ТОЛЬКО из domains/service/modules/accounting
   // (MotivationSchemaRepository.update()/insert()/initializeName()) —
   // domains/shop в это поле никогда не пишет.
-  serviceName String? @map("service_name")
+  serviceName String?  @map("service_name")
   // Зеркало serviceName для направления shop — та же независимость, тот
   // же фолбэк на `name` при NULL. Пишется ТОЛЬКО из
   // domains/shop/modules/accounting (ShopMotivationSchemaRepository).
-  shopName    String? @map("shop_name")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  shopName    String?  @map("shop_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   rules SalaryRule[]
 

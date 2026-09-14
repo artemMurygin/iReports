@@ -21,14 +21,14 @@ describe('resolveShopRoleSource', () => {
         });
     });
 
-    it('ONLINE_PURCHASER/OFFLINE_PURCHASER — уровень товарной позиции', () => {
+    it('ONLINE_PURCHASER/OFFLINE_PURCHASER — уровень карточки товара', () => {
         expect(resolveShopRoleSource('ONLINE_PURCHASER')).toEqual({
-            kind: 'POSITION_PURCHASER_FIELD',
+            kind: 'PRODUCT_PURCHASER_FIELD',
             field: 'onlinePurchaserId',
             identifierType: 'MOY_SKLAD_ONLINE_PURCHASER_FIELD',
         });
         expect(resolveShopRoleSource('OFFLINE_PURCHASER')).toEqual({
-            kind: 'POSITION_PURCHASER_FIELD',
+            kind: 'PRODUCT_PURCHASER_FIELD',
             field: 'offlinePurchaserId',
             identifierType: 'MOY_SKLAD_OFFLINE_PURCHASER_FIELD',
         });
@@ -80,7 +80,7 @@ describe('employeeMatchesShopDemandRole', () => {
         ).toBe(false);
     });
 
-    it('бросает для ролей закупщика (уровень позиции, не отгрузки)', () => {
+    it('бросает для ролей закупщика (уровень товара, не отгрузки)', () => {
         const emp = employee([]);
         expect(() =>
             employeeMatchesShopDemandRole(emp, 'ONLINE_PURCHASER', {
@@ -109,7 +109,7 @@ describe('employeeMatchesShopPurchaserRole', () => {
         ).toBe(true);
     });
 
-    it('бросает для ролей менеджера (уровень отгрузки, не позиции)', () => {
+    it('бросает для ролей менеджера (уровень отгрузки, не товара)', () => {
         const emp = employee([]);
         expect(() =>
             employeeMatchesShopPurchaserRole(emp, 'ONLINE_MANAGER', {
