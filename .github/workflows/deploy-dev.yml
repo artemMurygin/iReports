@@ -9,6 +9,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Notify Telegram (start)
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="🚀 *iReports (dev)* деплой запущен%0A🌿 Branch: \`${{ github.ref_name }}\`%0A📝 Commit: \`${{ github.sha }}\`%0A👤 Author: ${{ github.actor }}" \
+            -d parse_mode="Markdown"
+
       - name: Deploy to dev stand
         id: deploy
         uses: appleboy/ssh-action@v1.0.0
