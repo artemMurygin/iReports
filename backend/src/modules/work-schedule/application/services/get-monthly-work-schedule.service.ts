@@ -49,14 +49,11 @@ export class GetMonthlyWorkScheduleService {
         const period = Period.create(month);
         const dates = buildMonthDates(period);
 
-        // includeServiceAccounts: true (docs/employee-ordering-and-salary-filter,
-        // Фаза 3) — график работы обязан продолжать показывать служебных
-        // аккаунтов без изменений (PRD, "Не в скоупе": "Скрытие служебных
-        // сотрудников за пределами зарплатного раздела"), отсев по умолчанию
-        // в findEmployees() касается только зарплатных списков/справочников.
-        const employees = await this.directory.findEmployees(departmentId, {
-            includeServiceAccounts: true,
-        });
+        // includeServiceAccounts не передан — служебные аккаунты исключаются
+        // из таблицы графика работы тем же дефолтом findEmployees(), что и
+        // зарплатные списки/справочники (см. WHY на FindEmployeesOptions в
+        // directory.port.ts).
+        const employees = await this.directory.findEmployees(departmentId);
         const employeeIds = employees.map((employee) => employee.id);
 
         const entries = await this.fetchYearEntries(period, employeeIds);

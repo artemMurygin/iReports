@@ -74,20 +74,15 @@ describe('WorkSchedule HTTP (e2e)', () => {
     // /v1/work-schedule/shift (Фаза 4), чтобы проверять «на смене»/«не на
     // смене» на группе, не задевая ассерты Фазы 3 по отделам 1/2 (там
     // ожидается ровно по одному сотруднику). Отдел 4 — отдельный,
-    // единственный сотрудник в нём (104) служебный
-    // (docs/employee-ordering-and-salary-filter, Фаза 3): не подмешан в
-    // отдел 3, чтобы не задеть точные ассерты Фазы 4 по составу «на смене»/
-    // «не на смене» там (тем же приёмом, что и разделение отделов 1/2 и 3
-    // в комментарии выше). Фейк ничего не отсеивает по isServiceAccount (в
-    // отличие от реального DirectoryRepository) — так тест ниже доказывает
-    // именно то, что требуется явной проверкой: график работы запрашивает
-    // findEmployees с { includeServiceAccounts: true } и не теряет такого
-    // сотрудника из ответа, а не полагается на случайное совпадение
-    // поведения фейка с продом.
+    // единственный сотрудник в нём (104) служебный. Фейк ЗЕРКАЛИТ фильтрацию
+    // по isServiceAccount реального DirectoryRepository
+    // (options?.includeServiceAccounts не передан/false → сотрудник 104
+    // отсеивается) — так тесты ниже проверяют реально наблюдаемое поведение
+    // (кто попал в ответ), а не то, каким аргументом вызван findEmployees.
     const findEmployees = jest.fn(
         (
             departmentId?: number,
-            _options?: { includeServiceAccounts?: boolean },
+            options?: { includeServiceAccounts?: boolean },
         ) =>
             Promise.resolve(
                 [
@@ -129,8 +124,10 @@ describe('WorkSchedule HTTP (e2e)', () => {
                     },
                 ].filter(
                     (employee) =>
-                        departmentId === undefined ||
-                        employee.departmentId === departmentId,
+                        (departmentId === undefined ||
+                            employee.departmentId === departmentId) &&
+                        (options?.includeServiceAccounts ||
+                            employee.id !== 104),
                 ),
             ),
     );
@@ -593,12 +590,11 @@ describe('WorkSchedule HTTP (e2e)', () => {
             .expect(400);
     });
 
-    // docs/employee-ordering-and-salary-filter, Фаза 3, "Не в скоупе":
-    // "Скрытие служебных сотрудников за пределами зарплатного раздела" —
-    // явная проверка, что график работы продолжает возвращать служебных
-    // сотрудников без изменений (сотрудник 104, findServiceAccountEmployeeIds
-    // выше отмечает его как служебного).
-    it('GET /v1/work-schedule?departmentId= — служебный сотрудник (isServiceAccount: true) остаётся в таблице графика', async () => {
+    // Таблица графика работы больше не показывает служебные аккаунты
+    // (сотрудник 104) — findEmployees() запрашивается без
+    // includeServiceAccounts, тем же дефолтом, что и зарплатные списки/
+    // справочники.
+    it('GET /v1/work-schedule?departmentId= — служебный сотрудник (isServiceAccount: true) не попадает в таблицу графика', async () => {
         const response = await authedRequest()
             .get('/v1/work-schedule')
             .set(...AUTH_HEADER)
@@ -606,13 +602,16 @@ describe('WorkSchedule HTTP (e2e)', () => {
             .expect(200);
         const body = response.body as MonthlyWorkScheduleResponse;
 
-        expect(body.employees).toHaveLength(1);
-        expect(body.employees[0].employeeId).toBe(104);
-        expect(findEmployees).toHaveBeenCalledWith(4, {
-            includeServiceAccounts: true,
-        });
+        expect(body.employees).toHaveLength(0);
+        expect(findEmployees).toHaveBeenCalledWith(4);
     });
 
+    // docs/employee-ordering-and-salary-filter, Фаза 3, "Не в скоупе":
+    // "Скрытие служебных сотрудников за пределами зарплатного раздела" —
+    // в отличие от таблицы месячного графика выше, состав смены («Отдел
+    // сегодня») продолжает возвращать служебных сотрудников без изменений
+    // (сотрудник 104, findServiceAccountEmployeeIds выше отмечает его как
+    // служебного) — этот экран не затронут текущим изменением.
     it('GET /v1/work-schedule/shift — служебный сотрудник (isServiceAccount: true) остаётся в составе смены', async () => {
         await authedRequest()
             .put('/v1/work-schedule/entries')
