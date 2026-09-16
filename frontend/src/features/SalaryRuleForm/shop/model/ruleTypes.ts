@@ -83,6 +83,14 @@ export const SHOP_CATEGORY_RULE_TYPES: ShopRuleType[] = ['ProductSold', 'UsedPro
  * (`core/ui/RuleFormCard/ui/TaskCompletionRuleFields.tsx`), не `AwardSection`. */
 export const SHOP_TASK_RULE_TYPES: ShopRuleType[] = ['TaskCompletion']
 
+/** Временный костыль поверх add-department-head-salary-rules design.md Decision 1 — см. WHY у
+ * `RuleFormConfig.departmentOverrideRuleTypes`. Зеркало сервисного `SERVICE_DEPARTMENT_OVERRIDE_RULE_TYPES`
+ * — у shop-версии DepartmentPercent/DepartmentPlanBonus такой же опциональный `config.departmentId`. */
+export const SHOP_DEPARTMENT_OVERRIDE_RULE_TYPES: ShopRuleType[] = [
+    'DepartmentPercent',
+    'DepartmentPlanBonus',
+]
+
 export const SHOP_RULE_FORM_CONFIG: RuleFormConfig = {
     ruleTypeOrder: SHOP_RULE_TYPE_ORDER,
     ruleTypeLabels: SHOP_RULE_TYPE_LABELS,
@@ -93,8 +101,5 @@ export const SHOP_RULE_FORM_CONFIG: RuleFormConfig = {
     // docs/service-plan-salary-rule-order-category-filter — вне скоупа для shop, см. PRD).
     orderTypeRuleTypes: [],
     taskRuleTypes: SHOP_TASK_RULE_TYPES,
-    // Временный костыль поверх add-department-head-salary-rules design.md Decision 1 (сервис-only,
-    // см. WHY у `RuleFormConfig.departmentOverrideRuleTypes`) — у shop-версии DepartmentPercent/
-    // DepartmentPlanBonus нет departmentId в конфиге вовсе.
-    departmentOverrideRuleTypes: [],
+    departmentOverrideRuleTypes: SHOP_DEPARTMENT_OVERRIDE_RULE_TYPES,
 }

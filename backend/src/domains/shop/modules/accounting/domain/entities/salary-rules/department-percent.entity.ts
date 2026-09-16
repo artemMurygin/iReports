@@ -8,7 +8,11 @@ import {
     ShopSalaryRule,
     TargetRole,
 } from '../../types/salary-rule.types';
-import type { ShopDepartmentCalculationContext } from '../../types/calculation-context.types';
+import type {
+    DepartmentSalesPerformanceEntry,
+    ShopDepartmentCalculationContext,
+} from '../../types/calculation-context.types';
+import { departmentPerformanceOverrideScopeKey } from '../../types/calculation-context.types';
 import { Money } from '../../value-objects/money.value-object';
 
 // Implements FR2 of add-department-head-salary-rules.
@@ -77,9 +81,7 @@ export class DepartmentPercentEntity
      * начисляет 0, а не бросает ошибку (design.md Q2).
      */
     calculate(context: ShopDepartmentCalculationContext): CalculationLine {
-        const entry =
-            context.departmentSalesPerformance?.get(this.config.category) ??
-            null;
+        const entry = this.resolveEntry(context);
 
         if (!entry) {
             return this.emptyLine();
@@ -112,5 +114,22 @@ export class DepartmentPercentEntity
             amount: 0,
             sources: [],
         };
+    }
+
+    // Временный костыль (см. WHY у DepartmentPercentShopSalaryConfig.departmentId) — если правило
+    // явно переопределило отдел, читаем его факт из departmentPerformanceOverrides (ключ включает
+    // departmentId, не зависит от отдела сотрудника), иначе — прежнее поведение: собственный отдел
+    // сотрудника через departmentSalesPerformance.
+    private resolveEntry(
+        context: ShopDepartmentCalculationContext,
+    ): DepartmentSalesPerformanceEntry | null {
+        if (this.config.departmentId != null) {
+            const key = departmentPerformanceOverrideScopeKey({
+                departmentId: this.config.departmentId,
+                category: this.config.category,
+            });
+            return context.departmentPerformanceOverrides.get(key) ?? null;
+        }
+        return context.departmentSalesPerformance?.get(this.config.category) ?? null;
     }
 }

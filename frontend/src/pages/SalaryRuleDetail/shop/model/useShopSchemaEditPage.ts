@@ -7,6 +7,7 @@ import {
     useShopSalaryRuleTypes,
     useStores,
 } from '@/features/SalaryRuleForm'
+import { useDepartments } from '@/features/TargetDirectory'
 
 import { useMotivationSchema } from './useMotivationSchema.ts'
 
@@ -22,6 +23,7 @@ export function useShopSchemaEditPage(id: string) {
     const ruleTypesQuery = useShopSalaryRuleTypes()
     const catalogQuery = useCatalog()
     const storesQuery = useStores()
+    const departmentsQuery = useDepartments()
 
     const allowedRolesByType = useAllowedRolesByType(ruleTypesQuery.data)
 
@@ -42,5 +44,10 @@ export function useShopSchemaEditPage(id: string) {
         warehouses: storesQuery.data ?? [],
         isWarehousesLoading: storesQuery.isLoading,
         warehousesError: storesQuery.error?.message ?? null,
+        // Временный костыль (`DepartmentPercent`/`DepartmentPlanBonus`, см.
+        // `RuleFormConfig.departmentOverrideRuleTypes`).
+        departments: departmentsQuery.data ?? [],
+        isDepartmentsLoading: departmentsQuery.isLoading,
+        departmentsError: departmentsQuery.error?.message ?? null,
     }
 }

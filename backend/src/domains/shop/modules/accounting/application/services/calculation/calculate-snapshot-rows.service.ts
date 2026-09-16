@@ -57,6 +57,8 @@ export class CalculateShopSnapshotRowsService implements ShopSnapshotRowsCalcula
                 ),
                 departmentSalesPerformance: base.departmentSalesPerformance,
                 turnoverPerformance: base.turnoverPerformance,
+                departmentPerformanceOverrides:
+                    base.departmentPerformanceOverrides,
             };
             const lines = await PeriodCalculationOrchestrator.calculate(
                 rules,

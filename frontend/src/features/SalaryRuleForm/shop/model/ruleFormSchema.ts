@@ -314,6 +314,8 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
                 salaryBasis: rule.config.salaryBasis,
                 category: rule.config.category,
                 percent: String(rule.config.percent),
+                departmentIdOverride:
+                    rule.config.departmentId != null ? String(rule.config.departmentId) : '',
             }
 
         case 'DepartmentPlanBonus':
@@ -323,6 +325,8 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
                 category: rule.config.category,
                 price: String(rule.config.fixedAmount),
                 percentBorders: bordersFromResponse(rule.config.percentBorders),
+                departmentIdOverride:
+                    rule.config.departmentId != null ? String(rule.config.departmentId) : '',
             }
 
         case 'DepartmentTurnoverBonus':

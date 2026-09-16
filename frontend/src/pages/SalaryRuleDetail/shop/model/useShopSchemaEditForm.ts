@@ -14,6 +14,7 @@ import {
     resolveShopRuleDraft,
     useSalaryRulesDraft,
     useTaskLinkPanels,
+    type DepartmentOverrideOption,
     type RuleFormConfig,
     type RuleType,
     type WarehouseFieldWarehouse,
@@ -38,6 +39,9 @@ export type UseShopSchemaEditFormArgs = {
     warehouses: WarehouseFieldWarehouse[]
     isWarehousesLoading: boolean
     warehousesError: string | null
+    departments: DepartmentOverrideOption[]
+    isDepartmentsLoading: boolean
+    departmentsError: string | null
 }
 
 /** Зеркало `service/model/useServiceSchemaEditForm.ts` — та же "фаза формы", смонтированная только
@@ -58,6 +62,9 @@ export function useShopSchemaEditForm({
     warehouses,
     isWarehousesLoading,
     warehousesError,
+    departments,
+    isDepartmentsLoading,
+    departmentsError,
 }: UseShopSchemaEditFormArgs) {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -156,6 +163,9 @@ export function useShopSchemaEditForm({
         warehouses,
         isWarehousesLoading,
         warehousesError,
+        departments,
+        isDepartmentsLoading,
+        departmentsError,
         canSave,
         isSubmitting: updateSchema.isPending,
         handleSave,

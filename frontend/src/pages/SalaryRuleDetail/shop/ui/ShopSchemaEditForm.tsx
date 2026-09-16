@@ -6,7 +6,7 @@ import type {
 } from 'ireports-contracts'
 import { CreateTaskPanel } from '@/features/CreateTask'
 import { RuleList } from '@/features/SalaryRuleForm'
-import type { RuleFormConfig, RuleType, WarehouseFieldWarehouse } from '@/features/SalaryRuleForm'
+import type { DepartmentOverrideOption, RuleFormConfig, RuleType, WarehouseFieldWarehouse } from '@/features/SalaryRuleForm'
 import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 
 import { Layout } from '../../ui/Layout.tsx'
@@ -31,6 +31,9 @@ export type ShopSchemaEditFormProps = {
     warehouses: WarehouseFieldWarehouse[]
     isWarehousesLoading: boolean
     warehousesError: string | null
+    departments: DepartmentOverrideOption[]
+    isDepartmentsLoading: boolean
+    departmentsError: string | null
 }
 
 /** Зеркало `service/ui/ServiceSchemaEditForm.tsx` для направления "Магазин". */
@@ -72,6 +75,9 @@ export function ShopSchemaEditForm(props: ShopSchemaEditFormProps) {
         warehouses: page.warehouses,
         isWarehousesLoading: page.isWarehousesLoading,
         warehousesError: page.warehousesError,
+        departments: page.departments,
+        isDepartmentsLoading: page.isDepartmentsLoading,
+        departmentsError: page.departmentsError,
         onChange: page.rules.updateDraft,
         onChangeType: page.rules.changeType,
         onChangeBorder: page.rules.updateBorder,
