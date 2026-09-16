@@ -16,6 +16,7 @@ import {
     INVALID_TASK_TRANSITION,
     NOT_FOUND,
     SALARY_RULE_NOT_FOUND,
+    TASK_ALREADY_CLOSED,
     TASK_COMMENT_BODY_EMPTY,
 } from './exception.codes';
 
@@ -35,6 +36,11 @@ const CODE_TO_HTTP_STATUS: Record<string, HttpStatus> = {
     // ARGUMENT_INVALID.
     [TASK_COMMENT_BODY_EMPTY]: HttpStatus.BAD_REQUEST,
     [INVALID_TASK_LINK_URL]: HttpStatus.BAD_REQUEST,
+    // src/modules/tasks (edit-task) — попытка отредактировать поля задачи,
+    // уже находящейся в терминальном статусе — конфликт с текущим
+    // состоянием задачи, тот же HTTP-статус, что и INVALID_TASK_TRANSITION
+    // (не невалидный ввод, а недопустимая операция над текущим состоянием).
+    [TASK_ALREADY_CLOSED]: HttpStatus.CONFLICT,
     // domains/{service,shop}/modules/accounting (add-task-salary-rule-links-comments,
     // раздел 19 tasks.md) — GetSalaryRuleService/GetShopSalaryRuleService не
     // нашли правило по id (SalaryRuleNotFoundException/

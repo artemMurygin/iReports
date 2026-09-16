@@ -2,6 +2,7 @@ import { ExceptionBase, NotFoundException } from '@/shared/exceptions';
 import {
     INVALID_TASK_LINK_URL,
     INVALID_TASK_TRANSITION,
+    TASK_ALREADY_CLOSED,
     TASK_COMMENT_BODY_EMPTY,
 } from '@/shared/exceptions/exception.codes';
 
@@ -17,6 +18,15 @@ export class TaskNotFoundException extends NotFoundException {
     constructor(message = 'Задача не найдена') {
         super(message);
     }
+}
+
+// openspec/changes/edit-task/specs/tasks/spec.md, Requirement:
+// «Редактирование полей активной задачи» — попытка изменить title/
+// description/deadline/assigneeEmployeeId задачи, уже находящейся в
+// терминальном статусе (CLOSED_SUCCESSFULLY/CLOSED_UNSUCCESSFULLY). Брошено
+// ДО любой мутации состояния — см. Task.update.
+export class TaskAlreadyClosedException extends ExceptionBase {
+    readonly code = TASK_ALREADY_CLOSED;
 }
 
 // spec: tasks/comments#requirement-пустой-комментарий-отклоняется — текст

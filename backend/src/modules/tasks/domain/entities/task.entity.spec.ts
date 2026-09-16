@@ -1,7 +1,11 @@
+import { ArgumentInvalidException } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { Task } from './task.entity';
 import { TaskStatus } from '../value-objects/task-status.value-object';
-import { InvalidTaskTransitionException } from '../exceptions/task.exception';
+import {
+    InvalidTaskTransitionException,
+    TaskAlreadyClosedException,
+} from '../exceptions/task.exception';
 
 // specs/tasks/spec.md — Task.create/transitionTo/cancelForRuleDeletion.
 describe('Task entity', () => {
@@ -143,6 +147,99 @@ describe('Task entity', () => {
                 task.cancelForRuleDeletion();
             });
             expect(task.status.code).toBe('CLOSED_UNSUCCESSFULLY');
+        });
+    });
+
+    // openspec/changes/edit-task/specs/tasks/spec.md, Requirement:
+    // «Редактирование полей активной задачи».
+    describe('update', () => {
+        it('применяет частичный патч к нетерминальной задаче (NEW) — меняются только переданные поля', () => {
+            const task = buildTask();
+            withRequestContext(() =>
+                task.update({ title: 'Новое название' }),
+            );
+            expect(task.title).toBe('Новое название');
+            expect(task.description).toBe('Сверить цифры с бухгалтерией');
+            expect(task.deadline).toEqual(
+                new Date('2026-09-30T00:00:00.000Z'),
+            );
+            expect(task.assigneeEmployeeId).toBe(42);
+        });
+
+        it('применяет частичный патч к нетерминальной задаче (IN_PROGRESS) — меняются только переданные поля', () => {
+            const task = buildTask();
+            withRequestContext(() => {
+                task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42);
+                task.update({
+                    deadline: new Date('2026-10-15T00:00:00.000Z'),
+                    assigneeEmployeeId: 7,
+                });
+            });
+            expect(task.title).toBe('Согласовать отчёт');
+            expect(task.description).toBe('Сверить цифры с бухгалтерией');
+            expect(task.deadline).toEqual(
+                new Date('2026-10-15T00:00:00.000Z'),
+            );
+            expect(task.assigneeEmployeeId).toBe(7);
+        });
+
+        it('обновляет несколько полей сразу', () => {
+            const task = buildTask();
+            withRequestContext(() =>
+                task.update({
+                    title: 'Другое название',
+                    description: 'Другое описание',
+                }),
+            );
+            expect(task.title).toBe('Другое название');
+            expect(task.description).toBe('Другое описание');
+            expect(task.deadline).toEqual(
+                new Date('2026-09-30T00:00:00.000Z'),
+            );
+            expect(task.assigneeEmployeeId).toBe(42);
+        });
+
+        it('бросает TaskAlreadyClosedException и не меняет поля, если задача CLOSED_SUCCESSFULLY', () => {
+            const task = buildTask();
+            withRequestContext(() => {
+                task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42);
+                task.transitionTo(TaskStatus.fromCode('DONE'), 42);
+                task.transitionTo(
+                    TaskStatus.fromCode('CLOSED_SUCCESSFULLY'),
+                    7,
+                );
+            });
+            expect(() =>
+                withRequestContext(() =>
+                    task.update({ title: 'Попытка изменить' }),
+                ),
+            ).toThrow(TaskAlreadyClosedException);
+            expect(task.title).toBe('Согласовать отчёт');
+        });
+
+        it('бросает TaskAlreadyClosedException и не меняет поля, если задача CLOSED_UNSUCCESSFULLY', () => {
+            const task = buildTask();
+            withRequestContext(() => {
+                task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42);
+                task.transitionTo(TaskStatus.fromCode('DONE'), 42);
+                task.transitionTo(
+                    TaskStatus.fromCode('CLOSED_UNSUCCESSFULLY'),
+                    7,
+                );
+            });
+            expect(() =>
+                withRequestContext(() =>
+                    task.update({ title: 'Попытка изменить' }),
+                ),
+            ).toThrow(TaskAlreadyClosedException);
+            expect(task.title).toBe('Согласовать отчёт');
+        });
+
+        it('update({ title: "" }) на нетерминальной задаче бросает ArgumentInvalidException', () => {
+            const task = buildTask();
+            expect(() =>
+                withRequestContext(() => task.update({ title: '' })),
+            ).toThrow(ArgumentInvalidException);
         });
     });
 });

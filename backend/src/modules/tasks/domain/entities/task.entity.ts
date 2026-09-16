@@ -7,7 +7,10 @@ import {
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { TaskStatus } from '../value-objects/task-status.value-object';
-import { InvalidTaskTransitionException } from '../exceptions/task.exception';
+import {
+    InvalidTaskTransitionException,
+    TaskAlreadyClosedException,
+} from '../exceptions/task.exception';
 
 // specs/tasks/spec.md, Requirement: «Задача — полностью самостоятельная
 // сущность, не знающая о зарплатных правилах» — design.md Decision 2:
@@ -131,6 +134,42 @@ export class Task extends Entity<TaskProps> {
         // Терминальный переход, инициированный системой, а не проверкой
         // руководителя — closedSuccessfullyAt намеренно не проставляется
         // (это не CLOSED_SUCCESSFULLY).
+    }
+
+    // openspec/changes/edit-task/specs/tasks/spec.md, Requirement:
+    // «Редактирование полей активной задачи» — каждое поле редактируется
+    // независимо (частичный патч, только определённые поля применяются),
+    // недоступно для задачи в терминальном статусе (проверено через
+    // TaskStatus.isTerminal(), тот же признак, что и в
+    // cancelForRuleDeletion). validate() вызывается в конце, как и при
+    // create(), чтобы патч не мог довести сущность до невалидного состояния
+    // (например, пустой title).
+    update(
+        patch: Partial<
+            Pick<
+                TaskProps,
+                'title' | 'description' | 'deadline' | 'assigneeEmployeeId'
+            >
+        >,
+    ): void {
+        if (this.props.status.isTerminal()) {
+            throw new TaskAlreadyClosedException(
+                'Нельзя изменить задачу в терминальном статусе',
+            );
+        }
+        if (patch.title !== undefined) {
+            this.props.title = patch.title;
+        }
+        if (patch.description !== undefined) {
+            this.props.description = patch.description;
+        }
+        if (patch.deadline !== undefined) {
+            this.props.deadline = patch.deadline;
+        }
+        if (patch.assigneeEmployeeId !== undefined) {
+            this.props.assigneeEmployeeId = patch.assigneeEmployeeId;
+        }
+        this.validate();
     }
 
     validate(): void {

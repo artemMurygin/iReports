@@ -115,6 +115,23 @@ describe('linksApi', () => {
     })
 })
 
+// edit-task, tasks.md группа 5: tasksApi.update — частичное обновление задачи
+// (`PATCH /v1/tasks/:id`). По прецеденту `commentsApi.create`/`linksApi.create` выше — проверяем
+// только фактический сетевой запрос (URL/метод/тело), без обёртки в ApiError (тот же приём, что
+// `tasksApi.transition`).
+describe('tasksApi.update', () => {
+    beforeEach(() => {
+        vi.mocked(axiosInstance.patch).mockReset()
+    })
+
+    it('calls PATCH /v1/tasks/:id with the partial payload', async () => {
+        vi.mocked(axiosInstance.patch).mockResolvedValue({ data: { id: 'task-1' } })
+        const payload = { title: 'Новый заголовок' }
+        await tasksApi.update('task-1', payload)
+        expect(axiosInstance.patch).toHaveBeenCalledWith('/v1/tasks/task-1', payload)
+    })
+})
+
 describe('salaryReferenceApi', () => {
     beforeEach(() => {
         vi.mocked(axiosInstance.get).mockReset()

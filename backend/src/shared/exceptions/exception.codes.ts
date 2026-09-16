@@ -24,6 +24,12 @@ export const INVALID_TASK_TRANSITION = 'GENERIC.INVALID_TASK_TRANSITION';
 // spec: tasks/links#requirement-ссылка-должна-быть-валидным-адресом).
 export const TASK_COMMENT_BODY_EMPTY = 'TASKS.COMMENT_BODY_EMPTY';
 export const INVALID_TASK_LINK_URL = 'TASKS.INVALID_LINK_URL';
+// src/modules/tasks (edit-task) — попытка изменить поля задачи (title/
+// description/deadline/assigneeEmployeeId), уже находящейся в терминальном
+// статусе (CLOSED_SUCCESSFULLY/CLOSED_UNSUCCESSFULLY) — openspec/changes/
+// edit-task/specs/tasks/spec.md, Requirement: «Редактирование полей активной
+// задачи».
+export const TASK_ALREADY_CLOSED = 'TASKS.ALREADY_CLOSED';
 // domains/{service,shop}/modules/accounting (add-task-salary-rule-links-comments) —
 // GetSalaryRuleService (боковая панель зарплатного правила,
 // features/SalaryRuleDetailsPanel) не нашла правило по id. Общий код для

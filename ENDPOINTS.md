@@ -113,6 +113,11 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
 - `PATCH /v1/tasks/:id/status` — перевод задачи в допустимый по графу статус (см.
   `openspec/changes/replace-bitrix-task-integration/specs/tasks/spec.md`) — единственное место
   проверки графа переходов (`Task.transitionTo`)
+- `PATCH /v1/tasks/:id` — частичное обновление полей активной задачи (`title?`/`description?`/
+  `deadline?`/`assigneeEmployeeId?`, все опциональны — непереданное поле не трогается,
+  `openspec/changes/edit-task`); `404`, если задачи нет; `409`, если задача уже в терминальном
+  статусе (`CLOSED_SUCCESSFULLY`/`CLOSED_UNSUCCESSFULLY`) — `TaskAlreadyClosedException`, тот же
+  HTTP-статус, что и `INVALID_TASK_TRANSITION`
 - `DELETE /v1/tasks/:id` — удалить задачу целиком, безвозвратно (без soft-delete), вместе с её
   `TaskComment`/`TaskLink` (отдельные таблицы без Prisma `@relation`/каскада — чистятся вручную в
   той же транзакции). `404`, если задачи нет. Не путать с мягкой отменой задачи при удалении уже

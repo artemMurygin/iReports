@@ -103,6 +103,21 @@ export type ChangeTaskStatusRequest = z.infer<
     typeof changeTaskStatusRequestSchema
 >;
 
+// ========================== Обновление задачи ========================== //
+
+// PATCH /v1/tasks/:id — частичное обновление полей существующей задачи (openspec/changes/edit-task).
+// Все поля опциональны — партиал на всех уровнях (contracts → command → entity), см. design.md
+// Decision 2 этого change: недоступно для задачи в терминальном статусе (см. Task.update,
+// TaskAlreadyClosedException) — это НЕ проверяется здесь, только на бэкенде.
+const updateTaskRequestSchema = z.object({
+    title: z.string().min(1).optional(),
+    description: z.string().optional(),
+    deadline: isoDateStringSchema.optional(),
+    assigneeEmployeeId: z.number().optional(),
+});
+
+export type UpdateTaskRequest = z.infer<typeof updateTaskRequestSchema>;
+
 // ========================== Комментарий к задаче ========================== //
 
 // Комментарий — собственная сущность модуля `tasks` (add-task-salary-rule-links-comments,
@@ -168,6 +183,7 @@ export {
     createTaskResponseSchema,
     listTasksQuerySchema,
     changeTaskStatusRequestSchema,
+    updateTaskRequestSchema,
     taskCommentSchema,
     createTaskCommentRequestSchema,
     taskLinkSchema,

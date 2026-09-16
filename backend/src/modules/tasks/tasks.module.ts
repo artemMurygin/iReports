@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { CreateTaskHandler } from './application/command/create-task/create-task.handler';
 import { ChangeTaskStatusHandler } from './application/command/change-task-status/change-task-status.handler';
+import { UpdateTaskHandler } from './application/command/update-task/update-task.handler';
 import { AddTaskCommentHandler } from './application/command/add-task-comment/add-task-comment.handler';
 import { AddTaskLinkHandler } from './application/command/add-task-link/add-task-link.handler';
 import { RemoveTaskLinkHandler } from './application/command/remove-task-link/remove-task-link.handler';
@@ -21,6 +22,7 @@ import { CreateTaskHttpController } from './interface/http-controllers/create-ta
 import { ListTasksHttpController } from './interface/http-controllers/list-tasks.http.controller';
 import { GetTaskHttpController } from './interface/http-controllers/get-task.http.controller';
 import { ChangeTaskStatusHttpController } from './interface/http-controllers/change-task-status.http.controller';
+import { UpdateTaskHttpController } from './interface/http-controllers/update-task.http.controller';
 import { ListTaskCommentsHttpController } from './interface/http-controllers/list-task-comments.http.controller';
 import { CreateTaskCommentHttpController } from './interface/http-controllers/create-task-comment.http.controller';
 import { ListTaskLinksHttpController } from './interface/http-controllers/list-task-links.http.controller';
@@ -44,6 +46,7 @@ import { DeleteTaskHttpController } from './interface/http-controllers/delete-ta
         ListTasksHttpController,
         GetTaskHttpController,
         ChangeTaskStatusHttpController,
+        UpdateTaskHttpController,
         ListTaskCommentsHttpController,
         CreateTaskCommentHttpController,
         ListTaskLinksHttpController,
@@ -54,6 +57,7 @@ import { DeleteTaskHttpController } from './interface/http-controllers/delete-ta
     providers: [
         CreateTaskHandler,
         ChangeTaskStatusHandler,
+        UpdateTaskHandler,
         AddTaskCommentHandler,
         AddTaskLinkHandler,
         RemoveTaskLinkHandler,
