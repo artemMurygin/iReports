@@ -407,7 +407,7 @@ describe('resolveShopRuleDraft — DepartmentPercent (FR2)', () => {
         )
         expect(result.success).toBe(true)
         if (result.success && result.data.type === 'DepartmentPercent') {
-            expect(result.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5 })
+            expect(result.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5, departmentId: null })
         }
     })
 
@@ -422,6 +422,31 @@ describe('resolveShopRuleDraft — DepartmentPercent (FR2)', () => {
         )
         expect(result.success).toBe(false)
         if (!result.success) expect(result.errors.percent).toBeTruthy()
+    })
+
+    // Временный костыль (add-department-head-salary-rules) — round-trip через
+    // draftFromShopRule/resolveShopRuleDraft тем же путём, что и остальные поля (зеркало
+    // service/model/ruleFormSchema.test.ts).
+    it('departmentId override round-trips through draftFromShopRule/resolveShopRuleDraft', () => {
+        const draft = draftFromShopRule({
+            id: 'rule-dep-shop-1',
+            type: 'DepartmentPercent',
+            name: 'Процент от маржи (чужой отдел)',
+            targetRole: 'DEPARTMENT_HEAD',
+            config: { salaryBasis: 'MARGIN', category: null, percent: 5, departmentId: 158 },
+        })
+        expect(draft.departmentIdOverride).toBe('158')
+
+        const resolvedAgain = resolveShopRuleDraft(draft)
+        expect(resolvedAgain.success).toBe(true)
+        if (resolvedAgain.success && resolvedAgain.data.type === 'DepartmentPercent') {
+            expect(resolvedAgain.data.config).toEqual({
+                salaryBasis: 'MARGIN',
+                category: null,
+                percent: 5,
+                departmentId: 158,
+            })
+        }
     })
 })
 

@@ -83,7 +83,31 @@ export function turnoverPerformanceScopeKey(
     return `${scope.warehouseId}:${scope.category ?? ''}`;
 }
 
+// Временный костыль поверх design.md Decision 1 (зеркало WHY у одноимённых типов в
+// domains/service/modules/accounting/domain/types/calculation-context.types.ts) — скоуп факта/
+// percentCompletion для правила, ЯВНО переопределившего отдел, чей план продаж используется, вместо
+// собственного отдела сотрудника. Отдельная от DepartmentSalesPerformanceByCategory карта — та карта
+// всегда про СОБСТВЕННЫЙ отдел сотрудника и не знает о departmentId, здесь наоборот departmentId
+// обязателен, ключ — departmentPerformanceOverrideScopeKey(). По той же схеме, что и
+// TurnoverPerformanceScope/TurnoverPerformanceByScope выше (там обязателен warehouseId).
+export interface DepartmentPerformanceOverrideScope {
+    departmentId: number;
+    category: string | null;
+}
+
+export type DepartmentPerformanceOverrideByScope = Map<
+    string,
+    DepartmentSalesPerformanceEntry
+>;
+
+export function departmentPerformanceOverrideScopeKey(
+    scope: DepartmentPerformanceOverrideScope,
+): string {
+    return `${scope.departmentId}:${scope.category ?? ''}`;
+}
+
 export type ShopDepartmentCalculationContext = ShopCalculationContext & {
     departmentSalesPerformance: DepartmentSalesPerformanceByCategory | null;
     turnoverPerformance: TurnoverPerformanceByScope;
+    departmentPerformanceOverrides: DepartmentPerformanceOverrideByScope;
 };

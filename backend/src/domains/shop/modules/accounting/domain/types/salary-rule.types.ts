@@ -170,6 +170,11 @@ export type DepartmentPercentShopSalaryConfig = {
     salaryBasis: ShopSalaryBasis;
     category: string | null;
     percent: number;
+    // Временный костыль поверх design.md Decision 1 (зеркало WHY у одноимённого поля в
+    // domains/service/modules/accounting) — явное переопределение отдела, чей план продаж
+    // используется, вместо собственного отдела сотрудника. Опционально, как и в contracts —
+    // undefined трактуется наравне с null (см. resolveEntry() у DepartmentPercentEntity).
+    departmentId?: number | null;
 };
 
 export type DepartmentPercentShopSalaryRule = {
@@ -188,6 +193,8 @@ export type DepartmentPlanBonusShopSalaryConfig = {
     category: string | null;
     fixedAmount: number;
     percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+    // Временный костыль — см. WHY у DepartmentPercentShopSalaryConfig.departmentId.
+    departmentId?: number | null;
 };
 
 export type DepartmentPlanBonusShopSalaryRule = {

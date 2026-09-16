@@ -203,11 +203,19 @@ const taskCompletionShopSalaryRuleSchema = z.object({
 // warehouseId: string (MoySklad UUID, как shopGoodsTurnoverReportLineSchema.warehouseId) вместо
 // number (RoApp warehouse id) у service.
 
+// Временный костыль поверх add-department-head-salary-rules design.md Decision 1 (зеркало WHY у
+// departmentIdOverrideSchema в salary-rule.ts) — явное переопределение отдела, чей план продаж
+// используется, для случая, когда у собственного отдела сотрудника ещё нет плана. `.optional()` (не
+// `.default()`) — иначе z.infer сделал бы поле обязательным в выводном типе и сломал компиляцию
+// мест, где config собирается литералом без него.
+const departmentIdOverrideShopSchema = z.number().nullable().optional();
+
 // DepartmentPercent (FR2, shop) — % от факта выручки/маржи категории/магазина, без коэффициента.
 const departmentPercentShopSalaryConfigSchema = z.object({
     salaryBasis: shopSalaryBasisSchema,
     category: z.string().nullable(),
     percent: z.number(),
+    departmentId: departmentIdOverrideShopSchema,
 });
 
 export type DepartmentPercentShopSalaryConfig = z.infer<
@@ -229,6 +237,7 @@ const departmentPlanBonusShopSalaryConfigSchema = z.object({
     category: z.string().nullable(),
     fixedAmount: z.number(),
     percentBorders: percentBordersSchema,
+    departmentId: departmentIdOverrideShopSchema,
 });
 
 export type DepartmentPlanBonusShopSalaryConfig = z.infer<

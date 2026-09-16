@@ -5,13 +5,18 @@ import type {
 } from 'ireports-contracts';
 import { CalculationLine } from '@/shared/domain/calculation-line';
 import type {
+    DepartmentPerformanceOverrideByScope,
+    DepartmentPerformanceOverrideScope,
     DepartmentSalesPerformanceByCategory,
     DepartmentSalesPerformanceEntry,
     ShopDepartmentCalculationContext,
     TurnoverPerformanceByScope,
     TurnoverPerformanceScope,
 } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
-import { turnoverPerformanceScopeKey } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
+import {
+    departmentPerformanceOverrideScopeKey,
+    turnoverPerformanceScopeKey,
+} from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
 import { Period } from '@/shared/domain/period.value-object';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
@@ -368,15 +373,19 @@ export class GetShopDepartmentSalaryReportService {
         // же переиспользуются для каждого сотрудника ниже (зеркало
         // resolveDepartmentSalesPerformance/resolveTurnoverPerformance у
         // BuildShopCalculationContextService).
-        const [departmentSalesPerformance, turnoverPerformance] =
-            await Promise.all([
-                this.resolveDepartmentSalesPerformance(
-                    period,
-                    departmentId,
-                    allRules,
-                ),
-                this.resolveTurnoverPerformance(period, allRules),
-            ]);
+        const [
+            departmentSalesPerformance,
+            turnoverPerformance,
+            departmentPerformanceOverrides,
+        ] = await Promise.all([
+            this.resolveDepartmentSalesPerformance(
+                period,
+                departmentId,
+                allRules,
+            ),
+            this.resolveTurnoverPerformance(period, allRules),
+            this.resolveDepartmentPerformanceOverrides(period, allRules),
+        ]);
 
         const contributions = new Map<number, ShopContribution>();
 
@@ -427,6 +436,7 @@ export class GetShopDepartmentSalaryReportService {
                 // каждого сотрудника отдела (см. WHY у batch-резолва выше).
                 departmentSalesPerformance,
                 turnoverPerformance,
+                departmentPerformanceOverrides,
             };
 
             const { factLines, prognoseLines } =
@@ -688,6 +698,12 @@ export class GetShopDepartmentSalaryReportService {
             const config = rule.config as
                 | DepartmentPercentShopSalaryConfig
                 | DepartmentPlanBonusShopSalaryConfig;
+            // Правила с явным departmentId идут через
+            // resolveDepartmentPerformanceOverrides/departmentPerformanceOverrides ниже, а не через
+            // эту implicit-по-отделу-отчёта карту.
+            if (config.departmentId != null) {
+                continue;
+            }
             categories.add(config.category);
         }
         return categories;
@@ -751,6 +767,73 @@ export class GetShopDepartmentSalaryReportService {
                 category: config.category,
             };
             const key = turnoverPerformanceScopeKey(scope);
+            if (seenKeys.has(key)) {
+                continue;
+            }
+            seenKeys.add(key);
+            scopes.push(scope);
+        }
+        return scopes;
+    }
+
+    // Временный костыль (см. WHY у DepartmentPercentShopSalaryConfig.departmentId/
+    // DepartmentPlanBonusShopSalaryConfig.departmentId) — зеркало
+    // BuildShopCalculationContextService.resolveDepartmentPerformanceOverrides, по union
+    // (departmentId, category) ВСЕХ схем отдела разом (allRules), а не по схеме одного сотрудника.
+    private async resolveDepartmentPerformanceOverrides(
+        period: string,
+        rules: ShopSalaryRule[],
+    ): Promise<DepartmentPerformanceOverrideByScope> {
+        const scopes = this.collectDepartmentPerformanceOverrideScopes(rules);
+        const result: DepartmentPerformanceOverrideByScope = new Map();
+        if (scopes.length === 0) {
+            return result;
+        }
+
+        const entries = await Promise.all(
+            scopes.map(
+                async (scope) =>
+                    [
+                        departmentPerformanceOverrideScopeKey(scope),
+                        await this.shopSalesPerformanceReader.findForScope(
+                            period,
+                            scope.departmentId,
+                            scope.category,
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [key, performance] of entries) {
+            if (performance) {
+                result.set(key, this.toDepartmentSalesPerformanceEntry(performance));
+            }
+        }
+        return result;
+    }
+
+    private collectDepartmentPerformanceOverrideScopes(
+        rules: ShopSalaryRule[],
+    ): DepartmentPerformanceOverrideScope[] {
+        const seenKeys = new Set<string>();
+        const scopes: DepartmentPerformanceOverrideScope[] = [];
+        for (const rule of rules) {
+            if (
+                rule.type !== 'DepartmentPercent' &&
+                rule.type !== 'DepartmentPlanBonus'
+            ) {
+                continue;
+            }
+            const config = rule.config as
+                | DepartmentPercentShopSalaryConfig
+                | DepartmentPlanBonusShopSalaryConfig;
+            if (config.departmentId == null) {
+                continue;
+            }
+            const scope: DepartmentPerformanceOverrideScope = {
+                departmentId: config.departmentId,
+                category: config.category,
+            };
+            const key = departmentPerformanceOverrideScopeKey(scope);
             if (seenKeys.has(key)) {
                 continue;
             }

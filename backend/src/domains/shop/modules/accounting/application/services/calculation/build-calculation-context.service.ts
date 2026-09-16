@@ -20,12 +20,17 @@ import { buildTaskCompletionStatuses } from '@/domains/shop/modules/accounting/a
 import { SHOP_TURNOVER_PERFORMANCE_READER } from '@/domains/shop/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
 import type { ShopTurnoverPerformanceReaderPort } from '@/domains/shop/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
 import type {
+    DepartmentPerformanceOverrideByScope,
+    DepartmentPerformanceOverrideScope,
     DepartmentSalesPerformanceByCategory,
     DepartmentSalesPerformanceEntry,
     TurnoverPerformanceByScope,
     TurnoverPerformanceScope,
 } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
-import { turnoverPerformanceScopeKey } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
+import {
+    departmentPerformanceOverrideScopeKey,
+    turnoverPerformanceScopeKey,
+} from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
 
 // Базовый контекст расчёта направления shop, ещё не привязанный к
 // конкретному режиму (FACT/PROGNOSE) — зеркало ServiceCalculationBaseContext
@@ -70,6 +75,14 @@ export interface ShopCalculationBaseContext {
     // оборачиваемости по уникальным (warehouseId, category) скоупам DepartmentTurnoverBonus правил
     // схемы, ключ — turnoverPerformanceScopeKey(). Всегда Map (не null).
     turnoverPerformance: TurnoverPerformanceByScope;
+    // Временный костыль (см. WHY у DepartmentPercentShopSalaryConfig.departmentId/
+    // DepartmentPlanBonusShopSalaryConfig.departmentId) — факт/percentCompletion по уникальным
+    // (departmentId, category) скоупам ТЕХ ИЗ DepartmentPercent/DepartmentPlanBonus правил схемы, что
+    // явно переопределили отдел (config.departmentId != null), ключ —
+    // departmentPerformanceOverrideScopeKey(). Не зависит от собственного отдела сотрудника (в отличие
+    // от departmentSalesPerformance выше) — по тому же принципу, что и turnoverPerformance. Всегда Map,
+    // пустая, если в схеме нет ни одного правила с переопределённым отделом.
+    departmentPerformanceOverrides: DepartmentPerformanceOverrideByScope;
 }
 
 // Application-слой сборки контекста расчёта направления shop (Фаза 13.5,
@@ -153,6 +166,7 @@ export class BuildShopCalculationContextService {
             salesPerformanceByCategory,
             departmentSalesPerformance,
             turnoverPerformance,
+            departmentPerformanceOverrides,
         ] = await Promise.all([
             this.resolveSalesPerformanceByCategory(
                 period,
@@ -162,6 +176,7 @@ export class BuildShopCalculationContextService {
             ),
             this.resolveDepartmentSalesPerformance(period, departmentId, rules),
             this.resolveTurnoverPerformance(period, rules),
+            this.resolveDepartmentPerformanceOverrides(period, rules),
         ]);
 
         return {
@@ -178,6 +193,7 @@ export class BuildShopCalculationContextService {
             salesPerformanceByDepartment,
             departmentSalesPerformance,
             turnoverPerformance,
+            departmentPerformanceOverrides,
         };
     }
 
@@ -396,6 +412,12 @@ export class BuildShopCalculationContextService {
             const config = rule.config as
                 | DepartmentPercentShopSalaryConfig
                 | DepartmentPlanBonusShopSalaryConfig;
+            // Правила с явным departmentId идут через
+            // resolveDepartmentPerformanceOverrides/departmentPerformanceOverrides, а не через эту
+            // implicit-по-своему-отделу карту — иначе один и тот же findForScope дублировался бы.
+            if (config.departmentId != null) {
+                continue;
+            }
             categories.add(config.category);
         }
         return categories;
@@ -461,6 +483,74 @@ export class BuildShopCalculationContextService {
                 category: config.category,
             };
             const key = turnoverPerformanceScopeKey(scope);
+            if (seenKeys.has(key)) {
+                continue;
+            }
+            seenKeys.add(key);
+            scopes.push(scope);
+        }
+        return scopes;
+    }
+
+    // Временный костыль (см. WHY у DepartmentPercentShopSalaryConfig.departmentId/
+    // DepartmentPlanBonusShopSalaryConfig.departmentId) — зеркало resolveTurnoverPerformance выше: по
+    // одному findForScope на уникальный (departmentId, category) скоуп ТЕХ ИЗ DepartmentPercent/
+    // DepartmentPlanBonus правил, что явно переопределили отдел, а не implicit-правил (те по-прежнему
+    // идут через resolveDepartmentSalesPerformance/собственный отдел сотрудника).
+    private async resolveDepartmentPerformanceOverrides(
+        period: Period,
+        rules: ShopSalaryRule[],
+    ): Promise<DepartmentPerformanceOverrideByScope> {
+        const scopes = this.collectDepartmentPerformanceOverrideScopes(rules);
+        const result: DepartmentPerformanceOverrideByScope = new Map();
+        if (scopes.length === 0) {
+            return result;
+        }
+
+        const entries = await Promise.all(
+            scopes.map(
+                async (scope) =>
+                    [
+                        departmentPerformanceOverrideScopeKey(scope),
+                        await this.salesPerformanceReader.findForScope(
+                            period.getValue(),
+                            scope.departmentId,
+                            scope.category,
+                        ),
+                    ] as const,
+            ),
+        );
+        for (const [key, performance] of entries) {
+            if (performance) {
+                result.set(key, this.toDepartmentSalesPerformanceEntry(performance));
+            }
+        }
+        return result;
+    }
+
+    private collectDepartmentPerformanceOverrideScopes(
+        rules: ShopSalaryRule[],
+    ): DepartmentPerformanceOverrideScope[] {
+        const seenKeys = new Set<string>();
+        const scopes: DepartmentPerformanceOverrideScope[] = [];
+        for (const rule of rules) {
+            if (
+                rule.type !== 'DepartmentPercent' &&
+                rule.type !== 'DepartmentPlanBonus'
+            ) {
+                continue;
+            }
+            const config = rule.config as
+                | DepartmentPercentShopSalaryConfig
+                | DepartmentPlanBonusShopSalaryConfig;
+            if (config.departmentId == null) {
+                continue;
+            }
+            const scope: DepartmentPerformanceOverrideScope = {
+                departmentId: config.departmentId,
+                category: config.category,
+            };
+            const key = departmentPerformanceOverrideScopeKey(scope);
             if (seenKeys.has(key)) {
                 continue;
             }

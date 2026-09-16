@@ -253,6 +253,8 @@ export class GetShopEmployeeSalaryReportService {
             ),
             departmentSalesPerformance: baseContext.departmentSalesPerformance,
             turnoverPerformance: baseContext.turnoverPerformance,
+            departmentPerformanceOverrides:
+                baseContext.departmentPerformanceOverrides,
         };
         const prognoseContext: ShopDepartmentCalculationContext = {
             employee: baseContext.employee,
@@ -265,6 +267,8 @@ export class GetShopEmployeeSalaryReportService {
             ),
             departmentSalesPerformance: baseContext.departmentSalesPerformance,
             turnoverPerformance: baseContext.turnoverPerformance,
+            departmentPerformanceOverrides:
+                baseContext.departmentPerformanceOverrides,
         };
         const [factLines, prognoseLines] = await Promise.all([
             ShopPeriodCalculationOrchestrator.calculate(rules, factContext),
