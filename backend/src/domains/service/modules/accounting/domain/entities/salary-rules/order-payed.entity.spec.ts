@@ -281,11 +281,12 @@ describe('OrderPayedEntity', () => {
             expect(new Set([at50, at70, at120]).size).toBe(3);
         });
 
-        it('LINEAR — интерполирует между порогами', () => {
+        it('LINEAR — множитель пропорционален проценту выполнения плана', () => {
             const rule = buildRule('LINEAR');
             const item = buildItem({ revenue: 1000 });
 
-            // Между 50% (0.5) и 70% (1.0): на 60% — середина -> 0.75.
+            // Порог A(50%, 0.5) активен на 60% -> множитель = 0.5 * 60/100 = 0.3
+            // (multiplier следующего порога B (1) не участвует).
             const at60 = rule.calculate(
                 buildContext([item], {
                     salesPerformance: {
@@ -296,7 +297,7 @@ describe('OrderPayedEntity', () => {
                 }),
             ).amount;
 
-            expect(at60).toBe(75); // 1000 * 10% * 0.75
+            expect(at60).toBe(30); // 1000 * 10% * 0.3
         });
 
         it('отсутствие плана на период даёт доменную ошибку', () => {

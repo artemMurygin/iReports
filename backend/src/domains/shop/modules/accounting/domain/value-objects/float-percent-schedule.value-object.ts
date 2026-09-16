@@ -76,6 +76,12 @@ export class FloatPercentSchedule extends ValueObject<FloatPercentScheduleProps>
     // mode лежит НА КАЖДОМ пороге и описывает участок ОТ ЭТОГО порога
     // ВПЕРЁД, до следующего порога (или до бесконечности, если порог
     // последний).
+    //
+    // LINEAR — не интерполяция к multiplier следующего порога: множитель на участке пропорционален
+    // проценту выполнения плана (current.multiplier * percentCompletion / 100). multiplier
+    // следующего порога здесь не участвует — он вступает в силу только когда сам становится
+    // current — implements FR3 of float-percent-linear-formula (зеркало service, см.
+    // domain/services/float-percent.ts).
     resolveMultiplier(percentCompletion: number): number {
         const borders = this.props.borders;
 
@@ -95,11 +101,7 @@ export class FloatPercentSchedule extends ValueObject<FloatPercentScheduleProps>
             return current.multiplier;
         }
 
-        const span = next.fromPlanPercent - current.fromPlanPercent;
-        const ratio = (percentCompletion - current.fromPlanPercent) / span;
-        return (
-            current.multiplier + ratio * (next.multiplier - current.multiplier)
-        );
+        return current.multiplier * (percentCompletion / 100);
     }
 
     // Текущий/следующий порог для отчёта (Фаза 13.5) — currentThreshold
