@@ -372,7 +372,7 @@ describe('ProductSoldEntity', () => {
             expect(low).not.toBe(high);
         });
 
-        it('режим LINEAR — интерполирует множитель между порогами по СВОЕЙ (null) категории', () => {
+        it('режим LINEAR — множитель пропорционален проценту выполнения плана по СВОЕЙ (null) категории', () => {
             const rule = ProductSoldEntity.create({
                 type: 'ProductSold',
                 name: 'За проданный товар',
@@ -391,14 +391,15 @@ describe('ProductSoldEntity', () => {
                 buildItem({ sum: 1000, onlineManagerId: 'employee-42' }),
             ];
 
-            // Ровно между 50 (×0.5) и 80 (×1) — 65%, интерполяция даёт ×0.75.
+            // Порог A(50%, 0.5) активен на 65% -> множитель = 0.5 * 65/100 = 0.325
+            // (multiplier следующего порога B (1) не участвует).
             const amount = rule.calculate(
                 buildContext(items, {
                     salesPerformance: new Map([[null, 65]]),
                 }),
             ).amount;
 
-            expect(amount).toBe(75); // 1000 * 10% * 0.75
+            expect(amount).toBe(33); // round(1000 * 10% * 0.325)
         });
 
         it('правило на конкретную категорию считает по проценту выполнения плана СВОЕЙ категории, а не отдела целиком (Фаза 2, issue #60)', () => {

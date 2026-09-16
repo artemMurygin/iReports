@@ -82,11 +82,13 @@ export type SalaryBasis = z.infer<typeof salaryBasisSchema>;
 // fromPlanPercent):
 // - FIX    — множитель ступенькой: от этого порога и до следующего действует
 //            множитель ЭТОГО порога;
-// - LINEAR — от этого порога до следующего множитель линейно
-//            интерполируется между множителем этого порога и множителем
-//            следующего.
-// См. domain/services/float-percent.ts на бэкенде (в обоих доменах —
-// service и shop, это независимые, но идентичные по семантике реализации).
+// - LINEAR — множитель на участке пропорционален проценту выполнения плана:
+//            multiplier ЭТОГО порога × (percentCompletion / 100); multiplier
+//            следующего порога в расчёте на этом участке не участвует —
+//            вступает в силу только когда сам становится текущим порогом.
+// См. domain/services/float-percent.ts в service и
+// domain/value-objects/float-percent-schedule.value-object.ts в shop —
+// независимые, но идентичные по семантике реализации.
 const percentBorderSchema = z.object({
     name: z.string(),
     fromPlanPercent: z.number(),

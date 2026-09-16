@@ -41,15 +41,34 @@ describe('resolveFloatPercentMultiplier', () => {
             expect(resolveFloatPercentMultiplier(linearBorders, 25)).toBe(0);
         });
 
-        it('между порогами — линейная интерполяция от ЭТОГО порога к СЛЕДУЮЩЕМУ', () => {
-            // A(50, 0.5) -> B(70, 1): на 60 (середина отрезка) -> 0.75.
+        it('между порогами — множитель пропорционален проценту выполнения плана, а не интерполируется к следующему порогу', () => {
+            // A(50, 0.5): на 60 -> 0.5 * 60/100 = 0.3 (multiplier следующего
+            // порога B (1) не участвует).
             expect(
                 resolveFloatPercentMultiplier(linearBorders, 60),
-            ).toBeCloseTo(0.75);
-            // B(70, 1) -> C(100, 1.5): на 85 (середина отрезка) -> 1.25.
+            ).toBeCloseTo(0.3);
+            // B(70, 1): на 85 -> 1 * 85/100 = 0.85 (multiplier следующего
+            // порога C (1.5) не участвует).
             expect(
                 resolveFloatPercentMultiplier(linearBorders, 85),
-            ).toBeCloseTo(1.25);
+            ).toBeCloseTo(0.85);
+        });
+
+        it('на границе сегмента (percentCompletion === current.fromPlanPercent) — множитель не обязан равняться multiplier этого порога', () => {
+            // B(70, 1) становится current ровно на 70% -> 1 * 70/100 = 0.7,
+            // а не 1 (это не FIX-ступенька).
+            expect(
+                resolveFloatPercentMultiplier(linearBorders, 70),
+            ).toBeCloseTo(0.7);
+        });
+
+        it('чуть ниже следующего порога — множитель всё ещё считается от текущего порога, не от следующего', () => {
+            // B(70, 1) остаётся current до 100 (не включая) -> на 99.9
+            // -> 1 * 99.9/100 = 0.999, а не близко к multiplier следующего
+            // порога C (1.5).
+            expect(
+                resolveFloatPercentMultiplier(linearBorders, 99.9),
+            ).toBeCloseTo(0.999);
         });
 
         it('на и выше старшего порога — множитель фиксируется', () => {
@@ -90,23 +109,68 @@ describe('resolveFloatPercentMultiplier', () => {
             expect(resolveFloatPercentMultiplier(mixedBorders, 69.9)).toBe(0.5);
         });
 
-        it('70-120% — линейно от 0.7 (на 70%) до 1.2 (на 120%)', () => {
-            expect(resolveFloatPercentMultiplier(mixedBorders, 70)).toBe(0.7);
+        it('70-120% — множитель нижнего порога (0.7), умноженный на процент выполнения плана', () => {
+            expect(resolveFloatPercentMultiplier(mixedBorders, 70)).toBeCloseTo(
+                0.49,
+            ); // 0.7 * 70/100
             expect(resolveFloatPercentMultiplier(mixedBorders, 80)).toBeCloseTo(
-                0.8,
-            );
+                0.56,
+            ); // 0.7 * 80/100
             expect(resolveFloatPercentMultiplier(mixedBorders, 85)).toBeCloseTo(
-                0.85,
-            );
+                0.595,
+            ); // 0.7 * 85/100
             expect(
                 resolveFloatPercentMultiplier(mixedBorders, 110),
-            ).toBeCloseTo(1.1);
+            ).toBeCloseTo(0.77); // 0.7 * 110/100
         });
 
-        it('от 120% и выше — плоско на 1.2', () => {
+        // Точный кейс из бага: план выполнен на 95.59% (меньше 100%), но
+        // старая формула (интерполяция к multiplier следующего порога 1.2)
+        // давала множитель 1.10236 — больше 1 при невыполненном плане.
+        it('регрессия: план не выполнен (95.59%) — множитель меньше 1, а не больше', () => {
+            const multiplier = resolveFloatPercentMultiplier(
+                mixedBorders,
+                95.59,
+            );
+            expect(multiplier).toBeCloseTo(0.7 * (95.59 / 100));
+            expect(multiplier).toBeLessThan(1);
+        });
+
+        it('от 120% и выше — плоско на 1.2 (FIX не затронут изменением формулы LINEAR)', () => {
             expect(resolveFloatPercentMultiplier(mixedBorders, 120)).toBe(1.2);
             expect(resolveFloatPercentMultiplier(mixedBorders, 150)).toBe(1.2);
         });
+    });
+
+    // Точные пороги из бага (значения multiplier как в реальном зарплатном
+    // правиле "Сервис"): при выполнении плана на 95.59% старая формула
+    // (интерполяция к multiplier следующего порога) давала множитель
+    // 1.10236 (appliedPercent 5.5118% при базовых 5%) — выше базового
+    // процента при НЕвыполненном плане.
+    it('регрессия из бага: fromPlanPercent 70/multiplier 1 -> 120/multiplier 1.2, 95.59% -> ~0.9559, а не 1.10236', () => {
+        const realBorders: [PercentBorder, PercentBorder, PercentBorder] = [
+            {
+                name: 'Ниже плана',
+                fromPlanPercent: 0,
+                multiplier: 0,
+                mode: 'FIX',
+            },
+            {
+                name: 'Выполнение плана',
+                fromPlanPercent: 70,
+                multiplier: 1,
+                mode: 'LINEAR',
+            },
+            {
+                name: 'Перевыполнение',
+                fromPlanPercent: 120,
+                multiplier: 1.2,
+                mode: 'FIX',
+            },
+        ];
+        expect(resolveFloatPercentMultiplier(realBorders, 95.59)).toBeCloseTo(
+            0.9559,
+        );
     });
 
     it('порядок порогов во входном массиве не важен — сортируются по fromPlanPercent', () => {

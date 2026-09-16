@@ -79,7 +79,7 @@ describe('DepartmentTurnoverBonusEntity', () => {
             expect(at120).toBe(150); // 100 * 1.5
         });
 
-        it('LINEAR — интерполирует между порогами', () => {
+        it('LINEAR — множитель пропорционален проценту выполнения плана', () => {
             const rule = buildRule('LINEAR', {
                 warehouseId: 1,
                 category: null,
@@ -93,7 +93,7 @@ describe('DepartmentTurnoverBonusEntity', () => {
                 buildContext(new Map([[key, 0.6]])),
             ).amount;
 
-            expect(at60).toBe(75); // 100 * 0.75
+            expect(at60).toBe(30); // 100 * (0.5 * 60/100)
         });
 
         it('planTurnoverRatio != 1 — процент выполнения плана делится на план', () => {

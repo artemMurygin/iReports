@@ -10,6 +10,13 @@ import { roundRubles } from '@/domains/service/modules/accounting/domain/service
 // и описывал отрезок ДО себя — это давало обратный эффект (LINEAR интерполировал не в ту сторону,
 // FIX "замораживал" множитель соседнего порога). Верная семантика — mode на НИЖНЕЙ границе отрезка,
 // описывает, что происходит ПОСЛЕ неё.
+//
+// LINEAR — не интерполяция к multiplier следующего порога: множитель на участке пропорционален
+// проценту выполнения плана (current.multiplier * percentCompletion / 100). multiplier следующего
+// порога здесь не участвует — он вступает в силу только когда сам становится current. Иначе при
+// невыполненном плане (percentCompletion между fromPlanPercent этого порога и 100) множитель мог
+// оказаться больше 1 просто из-за близости к следующему, более высокому порогу — implements FR1 of
+// float-percent-linear-formula.
 export function resolveFloatPercentMultiplier(
     percentBorders: readonly [PercentBorder, PercentBorder, PercentBorder],
     percentCompletion: number,
@@ -36,12 +43,7 @@ export function resolveFloatPercentMultiplier(
         return current.multiplier;
     }
 
-    const span = next.fromPlanPercent - current.fromPlanPercent;
-    if (span <= 0) {
-        return current.multiplier;
-    }
-    const ratio = (percentCompletion - current.fromPlanPercent) / span;
-    return current.multiplier + ratio * (next.multiplier - current.multiplier);
+    return current.multiplier * (percentCompletion / 100);
 }
 
 export interface FloatPercentThresholdInfo {

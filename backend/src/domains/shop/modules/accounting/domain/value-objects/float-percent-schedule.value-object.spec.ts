@@ -132,8 +132,23 @@ describe('FloatPercentSchedule', () => {
             expect(schedule.resolveMultiplier(25)).toBe(0);
         });
 
-        it('между порогами — линейная интерполяция от ЭТОГО порога к СЛЕДУЮЩЕМУ', () => {
-            expect(schedule.resolveMultiplier(60)).toBeCloseTo(0.75);
+        it('между порогами — множитель пропорционален проценту выполнения плана, а не интерполируется к следующему порогу', () => {
+            // A(50, 0.5): на 60 -> 0.5 * 60/100 = 0.3 (multiplier следующего
+            // порога B (1) не участвует).
+            expect(schedule.resolveMultiplier(60)).toBeCloseTo(0.3);
+        });
+
+        it('на границе сегмента (percentCompletion === current.fromPlanPercent) — множитель не обязан равняться multiplier этого порога', () => {
+            // B(70, 1) становится current ровно на 70% -> 1 * 70/100 = 0.7,
+            // а не 1 (это не FIX-ступенька).
+            expect(schedule.resolveMultiplier(70)).toBeCloseTo(0.7);
+        });
+
+        it('чуть ниже следующего порога — множитель всё ещё считается от текущего порога, не от следующего', () => {
+            // B(70, 1) остаётся current до 100 (не включая) -> на 99.9
+            // -> 1 * 99.9/100 = 0.999, а не близко к multiplier следующего
+            // порога C (1.5).
+            expect(schedule.resolveMultiplier(99.9)).toBeCloseTo(0.999);
         });
 
         it('на и выше старшего порога — множитель фиксируется', () => {
@@ -169,8 +184,17 @@ describe('FloatPercentSchedule', () => {
             expect(schedule.resolveMultiplier(30)).toBe(0.5);
         });
 
-        it('70-120% — линейно от 0.7 до 1.2', () => {
-            expect(schedule.resolveMultiplier(85)).toBeCloseTo(0.85);
+        it('70-120% — множитель нижнего порога (0.7), умноженный на процент выполнения плана', () => {
+            expect(schedule.resolveMultiplier(85)).toBeCloseTo(0.595); // 0.7 * 85/100
+        });
+
+        // Регрессия из бага: при невыполненном плане множитель не должен
+        // превышать multiplier нижнего порога, независимо от близости к
+        // следующему, более высокому порогу.
+        it('план не выполнен (95.59%) — множитель меньше 1, а не больше', () => {
+            expect(schedule.resolveMultiplier(95.59)).toBeCloseTo(
+                0.7 * (95.59 / 100),
+            );
         });
 
         it('от 120% и выше — плоско на 1.2', () => {
