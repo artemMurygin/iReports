@@ -1,7 +1,7 @@
 import type { CatalogCategoryResponse, MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 import { CreateTaskPanel } from '@/features/CreateTask'
 import { RuleList } from '@/features/SalaryRuleForm'
-import type { RuleFormConfig, RuleType, WarehouseFieldWarehouse } from '@/features/SalaryRuleForm'
+import type { DepartmentOverrideOption, RuleFormConfig, RuleType, WarehouseFieldWarehouse } from '@/features/SalaryRuleForm'
 import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 
 import { Layout } from '../../ui/Layout.tsx'
@@ -23,6 +23,9 @@ export type ServiceSchemaEditFormProps = {
     warehouses: WarehouseFieldWarehouse[]
     isWarehousesLoading: boolean
     warehousesError: string | null
+    departments: DepartmentOverrideOption[]
+    isDepartmentsLoading: boolean
+    departmentsError: string | null
     categories: CatalogCategoryResponse[]
     isCategoriesLoading: boolean
     categoriesError: string | null
@@ -73,6 +76,9 @@ export function ServiceSchemaEditForm(props: ServiceSchemaEditFormProps) {
         warehouses: page.warehouses,
         isWarehousesLoading: page.isWarehousesLoading,
         warehousesError: page.warehousesError,
+        departments: page.departments,
+        isDepartmentsLoading: page.isDepartmentsLoading,
+        departmentsError: page.departmentsError,
         onChange: page.rules.updateDraft,
         onChangeType: page.rules.changeType,
         onChangeBorder: page.rules.updateBorder,

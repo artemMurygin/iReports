@@ -93,4 +93,8 @@ export const SHOP_RULE_FORM_CONFIG: RuleFormConfig = {
     // docs/service-plan-salary-rule-order-category-filter — вне скоупа для shop, см. PRD).
     orderTypeRuleTypes: [],
     taskRuleTypes: SHOP_TASK_RULE_TYPES,
+    // Временный костыль поверх add-department-head-salary-rules design.md Decision 1 (сервис-only,
+    // см. WHY у `RuleFormConfig.departmentOverrideRuleTypes`) — у shop-версии DepartmentPercent/
+    // DepartmentPlanBonus нет departmentId в конфиге вовсе.
+    departmentOverrideRuleTypes: [],
 }

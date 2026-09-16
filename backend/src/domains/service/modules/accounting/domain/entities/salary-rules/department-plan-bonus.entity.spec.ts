@@ -1,11 +1,13 @@
 import { DepartmentPlanBonusEntity } from './department-plan-bonus.entity';
 import type {
+    DepartmentPerformanceOverrideByScope,
     DepartmentSalesPerformanceByCategory,
     ServiceCalculationContext,
 } from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
 
 const buildContext = (
     departmentSalesPerformance: DepartmentSalesPerformanceByCategory | null,
+    departmentPerformanceOverrides: DepartmentPerformanceOverrideByScope = new Map(),
 ): ServiceCalculationContext => ({
     employee: { id: 1, identities: [] },
     period: {
@@ -20,9 +22,14 @@ const buildContext = (
     salesPerformance: null,
     departmentSalesPerformance,
     turnoverPerformance: new Map(),
+    departmentPerformanceOverrides,
 });
 
-const buildRule = (mode: 'FIX' | 'LINEAR', category: string | null = null) =>
+const buildRule = (
+    mode: 'FIX' | 'LINEAR',
+    category: string | null = null,
+    departmentId: number | null = null,
+) =>
     DepartmentPlanBonusEntity.create({
         type: 'DepartmentPlanBonus',
         name: 'Бонус за выполнение плана отдела',
@@ -36,6 +43,7 @@ const buildRule = (mode: 'FIX' | 'LINEAR', category: string | null = null) =>
                 { name: 'B', fromPlanPercent: 70, multiplier: 1, mode },
                 { name: 'C', fromPlanPercent: 100, multiplier: 1.5, mode },
             ],
+            departmentId,
         },
     });
 
@@ -123,6 +131,31 @@ describe('DepartmentPlanBonusEntity', () => {
             const rule = buildRule('FIX', 'cat-missing');
 
             const line = rule.calculate(buildContext(performanceAt(null, 100)));
+
+            expect(line.amount).toBe(0);
+        });
+    });
+
+    describe('calculate — departmentId (временный костыль): явное переопределение отдела вместо собственного отдела сотрудника', () => {
+        it('резолвит percentCompletion из departmentPerformanceOverrides по (departmentId, category)', () => {
+            const rule = buildRule('FIX', null, 158);
+            const overrides: DepartmentPerformanceOverrideByScope = new Map([
+                ['158:', { fact: { turnover: 0, margin: 0 }, percentCompletion: 120 }],
+            ]);
+
+            // departmentSalesPerformance (собственный отдел) намеренно не несёт этот ключ —
+            // правило с departmentId не должно к нему обращаться.
+            const line = rule.calculate(buildContext(null, overrides));
+
+            expect(line.amount).toBe(150); // 100 * 1.5
+        });
+
+        it('scope отсутствует в overrides — начисляет 0, даже если у отдела сотрудника есть план', () => {
+            const rule = buildRule('FIX', null, 158);
+
+            const line = rule.calculate(
+                buildContext(performanceAt(null, 120), new Map()),
+            );
 
             expect(line.amount).toBe(0);
         });

@@ -9,6 +9,7 @@ import {
     resolveRuleDraft,
     useSalaryRulesDraft,
     useTaskLinkPanels,
+    type DepartmentOverrideOption,
     type RuleFormConfig,
     type RuleType,
     type WarehouseFieldWarehouse,
@@ -30,6 +31,9 @@ export type UseServiceSchemaEditFormArgs = {
     warehouses: WarehouseFieldWarehouse[]
     isWarehousesLoading: boolean
     warehousesError: string | null
+    departments: DepartmentOverrideOption[]
+    isDepartmentsLoading: boolean
+    departmentsError: string | null
     categories: CatalogCategoryResponse[]
     isCategoriesLoading: boolean
     categoriesError: string | null
@@ -55,6 +59,9 @@ export function useServiceSchemaEditForm({
     warehouses,
     isWarehousesLoading,
     warehousesError,
+    departments,
+    isDepartmentsLoading,
+    departmentsError,
     categories,
     isCategoriesLoading,
     categoriesError,
@@ -162,6 +169,9 @@ export function useServiceSchemaEditForm({
         warehouses,
         isWarehousesLoading,
         warehousesError,
+        departments,
+        isDepartmentsLoading,
+        departmentsError,
         canSave,
         isSubmitting: updateSchema.isPending,
         handleSave,

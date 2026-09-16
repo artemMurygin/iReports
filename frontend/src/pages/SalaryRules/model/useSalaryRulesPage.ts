@@ -125,6 +125,12 @@ export function useSalaryRulesPage() {
         warehouses: active.warehouses,
         isWarehousesLoading: active.isWarehousesLoading,
         warehousesError: active.warehousesError,
+        // Временный костыль (`DepartmentPercent`/`DepartmentPlanBonus`, service only, см.
+        // `RuleFormConfig.departmentOverrideRuleTypes`) — переиспользует уже загруженный здесь же
+        // (для Шага 1 «Отдел»/«Сотрудник») справочник отделов, а не заводит отдельный запрос.
+        departments: departmentsQuery.data ?? [],
+        isDepartmentsLoading: departmentsQuery.isLoading,
+        departmentsError: departmentsQuery.error?.message ?? null,
         ruleCount: active.rules.drafts.length,
 
         canSubmit,

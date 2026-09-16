@@ -14,6 +14,7 @@ import { ThresholdsEditor } from '../../ThresholdsEditor'
 import { WarehouseField, type WarehouseFieldWarehouse } from '../../WarehouseField'
 
 import { AmountField } from './AmountField.tsx'
+import { DepartmentOverrideField, type DepartmentOverrideOption } from './DepartmentOverrideField.tsx'
 import { FieldError } from './FieldError.tsx'
 import { RuleRoleField } from './RuleRoleField.tsx'
 import { SalaryBasisField } from './SalaryBasisField.tsx'
@@ -47,6 +48,12 @@ export type RuleFormCardFieldsProps = {
     warehouses?: WarehouseFieldWarehouse[]
     isWarehousesLoading?: boolean
     warehousesError?: string | null
+    /** Временный костыль (`DepartmentPercent`/`DepartmentPlanBonus`, service only) — see
+     * `config.departmentOverrideRuleTypes`/`DepartmentOverrideField`'s комментарий. Optional/
+     * defaults to `[]`, как и `warehouses` выше — shop-каллеры его не передают. */
+    departments?: DepartmentOverrideOption[]
+    isDepartmentsLoading?: boolean
+    departmentsError?: string | null
     onChange: (patch: Partial<RuleDraft>) => void
     onChangeType: (type: RuleType) => void
 }
@@ -102,6 +109,9 @@ export function RuleFormCardFields({
     warehouses,
     isWarehousesLoading,
     warehousesError,
+    departments,
+    isDepartmentsLoading,
+    departmentsError,
     onChange,
     onChangeType,
 }: RuleFormCardFieldsProps) {
@@ -179,7 +189,12 @@ export function RuleFormCardFields({
             {draft.type === 'DepartmentPercent' && (
                 <>
                     <div className="h-px w-full bg-hairline" />
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div
+                        className={cn(
+                            'grid grid-cols-1 gap-3',
+                            config.departmentOverrideRuleTypes.includes(draft.type) ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+                        )}
+                    >
                         <div className="flex flex-col gap-1.5">
                             <label className="font-ui text-xs font-medium text-ink-muted">Категория</label>
                             <CategoryField
@@ -207,6 +222,16 @@ export function RuleFormCardFields({
                             value={draft.salaryBasis || config.salaryBasisOptions[0]?.value || 'REVENUE'}
                             onValueChange={(salaryBasis) => onChange({ salaryBasis })}
                         />
+
+                        {config.departmentOverrideRuleTypes.includes(draft.type) && (
+                            <DepartmentOverrideField
+                                value={draft.departmentIdOverride}
+                                onValueChange={(departmentIdOverride) => onChange({ departmentIdOverride })}
+                                departments={departments ?? []}
+                                isLoading={isDepartmentsLoading}
+                                error={departmentsError}
+                            />
+                        )}
                     </div>
                     <FieldError message={errors.salaryBasis} />
                 </>
@@ -215,7 +240,12 @@ export function RuleFormCardFields({
             {draft.type === 'DepartmentPlanBonus' && (
                 <>
                     <div className="h-px w-full bg-hairline" />
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div
+                        className={cn(
+                            'grid grid-cols-1 gap-3',
+                            config.departmentOverrideRuleTypes.includes(draft.type) ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+                        )}
+                    >
                         <div className="flex flex-col gap-1.5">
                             <label className="font-ui text-xs font-medium text-ink-muted">Категория</label>
                             <CategoryField
@@ -241,6 +271,16 @@ export function RuleFormCardFields({
                             value={draft.salaryBasis || config.salaryBasisOptions[0]?.value || 'REVENUE'}
                             onValueChange={(salaryBasis) => onChange({ salaryBasis })}
                         />
+
+                        {config.departmentOverrideRuleTypes.includes(draft.type) && (
+                            <DepartmentOverrideField
+                                value={draft.departmentIdOverride}
+                                onValueChange={(departmentIdOverride) => onChange({ departmentIdOverride })}
+                                departments={departments ?? []}
+                                isLoading={isDepartmentsLoading}
+                                error={departmentsError}
+                            />
+                        )}
                     </div>
                     <FieldError message={errors.salaryBasis} />
 

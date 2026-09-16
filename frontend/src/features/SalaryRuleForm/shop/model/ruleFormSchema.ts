@@ -226,6 +226,9 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: rule.type === 'ProductSold' || rule.type === 'UsedProductSold' ? rule.config.category : null,
+        // departmentIdOverride — сервисное поле (add-department-head-salary-rules, временный
+        // костыль), у shop-версии DepartmentPercent/DepartmentPlanBonus нет departmentId в конфиге.
+        departmentIdOverride: '',
         // orderTypeIds — сервисное поле (`OrderPayed`/`ServiceCompleted`, Фаза 5,
         // docs/service-plan-salary-rule-order-category-filter), ни один shop-тип его не имеет.
         orderTypeIds: [],

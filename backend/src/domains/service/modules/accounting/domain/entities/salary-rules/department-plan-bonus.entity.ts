@@ -9,6 +9,8 @@ import {
     TargetRole,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { ServiceCalculationContext } from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
+import type { DepartmentSalesPerformanceEntry } from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
+import { departmentPerformanceOverrideScopeKey } from '@/domains/service/modules/accounting/domain/types/calculation-context.types';
 import { roundRubles } from '@/domains/service/modules/accounting/domain/services/money';
 import { resolveFloatPercentMultiplier } from '@/domains/service/modules/accounting/domain/services/float-percent';
 
@@ -77,9 +79,7 @@ export class DepartmentPlanBonusEntity
      * (design.md Q2, в отличие от FloatPercent у OrderPayedEntity).
      */
     calculate(context: ServiceCalculationContext): CalculationLine {
-        const entry =
-            context.departmentSalesPerformance?.get(this.config.category) ??
-            null;
+        const entry = this.resolveEntry(context);
 
         if (!entry) {
             return this.emptyLine();
@@ -101,6 +101,23 @@ export class DepartmentPlanBonusEntity
     }
 
     validate(): void {}
+
+    // Временный костыль (см. WHY у DepartmentPlanBonusSalaryConfig.departmentId) — если правило явно
+    // переопределило отдел, читаем его факт из departmentPerformanceOverrides (ключ включает
+    // departmentId, не зависит от отдела сотрудника), иначе — прежнее поведение: собственный отдел
+    // сотрудника через departmentSalesPerformance.
+    private resolveEntry(
+        context: ServiceCalculationContext,
+    ): DepartmentSalesPerformanceEntry | null {
+        if (this.config.departmentId != null) {
+            const key = departmentPerformanceOverrideScopeKey({
+                departmentId: this.config.departmentId,
+                category: this.config.category,
+            });
+            return context.departmentPerformanceOverrides.get(key) ?? null;
+        }
+        return context.departmentSalesPerformance?.get(this.config.category) ?? null;
+    }
 
     private emptyLine(): CalculationLine {
         return {

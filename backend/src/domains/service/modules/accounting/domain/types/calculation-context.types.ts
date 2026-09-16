@@ -34,6 +34,29 @@ export type DepartmentSalesPerformanceByCategory = Map<
     DepartmentSalesPerformanceEntry
 >;
 
+// Временный костыль поверх design.md Decision 1 (см. WHY у DepartmentPercentSalaryConfig.departmentId/
+// DepartmentPlanBonusSalaryConfig.departmentId в salary-rule.types.ts): скоуп факта/percentCompletion
+// для правила, ЯВНО переопределившего отдел, чей план продаж используется, вместо собственного отдела
+// сотрудника. Отдельная от DepartmentSalesPerformanceByCategory карта (а не тот же ключ) — та карта
+// всегда про СОБСТВЕННЫЙ отдел сотрудника и не знает о departmentId, здесь наоборот departmentId
+// обязателен, ключ — departmentPerformanceOverrideScopeKey(). По той же схеме, что и
+// TurnoverPerformanceScope/TurnoverPerformanceByScope ниже (там обязателен warehouseId).
+export interface DepartmentPerformanceOverrideScope {
+    departmentId: number;
+    category: string | null;
+}
+
+export type DepartmentPerformanceOverrideByScope = Map<
+    string,
+    DepartmentSalesPerformanceEntry
+>;
+
+export function departmentPerformanceOverrideScopeKey(
+    scope: DepartmentPerformanceOverrideScope,
+): string {
+    return `${scope.departmentId}:${scope.category ?? ''}`;
+}
+
 // Скоуп факта оборачиваемости для DepartmentTurnoverBonus (FR4) — склад обязателен, категория
 // опциональна (design.md Decision 2); null category — итог по всему складу (см.
 // GoodsTurnoverWarehouseTotal/TurnoverReportSnapshot, FR5).
@@ -59,4 +82,5 @@ export function turnoverPerformanceScopeKey(
 export type ServiceCalculationContext = CalculationContext & {
     departmentSalesPerformance: DepartmentSalesPerformanceByCategory | null;
     turnoverPerformance: TurnoverPerformanceByScope;
+    departmentPerformanceOverrides: DepartmentPerformanceOverrideByScope;
 };

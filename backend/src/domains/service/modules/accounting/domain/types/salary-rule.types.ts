@@ -136,9 +136,12 @@ export type TaskCompletionSalaryRule = {
 //
 // category: string | null — тот же scope-параметр, что и у существующего ProductSoldEntity (shop):
 // null = без фильтра, «весь склад/направление». department, с которым резолвится SalesPerformance
-// для DepartmentPercent/DepartmentPlanBonus, в config НЕ входит — берётся из собственного
+// для DepartmentPercent/DepartmentPlanBonus, по умолчанию берётся из собственного
 // BitrixEmployee.departmentId сотрудника, которому назначено правило (design.md Decision 1,
-// findEmployeeDepartmentId, без изменений).
+// findEmployeeDepartmentId). departmentId в config ниже — временный костыль поверх этого решения:
+// явное переопределение отдела, чей план продаж используется, на случай, когда у собственного
+// отдела сотрудника ещё нет плана (см. resolveDepartmentPerformanceOverrides в
+// build-service-calculation-context.service.ts) — null сохраняет исходное поведение.
 
 // DepartmentPercent (FR2) — % от факта выручки/маржи отдела/категории, без коэффициента:
 // amount = round(fact.(turnover|margin) * percent / 100).
@@ -146,6 +149,9 @@ export type DepartmentPercentSalaryConfig = {
     salaryBasis: SalaryBasis;
     category: string | null;
     percent: number;
+    // Опционально (как и в contracts) — undefined трактуется наравне с null (см. resolveEntry() у
+    // DepartmentPercentEntity).
+    departmentId?: number | null;
 };
 
 export type DepartmentPercentSalaryRule = {
@@ -166,6 +172,9 @@ export type DepartmentPlanBonusSalaryConfig = {
     category: string | null;
     fixedAmount: number;
     percentBorders: [PercentBorder, PercentBorder, PercentBorder];
+    // Опционально (как и в contracts) — undefined трактуется наравне с null (см. resolveEntry() у
+    // DepartmentPlanBonusEntity).
+    departmentId?: number | null;
 };
 
 export type DepartmentPlanBonusSalaryRule = {

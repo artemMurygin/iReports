@@ -86,6 +86,13 @@ export const SERVICE_ORDER_TYPE_RULE_TYPES: ServiceRuleType[] = ['OrderPayed', '
  * `AwardSection` (tasks.md раздел 20, node `wV3fv`/`aS8yc`). */
 export const SERVICE_TASK_RULE_TYPES: ServiceRuleType[] = ['TaskCompletion']
 
+/** Временный костыль поверх add-department-head-salary-rules design.md Decision 1 — см. WHY у
+ * `RuleFormConfig.departmentOverrideRuleTypes`. */
+export const SERVICE_DEPARTMENT_OVERRIDE_RULE_TYPES: ServiceRuleType[] = [
+    'DepartmentPercent',
+    'DepartmentPlanBonus',
+]
+
 export const SERVICE_RULE_FORM_CONFIG: RuleFormConfig = {
     ruleTypeOrder: RULE_TYPE_ORDER,
     ruleTypeLabels: RULE_TYPE_LABELS,
@@ -94,4 +101,5 @@ export const SERVICE_RULE_FORM_CONFIG: RuleFormConfig = {
     categoryRuleTypes: [],
     orderTypeRuleTypes: SERVICE_ORDER_TYPE_RULE_TYPES,
     taskRuleTypes: SERVICE_TASK_RULE_TYPES,
+    departmentOverrideRuleTypes: SERVICE_DEPARTMENT_OVERRIDE_RULE_TYPES,
 }
