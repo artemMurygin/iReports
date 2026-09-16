@@ -248,4 +248,82 @@ describe('Tasks HTTP (e2e)', () => {
             })
             .expect(400);
     });
+
+    // openspec/changes/edit-task, группа 4 — PATCH /v1/tasks/:id частично
+    // обновляет поля активной задачи, не трогая непереданные.
+    it('PATCH /v1/tasks/:id с частичным телом — 200, обновлённое поле меняется, остальные — нет', async () => {
+        const create = await request(app.getHttpServer())
+            .post('/v1/tasks')
+            .send({
+                title: 'Задача для редактирования',
+                description: 'Исходное описание',
+                deadline: '2026-09-30T00:00:00.000Z',
+                assigneeEmployeeId: 7,
+                direction: 'service',
+            })
+            .expect(201);
+        const id = (create.body as CreateTaskResponse).id;
+
+        const patchResponse = await request(app.getHttpServer())
+            .patch(`/v1/tasks/${id}`)
+            .send({ deadline: '2027-01-01T00:00:00.000Z' })
+            .expect(200);
+        const patched = patchResponse.body as Task;
+        expect(patched.deadline).toBe('2027-01-01T00:00:00.000Z');
+        expect(patched.title).toBe('Задача для редактирования');
+        expect(patched.description).toBe('Исходное описание');
+        expect(patched.assigneeEmployeeId).toBe(7);
+        expect(patched.status).toBe('NEW');
+
+        const after = await request(app.getHttpServer())
+            .get(`/v1/tasks/${id}`)
+            .expect(200);
+        expect((after.body as Task).deadline).toBe('2027-01-01T00:00:00.000Z');
+    });
+
+    it('PATCH /v1/tasks/:несуществующий-id — 404', async () => {
+        await request(app.getHttpServer())
+            .patch('/v1/tasks/missing-id')
+            .send({ title: 'Новое название' })
+            .expect(404);
+    });
+
+    it('PATCH /v1/tasks/:id задачи в терминальном статусе — 409, поля не меняются', async () => {
+        const create = await request(app.getHttpServer())
+            .post('/v1/tasks')
+            .send({
+                title: 'Задача для закрытия',
+                description: 'Описание',
+                deadline: '2026-09-30T00:00:00.000Z',
+                assigneeEmployeeId: 7,
+            })
+            .expect(201);
+        const id = (create.body as CreateTaskResponse).id;
+
+        await request(app.getHttpServer())
+            .patch(`/v1/tasks/${id}/status`)
+            .send({ targetStatus: 'IN_PROGRESS' })
+            .expect(200);
+        await request(app.getHttpServer())
+            .patch(`/v1/tasks/${id}/status`)
+            .send({ targetStatus: 'DONE' })
+            .expect(200);
+        await request(app.getHttpServer())
+            .patch(`/v1/tasks/${id}/status`)
+            .send({ targetStatus: 'CLOSED_SUCCESSFULLY' })
+            .expect(200);
+
+        await request(app.getHttpServer())
+            .patch(`/v1/tasks/${id}`)
+            .send({ title: 'Попытка изменить закрытую задачу' })
+            .expect(409);
+
+        const after = await request(app.getHttpServer())
+            .get(`/v1/tasks/${id}`)
+            .expect(200);
+        const afterTask = after.body as Task;
+        expect(afterTask.title).toBe('Задача для закрытия');
+        expect(afterTask.description).toBe('Описание');
+        expect(afterTask.status).toBe('CLOSED_SUCCESSFULLY');
+    });
 });

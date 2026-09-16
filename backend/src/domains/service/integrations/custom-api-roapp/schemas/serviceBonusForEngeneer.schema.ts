@@ -2,16 +2,12 @@ import { z } from 'zod';
 
 export const ServiceBonusForEngeneerSchema = z
     .object({
-        id: z.number(),
-        objectId: z.number(),
-        title: z.string(),
-        earningsSum: z.number(),
-        earningsPctBasis: z.number(),
-        type: z.number(),
+        entityId: z.number(),
+        fixedAmount: z.number(),
     })
     .transform((d) => ({
-        id: d.objectId,
-        bonus: d.earningsSum,
+        id: d.entityId,
+        bonus: d.fixedAmount,
     }));
 
 export type ServiceBonusForEngeneer = z.infer<

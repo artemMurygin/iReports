@@ -10,6 +10,7 @@ import type {
     TaskDirection,
     TaskLink,
     TaskStatus,
+    UpdateTaskRequest,
 } from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
@@ -49,6 +50,13 @@ export const tasksApi = {
     // читаемым `message`, который читает `extractApiErrorMessage` в самом UI-обработчике мутации.
     transition: (taskId: string, payload: ChangeTaskStatusRequest): Promise<Task> =>
         apiInstance.patch<Task>(`/v1/tasks/${taskId}/status`, payload).then((r) => r.data),
+
+    // edit-task, tasks.md группа 5 — частичное обновление задачи (`PATCH /v1/tasks/:id`). Ошибка НЕ
+    // оборачивается в ApiError — тот же приём, что `transition` выше: читаемое сообщение из
+    // `TaskAlreadyClosedException`/`ArgumentInvalidException` разворачивает `extractApiErrorMessage`
+    // уже в UI-обработчике мутации, не здесь.
+    update: (taskId: string, payload: UpdateTaskRequest): Promise<Task> =>
+        apiInstance.patch<Task>(`/v1/tasks/${taskId}`, payload).then((r) => r.data),
 
     getAssigneeEmployees: () =>
         queryOptions({

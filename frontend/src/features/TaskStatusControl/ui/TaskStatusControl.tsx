@@ -1,13 +1,15 @@
-import type { TaskDirection, TaskStatus } from 'ireports-contracts'
+import { useState } from 'react'
+import type { Task, TaskDirection, TaskStatus } from 'ireports-contracts'
 
 import { useAssigneeName } from '../model/useAssigneeName.ts'
 import { readTransitionErrorMessage } from '../model/api.ts'
+import { useEditTaskForm } from '../model/useEditTaskForm.ts'
 import { useTask } from '../model/useTask.ts'
 import { useTaskComments } from '../model/useTaskComments.ts'
 import { useTaskLinks } from '../model/useTaskLinks.ts'
 import { useTaskSalaryReference } from '../model/useTaskSalaryReference.ts'
 import { useTaskTransition } from '../model/useTaskTransition.ts'
-import { TaskStatusCard } from './TaskStatusCard.tsx'
+import { TaskStatusCard, type TaskStatusCardProps } from './TaskStatusCard.tsx'
 
 /**
  * Публичный компонент фичи (реэкспортируется `index.ts`) — orchestrator/model-хук в одном месте,
@@ -65,7 +67,7 @@ export function TaskStatusControl({ taskId, onClose, onOpenSalaryRule, className
 
     return (
         <div data-slot="task-status-control" className={className}>
-            <TaskStatusCard
+            <EditableTaskStatusCard
                 task={task}
                 assigneeName={assigneeName}
                 isTransitionPending={transition.isPending}
@@ -86,5 +88,47 @@ export function TaskStatusControl({ taskId, onClose, onOpenSalaryRule, className
                 </p>
             )}
         </div>
+    )
+}
+
+/**
+ * edit-task, tasks.md группа 8 — `useEditTaskForm(task, onSaved)` принимает гарантированно
+ * загруженную `Task` (не `Task | undefined`), поэтому не может вызываться в самом
+ * `TaskStatusControl` вместе с `useAssigneeName`/`useTaskSalaryReference` и другими хуками,
+ * вызываемыми ДО ранних `return` при `isLoading`/`isError` (см. их WHY — они принимают
+ * fallback-значения именно чтобы оставаться безусловными). Условный вызов хука после тех же
+ * ранних `return` нарушил бы Rules of Hooks (разное число хуков между рендером-загрузкой и
+ * рендером-с-задачей одного и того же инстанса компонента). Выносим `useEditTaskForm` в
+ * отдельный компонент, монтируемый уже после гарантированной `task` — тот же инстанс живёт всё
+ * время, пока карточка задачи показана, поэтому хук вызывается безусловно на каждом его рендере.
+ */
+type EditableTaskStatusCardProps = Omit<TaskStatusCardProps, 'isEditing' | 'onToggleEdit' | 'editFieldsProps'> & {
+    task: Task
+}
+
+function EditableTaskStatusCard({ task, ...cardProps }: EditableTaskStatusCardProps) {
+    const [isEditing, setIsEditing] = useState(false)
+    const editForm = useEditTaskForm(task, () => setIsEditing(false))
+
+    return (
+        <TaskStatusCard
+            task={task}
+            {...cardProps}
+            isEditing={isEditing}
+            onToggleEdit={() => setIsEditing((v) => !v)}
+            editFieldsProps={
+                isEditing
+                    ? {
+                          draft: editForm.draft,
+                          onPatch: editForm.patch,
+                          onSave: editForm.save,
+                          onCancel: () => setIsEditing(false),
+                          canSave: editForm.canSave,
+                          isPending: editForm.isPending,
+                          error: editForm.error,
+                      }
+                    : null
+            }
+        />
     )
 }

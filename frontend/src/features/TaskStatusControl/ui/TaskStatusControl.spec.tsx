@@ -102,6 +102,61 @@ describe('TaskStatusControl', () => {
         expect(
             screen.queryByRole('button', { name: /Закрыть успешно|Отметить выполненной|Взять в работу/ }),
         ).not.toBeInTheDocument()
+        // edit-task, tasks.md 8.1 — терминальный статус не подлежит редактированию (design.md решение 5).
+        expect(screen.queryByRole('button', { name: 'Редактировать задачу' })).not.toBeInTheDocument()
+    })
+
+    // edit-task, tasks.md 8.1 — кнопка-карандаш и режим редактирования карточки.
+    describe('редактирование задачи (edit-task)', () => {
+        it('renders the edit button for a non-terminal status and switches the card into editing mode with current task values', async () => {
+            const user = userEvent.setup()
+            vi.mocked(axiosInstance.get).mockImplementation((url: string) => {
+                if (url === '/v1/tasks/task-1') return Promise.resolve({ data: TASK_IN_PROGRESS })
+                if (url === '/v1/directory/employees') return Promise.resolve({ data: [] })
+                return Promise.reject(new Error(`unexpected GET ${url}`))
+            })
+
+            renderControl()
+            await screen.findByText('Обновить фото витрины')
+
+            const editButton = screen.getByRole('button', { name: 'Редактировать задачу' })
+            await user.click(editButton)
+
+            const titleInput = await screen.findByLabelText('Заголовок')
+            expect(titleInput).toHaveValue('Обновить фото витрины')
+            expect(screen.getByLabelText('Описание')).toHaveValue('Сфотографировать витрину и загрузить в CRM')
+            expect(screen.getByLabelText('Дедлайн')).toHaveValue('2026-08-25')
+            // Статичные секции просмотра заменены формой — статичного текста описания больше нет.
+            expect(screen.queryByText('Сфотографировать витрину и загрузить в CRM', { selector: 'p' })).not.toBeInTheDocument()
+        })
+
+        it('returns the card to view mode after a successful save', async () => {
+            const user = userEvent.setup()
+            vi.mocked(axiosInstance.get).mockImplementation((url: string) => {
+                if (url === '/v1/tasks/task-1') return Promise.resolve({ data: TASK_IN_PROGRESS })
+                if (url === '/v1/directory/employees') return Promise.resolve({ data: [] })
+                return Promise.reject(new Error(`unexpected GET ${url}`))
+            })
+            vi.mocked(axiosInstance.patch).mockResolvedValueOnce({
+                data: { ...TASK_IN_PROGRESS, title: 'Обновлённый заголовок' },
+            })
+
+            renderControl()
+            await screen.findByText('Обновить фото витрины')
+
+            await user.click(screen.getByRole('button', { name: 'Редактировать задачу' }))
+            await screen.findByLabelText('Заголовок')
+
+            await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+            await waitFor(() =>
+                expect(axiosInstance.patch).toHaveBeenCalledWith(
+                    '/v1/tasks/task-1',
+                    expect.objectContaining({ title: 'Обновить фото витрины' }),
+                ),
+            )
+            await waitFor(() => expect(screen.queryByLabelText('Заголовок')).not.toBeInTheDocument())
+        })
     })
 
     // add-task-salary-rule-links-comments, tasks.md 27.1 — `spec: tasks/salary-rule-panel#Requirement:

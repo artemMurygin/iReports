@@ -1,4 +1,4 @@
-import { BadgeCheck, BadgeX, Calendar, X } from 'lucide-react'
+import { BadgeCheck, BadgeX, Calendar, Pencil, X } from 'lucide-react'
 import type {
     SalaryAccrualLineSummary,
     SalaryRuleSummary,
@@ -14,6 +14,7 @@ import { IconButton } from '@/shared/ui-kit/atoms/IconButton.tsx'
 import { TaskStatusBadge } from '@/shared/ui-kit/atoms/TaskStatusBadge.tsx'
 import { cn } from '@/shared/lib/tw'
 
+import { EditTaskFields, type EditTaskFieldsProps } from './EditTaskFields.tsx'
 import { SalaryRuleSummaryBlock } from './SalaryRuleSummaryBlock.tsx'
 import { SECTION_LABEL_CLASS } from './sectionLabel.ts'
 import { TaskCommentsSection } from './TaskCommentsSection.tsx'
@@ -89,6 +90,12 @@ export type TaskStatusCardProps = {
     onTransition: (targetStatus: TaskStatus) => void
     onClose?: () => void
     className?: string
+    // edit-task, tasks.md группа 8 (design.md Decision 5) — режим редактирования карточки.
+    // `editFieldsProps` — `null` вне режима редактирования (карточка сама не знает про
+    // `useEditTaskForm`, только рендерит то, что ей передал `TaskStatusControl`).
+    isEditing: boolean
+    onToggleEdit: () => void
+    editFieldsProps: EditTaskFieldsProps | null
     comments: TaskComment[]
     links: TaskLink[]
     onAddLink: (url: string, label?: string) => void
@@ -114,6 +121,9 @@ export function TaskStatusCard({
     salaryAccrual,
     salaryRuleDirection,
     onOpenSalaryRule,
+    isEditing,
+    onToggleEdit,
+    editFieldsProps,
 }: TaskStatusCardProps) {
     const assigneeLabel = assigneeName ?? `Сотрудник #${task.assigneeEmployeeId}`
     const terminalNote = TERMINAL_NOTE[task.status]
@@ -137,42 +147,63 @@ export function TaskStatusCard({
                         {formatDeadline(task.deadline)}
                     </p>
                 </div>
-                {onClose && (
-                    <IconButton
-                        aria-label="Закрыть карточку задачи"
-                        onClick={onClose}
-                        className="shrink-0 bg-canvas hover:bg-canvas"
-                    >
-                        <X />
-                    </IconButton>
-                )}
-            </div>
-
-            <div className="px-5 py-3.5">
-                <p className={SECTION_LABEL_CLASS}>Описание</p>
-                <p className="mt-2 font-ui text-sm leading-relaxed text-ink">{task.description || 'Без описания'}</p>
-            </div>
-
-            <div className="flex gap-6 border-t border-hairline px-5 py-3.5">
-                <div className="min-w-0 flex-1">
-                    <p className={SECTION_LABEL_CLASS}>Дедлайн</p>
-                    <div className="mt-2 flex items-center gap-1.5">
-                        <Calendar className="size-[13px] shrink-0 text-ink-muted" />
-                        <span className="font-ui text-[13px] font-semibold text-ink">
-                            {formatDeadline(task.deadline)}
-                        </span>
-                    </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                    <p className={SECTION_LABEL_CLASS}>Ответственный</p>
-                    <div className="mt-2 flex items-center gap-2">
-                        <Avatar size="sm">
-                            <AvatarFallback>{initialsOf(assigneeLabel)}</AvatarFallback>
-                        </Avatar>
-                        <span className="truncate font-ui text-sm text-ink">{assigneeLabel}</span>
-                    </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                    {!terminalNote && (
+                        <IconButton
+                            aria-label="Редактировать задачу"
+                            onClick={onToggleEdit}
+                            className="shrink-0 bg-canvas hover:bg-canvas"
+                        >
+                            <Pencil />
+                        </IconButton>
+                    )}
+                    {onClose && (
+                        <IconButton
+                            aria-label="Закрыть карточку задачи"
+                            onClick={onClose}
+                            className="shrink-0 bg-canvas hover:bg-canvas"
+                        >
+                            <X />
+                        </IconButton>
+                    )}
                 </div>
             </div>
+
+            {isEditing && editFieldsProps ? (
+                <div className="px-5 py-3.5">
+                    <EditTaskFields {...editFieldsProps} />
+                </div>
+            ) : (
+                <>
+                    <div className="px-5 py-3.5">
+                        <p className={SECTION_LABEL_CLASS}>Описание</p>
+                        <p className="mt-2 font-ui text-sm leading-relaxed text-ink">
+                            {task.description || 'Без описания'}
+                        </p>
+                    </div>
+
+                    <div className="flex gap-6 border-t border-hairline px-5 py-3.5">
+                        <div className="min-w-0 flex-1">
+                            <p className={SECTION_LABEL_CLASS}>Дедлайн</p>
+                            <div className="mt-2 flex items-center gap-1.5">
+                                <Calendar className="size-[13px] shrink-0 text-ink-muted" />
+                                <span className="font-ui text-[13px] font-semibold text-ink">
+                                    {formatDeadline(task.deadline)}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className={SECTION_LABEL_CLASS}>Ответственный</p>
+                            <div className="mt-2 flex items-center gap-2">
+                                <Avatar size="sm">
+                                    <AvatarFallback>{initialsOf(assigneeLabel)}</AvatarFallback>
+                                </Avatar>
+                                <span className="truncate font-ui text-sm text-ink">{assigneeLabel}</span>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
 
             <div className={cn('border-t border-hairline px-5 py-3.5', !terminalNote && 'bg-canvas')}>
                 {terminalNote ? (
