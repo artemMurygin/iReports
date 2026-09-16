@@ -47,6 +47,7 @@ export { SERVICE_RULE_FORM_CONFIG, RULE_TYPE_LABELS, RULE_TYPE_ORDER } from './s
 export { useSalaryRuleTypes } from './service/model/useSalaryRuleTypes.ts'
 export { useOrderTypes } from './service/model/useOrderTypes.ts'
 export { useWarehouses } from './service/model/useWarehouses.ts'
+export { useServiceCategories } from './service/model/useServiceCategories.ts'
 
 export { resolveShopRuleDraft, draftFromShopRule } from './shop/model/ruleFormSchema.ts'
 export type { ResolveShopRuleDraftResult } from './shop/model/ruleFormSchema.ts'

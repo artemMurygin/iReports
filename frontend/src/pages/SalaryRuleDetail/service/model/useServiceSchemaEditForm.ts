@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
+import type { CatalogCategoryResponse, MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -18,8 +18,6 @@ import { api } from './api.ts'
 import { useUpdateMotivationSchema } from './useUpdateMotivationSchema.ts'
 import { useDeleteMotivationSchema } from './useDeleteMotivationSchema.ts'
 
-const NO_CATEGORIES: never[] = []
-
 export type UseServiceSchemaEditFormArgs = {
     schema: MotivationSchemaDetailResponse
     config: RuleFormConfig
@@ -32,6 +30,9 @@ export type UseServiceSchemaEditFormArgs = {
     warehouses: WarehouseFieldWarehouse[]
     isWarehousesLoading: boolean
     warehousesError: string | null
+    categories: CatalogCategoryResponse[]
+    isCategoriesLoading: boolean
+    categoriesError: string | null
 }
 
 /**
@@ -54,6 +55,9 @@ export function useServiceSchemaEditForm({
     warehouses,
     isWarehousesLoading,
     warehousesError,
+    categories,
+    isCategoriesLoading,
+    categoriesError,
 }: UseServiceSchemaEditFormArgs) {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -149,9 +153,9 @@ export function useServiceSchemaEditForm({
         allowedRolesByType,
         isRoleTypesLoading,
         roleTypesError,
-        categories: NO_CATEGORIES,
-        isCategoriesLoading: false,
-        categoriesError: null,
+        categories,
+        isCategoriesLoading,
+        categoriesError,
         orderTypes,
         isOrderTypesLoading,
         orderTypesError,

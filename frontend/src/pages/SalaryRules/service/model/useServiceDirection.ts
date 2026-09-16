@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { CatalogCategoryResponse, MotivationRequest } from 'ireports-contracts'
+import type { MotivationRequest } from 'ireports-contracts'
 import { toast } from 'sonner'
 
 import {
@@ -9,16 +9,13 @@ import {
     useOrderTypes,
     useSalaryRuleTypes,
     useSalaryRulesDraft,
+    useServiceCategories,
     useWarehouses,
 } from '@/features/SalaryRuleForm'
 
 import type { DirectionAdapter, SchemaTarget } from '../../model/types.ts'
 
 import { useCreateMotivationSchema } from './useCreateMotivationSchema.ts'
-
-/** У сервисных правил нет поля `category` (`SERVICE_RULE_FORM_CONFIG.categoryRuleTypes` пуст), так
- * что каталог магазина здесь не запрашивается вовсе — стабильная пустая ссылка вместо запроса. */
-const NO_CATEGORIES: CatalogCategoryResponse[] = []
 
 /**
  * Направление "Сервис" целиком: свой черновик правил (`resolveRuleDraft` →
@@ -32,6 +29,7 @@ export function useServiceDirection(): DirectionAdapter {
     const ruleTypesQuery = useSalaryRuleTypes()
     const orderTypesQuery = useOrderTypes()
     const warehousesQuery = useWarehouses()
+    const categoriesQuery = useServiceCategories()
     const createSchema = useCreateMotivationSchema()
     const rules = useSalaryRulesDraft(resolveRuleDraft)
 
@@ -66,9 +64,9 @@ export function useServiceDirection(): DirectionAdapter {
         allowedRolesByType,
         isRoleTypesLoading: ruleTypesQuery.isLoading,
         roleTypesError: ruleTypesQuery.error?.message ?? null,
-        categories: NO_CATEGORIES,
-        isCategoriesLoading: false,
-        categoriesError: null,
+        categories: categoriesQuery.categories,
+        isCategoriesLoading: categoriesQuery.isLoading,
+        categoriesError: categoriesQuery.error?.message ?? null,
         orderTypes: orderTypesQuery.data ?? [],
         isOrderTypesLoading: orderTypesQuery.isLoading,
         orderTypesError: orderTypesQuery.error?.message ?? null,
