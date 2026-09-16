@@ -278,10 +278,18 @@ const taskCompletionSalaryRuleSchema = z.object({
 // самой логике расчёта.
 //
 // category: string | null — тот же scope-параметр, что и у ProductSoldEntity.config.category
-// (null = без фильтра, «весь склад/направление»). department, с которым в итоге резолвится
-// SalesPerformance для DepartmentPercent/DepartmentPlanBonus, в конфиг НЕ входит — он неизбежно
-// берётся из собственного BitrixEmployee.departmentId сотрудника, которому назначено правило
-// (design.md Decision 1, существующий механизм findEmployeeDepartmentId, без изменений).
+// (null = без фильтра, «весь склад/направление»). department, с которым резолвится
+// SalesPerformance для DepartmentPercent/DepartmentPlanBonus, по умолчанию берётся из собственного
+// BitrixEmployee.departmentId сотрудника, которому назначено правило (design.md Decision 1,
+// findEmployeeDepartmentId). departmentId в конфиге ниже — временный костыль поверх этого решения:
+// явное переопределение отдела, из плана которого резолвится SalesPerformance, для случаев, когда у
+// собственного отдела сотрудника ещё нет плана продаж (например, только что созданный отдел) —
+// null/не задано сохраняет исходное поведение (свой отдел).
+// .optional() (не .default()) — иначе z.infer сделал бы поле обязательным в выводном типе и сломал
+// компиляцию всех мест, где config этих двух правил уже собирается литералом без него (фабрики,
+// тесты); undefined трактуется правилом (department-percent.entity.ts/department-plan-bonus.entity.ts,
+// resolveEntry()) как отсутствие override — так же, как null.
+const departmentIdOverrideSchema = z.number().nullable().optional();
 
 // DepartmentPercent (FR2) — % от факта выручки/маржи отдела/категории/направления, без какого-либо
 // коэффициента (простой фиксированный процент от фактического значения плана продаж за период):
@@ -290,6 +298,7 @@ const departmentPercentSalaryConfigSchema = z.object({
     salaryBasis: salaryBasisSchema,
     category: z.string().nullable(),
     percent: z.number(),
+    departmentId: departmentIdOverrideSchema,
 });
 
 export type DepartmentPercentSalaryConfig = z.infer<
@@ -313,6 +322,7 @@ const departmentPlanBonusSalaryConfigSchema = z.object({
     category: z.string().nullable(),
     fixedAmount: z.number(),
     percentBorders: percentBordersSchema,
+    departmentId: departmentIdOverrideSchema,
 });
 
 export type DepartmentPlanBonusSalaryConfig = z.infer<

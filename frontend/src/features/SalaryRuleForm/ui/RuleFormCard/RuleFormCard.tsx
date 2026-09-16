@@ -55,6 +55,9 @@ export function RuleFormCard({
     warehouses,
     isWarehousesLoading,
     warehousesError,
+    departments,
+    isDepartmentsLoading,
+    departmentsError,
     onChange,
     onChangeType,
     onChangeBorder,
@@ -115,6 +118,9 @@ export function RuleFormCard({
                         warehouses={warehouses}
                         isWarehousesLoading={isWarehousesLoading}
                         warehousesError={warehousesError}
+                        departments={departments}
+                        isDepartmentsLoading={isDepartmentsLoading}
+                        departmentsError={departmentsError}
                         onChange={patchDraft}
                         onChangeType={handleTypeChange}
                     />

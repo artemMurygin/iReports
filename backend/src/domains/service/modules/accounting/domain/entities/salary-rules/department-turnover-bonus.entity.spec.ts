@@ -21,6 +21,7 @@ const buildContext = (
     salesPerformance: null,
     departmentSalesPerformance: null,
     turnoverPerformance,
+    departmentPerformanceOverrides: new Map(),
 });
 
 const buildRule = (

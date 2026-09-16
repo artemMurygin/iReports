@@ -425,7 +425,7 @@ describe('resolveRuleDraft — DepartmentPercent (FR2)', () => {
         )
         expect(result.success).toBe(true)
         if (result.success && result.data.type === 'DepartmentPercent') {
-            expect(result.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5 })
+            expect(result.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5, departmentId: null })
         }
     })
 
@@ -613,7 +613,31 @@ describe('draftFromRule — department-level rule types round-trip (FR2-FR4)', (
         const resolvedAgain = resolveRuleDraft(draft)
         expect(resolvedAgain.success).toBe(true)
         if (resolvedAgain.success && resolvedAgain.data.type === 'DepartmentPercent') {
-            expect(resolvedAgain.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5 })
+            expect(resolvedAgain.data.config).toEqual({ salaryBasis: 'MARGIN', category: null, percent: 5, departmentId: null })
+        }
+    })
+
+    // Временный костыль (add-department-head-salary-rules) — переопределение отдела плана
+    // round-trip'ится через draftFromRule/resolveRuleDraft тем же путём, что и остальные поля.
+    it('DepartmentPercent with departmentId override', () => {
+        const draft = draftFromRule({
+            id: 'rule-dep-2',
+            type: 'DepartmentPercent',
+            name: 'Процент от маржи (чужой отдел)',
+            targetRole: 'DEPARTMENT_HEAD',
+            config: { salaryBasis: 'MARGIN', category: null, percent: 5, departmentId: 158 },
+        })
+        expect(draft.departmentIdOverride).toBe('158')
+
+        const resolvedAgain = resolveRuleDraft(draft)
+        expect(resolvedAgain.success).toBe(true)
+        if (resolvedAgain.success && resolvedAgain.data.type === 'DepartmentPercent') {
+            expect(resolvedAgain.data.config).toEqual({
+                salaryBasis: 'MARGIN',
+                category: null,
+                percent: 5,
+                departmentId: 158,
+            })
         }
     })
 

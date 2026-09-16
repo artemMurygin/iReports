@@ -6,6 +6,7 @@ import {
     useWarehouses,
     SERVICE_RULE_FORM_CONFIG,
 } from '@/features/SalaryRuleForm'
+import { useDepartments } from '@/features/TargetDirectory'
 
 import { useMotivationSchema } from './useMotivationSchema.ts'
 
@@ -22,6 +23,7 @@ export function useServiceSchemaEditPage(id: string) {
     const orderTypesQuery = useOrderTypes()
     const warehousesQuery = useWarehouses()
     const categoriesQuery = useServiceCategories()
+    const departmentsQuery = useDepartments()
 
     const allowedRolesByType = useAllowedRolesByType(ruleTypesQuery.data)
 
@@ -42,5 +44,10 @@ export function useServiceSchemaEditPage(id: string) {
         categories: categoriesQuery.categories,
         isCategoriesLoading: categoriesQuery.isLoading,
         categoriesError: categoriesQuery.error?.message ?? null,
+        // Временный костыль (`DepartmentPercent`/`DepartmentPlanBonus`, см.
+        // `RuleFormConfig.departmentOverrideRuleTypes`).
+        departments: departmentsQuery.data ?? [],
+        isDepartmentsLoading: departmentsQuery.isLoading,
+        departmentsError: departmentsQuery.error?.message ?? null,
     }
 }

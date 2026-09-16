@@ -4,6 +4,7 @@ import type { RuleFormConfig } from '../../../model/ruleFormConfig.ts'
 import type { RuleSaveOutcome } from '../../../model/ruleResolver.ts'
 import type { BorderDraft, RuleDraft, RuleType } from '../../../model/ruleDraft.ts'
 import type { WarehouseFieldWarehouse } from '../../WarehouseField'
+import type { DepartmentOverrideOption } from '../ui/DepartmentOverrideField.tsx'
 
 /**
  * Всё, что карточке правила нужно от родителя помимо самого черновика: конфиг направления,
@@ -32,6 +33,12 @@ export type RuleFormCardContext = {
     warehouses?: WarehouseFieldWarehouse[]
     isWarehousesLoading?: boolean
     warehousesError?: string | null
+    /** Временный костыль (`DepartmentPercent`/`DepartmentPlanBonus`, service only) — see
+     * `RuleFormConfig.departmentOverrideRuleTypes`'s комментарий. Optional/defaults to `[]`, как и
+     * `warehouses` выше — shop-каллеры его не передают. */
+    departments?: DepartmentOverrideOption[]
+    isDepartmentsLoading?: boolean
+    departmentsError?: string | null
     onChange: (id: string, patch: Partial<RuleDraft>) => void
     onChangeType: (id: string, type: RuleType) => void
     onChangeBorder: (id: string, index: number, patch: Partial<BorderDraft>) => void

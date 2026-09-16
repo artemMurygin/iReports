@@ -247,6 +247,8 @@ export class GetEmployeeSalaryReportService {
             ),
             departmentSalesPerformance: baseContext.departmentSalesPerformance,
             turnoverPerformance: baseContext.turnoverPerformance,
+            departmentPerformanceOverrides:
+                baseContext.departmentPerformanceOverrides,
         };
         const prognoseContext: ServiceCalculationContext = {
             employee: baseContext.employee,
@@ -259,6 +261,8 @@ export class GetEmployeeSalaryReportService {
             ),
             departmentSalesPerformance: baseContext.departmentSalesPerformance,
             turnoverPerformance: baseContext.turnoverPerformance,
+            departmentPerformanceOverrides:
+                baseContext.departmentPerformanceOverrides,
         };
         const [factLines, prognoseLines] = await Promise.all([
             PeriodCalculationOrchestrator.calculate(rules, factContext),

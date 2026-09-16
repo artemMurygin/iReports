@@ -49,4 +49,10 @@ export type RuleFormConfig = {
     categoryRuleTypes: RuleType[]
     orderTypeRuleTypes: RuleType[]
     taskRuleTypes: RuleType[]
+    /** Временный костыль поверх add-department-head-salary-rules design.md Decision 1 — подмножество
+     * `ruleTypeOrder`, для которого `RuleFormCardFields.tsx` показывает поле явного переопределения
+     * отдела (`DepartmentOverrideField`, `RuleDraft.departmentIdOverride`). `['DepartmentPercent',
+     * 'DepartmentPlanBonus']` для сервиса; пустой для магазина — у shop-версии этих правил
+     * `departmentId` в конфиге нет вовсе (см. `contracts/commands/shop-salary-rule.ts`). */
+    departmentOverrideRuleTypes: RuleType[]
 }

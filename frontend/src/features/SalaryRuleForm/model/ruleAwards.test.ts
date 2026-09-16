@@ -29,14 +29,14 @@ describe('buildDepartmentPercentConfig (FR2)', () => {
             draft({ salaryBasis: 'MARGIN', category: 'repair-id', percent: '5' }),
             errors,
         )
-        expect(config).toEqual({ salaryBasis: 'MARGIN', category: 'repair-id', percent: 5 })
+        expect(config).toEqual({ salaryBasis: 'MARGIN', category: 'repair-id', percent: 5, departmentId: null })
         expect(errors).toEqual({})
     })
 
     it('category null ("весь склад/направление") is a valid default, not a validation error', () => {
         const errors: RuleFieldErrors = {}
         const config = buildDepartmentPercentConfig(draft({ salaryBasis: 'REVENUE', category: null, percent: '3' }), errors)
-        expect(config).toEqual({ salaryBasis: 'REVENUE', category: null, percent: 3 })
+        expect(config).toEqual({ salaryBasis: 'REVENUE', category: null, percent: 3, departmentId: null })
         expect(errors).toEqual({})
     })
 

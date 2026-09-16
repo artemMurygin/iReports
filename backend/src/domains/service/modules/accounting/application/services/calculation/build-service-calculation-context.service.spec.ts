@@ -225,15 +225,21 @@ describe('BuildServiceCalculationContextService — departmentSalesPerformance /
         },
     ] as const;
 
-    const buildDepartmentPercentRule = (category: string | null) =>
+    const buildDepartmentPercentRule = (
+        category: string | null,
+        departmentId: number | null = null,
+    ) =>
         DepartmentPercentEntity.create({
             type: 'DepartmentPercent',
             name: 'Процент от факта',
             targetRole: 'DEPARTMENT_HEAD',
-            config: { salaryBasis: 'REVENUE', category, percent: 5 },
+            config: { salaryBasis: 'REVENUE', category, percent: 5, departmentId },
         });
 
-    const buildDepartmentPlanBonusRule = (category: string | null) =>
+    const buildDepartmentPlanBonusRule = (
+        category: string | null,
+        departmentId: number | null = null,
+    ) =>
         DepartmentPlanBonusEntity.create({
             type: 'DepartmentPlanBonus',
             name: 'Бонус за план',
@@ -243,6 +249,7 @@ describe('BuildServiceCalculationContextService — departmentSalesPerformance /
                 category,
                 fixedAmount: 10000,
                 percentBorders: [...percentBorders],
+                departmentId,
             },
         });
 
@@ -442,6 +449,70 @@ describe('BuildServiceCalculationContextService — departmentSalesPerformance /
 
             expect(context.turnoverPerformance).toEqual(new Map());
             expect(turnoverFindForScope).not.toHaveBeenCalled();
+        });
+    });
+
+    // Временный костыль (см. WHY у DepartmentPercentSalaryConfig.departmentId/
+    // DepartmentPlanBonusSalaryConfig.departmentId) — правило может явно переопределить отдел, чей
+    // план продаж используется, вместо собственного отдела сотрудника.
+    describe('departmentPerformanceOverrides', () => {
+        it('резолвит по (departmentId, category) правила, игнорируя собственный отдел сотрудника', async () => {
+            const performance = buildFakeSalesPerformance(50000, 20000, 60);
+            const findForScope = jest.fn().mockResolvedValue(performance);
+            const service = buildService(buildDataSource(10), findForScope);
+
+            const context = await service.build(period(), 1, [
+                buildDepartmentPercentRule('cat-1', 158),
+            ]);
+
+            expect(findForScope).toHaveBeenCalledWith(
+                'service',
+                '2026-08',
+                158,
+                'cat-1',
+            );
+            expect(
+                context.departmentPerformanceOverrides.get('158:cat-1'),
+            ).toEqual({
+                fact: { turnover: 50000, margin: 20000 },
+                percentCompletion: 60,
+            });
+            // Правило с departmentId не должно попадать в implicit-по-своему-отделу карту.
+            expect(context.departmentSalesPerformance?.has('cat-1')).toBe(
+                false,
+            );
+        });
+
+        it('дедуплицирует одинаковый (departmentId, category) у нескольких правил — один запрос', async () => {
+            const performance = buildFakeSalesPerformance(1, 1, 1);
+            const findForScope = jest.fn().mockResolvedValue(performance);
+            const service = buildService(buildDataSource(10), findForScope);
+
+            await service.build(period(), 1, [
+                buildDepartmentPercentRule('cat-1', 158),
+                buildDepartmentPlanBonusRule('cat-1', 158),
+            ]);
+
+            const callsForOverride = findForScope.mock.calls.filter(
+                ([, , department, category]: [
+                    string,
+                    string,
+                    number,
+                    string | null,
+                ]) => department === 158 && category === 'cat-1',
+            );
+            expect(callsForOverride).toHaveLength(1);
+        });
+
+        it('пустая карта и без запросов, если ни одно правило не переопределяет отдел', async () => {
+            const findForScope = jest.fn().mockResolvedValue(null);
+            const service = buildService(buildDataSource(10), findForScope);
+
+            const context = await service.build(period(), 1, [
+                buildDepartmentPercentRule('cat-1'),
+            ]);
+
+            expect(context.departmentPerformanceOverrides).toEqual(new Map());
         });
     });
 });

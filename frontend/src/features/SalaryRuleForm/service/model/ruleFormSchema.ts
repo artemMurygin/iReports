@@ -170,6 +170,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         percentBorders: defaultBorders(),
         thresholdsExpanded: false,
         category: null,
+        departmentIdOverride: '',
         orderTypeIds: [],
         taskId: '',
         taskTitleTemplate: '',
@@ -255,6 +256,8 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
                 salaryBasis: rule.config.salaryBasis,
                 category: rule.config.category,
                 percent: String(rule.config.percent),
+                departmentIdOverride:
+                    rule.config.departmentId != null ? String(rule.config.departmentId) : '',
             }
 
         case 'DepartmentPlanBonus':
@@ -264,6 +267,8 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
                 category: rule.config.category,
                 price: String(rule.config.fixedAmount),
                 percentBorders: bordersFromResponse(rule.config.percentBorders),
+                departmentIdOverride:
+                    rule.config.departmentId != null ? String(rule.config.departmentId) : '',
             }
 
         case 'DepartmentTurnoverBonus':

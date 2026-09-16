@@ -96,6 +96,10 @@ export function buildDepartmentPercentConfig(draft: RuleDraft, errors: RuleField
         salaryBasis: draft.salaryBasis || 'REVENUE',
         category: draft.category,
         percent: percent ?? Number.NaN,
+        // Временный костыль (service only) — контракт стороны shop не несёт `departmentId` в
+        // конфиге вовсе, лишний ключ там просто отбрасывается zod-схемой при сабмите (обычный
+        // strip-режим `z.object()`), см. `contracts/commands/salary-rule.ts`'s WHY у поля.
+        departmentId: draft.departmentIdOverride ? Number(draft.departmentIdOverride) : null,
     }
 }
 
@@ -114,6 +118,8 @@ export function buildDepartmentPlanBonusConfig(draft: RuleDraft, errors: RuleFie
         category: draft.category,
         fixedAmount: fixedAmount ?? Number.NaN,
         percentBorders: buildPercentBorders(draft.percentBorders, errors),
+        // Временный костыль (service only) — см. WHY у buildDepartmentPercentConfig выше.
+        departmentId: draft.departmentIdOverride ? Number(draft.departmentIdOverride) : null,
     }
 }
 

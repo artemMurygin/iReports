@@ -17,6 +17,7 @@ export type { RuleListProps } from './ui/RuleList'
 export { RuleFormCard, TaskCompletionRuleFields } from './ui/RuleFormCard'
 export type { RuleFormCardContext, RuleFormCardProps, TaskCompletionRuleFieldsProps } from './ui/RuleFormCard'
 export type { WarehouseFieldWarehouse } from './ui/WarehouseField'
+export type { DepartmentOverrideOption } from './ui/RuleFormCard/ui/DepartmentOverrideField.tsx'
 export { SchemaNameField } from './ui/SchemaNameField.tsx'
 export type { SchemaNameFieldProps } from './ui/SchemaNameField.tsx'
 
