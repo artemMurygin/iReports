@@ -39,6 +39,9 @@ export function ServiceSchemaEdit({ id }: ServiceSchemaEditProps) {
                     warehouses={page.warehouses}
                     isWarehousesLoading={page.isWarehousesLoading}
                     warehousesError={page.warehousesError}
+                    categories={page.categories}
+                    isCategoriesLoading={page.isCategoriesLoading}
+                    categoriesError={page.categoriesError}
                 />
             )}
         </RefreshTransitionLayout>

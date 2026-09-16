@@ -17,6 +17,13 @@ export type SalaryBasisFieldProps = {
  * overflowing the card — see `SegmentedControl`'s own comment on the `orientation` prop. Both
  * `SegmentedControl`s are mounted (one hidden per breakpoint, same `value`/`onValueChange`), the
  * same pattern used throughout Фаза 5 rather than a JS width check.
+ *
+ * The `md:`+ breakpoint switch above is about VIEWPORT width, not this field's own column width —
+ * this field sits in a 1/3 grid column alongside "Категория"/"Сумма" (`RuleFormCardFields.tsx`), so
+ * even past `md:` the track can be narrower than three `flex-1` tabs need for
+ * `SALARY_MINUS_ENGINEER_SALARY`'s label, and the track overflowed the card. `wrapLabels` lets that
+ * one long label wrap to a second line instead (`items-stretch` on the track keeps all three tabs
+ * the same height as the wrapped one).
  */
 export function SalaryBasisField({ options, value, onValueChange }: SalaryBasisFieldProps) {
     return (
@@ -27,6 +34,7 @@ export function SalaryBasisField({ options, value, onValueChange }: SalaryBasisF
                 options={options}
                 value={value}
                 onValueChange={onValueChange}
+                wrapLabels
                 className="hidden md:flex"
             />
             <SegmentedControl

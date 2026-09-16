@@ -17,6 +17,13 @@ export type SegmentedControlProps<T extends string> = {
      * card (see `SalaryRulesRuleFormCard.tsx`, Фаза 5). Same active/inactive pill styling either
      * way, just the axis flips. */
     orientation?: 'horizontal' | 'vertical'
+    /** Когда часть лейблов заметно длиннее остальных (например, "Маржа - начисление инженера" среди
+     * трёх `flex-1` опций "Базы начисления") и трек физически не помещается в узкую колонку карточки
+     * даже на `md:`+ — снимает `whitespace-nowrap` с кнопок, разрешая перенос длинного лейбла на
+     * вторую строку вместо того, чтобы трек вылезал за пределы родителя (см. `SalaryBasisField.tsx`).
+     * По умолчанию выключено, чтобы не трогать уже стабильное поведение однострочных лейблов в
+     * остальных местах (переключатель направления, фильтры отчётов и т.д.). */
+    wrapLabels?: boolean
     className?: string
     'aria-label'?: string
 }
@@ -39,6 +46,7 @@ function SegmentedControl<T extends string>({
     value,
     onValueChange,
     orientation = 'horizontal',
+    wrapLabels = false,
     className,
     ...props
 }: SegmentedControlProps<T>) {
@@ -52,7 +60,7 @@ function SegmentedControl<T extends string>({
             aria-orientation={orientation}
             className={cn(
                 'flex gap-[2px] rounded-[8px] border border-hairline bg-canvas p-[3px]',
-                vertical ? 'flex-col' : 'items-center',
+                vertical ? 'flex-col' : 'items-stretch',
                 className,
             )}
         >
@@ -69,7 +77,8 @@ function SegmentedControl<T extends string>({
                         onClick={() => onValueChange(option.value)}
                         data-state={active ? 'active' : 'inactive'}
                         className={cn(
-                            'flex items-center justify-center rounded-[6px] px-3 py-[6px] font-ui text-[13px] whitespace-nowrap transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50',
+                            'flex items-center justify-center rounded-[6px] px-3 py-[6px] text-center font-ui text-[13px] transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50',
+                            wrapLabels ? 'min-w-0 leading-tight whitespace-normal' : 'whitespace-nowrap',
                             vertical ? 'w-full' : 'flex-1',
                             active
                                 ? 'border border-hairline bg-surface font-semibold text-ink'

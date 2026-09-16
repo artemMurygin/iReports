@@ -1,4 +1,4 @@
-import type { MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
+import type { CatalogCategoryResponse, MotivationSchemaDetailResponse, OrderTypeResponse, TargetRole } from 'ireports-contracts'
 import { CreateTaskPanel } from '@/features/CreateTask'
 import { RuleList } from '@/features/SalaryRuleForm'
 import type { RuleFormConfig, RuleType, WarehouseFieldWarehouse } from '@/features/SalaryRuleForm'
@@ -23,6 +23,9 @@ export type ServiceSchemaEditFormProps = {
     warehouses: WarehouseFieldWarehouse[]
     isWarehousesLoading: boolean
     warehousesError: string | null
+    categories: CatalogCategoryResponse[]
+    isCategoriesLoading: boolean
+    categoriesError: string | null
 }
 
 /**

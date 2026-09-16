@@ -1,5 +1,10 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { ListWarehousesResponse, OrderTypeResponse, SalaryRuleTypesResponse } from 'ireports-contracts'
+import type {
+    ListServiceCategoriesResponse,
+    ListWarehousesResponse,
+    OrderTypeResponse,
+    SalaryRuleTypesResponse,
+} from 'ireports-contracts'
 
 import { api as apiInstance } from '@/shared/api/axios.instance.ts'
 import { ApiError } from '@/shared/errors/apiError.ts'
@@ -63,6 +68,26 @@ export const api = {
                     .then((r) => r.data)
                     .catch((error) => {
                         throw new ApiError('Не удалось загрузить справочник складов ' + error)
+                    }),
+        }),
+
+    // GET /v1/service/reports/service-categories — справочник категорий услуг RemOnline (плоский
+    // список, `contracts/commands/report.ts`), для `CategoryField` у правил `DepartmentPercent`/
+    // `DepartmentPlanBonus`/`DepartmentTurnoverBonus` (у сервисных department-правил `category` —
+    // тот же scope-параметр, что у `ProductSold.config.category` в shop, см.
+    // `contracts/commands/salary-rule.ts`). Тот же эндпоинт, что `pages/ServicesReport/model/api.ts`'s
+    // `getCategories` использует для отчёта по услугам — своя копия запроса здесь (features не могут
+    // импортировать pages/друг друга, frontend/CLAUDE.md), с отдельным `queryKey`.
+    getServiceCategories: () =>
+        queryOptions({
+            queryKey: ['salary-rules', 'service', 'categories'],
+            staleTime: 30 * 60 * 1000,
+            queryFn: ({ signal }): Promise<ListServiceCategoriesResponse> =>
+                apiInstance
+                    .get<ListServiceCategoriesResponse>('/v1/service/reports/service-categories', { signal })
+                    .then((r) => r.data)
+                    .catch((error) => {
+                        throw new ApiError('Не удалось загрузить категории услуг ' + error)
                     }),
         }),
 }
