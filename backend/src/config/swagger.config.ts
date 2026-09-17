@@ -15,6 +15,7 @@ import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balan
 import { TasksModule } from '@/modules/tasks/tasks.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { RolesModule } from '@/modules/roles/roles.module';
+import { SessionModule } from '@/modules/session/session.module';
 import { PricingModule } from '@/domains/service/modules/marketing/pricing/pricing.module';
 import { ShopPricingModule } from '@/domains/shop/modules/marketing/pricing/pricing.module';
 
@@ -81,13 +82,15 @@ export function setupSwagger(app: INestApplication): void {
                 WorkScheduleModule,
                 EmployeeBalanceModule,
                 TasksModule,
-                // add-bitrix24-auth-and-rbac (раздел 12 tasks.md).
-                // SessionModule намеренно не включён — не заводит
-                // собственных HTTP-контроллеров в этом change (см.
-                // contracts/commands/session.ts): session_id доставляется
-                // исключительно через эндпоинты AuthModule.
                 AuthModule,
                 RolesModule,
+                // add-employee-api-key-auth (раздел 6 tasks.md):
+                // RegenerateApiKeyHttpController (POST
+                // /v1/auth/api-key/regenerate) — первый собственный HTTP-
+                // контроллер SessionModule (ранее session_id доставлялся
+                // исключительно через эндпоинты AuthModule, см.
+                // contracts/commands/session.ts).
+                SessionModule,
             ],
         },
     );

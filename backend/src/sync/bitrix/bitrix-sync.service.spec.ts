@@ -62,6 +62,7 @@ describe('BitrixSyncService', () => {
                     lastName: 'Иванов',
                     departmentId: 7,
                     isActive: true,
+                    apiKeyHash: expect.any(String),
                 },
                 update: {
                     firstName: 'Иван',
@@ -69,6 +70,41 @@ describe('BitrixSyncService', () => {
                     isActive: true,
                 },
             });
+        });
+
+        // add-employee-api-key-auth, design.md Decision 4 / tasks.md 4.1 —
+        // ключ генерируется только в ветке create; ветка update не содержит
+        // apiKeyHash вовсе, поэтому повторный upsert уже существующей записи
+        // не может его изменить (spec: auth/api-key#Повторная синхронизация
+        // не меняет существующий ключ).
+        it('генерирует apiKeyHash только в ветке create, не трогает его в update', async () => {
+            const { service, upsert } = createService();
+
+            await service.upsertEmployeeRecord(buildUser());
+
+            const call = upsert.mock.calls[0][0];
+            expect(call.create.apiKeyHash).toEqual(expect.any(String));
+            expect(call.create.apiKeyHash).toHaveLength(64); // SHA-256 hex
+            expect(call.update).not.toHaveProperty('apiKeyHash');
+        });
+
+        it('повторный upsert той же записи генерирует новый apiKeyHash в create-ветке заново (но update его не применит к существующей строке)', async () => {
+            const { service, upsert } = createService();
+
+            await service.upsertEmployeeRecord(buildUser());
+            await service.upsertEmployeeRecord(buildUser());
+
+            const firstHash = upsert.mock.calls[0][0].create.apiKeyHash;
+            const secondHash = upsert.mock.calls[1][0].create.apiKeyHash;
+            // Разные значения create.apiKeyHash между вызовами — ожидаемо
+            // (ApiKey.generate() всегда новый); неизменность для уже
+            // существующей строки обеспечивается тем, что Prisma применяет
+            // create только когда строки ещё нет, а update (без apiKeyHash)
+            // — когда она уже есть. Здесь фиксируем именно это разделение.
+            expect(firstHash).not.toEqual(secondHash);
+            expect(upsert.mock.calls[1][0].update).not.toHaveProperty(
+                'apiKeyHash',
+            );
         });
 
         // spec: auth#self-heal-bitrix-employee — обнаруженный реальный баг: первый

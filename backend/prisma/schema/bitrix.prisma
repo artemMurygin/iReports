@@ -90,6 +90,19 @@ model BitrixEmployee {
   /// же приёмом, что и order выше.
   isServiceAccount Boolean @default(false) @map("is_service_account")
 
+  /// Хэш (SHA-256, hex) персонального API-ключа сотрудника
+  /// (add-employee-api-key-auth, design.md Decision 1/4) — сам ключ в базе не
+  /// хранится, только его хэш; значение ключа отдаётся вызывающему один раз,
+  /// в ответе на регенерацию (POST /v1/auth/api-key/regenerate), и не
+  /// восстановимо из базы. Генерируется автоматически при первом создании
+  /// записи сотрудника (ветка create в upsertEmployeeRecord,
+  /// bitrix-sync.service.ts) и остаётся неизменным при последующих
+  /// синхронизациях; для сотрудников, существовавших в базе до этого
+  /// изменения, заполняется одноразовым backfill-скриптом. NULL — ключ ещё
+  /// не сгенерирован (например, до backfill'а) — аутентификация по ключу для
+  /// такого сотрудника невозможна, независимо от isActive.
+  apiKeyHash String? @unique @map("api_key_hash")
+
   /// @deprecated Заменено на EmployeeIdentity(system: ROAPP, identifierType: EMPLOYEE_ID)
   /// — см. employee-identity.prisma и Фазу 2 docs/payroll/plan-payroll-calculation.md.
   /// Поле оставлено для истории/переходного периода, новые связи сюда не пишутся.

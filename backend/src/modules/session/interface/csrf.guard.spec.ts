@@ -96,4 +96,24 @@ describe('CsrfGuard', () => {
 
         expect(guard.canActivate(buildContext(request))).toBe(true);
     });
+
+    // add-employee-api-key-auth, tasks.md 5.2 (design.md, Context): запрос,
+    // аутентифицированный SessionAuthGuard по X-Api-Key, физически не несёт
+    // SESSION_COOKIE_NAME cookie — CsrfGuard уже пропускает такой запрос без
+    // единой правки в этом файле, тем же путём, что и "нет cookie-сессии
+    // вовсе" выше; тест фиксирует это явно для сценария X-Api-Key, а не
+    // только для общего случая отсутствия cookie.
+    it('пропускает POST с валидным X-Api-Key, без CSRF-заголовка и без cookie-сессии', () => {
+        const guard = createGuard();
+        const request = {
+            method: 'POST',
+            header: (name: string) =>
+                name.toLowerCase() === 'x-api-key'
+                    ? 'irk_valid-api-key-value'
+                    : undefined,
+            cookies: {},
+        };
+
+        expect(guard.canActivate(buildContext(request))).toBe(true);
+    });
 });

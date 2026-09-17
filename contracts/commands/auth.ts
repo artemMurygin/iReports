@@ -98,6 +98,20 @@ const logoutResponseSchema = z.object({
 });
 export type LogoutResponse = z.infer<typeof logoutResponseSchema>;
 
+// ========================== Регенерация API-ключа ========================== //
+
+// add-employee-api-key-auth, spec: auth/api-key#Регенерация ключа. Эндпоинт
+// доступен только по Bitrix-сессии (design.md Decision 3); значение ключа
+// возвращается в теле ответа как единственный момент, когда оно видимо в
+// открытом виде после первичной генерации (design.md Decision 1) — backend
+// хранит только его хэш.
+const regenerateApiKeyResponseSchema = z.object({
+    apiKey: z.string().min(1),
+});
+export type RegenerateApiKeyResponse = z.infer<
+    typeof regenerateApiKeyResponseSchema
+>;
+
 export {
     bitrixEmbeddedLoginRequestSchema,
     bitrixEmbeddedLoginResponseSchema,
@@ -106,4 +120,5 @@ export {
     authenticatedEmployeeSchema,
     authMeResponseSchema,
     logoutResponseSchema,
+    regenerateApiKeyResponseSchema,
 };

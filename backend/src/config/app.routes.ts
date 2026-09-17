@@ -151,6 +151,10 @@ export const routesV1 = {
         oauthCallback: `${authRoot}/oauth/callback`,
         me: `${authRoot}/me`,
         logout: `${authRoot}/logout`,
+        // add-employee-api-key-auth, раздел 6 tasks.md — требует валидную
+        // сессию (SessionAuthGuard, не @Public()); регенерирует персональный
+        // API-ключ сотрудника, см. session-auth.guard.ts (ветка X-Api-Key).
+        apiKeyRegenerate: `${authRoot}/api-key/regenerate`,
     },
     // add-bitrix24-auth-and-rbac, раздел 12 — см. комментарий у rolesRoot
     // выше. employees/:employeeId — назначение/снятие роли сотруднику
