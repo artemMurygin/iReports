@@ -277,31 +277,30 @@ describe('MoyskladService.fetchStockByStore (D5)', () => {
     });
 });
 
-// spec: shop-turnover-report D5.1 — легаси бэкфилл истории остатков.
-// Контракт эндпоинта (фильтр stockMoment/stockStore, пагинация) и имена
-// полей строки подтверждены реальным ответом API: остаток — `stock` (шт.),
-// себестоимость единицы — `buyPrice.value` (коп., объект `{ value,
-// currency }`, НЕ плоское поле `price`) — тесты покрывают и штатный разбор
-// (stock/buyPrice.value), и запасной путь с логированием.
-describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
+// spec: fix-shop-turnover-historical-stock-cost D1, шаг 1 — обнаружение
+// товаров с остатком на конец периода через account-wide отчёт "Обороты"
+// (см. design.md D1/D2: momentFrom — фиксированный якорь, не связан с
+// отчётным месяцем; withoutTurnover=true передаётся всегда, хотя эмпирически
+// не влияет на результат — см. design.md Context).
+describe('MoyskladService.fetchTurnoverAllAt (D1)', () => {
     const buildService = (http: { get: jest.Mock }) =>
         new MoyskladService({
-            instance: Object.assign(http, {
-                defaults: { baseURL: 'https://api.moysklad.ru/api/remap/1.2' },
-            }),
+            instance: http,
         } as unknown as MoyskladHttpService);
 
-    it('строит фильтр stockMoment/stockStore и парсит остаток/себестоимость из stock/buyPrice.value', async () => {
+    it('запрашивает /report/turnover/all с momentFrom/momentTo/withoutTurnover и парсит строки', async () => {
         const http = createHttpMock();
         http.get.mockResolvedValueOnce({
             data: {
                 rows: [
                     {
-                        meta: {
-                            href: 'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1',
+                        assortment: {
+                            meta: {
+                                href: 'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1',
+                                type: 'product',
+                            },
                         },
-                        stock: 7,
-                        buyPrice: { value: 500 },
+                        onPeriodEnd: { quantity: 5, sum: 12345 },
                     },
                 ],
                 meta: { size: 1, limit: 1000, offset: 0 },
@@ -310,9 +309,9 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
         const service = buildService(http);
 
         const pages: unknown[][] = [];
-        for await (const batch of service.fetchAssortmentStockAt(
+        for await (const batch of service.fetchTurnoverAllAt(
+            new Date('2020-01-01T00:00:00.000Z'),
             new Date('2026-08-31T23:59:59.999Z'),
-            'store-1',
         )) {
             pages.push(batch);
         }
@@ -320,23 +319,28 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
         expect(pages).toEqual([
             [
                 {
-                    productHref:
-                        'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1',
-                    quantity: 7,
-                    costSum: 3500,
+                    assortment: {
+                        meta: {
+                            href: 'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1',
+                            type: 'product',
+                        },
+                    },
+                    onPeriodEnd: { quantity: 5, sum: 12345 },
                 },
             ],
         ]);
 
+        expect(http.get).toHaveBeenCalledTimes(1);
         const [url, config] = http.get.mock.calls[0] as [
             string,
             { params: Record<string, unknown> },
         ];
-        expect(url).toBe('/entity/assortment');
-        expect(config.params.filter).toBe(
-            'stockMoment=2026-08-31 23:59:59;stockStore=https://api.moysklad.ru/api/remap/1.2/entity/store/store-1',
-        );
-        expect(config.params.groupBy).toBe('product');
+        expect(url).toBe('/report/turnover/all');
+        expect(config.params).toMatchObject({
+            momentFrom: '2020-01-01 00:00:00',
+            momentTo: '2026-08-31 23:59:59',
+            withoutTurnover: 'true',
+        });
     });
 
     it('обходит все страницы ответа (offset/limit)', async () => {
@@ -346,9 +350,13 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
                 data: {
                     rows: [
                         {
-                            meta: { href: '.../product/p1' },
-                            stock: 1,
-                            buyPrice: { value: 100 },
+                            assortment: {
+                                meta: {
+                                    href: '.../product/p1',
+                                    type: 'product',
+                                },
+                            },
+                            onPeriodEnd: { quantity: 1, sum: 100 },
                         },
                     ],
                     meta: { size: 2, limit: 1, offset: 0 },
@@ -358,9 +366,13 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
                 data: {
                     rows: [
                         {
-                            meta: { href: '.../product/p2' },
-                            stock: 2,
-                            buyPrice: { value: 200 },
+                            assortment: {
+                                meta: {
+                                    href: '.../product/p2',
+                                    type: 'product',
+                                },
+                            },
+                            onPeriodEnd: { quantity: 2, sum: 200 },
                         },
                     ],
                     meta: { size: 2, limit: 1, offset: 1 },
@@ -369,9 +381,9 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
         const service = buildService(http);
 
         const pages: unknown[][] = [];
-        for await (const batch of service.fetchAssortmentStockAt(
+        for await (const batch of service.fetchTurnoverAllAt(
+            new Date('2020-01-01T00:00:00.000Z'),
             new Date('2026-08-31T23:59:59.999Z'),
-            'store-1',
         )) {
             pages.push(batch);
         }
@@ -384,18 +396,15 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
         expect(secondConfig.params.offset).toBe(1);
     });
 
-    it('при отсутствии поля "stock" использует "quantity" и логирует предупреждение', async () => {
-        const warnSpy = jest
-            .spyOn(Logger.prototype, 'warn')
-            .mockImplementation();
+    it('строка без onPeriodEnd не проходит валидацию схемы', async () => {
         const http = createHttpMock();
         http.get.mockResolvedValueOnce({
             data: {
                 rows: [
                     {
-                        meta: { href: '.../product/p1' },
-                        quantity: 4,
-                        buyPrice: { value: 500 },
+                        assortment: {
+                            meta: { href: '.../product/p1', type: 'product' },
+                        },
                     },
                 ],
                 meta: { size: 1, limit: 1000, offset: 0 },
@@ -403,42 +412,117 @@ describe('MoyskladService.fetchAssortmentStockAt (D5.1)', () => {
         });
         const service = buildService(http);
 
-        const pages: unknown[][] = [];
-        for await (const batch of service.fetchAssortmentStockAt(
-            new Date('2026-08-31T23:59:59.999Z'),
-            'store-1',
-        )) {
-            pages.push(batch);
-        }
-
-        expect(pages[0][0]).toMatchObject({ quantity: 4, costSum: 2000 });
-        expect(warnSpy).toHaveBeenCalled();
-        warnSpy.mockRestore();
+        await expect(async () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars -- дренаж генератора, ожидаем ошибку до первого yield
+            for await (const _batch of service.fetchTurnoverAllAt(
+                new Date('2020-01-01T00:00:00.000Z'),
+                new Date('2026-08-31T23:59:59.999Z'),
+            )) {
+                // no-op — ожидаем ошибку до первого yield
+            }
+        }).rejects.toThrow();
     });
+});
 
-    it('при отсутствии полей остатка и себестоимости отдаёт нули и логирует предупреждения', async () => {
-        const warnSpy = jest
-            .spyOn(Logger.prototype, 'warn')
-            .mockImplementation();
+// spec: fix-shop-turnover-historical-stock-cost D1, шаг 2 — разбивка по
+// складам для ОДНОГО товара (см. design.md Risks: `filter=product=` не
+// работает для `variant`, поэтому имя параметра фильтра зависит от
+// `assortment.meta.type` строки, полученной на шаге 1).
+describe('MoyskladService.fetchTurnoverByStoreForProduct (D1)', () => {
+    const buildService = (http: { get: jest.Mock }) =>
+        new MoyskladService({
+            instance: http,
+        } as unknown as MoyskladHttpService);
+
+    const productHref =
+        'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1';
+
+    it('строит filter=product=<href> для assortmentType "product" и мапит stockByStore[]', async () => {
         const http = createHttpMock();
         http.get.mockResolvedValueOnce({
             data: {
-                rows: [{ meta: { href: '.../product/p1' } }],
-                meta: { size: 1, limit: 1000, offset: 0 },
+                rows: [
+                    {
+                        assortment: {
+                            meta: { href: productHref, type: 'product' },
+                        },
+                        stockByStore: [
+                            {
+                                store: {
+                                    meta: {
+                                        href: 'https://api.moysklad.ru/api/remap/1.2/entity/store/store-1',
+                                    },
+                                },
+                                onPeriodEnd: { quantity: 3, sum: 1500 },
+                            },
+                        ],
+                    },
+                ],
             },
         });
         const service = buildService(http);
 
-        const pages: unknown[][] = [];
-        for await (const batch of service.fetchAssortmentStockAt(
+        const result = await service.fetchTurnoverByStoreForProduct(
+            productHref,
+            'product',
+            new Date('2020-01-01T00:00:00.000Z'),
             new Date('2026-08-31T23:59:59.999Z'),
-            'store-1',
-        )) {
-            pages.push(batch);
-        }
+        );
 
-        expect(pages[0][0]).toMatchObject({ quantity: 0, costSum: 0 });
-        expect(warnSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect(result).toEqual([
+            { warehouseId: 'store-1', quantity: 3, costSum: 1500 },
+        ]);
+
+        expect(http.get).toHaveBeenCalledTimes(1);
+        const [url, config] = http.get.mock.calls[0] as [
+            string,
+            { params: Record<string, unknown> },
+        ];
+        expect(url).toBe('/report/turnover/bystore');
+        expect(config.params.filter).toBe(`product=${productHref}`);
+        expect(config.params).toMatchObject({
+            momentFrom: '2020-01-01 00:00:00',
+            momentTo: '2026-08-31 23:59:59',
+            withoutTurnover: 'true',
+        });
+    });
+
+    it('строит filter=variant=<href> для assortmentType "variant"', async () => {
+        const http = createHttpMock();
+        http.get.mockResolvedValueOnce({ data: { rows: [] } });
+        const service = buildService(http);
+
+        await service.fetchTurnoverByStoreForProduct(
+            productHref,
+            'variant',
+            new Date('2020-01-01T00:00:00.000Z'),
+            new Date('2026-08-31T23:59:59.999Z'),
+        );
+
+        const [, config] = http.get.mock.calls[0] as [
+            string,
+            { params: Record<string, unknown> },
+        ];
+        expect(config.params.filter).toBe(`variant=${productHref}`);
+    });
+
+    it('для неизвестного assortmentType логирует warn и не обращается к API', async () => {
+        const warnSpy = jest
+            .spyOn(Logger.prototype, 'warn')
+            .mockImplementation();
+        const http = createHttpMock();
+        const service = buildService(http);
+
+        const result = await service.fetchTurnoverByStoreForProduct(
+            productHref,
+            'bundle',
+            new Date('2020-01-01T00:00:00.000Z'),
+            new Date('2026-08-31T23:59:59.999Z'),
+        );
+
+        expect(result).toEqual([]);
+        expect(http.get).not.toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalled();
         warnSpy.mockRestore();
     });
 });

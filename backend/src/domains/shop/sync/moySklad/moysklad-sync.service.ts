@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../../../infrustructure/database/database.service';
 import { UploadLogger } from '../../../../shared/logger';
+import { delay } from '../../../../shared/delay';
 import { MoyskladService } from '../../integrations/moySklad/moysklad.service';
 import type { ProductFolder } from '../../integrations/moySklad/schemas/productFolders.schema';
 import type { Demand } from '../../integrations/moySklad/schemas/demands.schema';
@@ -13,8 +14,24 @@ import {
     PURCHASER_ATTRIBUTE_NAME,
 } from './moysklad-sync.mappers';
 
+// spec: fix-shop-turnover-historical-stock-cost D2 — общий момент начала
+// поиска (`momentFrom`) для обоих запросов /report/turnover/* в бэкфилле
+// истории остатков (fetchTurnoverAllAt, fetchTurnoverByStoreForProduct).
+// Фиксированная дата, заведомо раньше начала работы этого аккаунта в
+// МойСклад — не связана с отчётным месяцем и не вычисляется из локальной
+// БД, чтобы не потерять товары с остатком, но без движения внутри узкого
+// окна конкретного месяца (см. design.md Context/D2 — на реальных данных
+// узкое окно теряло ~78% товаров с остатком). Значение подтверждено
+// эмпирически в рамках этого изменения (прямые запросы к боевому API,
+// сверка с отчётом «Остатки» интерфейса МойСклад — см. design.md Context).
+export const HISTORICAL_TURNOVER_LOOKBACK_ANCHOR = new Date(
+    '2015-01-01T00:00:00.000Z',
+);
+
 @Injectable()
 export class MoySkladSyncService {
+    private readonly logger = new Logger(MoySkladSyncService.name);
+
     constructor(
         private readonly db: DatabaseService,
         private readonly moySklad: MoyskladService,
@@ -282,56 +299,95 @@ export class MoySkladSyncService {
         }
     }
 
-    // spec: shop-turnover-report D5.1 — разовый бэкфилл истории остатков
-    // (`npm run initialProd <date> M`, см. UploadInitialMoySkladDataHandler)
-    // за каждый календарный месяц от fromDate до текущего, для каждого уже
-    // засинканного склада (MoySkladStore) — по одному снимку на конец
-    // месяца. Идемпотентен: upsert по (productId, warehouseId, snapshotAt),
-    // повторный запуск с тем же диапазоном не создаёт дублей.
+    // spec: fix-shop-turnover-historical-stock-cost D1/D3/D4 — разовый
+    // бэкфилл истории остатков (`npm run initialProd <date> M`, см.
+    // UploadInitialMoySkladDataHandler) за каждый календарный месяц от
+    // fromDate до текущего. Двухшаговая логика (design.md D1): шаг 1 —
+    // account-wide отчёт "Обороты" (fetchTurnoverAllAt) находит товары с
+    // ненулевым остатком на конец месяца; шаг 2 — для каждого такого товара
+    // (D3: с нулевым остатком товар не запрашивается повторно) —
+    // fetchTurnoverByStoreForProduct отдаёт разбивку по складам, состав
+    // складов на конкретный месяц берётся из этого ответа, а не из заранее
+    // загруженного справочника MoySkladStore. По одной строке MoySkladStock
+    // на каждый склад с ненулевым количеством. Идемпотентен: upsert по
+    // (productId, warehouseId, snapshotAt), повторный запуск с тем же
+    // диапазоном не создаёт дублей.
     async backfillHistoricalStockSnapshots(fromDate: Date) {
         const log = new UploadLogger('МойСклад: Остатки (бэкфилл истории)');
         log.start();
         try {
-            const stores = await this.db.moySkladStore.findMany({
-                select: { id: true },
-            });
             const monthEnds = this._monthEndsFrom(fromDate);
 
             for (const monthEnd of monthEnds) {
-                for (const store of stores) {
-                    for await (const batch of this.moySklad.fetchAssortmentStockAt(
-                        monthEnd,
-                        store.id,
-                    )) {
-                        for (const row of batch) {
-                            const productId = extractIdFromHref(
-                                row.productHref,
+                for await (const batch of this.moySklad.fetchTurnoverAllAt(
+                    HISTORICAL_TURNOVER_LOOKBACK_ANCHOR,
+                    monthEnd,
+                )) {
+                    for (const row of batch) {
+                        if (row.onPeriodEnd.quantity <= 0) continue;
+
+                        const productId = extractIdFromHref(
+                            row.assortment.meta.href,
+                        );
+                        if (!productId) continue;
+
+                        const stockByStore =
+                            await this.moySklad.fetchTurnoverByStoreForProduct(
+                                row.assortment.meta.href,
+                                row.assortment.meta.type,
+                                HISTORICAL_TURNOVER_LOOKBACK_ANCHOR,
+                                monthEnd,
                             );
-                            if (!productId) continue;
+                        // Троттлинг между вызовами на каждый товар (design.md
+                        // Risks — «как и остальные постраничные вызовы в
+                        // moysklad.service.ts, см. delay(400)/delay(500)»):
+                        // без задержки ~500 последовательных запросов на
+                        // /report/turnover/bystore за месяц упираются в
+                        // rate-limit МойСклад (429/502 Bad Gateway).
+                        await delay(400);
+
+                        // spec: fix-shop-turnover-historical-stock-cost D4 —
+                        // сверка account-wide (шаг 1) и по-складской (шаг 2)
+                        // суммы одного товара; расхождение — предупреждение,
+                        // а не исключение, останавливающее весь прогон одной
+                        // аномальной строкой.
+                        const byStoreSum = stockByStore.reduce(
+                            (sum, entry) => sum + entry.costSum,
+                            0,
+                        );
+                        if (byStoreSum !== row.onPeriodEnd.sum) {
+                            this.logger.warn(
+                                `Расхождение суммы остатка на конец периода у товара ${productId} на ${monthEnd.toISOString()}: ` +
+                                    `account-wide (/report/turnover/all)=${row.onPeriodEnd.sum}, по складам (/report/turnover/bystore)=${byStoreSum}`,
+                            );
+                        }
+
+                        for (const entry of stockByStore) {
+                            if (entry.quantity <= 0) continue;
 
                             await this.db.moySkladStock.upsert({
                                 where: {
                                     productId_warehouseId_snapshotAt: {
                                         productId,
-                                        warehouseId: store.id,
+                                        warehouseId: entry.warehouseId,
                                         snapshotAt: monthEnd,
                                     },
                                 },
                                 create: {
                                     id: randomUUID(),
                                     productId,
-                                    warehouseId: store.id,
-                                    quantity: row.quantity,
-                                    costSum: row.costSum,
+                                    warehouseId: entry.warehouseId,
+                                    quantity: entry.quantity,
+                                    costSum: entry.costSum,
                                     snapshotAt: monthEnd,
                                 },
                                 update: {
-                                    quantity: row.quantity,
-                                    costSum: row.costSum,
+                                    quantity: entry.quantity,
+                                    costSum: entry.costSum,
                                 },
                             });
+                            log.tick(1);
                         }
-                        log.tick(batch.length);
                     }
                 }
             }
@@ -343,9 +399,9 @@ export class MoySkladSyncService {
     }
 
     // Календарные месяцы от fromDate до текущего (включительно), каждый
-    // представлен последним моментом месяца в UTC (23:59:59.999) — момент,
-    // на который легаси /entity/assortment считает исторический остаток
-    // (D5.1).
+    // представлен последним моментом месяца в UTC (23:59:59.999) — это и
+    // есть `momentTo` обоих запросов /report/turnover/* в
+    // backfillHistoricalStockSnapshots (fix-shop-turnover-historical-stock-cost).
     private _monthEndsFrom(fromDate: Date): Date[] {
         const ends: Date[] = [];
         let year = fromDate.getUTCFullYear();
