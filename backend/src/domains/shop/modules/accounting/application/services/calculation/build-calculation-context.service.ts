@@ -477,7 +477,8 @@ export class BuildShopCalculationContextService {
             if (rule.type !== 'DepartmentTurnoverBonus') {
                 continue;
             }
-            const config = rule.config as DepartmentTurnoverBonusShopSalaryConfig;
+            const config =
+                rule.config as DepartmentTurnoverBonusShopSalaryConfig;
             const scope: TurnoverPerformanceScope = {
                 warehouseId: config.warehouseId,
                 category: config.category,
@@ -522,7 +523,10 @@ export class BuildShopCalculationContextService {
         );
         for (const [key, performance] of entries) {
             if (performance) {
-                result.set(key, this.toDepartmentSalesPerformanceEntry(performance));
+                result.set(
+                    key,
+                    this.toDepartmentSalesPerformanceEntry(performance),
+                );
             }
         }
         return result;

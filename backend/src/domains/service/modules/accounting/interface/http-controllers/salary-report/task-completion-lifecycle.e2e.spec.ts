@@ -248,7 +248,9 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         // config.taskId ссылается на уже созданную задачу — тот же путь,
         // которым TaskCompletion.create() строит config из
         // TaskCompletionSalaryConfigRequest (buildTaskCompletionConfig
-        // кладёт taskId в taskIdByPeriod[Period.current()]).
+        // кладёт taskId в taskIdByPeriod[request.accountingPeriod] —
+        // add-task-salary-rule-accounting-period, accountingPeriod больше не
+        // вычисляется скрыто как Period.current()).
         rule = withRequestContext(() =>
             TaskCompletion.create({
                 type: 'TaskCompletion',
@@ -262,6 +264,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
                     isRecurring: true,
                     deadlineTemplate: '2026-09-30',
                     defaultAmount: 1500,
+                    accountingPeriod: currentPeriod,
                 },
             }),
         );

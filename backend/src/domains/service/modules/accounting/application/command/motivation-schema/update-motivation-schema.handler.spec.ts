@@ -560,6 +560,11 @@ describe('UpdateMotivationSchemaHandler', () => {
                                 isRecurring: true,
                                 deadlineTemplate: '2026-08-05',
                                 defaultAmount: 6000,
+                                // add-task-salary-rule-accounting-period —
+                                // совпадает с Period.current(), чтобы не
+                                // менять ожидание существующей проверки
+                                // config.taskIdByPeriod ниже.
+                                accountingPeriod: Period.current().getValue(),
                             },
                         },
                     ],

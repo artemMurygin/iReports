@@ -138,6 +138,14 @@ export class EnsureShopSalaryTaskForPeriodService {
             config: {
                 ...config,
                 taskIdByPeriod: { ...config.taskIdByPeriod, [period]: taskId },
+                // add-task-salary-rule-accounting-period, design.md решение 3
+                // — та же мутация того же объекта config перед тем же
+                // вызовом update(), без нового обращения к репозиторию:
+                // accountingPeriod всегда отражает период самой свежей
+                // заведённой задачи. Идемпотентный ранний return выше
+                // (задача периода уже существует) это поле не трогает — это
+                // не создание новой задачи.
+                accountingPeriod: period,
             },
             updatedAt: rule.updatedAt,
             get isActive() {

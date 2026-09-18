@@ -46,7 +46,10 @@ export type RuleFieldErrors = Partial<
         // пользователь может исправить прямо в этом поле (оно readonly). `taskTitleTemplate` —
         // обязателен только когда `isRecurring === true` (см. `TaskCompletionRuleFields.tsx`).
         | 'taskId'
-        | 'taskTitleTemplate',
+        | 'taskTitleTemplate'
+        // add-task-salary-rule-accounting-period — расчётный период первой/текущей задачи
+        // правила, выбирается руководителем в `PeriodPicker` (`TaskCompletionRuleFields.tsx`).
+        | 'accountingPeriod',
         string
     >
 >

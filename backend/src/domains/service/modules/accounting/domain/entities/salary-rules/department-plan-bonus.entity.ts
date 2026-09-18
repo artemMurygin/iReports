@@ -116,7 +116,10 @@ export class DepartmentPlanBonusEntity
             });
             return context.departmentPerformanceOverrides.get(key) ?? null;
         }
-        return context.departmentSalesPerformance?.get(this.config.category) ?? null;
+        return (
+            context.departmentSalesPerformance?.get(this.config.category) ??
+            null
+        );
     }
 
     private emptyLine(): CalculationLine {

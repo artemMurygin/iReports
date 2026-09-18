@@ -4,10 +4,12 @@ import {
 } from '../../../../../../../../prisma/generated/prisma/schema/client';
 import { Mapper } from '@/shared/domain/mapper.interface';
 import { Entity } from '@/shared/domain/entity.base';
+import { Period } from '@/shared/domain/period.value-object';
 import { shopSalaryRuleRegistry } from '@/domains/shop/modules/accounting/domain/salary-rule-registry';
 import {
     ShopSalaryRule,
     ShopSalaryRuleTypes,
+    TaskCompletionShopSalaryConfig,
 } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import { targetRoleSchema } from 'ireports-contracts';
 import {
@@ -49,6 +51,29 @@ export class ShopSalaryRuleMapper implements Mapper<
         }
         const config = configSchema.parse(record.props);
         const targetRole = targetRoleSchema.parse(record.targetRole);
+
+        // add-task-salary-rule-accounting-period, design.md решение 1 —
+        // зеркало SalaryRuleMapper.toDomain направления service: props уже
+        // персистированных строк TaskCompletion, созданных до этой фичи, не
+        // содержит accountingPeriod (схема выше парсит его как опциональное
+        // поле) — деривируем один раз здесь, на границе маппера, чтобы
+        // дальше в домене и в API-ответе поле всегда присутствовало.
+        // Источник — максимальный (лексикографически, корректно для формата
+        // YYYY-MM) ключ taskIdByPeriod, а если карта пуста —
+        // Period.current() как последний резервный случай.
+        if (type === 'TaskCompletion') {
+            const taskCompletionConfig =
+                config as TaskCompletionShopSalaryConfig;
+            if (!taskCompletionConfig.accountingPeriod) {
+                const periods = Object.keys(
+                    taskCompletionConfig.taskIdByPeriod,
+                );
+                taskCompletionConfig.accountingPeriod =
+                    periods.length > 0
+                        ? periods.sort().at(-1)!
+                        : Period.current().getValue();
+            }
+        }
 
         // Entity.constructor вызывает validate() сам (entity.base.ts) —
         // те же инварианты FloatPercent, что и при записи (см.

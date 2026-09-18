@@ -666,6 +666,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
                         isRecurring: true,
                         deadlineTemplate: '2026-01-25T18:00:00.000Z',
                         defaultAmount: 5000,
+                        accountingPeriod: '2026-01',
                     },
                 }),
             );
@@ -711,6 +712,7 @@ describe('GetShopEmployeeSalaryReportService', () => {
                         isRecurring: true,
                         deadlineTemplate: '2026-01-25T18:00:00.000Z',
                         defaultAmount: 5000,
+                        accountingPeriod: '2026-01',
                     },
                 }),
             );

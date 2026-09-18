@@ -155,14 +155,10 @@ describe('Task entity', () => {
     describe('update', () => {
         it('применяет частичный патч к нетерминальной задаче (NEW) — меняются только переданные поля', () => {
             const task = buildTask();
-            withRequestContext(() =>
-                task.update({ title: 'Новое название' }),
-            );
+            withRequestContext(() => task.update({ title: 'Новое название' }));
             expect(task.title).toBe('Новое название');
             expect(task.description).toBe('Сверить цифры с бухгалтерией');
-            expect(task.deadline).toEqual(
-                new Date('2026-09-30T00:00:00.000Z'),
-            );
+            expect(task.deadline).toEqual(new Date('2026-09-30T00:00:00.000Z'));
             expect(task.assigneeEmployeeId).toBe(42);
         });
 
@@ -177,9 +173,7 @@ describe('Task entity', () => {
             });
             expect(task.title).toBe('Согласовать отчёт');
             expect(task.description).toBe('Сверить цифры с бухгалтерией');
-            expect(task.deadline).toEqual(
-                new Date('2026-10-15T00:00:00.000Z'),
-            );
+            expect(task.deadline).toEqual(new Date('2026-10-15T00:00:00.000Z'));
             expect(task.assigneeEmployeeId).toBe(7);
         });
 
@@ -193,9 +187,7 @@ describe('Task entity', () => {
             );
             expect(task.title).toBe('Другое название');
             expect(task.description).toBe('Другое описание');
-            expect(task.deadline).toEqual(
-                new Date('2026-09-30T00:00:00.000Z'),
-            );
+            expect(task.deadline).toEqual(new Date('2026-09-30T00:00:00.000Z'));
             expect(task.assigneeEmployeeId).toBe(42);
         });
 

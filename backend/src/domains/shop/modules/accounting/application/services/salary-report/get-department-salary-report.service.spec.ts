@@ -461,6 +461,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
                         isRecurring: true,
                         deadlineTemplate: '2026-01-25T18:00:00.000Z',
                         defaultAmount: 5000,
+                        accountingPeriod: '2026-01',
                     },
                 });
                 if (ruleId) {
@@ -550,6 +551,7 @@ describe('GetShopDepartmentSalaryReportService', () => {
                         isRecurring: true,
                         deadlineTemplate: '2026-08-05',
                         defaultAmount: 5000,
+                        accountingPeriod: '2026-08',
                     },
                 });
                 return {

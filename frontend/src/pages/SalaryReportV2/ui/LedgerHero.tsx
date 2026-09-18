@@ -58,12 +58,16 @@ export function LedgerHero({ grandTotal, isClosed, className }: LedgerHeroProps)
                         <PopoverContent align="end" className="flex flex-col gap-2.5">
                             <p className="font-ui text-[13px] font-semibold text-ink">Как считается прогноз</p>
                              <div className="flex flex-col gap-1 font-ui text-xs text-ink">
-                                <span className="font-semibold text-ink-muted">За продажи с плавающим процентом</span>
-                                <span>Прогноз = факт продаж * % по категории в прогнозе</span>
+                                <span className="font-semibold text-ink-muted">За продажи привязанные к плану</span>
+                                <span>Прогноз = маржа с фактических продаж * прогнозируемый % по категории</span>
                             </div>
                             <div className="flex flex-col gap-1 font-ui text-xs text-ink">
                                 <span className="font-semibold text-ink-muted">За задачи</span>
-                                <span>Предполагается, что Вы выполните все задачи к концу периода</span>
+                                <span>Прогноз = начисление за все задачи</span>
+                            </div>
+                            <div className="flex flex-col gap-1 font-ui text-xs text-ink">
+                                <span className="font-semibold text-ink-muted">Оплата по часам</span>
+                                <span>Учитываются только смены в графике работы для Онлайн и Офлайн менеджеров</span>
                             </div>
                         </PopoverContent>
                     </Popover>

@@ -4,6 +4,9 @@ import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/enti
 import { DepartmentPercentEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-percent.entity';
 import { DepartmentPlanBonusEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-plan-bonus.entity';
 import { DepartmentTurnoverBonusEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/department-turnover-bonus.entity';
+import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
+import type { TaskCompletionShopSalaryConfig } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
+import { Period } from '@/shared/domain/period.value-object';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 
 const buildContext = (): CalculationContext => ({
@@ -177,6 +180,100 @@ describe('ShopSalaryRuleMapper', () => {
             });
 
             expect(entity).toBeInstanceOf(DepartmentTurnoverBonusEntity);
+        });
+
+        // add-task-salary-rule-accounting-period, design.md решение 1 —
+        // зеркало SalaryRuleMapper.toDomain направления service: уже
+        // персистированные строки TaskCompletion без accountingPeriod в
+        // props должны продолжать читаться без ошибок валидации, с
+        // деривацией значения на границе маппера.
+        describe('деривация accountingPeriod для легаси-строк TaskCompletion (design.md решение 1)', () => {
+            it('props без accountingPeriod, но с непустым taskIdByPeriod → берёт максимальный (лексикографически) ключ карты', () => {
+                const entity = mapper.toDomain({
+                    id: 'rule-9',
+                    motivationSchemaId: 'schema-1',
+                    type: 'TaskCompletion',
+                    name: 'Собрать отчёт',
+                    targetRole: 'OFFLINE_MANAGER',
+                    direction: 'shop',
+                    isActive: true,
+                    props: {
+                        taskIdByPeriod: {
+                            '2026-01': 'task-1',
+                            '2026-03': 'task-3',
+                            '2026-02': 'task-2',
+                        },
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                    },
+                    createdAt,
+                    updatedAt,
+                });
+
+                expect(entity).toBeInstanceOf(TaskCompletionShop);
+                expect(
+                    (entity.config as TaskCompletionShopSalaryConfig)
+                        .accountingPeriod,
+                ).toBe('2026-03');
+            });
+
+            it('props без accountingPeriod и с пустым taskIdByPeriod → Period.current()', () => {
+                const entity = mapper.toDomain({
+                    id: 'rule-10',
+                    motivationSchemaId: 'schema-1',
+                    type: 'TaskCompletion',
+                    name: 'Собрать отчёт',
+                    targetRole: 'OFFLINE_MANAGER',
+                    direction: 'shop',
+                    isActive: true,
+                    props: {
+                        taskIdByPeriod: {},
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                    },
+                    createdAt,
+                    updatedAt,
+                });
+
+                expect(
+                    (entity.config as TaskCompletionShopSalaryConfig)
+                        .accountingPeriod,
+                ).toBe(Period.current().getValue());
+            });
+
+            it('props с уже заполненным accountingPeriod → значение передаётся как есть', () => {
+                const entity = mapper.toDomain({
+                    id: 'rule-11',
+                    motivationSchemaId: 'schema-1',
+                    type: 'TaskCompletion',
+                    name: 'Собрать отчёт',
+                    targetRole: 'OFFLINE_MANAGER',
+                    direction: 'shop',
+                    isActive: true,
+                    props: {
+                        taskIdByPeriod: {
+                            '2026-01': 'task-1',
+                            '2026-05': 'task-5',
+                        },
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                        accountingPeriod: '2026-01',
+                    },
+                    createdAt,
+                    updatedAt,
+                });
+
+                expect(
+                    (entity.config as TaskCompletionShopSalaryConfig)
+                        .accountingPeriod,
+                ).toBe('2026-01');
+            });
         });
 
         it('выбрасывает ошибку для неизвестного type', () => {

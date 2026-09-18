@@ -4,6 +4,8 @@ import {
     type ShopSalaryRuleResponse,
 } from 'ireports-contracts'
 
+import { isValidPeriod } from '@/shared/lib/format.ts'
+
 import { buildPercentBorders, parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
 import {
     buildDepartmentPercentConfig,
@@ -125,6 +127,9 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
             // — `taskId` приходит от мастера (Шаг 1), `taskTitleTemplate`/`deadlineTemplate`
             // required только при `isRecurring === true` (авто-пересоздание на новый период).
             if (draft.taskId.trim() === '') errors.taskId = 'Задача ещё не создана — пройдите Шаг 1 мастера'
+            // Зеркало сервисной ветки (`service/model/ruleFormSchema.ts`) —
+            // add-task-salary-rule-accounting-period, та же обязательность, что и у `taskId` выше.
+            if (!isValidPeriod(draft.accountingPeriod)) errors.accountingPeriod = 'Выберите расчётный период'
             const defaultAmount = parseNumber(draft.price)
             if (defaultAmount === undefined) errors.price = 'Укажите сумму начисления по умолчанию'
             if (draft.isRecurring) {
@@ -136,6 +141,7 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
             const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
             config = {
                 taskId: draft.taskId.trim(),
+                accountingPeriod: draft.accountingPeriod,
                 taskTitleTemplate: draft.taskTitleTemplate.trim(),
                 ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
                 isRecurring: draft.isRecurring,
@@ -235,6 +241,7 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         // `TaskCompletion`-поля (раздел 21) — дефолты, перезаписываются ниже веткой `case
         // 'TaskCompletion'` при редактировании существующего правила этого типа.
         taskId: '',
+        accountingPeriod: '',
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
         isRecurring: false,
@@ -297,6 +304,9 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
                 ...base,
                 price: String(rule.config.defaultAmount),
                 taskId: latestTaskId(rule.config.taskIdByPeriod),
+                // Зеркало сервисной ветки — add-task-salary-rule-accounting-period, design.md
+                // Decision 4, берётся из ответа API как есть, не пересчитывается на клиенте.
+                accountingPeriod: rule.config.accountingPeriod ?? '',
                 taskTitleTemplate: rule.config.taskTitleTemplate,
                 taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,

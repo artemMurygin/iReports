@@ -38,6 +38,7 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
             deadlineTemplate: '2026-01-25T18:00:00.000Z',
             defaultAmount: 5000,
             taskLinkTemplates: [],
+            accountingPeriod: '2026-01',
             ...config,
         },
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -89,12 +90,30 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
         const { service, execute, update } = buildService({
             rule: buildRuleFixture({
                 taskIdByPeriod: { '2026-09': 'task-existing' },
+                accountingPeriod: '2026-09',
             }),
         });
 
         const result = await service.ensure('rule-1', '2026-09', 42);
 
         expect(result).toBe('task-existing');
+        expect(execute).not.toHaveBeenCalled();
+        expect(update).not.toHaveBeenCalled();
+    });
+
+    // add-task-salary-rule-accounting-period, design.md решение 3 — ранний
+    // идемпотентный возврат (задача периода уже существует) НЕ является
+    // "новым текущим периодом" правила и не должен трогать accountingPeriod.
+    it('идемпотентный ранний возврат НЕ меняет config.accountingPeriod', async () => {
+        const { service, execute, update } = buildService({
+            rule: buildRuleFixture({
+                taskIdByPeriod: { '2026-09': 'task-existing' },
+                accountingPeriod: '2026-01',
+            }),
+        });
+
+        await service.ensure('rule-1', '2026-09', 42);
+
         expect(execute).not.toHaveBeenCalled();
         expect(update).not.toHaveBeenCalled();
     });
@@ -165,6 +184,13 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
             (updatedRule.config as TaskCompletionShopSalaryConfig)
                 .taskIdByPeriod,
         ).toEqual({ '2026-10': 'task-99' });
+        // add-task-salary-rule-accounting-period, design.md решение 3 —
+        // создание НОВОЙ задачи на период P устанавливает
+        // config.accountingPeriod = P перед ruleRepo.update(rule).
+        expect(
+            (updatedRule.config as TaskCompletionShopSalaryConfig)
+                .accountingPeriod,
+        ).toBe('2026-10');
     });
 
     // add-task-rule-task-lifecycle
@@ -219,6 +245,7 @@ describe('filterRecurringTaskCompletionShopRules', () => {
             deadlineTemplate: '2026-01-25T18:00:00.000Z',
             defaultAmount: 5000,
             taskLinkTemplates: [],
+            accountingPeriod: '2026-01',
         },
         updatedAt: new Date(),
         isActive: true,

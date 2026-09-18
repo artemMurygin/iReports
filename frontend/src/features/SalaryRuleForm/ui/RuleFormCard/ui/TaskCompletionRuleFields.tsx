@@ -4,6 +4,7 @@ import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 import { Input } from '@/shared/ui-kit/atoms/Input'
 import { SegmentedControl, type SegmentedControlOption } from '@/shared/ui-kit/atoms/SegmentedControl'
 import { Textarea } from '@/shared/ui-kit/atoms/Textarea'
+import { PeriodPicker } from '@/shared/ui-kit/organisms/PeriodPicker.tsx'
 
 import { salaryRuleTaskApi } from '../../../model/taskApi.ts'
 import { useDeleteRuleTask } from '../../../model/useDeleteRuleTask.ts'
@@ -18,8 +19,9 @@ import { TaskLinkTemplatesField } from './TaskLinkTemplatesField.tsx'
 
 export type TaskCompletionRuleFieldsProps = {
     draft: RuleDraft
-    /** `errors.taskId`/`errors.taskTitleTemplate`/`errors.dueDate`/`errors.price` — see each
-     * field's own comment below for when `resolveRuleDraft` actually sets it. */
+    /** `errors.taskId`/`errors.accountingPeriod`/`errors.taskTitleTemplate`/`errors.dueDate`/
+     * `errors.price` — see each field's own comment below for when `resolveRuleDraft` actually
+     * sets it. */
     errors: RuleFieldErrors
     onChange: (patch: Partial<RuleDraft>) => void
     /** Opens the task details side panel for the already-linked task — see
@@ -162,6 +164,16 @@ export function TaskCompletionRuleFields({
                     isPending={deleteTask.isPending}
                     error={deleteTask.error}
                 />
+            </div>
+
+            {/* add-task-salary-rule-accounting-period — расчётный период относится к САМОЙ первой
+                задаче правила, которая существует независимо от периодичности (design.md, Decision
+                4), поэтому блок рендерится всегда, в отличие от «Шаблона для автосоздания…» ниже,
+                который показывается только при `isRecurring`. */}
+            <div className="flex flex-col gap-1.5">
+                <span className="font-ui text-xs font-medium text-ink-muted">Расчётный период</span>
+                <PeriodPicker period={draft.accountingPeriod} onChange={(accountingPeriod) => onChange({ accountingPeriod })} />
+                <FieldError message={errors.accountingPeriod} />
             </div>
 
             <div className="flex flex-col gap-1.5">

@@ -54,6 +54,7 @@ describe('SalaryRuleFactory', () => {
                 isRecurring: false,
                 deadlineTemplate: '2026-08-15',
                 defaultAmount: 5000,
+                accountingPeriod: '2026-08',
             },
         });
 

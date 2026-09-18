@@ -1,9 +1,13 @@
-import { TaskCompletion } from './task-completion.entity';
+import {
+    TaskCompletion,
+    buildTaskCompletionConfig,
+} from './task-completion.entity';
 import { SalaryTask } from '@/domains/service/modules/accounting/domain/entities/salary-task/salary-task.entity';
 import { CalculationContext } from '@/shared/domain/calculation-context';
 import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { Period } from '@/shared/domain/period.value-object';
+import { ArgumentInvalidException } from '@/shared/exceptions';
 
 // replace-bitrix-task-integration, design.md решение 2/4/5 —
 // TaskCompletion.create() сохраняет request-only config.taskId в
@@ -27,6 +31,10 @@ const buildRule = () =>
                 isRecurring: true,
                 deadlineTemplate: '2026-08-05',
                 defaultAmount: 5000,
+                // add-task-salary-rule-accounting-period — руководитель
+                // выбирает период явно, сервер больше не подставляет
+                // Period.current() сам.
+                accountingPeriod: '2026-08',
             },
         }),
     );
@@ -53,7 +61,7 @@ const buildContext = (
 
 describe('TaskCompletion', () => {
     describe('create', () => {
-        it('создаёт правило с генерируемым id и типом TaskCompletion, taskId уходит в taskIdByPeriod текущего периода', () => {
+        it('создаёт правило с генерируемым id и типом TaskCompletion, taskId уходит в taskIdByPeriod под ключом request.accountingPeriod', () => {
             const rule = buildRule();
 
             expect(rule).toBeInstanceOf(TaskCompletion);
@@ -61,9 +69,12 @@ describe('TaskCompletion', () => {
             expect(rule.id).toEqual(expect.any(String));
             expect(rule.name).toBe('Собрать отчёт по браку');
             expect(rule.targetRole).toBe('ENGINEER');
+            // add-task-salary-rule-accounting-period — ключ карты больше не
+            // Period.current(), а явно выбранный руководителем период.
             expect(rule.config.taskIdByPeriod).toEqual({
-                [Period.current().getValue()]: 'task-777',
+                '2026-08': 'task-777',
             });
+            expect(rule.config.accountingPeriod).toBe('2026-08');
             expect(rule.config.taskTitleTemplate).toBe(
                 'Собрать отчёт по браку за месяц',
             );
@@ -72,6 +83,61 @@ describe('TaskCompletion', () => {
             expect(
                 (rule.config as unknown as { taskId?: string }).taskId,
             ).toBeUndefined();
+        });
+    });
+
+    // add-task-salary-rule-accounting-period, design.md Decision 2 —
+    // buildTaskCompletionConfig() больше не подставляет Period.current()
+    // неявно, а использует явно переданный request.accountingPeriod,
+    // провалидированный через Period.create().
+    describe('buildTaskCompletionConfig', () => {
+        it('кладёт request.taskId в taskIdByPeriod под ключом request.accountingPeriod, а не Period.current()', () => {
+            const config = buildTaskCompletionConfig({
+                taskId: 'task-1',
+                taskTitleTemplate: 'Шаблон',
+                isRecurring: false,
+                deadlineTemplate: '2026-01-15',
+                defaultAmount: 1000,
+                accountingPeriod: '2026-11',
+            });
+
+            expect(config.taskIdByPeriod).toEqual({ '2026-11': 'task-1' });
+            expect(config.accountingPeriod).toBe('2026-11');
+        });
+
+        it('сохраняет existingTaskIdByPeriod прошлых периодов, добавляя новый ключ', () => {
+            const config = buildTaskCompletionConfig(
+                {
+                    taskId: 'task-2',
+                    taskTitleTemplate: 'Шаблон',
+                    isRecurring: true,
+                    deadlineTemplate: '2026-01-15',
+                    defaultAmount: 1000,
+                    accountingPeriod: '2026-12',
+                },
+                { '2026-11': 'task-1' },
+            );
+
+            expect(config.taskIdByPeriod).toEqual({
+                '2026-11': 'task-1',
+                '2026-12': 'task-2',
+            });
+            expect(config.accountingPeriod).toBe('2026-12');
+        });
+
+        it('бросает исключение домена, а не тихо принимает некорректный формат accountingPeriod', () => {
+            withRequestContext(() =>
+                expect(() =>
+                    buildTaskCompletionConfig({
+                        taskId: 'task-1',
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-01-15',
+                        defaultAmount: 1000,
+                        accountingPeriod: 'не период',
+                    }),
+                ).toThrow(ArgumentInvalidException),
+            );
         });
     });
 

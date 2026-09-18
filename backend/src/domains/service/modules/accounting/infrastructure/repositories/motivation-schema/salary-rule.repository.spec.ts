@@ -1,6 +1,8 @@
 import { SalaryRuleRepository } from './salary-rule.repository';
+import { SalaryRuleMapper } from '../../mappers/motivation-schema/salary-rule.mapper';
 import type { DatabaseService } from '@/infrustructure/database/database.service';
 import { Period } from '@/shared/domain/period.value-object';
+import type { TaskCompletionSalaryConfig } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 
 // Тесты findByTaskId/findMotivationSchemaId, добавленных
 // SalaryRuleRepositoryPort разделами 15/18 tasks.md
@@ -112,6 +114,77 @@ describe('SalaryRuleRepository', () => {
             const rule = await repository.findByTaskId('task-1');
 
             expect(rule).toBeNull();
+        });
+    });
+
+    // add-task-salary-rule-accounting-period, design.md Decision 1 —
+    // SalaryRuleMapper.toDomain дерива́т accountingPeriod для уже
+    // персистированных строк, у которых его нет в props (создано до этой
+    // фичи): из максимального (лексикографически, формат YYYY-MM) ключа
+    // taskIdByPeriod, а если карта тоже пуста — Period.current().
+    describe('SalaryRuleMapper.toDomain — деривация accountingPeriod', () => {
+        const mapper = new SalaryRuleMapper();
+
+        it('дериви́рует accountingPeriod из максимального ключа taskIdByPeriod, если поле отсутствует в props', () => {
+            const rule = mapper.toDomain(
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: {
+                            '2026-01': 'task-a',
+                            '2026-03': 'task-b',
+                            '2025-12': 'task-c',
+                        },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            );
+
+            expect(
+                (rule.config as TaskCompletionSalaryConfig).accountingPeriod,
+            ).toBe('2026-03');
+        });
+
+        it('дериви́рует Period.current(), если и accountingPeriod, и taskIdByPeriod отсутствуют/пусты', () => {
+            const rule = mapper.toDomain(
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: {},
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            );
+
+            expect(
+                (rule.config as TaskCompletionSalaryConfig).accountingPeriod,
+            ).toBe(Period.current().getValue());
+        });
+
+        it('передаёт уже заполненный в props accountingPeriod как есть, не переопределяя его', () => {
+            const rule = mapper.toDomain(
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: {
+                            '2026-01': 'task-a',
+                            '2026-05': 'task-b',
+                        },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                        accountingPeriod: '2026-01',
+                    },
+                }),
+            );
+
+            expect(
+                (rule.config as TaskCompletionSalaryConfig).accountingPeriod,
+            ).toBe('2026-01');
         });
     });
 

@@ -140,7 +140,13 @@ describe('DepartmentPlanBonusEntity (shop)', () => {
         it('резолвит percentCompletion из departmentPerformanceOverrides по (departmentId, category)', () => {
             const rule = buildRule('FIX', null, 158);
             const overrides: DepartmentPerformanceOverrideByScope = new Map([
-                ['158:', { fact: { turnover: 0, margin: 0 }, percentCompletion: 120 }],
+                [
+                    '158:',
+                    {
+                        fact: { turnover: 0, margin: 0 },
+                        percentCompletion: 120,
+                    },
+                ],
             ]);
 
             const line = rule.calculate(buildContext(null, overrides));

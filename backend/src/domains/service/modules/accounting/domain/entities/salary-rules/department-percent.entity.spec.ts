@@ -229,7 +229,10 @@ describe('DepartmentPercentEntity', () => {
             const overrides: DepartmentPerformanceOverrideByScope = new Map([
                 [
                     '158:',
-                    { fact: { turnover: 50_000, margin: 0 }, percentCompletion: 0 },
+                    {
+                        fact: { turnover: 50_000, margin: 0 },
+                        percentCompletion: 0,
+                    },
                 ],
             ]);
 

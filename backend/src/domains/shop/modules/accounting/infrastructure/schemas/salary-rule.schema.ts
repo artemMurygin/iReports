@@ -31,6 +31,18 @@ const taskCompletionShopPersistedConfigSchema = z.object({
     isRecurring: z.boolean(),
     deadlineTemplate: z.string(),
     defaultAmount: z.number().int().nonnegative(),
+    // Опционально здесь (в отличие от domain-типа TaskCompletionShopSalaryConfig,
+    // где поле обязательное) — зеркало service (add-task-salary-rule-accounting-period,
+    // design.md решение 1): уже персистированные строки TaskCompletion, созданные до
+    // этой фичи, не содержат accountingPeriod в props. ShopSalaryRuleMapper.toDomain
+    // деривирует его при отсутствии, поэтому парсинг не должен падать на легаси-строках.
+    accountingPeriod: z
+        .string()
+        .regex(
+            /^\d{4}-(0[1-9]|1[0-2])$/,
+            'Период должен быть в формате YYYY-MM',
+        )
+        .optional(),
 });
 
 // Partial<Record<...>>, а не `as const`: ключ типа — ShopSalaryRuleTypes из

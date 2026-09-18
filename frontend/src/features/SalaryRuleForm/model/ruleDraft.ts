@@ -9,6 +9,15 @@ import type { ServiceRuleType, ShopRuleType } from '@/kernel/ruleTypeLabels.ts'
  */
 export type { ServiceRuleType, ShopRuleType }
 
+// '2026-08' — текущий месяц в формате `YYYY-MM`, который ожидает бэкенд (`Period.create`,
+// `backend/src/shared/domain/period.value-object.ts`). Тот же приём, что и `getCurrentPeriod()` в
+// `pages/GoodsTurnoverReport/model/useGoodsTurnoverReportPage.ts` — не общий хелпер, каждая фича с
+// полем периода строит его сама из `Date` (см. комментарий там же).
+function getCurrentPeriod(): string {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
 /**
  * One flat draft (below) is reused for both directions' rule cards, so this is the union of both —
  * NOT a merged/mixed contract type (that stays strictly separate, see `service/model/ruleFormSchema.ts`
@@ -123,6 +132,15 @@ export type RuleDraft = {
      * единственное состояние, в котором `resolveRuleDraft` отказывает (см. её `errors.taskId`).
      */
     taskId: string
+    /** `TaskCompletion.config.accountingPeriod` (`YYYY-MM`, add-task-salary-rule-accounting-period)
+     * — расчётный период, к которому относится последняя/текущая задача правила; руководитель
+     * выбирает его явно в форме (`PeriodPicker`, `TaskCompletionRuleFields.tsx`), больше не
+     * вычисляется неявно на бэкенде. `createRuleDraft`/`resetAwardFields` предзаполняют текущим
+     * периодом (`getCurrentPeriod()` выше); для уже сохранённого правила (`draftFromRule`/
+     * `draftFromShopRule`) значение берётся из ответа API (`config.accountingPeriod`), а не
+     * пересчитывается на клиенте (design.md, Decision 4) — руководитель видит период, реально
+     * записанный в последней задаче правила. Read only for `TaskCompletion`; ignored otherwise. */
+    accountingPeriod: string
     /** `TaskCompletion.config.taskTitleTemplate` — шаблон заголовка задачи для авто-пересоздания
      * РЕГУЛЯРНОГО правила на новый период (`EnsureRuleTaskForPeriodService`), НЕ заголовок самой
      * первой задачи (тот уже произвольно введён на Шаге 1 мастера, см. `taskId`'s комментарий).
@@ -211,6 +229,7 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         departmentIdOverride: '',
         orderTypeIds: [],
         taskId: '',
+        accountingPeriod: getCurrentPeriod(),
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
         isRecurring: false,
@@ -243,6 +262,7 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         departmentIdOverride: '',
         orderTypeIds: [],
         taskId: '',
+        accountingPeriod: getCurrentPeriod(),
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
         isRecurring: false,

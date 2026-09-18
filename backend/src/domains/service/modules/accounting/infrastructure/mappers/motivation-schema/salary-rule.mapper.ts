@@ -4,10 +4,12 @@ import {
 } from '../../../../../../../../prisma/generated/prisma/schema/client';
 import { Mapper } from '@/shared/domain/mapper.interface';
 import { Entity } from '@/shared/domain/entity.base';
+import { Period } from '@/shared/domain/period.value-object';
 import { salaryRuleRegistry } from '@/domains/service/modules/accounting/domain/salary-rule-registry';
 import {
     SalaryRule,
     SalaryRuleTypes,
+    TaskCompletionSalaryConfig,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { targetRoleSchema } from 'ireports-contracts';
 import {
@@ -42,6 +44,17 @@ export class SalaryRuleMapper implements Mapper<
             );
         }
         const config = configSchema.parse(record.props);
+        if (type === 'TaskCompletion') {
+            // add-task-salary-rule-accounting-period, design.md Decision 1 —
+            // accountingPeriod опционален в персистентной схеме (обратная
+            // совместимость с правилами, созданными до этой фичи), но
+            // обязателен в домене: дериви́руем его один раз здесь, на
+            // границе маппера, а не на каждое последующее чтение.
+            (config as TaskCompletionSalaryConfig).accountingPeriod =
+                deriveTaskCompletionAccountingPeriod(
+                    config as TaskCompletionSalaryConfig,
+                );
+        }
         const targetRole = targetRoleSchema.parse(record.targetRole);
 
         return new RuleClass({
@@ -78,4 +91,22 @@ export class SalaryRuleMapper implements Mapper<
             updatedAt,
         };
     }
+}
+
+// add-task-salary-rule-accounting-period, design.md Decision 1 — уже
+// заполненное значение передаётся как есть; иначе берём максимальный
+// (лексикографически — корректно для формата YYYY-MM) ключ taskIdByPeriod;
+// если и карта пуста (правило совсем без заведённых задач), последний
+// резервный случай — Period.current().
+function deriveTaskCompletionAccountingPeriod(
+    config: TaskCompletionSalaryConfig,
+): string {
+    if (config.accountingPeriod) {
+        return config.accountingPeriod;
+    }
+    const periods = Object.keys(config.taskIdByPeriod ?? {});
+    if (periods.length === 0) {
+        return Period.current().getValue();
+    }
+    return periods.sort().at(-1) as string;
 }

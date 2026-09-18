@@ -31,7 +31,7 @@ export const ROLE_LABEL: Record<TargetRole, string> = {
     ENGINEER: 'Инженер',
     ONLINE_MANAGER: 'Онлайн-менеджер',
     OFFLINE_MANAGER: 'Офлайн-менеджер',
-    ORDER_MANAGER: 'Менеджер заказа',
+    ORDER_MANAGER: 'Менеджер',
     ONLINE_PURCHASER: 'Онлайн-закупщик',
     OFFLINE_PURCHASER: 'Офлайн-закупщик',
     OFFICE: 'Офис',

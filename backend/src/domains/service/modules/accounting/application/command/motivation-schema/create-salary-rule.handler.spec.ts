@@ -132,6 +132,10 @@ describe('CreateSalaryRuleHandler', () => {
                         isRecurring: false,
                         deadlineTemplate: '2026-09-20T00:00:00.000Z',
                         defaultAmount: 5000,
+                        // add-task-salary-rule-accounting-period — совпадает
+                        // с Period.current(), чтобы не менять ожидание
+                        // существующей проверки config.taskIdByPeriod ниже.
+                        accountingPeriod: Period.current().getValue(),
                     },
                 },
             });
