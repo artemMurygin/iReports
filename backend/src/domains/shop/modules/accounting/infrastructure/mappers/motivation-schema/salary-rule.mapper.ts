@@ -73,6 +73,15 @@ export class ShopSalaryRuleMapper implements Mapper<
                         ? periods.sort().at(-1)!
                         : Period.current().getValue();
             }
+
+            // recurring-task-deadline-offset, tasks.md раздел 7 (design.md
+            // решение 4) — та же деривация для легаси-строк, что и у
+            // accountingPeriod выше: строки, персистированные до этого
+            // изменения, не содержат deadlinePeriodOffset — воспроизводим
+            // точное прежнее поведение (дедлайн внутри месяца периода).
+            if (taskCompletionConfig.deadlinePeriodOffset === undefined) {
+                taskCompletionConfig.deadlinePeriodOffset = 0;
+            }
         }
 
         // Entity.constructor вызывает validate() сам (entity.base.ts) —

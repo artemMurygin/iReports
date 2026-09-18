@@ -86,6 +86,7 @@ export class EnsureShopSalaryTaskForPeriodService {
         const deadline = computeRecurringTaskDeadline(
             periodVO,
             config.deadlineTemplate,
+            config.deadlinePeriodOffset,
         );
 
         // Единственное оставшееся межмодульное обращение accounting → tasks

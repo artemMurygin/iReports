@@ -161,10 +161,24 @@ export type RuleDraft = {
     /** `TaskCompletion.config.deadlineTemplate` — то же самое разделение, что и у
      * `taskTitleTemplate`: шаблон дедлайна для авто-пересоздания РЕГУЛЯРНОГО правила (только число
      * месяца читается бэкендом), а не дедлайн самой первой задачи (тот введён на Шаге 1 мастера
-     * отдельным полем `CreateTaskForm`). Хранится как есть (ISO-дата `YYYY-MM-DD`), без
-     * парсинга/форматирования на стороне драфта. Read only for `TaskCompletion`; ignored
-     * otherwise. */
+     * отдельным полем `CreateTaskForm`). Для регулярного правила (`isRecurring === true`) хранит
+     * НЕ настоящую дату, а голые непадженные цифры дня в конце строки (`"2000-01-3"` →
+     * `"2000-01-31"` по мере набора, см. `TaskCompletionRuleFields.tsx`'s `buildDeadlineDayTemplate`)
+     * — `padStart`/зажатие 1..31 делает `normalizeDeadlineDayTemplate`
+     * (`model/formNumberUtils.ts`) один раз на границе, в `resolveRuleDraft`/`resolveShopRuleDraft`,
+     * а не здесь. Для разового правила — как есть, буквальная дата, без этой нормализации.
+     * Read only for `TaskCompletion`; ignored otherwise. */
     deadlineTemplate: string
+    /** `TaskCompletion.config.deadlinePeriodOffset` (recurring-task-deadline-offset, FR1) — на
+     * сколько расчётных периодов вперёд от периода авто-пересозданной задачи отсчитывается её
+     * дедлайн: `0` — дедлайн в месяце периода задачи (поведение по умолчанию, обратная
+     * совместимость с уже персистированными правилами), `1..3` — на 1..3 месяца вперёд. Хранится
+     * как обычное число (не VO — `DeadlinePeriodOffset` конструируется транзитно только на бэкенде
+     * для валидации инварианта, см. architecture.md поправку), число месяца по-прежнему берётся из
+     * `deadlineTemplate` выше. Read only for `TaskCompletion` with `isRecurring === true`
+     * (`TaskCompletionRuleFields.tsx` показывает контрол только тогда); ignored otherwise — тот же
+     * приём, что и у `taskTitleTemplate`. */
+    deadlinePeriodOffset: number
     /** `TaskCompletion.config.taskLinkTemplates` — ссылки, прикрепляемые к каждой АВТОСОЗДАННОЙ
      * задаче регулярного правила (`EnsureRuleTaskForPeriodService`), не к самой первой (та уже
      * создана вручную, со своими произвольными ссылками, на Шаге 1). Read only for `TaskCompletion`
@@ -234,6 +248,7 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',
@@ -267,6 +282,7 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',

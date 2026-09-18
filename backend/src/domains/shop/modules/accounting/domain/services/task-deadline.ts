@@ -18,13 +18,23 @@ import { Period } from '@/shared/domain/period.value-object';
 // overflow Date.UTC — иначе, например, deadlineTemplate "31 число" в
 // феврале давал бы дедлайн в марте, а не последний день февраля (тот же
 // приём и то же обоснование, что у зеркальной функции направления service).
+//
+// recurring-task-deadline-offset, tasks.md раздел 6 (design.md решение 3) —
+// deadlinePeriodOffset (0..3, провалидировано транзитно через
+// DeadlinePeriodOffset.create() на границе вызывающего кода — см.
+// TaskCompletionShop.buildConfig()) сдвигает месяц, от которого берутся
+// год/месяц/длина месяца для зажатия дня: используется
+// period.shiftMonths(deadlinePeriodOffset), а не сам period напрямую.
+// Смещение 0 — прежнее поведение без изменений.
 export function computeRecurringTaskDeadline(
     period: Period,
     deadlineTemplate: string,
+    deadlinePeriodOffset: number,
 ): Date {
     const template = new Date(deadlineTemplate);
-    const { from } = period.getBounds();
-    const totalDays = period.getTotalCalendarDays();
+    const targetPeriod = period.shiftMonths(deadlinePeriodOffset);
+    const { from } = targetPeriod.getBounds();
+    const totalDays = targetPeriod.getTotalCalendarDays();
     const day = Math.min(template.getUTCDate(), totalDays);
 
     return new Date(

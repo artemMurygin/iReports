@@ -188,6 +188,53 @@ describe('SalaryRuleRepository', () => {
         });
     });
 
+    // recurring-task-deadline-offset, tasks.md 4.1 — обратная совместимость с легаси-строками
+    // (созданными до этой фичи, без deadlinePeriodOffset в props): тот же приём, что и у
+    // accountingPeriod выше — деривация значения по умолчанию на границе SalaryRuleMapper.toDomain,
+    // а не бэкфилл БД.
+    describe('SalaryRuleMapper.toDomain — деривация deadlinePeriodOffset', () => {
+        const mapper = new SalaryRuleMapper();
+
+        it('легаси-запись без deadlinePeriodOffset в props получает deadlinePeriodOffset = 0', () => {
+            const rule = mapper.toDomain(
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            );
+
+            expect(
+                (rule.config as TaskCompletionSalaryConfig)
+                    .deadlinePeriodOffset,
+            ).toBe(0);
+        });
+
+        it('запись с явным deadlinePeriodOffset сохраняет своё значение', () => {
+            const rule = mapper.toDomain(
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                        deadlinePeriodOffset: 2,
+                    },
+                }),
+            );
+
+            expect(
+                (rule.config as TaskCompletionSalaryConfig)
+                    .deadlinePeriodOffset,
+            ).toBe(2);
+        });
+    });
+
     describe('findMotivationSchemaId', () => {
         it('возвращает motivationSchemaId найденного правила направления service', async () => {
             const { repository, findFirst } = buildRepository();

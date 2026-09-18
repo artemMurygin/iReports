@@ -11,6 +11,7 @@ import {
 } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import type { ShopCalculationContext } from '@/domains/shop/modules/accounting/domain/types/calculation-context.types';
 import type { ShopCalculationErpData } from '@/domains/shop/modules/accounting/domain/types/calculation-data.types';
+import { DeadlinePeriodOffset } from '@/domains/shop/modules/accounting/domain/value-objects/deadline-period-offset.value-object';
 
 // openspec/changes/replace-bitrix-task-integration — зеркало TaskCompletion
 // сервиса (domains/service/modules/accounting/domain/entities/salary-rules/
@@ -135,10 +136,28 @@ export class TaskCompletionShop
             taskDescriptionTemplate?: string;
             isRecurring: boolean;
             deadlineTemplate: string;
+            // Опционально в этой транзитной wire-форме (в отличие от
+            // домена, где поле обязательное, см.
+            // TaskCompletionShopSalaryConfig) — зеркало обработки
+            // accountingPeriod чуть ниже: контракт (TaskCompletionShopSalaryConfigRequest)
+            // уже задаёт `.default(0)` на границе HTTP, но здесь, на границе
+            // самого домена, отсутствие поля тоже трактуется как 0, а не
+            // как ошибка — тот же дефолт, что и для легаси-строк БД (design.md
+            // решение 4, ShopSalaryRuleMapper.toDomain).
+            deadlinePeriodOffset?: number;
             defaultAmount: number;
             taskLinkTemplates?: { url: string; label?: string }[];
             accountingPeriod: string;
         };
+
+        // recurring-task-deadline-offset, design.md решение 1/3 — валидация
+        // транзитная (по образцу ProductSoldEntity.validate(), дёргающего
+        // FloatPercentSchedule.create()): DeadlinePeriodOffset.create()
+        // бросает ArgumentInvalidException на невалидном значении (не целое,
+        // вне 0..3), а само значение в config сохраняется как обычное
+        // число — этот VO нигде не персистируется.
+        const deadlinePeriodOffset = config.deadlinePeriodOffset ?? 0;
+        DeadlinePeriodOffset.create(deadlinePeriodOffset);
 
         // add-task-salary-rule-accounting-period, design.md решение 2 —
         // зеркало buildTaskCompletionConfig направления service: период
@@ -160,6 +179,7 @@ export class TaskCompletionShop
             taskDescriptionTemplate: config.taskDescriptionTemplate,
             isRecurring: config.isRecurring,
             deadlineTemplate: config.deadlineTemplate,
+            deadlinePeriodOffset,
             defaultAmount: config.defaultAmount,
             taskLinkTemplates: config.taskLinkTemplates ?? [],
             accountingPeriod: period,
@@ -223,5 +243,15 @@ export class TaskCompletionShop
         ];
     }
 
-    validate(): void {}
+    // recurring-task-deadline-offset — вызывается автоматически
+    // конструктором Entity (entity.base.ts) и при чтении из БД
+    // (ShopSalaryRuleMapper.toDomain), и при create()/restore() (см.
+    // buildConfig() выше, откуда validate() вызывается повторно —
+    // безвредно, DeadlinePeriodOffset.create() идемпотентна): тот же
+    // fail-closed приём, что и у ProductSoldEntity.validate()
+    // (FloatPercentSchedule.create()) — невалидное значение в БД не должно
+    // молча уходить в расчёт дедлайна.
+    validate(): void {
+        DeadlinePeriodOffset.create(this.props.config.deadlinePeriodOffset);
+    }
 }

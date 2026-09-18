@@ -114,6 +114,14 @@ export type TaskCompletionSalaryConfig = {
     // taskIdByPeriod, иначе Period.current()) — здесь, на границе домена,
     // поле уже всегда присутствует.
     accountingPeriod: string;
+    // Смещение (в расчётных периодах, 0..3) месяца дедлайна регулярной задачи относительно
+    // самого периода (recurring-task-deadline-offset, design.md решение 1/2): 0 — дедлайн внутри
+    // месяца периода (прежнее поведение), 1..3 — на 1..3 месяца вперёд. Для разового правила не
+    // используется (deadlineTemplate трактуется буквально как дата, задача не пересоздаётся).
+    // Обычное число, а не DeadlinePeriodOffset VO — тот же паттерн, что и percentBorders у
+    // ProductSoldEntity (shop, FloatPercentSchedule): VO валидирует значение транзитно в
+    // buildTaskCompletionConfig(), в config персистируется уже проверенный примитив.
+    deadlinePeriodOffset: number;
     // Сумма начисления по умолчанию — TaskCompletion.calculate() подставляет
     // её в CalculationLine.amount, когда задача переходит в «Закрыта
     // успешно»; руководитель может изменить сумму при проведении начисления

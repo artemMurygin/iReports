@@ -2,7 +2,7 @@ import { salaryRuleRequestSchema, type SalaryRuleRequest, type SalaryRuleRespons
 
 import { isValidPeriod } from '@/shared/lib/format.ts'
 
-import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
+import { normalizeDeadlineDayTemplate, parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
 import {
     buildDepartmentPercentConfig,
     buildDepartmentPlanBonusConfig,
@@ -78,6 +78,13 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
                 }
                 if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите шаблон дедлайна'
             }
+            // recurring-task-deadline-offset, FR1 — «Дедлайн относится к» (0 — этому периоду, 1..3
+            // — на 1..3 периода вперёд). Драфт всегда несёт число (default 0, см.
+            // `createRuleDraft`), поэтому проверка структурная (регрессия UI-контрола), а не
+            // "обязательное поле" — тот же приём, что и у `percentBorders`' длины в `buildPercentBorders`.
+            if (!Number.isInteger(draft.deadlinePeriodOffset) || draft.deadlinePeriodOffset < 0 || draft.deadlinePeriodOffset > 3) {
+                errors.deadlinePeriodOffset = 'Смещение периода дедлайна должно быть от 0 до 3'
+            }
             const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
             config = {
                 taskId: draft.taskId.trim(),
@@ -85,7 +92,10 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
                 taskTitleTemplate: draft.taskTitleTemplate.trim(),
                 ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
                 isRecurring: draft.isRecurring,
-                deadlineTemplate: draft.deadlineTemplate,
+                deadlineTemplate: draft.isRecurring
+                    ? normalizeDeadlineDayTemplate(draft.deadlineTemplate)
+                    : draft.deadlineTemplate,
+                deadlinePeriodOffset: draft.deadlinePeriodOffset,
                 defaultAmount: defaultAmount ?? Number.NaN,
                 taskLinkTemplates: draft.taskLinkTemplates,
             }
@@ -186,6 +196,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',
@@ -261,6 +272,11 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
                 taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
                 deadlineTemplate: rule.config.deadlineTemplate,
+                // recurring-task-deadline-offset — обратная совместимость с уже персистированными
+                // правилами до бэкофилла (мапperа/контракта дефолт на бэкенде тот же, `?? 0` тут —
+                // защита на случай, если ответ пришёл без zod-парсинга, тем же приёмом что и
+                // `accountingPeriod ?? ''` выше).
+                deadlinePeriodOffset: rule.config.deadlinePeriodOffset ?? 0,
                 taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
             }
 

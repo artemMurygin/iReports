@@ -152,6 +152,17 @@ export type TaskCompletionShopSalaryConfig = {
     // ShopSalaryRuleMapper.toDomain (design.md решение 1), дальше в домене и
     // в API-ответе поле всегда присутствует.
     accountingPeriod: string;
+    // recurring-task-deadline-offset, design.md решение 1/3 — смещение (в
+    // расчётных периодах, 0..3) месяца дедлайна регулярной задачи
+    // относительно месяца периода задачи. Хранится как обычное число (не
+    // как объект DeadlinePeriodOffset VO) — тот же паттерн, что и у
+    // ProductSoldSalaryConfig.award.percentBorders: конфиг остаётся plain
+    // data, а DeadlinePeriodOffset.create() используется ТРАНЗИТНО только
+    // для валидации инварианта диапазона (см. TaskCompletionShop.buildConfig()/
+    // validate()). Не опционально здесь по той же причине, что и
+    // accountingPeriod — деривация дефолта 0 для легаси-строк происходит
+    // один раз на границе ShopSalaryRuleMapper.toDomain.
+    deadlinePeriodOffset: number;
 };
 
 export type TaskCompletionShopSalaryRule = {

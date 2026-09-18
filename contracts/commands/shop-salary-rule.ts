@@ -166,6 +166,9 @@ const taskCompletionShopSalaryConfigRequestSchema = z.object({
     taskDescriptionTemplate: z.string().optional(),
     isRecurring: z.boolean(),
     deadlineTemplate: z.string(),
+    // Смещение периода дедлайна регулярной задачи относительно расчётного периода — зеркало
+    // service (recurring-task-deadline-offset, независимая копия, issue #57).
+    deadlinePeriodOffset: z.number().int().min(0).max(3).default(0),
     // Сумма начисления по умолчанию — зеркало service (см.
     // taskCompletionSalaryConfigRequestSchema в salary-rule.ts), независимая копия (issue #57).
     defaultAmount: z.number().int().nonnegative(),

@@ -276,6 +276,69 @@ describe('ShopSalaryRuleMapper', () => {
             });
         });
 
+        // recurring-task-deadline-offset, tasks.md раздел 7 (design.md решение 4) —
+        // зеркало пункта 4.1 направления service: уже персистированные строки
+        // TaskCompletion без deadlinePeriodOffset (легаси, до этого изменения)
+        // должны продолжать читаться без ошибок валидации, с деривацией 0 на
+        // границе маппера — тот же приём, что и у accountingPeriod выше.
+        describe('деривация deadlinePeriodOffset для легаси-строк TaskCompletion (design.md решение 4)', () => {
+            it('props без deadlinePeriodOffset → домен получает deadlinePeriodOffset = 0', () => {
+                const entity = mapper.toDomain({
+                    id: 'rule-12',
+                    motivationSchemaId: 'schema-1',
+                    type: 'TaskCompletion',
+                    name: 'Собрать отчёт',
+                    targetRole: 'OFFLINE_MANAGER',
+                    direction: 'shop',
+                    isActive: true,
+                    props: {
+                        taskIdByPeriod: { '2026-01': 'task-1' },
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                        accountingPeriod: '2026-01',
+                    },
+                    createdAt,
+                    updatedAt,
+                });
+
+                expect(entity).toBeInstanceOf(TaskCompletionShop);
+                expect(
+                    (entity.config as TaskCompletionShopSalaryConfig)
+                        .deadlinePeriodOffset,
+                ).toBe(0);
+            });
+
+            it('props с уже заполненным deadlinePeriodOffset → значение передаётся как есть', () => {
+                const entity = mapper.toDomain({
+                    id: 'rule-13',
+                    motivationSchemaId: 'schema-1',
+                    type: 'TaskCompletion',
+                    name: 'Собрать отчёт',
+                    targetRole: 'OFFLINE_MANAGER',
+                    direction: 'shop',
+                    isActive: true,
+                    props: {
+                        taskIdByPeriod: { '2026-01': 'task-1' },
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        deadlinePeriodOffset: 2,
+                        defaultAmount: 5000,
+                        accountingPeriod: '2026-01',
+                    },
+                    createdAt,
+                    updatedAt,
+                });
+
+                expect(
+                    (entity.config as TaskCompletionShopSalaryConfig)
+                        .deadlinePeriodOffset,
+                ).toBe(2);
+            });
+        });
+
         it('выбрасывает ошибку для неизвестного type', () => {
             expect(() =>
                 mapper.toDomain({

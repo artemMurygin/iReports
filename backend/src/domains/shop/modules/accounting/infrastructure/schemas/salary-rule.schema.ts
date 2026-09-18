@@ -30,6 +30,15 @@ const taskCompletionShopPersistedConfigSchema = z.object({
     taskDescriptionTemplate: z.string().optional(),
     isRecurring: z.boolean(),
     deadlineTemplate: z.string(),
+    // recurring-task-deadline-offset, tasks.md раздел 7 (design.md решение 4) —
+    // опционально здесь по той же причине, что и accountingPeriod ниже:
+    // уже персистированные строки TaskCompletion, созданные до этого
+    // изменения, не содержат deadlinePeriodOffset в props.
+    // ShopSalaryRuleMapper.toDomain деривирует его при отсутствии (0), поэтому
+    // парсинг не должен падать на легаси-строках. Обычное число (не через
+    // схему-обёртку VO) — зеркало формы хранения остальных примитивов конфига,
+    // см. WHY у TaskCompletionShopSalaryConfig.deadlinePeriodOffset.
+    deadlinePeriodOffset: z.number().int().min(0).max(3).optional(),
     defaultAmount: z.number().int().nonnegative(),
     // Опционально здесь (в отличие от domain-типа TaskCompletionShopSalaryConfig,
     // где поле обязательное) — зеркало service (add-task-salary-rule-accounting-period,

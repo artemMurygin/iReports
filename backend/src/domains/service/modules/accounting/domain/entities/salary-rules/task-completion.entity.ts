@@ -12,6 +12,7 @@ import {
     TaskCompletionSalaryRule,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
+import { DeadlinePeriodOffset } from '@/domains/service/modules/accounting/domain/value-objects/deadline-period-offset.value-object';
 
 // replace-bitrix-task-integration, design.md решение 2/4/5: правило «за
 // выполнение задачи» — единственный тип правила сервиса, чей calculate()
@@ -161,6 +162,14 @@ export function buildTaskCompletionConfig(
     // контракта (бросает ArgumentInvalidException при некорректном значении).
     const accountingPeriod = Period.create(request.accountingPeriod).getValue();
 
+    // recurring-task-deadline-offset, design.md решение 1/2 — DeadlinePeriodOffset.create()
+    // здесь чисто транзитная валидация (тот же приём, что и Period.create() выше и
+    // FloatPercentSchedule.create() у ProductSoldEntity, shop): бросает ArgumentInvalidException
+    // на невалидном значении, а в config попадает уже проверенное число, не сам VO.
+    const deadlinePeriodOffset = DeadlinePeriodOffset.create(
+        request.deadlinePeriodOffset ?? 0,
+    ).getValue();
+
     return {
         taskIdByPeriod: {
             ...existingTaskIdByPeriod,
@@ -170,6 +179,7 @@ export function buildTaskCompletionConfig(
         taskDescriptionTemplate: request.taskDescriptionTemplate,
         isRecurring: request.isRecurring,
         deadlineTemplate: request.deadlineTemplate,
+        deadlinePeriodOffset,
         defaultAmount: request.defaultAmount,
         taskLinkTemplates: request.taskLinkTemplates ?? [],
         accountingPeriod,

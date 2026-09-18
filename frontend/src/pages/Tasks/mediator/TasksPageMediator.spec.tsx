@@ -188,6 +188,7 @@ describe('TasksPageMediator', () => {
                 taskTitleTemplate: 'Обзвонить клиентов',
                 isRecurring: false,
                 deadlineTemplate: '2026-09-08',
+                deadlinePeriodOffset: 0,
                 defaultAmount: 5000,
                 taskIdByPeriod: { '2026-09': 'task-1' },
             },

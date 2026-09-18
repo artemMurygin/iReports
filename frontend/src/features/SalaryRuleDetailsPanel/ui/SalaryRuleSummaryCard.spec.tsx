@@ -21,6 +21,7 @@ const TASK_COMPLETION_RULE: SalaryRuleDetail = {
         taskTitleTemplate: 'Сделать X',
         isRecurring: false,
         deadlineTemplate: '2026-09-30',
+        deadlinePeriodOffset: 0,
         defaultAmount: 12000,
         taskIdByPeriod: { '2026-09': 'task-1' },
     },

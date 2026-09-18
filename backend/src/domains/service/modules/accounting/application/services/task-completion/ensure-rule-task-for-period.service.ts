@@ -73,6 +73,7 @@ export class EnsureRuleTaskForPeriodService {
 
         const deadline = computeDeadlineForPeriod(
             config.deadlineTemplate,
+            config.deadlinePeriodOffset,
             period,
         );
 
@@ -120,23 +121,31 @@ export class EnsureRuleTaskForPeriodService {
 }
 
 // deadlineTemplate регулярного правила несёт только число месяца (и время
-// суток, если руководитель его задал) — календарный год/месяц всегда
-// берутся из запрошенного периода. День зажимается длиной целевого месяца
-// (Period.getTotalCalendarDays()), чтобы, например, deadlineTemplate «31
-// число» не выходил за пределы февраля.
+// суток, если руководитель его задал) — календарный год/месяц берутся из
+// запрошенного периода, СДВИНУТОГО на deadlinePeriodOffset месяцев вперёд
+// (recurring-task-deadline-offset, design.md решение 3): 0 — сохраняет
+// прежнее поведение (месяц периода как есть). День зажимается длиной ИТОГОВОГО
+// (уже сдвинутого) месяца через Period.getTotalCalendarDays() того же
+// сдвинутого периода, а не исходного — иначе, например, «31 число» со
+// смещением в февраль зажималось бы длиной января, а не февраля.
 export function computeDeadlineForPeriod(
     deadlineTemplate: string,
+    deadlinePeriodOffset: number,
     period: string,
 ): Date {
     const template = new Date(deadlineTemplate);
-    const [year, month] = period.split('-').map(Number);
-    const totalDays = Period.create(period).getTotalCalendarDays();
+    const targetPeriod =
+        Period.create(period).shiftMonths(deadlinePeriodOffset);
+    const { from } = targetPeriod.getBounds();
+    const year = from.getUTCFullYear();
+    const month = from.getUTCMonth();
+    const totalDays = targetPeriod.getTotalCalendarDays();
     const day = Math.min(template.getUTCDate(), totalDays);
 
     return new Date(
         Date.UTC(
             year,
-            month - 1,
+            month,
             day,
             template.getUTCHours(),
             template.getUTCMinutes(),

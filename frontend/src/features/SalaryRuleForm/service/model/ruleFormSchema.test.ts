@@ -251,7 +251,11 @@ describe('resolveRuleDraft — TaskCompletion', () => {
                 taskTitleTemplate: 'Обновить фото витрины ({месяц})',
                 taskDescriptionTemplate: 'Смотри требования в ТЗ',
                 isRecurring: true,
-                deadlineTemplate: '2026-09-25',
+                // recurring-task-deadline-offset v2 — `resolveRuleDraft` нормализует
+                // `deadlineTemplate` регулярного правила в канонический носитель дня
+                // (`normalizeDeadlineDayTemplate`), день (25) сохраняется, месяц/год — нет.
+                deadlineTemplate: '2000-01-25',
+                deadlinePeriodOffset: 0,
                 defaultAmount: 5000,
                 taskLinkTemplates: [],
             })
@@ -314,6 +318,40 @@ describe('resolveRuleDraft — TaskCompletion', () => {
     })
 })
 
+/**
+ * recurring-task-deadline-offset, FR1 — «Дедлайн относится к» (Select, `TaskCompletionRuleFields.tsx`),
+ * поле `RuleDraft.deadlinePeriodOffset` (обычное число, не VO — VO конструируется транзитно только
+ * на бэкенде, см. architecture.md поправку из tasks.md группы 9). Зеркально покрыто в
+ * `shop/model/ruleFormSchema.test.ts`.
+ */
+describe('resolveRuleDraft — TaskCompletion deadlinePeriodOffset (recurring-task-deadline-offset)', () => {
+    it('defaults to 0 on a brand-new RuleDraft', () => {
+        expect(createRuleDraft().deadlinePeriodOffset).toBe(0)
+    })
+
+    it('resolves a valid deadlinePeriodOffset (1..3) into the request', () => {
+        for (const offset of [1, 2, 3]) {
+            const result = resolveRuleDraft(
+                baseDraft({ type: 'TaskCompletion', taskId: 'task-1', price: '5000', deadlinePeriodOffset: offset }),
+            )
+            expect(result.success).toBe(true)
+            if (result.success && result.data.type === 'TaskCompletion') {
+                expect(result.data.config.deadlinePeriodOffset).toBe(offset)
+            }
+        }
+    })
+
+    it('rejects a value outside 0..3 with a clear field error', () => {
+        for (const invalid of [-1, 4, 1.5]) {
+            const result = resolveRuleDraft(
+                baseDraft({ type: 'TaskCompletion', taskId: 'task-1', price: '5000', deadlinePeriodOffset: invalid }),
+            )
+            expect(result.success).toBe(false)
+            if (!result.success) expect(result.errors.deadlinePeriodOffset).toBeTruthy()
+        }
+    })
+})
+
 describe('draftFromRule — TaskCompletion', () => {
     it('round-trips a persisted rule back into a draft usable by resolveRuleDraft', () => {
         const draft = draftFromRule({
@@ -327,6 +365,7 @@ describe('draftFromRule — TaskCompletion', () => {
                 taskDescriptionTemplate: 'Смотри требования в ТЗ',
                 isRecurring: true,
                 deadlineTemplate: '2026-09-25',
+                deadlinePeriodOffset: 2,
                 defaultAmount: 5000,
                 taskIdByPeriod: { '2026-08': 'task-old', '2026-09': 'task-1' },
             },
@@ -340,6 +379,8 @@ describe('draftFromRule — TaskCompletion', () => {
         expect(draft.taskDescriptionTemplate).toBe('Смотри требования в ТЗ')
         expect(draft.isRecurring).toBe(true)
         expect(draft.deadlineTemplate).toBe('2026-09-25')
+        // recurring-task-deadline-offset — переносится из ответа как есть (см. draftFromRule).
+        expect(draft.deadlinePeriodOffset).toBe(2)
         expect(draft.price).toBe('5000')
         expect(draft.taskLinkTemplates).toEqual([])
 
@@ -349,6 +390,7 @@ describe('draftFromRule — TaskCompletion', () => {
             expect(resolvedAgain.data.config.taskId).toBe('task-1')
             expect(resolvedAgain.data.config.taskDescriptionTemplate).toBe('Смотри требования в ТЗ')
             expect(resolvedAgain.data.config.defaultAmount).toBe(5000)
+            expect(resolvedAgain.data.config.deadlinePeriodOffset).toBe(2)
         }
     })
 
@@ -364,6 +406,7 @@ describe('draftFromRule — TaskCompletion', () => {
                 taskTitleTemplate: 'Обновить фото витрины',
                 isRecurring: true,
                 deadlineTemplate: '2026-09-25',
+                deadlinePeriodOffset: 1,
                 defaultAmount: 5000,
                 taskIdByPeriod: { '2026-09': 'task-1' },
                 taskLinkTemplates: [{ url: 'https://example.com/1', label: 'Отчёт' }],
@@ -383,12 +426,14 @@ describe('draftFromRule — TaskCompletion', () => {
                 taskTitleTemplate: '',
                 isRecurring: false,
                 deadlineTemplate: '',
+                deadlinePeriodOffset: 0,
                 defaultAmount: 3000,
                 taskIdByPeriod: {},
             },
         })
         expect(draft.taskId).toBe('')
         expect(draft.taskDescriptionTemplate).toBe('')
+        expect(draft.deadlinePeriodOffset).toBe(0)
         expect(draft.isRecurring).toBe(false)
         expect(draft.price).toBe('3000')
     })

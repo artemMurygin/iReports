@@ -65,6 +65,26 @@ describe('Period', () => {
         });
     });
 
+    describe('shiftMonths', () => {
+        it('offset 0 возвращает тот же период', () => {
+            expect(Period.create('2026-08').shiftMonths(0).getValue()).toBe(
+                '2026-08',
+            );
+        });
+
+        it('положительный offset переносит месяц вперёд внутри года', () => {
+            expect(Period.create('2026-08').shiftMonths(2).getValue()).toBe(
+                '2026-10',
+            );
+        });
+
+        it('offset, переносящий через границу года, корректно увеличивает год', () => {
+            expect(Period.create('2026-12').shiftMonths(1).getValue()).toBe(
+                '2027-01',
+            );
+        });
+    });
+
     describe('current', () => {
         it('вычисляет текущий период по UTC-дате', () => {
             jest.useFakeTimers().setSystemTime(

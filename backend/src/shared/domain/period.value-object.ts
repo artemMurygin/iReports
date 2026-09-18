@@ -77,6 +77,19 @@ export class Period extends ValueObject<string> {
         return Period.fromDate(prevMonthDate);
     }
 
+    // Обобщение previous() на произвольное число месяцев в обе стороны —
+    // источник для дедлайна регулярной задачи, который может относиться не
+    // к текущему расчётному периоду, а к одному из следующих (Фаза
+    // recurring-task-deadline-offset, см. DeadlinePeriodOffset). offset 0
+    // возвращает тот же период, положительный — сдвигает вперёд; тот же
+    // UTC-трюк с "нулевым" месяцем, что и в previous()/getBounds(), сам
+    // переносит год при выходе месяца за границы 0..11.
+    shiftMonths(offset: number): Period {
+        const [year, month] = this.props.value.split('-').map(Number);
+        const shiftedDate = new Date(Date.UTC(year, month - 1 + offset, 1));
+        return Period.fromDate(shiftedDate);
+    }
+
     // Текущий период "сейчас" в UTC — общая точка отсчёта для крона
     // (SalesPlanAutoCreationCron) и ленивого достраивания, чтобы границы
     // месяца в кроне и в самом Period не расходились по временной зоне (см.

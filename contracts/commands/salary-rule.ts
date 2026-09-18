@@ -232,6 +232,13 @@ const taskCompletionSalaryConfigRequestSchema = z.object({
     taskDescriptionTemplate: z.string().optional(),
     isRecurring: z.boolean(),
     deadlineTemplate: z.string(),
+    // Смещение периода дедлайна регулярной задачи относительно расчётного периода
+    // (recurring-task-deadline-offset, FR1/design.md): 0 — дедлайн в месяце периода задачи,
+    // 1..3 — на 1..3 месяца вперёд. Для разового правила не используется (задача не
+    // пересоздаётся, deadlineTemplate трактуется буквально как дата). Дефолт 0 — обратная
+    // совместимость с уже персистированными правилами (легаси-строки трактуются как
+    // прежнее поведение, см. SalaryRuleMapper.toDomain).
+    deadlinePeriodOffset: z.number().int().min(0).max(3).default(0),
     // Сумма начисления по умолчанию — подставляется в строку начисления,
     // когда задача закрыта успешно (TaskCompletion.calculate()), руководитель
     // может изменить её при проведении (см.

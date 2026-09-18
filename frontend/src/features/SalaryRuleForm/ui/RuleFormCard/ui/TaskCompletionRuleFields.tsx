@@ -2,9 +2,11 @@ import { ChevronRight, Plus, Trash2 } from 'lucide-react'
 
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 import { Input } from '@/shared/ui-kit/atoms/Input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui-kit/atoms/Select'
 import { SegmentedControl, type SegmentedControlOption } from '@/shared/ui-kit/atoms/SegmentedControl'
 import { Textarea } from '@/shared/ui-kit/atoms/Textarea'
 import { PeriodPicker } from '@/shared/ui-kit/organisms/PeriodPicker.tsx'
+import { formatPeriodMonthGenitive, formatPeriodMonthName, isValidPeriod, shiftPeriod } from '@/shared/lib/format.ts'
 
 import { salaryRuleTaskApi } from '../../../model/taskApi.ts'
 import { useDeleteRuleTask } from '../../../model/useDeleteRuleTask.ts'
@@ -51,6 +53,57 @@ const PERIOD_TABS: SegmentedControlOption<PeriodTab>[] = [
     { value: 'once', label: 'Разовая' },
     { value: 'recurring', label: 'Регулярная' },
 ]
+
+/** recurring-task-deadline-offset, FR1/ui-design.md v2 (Pencil: node `Zp9oG`/`UG3Qs`, фрейм
+ * `T0d2zv`, «Дедлайн регулярной задачи — предложение по UX», сравнение с прежним двухпольным
+ * вариантом на `MC9n1`) — 4 фиксированных пункта, индекс совпадает со значением
+ * `draft.deadlinePeriodOffset` (0 — этому периоду, по умолчанию). Формулировки читаются как
+ * продолжение фразы «‹день› числа · ‹пункт›» (см. `Control Row` ниже), а не как самостоятельная
+ * подпись — поэтому «в этом/следующем периоде», а не изолированное «этому периоду». `Select`
+ * работает со строковыми значениями (`radix-ui`), поэтому здесь строки — конвертация в/из
+ * `number` происходит на границе (`onValueChange`/`String(...)` ниже). */
+const DEADLINE_PERIOD_OFFSET_OPTIONS: { value: string; label: string }[] = [
+    { value: '0', label: 'в этом периоде' },
+    { value: '1', label: 'в следующем периоде' },
+    { value: '2', label: 'через 2 периода' },
+    { value: '3', label: 'через 3 периода' },
+]
+
+/** Дедлайн регулярной задачи не хранит настоящую календарную дату (год/месяц бэкенд игнорирует,
+ * см. `computeDeadlineForPeriod`/`computeRecurringTaskDeadline`) — только число месяца, буквально
+ * последние 1-2 цифры `deadlineTemplate`. Извлекает их regex'ом, а не через `Date`, чтобы не
+ * зависеть от того, реальная это дата легаси-правила (`"2026-09-30"`) или новый плейсхолдер-носитель
+ * (`buildDeadlineDayTemplate` ниже, `"2000-01-25"`) — в обоих случаях день лежит в конце строки. */
+function extractDeadlineDay(deadlineTemplate: string): string {
+    const match = /(\d{1,2})$/.exec(deadlineTemplate)
+    return match ? match[1] : ''
+}
+
+/** Обратная операция к `extractDeadlineDay`: несёт голые цифры дня как есть, БЕЗ `padStart` —
+ * иначе однозначный ввод "3" тут же переписался бы в "03" и сломал бы дальнейший набор второй
+ * цифры ("31") посреди уже отрисованного значения. Плейсхолдер-месяц/год (январь 2000-го, у него
+ * 31 день) выбран специально, чтобы ЛЮБОЙ ввод 1-31 давал синтаксически валидную дату — нормализация
+ * (padStart до 2 цифр, зажатие в 1..31) происходит один раз на границе, в
+ * `resolveRuleDraft`/`resolveShopRuleDraft`, а не здесь. */
+function buildDeadlineDayTemplate(digits: string): string {
+    return digits === '' ? '' : `2000-01-${digits}`
+}
+
+/** Живой пример под контролом (design: «Например: 5 февраля — для задачи за январь») — переводит
+ * абстрактное «в следующем периоде» в конкретную дату для ТЕКУЩЕГО расчётного периода правила,
+ * поэтому руководителю не нужно считать смещение в уме. `null`, пока день/период ещё не заполнены
+ * (тогда показывать нечего — оба поля уже подсвечены `FieldError` рядом). */
+function computeDeadlineHint(accountingPeriod: string, deadlineTemplate: string, offset: number): string | null {
+    const day = Number(extractDeadlineDay(deadlineTemplate))
+    if (!Number.isInteger(day) || day < 1 || !isValidPeriod(accountingPeriod)) return null
+
+    const targetPeriod = shiftPeriod(accountingPeriod, offset)
+    const [year, month] = targetPeriod.split('-').map(Number)
+    const totalDaysInTargetMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    const clampedDay = Math.min(day, totalDaysInTargetMonth)
+
+    return `Например: ${clampedDay} ${formatPeriodMonthGenitive(targetPeriod)} — для задачи за ${formatPeriodMonthName(accountingPeriod)}`
+}
 
 /**
  * Pencil: `design/sallary-first-iteration.pen`, фрейм `EdCuh` («Создание правила «За выполнение
@@ -197,36 +250,71 @@ export function TaskCompletionRuleFields({
                         Шаблон для автосоздания задачи на новый период
                     </p>
 
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-title-template">
-                                Заголовок задачи
-                            </label>
-                            <Input
-                                id="task-title-template"
-                                value={draft.taskTitleTemplate}
-                                onChange={(event) => onChange({ taskTitleTemplate: event.target.value })}
-                                placeholder="Например, Обновить фото витрины ({месяц})"
-                            />
-                            <FieldError message={errors.taskTitleTemplate} />
-                        </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-title-template">
+                            Заголовок задачи
+                        </label>
+                        <Input
+                            id="task-title-template"
+                            value={draft.taskTitleTemplate}
+                            onChange={(event) => onChange({ taskTitleTemplate: event.target.value })}
+                            placeholder="Например, Обновить фото витрины ({месяц})"
+                        />
+                        <FieldError message={errors.taskTitleTemplate} />
+                    </div>
 
-                        <div className="flex flex-col gap-1.5">
-                            <label
-                                className="font-ui text-xs font-medium text-ink-muted"
-                                htmlFor="task-deadline-template"
-                            >
-                                Дедлайн шаблона
-                            </label>
+                    {/* recurring-task-deadline-offset, FR1/ui-design.md v2 — одно поле «Дедлайн»
+                        вместо прежних двух разрозненных (полноценная дата + отдельный select ниже,
+                        Pencil node `B7KIJL` на фрейме `MC9n1` — так фича была сдана изначально, но
+                        месяц/год в дате были не нужны и вводили в заблуждение, а связь даты со
+                        смещением периода была неочевидна). Читается как одно предложение: «‹день›
+                        числа · ‹пункт смещения›» (Pencil node `Zp9oG`, фрейм `T0d2zv`). */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-deadline-day">
+                            Дедлайн
+                        </label>
+                        <div className="flex items-center gap-2">
                             <Input
-                                id="task-deadline-template"
-                                type="date"
-                                value={draft.deadlineTemplate.slice(0, 10)}
-                                onChange={(event) => onChange({ deadlineTemplate: event.target.value })}
+                                id="task-deadline-day"
+                                inputMode="numeric"
+                                className="w-14 shrink-0 text-center"
+                                value={extractDeadlineDay(draft.deadlineTemplate)}
+                                onChange={(event) =>
+                                    onChange({
+                                        deadlineTemplate: buildDeadlineDayTemplate(
+                                            event.target.value.replace(/[^0-9]/g, '').slice(0, 2),
+                                        ),
+                                    })
+                                }
+                                placeholder="25"
                             />
-                            <p className="font-ui text-[11px] text-ink-muted">Число месяца — дедлайн каждого периода</p>
-                            <FieldError message={errors.dueDate} />
+                            <span className="shrink-0 font-ui text-[13px] text-ink-muted">числа ·</span>
+                            <Select
+                                value={String(draft.deadlinePeriodOffset)}
+                                onValueChange={(value) => onChange({ deadlinePeriodOffset: Number(value) })}
+                            >
+                                <SelectTrigger id="task-deadline-period-offset" aria-label="Дедлайн относится к" className="flex-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DEADLINE_PERIOD_OFFSET_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
+                        {(() => {
+                            const hint = computeDeadlineHint(
+                                draft.accountingPeriod,
+                                draft.deadlineTemplate,
+                                draft.deadlinePeriodOffset,
+                            )
+                            return hint ? <p className="font-ui text-[11px] text-ink-muted">{hint}</p> : null
+                        })()}
+                        <FieldError message={errors.dueDate} />
+                        <FieldError message={errors.deadlinePeriodOffset} />
                     </div>
 
                     <div className="flex flex-col gap-1.5">

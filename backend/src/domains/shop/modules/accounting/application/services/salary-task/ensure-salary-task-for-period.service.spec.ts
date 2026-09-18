@@ -36,6 +36,7 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
             taskDescriptionTemplate: 'Описание задачи',
             isRecurring: true,
             deadlineTemplate: '2026-01-25T18:00:00.000Z',
+            deadlinePeriodOffset: 0,
             defaultAmount: 5000,
             taskLinkTemplates: [],
             accountingPeriod: '2026-01',
@@ -193,6 +194,27 @@ describe('EnsureShopSalaryTaskForPeriodService', () => {
         ).toBe('2026-10');
     });
 
+    // recurring-task-deadline-offset, tasks.md раздел 6 — прокидывает
+    // config.deadlinePeriodOffset в computeRecurringTaskDeadline (см.
+    // task-deadline.spec.ts за самими сценариями зажатия/смещения месяца).
+    it('прокидывает config.deadlinePeriodOffset в дедлайн авто-созданной задачи', async () => {
+        const { service, execute } = buildService({
+            rule: buildRuleFixture({
+                isRecurring: true,
+                deadlineTemplate: '2026-01-05T00:00:00.000Z',
+                deadlinePeriodOffset: 1,
+            }),
+            createdTaskId: 'task-99',
+        });
+
+        await withRequestContext(() => service.ensure('rule-1', '2026-10', 77));
+
+        const dispatched = execute.mock.calls[0][0];
+        expect(dispatched).toMatchObject({
+            deadline: new Date('2026-11-05T00:00:00.000Z'),
+        });
+    });
+
     // add-task-rule-task-lifecycle
     it('прикрепляет ссылки шаблона к новой задаче через AddTaskLinkCommand', async () => {
         const { service, execute } = buildService({
@@ -243,6 +265,7 @@ describe('filterRecurringTaskCompletionShopRules', () => {
             taskTitleTemplate: 'Задача',
             isRecurring,
             deadlineTemplate: '2026-01-25T18:00:00.000Z',
+            deadlinePeriodOffset: 0,
             defaultAmount: 5000,
             taskLinkTemplates: [],
             accountingPeriod: '2026-01',

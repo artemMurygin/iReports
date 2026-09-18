@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeAll, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -23,6 +23,15 @@ import { TaskCompletionRuleFields, type TaskCompletionRuleFieldsProps } from './
 vi.mock('@/shared/api/axios.instance.ts', () => ({
     api: { get: vi.fn(), delete: vi.fn() },
 }))
+
+// Radix `Select` (deadlinePeriodOffset) вызывает `hasPointerCapture`/`releasePointerCapture`/
+// `scrollIntoView` при открытии — jsdom их не реализует. Тот же полифилл, что и
+// `WarehouseSelect.spec.tsx`/`EditTaskFields.spec.tsx`.
+beforeAll(() => {
+    window.HTMLElement.prototype.hasPointerCapture = vi.fn().mockReturnValue(false)
+    window.HTMLElement.prototype.releasePointerCapture = vi.fn()
+    window.HTMLElement.prototype.scrollIntoView = vi.fn()
+})
 
 function makeDraft(patch: Partial<RuleDraft> = {}): RuleDraft {
     return { ...createRuleDraft('TaskCompletion'), taskId: 'task-42', ...patch }
@@ -75,7 +84,10 @@ describe('TaskCompletionRuleFields', () => {
 
         expect(screen.queryByLabelText('Заголовок задачи')).not.toBeInTheDocument()
         expect(screen.queryByLabelText('Описание задачи')).not.toBeInTheDocument()
-        expect(screen.queryByLabelText('Дедлайн шаблона')).not.toBeInTheDocument()
+        // recurring-task-deadline-offset v2 — одно поле «Дедлайн» (день + смещение периода)
+        // вместо прежних двух разрозненных.
+        expect(screen.queryByLabelText('Дедлайн')).not.toBeInTheDocument()
+        expect(screen.queryByLabelText('Дедлайн относится к')).not.toBeInTheDocument()
     })
 
     it('shows the auto-recreate template fields for a recurring rule and reports edits', async () => {
@@ -86,11 +98,79 @@ describe('TaskCompletionRuleFields', () => {
         const titleTemplate = screen.getByLabelText('Заголовок задачи')
         expect(titleTemplate).toBeInTheDocument()
         expect(screen.getByLabelText('Описание задачи')).toBeInTheDocument()
-        expect(screen.getByLabelText('Дедлайн шаблона')).toBeInTheDocument()
+        // recurring-task-deadline-offset v2 — единое поле «Дедлайн» (день месяца + селект
+        // смещения периода, см. describe ниже за детальным покрытием).
+        expect(screen.getByLabelText('Дедлайн')).toBeInTheDocument()
+        expect(screen.getByLabelText('Дедлайн относится к')).toBeInTheDocument()
 
         await user.type(titleTemplate, 'X')
 
         expect(onChange).toHaveBeenCalledWith({ taskTitleTemplate: 'X' })
+    })
+
+    // recurring-task-deadline-offset v2, Pencil node `Zp9oG` (фрейм `T0d2zv`) — одно поле
+    // «Дедлайн» (день + «‹день› числа · ‹смещение›») с живым примером вместо прежней полной
+    // календарной даты и разрозненного select'а (node `B7KIJL`, фрейм `MC9n1`, сравнение).
+    describe('поле «Дедлайн» (день месяца + смещение периода)', () => {
+        it('показывает день из deadlineTemplate, выбранное смещение и живой пример', () => {
+            renderField({
+                draft: makeDraft({
+                    isRecurring: true,
+                    deadlineTemplate: '2000-01-25',
+                    deadlinePeriodOffset: 1,
+                    accountingPeriod: '2026-01',
+                }),
+            })
+
+            expect(screen.getByLabelText('Дедлайн')).toHaveValue('25')
+            expect(screen.getByLabelText('Дедлайн относится к')).toHaveTextContent('в следующем периоде')
+            expect(screen.getByText('Например: 25 февраля — для задачи за январь')).toBeInTheDocument()
+        })
+
+        it('зажимает пример по длине целевого месяца (31 число со смещением в короткий месяц)', () => {
+            renderField({
+                draft: makeDraft({
+                    isRecurring: true,
+                    deadlineTemplate: '2000-01-31',
+                    deadlinePeriodOffset: 1,
+                    accountingPeriod: '2026-01',
+                }),
+            })
+
+            expect(screen.getByText('Например: 28 февраля — для задачи за январь')).toBeInTheDocument()
+        })
+
+        it('не показывает пример, пока день ещё не введён', () => {
+            renderField({
+                draft: makeDraft({ isRecurring: true, deadlineTemplate: '', accountingPeriod: '2026-01' }),
+            })
+
+            expect(screen.queryByText(/Например:/)).not.toBeInTheDocument()
+        })
+
+        it('строит канонический носитель дня без ведущего нуля по мере набора', async () => {
+            const user = userEvent.setup()
+            const onChange = vi.fn()
+            renderField({ draft: makeDraft({ isRecurring: true, deadlineTemplate: '' }), onChange })
+
+            await user.type(screen.getByLabelText('Дедлайн'), '5')
+
+            expect(onChange).toHaveBeenCalledWith({ deadlineTemplate: '2000-01-5' })
+        })
+
+        it('меняет смещение периода через select', async () => {
+            const user = userEvent.setup()
+            const onChange = vi.fn()
+            renderField({
+                draft: makeDraft({ isRecurring: true, deadlineTemplate: '2000-01-10', deadlinePeriodOffset: 0 }),
+                onChange,
+            })
+
+            await user.click(screen.getByLabelText('Дедлайн относится к'))
+            await user.click(screen.getByRole('option', { name: 'через 2 периода' }))
+
+            expect(onChange).toHaveBeenCalledWith({ deadlinePeriodOffset: 2 })
+        })
     })
 
     // add-task-rule-task-lifecycle

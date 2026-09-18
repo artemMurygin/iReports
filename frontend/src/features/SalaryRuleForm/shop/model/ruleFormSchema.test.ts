@@ -251,7 +251,11 @@ describe('resolveShopRuleDraft — TaskCompletion', () => {
                 taskTitleTemplate: 'Провести ревизию склада ({месяц})',
                 taskDescriptionTemplate: 'Сверить остатки по накладным',
                 isRecurring: true,
-                deadlineTemplate: '2026-09-25',
+                // recurring-task-deadline-offset v2 — `resolveShopRuleDraft` нормализует
+                // `deadlineTemplate` регулярного правила в канонический носитель дня
+                // (`normalizeDeadlineDayTemplate`), день (25) сохраняется, месяц/год — нет.
+                deadlineTemplate: '2000-01-25',
+                deadlinePeriodOffset: 0,
                 defaultAmount: 5000,
                 taskLinkTemplates: [],
             })
@@ -309,6 +313,39 @@ describe('resolveShopRuleDraft — TaskCompletion', () => {
     })
 })
 
+/**
+ * Shop mirror of `service/model/ruleFormSchema.test.ts`'s аналогичный `describe`
+ * (recurring-task-deadline-offset, FR1) — тот же контрол «Дедлайн относится к», тот же
+ * `RuleDraft.deadlinePeriodOffset` (общий для обеих директоров тип драфта, `core/model/ruleDraft.ts`).
+ */
+describe('resolveShopRuleDraft — TaskCompletion deadlinePeriodOffset (recurring-task-deadline-offset)', () => {
+    it('defaults to 0 on a brand-new RuleDraft', () => {
+        expect(createRuleDraft().deadlinePeriodOffset).toBe(0)
+    })
+
+    it('resolves a valid deadlinePeriodOffset (1..3) into the request', () => {
+        for (const offset of [1, 2, 3]) {
+            const result = resolveShopRuleDraft(
+                baseDraft({ type: 'TaskCompletion', taskId: 'task-1', price: '5000', deadlinePeriodOffset: offset }),
+            )
+            expect(result.success).toBe(true)
+            if (result.success && result.data.type === 'TaskCompletion') {
+                expect(result.data.config.deadlinePeriodOffset).toBe(offset)
+            }
+        }
+    })
+
+    it('rejects a value outside 0..3 with a clear field error', () => {
+        for (const invalid of [-1, 4, 1.5]) {
+            const result = resolveShopRuleDraft(
+                baseDraft({ type: 'TaskCompletion', taskId: 'task-1', price: '5000', deadlinePeriodOffset: invalid }),
+            )
+            expect(result.success).toBe(false)
+            if (!result.success) expect(result.errors.deadlinePeriodOffset).toBeTruthy()
+        }
+    })
+})
+
 describe('draftFromShopRule — TaskCompletion', () => {
     it('round-trips a persisted rule back into a draft usable by resolveShopRuleDraft', () => {
         const draft = draftFromShopRule({
@@ -322,6 +359,7 @@ describe('draftFromShopRule — TaskCompletion', () => {
                 taskDescriptionTemplate: 'Сверить остатки по накладным',
                 isRecurring: false,
                 deadlineTemplate: '2026-09-25',
+                deadlinePeriodOffset: 3,
                 defaultAmount: 5000,
                 taskIdByPeriod: { '2026-09': 'task-1' },
             },
@@ -332,6 +370,8 @@ describe('draftFromShopRule — TaskCompletion', () => {
         expect(draft.taskDescriptionTemplate).toBe('Сверить остатки по накладным')
         expect(draft.isRecurring).toBe(false)
         expect(draft.deadlineTemplate).toBe('2026-09-25')
+        // recurring-task-deadline-offset — переносится из ответа как есть.
+        expect(draft.deadlinePeriodOffset).toBe(3)
         expect(draft.price).toBe('5000')
         expect(draft.taskLinkTemplates).toEqual([])
 
@@ -341,6 +381,7 @@ describe('draftFromShopRule — TaskCompletion', () => {
             expect(resolvedAgain.data.config.taskId).toBe('task-1')
             expect(resolvedAgain.data.config.taskDescriptionTemplate).toBe('Сверить остатки по накладным')
             expect(resolvedAgain.data.config.defaultAmount).toBe(5000)
+            expect(resolvedAgain.data.config.deadlinePeriodOffset).toBe(3)
         }
     })
 
@@ -356,6 +397,7 @@ describe('draftFromShopRule — TaskCompletion', () => {
                 taskTitleTemplate: 'Провести ревизию склада',
                 isRecurring: true,
                 deadlineTemplate: '2026-09-25',
+                deadlinePeriodOffset: 1,
                 defaultAmount: 5000,
                 taskIdByPeriod: { '2026-09': 'task-1' },
                 taskLinkTemplates: [{ url: 'https://example.com/1', label: 'Отчёт' }],
@@ -375,11 +417,13 @@ describe('draftFromShopRule — TaskCompletion', () => {
                 taskTitleTemplate: '',
                 isRecurring: true,
                 deadlineTemplate: '2026-09-05',
+                deadlinePeriodOffset: 0,
                 defaultAmount: 3000,
                 taskIdByPeriod: {},
             },
         })
         expect(draft.taskId).toBe('')
+        expect(draft.deadlinePeriodOffset).toBe(0)
         expect(draft.taskDescriptionTemplate).toBe('')
         expect(draft.isRecurring).toBe(true)
         expect(draft.deadlineTemplate).toBe('2026-09-05')

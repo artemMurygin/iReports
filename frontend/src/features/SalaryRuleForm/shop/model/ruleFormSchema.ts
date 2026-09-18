@@ -6,7 +6,12 @@ import {
 
 import { isValidPeriod } from '@/shared/lib/format.ts'
 
-import { buildPercentBorders, parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
+import {
+    buildPercentBorders,
+    normalizeDeadlineDayTemplate,
+    parseNumber,
+    type RuleFieldErrors,
+} from '../../model/formNumberUtils.ts'
 import {
     buildDepartmentPercentConfig,
     buildDepartmentPlanBonusConfig,
@@ -138,6 +143,10 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
                 }
                 if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите шаблон дедлайна'
             }
+            // Зеркало сервисной ветки (`service/model/ruleFormSchema.ts`) — recurring-task-deadline-offset, FR1.
+            if (!Number.isInteger(draft.deadlinePeriodOffset) || draft.deadlinePeriodOffset < 0 || draft.deadlinePeriodOffset > 3) {
+                errors.deadlinePeriodOffset = 'Смещение периода дедлайна должно быть от 0 до 3'
+            }
             const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
             config = {
                 taskId: draft.taskId.trim(),
@@ -145,7 +154,10 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
                 taskTitleTemplate: draft.taskTitleTemplate.trim(),
                 ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
                 isRecurring: draft.isRecurring,
-                deadlineTemplate: draft.deadlineTemplate,
+                deadlineTemplate: draft.isRecurring
+                    ? normalizeDeadlineDayTemplate(draft.deadlineTemplate)
+                    : draft.deadlineTemplate,
+                deadlinePeriodOffset: draft.deadlinePeriodOffset,
                 defaultAmount: defaultAmount ?? Number.NaN,
                 taskLinkTemplates: draft.taskLinkTemplates,
             }
@@ -246,6 +258,7 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
         warehouseId: '',
         planTurnoverRatio: '',
@@ -311,6 +324,8 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
                 taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
                 deadlineTemplate: rule.config.deadlineTemplate,
+                // Зеркало сервисной ветки — recurring-task-deadline-offset, обратная совместимость.
+                deadlinePeriodOffset: rule.config.deadlinePeriodOffset ?? 0,
                 taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
             }
 
