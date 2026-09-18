@@ -1,4 +1,4 @@
-import { Percent, Wallet } from 'lucide-react'
+import { Receipt, Wallet } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
 import { useCurrentUser, useLogout } from '@/features/Auth'
@@ -23,13 +23,14 @@ export function Header() {
         : undefined
 
     // Профиль-меню (Pencil `FjbRC`/`X2GpSa`, десктоп-поповер + мобильная шторка) — открывается
-    // из блока пользователя в шапке. «Выйти» доступно всегда; «Баланс»/«Зарплатные правила» —
-    // только когда известен id сотрудника (нужен для `/balance/employee/:id`).
+    // из блока пользователя в шапке. «Выйти» доступно всегда; «Баланс»/«Моя зарплата» —
+    // только когда известен id сотрудника (нужен для `/balance/employee/:id` и
+    // `/salaries/employee/:employeeId`).
     const profileMenu: ProfileMenuData | undefined = employee
         ? {
               items: [
+                  { label: 'Моя зарплата', icon: <Receipt />, to: `/salaries/employee/${employee.id}` },
                   { label: 'Баланс', icon: <Wallet />, to: `/balance/employee/${employee.id}` },
-                  { label: 'Зарплатные правила', icon: <Percent />, to: '/salaries/rules' },
               ],
               onLogout: () => logout(),
           }
