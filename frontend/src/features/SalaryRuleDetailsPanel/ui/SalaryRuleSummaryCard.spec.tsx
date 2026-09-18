@@ -12,15 +12,16 @@ import { SalaryRuleSummaryCard } from './SalaryRuleSummaryCard.tsx'
  * и плашка «только для просмотра» намеренно не отображаются (продуктовая правка после ui-design.md —
  * пользователь счёл их лишними на этой панели).
  */
+// split-task-completion-rule-form — isRecurring: false response не несёт буквальных полей задачи
+// вовсе (см. `taskCompletionOneOffConfigResponseSchema`, `contracts/commands/salary-rule.ts`), в
+// отличие от isRecurring: true ниже.
 const TASK_COMPLETION_RULE: SalaryRuleDetail = {
     id: 'rule-1',
     type: 'TaskCompletion',
     name: 'Обновить фото витрины',
     targetRole: 'ENGINEER',
     config: {
-        taskTitleTemplate: 'Сделать X',
         isRecurring: false,
-        deadlineTemplate: '2026-09-30',
         defaultAmount: 12000,
         taskIdByPeriod: { '2026-09': 'task-1' },
     },
@@ -64,7 +65,14 @@ describe('SalaryRuleSummaryCard', () => {
     it('показывает "Ежемесячно" и день месяца дедлайна для регулярного правила', () => {
         const recurringRule: SalaryRuleDetail = {
             ...TASK_COMPLETION_RULE,
-            config: { ...TASK_COMPLETION_RULE.config, isRecurring: true, deadlineTemplate: '2026-09-25' },
+            config: {
+                isRecurring: true,
+                taskTitleTemplate: 'Сделать X',
+                deadlineTemplate: '2026-09-25',
+                deadlinePeriodOffset: 0,
+                defaultAmount: TASK_COMPLETION_RULE.config.defaultAmount,
+                taskIdByPeriod: TASK_COMPLETION_RULE.config.taskIdByPeriod,
+            },
         }
 
         render(<SalaryRuleSummaryCard rule={recurringRule} />)

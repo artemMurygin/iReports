@@ -12,6 +12,7 @@ import {
     TaskCompletionSalaryRule,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { ServiceCalculationErpData } from '@/domains/service/modules/accounting/domain/types/calculation-data.types';
+import { DeadlinePeriodOffset } from '@/domains/service/modules/accounting/domain/value-objects/deadline-period-offset.value-object';
 
 // replace-bitrix-task-integration, design.md решение 2/4/5: правило «за
 // выполнение задачи» — единственный тип правила сервиса, чей calculate()
@@ -55,10 +56,11 @@ export class TaskCompletion
         return this.props.isActive;
     }
 
-    // design.md решение 4: приходящий в теле запроса taskId (id уже
-    // существующей, отдельно созданной задачи) просто сохраняется в
-    // config.taskIdByPeriod[текущийПериод] — CreateSalaryRuleHandler не
-    // делает ни одного вызова в tasks.
+    // split-task-completion-rule-form — задача этим билдером НЕ создаётся: config.taskIdByPeriod
+    // строится пустым (или унаследованным от existingTaskIdByPeriod при PATCH), CreateSalaryRuleHandler
+    // сам создаёт задачу через CommandBus и дописывает её id в уже построенный config.taskIdByPeriod
+    // ПОСЛЕ этого вызова (см. WHY у CreateSalaryRuleHandler) — buildTaskCompletionConfig() остаётся
+    // чистой функцией без IO.
     static create(rule: CreateSalaryRuleProps): TaskCompletion {
         return new TaskCompletion({
             id: randomUUID(),
@@ -146,10 +148,10 @@ export class TaskCompletion
 
 // Собирает домен-config из request-config — вызывается и TaskCompletion.create()
 // (существующий taskIdByPeriod ещё не заведён), и UpdateMotivationSchemaHandler
-// при правке уже существующего правила (existingTaskIdByPeriod — карта
-// прежнего правила, чтобы PATCH не терял привязку задач прошлых периодов
-// регулярного правила, см. design.md решение 4 — taskId запроса относится
-// только к ТЕКУЩЕМУ периоду).
+// при правке уже существующего правила (existingTaskIdByPeriod — карта прежнего правила, чтобы
+// PATCH не терял привязку задач прошлых периодов регулярного правила). НЕ создаёт задачу и не
+// пишет в неё taskId текущего периода — это делает вызывающий (CreateSalaryRuleHandler) отдельной
+// мутацией результата ПОСЛЕ этого вызова, см. WHY у buildTaskCompletionConfig-caller'ов.
 export function buildTaskCompletionConfig(
     request: TaskCompletionSalaryConfigRequest,
     existingTaskIdByPeriod: Record<string, string> = {},
@@ -160,18 +162,34 @@ export function buildTaskCompletionConfig(
     // здесь — валидация формата на границе домена, а не только Zod-схемой
     // контракта (бросает ArgumentInvalidException при некорректном значении).
     const accountingPeriod = Period.create(request.accountingPeriod).getValue();
+    const taskIdByPeriod = { ...existingTaskIdByPeriod };
+
+    if (!request.isRecurring) {
+        return {
+            taskIdByPeriod,
+            defaultAmount: request.defaultAmount,
+            accountingPeriod,
+            isRecurring: false,
+        };
+    }
+
+    // recurring-task-deadline-offset, design.md решение 1/2 — DeadlinePeriodOffset.create()
+    // здесь чисто транзитная валидация (тот же приём, что и Period.create() выше и
+    // FloatPercentSchedule.create() у ProductSoldEntity, shop): бросает ArgumentInvalidException
+    // на невалидном значении, а в config попадает уже проверенное число, не сам VO.
+    const deadlinePeriodOffset = DeadlinePeriodOffset.create(
+        request.deadlinePeriodOffset ?? 0,
+    ).getValue();
 
     return {
-        taskIdByPeriod: {
-            ...existingTaskIdByPeriod,
-            [accountingPeriod]: request.taskId,
-        },
+        taskIdByPeriod,
+        defaultAmount: request.defaultAmount,
+        accountingPeriod,
+        isRecurring: true,
         taskTitleTemplate: request.taskTitleTemplate,
         taskDescriptionTemplate: request.taskDescriptionTemplate,
-        isRecurring: request.isRecurring,
         deadlineTemplate: request.deadlineTemplate,
-        defaultAmount: request.defaultAmount,
+        deadlinePeriodOffset,
         taskLinkTemplates: request.taskLinkTemplates ?? [],
-        accountingPeriod,
     };
 }

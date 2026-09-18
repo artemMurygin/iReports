@@ -25,7 +25,6 @@ function CloseDialogKpiGrid({ preview }: CloseDialogKpiGridProps) {
                     </>
                 }
                 value={String(preview.employeesCount)}
-                note={`из них уволены: ${preview.dismissedEmployeesCount}`}
                 icon={<Users />}
             />
             <KpiCard

@@ -1,4 +1,8 @@
-import { Body, Controller, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { MotivationResponse } from 'ireports-contracts';
@@ -7,6 +11,8 @@ import { UpdateMotivationSchemaDto } from '../../dto/motivation-schema/update-mo
 import { UpdateMotivationSchemaCommand } from '@/domains/service/modules/accounting/application/command/motivation-schema/update-motivation-schema.command';
 
 @ApiTags('Бухгалтерия: мотивационная схема')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:manage_schema')
 @Controller()
 export class UpdateMotivationSchemaHttpController {
     constructor(private readonly commandBus: CommandBus) {}

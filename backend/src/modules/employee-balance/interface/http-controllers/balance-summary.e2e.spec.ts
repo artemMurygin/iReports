@@ -44,6 +44,8 @@ import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Сквозной список взаиморасчётов (docs/employee-settlements-page-redesign,
 // Фаза 1, GET /v1/accounting/balance/summary/:period) — e2e поверх реального
@@ -133,6 +135,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
         findByTaskId: () => Promise.resolve(null),
+        findOneOffByAnyTaskId: () => Promise.resolve(null),
         findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
@@ -193,6 +196,31 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
     class FakeInfrastructureModule {}
 
     beforeAll(async () => {
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+
+                    'employee-balance:view_all',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
@@ -233,6 +261,10 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
             .useValue(fakeErpCashDocumentPort)
             .overrideProvider(PAYOUT_CASHBOX_RECORD_REPOSITORY)
             .useValue(new InMemoryPayoutCashboxRecordRepository())
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -275,6 +307,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 
@@ -312,6 +345,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07?departmentId=5')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 
@@ -327,6 +361,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const allDepartments = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07?search=КУЗНЕЦ')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
         expect(allDepartments.employees.map((row) => row.employeeId)).toEqual([
@@ -338,6 +373,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
                 .get(
                     '/v1/accounting/balance/summary/2026-07?departmentId=5&search=кузнец',
                 )
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
         expect(withinOtherDepartment.employees).toEqual([]);
@@ -347,6 +383,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 
@@ -361,6 +398,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07?departmentId=5')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 

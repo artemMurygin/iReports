@@ -1,6 +1,7 @@
 import { buildSalaryReportRules } from './to-salary-report-rules';
 import { OrderPayedEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/order-payed.entity';
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { TaskCompletion } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import type { PercentBorder } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import type { SalesPerformance } from '@/domains/service/modules/sales/domain/value-objects/sales-performance.value-object';
 
@@ -328,5 +329,98 @@ describe('buildSalaryReportRules', () => {
         expect(entries).toHaveLength(1);
         expect(entries[0].ruleId).toBe(ruleA.id);
         expect(entries[0].amount).toEqual({ fact: 2000, prognose: 2000 });
+    });
+
+    // FR2: строка правила не отображается, если и факт, и прогноз равны нулю
+    it('FR2: исключает строку правила, если amount.fact === 0 и amount.prognose === 0', () => {
+        const rule = PayPerHoursEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
+            config: { price: 250 },
+        });
+        const zeroLine = {
+            ruleId: rule.id,
+            quantity: 0,
+            rate: 250,
+            amount: 0,
+            sources: [],
+        };
+
+        const entries = buildSalaryReportRules(
+            [rule],
+            [zeroLine],
+            [zeroLine],
+            null,
+        );
+
+        expect(entries).toHaveLength(0);
+    });
+
+    // FR2: строка остаётся, если хотя бы одно из значений (факт/прогноз) отлично от нуля
+    it('FR2: не исключает строку правила, если хотя бы одно из значений amount.fact/amount.prognose отлично от нуля', () => {
+        const rule = PayPerHoursEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ENGINEER',
+            config: { price: 250 },
+        });
+        const factLine = {
+            ruleId: rule.id,
+            quantity: 0,
+            rate: 250,
+            amount: 0,
+            sources: [],
+        };
+        const prognoseLine = {
+            ruleId: rule.id,
+            quantity: 8,
+            rate: 250,
+            amount: 2000,
+            sources: [],
+        };
+
+        const entries = buildSalaryReportRules(
+            [rule],
+            [factLine],
+            [prognoseLine],
+            null,
+        );
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0].amount).toEqual({ fact: 0, prognose: 2000 });
+    });
+
+    // FR2: правило «за выполнение задачи» исключено из общего фильтра нулевых
+    // строк — его видимость целиком определяется отдельной, уже существующей
+    // логикой (наличие/статус задачи), а не значением amount.
+    it('FR2: не исключает строку правила TaskCompletion общим фильтром, даже если amount.fact === 0 и amount.prognose === 0', () => {
+        const rule = TaskCompletion.create({
+            type: 'TaskCompletion',
+            name: 'За выполнение задачи',
+            targetRole: 'ENGINEER',
+            config: {
+                isRecurring: false,
+                accountingPeriod: '2024-01',
+                defaultAmount: 0,
+            },
+        });
+        const zeroLine = {
+            ruleId: rule.id,
+            amount: 0,
+            requiresManualInput: true,
+            sources: [{ type: 'taskCompletion', id: 'task-1' }],
+        };
+
+        const entries = buildSalaryReportRules(
+            [rule],
+            [zeroLine],
+            [zeroLine],
+            null,
+        );
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0].type).toBe('TaskCompletion');
+        expect(entries[0].amount).toEqual({ fact: 0, prognose: 0 });
     });
 });

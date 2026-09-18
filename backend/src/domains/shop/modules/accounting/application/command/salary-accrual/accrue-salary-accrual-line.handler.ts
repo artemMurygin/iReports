@@ -14,6 +14,9 @@ import { ShopSalaryAccrualNotFoundException } from '@/domains/shop/modules/accou
 import { ShopSalaryAccrualMapper } from '@/domains/shop/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { resolveShopEmployees } from '../../services/salary-accrual/list-salary-accruals.service';
 import { AccrueShopSalaryAccrualLineCommand } from './accrue-salary-accrual-line.command';
+import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { ShopSalaryRuleRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { TaskCompletionShopSalaryConfig } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 
 // Зеркало domains/service/modules/accounting/application/command/
 // accrue-salary-accrual-line.handler.ts (Фаза 6 docs/service-shop-boundary-violations-fix)
@@ -41,6 +44,8 @@ export class AccrueShopSalaryAccrualLineHandler implements ICommandHandler<
         private readonly directoryRepo: DirectoryRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
+        @Inject(SHOP_SALARY_RULE_REPOSITORY)
+        private readonly salaryRuleRepo: ShopSalaryRuleRepositoryPort,
     ) {}
 
     async execute(
@@ -62,6 +67,22 @@ export class AccrueShopSalaryAccrualLineHandler implements ICommandHandler<
             await this.transactionRepo.insertMany(transactions);
             await this.accrualRepo.save(accrual);
         });
+
+        // deactivate-one-off-task-completion-rule — зеркало service-версии:
+        // деактивация разового правила «за выполнение задачи» не зависит от
+        // того, каким путём строка попала в ACCRUED (явный «Указать сумму»
+        // или обычное «Начислить»/«Начислить всё»). Идемпотентно — уже
+        // неактивное или регулярное правило не трогается.
+        if (line.type === 'TaskCompletion') {
+            const rule = await this.salaryRuleRepo.findById(line.ruleId);
+            if (rule && rule.type === 'TaskCompletion' && rule.isActive) {
+                const config = rule.config as TaskCompletionShopSalaryConfig;
+                if (config.isRecurring === false) {
+                    rule.deactivate();
+                    await this.salaryRuleRepo.update(rule);
+                }
+            }
+        }
 
         const employees = await resolveShopEmployees(this.directoryRepo);
         return this.mapper.toDetailResponse(

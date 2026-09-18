@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import {
     MoySkladSyncService,
     HISTORICAL_TURNOVER_LOOKBACK_ANCHOR,
@@ -12,13 +11,6 @@ import type { DatabaseService } from '@/infrustructure/database/database.service
 // randomUUID мокается детерминированным значением — тесты D5/D5.1 ниже
 // проверяют конкретное значение id, которое сервис подставляет на create.
 jest.mock('crypto', () => ({ randomUUID: () => 'generated-uuid' }));
-
-// delay() мокается на весь файл (тот же паттерн, что moysklad.service.spec.ts) —
-// троттлинг между вызовами fetchTurnoverByStoreForProduct в
-// backfillHistoricalStockSnapshots не должен реально ждать в тестах.
-jest.mock('../../../../shared/delay', () => ({
-    delay: jest.fn().mockResolvedValue(undefined),
-}));
 
 // Голый MetaSchema ({ href, type, mediaType }) — используется там, где поле
 // само по себе является meta-объектом (Demand.meta, positions.meta,
@@ -458,71 +450,72 @@ describe('MoySkladSyncService.uploadStockSnapshot (D5)', () => {
     });
 });
 
-// spec: fix-shop-turnover-historical-stock-cost D1/D4 — разовый бэкфилл
-// истории остатков через связку /report/turnover/all (шаг 1, обнаружение
-// товаров с ненулевым остатком на конец месяца) + /report/turnover/bystore
-// (шаг 2, разбивка найденных товаров по складам): по одному снимку на конец
-// каждого месяца от fromDate до текущего, по одной строке MoySkladStock на
-// каждый склад с ненулевым количеством. Не зависит от MoySkladStore.findMany
-// — состав складов берётся из ответа bystore на товар (design.md D1, D3).
+// spec: fix-shop-turnover-historical-stock-cost — разовый бэкфилл истории
+// остатков через `/report/turnover/all?filter=store=<href>` — по одному
+// постраничному проходу НА КАЖДЫЙ СКЛАД (`MoySkladStore.findMany`), а не по
+// каждому товару с остатком: эмпирически подтверждено, что этот отчёт
+// поддерживает рабочий `filter=store=<href>` (design.md D1, обновлённая
+// редакция), поэтому каждая строка ответа уже относится к конкретному складу
+// и `onPeriodEnd.{quantity,sum}` читается напрямую, без обращения к
+// `/report/turnover/bystore`. По одному снимку на конец каждого месяца от
+// fromDate до текущего, по одной строке MoySkladStock на (товар, склад).
 // Идемпотентен — повторный запуск с тем же диапазоном апсертит по тому же
 // ключу (productId, warehouseId, snapshotAt), не создаёт дублей.
-describe('MoySkladSyncService.backfillHistoricalStockSnapshots (D1/D4)', () => {
+describe('MoySkladSyncService.backfillHistoricalStockSnapshots', () => {
     const productHref = (id: string) =>
         `https://api.moysklad.ru/api/remap/1.2/entity/product/${id}`;
 
     const buildService = () => {
         const upsert = jest.fn().mockResolvedValue({});
+        const findMany = jest
+            .fn()
+            .mockResolvedValue([{ id: 'store-1' }, { id: 'store-2' }]);
         const db = {
             moySkladStock: { upsert },
+            moySkladStore: { findMany },
         } as unknown as DatabaseService;
 
-        // Один и тот же товар с ненулевым остатком на каждый месяц бэкфилла,
-        // плюс товар с нулевым остатком, который не должен доходить до шага 2.
+        // Один и тот же товар с ненулевым остатком на складе store-1 на
+        // каждый месяц бэкфилла; на store-2 — товар с нулевым остатком,
+        // который не должен породить строку MoySkladStock.
         const fetchTurnoverAllAt = jest.fn(function* (
             _momentFrom: Date,
             _momentTo: Date,
+            storeId: string,
         ) {
-            yield [
-                {
-                    assortment: {
-                        meta: {
-                            href: productHref('product-1'),
-                            type: 'product',
+            if (storeId === 'store-1') {
+                yield [
+                    {
+                        assortment: {
+                            meta: {
+                                href: productHref('product-1'),
+                                type: 'product',
+                            },
                         },
+                        onPeriodEnd: { quantity: 3, sum: 999 },
                     },
-                    onPeriodEnd: { quantity: 3, sum: 999 },
-                },
-                {
-                    assortment: {
-                        meta: {
-                            href: productHref('product-zero'),
-                            type: 'product',
+                ];
+            } else {
+                yield [
+                    {
+                        assortment: {
+                            meta: {
+                                href: productHref('product-1'),
+                                type: 'product',
+                            },
                         },
+                        onPeriodEnd: { quantity: 0, sum: 0 },
                     },
-                    onPeriodEnd: { quantity: 0, sum: 0 },
-                },
-            ];
+                ];
+            }
         });
-
-        const fetchTurnoverByStoreForProduct = jest
-            .fn()
-            .mockResolvedValue([
-                { warehouseId: 'store-1', quantity: 3, costSum: 999 },
-            ]);
 
         const moySklad = {
             fetchTurnoverAllAt,
-            fetchTurnoverByStoreForProduct,
         } as unknown as MoyskladService;
 
         const service = new MoySkladSyncService(db, moySklad);
-        return {
-            service,
-            upsert,
-            fetchTurnoverAllAt,
-            fetchTurnoverByStoreForProduct,
-        };
+        return { service, upsert, findMany, fetchTurnoverAllAt };
     };
 
     beforeEach(() => {
@@ -534,46 +527,41 @@ describe('MoySkladSyncService.backfillHistoricalStockSnapshots (D1/D4)', () => {
         jest.useRealTimers();
     });
 
-    it('для каждого месяца от fromDate до текущего запрашивает turnover/all с якорным momentFrom и пропускает товары с нулевым остатком', async () => {
-        const { service, fetchTurnoverAllAt, fetchTurnoverByStoreForProduct } =
-            buildService();
+    it('для каждого месяца и каждого склада запрашивает turnover/all с якорным momentFrom и storeId этого склада', async () => {
+        const { service, findMany, fetchTurnoverAllAt } = buildService();
         const fromDate = new Date('2026-07-01T00:00:00.000Z');
 
         await service.backfillHistoricalStockSnapshots(fromDate);
 
+        expect(findMany).toHaveBeenCalledTimes(1);
+
         // Июль, август, сентябрь 2026 (текущий месяц захвачен фейковым
-        // временем выше).
-        expect(fetchTurnoverAllAt).toHaveBeenCalledTimes(3);
+        // временем выше) × 2 склада.
+        expect(fetchTurnoverAllAt).toHaveBeenCalledTimes(6);
 
         const julyEnd = new Date('2026-07-31T23:59:59.999Z');
         const septemberEnd = new Date('2026-09-30T23:59:59.999Z');
         expect(fetchTurnoverAllAt).toHaveBeenCalledWith(
             HISTORICAL_TURNOVER_LOOKBACK_ANCHOR,
             julyEnd,
+            'store-1',
         );
         expect(fetchTurnoverAllAt).toHaveBeenCalledWith(
             HISTORICAL_TURNOVER_LOOKBACK_ANCHOR,
             septemberEnd,
-        );
-
-        // Только товар с ненулевым остатком доходит до шага 2 — один вызов
-        // на месяц, товар с нулевым остатком не порождает вызова.
-        expect(fetchTurnoverByStoreForProduct).toHaveBeenCalledTimes(3);
-        expect(fetchTurnoverByStoreForProduct).toHaveBeenCalledWith(
-            productHref('product-1'),
-            'product',
-            HISTORICAL_TURNOVER_LOOKBACK_ANCHOR,
-            septemberEnd,
+            'store-2',
         );
     });
 
-    it('апсертит одну строку MoySkladStock на (товар, склад, конец месяца) по данным шага 2', async () => {
+    it('апсертит одну строку MoySkladStock на (товар, склад, конец месяца) из onPeriodEnd строки конкретного склада', async () => {
         const { service, upsert } = buildService();
         const fromDate = new Date('2026-09-01T00:00:00.000Z');
 
         await service.backfillHistoricalStockSnapshots(fromDate);
 
         const septemberEnd = new Date('2026-09-30T23:59:59.999Z');
+        // Только store-1 даёт ненулевой остаток (см. buildService) — ровно
+        // один upsert за месяц.
         expect(upsert).toHaveBeenCalledTimes(1);
         expect(upsert).toHaveBeenCalledWith({
             where: {
@@ -595,51 +583,34 @@ describe('MoySkladSyncService.backfillHistoricalStockSnapshots (D1/D4)', () => {
         });
     });
 
-    it('не создаёт строку для складской записи с нулевым количеством (D3)', async () => {
+    it('не создаёт строку для товара с нулевым остатком на конкретном складе', async () => {
         const upsert = jest.fn().mockResolvedValue({});
+        const findMany = jest.fn().mockResolvedValue([{ id: 'store-1' }]);
         const db = {
             moySkladStock: { upsert },
+            moySkladStore: { findMany },
         } as unknown as DatabaseService;
         const fetchTurnoverAllAt = jest.fn(function* () {
             yield [
                 {
                     assortment: {
                         meta: {
-                            href: productHref('product-1'),
+                            href: productHref('product-zero'),
                             type: 'product',
                         },
                     },
-                    onPeriodEnd: { quantity: 3, sum: 999 },
+                    onPeriodEnd: { quantity: 0, sum: 0 },
                 },
             ];
         });
-        const fetchTurnoverByStoreForProduct = jest.fn().mockResolvedValue([
-            { warehouseId: 'store-1', quantity: 3, costSum: 999 },
-            { warehouseId: 'store-2', quantity: 0, costSum: 0 },
-        ]);
-        const moySklad = {
-            fetchTurnoverAllAt,
-            fetchTurnoverByStoreForProduct,
-        } as unknown as MoyskladService;
+        const moySklad = { fetchTurnoverAllAt } as unknown as MoyskladService;
         const service = new MoySkladSyncService(db, moySklad);
 
         await service.backfillHistoricalStockSnapshots(
             new Date('2026-09-01T00:00:00.000Z'),
         );
 
-        const septemberEnd = new Date('2026-09-30T23:59:59.999Z');
-        expect(upsert).toHaveBeenCalledTimes(1);
-        expect(upsert).toHaveBeenCalledWith(
-            expect.objectContaining({
-                where: {
-                    productId_warehouseId_snapshotAt: {
-                        productId: 'product-1',
-                        warehouseId: 'store-1',
-                        snapshotAt: septemberEnd,
-                    },
-                },
-            }),
-        );
+        expect(upsert).not.toHaveBeenCalled();
     });
 
     it('идемпотентен: повторный запуск с тем же диапазоном апсертит по тем же ключам, не дублирует', async () => {
@@ -658,71 +629,5 @@ describe('MoySkladSyncService.backfillHistoricalStockSnapshots (D1/D4)', () => {
         );
 
         expect(secondKeys).toEqual(firstKeys);
-    });
-
-    // spec: fix-shop-turnover-historical-stock-cost D4 — сверка account-wide
-    // (шаг 1, onPeriodEnd.sum строки turnover/all) и по-складской (шаг 2,
-    // сумма onPeriodEnd.sum по stockByStore) суммы одного товара.
-    it('при расхождении account-wide и по-складской суммы товара логирует warn с id товара и обоими значениями, не падает и продолжает бэкфилл (D4)', async () => {
-        const warnSpy = jest
-            .spyOn(Logger.prototype, 'warn')
-            .mockImplementation();
-        const upsert = jest.fn().mockResolvedValue({});
-        const db = {
-            moySkladStock: { upsert },
-        } as unknown as DatabaseService;
-        const fetchTurnoverAllAt = jest.fn(function* () {
-            yield [
-                {
-                    assortment: {
-                        meta: {
-                            href: productHref('mismatched-product'),
-                            type: 'product',
-                        },
-                    },
-                    onPeriodEnd: { quantity: 5, sum: 1000 },
-                },
-                {
-                    assortment: {
-                        meta: {
-                            href: productHref('next-product'),
-                            type: 'product',
-                        },
-                    },
-                    onPeriodEnd: { quantity: 1, sum: 100 },
-                },
-            ];
-        });
-        const fetchTurnoverByStoreForProduct = jest
-            .fn()
-            .mockResolvedValueOnce([
-                { warehouseId: 'store-1', quantity: 5, costSum: 900 },
-            ])
-            .mockResolvedValueOnce([
-                { warehouseId: 'store-1', quantity: 1, costSum: 100 },
-            ]);
-        const moySklad = {
-            fetchTurnoverAllAt,
-            fetchTurnoverByStoreForProduct,
-        } as unknown as MoyskladService;
-        const service = new MoySkladSyncService(db, moySklad);
-
-        await expect(
-            service.backfillHistoricalStockSnapshots(
-                new Date('2026-09-01T00:00:00.000Z'),
-            ),
-        ).resolves.not.toThrow();
-
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        const warnMessage = warnSpy.mock.calls[0][0] as string;
-        expect(warnMessage).toContain('mismatched-product');
-        expect(warnMessage).toContain('1000');
-        expect(warnMessage).toContain('900');
-
-        // Бэкфилл не падает и обрабатывает следующий товар как обычно.
-        expect(fetchTurnoverByStoreForProduct).toHaveBeenCalledTimes(2);
-        expect(upsert).toHaveBeenCalledTimes(2);
-
-        warnSpy.mockRestore();
     });
 });

@@ -145,6 +145,17 @@ export function formatLineMeta(line: Pick<SalaryAccrualLine, 'type' | 'sources'>
     return `${typeLabel} · ${unitLabel}`
 }
 
+/** `taskId` строки типа `TaskCompletion` (её единственный источник — `type: 'taskCompletion'`,
+ * `id` источника и есть id связанной задачи, см. `calculationSourceRefSchema`) — `null` для любой
+ * другой строки. Строка с этим правилом ведёт в карточку задачи (`TaskDetailsPanel`), а не в
+ * панель детализации начисления (`AccrualLineDetailsPanel`) — та же развилка, что и на странице
+ * зарплаты (`pages/SalaryReportV2`'s `TaskSourceCard`, открывающая задачу напрямую). */
+export function deriveLineTaskId(line: Pick<SalaryAccrualLine, 'type' | 'sources'>): string | null {
+    if (line.type !== 'TaskCompletion') return null
+    const source = line.sources.find((item) => item.type === 'taskCompletion')
+    return source ? String(source.id) : null
+}
+
 function dominantSourceType(sources: SalaryAccrualLine['sources']): string {
     const counts = new Map<string, number>()
     for (const source of sources) counts.set(source.type, (counts.get(source.type) ?? 0) + 1)

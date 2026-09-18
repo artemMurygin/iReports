@@ -39,6 +39,8 @@ import { SERVICE_SALES_SOURCE } from '@/domains/service/modules/reports/applicat
 import type { ServiceSalesSourcePort } from '@/domains/service/modules/reports/application/ports/service-sales.port';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Смоук-тест генерации OpenAPI (Фаза 5, "Когда готово": "OpenAPI-документы
 // генерируются — блокер z.coerce.date() устранён") — TODO/reports
@@ -106,6 +108,7 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
         findByTaskId: () => Promise.resolve(null),
+        findOneOffByAnyTaskId: () => Promise.resolve(null),
         findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
@@ -159,6 +162,29 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
     class FakeInfrastructureModule {}
 
     it('SwaggerModule.createDocument({ include: [SalesModule, AccountingModule, ReportsModule] }) не бросает исключение', async () => {
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 // EventEmitter2 — зависимость CloseAccountingPeriodHandler
@@ -201,6 +227,10 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
             .useValue(fakeServiceCalculationData)
             .overrideProvider(SERVICE_SALES_SOURCE)
             .useValue(fakeServiceSalesSource)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         const app = moduleRef.createNestApplication();

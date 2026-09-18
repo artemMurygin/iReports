@@ -40,16 +40,23 @@ export type RuleFieldErrors = Partial<
         | 'marginThreshold'
         | 'floorAmount'
         | 'lowMarginPercent'
-        // replace-bitrix-task-integration, раздел 14 tasks.md — `taskId` приходит от мастера
-        // (Шаг 1) и в норме уже заполнен к моменту, когда форма правила вообще видна; ошибка тут
-        // — защита от регрессии (см. `resolveRuleDraft`'s `case 'TaskCompletion'`), не то, что
-        // пользователь может исправить прямо в этом поле (оно readonly). `taskTitleTemplate` —
-        // обязателен только когда `isRecurring === true` (см. `TaskCompletionRuleFields.tsx`).
+        // split-task-completion-rule-form — `taskId` теперь readonly только когда задача УЖЕ
+        // существует (правило уже персистировано); ошибка тут — защита от регрессии, не то, что
+        // пользователь может исправить прямо в этом поле. `taskTitle`/`taskDeadline` — буквальные
+        // поля единственной задачи НОВОГО разового правила (`taskId === ''`), обязательны в этом
+        // состоянии. `taskTitleTemplate` — обязателен только когда `isRecurring === true` (см.
+        // `TaskCompletionRuleFields.tsx`).
         | 'taskId'
+        | 'taskTitle'
+        | 'taskDeadline'
         | 'taskTitleTemplate'
         // add-task-salary-rule-accounting-period — расчётный период первой/текущей задачи
         // правила, выбирается руководителем в `PeriodPicker` (`TaskCompletionRuleFields.tsx`).
-        | 'accountingPeriod',
+        | 'accountingPeriod'
+        // recurring-task-deadline-offset, FR1 — «Дедлайн относится к» (0..3 периода вперёд),
+        // видим только при `isRecurring === true` (`TaskCompletionRuleFields.tsx`), но структурно
+        // всегда число на драфте (default 0), поэтому проверяется как и остальные численные поля.
+        | 'deadlinePeriodOffset',
         string
     >
 >
@@ -62,6 +69,23 @@ export function parseNumber(raw: string): number | undefined {
     if (trimmed === '') return undefined
     const value = Number(trimmed.replace(',', '.'))
     return Number.isFinite(value) ? value : undefined
+}
+
+/**
+ * recurring-task-deadline-offset, FR1 — `TaskCompletionRuleFields.tsx`'s day input keeps
+ * `RuleDraft.deadlineTemplate` as bare, unpadded digits while typing (`"2000-01-3"`, see that
+ * file's `buildDeadlineDayTemplate` comment for why no `padStart` there). This is the one place
+ * that normalizes it into an always-valid, zero-padded carrier date (`"2000-01-25"`) before it
+ * reaches the wire — call only for a recurring `TaskCompletion` rule's `deadlineTemplate`, never
+ * for a one-off rule's (that one is a real, literal date from `CreateTaskForm`, untouched here).
+ * Empty input passes through unchanged so the existing `dueDate` required-field check (on the
+ * RAW value, before this runs) still fires correctly.
+ */
+export function normalizeDeadlineDayTemplate(raw: string): string {
+    const match = /(\d{1,2})$/.exec(raw)
+    if (!match) return raw
+    const day = Math.min(Math.max(Number(match[1]), 1), 31)
+    return `2000-01-${String(day).padStart(2, '0')}`
 }
 
 /**

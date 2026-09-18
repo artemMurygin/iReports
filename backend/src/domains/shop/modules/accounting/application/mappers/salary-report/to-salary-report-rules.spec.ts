@@ -1,6 +1,7 @@
 import { buildShopSalaryReportRules } from './to-salary-report-rules';
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
+import { TaskCompletionShop } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import type { PercentBorder } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import type { ShopSalesPerformance } from '@/domains/shop/modules/sales/domain/value-objects/sales-performance.value-object';
 
@@ -281,5 +282,103 @@ describe('buildShopSalaryReportRules', () => {
 
         expect(result).toHaveLength(1);
         expect(result[0].ruleId).toBe(ruleA.id);
+    });
+
+    // FR4: строка правила не отображается, если и факт, и прогноз равны нулю
+    it('исключает строку правила, если и факт, и прогноз равны нулю', () => {
+        const rule = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 250 },
+        });
+        const zeroLines = [
+            {
+                ruleId: rule.id,
+                quantity: 0,
+                rate: 250,
+                amount: 0,
+                sources: [],
+            },
+        ];
+
+        const result = buildShopSalaryReportRules(
+            [rule],
+            zeroLines,
+            zeroLines,
+            null,
+        );
+
+        expect(result).toHaveLength(0);
+    });
+
+    // FR4: строка остаётся, если хотя бы одно из значений отлично от нуля
+    it('оставляет строку правила, если хотя бы одно из значений (факт или прогноз) отлично от нуля', () => {
+        const rule = PayPerHourShopEntity.create({
+            type: 'PayPerHour',
+            name: 'Почасовая ставка',
+            targetRole: 'ONLINE_MANAGER',
+            config: { price: 250 },
+        });
+        const factLines = [
+            {
+                ruleId: rule.id,
+                quantity: 0,
+                rate: 250,
+                amount: 0,
+                sources: [],
+            },
+        ];
+        const prognoseLines = [
+            {
+                ruleId: rule.id,
+                quantity: 8,
+                rate: 250,
+                amount: 2000,
+                sources: [],
+            },
+        ];
+
+        const result = buildShopSalaryReportRules(
+            [rule],
+            factLines,
+            prognoseLines,
+            null,
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].amount).toEqual({ fact: 0, prognose: 2000 });
+    });
+
+    // FR4: правило «за выполнение задачи» исключено из общего фильтра нулевых строк
+    it('не скрывает строку правила «за выполнение задачи», даже если факт и прогноз равны нулю', () => {
+        const rule = TaskCompletionShop.create({
+            type: 'TaskCompletion',
+            name: 'За выполнение задачи',
+            targetRole: 'ONLINE_MANAGER',
+            config: {
+                isRecurring: false,
+                defaultAmount: 0,
+                accountingPeriod: '2026-01',
+            },
+        });
+        const zeroLines = [
+            {
+                ruleId: rule.id,
+                amount: 0,
+                sources: [],
+            },
+        ];
+
+        const result = buildShopSalaryReportRules(
+            [rule],
+            zeroLines,
+            zeroLines,
+            null,
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].ruleId).toBe(rule.id);
+        expect(result[0].amount).toEqual({ fact: 0, prognose: 0 });
     });
 });

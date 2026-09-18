@@ -61,6 +61,8 @@ import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance
 import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Сквозные сценарии Фаз 7/8b PRD 2 (docs/payroll-closing-and-accrual):
 // массовое проведение по документу и месяцу, ручные движения на ОБЩЕМ
@@ -107,6 +109,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
         findByTaskId: () => Promise.resolve(null),
+        findOneOffByAnyTaskId: () => Promise.resolve(null),
         findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {
@@ -238,6 +241,35 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             schemas.set(employee.id, schema);
         }
 
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+
+                    'employee-balance:view_all',
+                    'employee-balance:edit',
+                    'service-accounting:view_accrual',
+                    'service-accounting:edit_accrual',
+                    'service-accounting:manage_period',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
@@ -278,6 +310,10 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             .useValue(fakeErpCashDocumentPort)
             .overrideProvider(PAYOUT_CASHBOX_RECORD_REPOSITORY)
             .useValue(payoutCashboxRecordRepo)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -296,12 +332,14 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
     it('массовое проведение: «Начислить всё» по документу и «Начислить все документы месяца»', async () => {
         await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/close')
+            .set('Authorization', 'Bearer test-session')
             .send({ closedBy: 1 })
             .expect(201);
 
         const list = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
         expect(list.items).toHaveLength(2);
@@ -313,6 +351,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .post(
                     `/v1/service/accounting/salary_accruals/${first.id}/accrue`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({ accruedBy: 7 })
                 .expect(201)
         ).body as AccrueSalaryAccrualDocumentResponse;
@@ -328,6 +367,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .post(
                     '/v1/service/accounting/salary_accruals/accrue?period=2026-07',
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({ accruedBy: 7 })
                 .expect(201)
         ).body as AccruePeriodSalaryAccrualsResponse;
@@ -347,6 +387,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .post(
                     '/v1/service/accounting/salary_accruals/accrue?period=2026-07',
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({ accruedBy: 7 })
                 .expect(201)
         ).body as AccruePeriodSalaryAccrualsResponse;
@@ -358,6 +399,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const before = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
 
@@ -390,6 +432,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             const created = (
                 await request(app.getHttpServer())
                     .post('/v1/accounting/balance/employee/42/transactions')
+                    .set('Authorization', 'Bearer test-session')
                     .send({
                         direction: 'service',
                         type: item.type,
@@ -411,6 +454,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         // Штраф и корректировка без комментария — 400 на границе HTTP.
         await request(app.getHttpServer())
             .post('/v1/accounting/balance/employee/42/transactions')
+            .set('Authorization', 'Bearer test-session')
             .send({
                 direction: 'service',
                 type: 'PENALTY',
@@ -420,6 +464,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             .expect(400);
         await request(app.getHttpServer())
             .post('/v1/accounting/balance/employee/42/transactions')
+            .set('Authorization', 'Bearer test-session')
             .send({
                 direction: 'service',
                 type: 'ADJUSTMENT',
@@ -431,6 +476,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const after = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         // -5000 -2000 +3000 +1500 +2500 -1000 -700 = -1700 к прежнему
@@ -443,12 +489,14 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const accrualsBefore = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
 
         const backdated = (
             await request(app.getHttpServer())
                 .post('/v1/accounting/balance/employee/42/transactions')
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     direction: 'service',
                     type: 'ADVANCE',
@@ -485,6 +533,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const accrualsAfter = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
         expect(accrualsAfter).toEqual(accrualsBefore);
@@ -494,6 +543,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const before = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/43')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
 
@@ -502,6 +552,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const shopBonus = (
             await request(app.getHttpServer())
                 .post('/v1/accounting/balance/employee/43/transactions')
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     direction: 'shop',
                     type: 'BONUS',
@@ -515,6 +566,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const after = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/43')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(after.balance).toBe(before.balance + 1200);
@@ -535,6 +587,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const advance = (
             await request(app.getHttpServer())
                 .post('/v1/accounting/balance/employee/43/transactions')
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     direction: 'service',
                     type: 'ADVANCE',
@@ -547,22 +600,26 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const balanceBefore = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/43')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
 
         // Ошибочное ручное движение удаляется — запись исчезает из ленты.
         await request(app.getHttpServer())
             .delete(`/v1/accounting/balance/transactions/${advance.id}`)
+            .set('Authorization', 'Bearer test-session')
             .expect(204);
 
         // Повторное удаление — 404: записи больше нет.
         await request(app.getHttpServer())
             .delete(`/v1/accounting/balance/transactions/${advance.id}`)
+            .set('Authorization', 'Bearer test-session')
             .expect(404);
 
         const balanceAfter = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/43')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balanceAfter.balance).toBe(balanceBefore.balance + 1000);
@@ -582,6 +639,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             .delete(
                 `/v1/accounting/balance/transactions/${accrualTransaction!.id}`,
             )
+            .set('Authorization', 'Bearer test-session')
             .expect(409);
 
         // Движение с документом ERP (erpSyncRequired) — удаляется вместе с
@@ -590,6 +648,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const erpAdvance = (
             await request(app.getHttpServer())
                 .post('/v1/accounting/balance/employee/43/transactions')
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     direction: 'service',
                     type: 'ADVANCE',
@@ -602,6 +661,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const deleteCallsBefore = erpDeleteCalls.length;
         await request(app.getHttpServer())
             .delete(`/v1/accounting/balance/transactions/${erpAdvance.id}`)
+            .set('Authorization', 'Bearer test-session')
             .expect(204);
         expect(erpDeleteCalls.length).toBe(deleteCallsBefore + 1);
         expect(erpDeleteCalls.at(-1)).toMatchObject({
@@ -616,6 +676,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const summary = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/department/5/2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as DepartmentBalancesResponse;
 
@@ -640,6 +701,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
             const balance = (
                 await request(app.getHttpServer())
                     .get(`/v1/accounting/balance/employee/${row.employeeId}`)
+                    .set('Authorization', 'Bearer test-session')
                     .expect(200)
             ).body as EmployeeBalanceResponse;
             expect(row.balance).toBe(balance.balance);
@@ -669,6 +731,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const list = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
         expect(summary.totals.accrued).toBe(list.total);
@@ -678,6 +741,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const list = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
         // Сотрудник 43 (не 42 — его документ уже PAID, см. WHY в тесте
@@ -688,6 +752,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const card = (
             await request(app.getHttpServer())
                 .get(`/v1/service/accounting/salary_accruals/${item.id}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualResponse;
         expect(card.status).toBe('ACCRUED');
@@ -707,6 +772,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .post(
                     `/v1/accounting/balance/employee/${employeeId}/transactions`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     direction: 'service',
                     type: 'BONUS',
@@ -719,6 +785,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const first = (
             await request(app.getHttpServer())
                 .get(`/v1/accounting/balance/employee/${employeeId}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(first.transactions).toHaveLength(20);
@@ -733,6 +800,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .get(
                     `/v1/accounting/balance/employee/${employeeId}?cursor=${first.nextCursor}`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(second.transactions).toHaveLength(3);
@@ -753,6 +821,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
                 .post(
                     `/v1/accounting/balance/employee/${employeeId}/transactions`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     direction: 'service',
                     type: 'BONUS',
@@ -765,6 +834,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const limited = (
             await request(app.getHttpServer())
                 .get(`/v1/accounting/balance/employee/${employeeId}?limit=2`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(limited.transactions).toHaveLength(2);
@@ -774,6 +844,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const full = (
             await request(app.getHttpServer())
                 .get(`/v1/accounting/balance/employee/${employeeId}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(full.hasMore).toBe(false);
@@ -787,6 +858,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const employeeId = 902;
         await request(app.getHttpServer())
             .post(`/v1/accounting/balance/employee/${employeeId}/transactions`)
+            .set('Authorization', 'Bearer test-session')
             .send({
                 direction: 'service',
                 type: 'BONUS',
@@ -799,6 +871,7 @@ describe('Фазы 7/8b: массовое проведение, ручные д�
         const response = (
             await request(app.getHttpServer())
                 .get(`/v1/accounting/balance/employee/${employeeId}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(response.transactions).toHaveLength(1);

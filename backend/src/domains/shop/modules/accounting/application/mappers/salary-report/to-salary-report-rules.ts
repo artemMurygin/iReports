@@ -50,6 +50,20 @@ export function buildShopSalaryReportRules(
         if (!fact || !prognose) {
             return [];
         }
+        // FR4 (skip-zero-salary-accruals): строка правила не отображается в
+        // отчёте, если и факт, и прогноз равны нулю — фильтр применяется
+        // ПОСЛЕ сведения FACT/PROGNOSE по ruleId (design.md решение 2), так
+        // как только тут известны оба значения одновременно. Правило «за
+        // выполнение задачи» исключено явной проверкой дискриминатора type
+        // (design.md решение 3) — его видимость целиком определяется
+        // отдельным требованием (наличие/статус задачи), а не суммой.
+        if (
+            fact.amount === 0 &&
+            prognose.amount === 0 &&
+            rule.type !== 'TaskCompletion'
+        ) {
+            return [];
+        }
         const percentBorders = getFloatPercentBorders(rule);
 
         return [

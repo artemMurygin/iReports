@@ -93,6 +93,31 @@ export class ShopSalaryRuleRepository
         return null;
     }
 
+    // deactivate-one-off-task-completion-rule, tasks.md раздел 3 — см. WHY на
+    // ShopSalaryRuleRepositoryPort.findOneOffByAnyTaskId. Независимая копия
+    // domains/service/.../salary-rule.repository.ts'ного одноимённого
+    // метода (без переиспользования кода service) — то же полное
+    // сканирование правил TaskCompletion направления shop, что и у
+    // findByTaskId, но без ограничения по текущему периоду
+    // (Object.values(taskIdByPeriod) вместо taskIdByPeriod[currentPeriod])
+    // и с дополнительным фильтром config.isRecurring === false.
+    async findOneOffByAnyTaskId(taskId: string): Promise<ShopSalaryRule | null> {
+        const records = await this.client.salaryRule.findMany({
+            where: { type: 'TaskCompletion', direction: 'shop' },
+        });
+        for (const record of records) {
+            const rule = this.mapper.toDomain(record);
+            const config = rule.config as TaskCompletionShopSalaryConfig;
+            if (config.isRecurring) {
+                continue;
+            }
+            if (Object.values(config.taskIdByPeriod).includes(taskId)) {
+                return rule;
+            }
+        }
+        return null;
+    }
+
     // Раздел 18 tasks.md — см. WHY на
     // ShopSalaryRuleRepositoryPort.findMotivationSchemaId.
     async findMotivationSchemaId(ruleId: string): Promise<string | null> {

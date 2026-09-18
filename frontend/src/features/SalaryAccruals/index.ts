@@ -28,6 +28,7 @@ export {
     deriveListProgress,
     deriveDocumentProgress,
     deriveAccrualsTotals,
+    deriveLineTaskId,
     filterAccrualsByDepartment,
     countAdjustedLines,
     countByStatus,
@@ -56,6 +57,7 @@ export { AccrualCardList } from './ui/AccrualCardList.tsx'
 export { AccrualsEmptyState } from './ui/AccrualsEmptyState.tsx'
 export { AccrualLinesTable } from './ui/AccrualLinesTable.tsx'
 export { AccrualLineCardList } from './ui/AccrualLineCardList.tsx'
+export { AccrualLineDetailsPanel } from './ui/AccrualLineDetailsPanel.tsx'
 export { SelectionBar } from './ui/SelectionBar.tsx'
 export { AccrueSelectedDialog } from './ui/AccrueSelectedDialog.tsx'
 export { AccruePeriodDialog } from './ui/AccruePeriodDialog.tsx'

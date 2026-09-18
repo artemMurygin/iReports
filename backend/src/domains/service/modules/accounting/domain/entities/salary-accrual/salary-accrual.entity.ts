@@ -69,9 +69,30 @@ export class SalaryAccrual extends AggregateRoot<SalaryAccrualProps> {
                 status: 'DRAFT',
                 isDismissed: create.isDismissed,
                 total: create.total,
-                lines: create.lines.map((line, index) =>
-                    SalaryAccrualLine.fromBreakdownLine(line, index),
-                ),
+                // FR1 (skip-zero-salary-accruals): правило с рассчитанной
+                // суммой 0 не порождает строку документа — она не несёт
+                // информации (ничего не начисляет), только шумит в
+                // документе/отчёте. Документ при этом создаётся как обычно,
+                // даже если все правила сотрудника дали 0 (см. design.md
+                // Decision 1 — фильтр здесь, а не invalid-state в
+                // SalaryAccrualLine.validate()).
+                //
+                // Исключение: requiresManualInput (TaskCompletion, раздел 13
+                // tasks.md add-task-based-salary-rule) — такая строка
+                // намеренно рождается с amount 0 до первого ручного ввода
+                // суммы, и обязана появиться в документе сразу (spec:
+                // service/accounting#requirement-строка-правила-за-выполнение-задачи-появляется-сразу-и-растёт-по-статусу-задачи),
+                // иначе SetTaskCompletionLineRewardHandler не найдёт строку,
+                // на которой зафиксировать сумму. Тот же принцип, что и
+                // design.md Decision 3 для отчёта, применённый здесь к
+                // построению документа.
+                lines: create.lines
+                    .filter(
+                        (line) => line.amount !== 0 || line.requiresManualInput,
+                    )
+                    .map((line, index) =>
+                        SalaryAccrualLine.fromBreakdownLine(line, index),
+                    ),
             },
         });
     }

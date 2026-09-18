@@ -1,4 +1,8 @@
-import { Body, Controller, Post, Query } from '@nestjs/common';
+import { Body, Controller, Post, Query, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccruePeriodSalaryAccrualsResponse } from 'ireports-contracts';
@@ -12,6 +16,8 @@ import { ListShopSalaryAccrualsQueryDto } from '../../dto/salary-accrual/list-sa
 // docs/service-shop-boundary-violations-fix) вместо generic по direction
 // команды сервиса.
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:edit_accrual')
 @Controller()
 export class AccruePeriodShopSalaryAccrualsHttpController {
     constructor(private readonly commandBus: CommandBus) {}

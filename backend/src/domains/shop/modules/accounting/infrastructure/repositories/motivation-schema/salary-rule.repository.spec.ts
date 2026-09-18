@@ -111,6 +111,92 @@ describe('ShopSalaryRuleRepository', () => {
         });
     });
 
+    describe('findOneOffByAnyTaskId', () => {
+        // spec: deactivate-one-off-task-completion-rule/specs/shop/accounting —
+        // Requirement «Разовое правило «за выполнение задачи» деактивируется по
+        // исходу задачи». Зеркало domains/service/.../salary-rule.repository.spec.ts
+        // (независимая копия, tasks.md раздел 3).
+        it('находит разовое (isRecurring: false) правило TaskCompletion по taskId в ЛЮБОМ периоде', async () => {
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([
+                buildRuleRecord({
+                    props: {
+                        taskIdByPeriod: {
+                            '2025-12': 'task-old',
+                            [currentPeriod]: 'task-1',
+                        },
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                    },
+                }),
+            ]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-old');
+
+            expect(findMany).toHaveBeenCalledWith({
+                where: { type: 'TaskCompletion', direction: 'shop' },
+            });
+            expect(rule).not.toBeNull();
+            expect(rule?.id).toBe('rule-1');
+        });
+
+        it('возвращает null, если ни одно правило не ссылается на taskId ни в одном периоде', async () => {
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([
+                buildRuleRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                    },
+                }),
+            ]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-unknown');
+
+            expect(rule).toBeNull();
+        });
+
+        it('возвращает null, если правило с этим taskId регулярное (isRecurring: true)', async () => {
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([
+                buildRuleRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Собрать отчёт по продажам',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 5000,
+                    },
+                }),
+            ]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-1');
+
+            expect(rule).toBeNull();
+        });
+
+        it('не находит taskId, принадлежащий правилу направления service (фильтр direction в запросе)', async () => {
+            // findMany уже фильтрует по direction: 'shop' в WHERE — запись
+            // направления service просто не попадёт в выборку, поэтому здесь
+            // проверяем поведение метода при пустой выборке (эмулирует то, что
+            // Prisma вернула бы для чужого направления).
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-1');
+
+            expect(findMany).toHaveBeenCalledWith({
+                where: { type: 'TaskCompletion', direction: 'shop' },
+            });
+            expect(rule).toBeNull();
+        });
+    });
+
     describe('findMotivationSchemaId', () => {
         it('возвращает motivationSchemaId найденного правила направления shop', async () => {
             const { repository, findFirst } = buildRepository();

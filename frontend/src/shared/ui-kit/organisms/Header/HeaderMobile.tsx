@@ -3,7 +3,6 @@ import { Menu } from 'lucide-react'
 
 import { cn } from '@/shared/lib/tw'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui-kit/atoms/Avatar'
-import { BellBadge } from '@/shared/ui-kit/atoms/BellBadge'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 
 import { ProfileMenuSheet, type ProfileMenuData } from './ProfileMenu'
@@ -22,9 +21,10 @@ import { ProfileMenuSheet, type ProfileMenuData } from './ProfileMenu'
  * - `KMFKi` Right (gap 6, center): action `IconButton`s (`lg`, e.g. `tbU0H` search 17x17 —
  *   `oTq9M` ellipsis-vertical is present in the component but `enabled: false` in every real
  *   instance in the file, i.e. this App Bar typically ships with a single visible action; the
- *   slot supports 0-2 so a caller can opt into a second one) + `YVWZc` `BellBadge` + `WBewi`
- *   Profile `Avatar` (30x30 in the design; rendered here at the atom's default 32x32 — same
- *   4px rounding already accepted for `BellBadge` in `HeaderDesktop`, see that file's report).
+ *   slot supports 0-2 so a caller can opt into a second one) + `WBewi` Profile `Avatar` (30x30 in
+ *   the design; rendered here at the atom's default 32x32). The mockup's `YVWZc` `BellBadge` is
+ *   hidden in this build — no real notifications feature behind it yet (see `HeaderDesktop`'s
+ *   comment); `hasUnreadNotifications`/`onBellClick` stay on the props for when that feature lands.
  *
  * All business content (breadcrumb text, action icons/handlers, bell/user state) is passed in as
  * props — nothing is hardcoded, mirroring `HeaderDesktop`'s "slots, not hardcoded content" rule.
@@ -75,8 +75,6 @@ function HeaderMobile({
     menuOpen,
     onMenuToggle,
     actions = [],
-    hasUnreadNotifications = false,
-    onBellClick,
     user,
     onUserClick,
     profileMenu,
@@ -122,12 +120,6 @@ function HeaderMobile({
                         {icon}
                     </IconButton>
                 ))}
-
-                <BellBadge
-                    hasUnread={hasUnreadNotifications}
-                    aria-label="Уведомления"
-                    onClick={onBellClick}
-                />
 
                 {user ? (
                     <button

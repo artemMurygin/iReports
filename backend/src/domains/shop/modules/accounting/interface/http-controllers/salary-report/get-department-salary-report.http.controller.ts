@@ -1,4 +1,8 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { DepartmentSalaryReportResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -15,6 +19,8 @@ import { GetShopDepartmentSalaryReportService } from '@/domains/shop/modules/acc
 // комбинированным isClosed), здесь isClosed — статус закрытия периода
 // направления shop как есть, без combine-шага по двум направлениям.
 @ApiTags('Бухгалтерия: отчёты магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view_all_salary_report')
 @Controller()
 export class GetShopDepartmentSalaryReportHttpController {
     constructor(

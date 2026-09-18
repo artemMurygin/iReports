@@ -46,6 +46,8 @@ import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/e
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Сквозной путь PRD 1 docs/payroll-closing-and-accrual (Фаза 1, tracer
 // bullet): close → list → get → reopen через реальные HTTP-контроллеры,
@@ -197,6 +199,33 @@ describe('Документы начисления: close → salary_accruals →
             schemas.set(employeeId, schema);
         }
 
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+
+                    'service-accounting:view_accrual',
+                    'service-accounting:view_all_salary_report',
+                    'service-accounting:manage_period',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
@@ -230,6 +259,10 @@ describe('Документы начисления: close → salary_accruals →
             .useValue(fakeServiceCalculationData)
             .overrideProvider(DIRECTORY_REPOSITORY)
             .useValue(fakeDirectoryRepo)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -248,6 +281,7 @@ describe('Документы начисления: close → salary_accruals →
     it('до закрытия список начислений за период пуст', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_accruals?period=2026-07')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         expect(response.body as SalaryAccrualListResponse).toEqual({
             direction: 'service',
@@ -260,6 +294,7 @@ describe('Документы начисления: close → salary_accruals →
     it('close → документы DRAFT в списке и в карточке, статус в отчёте сотрудника → reopen удаляет документы', async () => {
         const closeResponse = await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/close')
+            .set('Authorization', 'Bearer test-session')
             .send({ closedBy: 1 })
             .expect(201);
         expect((closeResponse.body as AccountingPeriodResponse).status).toBe(
@@ -268,6 +303,7 @@ describe('Документы начисления: close → salary_accruals →
 
         const listResponse = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_accruals?period=2026-07')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const list = listResponse.body as SalaryAccrualListResponse;
         expect(list.direction).toBe('service');
@@ -299,6 +335,7 @@ describe('Документы начисления: close → salary_accruals →
         const accrual42 = list.items.find((item) => item.employeeId === 42);
         const cardResponse = await request(app.getHttpServer())
             .get(`/v1/service/accounting/salary_accruals/${accrual42?.id}`)
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const card = cardResponse.body as SalaryAccrualResponse;
         expect(card).toMatchObject({
@@ -324,6 +361,7 @@ describe('Документы начисления: close → salary_accruals →
         // Статус документа в отчёте сотрудника за закрытый период.
         const reportResponse = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_report/employee/42/2026-07')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const report = reportResponse.body as EmployeeSalaryReportResponse;
         expect(report.isClosed).toBe(true);
@@ -332,10 +370,12 @@ describe('Документы начисления: close → salary_accruals →
         // Документа shop под путём service нет.
         await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_accruals/unknown-id')
+            .set('Authorization', 'Bearer test-session')
             .expect(404);
 
         const reopenResponse = await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/reopen')
+            .set('Authorization', 'Bearer test-session')
             .send({ confirm: true })
             .expect(201);
         expect((reopenResponse.body as AccountingPeriodResponse).status).toBe(
@@ -344,6 +384,7 @@ describe('Документы начисления: close → salary_accruals →
 
         const afterReopen = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_accruals?period=2026-07')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         expect((afterReopen.body as SalaryAccrualListResponse).items).toEqual(
             [],
@@ -355,6 +396,7 @@ describe('Документы начисления: close → salary_accruals →
     it('reopen с документом не в DRAFT → 409 с перечнем, документы и снапшот на месте', async () => {
         await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-06/close')
+            .set('Authorization', 'Bearer test-session')
             .send({ closedBy: 1 })
             .expect(201);
         const accruals = await accrualRepo.findByDirectionAndPeriod(
@@ -366,6 +408,7 @@ describe('Документы начисления: close → salary_accruals →
 
         const response = await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-06/reopen')
+            .set('Authorization', 'Bearer test-session')
             .send({ confirm: true })
             .expect(409);
         expect(response.body).toMatchObject({
@@ -388,6 +431,7 @@ describe('Документы начисления: close → salary_accruals →
     it('список без period → 400', async () => {
         await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_accruals')
+            .set('Authorization', 'Bearer test-session')
             .expect(400);
     });
 });

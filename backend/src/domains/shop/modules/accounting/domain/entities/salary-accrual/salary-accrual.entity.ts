@@ -70,9 +70,32 @@ export class ShopSalaryAccrual extends AggregateRoot<ShopSalaryAccrualProps> {
                 status: 'DRAFT',
                 isDismissed: create.isDismissed,
                 total: create.total,
-                lines: create.lines.map((line, index) =>
-                    ShopSalaryAccrualLine.fromBreakdownLine(line, index),
-                ),
+                // FR3 of skip-zero-salary-accruals (зеркало FR1 домена
+                // service — см. design.md, Decision 1/4): правило с
+                // рассчитанной суммой 0 не порождает строку документа
+                // начисления. Фильтр стоит здесь, на границе построения
+                // списка строк, а не как инвариант
+                // ShopSalaryAccrualLine.validate() — amount === 0 не
+                // бракованное состояние строки, просто её не нужно
+                // создавать; total документа при этом не пересчитывается —
+                // он и так равен сумме originalAmount отфильтрованных строк,
+                // так как отброшенные строки вносили 0 (см. validate()).
+                //
+                // Исключение (по аналогии с исключением правила «за
+                // выполнение задачи» из фильтра отчёта, design.md Decision
+                // 3): строка с requiresManualInput === true (TaskCompletion,
+                // задача заведена, но сумма ещё не введена руководителем,
+                // раздел 18 tasks.md) сохраняется, даже если amount === 0 —
+                // это не «нулевой результат правила», а строка, ожидающая
+                // первичного ручного ввода (setLineManualReward); без строки
+                // руководителю было бы нечего заполнять.
+                lines: create.lines
+                    .filter(
+                        (line) => line.amount !== 0 || line.requiresManualInput,
+                    )
+                    .map((line, index) =>
+                        ShopSalaryAccrualLine.fromBreakdownLine(line, index),
+                    ),
             },
         });
     }

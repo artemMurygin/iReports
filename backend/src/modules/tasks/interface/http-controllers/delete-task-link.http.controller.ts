@@ -4,16 +4,23 @@ import {
     HttpCode,
     HttpStatus,
     Param,
+    UseGuards,
 } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { RemoveTaskLinkCommand } from '@/modules/tasks/application/command/remove-task-link/remove-task-link.command';
 
 // spec: tasks/links#Requirement: Ссылка удаляется из карточки задачи —
 // чужая/несуществующая ссылка отклоняется RemoveTaskLinkHandler
 // (TaskLinkNotFoundException → 404, см. domain-exception.filter.ts).
 @ApiTags('Задачи: ссылки')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('tasks:manage_links')
 @Controller()
 export class DeleteTaskLinkHttpController {
     constructor(private readonly commandBus: CommandBus) {}

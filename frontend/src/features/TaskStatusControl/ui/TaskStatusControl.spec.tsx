@@ -234,4 +234,59 @@ describe('TaskStatusControl', () => {
             expect(onOpenSalaryRule).toHaveBeenCalledWith({ ruleId: 'rule-1', direction: 'service' })
         })
     })
+
+    // delete-task-frontend, tasks.md группа 4 — интеграция кнопки «Удалить» (Trash2) в заголовок
+    // TaskStatusCard + wiring useDeleteTask/useDeleteTaskDialog/DeleteTaskDialog.
+    describe('удаление задачи (delete-task-frontend)', () => {
+        function mockGetTask(task: Task) {
+            vi.mocked(axiosInstance.get).mockImplementation((url: string) => {
+                if (url === `/v1/tasks/${task.id}`) return Promise.resolve({ data: task })
+                if (url === '/v1/directory/employees') return Promise.resolve({ data: [] })
+                return Promise.reject({ isAxiosError: true, response: { status: 404 } })
+            })
+        }
+
+        it.each([
+            ['NEW статус', TASK_IN_PROGRESS.status],
+            ['CLOSED_SUCCESSFULLY (терминальный)', 'CLOSED_SUCCESSFULLY' as const],
+            ['CLOSED_UNSUCCESSFULLY (терминальный)', 'CLOSED_UNSUCCESSFULLY' as const],
+        ])('кнопка «Удалить» видна и активна независимо от статуса задачи — %s', async (_label, status) => {
+            mockGetTask({ ...TASK_IN_PROGRESS, status, closedSuccessfullyAt: status === 'CLOSED_SUCCESSFULLY' ? new Date() : null })
+
+            renderControl()
+            await screen.findByText('Обновить фото витрины')
+
+            const deleteButton = screen.getByRole('button', { name: 'Удалить задачу' })
+            expect(deleteButton).toBeEnabled()
+        })
+
+        it('клик по кнопке «Удалить» открывает DeleteTaskDialog', async () => {
+            const user = userEvent.setup()
+            mockGetTask(TASK_IN_PROGRESS)
+
+            renderControl()
+            await screen.findByText('Обновить фото витрины')
+
+            await user.click(screen.getByRole('button', { name: 'Удалить задачу' }))
+
+            expect(await screen.findByText('Удалить задачу «Обновить фото витрины»?')).toBeInTheDocument()
+        })
+
+        it('успешное подтверждение удаления вызывает DELETE /v1/tasks/:id и закрывает панель (onClose ровно один раз)', async () => {
+            const user = userEvent.setup()
+            const onClose = vi.fn()
+            mockGetTask(TASK_IN_PROGRESS)
+            vi.mocked(axiosInstance.delete).mockResolvedValueOnce({ data: undefined })
+
+            renderControl('task-1', { onClose })
+            await screen.findByText('Обновить фото витрины')
+
+            await user.click(screen.getByRole('button', { name: 'Удалить задачу' }))
+            await screen.findByText('Удалить задачу «Обновить фото витрины»?')
+            await user.click(screen.getByRole('button', { name: 'Удалить' }))
+
+            await waitFor(() => expect(axiosInstance.delete).toHaveBeenCalledWith('/v1/tasks/task-1'))
+            await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+        })
+    })
 })

@@ -1,4 +1,8 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryRuleDetail } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -10,6 +14,8 @@ import { GetSalaryRuleService } from '@/domains/shop/modules/accounting/applicat
 // DomainExceptionFilter в HTTP 404 через тот же общий код
 // SALARY_RULE_NOT_FOUND.
 @ApiTags('Бухгалтерия: зарплатные правила магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view')
 @Controller()
 export class GetShopSalaryRuleHttpController {
     constructor(private readonly getSalaryRule: GetSalaryRuleService) {}

@@ -1,8 +1,12 @@
-import { Body, Controller, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Task } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { UpdateTaskCommand } from '@/modules/tasks/application/command/update-task/update-task.command';
 import { GetTaskService } from '@/modules/tasks/application/services/get-task.service';
 import { UpdateTaskDto } from '../dto/update-task.dto';
@@ -15,6 +19,8 @@ import { UpdateTaskDto } from '../dto/update-task.dto';
 // приём, что ChangeTaskStatusHttpController: команда через CommandBus,
 // ответ — актуальная задача через GetTaskService.
 @ApiTags('Задачи')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('tasks:edit')
 @Controller()
 export class UpdateTaskHttpController {
     constructor(

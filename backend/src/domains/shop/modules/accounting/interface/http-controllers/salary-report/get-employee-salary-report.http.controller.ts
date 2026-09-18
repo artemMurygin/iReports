@@ -1,4 +1,8 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { EmployeeSalaryReportResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -12,6 +16,8 @@ import { GetShopEmployeeSalaryReportService } from '@/domains/shop/modules/accou
 // одностороннее направление shop, а не объединённый отчёт по обоим
 // направлениям (см. employeeSalaryReportResponseSchema в contracts).
 @ApiTags('Бухгалтерия: отчёты магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view_all_salary_report')
 @Controller()
 export class GetShopEmployeeSalaryReportHttpController {
     constructor(

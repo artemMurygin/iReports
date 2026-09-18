@@ -56,6 +56,21 @@ export interface ShopSalaryRuleRepositoryPort {
     // shop/accounting#requirement-зарплатное-правило-и-начисление-доступны-для-поиска-по-идентификатору-задачи
     findByTaskId(taskId: string): Promise<ShopSalaryRule | null>;
 
+    // deactivate-one-off-task-completion-rule, tasks.md раздел 3 — зеркало
+    // domains/service/.../salary-rule.port.ts'ного findOneOffByAnyTaskId
+    // (независимая копия). В отличие от findByTaskId выше (только ТЕКУЩИЙ
+    // период — для панели связей задачи), сканирует ЛЮБОЕ значение
+    // config.taskIdByPeriod: разовое правило может быть создано в прошлом
+    // расчётном периоде, и его единственная задача может закрыться позже,
+    // уже после смещения текущего периода (design.md решение 3). Находит
+    // только разовое правило (config.isRecurring === false) — регулярное
+    // правило этим методом не находится и не деактивируется ни при каком
+    // статусе задачи (design.md Non-Goals). null — ни одно разовое правило
+    // домена shop не ссылается на taskId ни в одном периоде, либо
+    // единственное совпадение принадлежит регулярному правилу. spec:
+    // deactivate-one-off-task-completion-rule/shop/accounting#requirement-разовое-правило-за-выполнение-задачи-деактивируется-по-исходу-задачи
+    findOneOffByAnyTaskId(taskId: string): Promise<ShopSalaryRule | null>;
+
     // Раздел 18 tasks.md — motivationSchemaId правила (см. WHY у
     // findMotivationSchemaId направления service) — нужен
     // GetShopSalaryRuleService для резолвинга названия мотивационной схемы.

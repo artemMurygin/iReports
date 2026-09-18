@@ -1,4 +1,8 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
@@ -7,6 +11,8 @@ import { CloseAccountingPeriodCommand } from '@/domains/service/modules/accounti
 import { CloseAccountingPeriodDto } from '@/shared/interface/dto/close-accounting-period.dto';
 
 @ApiTags('Бухгалтерия: расчётный период')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:manage_period')
 @Controller()
 export class CloseAccountingPeriodHttpController {
     constructor(private readonly commandBus: CommandBus) {}

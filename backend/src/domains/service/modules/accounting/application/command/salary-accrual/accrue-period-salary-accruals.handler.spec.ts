@@ -5,6 +5,7 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SalaryAccrual } from '@/domains/service/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { AccrueSalaryAccrualLineHandler } from './accrue-salary-accrual-line.handler';
 import { AccruePeriodSalaryAccrualsHandler } from './accrue-period-salary-accruals.handler';
 import { AccruePeriodSalaryAccrualsCommand } from './accrue-period-salary-accruals.command';
@@ -67,11 +68,21 @@ describe('AccruePeriodSalaryAccrualsHandler', () => {
         }
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
+        const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
+            insert: () => Promise.resolve(),
+            deleteByIds: () => Promise.resolve(),
+            findById: () => Promise.resolve(null),
+            update: () => Promise.resolve(),
+            findByTaskId: () => Promise.resolve(null),
+            findOneOffByAnyTaskId: () => Promise.resolve(null),
+            findMotivationSchemaId: () => Promise.resolve(null),
+        };
         const lineHandler = new AccrueSalaryAccrualLineHandler(
             accrualRepo,
             transactionRepo,
             fakeDirectoryRepo,
             unitOfWork,
+            fakeSalaryRuleRepo,
         );
         const commandBus = {
             execute: (command: unknown) =>

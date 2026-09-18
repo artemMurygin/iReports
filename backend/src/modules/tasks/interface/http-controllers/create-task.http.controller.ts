@@ -1,16 +1,18 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { CreateTaskResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CreateTaskCommand } from '@/modules/tasks/application/command/create-task/create-task.command';
 import { CreateTaskDto } from '../dto/create-task.dto';
 
-// Без гарда — RBAC (tasks:view/tasks:manage) в этот change не вводится (см.
-// tasks.md, "Решения, зафиксированные перед написанием этого списка");
-// доступность любому аутентифицированному пользователю обеспечивает
-// глобальный APP_GUARD (SessionAuthGuard) в app.module.ts.
 @ApiTags('Задачи')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('tasks:create')
 @Controller()
 export class CreateTaskHttpController {
     constructor(private readonly commandBus: CommandBus) {}

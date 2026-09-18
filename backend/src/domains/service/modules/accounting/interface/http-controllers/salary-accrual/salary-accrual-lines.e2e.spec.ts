@@ -50,6 +50,8 @@ import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accou
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Сквозной путь PRD 2 docs/payroll-closing-and-accrual (Фаза 6, tracer
 // bullet): close → accrue → balance → unaccrue → reopen через реальные
@@ -192,6 +194,34 @@ describe('Проведение строк: close → accrue → balance → unac
         );
         schemas.set(42, schema);
 
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+
+                    'service-accounting:manage_period',
+                    'service-accounting:view_accrual',
+                    'service-accounting:edit_accrual',
+                    'employee-balance:view_all',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
@@ -226,6 +256,10 @@ describe('Проведение строк: close → accrue → balance → unac
             .useValue(fakeServiceCalculationData)
             .overrideProvider(DIRECTORY_REPOSITORY)
             .useValue(fakeDirectoryRepo)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -245,12 +279,14 @@ describe('Проведение строк: close → accrue → balance → unac
         // Закрытие месяца рождает документ DRAFT.
         await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/close')
+            .set('Authorization', 'Bearer test-session')
             .send({ closedBy: 1 })
             .expect(201);
 
         const list = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
         const accrualId = list.items[0].id;
@@ -263,6 +299,7 @@ describe('Проведение строк: close → accrue → balance → unac
         const card = (
             await request(app.getHttpServer())
                 .get(`/v1/service/accounting/salary_accruals/${accrualId}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualResponse;
         const lineId = card.lines[0].id;
@@ -271,6 +308,7 @@ describe('Проведение строк: close → accrue → balance → unac
         const emptyBalance = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(emptyBalance).toMatchObject({
@@ -285,6 +323,7 @@ describe('Проведение строк: close → accrue → balance → unac
                 .post(
                     `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/accrue`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({ accruedBy: 7 })
                 .expect(201)
         ).body as SalaryAccrualResponse;
@@ -295,6 +334,7 @@ describe('Проведение строк: close → accrue → balance → unac
         const balance = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balance.balance).toBe(2000);
@@ -320,6 +360,7 @@ describe('Проведение строк: close → accrue → balance → unac
             .post(
                 `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/accrue`,
             )
+            .set('Authorization', 'Bearer test-session')
             .send({ accruedBy: 7 })
             .expect(409);
         expect(transactionRepo.store.size).toBe(1);
@@ -328,6 +369,7 @@ describe('Проведение строк: close → accrue → balance → unac
         // блокировки из Фазы 1 на реально проведённой строке).
         const reopenBlocked = await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/reopen')
+            .set('Authorization', 'Bearer test-session')
             .send({ confirm: true })
             .expect(409);
         expect(reopenBlocked.body).toMatchObject({
@@ -344,6 +386,7 @@ describe('Проведение строк: close → accrue → balance → unac
                 .post(
                     `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/unaccrue`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .expect(201)
         ).body as SalaryAccrualResponse;
         expect(unaccrued.status).toBe('DRAFT');
@@ -352,6 +395,7 @@ describe('Проведение строк: close → accrue → balance → unac
         const balanceAfter = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balanceAfter.balance).toBe(0);
@@ -360,6 +404,7 @@ describe('Проведение строк: close → accrue → balance → unac
         // После отмены документ снова DRAFT — reopen проходит.
         const reopen = await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/reopen')
+            .set('Authorization', 'Bearer test-session')
             .send({ confirm: true })
             .expect(201);
         expect((reopen.body as AccountingPeriodResponse).status).toBe('OPEN');
@@ -369,17 +414,20 @@ describe('Проведение строк: close → accrue → balance → unac
     it('корректировка по HTTP: PATCH до проведения, 400 без комментария, при проведении два движения', async () => {
         await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-06/close')
+            .set('Authorization', 'Bearer test-session')
             .send({ closedBy: 1 })
             .expect(201);
         const list = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-06')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
         const accrualId = list.items[0].id;
         const card = (
             await request(app.getHttpServer())
                 .get(`/v1/service/accounting/salary_accruals/${accrualId}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualResponse;
         const lineId = card.lines[0].id;
@@ -389,6 +437,7 @@ describe('Проведение строк: close → accrue → balance → unac
             .patch(
                 `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}`,
             )
+            .set('Authorization', 'Bearer test-session')
             .send({ amount: 1500, comment: '', adjustedBy: 7 })
             .expect(400);
 
@@ -397,6 +446,7 @@ describe('Проведение строк: close → accrue → balance → unac
                 .patch(
                     `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     amount: 1500,
                     comment: 'Простой оборудования',
@@ -415,12 +465,14 @@ describe('Проведение строк: close → accrue → balance → unac
             .post(
                 `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}/accrue`,
             )
+            .set('Authorization', 'Bearer test-session')
             .send({ accruedBy: 7 })
             .expect(201);
 
         const balance = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balance.transactions).toHaveLength(2);
@@ -439,6 +491,7 @@ describe('Проведение строк: close → accrue → balance → unac
             .patch(
                 `/v1/service/accounting/salary_accruals/${accrualId}/lines/${lineId}`,
             )
+            .set('Authorization', 'Bearer test-session')
             .send({ amount: 1000, comment: 'Поздно', adjustedBy: 7 })
             .expect(409);
 
@@ -448,6 +501,7 @@ describe('Проведение строк: close → accrue → balance → unac
                 .get(
                     '/v1/accounting/balance/employee/42?types=ACCRUAL_ADJUSTMENT',
                 )
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(filtered.transactions).toHaveLength(1);
@@ -499,6 +553,7 @@ describe('Проведение строк: close → accrue → balance → unac
             .patch(
                 `/v1/service/accounting/salary_accruals/${accrual.id}/lines/does-not-exist/task-reward`,
             )
+            .set('Authorization', 'Bearer test-session')
             .send({ amount: 5000, comment: 'Готово' })
             .expect(404);
 
@@ -507,6 +562,7 @@ describe('Проведение строк: close → accrue → balance → unac
             .patch(
                 `/v1/service/accounting/salary_accruals/${accrual.id}/lines/${lineId}/task-reward`,
             )
+            .set('Authorization', 'Bearer test-session')
             .send({ amount: 5000, comment: '' })
             .expect(400);
 
@@ -515,6 +571,7 @@ describe('Проведение строк: close → accrue → balance → unac
                 .patch(
                     `/v1/service/accounting/salary_accruals/${accrual.id}/lines/${lineId}/task-reward`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({ amount: 5000, comment: 'Задача выполнена досрочно' })
                 .expect(200)
         ).body as SalaryAccrualResponse;
@@ -534,6 +591,7 @@ describe('Проведение строк: close → accrue → balance → unac
             .patch(
                 `/v1/service/accounting/salary_accruals/does-not-exist/lines/${lineId}/task-reward`,
             )
+            .set('Authorization', 'Bearer test-session')
             .send({ amount: 1000, comment: 'Нет такого документа' })
             .expect(404);
     });

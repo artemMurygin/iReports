@@ -30,6 +30,8 @@ import { MotivationSchema } from '@/domains/service/modules/accounting/domain/en
 import { PayPerHoursEntity } from '@/domains/service/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Настоящей инфраструктуры для test:e2e (jest-e2e.json + отдельная БД) в
 // проекте пока нет (см. backend/CLAUDE.md — упомянутый конфиг не заведён).
@@ -197,6 +199,31 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
         });
         schemas.set(42, schema);
 
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+
+                    'service-accounting:view_all_salary_report',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             // EventEmitterModule — EventEmitter2 для CloseAccountingPeriodHandler
             // (SalaryAccrualDocumentsCreatedDomainEvent, PRD 1); в приложении его
@@ -223,6 +250,10 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(SERVICE_CALCULATION_DATA)
             .useValue(fakeServiceCalculationData)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -246,6 +277,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     it('возвращает итог и разбивку по правилам схемы сотрудника', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_report/employee/42/2026-08')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const body = response.body as EmployeeSalaryReportResponse;
 
@@ -271,6 +303,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     it('возвращает пустой отчёт для сотрудника без мотивационной схемы', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_report/employee/999/2026-08')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const body = response.body as EmployeeSalaryReportResponse;
 
@@ -285,6 +318,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     it('отклоняет период не в формате YYYY-MM', async () => {
         await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_report/employee/42/2026')
+            .set('Authorization', 'Bearer test-session')
             .expect(400);
     });
 });

@@ -64,7 +64,6 @@ export function RuleFormCard({
     onCancel,
     onSave,
     onOpenTask,
-    onCreateTask,
     onDeleteRule,
     onDeactivateRule,
     onDelete,
@@ -149,7 +148,6 @@ export function RuleFormCard({
                             errors={errors}
                             onChange={patchDraft}
                             onOpenTask={onOpenTask}
-                            onCreateTask={onCreateTask}
                             onDeleteRule={onDeleteRule}
                             onRuleRemoved={() => onDelete(draft.draftId)}
                         />

@@ -277,5 +277,66 @@ describe('GetGoodsTurnoverReportService.getReport', () => {
 
             expect(result.totals).toEqual([]);
         });
+
+        // Правка пользователя от 2026-09-18: coefficient итога — TurnoverCoefficient от суммы
+        // оборота/остатков ПО ВСЕМ корневым строкам склада, а не средневзвешенный по строкам;
+        // previousStockSum считается по всем корневым строкам предыдущего периода склада (в т.ч.
+        // тем, что не совпали по categoryId с текущим периодом), не только по matched-парам.
+        it('coefficient итога = turnoverSum(root) ÷ средний(prevStockSum(root), stockSum(root))', async () => {
+            const { service } = buildService({
+                currentLines: [
+                    line({
+                        period: CURRENT,
+                        categoryId: 'root-1',
+                        warehouseId: 'warehouse-1',
+                        turnoverSum: 100,
+                        stockSum: 200,
+                    }),
+                    line({
+                        period: CURRENT,
+                        categoryId: 'root-2',
+                        warehouseId: 'warehouse-1',
+                        turnoverSum: 600,
+                        stockSum: 200,
+                    }),
+                    // Дочерняя категория — не должна попадать ни в turnoverSum/stockSum итога, ни
+                    // влиять на previousStockSum.
+                    line({
+                        period: CURRENT,
+                        categoryId: 'child-1',
+                        warehouseId: 'warehouse-1',
+                        turnoverSum: 999,
+                        stockSum: 999,
+                    }),
+                ],
+                previousLines: [
+                    line({
+                        period: PREVIOUS,
+                        categoryId: 'root-1',
+                        warehouseId: 'warehouse-1',
+                        stockSum: 100,
+                    }),
+                    line({
+                        period: PREVIOUS,
+                        categoryId: 'root-2',
+                        warehouseId: 'warehouse-1',
+                        stockSum: 500,
+                    }),
+                ],
+                rootCategoryIds: ['root-1', 'root-2'],
+            });
+
+            const result = await service.getReport(CURRENT);
+
+            // turnoverSum = 700, stockSum = 400, previousStockSum = 600 -> 700 / ((600+400)/2) = 1.4
+            expect(result.totals).toEqual([
+                expect.objectContaining({
+                    warehouseId: 'warehouse-1',
+                    turnoverSum: 700,
+                    stockSum: 400,
+                    coefficient: 1.4,
+                }),
+            ]);
+        });
     });
 });

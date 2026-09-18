@@ -38,6 +38,18 @@ export interface SalaryRuleRepositoryPort {
     // service/accounting#requirement-зарплатное-правило-и-начисление-доступны-для-поиска-по-идентификатору-задачи
     findByTaskId(taskId: string): Promise<SalaryRule | null>;
 
+    // deactivate-one-off-task-completion-rule, design.md решение 3 — в
+    // отличие от findByTaskId выше (только ТЕКУЩИЙ период, для панели
+    // связей задачи), сканирует ЛЮБОЙ ключ config.taskIdByPeriod: разовое
+    // правило могло быть создано в прошлом расчётном периоде, а его
+    // единственная задача закрывается позже, когда текущий период уже
+    // сместился. Возвращает правило только если оно разовое
+    // (config.isRecurring === false) — регулярные правила этим сценарием не
+    // деактивируются (см. design.md Non-Goals). null — ни одно правило
+    // домена service не ссылается на taskId ни в одном периоде, либо
+    // единственное совпадение принадлежит регулярному правилу.
+    findOneOffByAnyTaskId(taskId: string): Promise<SalaryRule | null>;
+
     // Раздел 18 tasks.md — motivationSchemaId правила, отдельно от самой
     // сущности: SalaryRule (структурный доменный тип) его не хранит (не
     // часть salary-rule.types.ts), нужен GetSalaryRuleService, чтобы

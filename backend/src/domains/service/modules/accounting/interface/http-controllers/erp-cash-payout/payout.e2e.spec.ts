@@ -61,6 +61,8 @@ import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance
 import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // PRD 3 (docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md),
 // «Критерии готовности», раздел «Общее»: «e2e-тест пайплайна «закрытие →
@@ -233,6 +235,35 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         );
         schemas.set(employee.id, schema);
 
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+
+                    'service-accounting:manage_period',
+                    'service-accounting:view_accrual',
+                    'service-accounting:edit_accrual',
+                    'service-accounting:manage_payout',
+                    'employee-balance:view_all',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
@@ -273,6 +304,10 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
             .useValue(fakeErpCashDocumentPort)
             .overrideProvider(PAYOUT_CASHBOX_RECORD_REPOSITORY)
             .useValue(payoutCashboxRecordRepo)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -292,12 +327,14 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         // 1) Закрытие месяца — создаёт документ начисления DRAFT (PRD 1).
         await request(app.getHttpServer())
             .post('/v1/service/accounting/period/2026-07/close')
+            .set('Authorization', 'Bearer test-session')
             .send({ closedBy: 1 })
             .expect(201);
 
         const list = (
             await request(app.getHttpServer())
                 .get('/v1/service/accounting/salary_accruals?period=2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualListResponse;
         expect(list.items).toHaveLength(1);
@@ -311,6 +348,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
                 .post(
                     `/v1/service/accounting/salary_accruals/${accrualId}/accrue`,
                 )
+                .set('Authorization', 'Bearer test-session')
                 .send({ accruedBy: 7 })
                 .expect(201)
         ).body as AccrueSalaryAccrualDocumentResponse;
@@ -320,6 +358,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const balanceAfterAccrual = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         const accruedAmount = balanceAfterAccrual.balance;
@@ -332,6 +371,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const payout = (
             await request(app.getHttpServer())
                 .post('/v1/service/accounting/payout')
+                .set('Authorization', 'Bearer test-session')
                 .send({
                     employeeId: 42,
                     amount: accruedAmount,
@@ -362,6 +402,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const balanceAfterPayout = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balanceAfterPayout.balance).toBe(0);
@@ -369,6 +410,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const accrualAfterPayout = (
             await request(app.getHttpServer())
                 .get(`/v1/service/accounting/salary_accruals/${accrualId}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualResponse;
         expect(accrualAfterPayout.status).toBe('PAID');
@@ -381,6 +423,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const rejected = (
             await request(app.getHttpServer())
                 .post('/v1/service/accounting/payout')
+                .set('Authorization', 'Bearer test-session')
                 .send({ employeeId: 42, amount: 500, createdBy: 7 })
                 .expect(409)
         ).body as ApiErrorResponse;
@@ -395,6 +438,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const erpDeleteCallsBefore = erpDeleteCalls.length;
         await request(app.getHttpServer())
             .delete(`/v1/service/accounting/payout/${payout.transaction.id}`)
+            .set('Authorization', 'Bearer test-session')
             .expect(204);
         expect(erpDeleteCalls.length).toBe(erpDeleteCallsBefore + 1);
         expect(erpDeleteCalls.at(-1)).toMatchObject({
@@ -406,6 +450,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const balanceAfterDelete = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/employee/42')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as EmployeeBalanceResponse;
         expect(balanceAfterDelete.balance).toBe(accruedAmount);
@@ -418,6 +463,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         const accrualAfterDelete = (
             await request(app.getHttpServer())
                 .get(`/v1/service/accounting/salary_accruals/${accrualId}`)
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as SalaryAccrualResponse;
         expect(accrualAfterDelete.status).toBe('ACCRUED');
@@ -435,6 +481,7 @@ describe('Фаза 12 PRD 3: закрытие → начисление → вы�
         // существующего движения PAYOUT это движение больше не найдёт (404).
         await request(app.getHttpServer())
             .delete(`/v1/service/accounting/payout/${payout.transaction.id}`)
+            .set('Authorization', 'Bearer test-session')
             .expect(404);
     });
 });

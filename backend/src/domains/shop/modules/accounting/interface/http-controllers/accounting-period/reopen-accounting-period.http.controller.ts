@@ -1,4 +1,8 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
@@ -11,6 +15,8 @@ import { ReopenShopAccountingPeriodDto } from '../../dto/accounting-period/reope
 // (Фаза 6 docs/service-shop-boundary-violations-fix) вместо generic по
 // direction команды сервиса, переиспользовавшейся раньше (см. Фазу 5).
 @ApiTags('Бухгалтерия: расчётный период магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:manage_period')
 @Controller()
 export class ReopenShopAccountingPeriodHttpController {
     constructor(private readonly commandBus: CommandBus) {}

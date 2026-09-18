@@ -2,7 +2,7 @@ import { salaryRuleRequestSchema, type SalaryRuleRequest, type SalaryRuleRespons
 
 import { isValidPeriod } from '@/shared/lib/format.ts'
 
-import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
+import { normalizeDeadlineDayTemplate, parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
 import {
     buildDepartmentPercentConfig,
     buildDepartmentPlanBonusConfig,
@@ -51,15 +51,9 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             config = { award: buildOrderPayedAward(draft, errors), orderTypeIds: draft.orderTypeIds }
             break
         case 'TaskCompletion': {
-            // replace-bitrix-task-integration, раздел 14 tasks.md — `taskId` приходит от мастера
-            // (Шаг 1, `CreateTaskCompletionRuleWizard`), никогда не вводится текстом здесь; пустое
-            // значение — защита от регрессии (мастер должен был заполнить его раньше, чем эта форма
-            // вообще стала видна), не обычная ошибка пользовательского ввода.
-            if (draft.taskId.trim() === '') errors.taskId = 'Задача ещё не создана — пройдите Шаг 1 мастера'
             // add-task-salary-rule-accounting-period — расчётный период больше не вычисляется
             // неявно на бэкенде (`Period.current()`), руководитель обязан выбрать его в форме
-            // (`PeriodPicker`, `TaskCompletionRuleFields.tsx`); та же обязательность, что и у
-            // `taskId` выше.
+            // (`PeriodPicker`, `TaskCompletionRuleFields.tsx`).
             if (!isValidPeriod(draft.accountingPeriod)) errors.accountingPeriod = 'Выберите расчётный период'
             // `draft.price` переиспользуется под `defaultAmount` (та же семантика "денежное
             // значение, введённое текстом", что и у PayPerHour.config.price выше) — руководитель
@@ -67,27 +61,62 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             // начисления (SetTaskRewardModal, `features/SalaryAccruals`).
             const defaultAmount = parseNumber(draft.price)
             if (defaultAmount === undefined) errors.price = 'Укажите сумму начисления по умолчанию'
-            // Шаблонные поля (`taskTitleTemplate`/`deadlineTemplate`) обслуживают ТОЛЬКО
-            // авто-пересоздание регулярного правила на новый период — для разового правила они
-            // структурно всё равно уходят в контракт (`z.string()` допускает `''`), но
-            // содержательно не нужны, поэтому required-проверка условна на `isRecurring`
-            // (см. `TaskCompletionRuleFields.tsx`, где поля и скрыты при `isRecurring === false`).
+
             if (draft.isRecurring) {
+                // Шаблонные поля обслуживают авто-пересоздание регулярного правила на новый период
+                // — обязательны только для этого сценария (см. `TaskCompletionRuleFields.tsx`, где
+                // поля показаны лишь при `isRecurring === true`).
                 if (draft.taskTitleTemplate.trim() === '') {
                     errors.taskTitleTemplate = 'Укажите шаблон заголовка для новой задачи периода'
                 }
                 if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите шаблон дедлайна'
-            }
-            const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
-            config = {
-                taskId: draft.taskId.trim(),
-                accountingPeriod: draft.accountingPeriod,
-                taskTitleTemplate: draft.taskTitleTemplate.trim(),
-                ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
-                isRecurring: draft.isRecurring,
-                deadlineTemplate: draft.deadlineTemplate,
-                defaultAmount: defaultAmount ?? Number.NaN,
-                taskLinkTemplates: draft.taskLinkTemplates,
+                // recurring-task-deadline-offset, FR1 — «Дедлайн относится к» (0 — этому периоду,
+                // 1..3 — на 1..3 периода вперёд). Драфт всегда несёт число (default 0, см.
+                // `createRuleDraft`), поэтому проверка структурная (регрессия UI-контрола).
+                if (
+                    !Number.isInteger(draft.deadlinePeriodOffset) ||
+                    draft.deadlinePeriodOffset < 0 ||
+                    draft.deadlinePeriodOffset > 3
+                ) {
+                    errors.deadlinePeriodOffset = 'Смещение периода дедлайна должно быть от 0 до 3'
+                }
+                const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
+                config = {
+                    isRecurring: true,
+                    accountingPeriod: draft.accountingPeriod,
+                    taskTitleTemplate: draft.taskTitleTemplate.trim(),
+                    ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
+                    deadlineTemplate: normalizeDeadlineDayTemplate(draft.deadlineTemplate),
+                    deadlinePeriodOffset: draft.deadlinePeriodOffset,
+                    taskLinkTemplates: draft.taskLinkTemplates,
+                    createTaskForCurrentPeriod: draft.createTaskForCurrentPeriod,
+                    defaultAmount: defaultAmount ?? Number.NaN,
+                }
+            } else {
+                // split-task-completion-rule-form — буквальные поля задачи обязательны, только
+                // пока задача ещё не создана (`draft.taskId === ''`, новое разовое правило); для
+                // уже существующего (персистентного) разового правила эта форма их больше не
+                // показывает и не трогает — задача создаётся один раз, тем же запросом, что и
+                // правило.
+                const isNewTask = draft.taskId.trim() === ''
+                if (isNewTask) {
+                    if (draft.taskTitle.trim() === '') errors.taskTitle = 'Укажите название задачи'
+                    if (draft.taskDeadline.trim() === '') errors.taskDeadline = 'Укажите дедлайн задачи'
+                }
+                const taskDescription = draft.taskDescription.trim()
+                config = {
+                    isRecurring: false,
+                    accountingPeriod: draft.accountingPeriod,
+                    defaultAmount: defaultAmount ?? Number.NaN,
+                    ...(isNewTask
+                        ? {
+                              taskTitle: draft.taskTitle.trim(),
+                              ...(taskDescription !== '' ? { taskDescription } : {}),
+                              taskDeadline: draft.taskDeadline,
+                              taskLinks: draft.taskLinks,
+                          }
+                        : {}),
+                }
             }
             break
         }
@@ -181,12 +210,18 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         departmentIdOverride: '',
         orderTypeIds: [],
         taskId: '',
+        taskTitle: '',
+        taskDescription: '',
+        taskDeadline: '',
+        taskLinks: [],
         accountingPeriod: '',
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
+        createTaskForCurrentPeriod: true,
         warehouseId: '',
         planTurnoverRatio: '',
         marginThreshold: '',
@@ -243,12 +278,13 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
             return {
                 ...base,
                 price: String(rule.config.defaultAmount),
-                // Ответ API отдаёт только `taskIdByPeriod` (design.md решение 2), не сам `taskId`
-                // (тот — одноразовый вход, относящийся к периоду ИЗ ЗАПРОСА, см.
-                // `contracts/commands/salary-rule.ts`'s `taskCompletionSalaryConfigResponseSchema`)
-                // — редактирование существующего правила переиспользует id ПОСЛЕДНЕГО периода,
-                // за который задача уже заводилась (см. `latestTaskId`), а не заново проводит
-                // пользователя через Шаг 1 мастера ради задачи, которая уже существует.
+                // Ответ API отдаёт только `taskIdByPeriod`, не буквальные поля задачи (одноразовый
+                // вход, split-task-completion-rule-form) — редактирование существующего правила
+                // переиспользует id ПОСЛЕДНЕГО периода, за который задача уже заводилась (см.
+                // `latestTaskId`); при непустом `taskId` `TaskCompletionRuleFields.tsx` больше не
+                // показывает буквальные поля задачи вовсе (см. `taskTitle`'s комментарий в
+                // `ruleDraft.ts`), поэтому `taskTitle`/`taskDescription`/`taskDeadline`/`taskLinks`
+                // остаются дефолтными ('').
                 taskId: latestTaskId(rule.config.taskIdByPeriod),
                 // add-task-salary-rule-accounting-period, design.md Decision 4 — берётся из ответа
                 // API как есть, НЕ пересчитывается на клиенте (`getCurrentPeriod()` — только для
@@ -257,11 +293,21 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
                 // персистированными строками до бэкофилла мапером), `''` — тот же "не задано"
                 // фоллбэк, что и у `taskDescriptionTemplate` ниже.
                 accountingPeriod: rule.config.accountingPeriod ?? '',
-                taskTitleTemplate: rule.config.taskTitleTemplate,
-                taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
-                deadlineTemplate: rule.config.deadlineTemplate,
-                taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
+                // Шаблонные поля существуют только в ответе регулярного варианта
+                // (`taskCompletionRecurringConfigResponseSchema`) — дефолты выше (`''`/`0`/`[]`) уже
+                // подставлены `base`, здесь перезаписываем только когда есть что подставить.
+                ...(rule.config.isRecurring
+                    ? {
+                          taskTitleTemplate: rule.config.taskTitleTemplate,
+                          taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
+                          deadlineTemplate: rule.config.deadlineTemplate,
+                          // recurring-task-deadline-offset — обратная совместимость с уже
+                          // персистированными правилами до бэкофилла.
+                          deadlinePeriodOffset: rule.config.deadlinePeriodOffset ?? 0,
+                          taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
+                      }
+                    : {}),
             }
 
         // add-department-head-salary-rules, FR2-FR4 — обратное преобразование для 3 новых видов

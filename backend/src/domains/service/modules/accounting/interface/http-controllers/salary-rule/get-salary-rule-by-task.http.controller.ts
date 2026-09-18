@@ -1,4 +1,8 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { SalaryRuleSummary } from 'ireports-contracts';
@@ -25,6 +29,8 @@ import { FindSalaryRuleForTaskService } from '@/domains/service/modules/accounti
 // сохранён как объявленный тип метода — для Swagger-схемы ответа, само тело
 // уже отправлено до return.
 @ApiTags('Бухгалтерия: зарплатные правила')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:view')
 @Controller()
 export class GetSalaryRuleByTaskHttpController {
     constructor(

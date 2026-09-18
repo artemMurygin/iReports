@@ -1,4 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualListResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -6,6 +10,8 @@ import { ListSalaryAccrualsService } from '@/domains/service/modules/accounting/
 import { ListSalaryAccrualsQueryDto } from '../../dto/salary-accrual/list-salary-accruals-query.dto';
 
 @ApiTags('Бухгалтерия: начисления зарплаты')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:view_accrual')
 @Controller()
 export class ListSalaryAccrualsHttpController {
     constructor(

@@ -22,6 +22,7 @@ describe('EnsureRuleTaskForPeriodService', () => {
     const buildRule = (overrides?: {
         isRecurring?: boolean;
         deadlineTemplate?: string;
+        deadlinePeriodOffset?: number;
         taskIdByPeriod?: Record<string, string>;
         taskLinkTemplates?: { url: string; label?: string }[];
         accountingPeriod?: string;
@@ -43,6 +44,8 @@ describe('EnsureRuleTaskForPeriodService', () => {
                             isRecurring: overrides?.isRecurring ?? true,
                             deadlineTemplate:
                                 overrides?.deadlineTemplate ?? '2026-01-15',
+                            deadlinePeriodOffset:
+                                overrides?.deadlinePeriodOffset ?? 0,
                             defaultAmount: 5000,
                             taskLinkTemplates:
                                 overrides?.taskLinkTemplates ?? [],
@@ -231,6 +234,80 @@ describe('EnsureRuleTaskForPeriodService', () => {
         });
     });
 
+    // recurring-task-deadline-offset, specs/service/accounting/spec.md
+    describe('deadlinePeriodOffset', () => {
+        it('смещение 0 — дедлайн внутри месяца самого периода (прежнее поведение)', async () => {
+            await withRequestContext(async () => {
+                const rule = buildRule({
+                    isRecurring: true,
+                    deadlineTemplate: '2026-01-25',
+                    deadlinePeriodOffset: 0,
+                });
+                const { service, execute } = buildService();
+
+                await service.ensure(rule, '2026-01', 555);
+
+                const [command] = execute.mock.calls[0] as [CreateTaskCommand];
+                expect(command.deadline).toEqual(
+                    new Date('2026-01-25T00:00:00.000Z'),
+                );
+            });
+        });
+
+        it('смещение 1 — дедлайн переносится в месяц, следующий за периодом', async () => {
+            await withRequestContext(async () => {
+                const rule = buildRule({
+                    isRecurring: true,
+                    deadlineTemplate: '2026-01-05',
+                    deadlinePeriodOffset: 1,
+                });
+                const { service, execute } = buildService();
+
+                await service.ensure(rule, '2026-01', 555);
+
+                const [command] = execute.mock.calls[0] as [CreateTaskCommand];
+                expect(command.deadline).toEqual(
+                    new Date('2026-02-05T00:00:00.000Z'),
+                );
+            });
+        });
+
+        it('число месяца 31 со смещением 1 из января зажимается концом февраля, а не переносится в март', async () => {
+            await withRequestContext(async () => {
+                const rule = buildRule({
+                    isRecurring: true,
+                    deadlineTemplate: '2026-01-31',
+                    deadlinePeriodOffset: 1,
+                });
+                const { service, execute } = buildService();
+
+                await service.ensure(rule, '2026-01', 555);
+
+                const [command] = execute.mock.calls[0] as [CreateTaskCommand];
+                expect(command.deadline).toEqual(
+                    new Date('2026-02-28T00:00:00.000Z'),
+                );
+            });
+        });
+
+        it('разовое правило не создаёт задачу и не применяет смещение периода', async () => {
+            await withRequestContext(async () => {
+                const rule = buildRule({
+                    isRecurring: false,
+                    deadlineTemplate: '2026-01-05',
+                    deadlinePeriodOffset: 2,
+                });
+                const { service, update, execute } = buildService();
+
+                const result = await service.ensure(rule, '2026-01', 555);
+
+                expect(result).toBeNull();
+                expect(execute).not.toHaveBeenCalled();
+                expect(update).not.toHaveBeenCalled();
+            });
+        });
+    });
+
     it('бросает ArgumentInvalidException для правила другого типа', async () => {
         await withRequestContext(async () => {
             const other = PayPerHoursEntity.create({
@@ -249,15 +326,34 @@ describe('EnsureRuleTaskForPeriodService', () => {
 });
 
 describe('computeDeadlineForPeriod', () => {
-    it('строит дедлайн периода из числа месяца шаблона', () => {
-        expect(computeDeadlineForPeriod('2026-01-15', '2026-09')).toEqual(
+    it('строит дедлайн периода из числа месяца шаблона (смещение 0)', () => {
+        expect(computeDeadlineForPeriod('2026-01-15', 0, '2026-09')).toEqual(
             new Date('2026-09-15T00:00:00.000Z'),
         );
     });
 
-    it('зажимает день длиной целевого месяца', () => {
-        expect(computeDeadlineForPeriod('2026-01-31', '2026-02')).toEqual(
+    it('зажимает день длиной целевого месяца (смещение 0)', () => {
+        expect(computeDeadlineForPeriod('2026-01-31', 0, '2026-02')).toEqual(
             new Date('2026-02-28T00:00:00.000Z'),
+        );
+    });
+
+    // recurring-task-deadline-offset
+    it('смещение 1 — год/месяц берутся из периода, сдвинутого на 1 месяц вперёд', () => {
+        expect(computeDeadlineForPeriod('2026-01-05', 1, '2026-01')).toEqual(
+            new Date('2026-02-05T00:00:00.000Z'),
+        );
+    });
+
+    it('число месяца 31 со смещением 1 из января зажимается длиной февраля, а не переносится в март', () => {
+        expect(computeDeadlineForPeriod('2026-01-31', 1, '2026-01')).toEqual(
+            new Date('2026-02-28T00:00:00.000Z'),
+        );
+    });
+
+    it('смещение переносит год через границу декабря', () => {
+        expect(computeDeadlineForPeriod('2026-01-10', 1, '2026-12')).toEqual(
+            new Date('2027-01-10T00:00:00.000Z'),
         );
     });
 });

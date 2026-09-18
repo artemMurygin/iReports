@@ -117,6 +117,112 @@ describe('SalaryRuleRepository', () => {
         });
     });
 
+    // deactivate-one-off-task-completion-rule, design.md решение 3 — в
+    // отличие от findByTaskId выше, сканирует ЛЮБОЙ период
+    // taskIdByPeriod (не только текущий) и возвращает правило только если
+    // оно разовое (isRecurring: false); direction: 'service' фиксируется в
+    // самом WHERE-запросе (тем же приёмом, что и у findByTaskId), поэтому
+    // правило чужого направления physически не попадёт в findMany.
+    describe('findOneOffByAnyTaskId', () => {
+        it('находит разовое правило TaskCompletion, ссылающееся на taskId в ПРОШЛОМ периоде', async () => {
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { '2020-01': 'task-1' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            ]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-1');
+
+            expect(findMany).toHaveBeenCalledWith({
+                where: { type: 'TaskCompletion', direction: 'service' },
+            });
+            expect(rule).not.toBeNull();
+            expect(rule?.id).toBe('rule-1');
+        });
+
+        it('находит разовое правило, ссылающееся на taskId в ТЕКУЩЕМ периоде', async () => {
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            ]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-1');
+
+            expect(rule).not.toBeNull();
+            expect(rule?.id).toBe('rule-1');
+        });
+
+        it('возвращает null, если найденное правило регулярное (isRecurring: true)', async () => {
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            ]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-1');
+
+            expect(rule).toBeNull();
+        });
+
+        it('возвращает null, если ни одно правило домена не ссылается на taskId ни в одном периоде', async () => {
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'other-task' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            ]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-1');
+
+            expect(rule).toBeNull();
+        });
+
+        it('запрашивает только правила направления service — правило другого направления не может быть найдено', async () => {
+            // Правило направления shop с тем же taskId физически не попадёт
+            // в результат findMany, т.к. Prisma-запрос уже фильтрует
+            // direction: 'service' в WHERE — findMany здесь возвращает
+            // пустой список, эмулируя ситуацию "совпадение есть, но только
+            // у чужого направления".
+            const { repository, findMany } = buildRepository();
+            findMany.mockResolvedValueOnce([]);
+
+            const rule = await repository.findOneOffByAnyTaskId('task-1');
+
+            expect(findMany).toHaveBeenCalledWith({
+                where: { type: 'TaskCompletion', direction: 'service' },
+            });
+            expect(rule).toBeNull();
+        });
+    });
+
     // add-task-salary-rule-accounting-period, design.md Decision 1 —
     // SalaryRuleMapper.toDomain дерива́т accountingPeriod для уже
     // персистированных строк, у которых его нет в props (создано до этой
@@ -185,6 +291,53 @@ describe('SalaryRuleRepository', () => {
             expect(
                 (rule.config as TaskCompletionSalaryConfig).accountingPeriod,
             ).toBe('2026-01');
+        });
+    });
+
+    // recurring-task-deadline-offset, tasks.md 4.1 — обратная совместимость с легаси-строками
+    // (созданными до этой фичи, без deadlinePeriodOffset в props): тот же приём, что и у
+    // accountingPeriod выше — деривация значения по умолчанию на границе SalaryRuleMapper.toDomain,
+    // а не бэкфилл БД.
+    describe('SalaryRuleMapper.toDomain — деривация deadlinePeriodOffset', () => {
+        const mapper = new SalaryRuleMapper();
+
+        it('легаси-запись без deadlinePeriodOffset в props получает deadlinePeriodOffset = 0', () => {
+            const rule = mapper.toDomain(
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                    },
+                }),
+            );
+
+            expect(
+                (rule.config as TaskCompletionSalaryConfig)
+                    .deadlinePeriodOffset,
+            ).toBe(0);
+        });
+
+        it('запись с явным deadlinePeriodOffset сохраняет своё значение', () => {
+            const rule = mapper.toDomain(
+                buildTaskCompletionRecord({
+                    props: {
+                        taskIdByPeriod: { [currentPeriod]: 'task-1' },
+                        taskTitleTemplate: 'Шаблон',
+                        isRecurring: true,
+                        deadlineTemplate: '2026-01-25T18:00:00.000Z',
+                        defaultAmount: 1000,
+                        deadlinePeriodOffset: 2,
+                    },
+                }),
+            );
+
+            expect(
+                (rule.config as TaskCompletionSalaryConfig)
+                    .deadlinePeriodOffset,
+            ).toBe(2);
         });
     });
 

@@ -1,4 +1,8 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccrueSalaryAccrualDocumentResponse } from 'ireports-contracts';
@@ -7,6 +11,8 @@ import { AccrueSalaryAccrualDocumentCommand } from '@/domains/service/modules/ac
 import { AccrueSalaryAccrualLineDto } from '../../dto/salary-accrual/accrue-salary-accrual-line.dto';
 
 @ApiTags('Бухгалтерия: начисления зарплаты')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:edit_accrual')
 @Controller()
 export class AccrueSalaryAccrualDocumentHttpController {
     constructor(private readonly commandBus: CommandBus) {}

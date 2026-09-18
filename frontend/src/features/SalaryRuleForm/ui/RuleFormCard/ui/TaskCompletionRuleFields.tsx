@@ -1,10 +1,13 @@
-import { ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { ChevronRight, Trash2 } from 'lucide-react'
 
+import { Checkbox } from '@/shared/ui-kit/atoms/Checkbox'
 import { IconButton } from '@/shared/ui-kit/atoms/IconButton'
 import { Input } from '@/shared/ui-kit/atoms/Input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui-kit/atoms/Select'
 import { SegmentedControl, type SegmentedControlOption } from '@/shared/ui-kit/atoms/SegmentedControl'
 import { Textarea } from '@/shared/ui-kit/atoms/Textarea'
 import { PeriodPicker } from '@/shared/ui-kit/organisms/PeriodPicker.tsx'
+import { formatPeriodMonthGenitive, formatPeriodMonthName, isValidPeriod, shiftPeriod } from '@/shared/lib/format.ts'
 
 import { salaryRuleTaskApi } from '../../../model/taskApi.ts'
 import { useDeleteRuleTask } from '../../../model/useDeleteRuleTask.ts'
@@ -19,17 +22,14 @@ import { TaskLinkTemplatesField } from './TaskLinkTemplatesField.tsx'
 
 export type TaskCompletionRuleFieldsProps = {
     draft: RuleDraft
-    /** `errors.taskId`/`errors.accountingPeriod`/`errors.taskTitleTemplate`/`errors.dueDate`/
-     * `errors.price` — see each field's own comment below for when `resolveRuleDraft` actually
-     * sets it. */
+    /** `errors.taskId`/`errors.taskTitle`/`errors.taskDeadline`/`errors.accountingPeriod`/
+     * `errors.taskTitleTemplate`/`errors.dueDate`/`errors.price` — see each field's own comment
+     * below for when `resolveRuleDraft` actually sets it. */
     errors: RuleFieldErrors
     onChange: (patch: Partial<RuleDraft>) => void
     /** Opens the task details side panel for the already-linked task — see
      * `RuleFormCardContext.onOpenTask`'s comment (`../model/types.ts`). */
     onOpenTask?: (taskId: string) => void
-    /** Opens the task creation side panel for this draft — see `RuleFormCardContext.onCreateTask`'s
-     * comment (`../model/types.ts`). */
-    onCreateTask?: (draftId: string) => void
     /** Cascade-deletes an ALREADY-PERSISTED rule (see `RuleFormCardContext.onDeleteRule`'s comment).
      * `undefined` on the schema-create page, where `draft.ruleId` is always `undefined` too, so it's
      * never called from there. */
@@ -52,30 +52,81 @@ const PERIOD_TABS: SegmentedControlOption<PeriodTab>[] = [
     { value: 'recurring', label: 'Регулярная' },
 ]
 
+/** recurring-task-deadline-offset, FR1/ui-design.md v2 (Pencil: node `Zp9oG`/`UG3Qs`, фрейм
+ * `T0d2zv`, «Дедлайн регулярной задачи — предложение по UX», сравнение с прежним двухпольным
+ * вариантом на `MC9n1`) — 4 фиксированных пункта, индекс совпадает со значением
+ * `draft.deadlinePeriodOffset` (0 — этому периоду, по умолчанию). Формулировки читаются как
+ * продолжение фразы «‹день› числа · ‹пункт›» (см. `Control Row` ниже), а не как самостоятельная
+ * подпись — поэтому «в этом/следующем периоде», а не изолированное «этому периоду». `Select`
+ * работает со строковыми значениями (`radix-ui`), поэтому здесь строки — конвертация в/из
+ * `number` происходит на границе (`onValueChange`/`String(...)` ниже). */
+const DEADLINE_PERIOD_OFFSET_OPTIONS: { value: string; label: string }[] = [
+    { value: '0', label: 'в этом периоде' },
+    { value: '1', label: 'в следующем периоде' },
+    { value: '2', label: 'через 2 периода' },
+    { value: '3', label: 'через 3 периода' },
+]
+
+/** Дедлайн регулярной задачи не хранит настоящую календарную дату (год/месяц бэкенд игнорирует,
+ * см. `computeDeadlineForPeriod`/`computeRecurringTaskDeadline`) — только число месяца, буквально
+ * последние 1-2 цифры `deadlineTemplate`. Извлекает их regex'ом, а не через `Date`, чтобы не
+ * зависеть от того, реальная это дата легаси-правила (`"2026-09-30"`) или новый плейсхолдер-носитель
+ * (`buildDeadlineDayTemplate` ниже, `"2000-01-25"`) — в обоих случаях день лежит в конце строки. */
+function extractDeadlineDay(deadlineTemplate: string): string {
+    const match = /(\d{1,2})$/.exec(deadlineTemplate)
+    return match ? match[1] : ''
+}
+
+/** Обратная операция к `extractDeadlineDay`: несёт голые цифры дня как есть, БЕЗ `padStart` —
+ * иначе однозначный ввод "3" тут же переписался бы в "03" и сломал бы дальнейший набор второй
+ * цифры ("31") посреди уже отрисованного значения. Плейсхолдер-месяц/год (январь 2000-го, у него
+ * 31 день) выбран специально, чтобы ЛЮБОЙ ввод 1-31 давал синтаксически валидную дату — нормализация
+ * (padStart до 2 цифр, зажатие в 1..31) происходит один раз на границе, в
+ * `resolveRuleDraft`/`resolveShopRuleDraft`, а не здесь. */
+function buildDeadlineDayTemplate(digits: string): string {
+    return digits === '' ? '' : `2000-01-${digits}`
+}
+
+/** Живой пример под контролом (design: «Например: 5 февраля — для задачи за январь») — переводит
+ * абстрактное «в следующем периоде» в конкретную дату для ТЕКУЩЕГО расчётного периода правила,
+ * поэтому руководителю не нужно считать смещение в уме. `null`, пока день/период ещё не заполнены
+ * (тогда показывать нечего — оба поля уже подсвечены `FieldError` рядом). */
+function computeDeadlineHint(accountingPeriod: string, deadlineTemplate: string, offset: number): string | null {
+    const day = Number(extractDeadlineDay(deadlineTemplate))
+    if (!Number.isInteger(day) || day < 1 || !isValidPeriod(accountingPeriod)) return null
+
+    const targetPeriod = shiftPeriod(accountingPeriod, offset)
+    const [year, month] = targetPeriod.split('-').map(Number)
+    const totalDaysInTargetMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    const clampedDay = Math.min(day, totalDaysInTargetMonth)
+
+    return `Например: ${clampedDay} ${formatPeriodMonthGenitive(targetPeriod)} — для задачи за ${formatPeriodMonthName(accountingPeriod)}`
+}
+
 /**
- * Pencil: `design/sallary-first-iteration.pen`, фрейм `EdCuh` («Создание правила «За выполнение
- * задачи» · Шаг 2, Регулярная») → «Колонка · Правило» → «Карточка · Правило» → `Body` — тело
- * карточки правила `TaskCompletion` (tasks.md раздел 14.5), рендерится вместо `AwardSection`
- * через `config.taskRuleTypes`/`showTaskFields` (`useRuleFormCard.ts`).
+ * Pencil: `design/sallary-first-iteration.pen`, фреймы `FwNov`/`EdCuh` («Создание правила «За
+ * выполнение задачи» · Разовая/Регулярная») → «Колонка · Правило» → «Карточка · Правило» → `Body`
+ * — тело карточки правила `TaskCompletion`, рендерится вместо `AwardSection` через
+ * `config.taskRuleTypes`/`showTaskFields` (`useRuleFormCard.ts`).
  *
- * replace-bitrix-task-integration, design.md решения 2/4 — переписано относительно прежней
- * (Bitrix-эры) версии этого файла: задача больше не заводится этой формой (ни явно текстовым
- * полем, ни неявно из `draft.name`) — она заводится тут же, по клику "Создать задачу", в боковой
- * панели поверх этой карточки (`features/CreateTask`'s `CreateTaskPanel`, открывается через
- * `onCreateTask` — см. `useTaskLinkPanels.ts` за тем, откуда берётся сам колбэк и куда пишется
- * созданный `draft.taskId`). Поэтому:
- * - «Задача» здесь — либо кнопка "Создать задачу" (`draft.taskId === ''`), либо кликабельный
- *   виджет с названием уже привязанной задачи (`useRuleTask`, `GET /v1/tasks/:id` — собственный
- *   запрос этой фичи, не импорт `features/TaskStatusControl`, кросс-фичевый импорт запрещён,
- *   frontend/CLAUDE.md), открывающий по клику боковую панель с полной карточкой задачи
- *   (`features/TaskStatusControl`'s `TaskDetailsPanel`, через `onOpenTask`) — обе панели рендерит
- *   страница (`pages/SalaryRuleDetail`/`pages/SalaryRules`), которой обе фичи доступны.
- * - add-task-rule-task-lifecycle: рядом с виджетом — кнопка "Удалить задачу" (`useDeleteRuleTask`,
- *   confirm через `DeleteRuleTaskDialog`). Что именно удаляется, решает `draft.ruleId`:
- *   - НЕ задано (правило ещё ни разу не сохранялось — черновик этой сессии) — безопасно удалить
- *     ТОЛЬКО задачу (`salaryRuleTaskApi.remove`, тот же вызов, что и unmount-очистка в
- *     `useTaskLinkPanels`) и очистить `draft.taskId` через `onChange`, снова показывая "Создать
- *     задачу". Ничего персистентного не затронуто — сохранённого правила с этим `taskId` ещё нет.
+ * split-task-completion-rule-form — переписано относительно прежней (replace-bitrix-task-integration)
+ * версии этого файла: разовая задача больше не заводится ОТДЕЛЬНЫМ, предшествующим запросом в
+ * боковой панели (`features/CreateTask`'s `CreateTaskPanel`) — пока задачи ещё нет (`draft.taskId
+ * === ''`), эта форма сама собирает её буквальные поля (`taskTitle`/`taskDeadline`/
+ * `taskDescription`/`taskLinks`) и отправляет их тем же запросом, что и само правило; бэкенд
+ * создаёт задачу сам (`CreateSalaryRuleHandler`). Поэтому:
+ * - «Задача» здесь — либо буквальные поля новой задачи (`draft.taskId === ''`), либо, для уже
+ *   существующего правила, кликабельный виджет с названием уже привязанной задачи (`useRuleTask`,
+ *   `GET /v1/tasks/:id` — собственный запрос этой фичи, не импорт `features/TaskStatusControl`,
+ *   кросс-фичевый импорт запрещён, frontend/CLAUDE.md), открывающий по клику боковую панель с
+ *   полной карточкой задачи (`features/TaskStatusControl`'s `TaskDetailsPanel`, через `onOpenTask`).
+ * - add-task-rule-task-lifecycle: рядом с уже существующим виджетом — кнопка "Удалить задачу"
+ *   (`useDeleteRuleTask`, confirm через `DeleteRuleTaskDialog`). Что именно удаляется, решает
+ *   `draft.ruleId`:
+ *   - НЕ задано (правило ещё ни разу не сохранялось — черновик этой сессии) — этот путь на
+ *     практике недостижим для НОВОГО разового правила (у него `draft.taskId === ''` до самого
+ *     сохранения схемы, задача создаётся вместе с правилом), но остаётся веткой на случай будущего
+ *     переиспользования компонента с уже готовым `taskId` без сохранённого `ruleId`.
  *   - задано (правило загружено из уже сохранённой схемы) — задачу удалить в обход `onChange`
  *     нельзя: правило `TaskCompletion` без задачи не может существовать как персистентная сущность,
  *     а сама схема сохраняется отдельным действием ("Сохранить изменения"), так что просто чистить
@@ -86,19 +137,21 @@ const PERIOD_TABS: SegmentedControlOption<PeriodTab>[] = [
  *     тут же пропала из списка.
  * - `taskTitleTemplate`/`taskDescriptionTemplate`/`deadlineTemplate`/`taskLinkTemplates` —
  *   самостоятельные поля ШАБЛОНА для авто-пересоздания задачи РЕГУЛЯРНОГО правила на новый период
- *   (`EnsureRuleTaskForPeriodService`), не поля самой первой задачи (та создаётся отдельно, со
- *   своими произвольными title/description/deadline/ссылками, в панели выше) — поэтому видимы
- *   только при `isRecurring === true` (узел `YrCno`, «Блок · Шаблон для нового периода», в макете
- *   отсутствует в варианте «Разовая»). `taskLinkTemplates` (add-task-rule-task-lifecycle) —
- *   `TaskLinkTemplatesField`, своя копия `features/CreateTask/ui/TaskLinksField.tsx`
- *   (кросс-фичевый импорт запрещён), над `draft.taskLinkTemplates` вместо отдельного `useState`.
+ *   (`EnsureRuleTaskForPeriodService`), видимы только при `isRecurring === true` (узел `TR9HA`,
+ *   «Секция · Шаблон задачи»). `createTaskForCurrentPeriod` — чекбокс «Создать задачу в текущем
+ *   периоде» (узел `y7DNh0`), только для НОВОГО регулярного правила (`draft.ruleId === undefined`):
+ *   определяет, создаётся ли задача текущего периода сразу вместе с правилом, или первая задача
+ *   появится позже лениво, при наступлении следующего периода. `taskLinkTemplates`
+ *   (add-task-rule-task-lifecycle) — `TaskLinkTemplatesField`, своя копия
+ *   `features/CreateTask/ui/TaskLinksField.tsx` (кросс-фичевый импорт запрещён), над
+ *   `draft.taskLinkTemplates` вместо отдельного `useState`; тот же компонент переиспользуется ниже
+ *   для `draft.taskLinks` (ссылки разовой задачи) с переопределённым `label`.
  */
 export function TaskCompletionRuleFields({
     draft,
     errors,
     onChange,
     onOpenTask,
-    onCreateTask,
     onDeleteRule,
     onRuleRemoved,
 }: TaskCompletionRuleFieldsProps) {
@@ -106,6 +159,7 @@ export function TaskCompletionRuleFields({
     const task = useRuleTask(draft.taskId || null)
     const deleteTask = useDeleteRuleTask()
     const alsoDeletesRule = draft.ruleId !== undefined
+    const isNewTask = draft.taskId === ''
 
     async function handleConfirmDelete() {
         if (draft.ruleId !== undefined) {
@@ -119,52 +173,100 @@ export function TaskCompletionRuleFields({
 
     return (
         <div className="flex flex-col gap-3.5">
-            <div className="flex flex-col gap-1.5">
-                <span className="font-ui text-xs font-medium text-ink-muted">Задача</span>
-                {draft.taskId ? (
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => onOpenTask?.(draft.taskId)}
-                            className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-[8px] border border-hairline bg-canvas px-3 py-2 text-left transition-colors hover:bg-surface"
-                        >
-                            <span className="truncate font-ui text-[13px] font-medium text-ink">
-                                {task.isLoading ? 'Загрузка…' : (task.data?.title ?? 'Задача')}
-                            </span>
-                            <ChevronRight className="size-3.5 shrink-0 text-ink-muted" />
-                        </button>
-                        <IconButton
-                            type="button"
-                            variant="danger"
-                            aria-label="Удалить задачу"
-                            onClick={() => deleteTask.open()}
-                            className="shrink-0"
-                        >
-                            <Trash2 />
-                        </IconButton>
-                    </div>
-                ) : (
-                    <button
-                        type="button"
-                        onClick={() => onCreateTask?.(draft.draftId)}
-                        className="flex items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-hairline px-3 py-2 font-ui text-[13px] font-medium text-ink-muted transition-colors hover:border-brand-border hover:text-ink"
-                    >
-                        <Plus className="size-3.5" />
-                        Создать задачу
-                    </button>
-                )}
-                <FieldError message={errors.taskId} />
+            {!draft.isRecurring && (
+                <div className="flex flex-col gap-3.5 rounded-[8px] border border-hairline bg-canvas p-3">
+                    {isNewTask ? (
+                        <>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-title">
+                                    Название задачи
+                                </label>
+                                <Input
+                                    id="task-title"
+                                    value={draft.taskTitle}
+                                    onChange={(event) => onChange({ taskTitle: event.target.value })}
+                                    placeholder="Что нужно сделать"
+                                />
+                                <FieldError message={errors.taskTitle} />
+                            </div>
 
-                <DeleteRuleTaskDialog
-                    open={deleteTask.isOpen}
-                    onOpenChange={(open) => !open && deleteTask.close()}
-                    taskTitle={task.data?.title ?? 'Задача'}
-                    alsoDeletesRule={alsoDeletesRule}
-                    onConfirm={() => deleteTask.confirm(handleConfirmDelete)}
-                    isPending={deleteTask.isPending}
-                    error={deleteTask.error}
-                />
-            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label
+                                    className="font-ui text-xs font-medium text-ink-muted"
+                                    htmlFor="task-description"
+                                >
+                                    Описание
+                                </label>
+                                <Textarea
+                                    id="task-description"
+                                    value={draft.taskDescription}
+                                    onChange={(event) => onChange({ taskDescription: event.target.value })}
+                                    placeholder="Необязательно — подробности задачи"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-deadline">
+                                    Дедлайн
+                                </label>
+                                <Input
+                                    id="task-deadline"
+                                    type="date"
+                                    value={draft.taskDeadline}
+                                    onChange={(event) => onChange({ taskDeadline: event.target.value })}
+                                />
+                                <FieldError message={errors.taskDeadline} />
+                            </div>
+
+                            <TaskLinkTemplatesField
+                                label="Ссылки"
+                                links={draft.taskLinks}
+                                onAddLink={(url, label) =>
+                                    onChange({ taskLinks: [...draft.taskLinks, { url, label }] })
+                                }
+                                onRemoveLink={(index) =>
+                                    onChange({ taskLinks: draft.taskLinks.filter((_, i) => i !== index) })
+                                }
+                            />
+                        </>
+                    ) : (
+                        <div className="flex flex-col gap-1.5">
+                            <span className="font-ui text-xs font-medium text-ink-muted">Задача</span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => onOpenTask?.(draft.taskId)}
+                                    className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-[8px] border border-hairline bg-surface px-3 py-2 text-left transition-colors hover:bg-canvas"
+                                >
+                                    <span className="truncate font-ui text-[13px] font-medium text-ink">
+                                        {task.isLoading ? 'Загрузка…' : (task.data?.title ?? 'Задача')}
+                                    </span>
+                                    <ChevronRight className="size-3.5 shrink-0 text-ink-muted" />
+                                </button>
+                                <IconButton
+                                    type="button"
+                                    variant="danger"
+                                    aria-label="Удалить задачу"
+                                    onClick={() => deleteTask.open()}
+                                    className="shrink-0"
+                                >
+                                    <Trash2 />
+                                </IconButton>
+                            </div>
+
+                            <DeleteRuleTaskDialog
+                                open={deleteTask.isOpen}
+                                onOpenChange={(open) => !open && deleteTask.close()}
+                                taskTitle={task.data?.title ?? 'Задача'}
+                                alsoDeletesRule={alsoDeletesRule}
+                                onConfirm={() => deleteTask.confirm(handleConfirmDelete)}
+                                isPending={deleteTask.isPending}
+                                error={deleteTask.error}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* add-task-salary-rule-accounting-period — расчётный период относится к САМОЙ первой
                 задаче правила, которая существует независимо от периодичности (design.md, Decision
@@ -191,42 +293,97 @@ export function TaskCompletionRuleFields({
                 </p>
             </div>
 
+            {draft.isRecurring && draft.ruleId === undefined && (
+                <label className="flex items-start gap-2.5 rounded-[10px] border border-hairline bg-canvas p-3">
+                    <Checkbox
+                        checked={draft.createTaskForCurrentPeriod}
+                        onCheckedChange={(checked) => onChange({ createTaskForCurrentPeriod: checked })}
+                        className="mt-0.5"
+                    />
+                    <span className="flex flex-col gap-0.5">
+                        <span className="font-ui text-[13px] font-semibold text-ink">
+                            Создать задачу в текущем периоде
+                        </span>
+                        <span className="font-ui text-[11px] text-ink-muted">
+                            {draft.createTaskForCurrentPeriod
+                                ? `Задача за «${formatPeriodMonthName(draft.accountingPeriod)}» создастся сразу после сохранения. Если снять — первая задача появится только в следующем периоде.`
+                                : 'Первая задача появится только в следующем периоде.'}
+                        </span>
+                    </span>
+                </label>
+            )}
+
             {draft.isRecurring && (
                 <div className="flex flex-col gap-3.5 rounded-[8px] border border-hairline bg-canvas p-3">
                     <p className="font-ui text-xs font-semibold text-ink-muted">
                         Шаблон для автосоздания задачи на новый период
                     </p>
 
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-title-template">
-                                Заголовок задачи
-                            </label>
-                            <Input
-                                id="task-title-template"
-                                value={draft.taskTitleTemplate}
-                                onChange={(event) => onChange({ taskTitleTemplate: event.target.value })}
-                                placeholder="Например, Обновить фото витрины ({месяц})"
-                            />
-                            <FieldError message={errors.taskTitleTemplate} />
-                        </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-title-template">
+                            Заголовок задачи
+                        </label>
+                        <Input
+                            id="task-title-template"
+                            value={draft.taskTitleTemplate}
+                            onChange={(event) => onChange({ taskTitleTemplate: event.target.value })}
+                            placeholder="Например, Обновить фото витрины ({месяц})"
+                        />
+                        <FieldError message={errors.taskTitleTemplate} />
+                    </div>
 
-                        <div className="flex flex-col gap-1.5">
-                            <label
-                                className="font-ui text-xs font-medium text-ink-muted"
-                                htmlFor="task-deadline-template"
-                            >
-                                Дедлайн шаблона
-                            </label>
+                    {/* recurring-task-deadline-offset, FR1/ui-design.md v2 — одно поле «Дедлайн»
+                        вместо прежних двух разрозненных (полноценная дата + отдельный select ниже,
+                        Pencil node `B7KIJL` на фрейме `MC9n1` — так фича была сдана изначально, но
+                        месяц/год в дате были не нужны и вводили в заблуждение, а связь даты со
+                        смещением периода была неочевидна). Читается как одно предложение: «‹день›
+                        числа · ‹пункт смещения›» (Pencil node `Zp9oG`, фрейм `T0d2zv`). */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="font-ui text-xs font-medium text-ink-muted" htmlFor="task-deadline-day">
+                            Дедлайн
+                        </label>
+                        <div className="flex items-center gap-2">
                             <Input
-                                id="task-deadline-template"
-                                type="date"
-                                value={draft.deadlineTemplate.slice(0, 10)}
-                                onChange={(event) => onChange({ deadlineTemplate: event.target.value })}
+                                id="task-deadline-day"
+                                inputMode="numeric"
+                                className="w-14 shrink-0 text-center"
+                                value={extractDeadlineDay(draft.deadlineTemplate)}
+                                onChange={(event) =>
+                                    onChange({
+                                        deadlineTemplate: buildDeadlineDayTemplate(
+                                            event.target.value.replace(/[^0-9]/g, '').slice(0, 2),
+                                        ),
+                                    })
+                                }
+                                placeholder="25"
                             />
-                            <p className="font-ui text-[11px] text-ink-muted">Число месяца — дедлайн каждого периода</p>
-                            <FieldError message={errors.dueDate} />
+                            <span className="shrink-0 font-ui text-[13px] text-ink-muted">числа ·</span>
+                            <Select
+                                value={String(draft.deadlinePeriodOffset)}
+                                onValueChange={(value) => onChange({ deadlinePeriodOffset: Number(value) })}
+                            >
+                                <SelectTrigger id="task-deadline-period-offset" aria-label="Дедлайн относится к" className="flex-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DEADLINE_PERIOD_OFFSET_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
+                        {(() => {
+                            const hint = computeDeadlineHint(
+                                draft.accountingPeriod,
+                                draft.deadlineTemplate,
+                                draft.deadlinePeriodOffset,
+                            )
+                            return hint ? <p className="font-ui text-[11px] text-ink-muted">{hint}</p> : null
+                        })()}
+                        <FieldError message={errors.dueDate} />
+                        <FieldError message={errors.deadlinePeriodOffset} />
                     </div>
 
                     <div className="flex flex-col gap-1.5">

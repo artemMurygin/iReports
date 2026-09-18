@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { MoyskladService } from './moysklad.service';
 import type { MoyskladHttpService } from './moysklad.instance';
 
@@ -422,64 +421,40 @@ describe('MoyskladService.fetchTurnoverAllAt (D1)', () => {
             }
         }).rejects.toThrow();
     });
-});
 
-// spec: fix-shop-turnover-historical-stock-cost D1, шаг 2 — разбивка по
-// складам для ОДНОГО товара (см. design.md Risks: `filter=product=` не
-// работает для `variant`, поэтому имя параметра фильтра зависит от
-// `assortment.meta.type` строки, полученной на шаге 1).
-describe('MoyskladService.fetchTurnoverByStoreForProduct (D1)', () => {
-    const buildService = (http: { get: jest.Mock }) =>
-        new MoyskladService({
-            instance: http,
-        } as unknown as MoyskladHttpService);
-
-    const productHref =
-        'https://api.moysklad.ru/api/remap/1.2/entity/product/product-1';
-
-    it('строит filter=product=<href> для assortmentType "product" и мапит stockByStore[]', async () => {
+    // spec: fix-shop-turnover-historical-stock-cost — рефакторинг на
+    // per-store фильтр: `/report/turnover/all` эмпирически подтверждён
+    // рабочим с `filter=store=<href>` (см. design.md D1, обновлённая
+    // редакция), поэтому обнаружение товаров с остатком выполняется ОДНИМ
+    // запросом на склад, без обращения к `/report/turnover/bystore`.
+    it('с переданным storeId добавляет filter=store=<href склада>', async () => {
         const http = createHttpMock();
         http.get.mockResolvedValueOnce({
             data: {
-                rows: [
-                    {
-                        assortment: {
-                            meta: { href: productHref, type: 'product' },
-                        },
-                        stockByStore: [
-                            {
-                                store: {
-                                    meta: {
-                                        href: 'https://api.moysklad.ru/api/remap/1.2/entity/store/store-1',
-                                    },
-                                },
-                                onPeriodEnd: { quantity: 3, sum: 1500 },
-                            },
-                        ],
-                    },
-                ],
+                rows: [],
+                meta: { size: 0, limit: 1000, offset: 0 },
             },
         });
         const service = buildService(http);
 
-        const result = await service.fetchTurnoverByStoreForProduct(
-            productHref,
-            'product',
+        const pages: unknown[][] = [];
+        for await (const batch of service.fetchTurnoverAllAt(
             new Date('2020-01-01T00:00:00.000Z'),
             new Date('2026-08-31T23:59:59.999Z'),
-        );
-
-        expect(result).toEqual([
-            { warehouseId: 'store-1', quantity: 3, costSum: 1500 },
-        ]);
+            'store-1',
+        )) {
+            pages.push(batch);
+        }
 
         expect(http.get).toHaveBeenCalledTimes(1);
         const [url, config] = http.get.mock.calls[0] as [
             string,
             { params: Record<string, unknown> },
         ];
-        expect(url).toBe('/report/turnover/bystore');
-        expect(config.params.filter).toBe(`product=${productHref}`);
+        expect(url).toBe('/report/turnover/all');
+        expect(config.params.filter).toBe(
+            'store=https://api.moysklad.ru/api/remap/1.2/entity/store/store-1',
+        );
         expect(config.params).toMatchObject({
             momentFrom: '2020-01-01 00:00:00',
             momentTo: '2026-08-31 23:59:59',
@@ -487,42 +462,25 @@ describe('MoyskladService.fetchTurnoverByStoreForProduct (D1)', () => {
         });
     });
 
-    it('строит filter=variant=<href> для assortmentType "variant"', async () => {
+    it('без storeId не добавляет параметр filter (обратная совместимость)', async () => {
         const http = createHttpMock();
-        http.get.mockResolvedValueOnce({ data: { rows: [] } });
+        http.get.mockResolvedValueOnce({
+            data: { rows: [], meta: { size: 0, limit: 1000, offset: 0 } },
+        });
         const service = buildService(http);
 
-        await service.fetchTurnoverByStoreForProduct(
-            productHref,
-            'variant',
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- дренаж генератора
+        for await (const _batch of service.fetchTurnoverAllAt(
             new Date('2020-01-01T00:00:00.000Z'),
             new Date('2026-08-31T23:59:59.999Z'),
-        );
+        )) {
+            // no-op
+        }
 
         const [, config] = http.get.mock.calls[0] as [
             string,
             { params: Record<string, unknown> },
         ];
-        expect(config.params.filter).toBe(`variant=${productHref}`);
-    });
-
-    it('для неизвестного assortmentType логирует warn и не обращается к API', async () => {
-        const warnSpy = jest
-            .spyOn(Logger.prototype, 'warn')
-            .mockImplementation();
-        const http = createHttpMock();
-        const service = buildService(http);
-
-        const result = await service.fetchTurnoverByStoreForProduct(
-            productHref,
-            'bundle',
-            new Date('2020-01-01T00:00:00.000Z'),
-            new Date('2026-08-31T23:59:59.999Z'),
-        );
-
-        expect(result).toEqual([]);
-        expect(http.get).not.toHaveBeenCalled();
-        expect(warnSpy).toHaveBeenCalled();
-        warnSpy.mockRestore();
+        expect(config.params.filter).toBeUndefined();
     });
 });

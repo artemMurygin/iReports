@@ -1,4 +1,4 @@
-import type { SalaryAccrualResponse } from 'ireports-contracts'
+import type { SalaryAccrualLine, SalaryAccrualResponse } from 'ireports-contracts'
 
 import { AccrualLineCardList, AccrualLinesTable, type AccrualProgress } from '@/features/SalaryAccruals'
 
@@ -11,10 +11,8 @@ export type SalaryAccrualDocumentBodyProps = {
     periodLabel: string
     departmentName: string | null
     progress: AccrualProgress
-    isLineExpanded: (id: string) => boolean
-    onToggleLine: (id: string) => void
-    /** Клик по строке начисления — открыть боковую панель деталей её правила. */
-    onOpenRule: (ruleId: string) => void
+    /** Клик по строке начисления — открыть боковую панель детализации по всей строке. */
+    onOpenLine: (line: SalaryAccrualLine) => void
     footerNote: string
     footerNoteMobile: string
     footerTotal: string
@@ -34,9 +32,7 @@ export function SalaryAccrualDocumentBody({
     periodLabel,
     departmentName,
     progress,
-    isLineExpanded,
-    onToggleLine,
-    onOpenRule,
+    onOpenLine,
     footerNote,
     footerNoteMobile,
     footerTotal,
@@ -60,9 +56,7 @@ export function SalaryAccrualDocumentBody({
                 directionLabel={directionLabel}
                 accrualId={document.id}
                 documentStatus={document.status}
-                isLineExpanded={isLineExpanded}
-                onToggleLine={onToggleLine}
-                onOpenRule={onOpenRule}
+                onOpenLine={onOpenLine}
                 footerNote={footerNote}
                 footerTotal={footerTotal}
                 className="hidden md:block"
@@ -73,9 +67,7 @@ export function SalaryAccrualDocumentBody({
                 directionLabel={directionLabel}
                 accrualId={document.id}
                 documentStatus={document.status}
-                isLineExpanded={isLineExpanded}
-                onToggleLine={onToggleLine}
-                onOpenRule={onOpenRule}
+                onOpenLine={onOpenLine}
                 footerNote={footerNoteMobile}
                 footerTotal={footerTotal}
                 className="md:hidden"

@@ -1,4 +1,8 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { SalaryAccrualLineSummary } from 'ireports-contracts';
@@ -16,6 +20,8 @@ import { FindSalaryAccrualForTaskService } from '@/domains/service/modules/accou
 // приём, тот же повод: без него Express-адаптер Nest шлёт пустое тело
 // вместо JSON-литерала `null`).
 @ApiTags('Бухгалтерия: начисления зарплаты')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:view_accrual')
 @Controller()
 export class GetSalaryAccrualLineByTaskHttpController {
     constructor(

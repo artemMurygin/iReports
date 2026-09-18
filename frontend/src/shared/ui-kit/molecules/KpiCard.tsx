@@ -56,13 +56,12 @@ const TONE_NOTE: Record<KpiCardTone, string> = {
 export type KpiCardProps = {
     label: React.ReactNode
     value: React.ReactNode
-    note: string
     icon: React.ReactNode
     tone?: KpiCardTone
     className?: string
 }
 
-function KpiCard({ label, value, note, icon, tone = 'default', className }: KpiCardProps) {
+function KpiCard({ label, value, icon, tone = 'default', className }: KpiCardProps) {
     return (
         <div
             data-slot="kpi-card"
@@ -80,7 +79,7 @@ function KpiCard({ label, value, note, icon, tone = 'default', className }: KpiC
             <span className="truncate font-display text-lg font-bold tracking-[-0.3px] text-ink md:text-2xl md:tracking-[-0.5px]">
                 {value}
             </span>
-            <span className={cn('truncate font-ui text-xs', TONE_NOTE[tone])}>{note}</span>
+
         </div>
     )
 }

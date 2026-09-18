@@ -178,6 +178,9 @@ describe('TasksPageMediator', () => {
             type: 'TaskCompletion',
             targetRole: 'ENGINEER',
         }
+        // split-task-completion-rule-form — isRecurring: false response не несёт буквальных/
+        // шаблонных полей задачи вовсе (см. `taskCompletionOneOffConfigResponseSchema`,
+        // `contracts/commands/salary-rule.ts`).
         const RULE_DETAIL: SalaryRuleDetail = {
             id: 'rule-1',
             type: 'TaskCompletion',
@@ -185,9 +188,7 @@ describe('TasksPageMediator', () => {
             targetRole: 'ENGINEER',
             isActive: true,
             config: {
-                taskTitleTemplate: 'Обзвонить клиентов',
                 isRecurring: false,
-                deadlineTemplate: '2026-09-08',
                 defaultAmount: 5000,
                 taskIdByPeriod: { '2026-09': 'task-1' },
             },

@@ -8,6 +8,7 @@ import { RoappModule } from '@/domains/service/integrations/roapp/roapp.module';
 import { RoappCashDocumentAdapter } from '@/domains/service/integrations/roapp/roapp-cash-document.adapter';
 import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/employee-operation-lock.module';
 import { TasksModule } from '@/modules/tasks/tasks.module';
+import { SessionModule } from '@/modules/session/session.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/update-motivation-schema.handler';
 import { DeleteMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/delete-motivation-schema.handler';
@@ -113,6 +114,11 @@ import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period/accounting-period-closed.event-handler';
 import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/events/salary-accrual-documents-created.event-handler';
+// Группа 4 tasks.md (deactivate-one-off-task-completion-rule) — деактивация
+// разового правила TaskCompletion по неуспешному закрытию связанной задачи
+// (design.md Decision 2), зеркало domains/shop/modules/accounting'ного
+// TaskClosedEventHandler.
+import { TaskClosedEventHandler } from '@/domains/service/modules/accounting/application/events/task-completion/task-closed.event-handler';
 
 // SalesModule — вход SALES_PLAN_REPOSITORY: закрытие периода читает
 // неутверждённые строки плана (CloseAccountingPeriodHandler), а ленивый
@@ -191,6 +197,10 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         // диспатчится через общий CommandBus (EnsureRuleTaskForPeriodService)
         // без отдельного импорта — CqrsModule уже общий.
         TasksModule,
+        // SessionModule — ради SessionAuthGuard/CsrfGuard на @UseGuards
+        // контроллеров ниже (service-accounting:*), тот же приём, что
+        // TasksModule/WorkScheduleModule.
+        SessionModule,
     ],
     controllers: [
         CreateMotivationSchemaHttpController,
@@ -320,6 +330,9 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         MotivationSchemaCreatedEventHandler,
         AccountingPeriodClosedEventHandler,
         SalaryAccrualDocumentsCreatedEventHandler,
+        // Группа 4 tasks.md (deactivate-one-off-task-completion-rule) — см.
+        // WHY у импорта выше.
+        TaskClosedEventHandler,
         {
             provide: MOTIVATION_SCHEMA_REPOSITORY,
             useClass: MotivationSchemaRepository,

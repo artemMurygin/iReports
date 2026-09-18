@@ -122,16 +122,36 @@ export type RuleDraft = {
      * Read only for `OrderPayed`/`ServiceCompleted`; ignored otherwise. */
     orderTypeIds: number[]
     /**
-     * replace-bitrix-task-integration, design.md решение 2/4 — id уже существующей, ОТДЕЛЬНО
-     * созданной задачи (`POST /v1/tasks`, Шаг 1 мастера `CreateTaskCompletionRuleWizard`,
-     * `pages/SalaryRuleDetail/mediator`). Заполняется ТОЛЬКО мастером (`onCreated` шага 1) —
-     * `TaskCompletionRuleFields.tsx` показывает его readonly, никогда не как текстовый ввод. Для
-     * уже существующего (персистентного) правила — id задачи текущего периода из
-     * `config.taskIdByPeriod` (см. `draftFromRule`'s комментарий), не сам `taskId` ответа (тот в
-     * ответе API вообще отсутствует — design.md решение 2). `''` — «задача ещё не создана»,
-     * единственное состояние, в котором `resolveRuleDraft` отказывает (см. её `errors.taskId`).
+     * split-task-completion-rule-form — id уже существующей задачи ЭТОГО правила. Больше не
+     * заполняется отдельной панелью создания задачи (см. `taskTitle`/`taskDeadline` ниже) — для
+     * НОВОГО разового правила (`taskId === ''`) задача создаётся тем же запросом, что и само
+     * правило, из буквальных полей ниже; `taskId` в этом состоянии остаётся `''` вплоть до
+     * успешного сохранения схемы (сервер сам создаёт задачу и возвращает её id только в составе
+     * `taskIdByPeriod` последующего `GET`). Для уже существующего (персистентного) правила — id
+     * задачи текущего периода из `config.taskIdByPeriod` (см. `draftFromRule`'s комментарий) —
+     * `TaskCompletionRuleFields.tsx` в этом состоянии показывает readonly-виджет уже созданной
+     * задачи (клик открывает её карточку), а не поля ниже.
      */
     taskId: string
+    /** `TaskCompletionSalaryConfigRequest`'s `taskTitle` (разовое правило, split-task-completion-rule-form)
+     * — буквальное название ЕДИНСТВЕННОЙ задачи правила, вводится прямо в этой форме (а не в
+     * отдельной панели создания задачи, как было раньше) и создаётся тем же запросом, что и само
+     * правило. Read only when `type === 'TaskCompletion' && !isRecurring && taskId === ''`
+     * (`TaskCompletionRuleFields.tsx`); ignored otherwise. */
+    taskTitle: string
+    /** `TaskCompletionSalaryConfigRequest`'s `taskDescription` — необязательное буквальное описание
+     * той же единственной задачи разового правила. Тот же read-only-scope, что и `taskTitle`. */
+    taskDescription: string
+    /** `TaskCompletionSalaryConfigRequest`'s `taskDeadline` (ISO-дата `YYYY-MM-DD`) — буквальный,
+     * настоящий календарный дедлайн единственной задачи разового правила (в отличие от
+     * `deadlineTemplate` ниже, который для регулярного правила несёт только число месяца). Тот же
+     * read-only-scope, что и `taskTitle`. */
+    taskDeadline: string
+    /** `TaskCompletionSalaryConfigRequest`'s `taskLinks` (разовое правило) — ссылки, прикрепляемые к
+     * единственной задаче при её создании тем же запросом, что и правило. Отдельное поле от
+     * `taskLinkTemplates` ниже (тот — только для регулярного правила, шаблон на каждый период). Тот
+     * же read-only-scope, что и `taskTitle`. */
+    taskLinks: { url: string; label?: string }[]
     /** `TaskCompletion.config.accountingPeriod` (`YYYY-MM`, add-task-salary-rule-accounting-period)
      * — расчётный период, к которому относится последняя/текущая задача правила; руководитель
      * выбирает его явно в форме (`PeriodPicker`, `TaskCompletionRuleFields.tsx`), больше не
@@ -161,15 +181,38 @@ export type RuleDraft = {
     /** `TaskCompletion.config.deadlineTemplate` — то же самое разделение, что и у
      * `taskTitleTemplate`: шаблон дедлайна для авто-пересоздания РЕГУЛЯРНОГО правила (только число
      * месяца читается бэкендом), а не дедлайн самой первой задачи (тот введён на Шаге 1 мастера
-     * отдельным полем `CreateTaskForm`). Хранится как есть (ISO-дата `YYYY-MM-DD`), без
-     * парсинга/форматирования на стороне драфта. Read only for `TaskCompletion`; ignored
-     * otherwise. */
+     * отдельным полем `CreateTaskForm`). Для регулярного правила (`isRecurring === true`) хранит
+     * НЕ настоящую дату, а голые непадженные цифры дня в конце строки (`"2000-01-3"` →
+     * `"2000-01-31"` по мере набора, см. `TaskCompletionRuleFields.tsx`'s `buildDeadlineDayTemplate`)
+     * — `padStart`/зажатие 1..31 делает `normalizeDeadlineDayTemplate`
+     * (`model/formNumberUtils.ts`) один раз на границе, в `resolveRuleDraft`/`resolveShopRuleDraft`,
+     * а не здесь. Для разового правила — как есть, буквальная дата, без этой нормализации.
+     * Read only for `TaskCompletion`; ignored otherwise. */
     deadlineTemplate: string
+    /** `TaskCompletion.config.deadlinePeriodOffset` (recurring-task-deadline-offset, FR1) — на
+     * сколько расчётных периодов вперёд от периода авто-пересозданной задачи отсчитывается её
+     * дедлайн: `0` — дедлайн в месяце периода задачи (поведение по умолчанию, обратная
+     * совместимость с уже персистированными правилами), `1..3` — на 1..3 месяца вперёд. Хранится
+     * как обычное число (не VO — `DeadlinePeriodOffset` конструируется транзитно только на бэкенде
+     * для валидации инварианта, см. architecture.md поправку), число месяца по-прежнему берётся из
+     * `deadlineTemplate` выше. Read only for `TaskCompletion` with `isRecurring === true`
+     * (`TaskCompletionRuleFields.tsx` показывает контрол только тогда); ignored otherwise — тот же
+     * приём, что и у `taskTitleTemplate`. */
+    deadlinePeriodOffset: number
     /** `TaskCompletion.config.taskLinkTemplates` — ссылки, прикрепляемые к каждой АВТОСОЗДАННОЙ
      * задаче регулярного правила (`EnsureRuleTaskForPeriodService`), не к самой первой (та уже
      * создана вручную, со своими произвольными ссылками, на Шаге 1). Read only for `TaskCompletion`
      * with `isRecurring === true`; ignored otherwise, add-task-rule-task-lifecycle. */
     taskLinkTemplates: { url: string; label?: string }[]
+    /** `TaskCompletionSalaryConfigRequest`'s `createTaskForCurrentPeriod` (регулярное правило,
+     * split-task-completion-rule-form) — чекбокс «Создать задачу в текущем периоде»: снят —
+     * регулярное правило создаётся без задачи вовсе, первая появится позже лениво, при наступлении
+     * следующего периода (`EnsureRuleTaskForPeriodService`). По умолчанию включён (то же поведение,
+     * что действовало раньше неявно). Read only for `TaskCompletion` with `isRecurring === true` и
+     * только при создании НОВОГО правила (`ruleId === undefined`) — при редактировании уже
+     * существующего регулярного правила задача текущего периода либо уже есть, либо нет, эта форма
+     * её больше не пересоздаёт, см. `TaskCompletionRuleFields.tsx`. */
+    createTaskForCurrentPeriod: boolean
     /** `DepartmentTurnoverBonus.config.warehouseId` (add-department-head-salary-rules, FR4) — id
      * склада, обязательное поле (design.md Decision 2: оборачиваемость скоуплена по категории ×
      * складу, автоматической привязки сотрудник→склад нет). Текстом, как и остальные числовые/id
@@ -229,12 +272,18 @@ export function createRuleDraft(type: RuleType = 'PayPerHour'): RuleDraft {
         departmentIdOverride: '',
         orderTypeIds: [],
         taskId: '',
+        taskTitle: '',
+        taskDescription: '',
+        taskDeadline: '',
+        taskLinks: [],
         accountingPeriod: getCurrentPeriod(),
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
+        createTaskForCurrentPeriod: true,
         warehouseId: '',
         planTurnoverRatio: '',
         marginThreshold: '',
@@ -262,12 +311,18 @@ export function resetAwardFields(draft: RuleDraft, nextType: RuleType): RuleDraf
         departmentIdOverride: '',
         orderTypeIds: [],
         taskId: '',
+        taskTitle: '',
+        taskDescription: '',
+        taskDeadline: '',
+        taskLinks: [],
         accountingPeriod: getCurrentPeriod(),
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
         isRecurring: false,
         deadlineTemplate: '',
+        deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
+        createTaskForCurrentPeriod: true,
         warehouseId: '',
         planTurnoverRatio: '',
         marginThreshold: '',

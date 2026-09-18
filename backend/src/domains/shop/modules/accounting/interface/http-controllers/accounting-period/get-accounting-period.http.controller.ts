@@ -1,4 +1,8 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AccountingPeriodResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -10,6 +14,8 @@ import { GetShopAccountingPeriodService } from '@/domains/shop/modules/accountin
 // /v1/shop (см. routesV1.shop.accounting.period в app.routes.ts) вместо
 // /accounting/period/:direction/:period сервиса.
 @ApiTags('Бухгалтерия: расчётный период магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view')
 @Controller()
 export class GetShopAccountingPeriodHttpController {
     constructor(

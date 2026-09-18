@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
+import { SessionModule } from '@/modules/session/session.module';
 import { CreateTaskHandler } from './application/command/create-task/create-task.handler';
 import { ChangeTaskStatusHandler } from './application/command/change-task-status/change-task-status.handler';
 import { UpdateTaskHandler } from './application/command/update-task/update-task.handler';
@@ -40,7 +41,10 @@ import { DeleteTaskHttpController } from './interface/http-controllers/delete-ta
 // 1, "DI-провайдинг — стандартизируем, а не копируем непоследовательность
 // employee-balance").
 @Module({
-    imports: [CqrsModule],
+    // SessionModule — ради SessionAuthGuard/CsrfGuard на @UseGuards
+    // контроллеров ниже (tasks:view/create/edit/delete/change_status/
+    // comment/manage_links), тот же приём, что WorkScheduleModule.
+    imports: [CqrsModule, SessionModule],
     controllers: [
         CreateTaskHttpController,
         ListTasksHttpController,

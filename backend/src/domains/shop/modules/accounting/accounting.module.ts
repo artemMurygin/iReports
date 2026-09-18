@@ -17,6 +17,7 @@ import { DirectoryModule } from '@/modules/directory/directory.module';
 // через RoappModule/MoyskladModule напрямую, не через бизнес-модули доменов)
 // — цикла нет.
 import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balance.module';
+import { SessionModule } from '@/modules/session/session.module';
 import { ListShopSalaryRuleTypesService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/list-salary-rule-types.service';
 import { ListShopMotivationSchemasService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/list-motivation-schemas.service';
 import { GetShopMotivationSchemaService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/get-motivation-schema.service';
@@ -67,6 +68,11 @@ import { AccrueShopSalaryAccrualDocumentHandler } from '@/domains/shop/modules/a
 import { AccruePeriodShopSalaryAccrualsHandler } from '@/domains/shop/modules/accounting/application/command/salary-accrual/accrue-period-salary-accruals.handler';
 import { ReopenShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/accounting-period/reopen-accounting-period.handler';
 import { RecalculateShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/accounting-period/recalculate-accounting-period.handler';
+// Группа 5 tasks.md (deactivate-one-off-task-completion-rule) — деактивация
+// разового правила TaskCompletion по неуспешному закрытию связанной задачи
+// (design.md Decision 2), зеркало domains/service/modules/accounting'ного
+// TaskClosedEventHandler.
+import { TaskClosedEventHandler } from '@/domains/shop/modules/accounting/application/events/task-completion/task-closed.event-handler';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
@@ -231,6 +237,10 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         // AccountingModule направления service (issue #57: общая
         // инфраструктура задачи не дублируется, см. design.md решение 1).
         TasksModule,
+        // SessionModule — ради SessionAuthGuard/CsrfGuard на @UseGuards
+        // контроллеров ниже (shop-accounting:*), тот же приём, что
+        // TasksModule/WorkScheduleModule.
+        SessionModule,
     ],
     controllers: [
         ListShopSalaryRuleTypesHttpController,
@@ -361,6 +371,9 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         // WHY, ранее зафиксированный здесь и в domains/shop/CLAUDE.md).
         ReopenShopAccountingPeriodHandler,
         RecalculateShopAccountingPeriodHandler,
+        // Группа 5 tasks.md (deactivate-one-off-task-completion-rule) — см.
+        // WHY у импорта выше.
+        TaskClosedEventHandler,
         GetShopEmployeeSalaryReportService,
         GetShopDepartmentSalaryReportService,
         {

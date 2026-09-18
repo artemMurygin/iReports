@@ -1,4 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ErpCashConfigResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -11,6 +15,8 @@ import { GetShopErpCashConfigService } from '@/domains/shop/modules/accounting/a
 // domains/service напрямую), с собственным путём под /v1/shop (см.
 // routesV1.shop.accounting.erpCashConfig).
 @ApiTags('Бухгалтерия: касса ERP магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view')
 @Controller()
 export class GetShopErpCashConfigHttpController {
     constructor(
