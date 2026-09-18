@@ -47,6 +47,8 @@ import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/acco
 import { Period } from '@/shared/domain/period.value-object';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Зеркало salary-accruals.e2e.spec.ts сервиса для направления shop (PRD 1
 // docs/payroll-closing-and-accrual): close → list → get → reopen через
@@ -227,6 +229,29 @@ describe('Документы начисления магазина: close → sa
             ),
         );
 
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
@@ -262,6 +287,10 @@ describe('Документы начисления магазина: close → sa
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(DIRECTORY_REPOSITORY)
             .useValue(fakeDirectoryRepo)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();

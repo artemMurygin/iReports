@@ -1,10 +1,16 @@
-import { Body, Controller, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { TaskComment } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import type { AuthenticatedRequestUser } from '@/modules/session/interface/session-auth.guard';
+import {
+    SessionAuthGuard,
+    type AuthenticatedRequestUser,
+} from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { AddTaskCommentCommand } from '@/modules/tasks/application/command/add-task-comment/add-task-comment.command';
 import { TaskComment as TaskCommentEntity } from '@/modules/tasks/domain/entities/task-comment.entity';
 import { toTaskCommentResponse } from '@/modules/tasks/application/mappers/to-task-comment-response';
@@ -15,6 +21,8 @@ import { CreateTaskCommentDto } from '../dto/create-task-comment.dto';
 // (SessionAuthGuard), а не из тела запроса (architecture.md, «HTTP-эндпоинты»),
 // тем же приёмом, что ChangeTaskStatusHttpController.
 @ApiTags('Задачи: комментарии')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('tasks:comment')
 @Controller()
 export class CreateTaskCommentHttpController {
     constructor(private readonly commandBus: CommandBus) {}

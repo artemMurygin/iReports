@@ -1,11 +1,20 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Task } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ListTasksService } from '@/modules/tasks/application/services/list-tasks.service';
 import { ListTasksQueryDto } from '../dto/list-tasks-query.dto';
 
+// tasks:view_own в каталоге прав есть, но список не фильтруется по
+// assigneeEmployeeId — этот guard проверяет только tasks:view (см. WHY в
+// tasks.permissions.ts).
 @ApiTags('Задачи')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('tasks:view')
 @Controller()
 export class ListTasksHttpController {
     constructor(private readonly listTasks: ListTasksService) {}

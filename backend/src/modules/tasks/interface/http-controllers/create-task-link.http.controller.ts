@@ -1,8 +1,12 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { TaskLink } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { AddTaskLinkCommand } from '@/modules/tasks/application/command/add-task-link/add-task-link.command';
 import { TaskLink as TaskLinkEntity } from '@/modules/tasks/domain/entities/task-link.entity';
 import { toTaskLinkResponse } from '@/modules/tasks/application/mappers/to-task-link-response';
@@ -10,6 +14,8 @@ import { CreateTaskLinkDto } from '../dto/create-task-link.dto';
 
 // spec: tasks/links#Requirement: Ссылка должна быть валидным адресом
 @ApiTags('Задачи: ссылки')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('tasks:manage_links')
 @Controller()
 export class CreateTaskLinkHttpController {
     constructor(private readonly commandBus: CommandBus) {}

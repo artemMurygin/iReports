@@ -34,6 +34,8 @@ import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/e
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // Настоящей инфраструктуры для test:e2e (jest-e2e.json + отдельная БД) в
 // проекте пока нет (см. backend/CLAUDE.md) — этот тест, как и его зеркало
@@ -355,6 +357,29 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
         });
         shopSchemas.set(43, shopSchemaProductSold);
 
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             // EventEmitterModule — EventEmitter2 для CloseShopAccountingPeriodHandler
             // (SalaryAccrualDocumentsCreatedDomainEvent, PRD 1); в приложении его
@@ -383,6 +408,10 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(SHOP_SALES_PERFORMANCE_READER)
             .useValue(fakeShopSalesPerformanceReader)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();

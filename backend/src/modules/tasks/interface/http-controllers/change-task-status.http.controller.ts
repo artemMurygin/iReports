@@ -1,10 +1,16 @@
-import { Body, Controller, Param, Patch, Req } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { Task } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
-import type { AuthenticatedRequestUser } from '@/modules/session/interface/session-auth.guard';
+import {
+    SessionAuthGuard,
+    type AuthenticatedRequestUser,
+} from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ChangeTaskStatusCommand } from '@/modules/tasks/application/command/change-task-status/change-task-status.command';
 import { GetTaskService } from '@/modules/tasks/application/services/get-task.service';
 import { ChangeTaskStatusDto } from '../dto/change-task-status.dto';
@@ -17,9 +23,11 @@ import { ChangeTaskStatusDto } from '../dto/change-task-status.dto';
 // (request.user, заполняется глобальным APP_GUARD/SessionAuthGuard в
 // app.module.ts), тем же приёмом, что GetCurrentUserHttpController.
 // ChangeTaskStatusHandler проверяет только сам граф переходов
-// (TaskStatus.canTransitionTo), не то, имеет ли этот сотрудник право
-// совершать переход (RBAC вне скоупа этого change).
+// (TaskStatus.canTransitionTo); tasks:change_status ограничивает лишь сам
+// доступ к переходу статуса, не то, в какую сторону графа он идёт.
 @ApiTags('Задачи')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('tasks:change_status')
 @Controller()
 export class ChangeTaskStatusHttpController {
     constructor(

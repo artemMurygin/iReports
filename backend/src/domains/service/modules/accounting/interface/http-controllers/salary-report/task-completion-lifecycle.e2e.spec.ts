@@ -40,6 +40,8 @@ import { TaskCompletion } from '@/domains/service/modules/accounting/domain/enti
 import { Period } from '@/shared/domain/period.value-object';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 
 // tasks.md, группа 16 (задача 16.3) — сквозной сценарий поверх РЕАЛЬНОГО
 // HTTP-слоя src/modules/tasks (без мока /v1/tasks, только граница с БД
@@ -180,6 +182,29 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
     class FakeInfrastructureModule {}
 
     beforeAll(async () => {
+        // TasksModule (импортируется AccountingModule ради TASK_REPOSITORY/
+        // CancelTaskForRuleDeletionService) теперь тянет SessionModule ради
+        // SessionAuthGuard/CsrfGuard на своих HTTP-контроллерах (см. WHY в
+        // tasks.module.ts) — SessionService реальна только с Redis, здесь
+        // подменяется фейком, тем же приёмом, что work-schedule.e2e.spec.ts,
+        // раз этот файл её бизнес-логику не проверяет.
+        const fakeSessionService: Partial<SessionService> = {
+            validateSessionAndTouch: jest.fn().mockResolvedValue({
+                bitrixEmployeeId: 42,
+                permissions: [
+                    'tasks:view',
+                    'tasks:create',
+                    'tasks:edit',
+                    'tasks:delete',
+                    'tasks:change_status',
+                    'tasks:comment',
+                    'tasks:manage_links',
+                ],
+            }),
+        };
+        const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+            findActiveEmployeeByApiKeyHash: jest.fn(),
+        };
         const moduleRef = await Test.createTestingModule({
             imports: [
                 EventEmitterModule.forRoot(),
@@ -207,6 +232,10 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
             .useValue(fakeDirectoryRepo)
             .overrideProvider(TASK_REPOSITORY)
             .useValue(taskRepo)
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         // Инстанс крона берётся из того же moduleRef, что и сам app — @ProdCron
@@ -234,6 +263,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         // через реальный POST /v1/tasks, не мок.
         const createTaskResponse = await request(app.getHttpServer())
             .post('/v1/tasks')
+            .set('Authorization', 'Bearer test-session')
             .send({
                 title: 'Сдать ежемесячный отчёт по инвентаризации',
                 description: 'Сверить остатки на складе',
@@ -312,6 +342,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
     it('NEW → IN_PROGRESS (ответственный) — прогноз/факт без изменений', async () => {
         const toInProgress = await request(app.getHttpServer())
             .patch(`/v1/tasks/${initialTaskId}/status`)
+            .set('Authorization', 'Bearer test-session')
             .send({ targetStatus: 'IN_PROGRESS' })
             .expect(200);
         expect((toInProgress.body as Task).status).toBe('IN_PROGRESS');
@@ -325,6 +356,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
     it('IN_PROGRESS → DONE (ответственный) — факт «капает», прогноз не меняется', async () => {
         const toDone = await request(app.getHttpServer())
             .patch(`/v1/tasks/${initialTaskId}/status`)
+            .set('Authorization', 'Bearer test-session')
             .send({ targetStatus: 'DONE' })
             .expect(200);
         expect((toDone.body as Task).status).toBe('DONE');
@@ -347,6 +379,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
     it('DONE → CLOSED_SUCCESSFULLY (руководитель) — без изменений в сумме, только адм. закрытие', async () => {
         const toClosed = await request(app.getHttpServer())
             .patch(`/v1/tasks/${initialTaskId}/status`)
+            .set('Authorization', 'Bearer test-session')
             .send({ targetStatus: 'CLOSED_SUCCESSFULLY' })
             .expect(200);
         expect((toClosed.body as Task).status).toBe('CLOSED_SUCCESSFULLY');
@@ -389,6 +422,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
 
         const listResponse = await request(app.getHttpServer())
             .get('/v1/tasks')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const tasks = listResponse.body as Task[];
         expect(tasks.map((t) => t.id)).toEqual(
