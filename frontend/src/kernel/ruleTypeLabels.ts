@@ -53,12 +53,12 @@ export type ShopRuleType =
  * отдела" / "План оборачиваемости склада" verbatim as the "Тип правила" value. */
 export const RULE_TYPE_LABELS: Record<ServiceRuleType, string> = {
     PayPerHour: 'Почасовая оплата',
-    ServiceCompleted: 'Выполнение услуги',
-    OrderPayed: 'Оплата заказа',
+    ServiceCompleted: 'За выполнение услуги',
+    OrderPayed: 'За оплаченый заказ',
     TaskCompletion: 'За выполнение задачи',
-    DepartmentPercent: '% от факта отдела',
-    DepartmentPlanBonus: 'План продаж отдела',
-    DepartmentTurnoverBonus: 'План оборачиваемости склада',
+    DepartmentPercent: 'Процент от категории',
+    DepartmentPlanBonus: 'KPI привязанный к плану продаж',
+    DepartmentTurnoverBonus: 'KPI привязанный к оборачиваемости',
 }
 
 /** Node `ZMEof` shows `ProductSold` as "Продажа товара", `UsedProductSold` as "Продажа Б/У товара".
@@ -67,14 +67,14 @@ export const RULE_TYPE_LABELS: Record<ServiceRuleType, string> = {
  * `mcp__pencil__execute`), формулировка не завязана на направление. */
 export const SHOP_RULE_TYPE_LABELS: Record<ShopRuleType, string> = {
     PayPerHour: 'Почасовая оплата',
-    ProductSold: 'Продажа товара',
-    UsedProductSold: 'Продажа Б/У товара',
+    ProductSold: 'За продажу товара',
+    UsedProductSold: 'За выкуп Б/У',
     TaskCompletion: 'За выполнение задачи',
     // Те же формулировки, что и у service (design.md: FR2-FR4 применяются одинаково к обоим
     // направлениям, ui-design.md показывает один визуальный пример на оба).
-    DepartmentPercent: '% от факта отдела',
-    DepartmentPlanBonus: 'План продаж отдела',
-    DepartmentTurnoverBonus: 'План оборачиваемости склада',
+    DepartmentPercent: 'Процент от категории',
+    DepartmentPlanBonus: 'KPI привязанный к плану продаж',
+    DepartmentTurnoverBonus: 'KPI привязанный к оборачиваемости',
 }
 
 /** Merged lookup by rule type string, regardless of direction — `PayPerHour` carries

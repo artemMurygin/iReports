@@ -390,6 +390,7 @@ describe('BuildShopCalculationContextService', () => {
                     isRecurring: true,
                     deadlineTemplate: '2026-08-05',
                     defaultAmount: 5000,
+                    accountingPeriod: '2026-08',
                 },
             });
 
@@ -496,7 +497,12 @@ describe('BuildShopCalculationContextService', () => {
                 type: 'DepartmentPercent',
                 name: 'Процент от факта',
                 targetRole: 'DEPARTMENT_HEAD',
-                config: { salaryBasis: 'REVENUE', category, percent: 5, departmentId },
+                config: {
+                    salaryBasis: 'REVENUE',
+                    category,
+                    percent: 5,
+                    departmentId,
+                },
             });
 
         const buildDepartmentPlanBonusRule = (

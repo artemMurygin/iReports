@@ -233,7 +233,12 @@ describe('BuildServiceCalculationContextService — departmentSalesPerformance /
             type: 'DepartmentPercent',
             name: 'Процент от факта',
             targetRole: 'DEPARTMENT_HEAD',
-            config: { salaryBasis: 'REVENUE', category, percent: 5, departmentId },
+            config: {
+                salaryBasis: 'REVENUE',
+                category,
+                percent: 5,
+                departmentId,
+            },
         });
 
     const buildDepartmentPlanBonusRule = (

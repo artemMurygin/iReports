@@ -11,6 +11,8 @@ import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
 import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
+import { PERMISSIONS_RESOLVER_PORT } from '../../application/ports/permissions-resolver.port';
 import { PermissionsGuard } from '../permissions.guard';
 import { RolesCommandHandlers } from '../../application/command/roles-command-handlers.service';
 import { RolesQueryHandlers } from '../../application/services/roles-query-handlers.service';
@@ -52,6 +54,11 @@ describe('Roles HTTP (e2e)', () => {
     const getRoleAssignments = jest.fn();
 
     const validateSessionAndTouch = jest.fn();
+    // Ни один из тестов этого файла не шлёт X-Api-Key — ветка не
+    // задействуется, но SessionAuthGuard (add-employee-api-key-auth)
+    // требует эти зависимости в конструкторе для любого запроса.
+    const findActiveEmployeeByApiKeyHash = jest.fn();
+    const resolvePermissions = jest.fn();
 
     const fakeCommandHandlers: Partial<RolesCommandHandlers> = {
         createRole,
@@ -69,6 +76,10 @@ describe('Roles HTTP (e2e)', () => {
     const fakeSessionService: Partial<SessionService> = {
         validateSessionAndTouch,
     };
+    const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+        findActiveEmployeeByApiKeyHash,
+    };
+    const fakePermissionsResolver = { resolvePermissions };
 
     // Локальный тестовый модуль — см. WHY выше.
     @Module({
@@ -87,6 +98,11 @@ describe('Roles HTTP (e2e)', () => {
             { provide: RolesCommandHandlers, useValue: fakeCommandHandlers },
             { provide: RolesQueryHandlers, useValue: fakeQueryHandlers },
             { provide: SessionService, useValue: fakeSessionService },
+            { provide: ApiKeyRepository, useValue: fakeApiKeyRepository },
+            {
+                provide: PERMISSIONS_RESOLVER_PORT,
+                useValue: fakePermissionsResolver,
+            },
             Reflector,
             SessionAuthGuard,
             CsrfGuard,

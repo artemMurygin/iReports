@@ -103,6 +103,17 @@ export type TaskCompletionSalaryConfig = {
     taskDescriptionTemplate?: string;
     isRecurring: boolean;
     deadlineTemplate: string;
+    // Период (`YYYY-MM`), к которому относится последняя/текущая задача
+    // правила — руководитель выбирает его явно в форме при создании, а не
+    // сервер неявно как Period.current() (add-task-salary-rule-accounting-
+    // period). buildTaskCompletionConfig() пишет сюда request.accountingPeriod
+    // (провалидированный через Period.create), EnsureRuleTaskForPeriodService
+    // обновляет его на новый период при автосоздании задачи регулярного
+    // правила. Для уже персистированных правил без этого поля значение
+    // дериви́руется SalaryRuleMapper.toDomain (максимальный ключ
+    // taskIdByPeriod, иначе Period.current()) — здесь, на границе домена,
+    // поле уже всегда присутствует.
+    accountingPeriod: string;
     // Сумма начисления по умолчанию — TaskCompletion.calculate() подставляет
     // её в CalculationLine.amount, когда задача переходит в «Закрыта
     // успешно»; руководитель может изменить сумму при проведении начисления

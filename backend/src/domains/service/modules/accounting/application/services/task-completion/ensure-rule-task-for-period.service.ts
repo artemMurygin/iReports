@@ -106,8 +106,13 @@ export class EnsureRuleTaskForPeriodService {
         // Мутация config напрямую (тот же объект, что и rule.config, см.
         // TaskCompletion.config getter) + локальный update(rule) —
         // единственная запись, не общая транзакция с tasks (design.md
-        // решение 4).
+        // решение 4). accountingPeriod обновляется той же мутацией — поле
+        // всегда отражает период самой свежей заведённой задачи
+        // (add-task-salary-rule-accounting-period, design.md решение 3);
+        // идемпотентный ранний return выше его не трогает — это не создание
+        // новой задачи.
         config.taskIdByPeriod[period] = taskId;
+        config.accountingPeriod = period;
         await this.ruleRepo.update(rule);
 
         return taskId;

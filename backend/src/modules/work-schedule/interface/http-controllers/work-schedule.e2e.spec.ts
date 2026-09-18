@@ -21,6 +21,7 @@ import type { DirectoryRepositoryPort } from '@/modules/directory/application/po
 import { ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 import { DomainExceptionFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
@@ -169,6 +170,13 @@ describe('WorkSchedule HTTP (e2e)', () => {
     const fakeSessionService: Partial<SessionService> = {
         validateSessionAndTouch,
     };
+    // add-employee-api-key-auth: SessionAuthGuard теперь также требует
+    // ApiKeyRepository в конструкторе (ветка X-Api-Key) — фейк нужен
+    // только чтобы граф DI вообще собрался, этот тест X-Api-Key не
+    // задействует (тем же приёмом, что fakeSessionService выше).
+    const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+        findActiveEmployeeByApiKeyHash: jest.fn(),
+    };
 
     const AUTH_HEADER = ['Authorization', 'Bearer test-session'] as const;
     const authedRequest = () => request(app.getHttpServer());
@@ -185,6 +193,8 @@ describe('WorkSchedule HTTP (e2e)', () => {
             .useValue(fakeAccountingPeriodRepo)
             .overrideProvider(SessionService)
             .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
             .compile();
 
         app = moduleRef.createNestApplication();

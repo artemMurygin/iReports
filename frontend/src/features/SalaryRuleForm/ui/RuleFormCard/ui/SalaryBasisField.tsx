@@ -1,3 +1,4 @@
+import { cn } from '@/shared/lib/tw'
 import { SegmentedControl } from '@/shared/ui-kit/atoms/SegmentedControl'
 
 import type { RuleFormConfig } from '../../../model/ruleFormConfig.ts'
@@ -7,6 +8,7 @@ export type SalaryBasisFieldProps = {
     options: RuleFormConfig['salaryBasisOptions']
     value: SalaryBasisValue
     onValueChange: (value: SalaryBasisValue) => void
+    className?: string
 }
 
 /**
@@ -18,16 +20,14 @@ export type SalaryBasisFieldProps = {
  * `SegmentedControl`s are mounted (one hidden per breakpoint, same `value`/`onValueChange`), the
  * same pattern used throughout Фаза 5 rather than a JS width check.
  *
- * The `md:`+ breakpoint switch above is about VIEWPORT width, not this field's own column width —
- * this field sits in a 1/3 grid column alongside "Категория"/"Сумма" (`RuleFormCardFields.tsx`), so
- * even past `md:` the track can be narrower than three `flex-1` tabs need for
- * `SALARY_MINUS_ENGINEER_SALARY`'s label, and the track overflowed the card. `wrapLabels` lets that
- * one long label wrap to a second line instead (`items-stretch` on the track keeps all three tabs
- * the same height as the wrapped one).
+ * Рендерится собственной строкой ниже сетки `Категория`/`Сумма`/переопределения отдела
+ * (`RuleFormCardFields.tsx`), а не как ещё одна колонка той сетки — в узкой колонке 3 таба
+ * `SegmentedControl` (особенно с `SALARY_MINUS_ENGINEER_SALARY`) слишком сжимались. `className`
+ * ограничивает ширину получившейся полноразмерной строки (`max-w-sm` у вызывающих компонентов).
  */
-export function SalaryBasisField({ options, value, onValueChange }: SalaryBasisFieldProps) {
+export function SalaryBasisField({ options, value, onValueChange, className }: SalaryBasisFieldProps) {
     return (
-        <div className="flex flex-1 flex-col gap-1.5">
+        <div className={cn('flex flex-1 flex-col gap-1.5', className)}>
             <span className="font-ui text-xs font-medium text-ink-muted">База начисления</span>
             <SegmentedControl
                 aria-label="База начисления"

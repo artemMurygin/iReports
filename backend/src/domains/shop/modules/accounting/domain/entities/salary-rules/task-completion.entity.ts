@@ -125,9 +125,10 @@ export class TaskCompletionShop
         // rule.config приходит в форме wire-запроса
         // (TaskCompletionShopSalaryConfigRequest из ireports-contracts:
         // {taskId, taskTitleTemplate, taskDescriptionTemplate?, isRecurring,
-        // deadlineTemplate, defaultAmount}) — единственное место, где домен
-        // TaskCompletionShop транслирует её в персистентную/доменную форму
-        // (taskIdByPeriod вместо одиночного taskId).
+        // deadlineTemplate, defaultAmount, accountingPeriod}) — единственное
+        // место, где домен TaskCompletionShop транслирует её в
+        // персистентную/доменную форму (taskIdByPeriod вместо одиночного
+        // taskId).
         const config = requestConfig as {
             taskId: string;
             taskTitleTemplate: string;
@@ -136,8 +137,19 @@ export class TaskCompletionShop
             deadlineTemplate: string;
             defaultAmount: number;
             taskLinkTemplates?: { url: string; label?: string }[];
+            accountingPeriod: string;
         };
-        const period = Period.current().getValue();
+
+        // add-task-salary-rule-accounting-period, design.md решение 2 —
+        // зеркало buildTaskCompletionConfig направления service: период
+        // больше не вычисляется скрыто как Period.current(), а приходит из
+        // запроса (значение, выбранное руководителем в форме) и
+        // используется и как ключ taskIdByPeriod для этой задачи, и как
+        // значение config.accountingPeriod. Period.create(...) валидирует
+        // формат и бросает исключение домена при некорректном значении —
+        // та же ответственность, что и у остальных использований Period в
+        // проекте, не только у Zod-схемы контракта.
+        const period = Period.create(config.accountingPeriod).getValue();
 
         return {
             taskIdByPeriod: {
@@ -150,6 +162,7 @@ export class TaskCompletionShop
             deadlineTemplate: config.deadlineTemplate,
             defaultAmount: config.defaultAmount,
             taskLinkTemplates: config.taskLinkTemplates ?? [],
+            accountingPeriod: period,
         };
     }
 

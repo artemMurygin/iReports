@@ -6,7 +6,9 @@ import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
 import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { PERMISSIONS_RESOLVER_PORT } from '@/modules/roles/application/ports/permissions-resolver.port';
 import { Public } from '@/shared/decorators/public.decorator';
 
 // add-bitrix24-auth-and-rbac, раздел 24 tasks.md (24.1-24.2) — единственный
@@ -53,11 +55,24 @@ describe('Глобальная регистрация SessionAuthGuard/Permissio
     const fakeSessionService: Partial<SessionService> = {
         validateSessionAndTouch,
     };
+    // Ни один из тестов этого файла не шлёт X-Api-Key — ветка не
+    // задействуется, но SessionAuthGuard (add-employee-api-key-auth)
+    // требует эти зависимости в конструкторе для любого запроса.
+    const findActiveEmployeeByApiKeyHash = jest.fn();
+    const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+        findActiveEmployeeByApiKeyHash,
+    };
+    const fakePermissionsResolver = { resolvePermissions: jest.fn() };
 
     @Module({
         controllers: [UnprotectedTestController, PublicTestController],
         providers: [
             { provide: SessionService, useValue: fakeSessionService },
+            { provide: ApiKeyRepository, useValue: fakeApiKeyRepository },
+            {
+                provide: PERMISSIONS_RESOLVER_PORT,
+                useValue: fakePermissionsResolver,
+            },
             Reflector,
             { provide: APP_GUARD, useClass: SessionAuthGuard },
             { provide: APP_GUARD, useClass: PermissionsGuard },

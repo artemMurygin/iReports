@@ -18,6 +18,7 @@ describe('FindSalaryRuleForTaskService', () => {
                 isRecurring: false,
                 deadlineTemplate: '2026-01-25',
                 defaultAmount: 5000,
+                accountingPeriod: '2026-01',
             },
         });
 

@@ -24,6 +24,7 @@ describe('EnsureRuleTaskForPeriodService', () => {
         deadlineTemplate?: string;
         taskIdByPeriod?: Record<string, string>;
         taskLinkTemplates?: { url: string; label?: string }[];
+        accountingPeriod?: string;
     }) =>
         withRequestContext(
             () =>
@@ -45,6 +46,8 @@ describe('EnsureRuleTaskForPeriodService', () => {
                             defaultAmount: 5000,
                             taskLinkTemplates:
                                 overrides?.taskLinkTemplates ?? [],
+                            accountingPeriod:
+                                overrides?.accountingPeriod ?? '2026-08',
                         },
                         isActive: true,
                     },
@@ -121,6 +124,59 @@ describe('EnsureRuleTaskForPeriodService', () => {
             expect(result).toBe('new-task-id');
             expect(rule.config.taskIdByPeriod['2026-09']).toBe('new-task-id');
             expect(update).toHaveBeenCalledWith(rule);
+        });
+    });
+
+    // add-task-salary-rule-accounting-period, design.md решение 3 — при
+    // создании НОВОЙ задачи на период accountingPeriod правила обновляется
+    // на этот период (та же мутация config, что и taskIdByPeriod, перед тем
+    // же update(rule)); идемпотентный ранний возврат поле не трогает.
+    describe('accountingPeriod', () => {
+        it('регулярное правило: устанавливает config.accountingPeriod = period при создании НОВОЙ задачи, перед update(rule)', async () => {
+            await withRequestContext(async () => {
+                const rule = buildRule({
+                    isRecurring: true,
+                    accountingPeriod: '2026-08',
+                });
+                const { service, update } = buildService();
+
+                await service.ensure(rule, '2026-09', 555);
+
+                expect(rule.config.accountingPeriod).toBe('2026-09');
+                expect(update).toHaveBeenCalledWith(rule);
+            });
+        });
+
+        it('идемпотентный ранний возврат (задача периода уже существует) НЕ меняет config.accountingPeriod', async () => {
+            await withRequestContext(async () => {
+                const rule = buildRule({
+                    taskIdByPeriod: { '2026-09': 'existing-task' },
+                    accountingPeriod: '2026-08',
+                });
+                const { service, update } = buildService();
+
+                const result = await service.ensure(rule, '2026-09', 555);
+
+                expect(result).toBe('existing-task');
+                expect(rule.config.accountingPeriod).toBe('2026-08');
+                expect(update).not.toHaveBeenCalled();
+            });
+        });
+
+        it('разовое правило без задачи за запрошенный период — return null не трогает config.accountingPeriod', async () => {
+            await withRequestContext(async () => {
+                const rule = buildRule({
+                    isRecurring: false,
+                    accountingPeriod: '2026-08',
+                });
+                const { service, update } = buildService();
+
+                const result = await service.ensure(rule, '2026-10', 555);
+
+                expect(result).toBeNull();
+                expect(rule.config.accountingPeriod).toBe('2026-08');
+                expect(update).not.toHaveBeenCalled();
+            });
         });
     });
 
@@ -219,6 +275,7 @@ describe('filterRecurringTaskCompletionRules', () => {
                     isRecurring: true,
                     deadlineTemplate: '2026-01-15',
                     defaultAmount: 1,
+                    accountingPeriod: '2026-01',
                 },
             }),
         );
@@ -233,6 +290,7 @@ describe('filterRecurringTaskCompletionRules', () => {
                     isRecurring: false,
                     deadlineTemplate: '2026-01-15',
                     defaultAmount: 1,
+                    accountingPeriod: '2026-01',
                 },
             }),
         );

@@ -357,7 +357,10 @@ export class BuildServiceCalculationContextService {
         );
         for (const [key, performance] of entries) {
             if (performance) {
-                result.set(key, this.toDepartmentSalesPerformanceEntry(performance));
+                result.set(
+                    key,
+                    this.toDepartmentSalesPerformanceEntry(performance),
+                );
             }
         }
         return result;

@@ -5,6 +5,7 @@ import { BitrixService } from '../../integrations/bitrix/bitrix.service';
 import { BitrixDealSchema } from '../../integrations/bitrix/schema';
 import { UploadLogger } from '../../shared/logger';
 import type { BitrixUser } from '../../integrations/bitrix/bitrix-api.types';
+import { ApiKey } from '../../modules/session/domain/value-objects/api-key.value-object';
 
 type BitrixDealInput = ReturnType<typeof BitrixDealSchema.parse>;
 
@@ -129,6 +130,13 @@ export class BitrixSyncService {
                 lastName: e.LAST_NAME ?? '',
                 departmentId,
                 isActive: e.ACTIVE !== false,
+                // add-employee-api-key-auth, design.md Decision 4: ключ
+                // генерируется один раз, только в момент первого появления
+                // строки сотрудника — ветка update ниже его не трогает, что
+                // и даёт неизменность при повторных синхронизациях (spec:
+                // auth/api-key#Повторная синхронизация не меняет
+                // существующий ключ).
+                apiKeyHash: ApiKey.generate().hash,
             },
             // isActive — признак увольнения для документов начисления
             // (PRD 1 docs/payroll-closing-and-accrual); отсутствие поля в

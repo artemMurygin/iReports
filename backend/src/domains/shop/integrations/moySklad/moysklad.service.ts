@@ -18,10 +18,12 @@ import {
     StockByStoreRowSchema,
 } from './schemas/stock-report.schema';
 import {
-    AssortmentStockRow,
-    toAssortmentStockRow,
-} from './schemas/assortment-stock.schema';
+    TurnoverAllRow,
+    TurnoverAllRowSchema,
+} from './schemas/turnover-all.schema';
+import { TurnoverByStoreRowSchema } from './schemas/turnover-bystore.schema';
 import { delay } from '../../../../shared/delay';
+import { extractIdFromHref } from '../../sync/moySklad/moysklad-sync.mappers';
 
 const PAGE_LIMIT = 1000;
 
@@ -213,55 +215,103 @@ export class MoyskladService {
         );
     }
 
-    // Бэкфилл истории остатков за прошлые периоды (D5.1
-    // shop-turnover-report) — легаси GET /entity/assortment с фильтром
-    // stockMoment/stockStore: остаток/себестоимость на произвольный момент
-    // в прошлом для конкретного склада. Помечен к выводу из эксплуатации в
-    // 2027 году (design.md Risks) — используется только для разового
-    // бэкфилла, не как постоянная зависимость. Имена полей остатка/
-    // себестоимости в ответе не подтверждены до конца документацией — см.
-    // toAssortmentStockRow (единая точка сопоставления, легко поправить).
-    async *fetchAssortmentStockAt(
-        momentEnd: Date,
-        storeId: string,
-    ): AsyncGenerator<AssortmentStockRow[]> {
-        const storeHref = `${this.moysklad.instance.defaults.baseURL}/entity/store/${storeId}`;
-        const filter = `stockMoment=${this.formatMoyskladDateTime(momentEnd)};stockStore=${storeHref}`;
+    // Бэкфилл истории остатков за прошлые периоды (D1, шаг 1
+    // fix-shop-turnover-historical-stock-cost) — обнаружение товаров с
+    // ненулевым остатком на конец периода через account-wide отчёт
+    // "Обороты": GET /report/turnover/all?momentFrom=...&momentTo=...&
+    // withoutTurnover=true, постранично (см. design.md D1/D2 — momentFrom
+    // фиксированный якорь, не зависит от отчётного месяца; withoutTurnover
+    // эмпирически не влияет на результат, но передаётся по смыслу
+    // названия). Вызывающий код (backfillHistoricalStockSnapshots) берёт из
+    // каждой строки `assortment.meta.{href,type}` для шага 2
+    // (fetchTurnoverByStoreForProduct) и account-wide `onPeriodEnd.sum` для
+    // сверки (design.md D4) — сама себестоимость по складам сюда не входит.
+    async *fetchTurnoverAllAt(
+        momentFrom: Date,
+        momentTo: Date,
+    ): AsyncGenerator<TurnoverAllRow[]> {
+        yield* this._fetchPaged(
+            '/report/turnover/all',
+            TurnoverAllRowSchema,
+            undefined,
+            {
+                momentFrom: this.formatMoyskladDateTime(momentFrom),
+                momentTo: this.formatMoyskladDateTime(momentTo),
+                withoutTurnover: 'true',
+            },
+        );
+    }
 
-        let offset = 0;
-        while (true) {
-            try {
-                const {
-                    data: { rows, meta },
-                } = await this.moysklad.instance.get<MoyskladListResponse>(
-                    '/entity/assortment',
-                    {
-                        params: {
-                            limit: PAGE_LIMIT,
-                            offset,
-                            filter,
-                            groupBy: 'product',
-                        },
+    // Бэкфилл истории остатков за прошлые периоды (D1, шаг 2
+    // fix-shop-turnover-historical-stock-cost) — разбивка по складам ОДНОГО
+    // товара: GET /report/turnover/bystore?filter=product=<href>|
+    // variant=<href>&momentFrom=...&momentTo=...&withoutTurnover=true (один
+    // вызов = один товар, фильтр нельзя указать больше одного раза — см.
+    // design.md Context). Имя параметра фильтра зависит от
+    // `assortment.meta.type` строки, полученной на шаге 1
+    // (fetchTurnoverAllAt) — `filter=product=` не работает для `variant`
+    // (design.md Risks). Для любого другого типа — предупреждение и пустой
+    // массив без обращения к API (неожиданный третий тип ассортимента не
+    // должен обрушивать весь бэкфилл).
+    async fetchTurnoverByStoreForProduct(
+        assortmentHref: string,
+        assortmentType: string,
+        momentFrom: Date,
+        momentTo: Date,
+    ): Promise<{ warehouseId: string; quantity: number; costSum: number }[]> {
+        let filterField: 'product' | 'variant';
+        if (assortmentType === 'product') {
+            filterField = 'product';
+        } else if (assortmentType === 'variant') {
+            filterField = 'variant';
+        } else {
+            this.logger.warn(
+                `/report/turnover/bystore: неизвестный assortment.meta.type "${assortmentType}" у ${assortmentHref}, товар пропущен`,
+            );
+            return [];
+        }
+
+        try {
+            const {
+                data: { rows },
+            } = await this.moysklad.instance.get<{ rows: unknown[] }>(
+                '/report/turnover/bystore',
+                {
+                    params: {
+                        filter: `${filterField}=${assortmentHref}`,
+                        momentFrom: this.formatMoyskladDateTime(momentFrom),
+                        momentTo: this.formatMoyskladDateTime(momentTo),
+                        withoutTurnover: 'true',
                     },
-                );
+                },
+            );
 
-                yield rows.map((row) =>
-                    toAssortmentStockRow(row, (message) =>
-                        this.logger.warn(message),
-                    ),
-                );
+            const result: {
+                warehouseId: string;
+                quantity: number;
+                costSum: number;
+            }[] = [];
+            for (const rawRow of rows) {
+                const row = TurnoverByStoreRowSchema.parse(rawRow);
+                for (const entry of row.stockByStore) {
+                    const warehouseId = extractIdFromHref(
+                        entry.store.meta.href,
+                    );
+                    if (!warehouseId) continue;
 
-                const fetched = offset + rows.length;
-                if (fetched >= meta.size) break;
-
-                offset = fetched;
-                await delay(500);
-            } catch (error) {
-                await this.dumpError(error);
-                throw new BadGatewayException(
-                    `Failed to fetch assortment stock from MoySklad: ${error instanceof Error ? error.message : String(error)}`,
-                );
+                    result.push({
+                        warehouseId,
+                        quantity: entry.onPeriodEnd.quantity,
+                        costSum: entry.onPeriodEnd.sum,
+                    });
+                }
             }
+            return result;
+        } catch (error) {
+            await this.dumpError(error);
+            throw new BadGatewayException(
+                `Failed to fetch turnover bystore from MoySklad: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
 

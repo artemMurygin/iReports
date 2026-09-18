@@ -29,6 +29,7 @@ describe('DeleteShopSalaryRuleHandler', () => {
             isRecurring: Object.keys(taskIdByPeriod).length > 1,
             deadlineTemplate: '',
             defaultAmount: 5000,
+            accountingPeriod: CURRENT_PERIOD,
         },
         updatedAt: new Date('2026-09-01T00:00:00.000Z'),
         isActive: true,

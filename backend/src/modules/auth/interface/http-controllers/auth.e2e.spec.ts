@@ -14,6 +14,8 @@ import { DomainExceptionFilter } from '@/shared/exceptions';
 import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
 import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
+import { PERMISSIONS_RESOLVER_PORT } from '@/modules/roles/application/ports/permissions-resolver.port';
 import {
     SESSION_PORT,
     type SessionPort,
@@ -45,6 +47,11 @@ describe('Auth HTTP (e2e)', () => {
     const findById = jest.fn();
     const validateSessionAndTouch = jest.fn();
     const invalidateSession = jest.fn();
+    // Ни один из тестов этого файла не шлёт X-Api-Key — ветка не
+    // задействуется, но SessionAuthGuard (add-employee-api-key-auth)
+    // требует эти зависимости в конструкторе для любого запроса.
+    const findActiveEmployeeByApiKeyHash = jest.fn();
+    const resolvePermissions = jest.fn();
 
     const fakeEmbeddedHandler: Partial<BitrixEmbeddedLoginHandler> = {
         execute: embeddedExecute,
@@ -59,6 +66,10 @@ describe('Auth HTTP (e2e)', () => {
     const fakeSessionPort: Partial<SessionPort> = {
         invalidateSession,
     };
+    const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+        findActiveEmployeeByApiKeyHash,
+    };
+    const fakePermissionsResolver = { resolvePermissions };
 
     @Module({
         controllers: [
@@ -79,6 +90,11 @@ describe('Auth HTTP (e2e)', () => {
             },
             { provide: SESSION_PORT, useValue: fakeSessionPort },
             { provide: SessionService, useValue: fakeSessionService },
+            { provide: ApiKeyRepository, useValue: fakeApiKeyRepository },
+            {
+                provide: PERMISSIONS_RESOLVER_PORT,
+                useValue: fakePermissionsResolver,
+            },
             Reflector,
             SessionAuthGuard,
             CsrfGuard,

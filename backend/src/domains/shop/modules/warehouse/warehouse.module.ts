@@ -15,6 +15,10 @@ import { ProductCategoryRepository } from './infrastructure/repositories/product
 import { PRODUCT_CATEGORY_REPOSITORY } from './application/ports/product-category/product-category.port';
 import { GetGoodsTurnoverReportHttpController } from './interface/http-controllers/get-goods-turnover-report.http.controller';
 import { GetShopStoresHttpController } from './interface/http-controllers/get-shop-stores.http.controller';
+import {
+    GOODS_TURNOVER_EXCLUDED_CATEGORY_IDS,
+    goodsTurnoverReportConfig,
+} from './infrastructure/config/goods-turnover-report.config';
 
 // Модуль warehouse (Фаза 1, см.
 // docs/shop-warehouse-catalog/plan-shop-warehouse-catalog.md) — исходно
@@ -73,6 +77,10 @@ import { GetShopStoresHttpController } from './interface/http-controllers/get-sh
         {
             provide: SHOP_ACCOUNTING_PERIOD_REPOSITORY,
             useClass: ShopAccountingPeriodRepository,
+        },
+        {
+            provide: GOODS_TURNOVER_EXCLUDED_CATEGORY_IDS,
+            useValue: goodsTurnoverReportConfig.excludedCategoryIds,
         },
     ],
 })

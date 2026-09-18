@@ -144,6 +144,14 @@ export type TaskCompletionShopSalaryConfig = {
     // АВТОСОЗДАННОЙ задаче регулярного правила. add-task-rule-task-lifecycle,
     // зеркало service.
     taskLinkTemplates: { url: string; label?: string }[];
+    // Период (формат YYYY-MM), к которому относится последняя/текущая
+    // задача правила — зеркало domain/types/salary-rule.types.ts направления
+    // service (add-task-salary-rule-accounting-period, design.md решение 1).
+    // Не опционально здесь: деривация для легаси-строк без этого поля в
+    // персистентном `props` происходит один раз на границе
+    // ShopSalaryRuleMapper.toDomain (design.md решение 1), дальше в домене и
+    // в API-ответе поле всегда присутствует.
+    accountingPeriod: string;
 };
 
 export type TaskCompletionShopSalaryRule = {

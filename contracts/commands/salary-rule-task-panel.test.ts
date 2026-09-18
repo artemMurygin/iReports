@@ -56,6 +56,9 @@ describe('salaryRuleDetailSchema', () => {
                 defaultAmount: 5000,
                 taskIdByPeriod: { '2026-09': 'task-1' },
             },
+            // isActive — обязательное поле ответа (soft-деактивация правила, см.
+            // salary-rule.ts); фикстура была написана до добавления этого поля в схему.
+            isActive: true,
             direction: 'service',
             motivationSchemaName: 'Инженеры',
         });
@@ -70,6 +73,7 @@ describe('salaryRuleDetailSchema', () => {
             name: 'Почасовая',
             targetRole: 'ONLINE_MANAGER',
             config: { price: 300 },
+            isActive: true,
             direction: 'shop',
             motivationSchemaName: 'Менеджеры',
         });

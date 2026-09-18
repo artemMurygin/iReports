@@ -1,5 +1,7 @@
 import { salaryRuleRequestSchema, type SalaryRuleRequest, type SalaryRuleResponse } from 'ireports-contracts'
 
+import { isValidPeriod } from '@/shared/lib/format.ts'
+
 import { parseNumber, type RuleFieldErrors } from '../../model/formNumberUtils.ts'
 import {
     buildDepartmentPercentConfig,
@@ -54,6 +56,11 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             // значение — защита от регрессии (мастер должен был заполнить его раньше, чем эта форма
             // вообще стала видна), не обычная ошибка пользовательского ввода.
             if (draft.taskId.trim() === '') errors.taskId = 'Задача ещё не создана — пройдите Шаг 1 мастера'
+            // add-task-salary-rule-accounting-period — расчётный период больше не вычисляется
+            // неявно на бэкенде (`Period.current()`), руководитель обязан выбрать его в форме
+            // (`PeriodPicker`, `TaskCompletionRuleFields.tsx`); та же обязательность, что и у
+            // `taskId` выше.
+            if (!isValidPeriod(draft.accountingPeriod)) errors.accountingPeriod = 'Выберите расчётный период'
             // `draft.price` переиспользуется под `defaultAmount` (та же семантика "денежное
             // значение, введённое текстом", что и у PayPerHour.config.price выше) — руководитель
             // задаёт сумму по умолчанию при создании правила, а сможет изменить её при проведении
@@ -74,6 +81,7 @@ export function resolveRuleDraft(draft: RuleDraft): ResolveRuleDraftResult {
             const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
             config = {
                 taskId: draft.taskId.trim(),
+                accountingPeriod: draft.accountingPeriod,
                 taskTitleTemplate: draft.taskTitleTemplate.trim(),
                 ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
                 isRecurring: draft.isRecurring,
@@ -173,6 +181,7 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
         departmentIdOverride: '',
         orderTypeIds: [],
         taskId: '',
+        accountingPeriod: '',
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
         isRecurring: false,
@@ -241,6 +250,13 @@ export function draftFromRule(rule: SalaryRuleResponse): RuleDraft {
                 // за который задача уже заводилась (см. `latestTaskId`), а не заново проводит
                 // пользователя через Шаг 1 мастера ради задачи, которая уже существует.
                 taskId: latestTaskId(rule.config.taskIdByPeriod),
+                // add-task-salary-rule-accounting-period, design.md Decision 4 — берётся из ответа
+                // API как есть, НЕ пересчитывается на клиенте (`getCurrentPeriod()` — только для
+                // нового, ещё не сохранённого правила, см. `createRuleDraft`). Ответ типизирован
+                // опциональным (design.md Decision 1 — обратная совместимость с уже
+                // персистированными строками до бэкофилла мапером), `''` — тот же "не задано"
+                // фоллбэк, что и у `taskDescriptionTemplate` ниже.
+                accountingPeriod: rule.config.accountingPeriod ?? '',
                 taskTitleTemplate: rule.config.taskTitleTemplate,
                 taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,

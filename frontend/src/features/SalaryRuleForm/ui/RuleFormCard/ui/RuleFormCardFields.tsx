@@ -192,7 +192,7 @@ export function RuleFormCardFields({
                     <div
                         className={cn(
                             'grid grid-cols-1 gap-3',
-                            config.departmentOverrideRuleTypes.includes(draft.type) ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+                            config.departmentOverrideRuleTypes.includes(draft.type) ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
                         )}
                     >
                         <div className="flex flex-col gap-1.5">
@@ -217,12 +217,6 @@ export function RuleFormCardFields({
                             <FieldError message={errors.percent} />
                         </div>
 
-                        <SalaryBasisField
-                            options={config.salaryBasisOptions}
-                            value={draft.salaryBasis || config.salaryBasisOptions[0]?.value || 'REVENUE'}
-                            onValueChange={(salaryBasis) => onChange({ salaryBasis })}
-                        />
-
                         {config.departmentOverrideRuleTypes.includes(draft.type) && (
                             <DepartmentOverrideField
                                 value={draft.departmentIdOverride}
@@ -233,6 +227,13 @@ export function RuleFormCardFields({
                             />
                         )}
                     </div>
+
+                    <SalaryBasisField
+                        className="max-w-sm"
+                        options={config.salaryBasisOptions}
+                        value={draft.salaryBasis || config.salaryBasisOptions[0]?.value || 'REVENUE'}
+                        onValueChange={(salaryBasis) => onChange({ salaryBasis })}
+                    />
                     <FieldError message={errors.salaryBasis} />
                 </>
             )}
@@ -243,7 +244,7 @@ export function RuleFormCardFields({
                     <div
                         className={cn(
                             'grid grid-cols-1 gap-3',
-                            config.departmentOverrideRuleTypes.includes(draft.type) ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+                            config.departmentOverrideRuleTypes.includes(draft.type) ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
                         )}
                     >
                         <div className="flex flex-col gap-1.5">
@@ -266,12 +267,6 @@ export function RuleFormCardFields({
                             onValueChange={(price) => onChange({ price })}
                         />
 
-                        <SalaryBasisField
-                            options={config.salaryBasisOptions}
-                            value={draft.salaryBasis || config.salaryBasisOptions[0]?.value || 'REVENUE'}
-                            onValueChange={(salaryBasis) => onChange({ salaryBasis })}
-                        />
-
                         {config.departmentOverrideRuleTypes.includes(draft.type) && (
                             <DepartmentOverrideField
                                 value={draft.departmentIdOverride}
@@ -282,6 +277,13 @@ export function RuleFormCardFields({
                             />
                         )}
                     </div>
+
+                    <SalaryBasisField
+                        className="max-w-sm"
+                        options={config.salaryBasisOptions}
+                        value={draft.salaryBasis || config.salaryBasisOptions[0]?.value || 'REVENUE'}
+                        onValueChange={(salaryBasis) => onChange({ salaryBasis })}
+                    />
                     <FieldError message={errors.salaryBasis} />
 
                     <ThresholdsEditor

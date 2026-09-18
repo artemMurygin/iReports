@@ -238,6 +238,14 @@ const taskCompletionSalaryConfigRequestSchema = z.object({
     // setTaskCompletionLineRewardRequestSchema в salary-accrual.ts).
     defaultAmount: z.number().int().nonnegative(),
     taskLinkTemplates: z.array(taskLinkTemplateSchema).optional(),
+    // Расчётный период первой задачи правила, формат 'YYYY-MM' — тот же, что
+    // использует Period value object (backend/src/shared/domain/period.value-object.ts).
+    // Обязательное поле запроса: руководитель выбирает период осознанно в форме
+    // создания/редактирования правила, скрытого дефолта на бэкенде больше нет
+    // (add-task-salary-rule-accounting-period, design.md Decision 1).
+    accountingPeriod: z
+        .string()
+        .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM'),
 });
 
 export type TaskCompletionSalaryConfigRequest = z.infer<
@@ -249,9 +257,17 @@ export type TaskCompletionSalaryConfigRequest = z.infer<
 // картой "расчётный период → задача", которую ведёт само правило. Читается для отображения (карточка
 // уже созданной задачи, ссылка на задачу текущего периода), но НЕ выставляется наружу как
 // редактируемое поле формы правила (см. TaskCompletionRuleFields.tsx, architecture.md).
-const taskCompletionSalaryConfigResponseSchema =
-    taskCompletionSalaryConfigRequestSchema.omit({ taskId: true }).extend({
+const taskCompletionSalaryConfigResponseSchema = taskCompletionSalaryConfigRequestSchema
+    .omit({ taskId: true, accountingPeriod: true })
+    .extend({
         taskIdByPeriod: z.record(z.string(), z.string()),
+        // Опционально (в отличие от запроса) — уже персистированные правила, созданные до этой
+        // фичи, не имеют этого поля в SalaryRule.props; SalaryRuleMapper.toDomain дерива́т его из
+        // taskIdByPeriod при чтении (add-task-salary-rule-accounting-period, design.md Decision 1).
+        accountingPeriod: z
+            .string()
+            .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM')
+            .optional(),
     });
 
 export type TaskCompletionSalaryConfigResponse = z.infer<

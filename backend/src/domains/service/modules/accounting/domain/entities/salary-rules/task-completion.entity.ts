@@ -154,10 +154,17 @@ export function buildTaskCompletionConfig(
     request: TaskCompletionSalaryConfigRequest,
     existingTaskIdByPeriod: Record<string, string> = {},
 ): TaskCompletionSalaryConfig {
+    // add-task-salary-rule-accounting-period, design.md решение 2 — период
+    // больше не вычисляется скрыто как Period.current(), а приходит из
+    // запроса (руководитель выбирает его осознанно в форме); Period.create()
+    // здесь — валидация формата на границе домена, а не только Zod-схемой
+    // контракта (бросает ArgumentInvalidException при некорректном значении).
+    const accountingPeriod = Period.create(request.accountingPeriod).getValue();
+
     return {
         taskIdByPeriod: {
             ...existingTaskIdByPeriod,
-            [Period.current().getValue()]: request.taskId,
+            [accountingPeriod]: request.taskId,
         },
         taskTitleTemplate: request.taskTitleTemplate,
         taskDescriptionTemplate: request.taskDescriptionTemplate,
@@ -165,5 +172,6 @@ export function buildTaskCompletionConfig(
         deadlineTemplate: request.deadlineTemplate,
         defaultAmount: request.defaultAmount,
         taskLinkTemplates: request.taskLinkTemplates ?? [],
+        accountingPeriod,
     };
 }

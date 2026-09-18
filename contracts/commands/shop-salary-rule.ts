@@ -170,16 +170,29 @@ const taskCompletionShopSalaryConfigRequestSchema = z.object({
     // taskCompletionSalaryConfigRequestSchema в salary-rule.ts), независимая копия (issue #57).
     defaultAmount: z.number().int().nonnegative(),
     taskLinkTemplates: z.array(shopTaskLinkTemplateSchema).optional(),
+    // Расчётный период первой задачи правила, формат 'YYYY-MM' — зеркало service (см.
+    // taskCompletionSalaryConfigRequestSchema в salary-rule.ts), независимая копия (issue #57).
+    // Обязательное поле запроса (add-task-salary-rule-accounting-period, design.md Decision 1).
+    accountingPeriod: z
+        .string()
+        .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM'),
 });
 
 export type TaskCompletionShopSalaryConfigRequest = z.infer<
     typeof taskCompletionShopSalaryConfigRequestSchema
 >;
 
-const taskCompletionShopSalaryConfigResponseSchema =
-    taskCompletionShopSalaryConfigRequestSchema
-        .omit({ taskId: true })
-        .extend({ taskIdByPeriod: z.record(z.string(), z.string()) });
+const taskCompletionShopSalaryConfigResponseSchema = taskCompletionShopSalaryConfigRequestSchema
+    .omit({ taskId: true, accountingPeriod: true })
+    .extend({
+        taskIdByPeriod: z.record(z.string(), z.string()),
+        // Опционально (в отличие от запроса) — зеркало service, обратная совместимость со старыми
+        // персистированными правилами без этого поля в props (design.md Decision 1).
+        accountingPeriod: z
+            .string()
+            .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM')
+            .optional(),
+    });
 
 export type TaskCompletionShopSalaryConfigResponse = z.infer<
     typeof taskCompletionShopSalaryConfigResponseSchema

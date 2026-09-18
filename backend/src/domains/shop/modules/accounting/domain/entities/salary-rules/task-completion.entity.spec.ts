@@ -25,6 +25,7 @@ const buildRule = () =>
             isRecurring: true,
             deadlineTemplate: '2026-08-05',
             defaultAmount: 5000,
+            accountingPeriod: '2026-08',
         },
     });
 
@@ -69,6 +70,50 @@ describe('TaskCompletionShop', () => {
             expect(Object.values(rule.config.taskIdByPeriod)).toEqual([
                 'task-1',
             ]);
+        });
+
+        // add-task-salary-rule-accounting-period, design.md решение 2 —
+        // зеркало buildTaskCompletionConfig направления service: период
+        // задачи больше не вычисляется неявно как Period.current(), а
+        // приходит из request.accountingPeriod и используется как ключ
+        // taskIdByPeriod и как значение config.accountingPeriod.
+        it('кладёт taskId в taskIdByPeriod под ключом request.accountingPeriod (а не Period.current()) и возвращает config.accountingPeriod === request.accountingPeriod', () => {
+            const rule = TaskCompletionShop.create({
+                type: 'TaskCompletion',
+                name: 'Сверить остатки склада',
+                targetRole: 'ONLINE_MANAGER',
+                config: {
+                    taskId: 'task-1',
+                    taskTitleTemplate: 'Сверить остатки склада за месяц',
+                    isRecurring: false,
+                    deadlineTemplate: '2026-08-05',
+                    defaultAmount: 5000,
+                    accountingPeriod: '2099-03',
+                },
+            });
+
+            expect(rule.config.accountingPeriod).toBe('2099-03');
+            expect(rule.config.taskIdByPeriod).toEqual({
+                '2099-03': 'task-1',
+            });
+        });
+
+        it('бросает исключение домена при некорректном формате accountingPeriod', () => {
+            expect(() =>
+                TaskCompletionShop.create({
+                    type: 'TaskCompletion',
+                    name: 'Сверить остатки склада',
+                    targetRole: 'ONLINE_MANAGER',
+                    config: {
+                        taskId: 'task-1',
+                        taskTitleTemplate: 'Сверить остатки склада за месяц',
+                        isRecurring: false,
+                        deadlineTemplate: '2026-08-05',
+                        defaultAmount: 5000,
+                        accountingPeriod: 'not-a-period',
+                    },
+                }),
+            ).toThrow();
         });
     });
 
