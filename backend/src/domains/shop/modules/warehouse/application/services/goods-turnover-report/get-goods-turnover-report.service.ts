@@ -78,14 +78,18 @@ export class GetGoodsTurnoverReportService {
 
         return {
             lines: dtos,
-            totals: this.buildTotals(dtos, rootCategoryIds),
+            totals: this.buildTotals(dtos, previousLines, rootCategoryIds),
         };
     }
 
     // Одна запись на каждый склад, встретившийся в dtos (не только на те, у которых есть строка
     // корневой категории) — design.md Decision 6a, тот же принцип, что и у warehouse/service.
+    // previousStockSum по складу — сумма stockSum корневых строк ТОГО ЖЕ склада за предыдущий
+    // период целиком (не только тех категорий, что совпали по ключу с текущим периодом) — то же
+    // "средний остаток по складу", что считает пользователь вручную по строке "Итого".
     private buildTotals(
         dtos: GoodsTurnoverReportLineDto[],
+        previousLines: GoodsTurnoverReportLine[],
         rootCategoryIds: ReadonlySet<string>,
     ): GoodsTurnoverWarehouseTotalDto[] {
         const dtosByWarehouse = new Map<string, GoodsTurnoverReportLineDto[]>();
@@ -93,6 +97,16 @@ export class GetGoodsTurnoverReportService {
             const forWarehouse = dtosByWarehouse.get(dto.warehouseId) ?? [];
             forWarehouse.push(dto);
             dtosByWarehouse.set(dto.warehouseId, forWarehouse);
+        }
+
+        const previousStockSumByWarehouse = new Map<string, number>();
+        for (const previousLine of previousLines) {
+            if (!rootCategoryIds.has(previousLine.categoryId)) continue;
+            previousStockSumByWarehouse.set(
+                previousLine.warehouseId,
+                (previousStockSumByWarehouse.get(previousLine.warehouseId) ??
+                    0) + previousLine.stockSum.getValue(),
+            );
         }
 
         return Array.from(dtosByWarehouse.entries()).map(
@@ -103,6 +117,7 @@ export class GetGoodsTurnoverReportService {
                         warehouseDtos.filter((dto) =>
                             rootCategoryIds.has(dto.categoryId),
                         ),
+                        previousStockSumByWarehouse.get(warehouseId) ?? null,
                     ),
                 ),
         );
