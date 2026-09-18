@@ -41,7 +41,7 @@ import { CloseAccountingPeriodCommand } from './close-accounting-period.command'
 // порядке (план → истечение/статус периода → синк ERP) — до расчёта, чтобы не трогать ERP зря.
 // Снапшот снимается по сотрудникам с правилами в личной схеме ИЛИ в схеме их отдела, тем же
 // оркестратором, что и открытый расчёт. Синк ERP — ErpPeriodSyncRunner → ERP_PERIOD_SYNC, таймаут
-// 2 мин, блокировка направления от тика крона. Строки снапшота считает
+// 5 мин, блокировка направления от тика крона. Строки снапшота считает
 // CalculateServiceSnapshotRowsService — тот же код, что и у GET .../close-preview.
 //
 // PRD 1 docs/payroll-closing-and-accrual (документ начисления SalaryAccrual — вне спека этого

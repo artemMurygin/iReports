@@ -7,7 +7,8 @@ import type { ErpPeriodSyncPort } from '@/shared/application/ports/erp-period-sy
 
 // Таймаут неявной синхронизации внутри закрытия, после которого закрытие
 // считается неудавшимся (PRD 1, открытые вопросы: "предварительно 2 минуты").
-export const ERP_PERIOD_SYNC_TIMEOUT_MS = 2 * 60 * 1000;
+// Увеличен до 5 минут — за 2 не успевали выгрузиться все заказы.
+export const ERP_PERIOD_SYNC_TIMEOUT_MS = 5 * 60 * 1000;
 
 // Неявная синхронизация ERP за закрываемый месяц (PRD 1
 // docs/payroll-closing-and-accrual, Фаза 2; вынесена в shared Фазой 9
