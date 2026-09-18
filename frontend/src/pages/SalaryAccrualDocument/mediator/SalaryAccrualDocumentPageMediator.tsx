@@ -1,7 +1,7 @@
-import { SalaryRuleDetailsPanel } from '@/features/SalaryRuleDetailsPanel'
+import { AccrualLineDetailsPanel } from '@/features/SalaryAccruals'
+import { TaskDetailsPanel } from '@/features/TaskStatusControl'
 
 import { useSalaryAccrualDocumentPage } from '../model/useSalaryAccrualDocumentPage.ts'
-import { useSalaryRulePanel } from '../model/useSalaryRulePanel.ts'
 import { Layout } from '../ui/Layout.tsx'
 import { SalaryAccrualDocumentBody } from '../ui/SalaryAccrualDocumentBody.tsx'
 
@@ -13,19 +13,16 @@ import { SalaryAccrualDocumentBody } from '../ui/SalaryAccrualDocumentBody.tsx'
  * docs/payroll-closing-and-accrual — чтение; действия строк и «Начислить всё» — Фаза 9
  * (`AccrualLineActions`, `useAccrueDocument`); drawer корректировки — `AdjustLineModal`.
  *
- * Переход из `ui/SalaryAccrualDocumentPage.tsx` в `mediator/SalaryAccrualDocumentPageMediator.tsx`
- * — по образцу `pages/Tasks/mediator/TasksPageMediator.tsx` (frontend/CLAUDE.md, «Mediator-компонент
- * для страниц с несколькими виджетами»): раньше на странице был единственный stateful-виджет
- * (`useSalaryAccrualDocumentPage()`), теперь клик по строке начисления открывает вторую независимую
- * боковую панель (`features/SalaryRuleDetailsPanel`) со статическим описанием её правила —
- * `useSalaryAccrualDocumentPage()` (документ/строки/аккордеон источников) и `useSalaryRulePanel()`
- * (какое правило открыто) не знают друг о друге, их единственная связь — колбэк `onOpenRule`,
- * прокинутый в `SalaryAccrualDocumentBody` -> `AccrualLinesTable`/`AccrualLineCardList`.
- *
- * `direction` для панели берётся из уже загруженного документа (`document.direction`), а не из
- * query-параметра страницы — `onOpenRule` вызывается только по клику на реально отрендеренную
- * строку, то есть документ на этот момент гарантированно загружен; `direction`-хука страницы
- * остаётся резервным значением на случай (в норме не наступающий) вызова до загрузки.
+ * Клик по строке начисления открывает боковую панель детализации источников
+ * (`features/SalaryAccruals`'s `AccrualLineDetailsPanel`) — тот же паттерн, что и на странице
+ * зарплаты (`pages/SalaryReportV2`'s `RuleGroupDetailsPanel`): один клик, одна боковая панель с
+ * "за какие заказы что начислено", без отдельной панели статического описания правила
+ * (`features/SalaryRuleDetailsPanel`, здесь больше не используется) и без аккордеона на месте.
+ * Строка типа `TaskCompletion` — исключение: ведёт в карточку самой задачи (`TaskDetailsPanel`),
+ * не в детализацию начисления (`openLineDetails`, часть `useSalaryAccrualDocumentPage()`, сама
+ * решает, какую из панелей открыть — `deriveLineTaskId`). `openLine`/`openTaskId` — та же строка
+ * документа целиком (не просто `id`)/id связанной задачи, оба уже есть в загруженном документе,
+ * отдельного запроса к API для выбора панели не нужно.
  */
 export function SalaryAccrualDocumentPageMediator() {
     const {
@@ -35,8 +32,11 @@ export function SalaryAccrualDocumentPageMediator() {
         periodLabel,
         departmentName,
         progress,
-        isLineExpanded,
-        toggleLine,
+        openLine,
+        openTaskId,
+        openLineDetails,
+        closeLineDetails,
+        closeTaskDetails,
         footerNote,
         footerNoteMobile,
         footerTotal,
@@ -47,12 +47,6 @@ export function SalaryAccrualDocumentPageMediator() {
         error,
     } = useSalaryAccrualDocumentPage()
 
-    const { openRuleRef, openRule, closeRule } = useSalaryRulePanel()
-
-    function onOpenRule(ruleId: string) {
-        openRule({ ruleId, direction: document?.direction ?? direction })
-    }
-
     const body = (
         <SalaryAccrualDocumentBody
             document={document}
@@ -60,9 +54,7 @@ export function SalaryAccrualDocumentPageMediator() {
             periodLabel={periodLabel}
             departmentName={departmentName}
             progress={progress}
-            isLineExpanded={isLineExpanded}
-            onToggleLine={toggleLine}
-            onOpenRule={onOpenRule}
+            onOpenLine={openLineDetails}
             footerNote={footerNote}
             footerNoteMobile={footerNoteMobile}
             footerTotal={footerTotal}
@@ -80,7 +72,14 @@ export function SalaryAccrualDocumentPageMediator() {
                 body={body}
             />
 
-            <SalaryRuleDetailsPanel {...openRuleRef} onClose={closeRule} />
+            <AccrualLineDetailsPanel
+                line={openLine}
+                direction={document?.direction ?? direction}
+                open={openLine !== null}
+                onClose={closeLineDetails}
+            />
+
+            <TaskDetailsPanel taskId={openTaskId} onClose={closeTaskDetails} />
         </>
     )
 }

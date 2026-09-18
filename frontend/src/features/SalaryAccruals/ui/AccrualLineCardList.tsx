@@ -1,16 +1,15 @@
-import { ChevronDown, UserRound } from 'lucide-react'
+import { ChevronRight, UserRound } from 'lucide-react'
 import type { SalaryAccrualLine, SalaryAccrualStatus, SalesDirection } from 'ireports-contracts'
 
 import { formatCurrency } from '@/shared/lib/format.ts'
 import { cn } from '@/shared/lib/tw'
 import { Chip } from '@/shared/ui-kit/atoms/Chip'
 
-import { formatLineAdjustmentNote, formatLineBasisNote, formatLineMeta, isLineAdjusted } from '../model/accrualView.ts'
+import { formatLineAdjustmentNote, formatLineMeta, isLineAdjusted } from '../model/accrualView.ts'
 import { ROLE_LABEL } from '../model/labels.ts'
 
 import { AccrualDirectionHeader } from './AccrualDirectionHeader.tsx'
 import { AccrualLineActions } from './AccrualLineActions.tsx'
-import { AccrualLineSources } from './AccrualLineSources.tsx'
 import { AccrualLineStatusBadge } from './AccrualStatusBadge.tsx'
 
 const DOT_CLASS: Record<SalesDirection, string> = {
@@ -22,18 +21,14 @@ const DOT_CLASS: Record<SalesDirection, string> = {
  * Pencil `g0onp` (`Начисление · Документ` redesign, мобильный) — тот же «гроссбух», что
  * `AccrualLinesTable` на десктопе, но карточками: `AccrualDirectionHeader` сверху, заголовок
  * колонок «Правило начисления / Сумма, ₽», затем строки-карточки («Верх» — название+чип роли+мета
- * / сумма с «Было» и «Основанием», «Низ» — статус-бейдж+действия) и общий подвал таблицы. В отличие
+ * / сумма с «Было» при корректировке, «Низ» — статус-бейдж+действия) и общий подвал таблицы. В отличие
  * от десктопа, здесь нет отдельного `AdjustmentBadge`/зачёркнутой суммы+бейджа рядом — мокап
  * (`h8et8b`) дописывает корректировку в мету строки («· корректировка +700 ₽»,
  * `formatLineAdjustmentNote`) и показывает «Было» просто приглушённым текстом без зачёркивания.
- * Аккордеон источников (`AccrualLineSources` `compact`) разворачивается по клику на всю строку —
- * явного шеврона-аффорданса в макете нет ни у одной строки (мокап рисует «Детализация» готово
- * развёрнутой только для примера), поэтому здесь, как и в `AccrualLinesTable`'s хвостовом столбце,
- * добавлен декоративный шеврон в конце «Низ»-строки — тот же документированный приём, что и там.
  *
- * `onOpenRule` — см. `AccrualLinesTable`'s JSDoc: тот же клик по карточке одновременно раскрывает
- * локальный аккордеон источников и (если передан) открывает боковую панель деталей правила по
- * `ruleId`. Компонент остаётся презентационным — оркестрацию панели ведёт страница.
+ * Клик по карточке открывает боковую панель детализации (`AccrualLineDetailsPanel`, оркеструется
+ * страницей) — см. `AccrualLinesTable`'s JSDoc, тот же приём. Хвостовой `ChevronRight` в «Низ»-строке
+ * — тот же декоративный аффорданс, что и десктопный столбец шеврона.
  */
 export type AccrualLineCardListProps = {
     lines: SalaryAccrualLine[]
@@ -42,10 +37,8 @@ export type AccrualLineCardListProps = {
     accrualId: string
     /** Статус ДОКУМЕНТА (не строки) — только он решает видимость действий строки. */
     documentStatus: SalaryAccrualStatus
-    isLineExpanded: (id: string) => boolean
-    onToggleLine: (id: string) => void
-    /** Клик по карточке — открыть боковую панель деталей правила по её `ruleId`. */
-    onOpenRule?: (ruleId: string) => void
+    /** Клик по карточке — открыть боковую панель детализации по всей строке. */
+    onOpenLine: (line: SalaryAccrualLine) => void
     /** «5 строк · корректировок: 1» — подвал таблицы. */
     footerNote: string
     /** «Итого 68 400 ₽». */
@@ -59,9 +52,7 @@ function AccrualLineCardList({
     directionLabel,
     accrualId,
     documentStatus,
-    isLineExpanded,
-    onToggleLine,
-    onOpenRule,
+    onOpenLine,
     footerNote,
     footerTotal,
     className,
@@ -85,80 +76,64 @@ function AccrualLineCardList({
                 <p className="px-3 py-6 text-center font-ui text-xs text-ink-muted">В документе нет строк по правилам.</p>
             ) : (
                 lines.map((line, index) => {
-                    const expanded = isLineExpanded(line.id)
                     const adjusted = isLineAdjusted(line)
                     const meta = adjusted
                         ? `${formatLineMeta(line)} · ${formatLineAdjustmentNote(line)}`
                         : formatLineMeta(line)
 
                     return (
-                        <div key={line.id} className={cn(index > 0 && 'border-t border-hairline', expanded && 'bg-row-selected')}>
-                            <div
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => {
-                                    onToggleLine(line.id)
-                                    onOpenRule?.(line.ruleId)
-                                }}
-                                onKeyDown={(event) => {
-                                    if (event.key !== 'Enter' && event.key !== ' ') return
-                                    event.preventDefault()
-                                    onToggleLine(line.id)
-                                    onOpenRule?.(line.ruleId)
-                                }}
-                                aria-expanded={expanded}
-                                className="flex cursor-pointer flex-col gap-2 p-3 text-left transition-colors hover:bg-canvas"
-                            >
-                                <span className="flex w-full items-start gap-2">
-                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                        <span className="flex min-w-0 items-center gap-1.5">
-                                            <span className={cn('size-1.5 shrink-0 rounded-full', DOT_CLASS[direction])} aria-hidden />
-                                            <span className="min-w-0 flex-1 truncate font-ui text-[13px] font-semibold text-ink">
-                                                {line.name}
-                                            </span>
-                                        </span>
-                                        <span className="truncate font-ui text-[11px] text-ink-muted">{meta}</span>
-                                    </span>
-                                    <span className="flex w-[92px] shrink-0 flex-col items-end gap-0.5">
-                                        {adjusted && (
-                                            <span className="font-ui text-[10.5px] text-ink-faint tabular-nums">
-                                                {formatCurrency(line.originalAmount)}
-                                            </span>
-                                        )}
-                                        <span className="font-ui text-sm font-bold text-ink tabular-nums">
-                                            {formatCurrency(line.amount)}
-                                        </span>
-                                        <span className="text-right font-ui text-[10.5px] text-ink-muted tabular-nums">
-                                            {formatLineBasisNote(line)}
+                        <div
+                            key={line.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => onOpenLine(line)}
+                            onKeyDown={(event) => {
+                                if (event.key !== 'Enter' && event.key !== ' ') return
+                                event.preventDefault()
+                                onOpenLine(line)
+                            }}
+                            className={cn(
+                                'flex cursor-pointer flex-col gap-2 p-3 text-left transition-colors hover:bg-canvas',
+                                index > 0 && 'border-t border-hairline',
+                            )}
+                        >
+                            <span className="flex w-full items-start gap-2">
+                                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                    <span className="flex min-w-0 items-center gap-1.5">
+                                        <span className={cn('size-1.5 shrink-0 rounded-full', DOT_CLASS[direction])} aria-hidden />
+                                        <span className="min-w-0 flex-1 truncate font-ui text-[13px] font-semibold text-ink">
+                                            {line.name}
                                         </span>
                                     </span>
+                                    <span className="truncate font-ui text-[11px] text-ink-muted">{meta}</span>
                                 </span>
-
-                                <span className="flex items-center gap-1.5">
-                                    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                                        <Chip icon={<UserRound />}>{ROLE_LABEL[line.targetRole]}</Chip>
-                                        <AccrualLineStatusBadge status={line.status} />
-                                    </span>
-                                    {actionsVisible && (
-                                        <span
-                                            className="flex shrink-0 items-center gap-1.5"
-                                            onClick={(event) => event.stopPropagation()}
-                                        >
-                                            <AccrualLineActions line={line} direction={direction} accrualId={accrualId} />
+                                <span className="flex w-[92px] shrink-0 flex-col items-end gap-0.5">
+                                    {adjusted && (
+                                        <span className="font-ui text-[10.5px] text-ink-faint tabular-nums">
+                                            {formatCurrency(line.originalAmount)}
                                         </span>
                                     )}
-                                    <ChevronDown
-                                        className={cn(
-                                            'size-4 shrink-0 text-ink-muted transition-transform duration-150',
-                                            expanded && 'rotate-180',
-                                        )}
-                                    />
+                                    <span className="font-ui text-sm font-bold text-ink tabular-nums">
+                                        {formatCurrency(line.amount)}
+                                    </span>
                                 </span>
-                            </div>
+                            </span>
 
-                            {expanded && (
-                                <AccrualLineSources sources={line.sources} compact className="border-t border-hairline bg-canvas" />
-                            )}
+                            <span className="flex items-center gap-1.5">
+                                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                                    <Chip icon={<UserRound />}>{ROLE_LABEL[line.targetRole]}</Chip>
+                                    <AccrualLineStatusBadge status={line.status} />
+                                </span>
+                                {actionsVisible && (
+                                    <span
+                                        className="flex shrink-0 items-center gap-1.5"
+                                        onClick={(event) => event.stopPropagation()}
+                                    >
+                                        <AccrualLineActions line={line} direction={direction} accrualId={accrualId} />
+                                    </span>
+                                )}
+                                <ChevronRight className="size-3.5 shrink-0 text-ink-muted" />
+                            </span>
                         </div>
                     )
                 })

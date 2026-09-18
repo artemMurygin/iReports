@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import type { SalesDirection } from 'ireports-contracts'
+import type { SalaryAccrualLine, SalesDirection } from 'ireports-contracts'
 
 import { DIRECTION_LABEL } from '@/features/AccountingPeriod'
 import {
     countAdjustedLines,
     deriveDocumentProgress,
+    deriveLineTaskId,
     pluralizeLines,
     useSalaryAccrual,
 } from '@/features/SalaryAccruals'
@@ -42,18 +43,23 @@ export function useSalaryAccrualDocumentPage() {
         )
     }, [document, departments.data])
 
-    // Аккордеон источников: развёрнутые строки — Set id строк (как isRuleExpanded в
-    // pages/SalaryReport, только id строки документа уникален сам по себе).
-    const [expandedLineIds, setExpandedLineIds] = useState<ReadonlySet<string>>(new Set())
-    function toggleLine(lineId: string) {
-        setExpandedLineIds((prev) => {
-            const next = new Set(prev)
-            if (next.has(lineId)) next.delete(lineId)
-            else next.add(lineId)
-            return next
-        })
+    // Детализация строки (источники заказов) — боковая панель, как на странице зарплаты
+    // (`pages/SalaryReportV2`'s `RuleGroupDetailsPanel`), а не аккордеон на месте: открытая строка
+    // хранится целиком (не только `id`), у панели уже есть все данные (`sources`) без похода в API.
+    // Строка типа `TaskCompletion` — исключение (`deriveLineTaskId`): клик по ней ведёт в карточку
+    // самой задачи (`TaskDetailsPanel`), а не в детализацию начисления — та же развилка, что и
+    // `TaskSourceCard` на странице зарплаты.
+    const [openLine, setOpenLine] = useState<SalaryAccrualLine | null>(null)
+    const [openTaskId, setOpenTaskId] = useState<string | null>(null)
+
+    function openLineDetails(line: SalaryAccrualLine) {
+        const taskId = deriveLineTaskId(line)
+        if (taskId !== null) {
+            setOpenTaskId(taskId)
+            return
+        }
+        setOpenLine(line)
     }
-    const isLineExpanded = (lineId: string) => expandedLineIds.has(lineId)
 
     const lines = useMemo(() => document?.lines ?? [], [document])
     const progress = useMemo(() => deriveDocumentProgress(lines), [lines])
@@ -77,8 +83,11 @@ export function useSalaryAccrualDocumentPage() {
         periodLabel,
         departmentName,
         progress,
-        isLineExpanded,
-        toggleLine,
+        openLine,
+        openTaskId,
+        openLineDetails,
+        closeLineDetails: () => setOpenLine(null),
+        closeTaskDetails: () => setOpenTaskId(null),
         footerNote,
         footerNoteMobile,
         footerTotal,
