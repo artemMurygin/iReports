@@ -58,6 +58,13 @@ export const tasksApi = {
     update: (taskId: string, payload: UpdateTaskRequest): Promise<Task> =>
         apiInstance.patch<Task>(`/v1/tasks/${taskId}`, payload).then((r) => r.data),
 
+    // delete-task-frontend, tasks.md группа 1 — безвозвратное удаление задачи (`DELETE /v1/tasks/:id`,
+    // без тела). Ошибка НЕ оборачивается в ApiError — тот же приём, что `update`/`transition` выше:
+    // читаемое сообщение разворачивает `extractApiErrorMessage` в UI-обработчике мутации (диалоге
+    // подтверждения), не здесь.
+    remove: (taskId: string): Promise<void> =>
+        apiInstance.delete<void>(`/v1/tasks/${taskId}`).then((r) => r.data),
+
     getAssigneeEmployees: () =>
         queryOptions({
             queryKey: ['task-status-control', 'employees'],

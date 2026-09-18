@@ -1,4 +1,4 @@
-import { BadgeCheck, BadgeX, Calendar, Pencil, X } from 'lucide-react'
+import { BadgeCheck, BadgeX, Calendar, Pencil, Trash2, X } from 'lucide-react'
 import type {
     SalaryAccrualLineSummary,
     SalaryRuleSummary,
@@ -14,6 +14,9 @@ import { IconButton } from '@/shared/ui-kit/atoms/IconButton.tsx'
 import { TaskStatusBadge } from '@/shared/ui-kit/atoms/TaskStatusBadge.tsx'
 import { cn } from '@/shared/lib/tw'
 
+import { useDeleteTask } from '../model/useDeleteTask.ts'
+import { useDeleteTaskDialog } from '../model/useDeleteTaskDialog.ts'
+import { DeleteTaskDialog } from './DeleteTaskDialog.tsx'
 import { EditTaskFields, type EditTaskFieldsProps } from './EditTaskFields.tsx'
 import { SalaryRuleSummaryBlock } from './SalaryRuleSummaryBlock.tsx'
 import { SECTION_LABEL_CLASS } from './sectionLabel.ts'
@@ -38,6 +41,12 @@ import { TaskTransitionActions } from './TaskTransitionActions.tsx'
  * `Task` не хранит "разовая/регулярная" — это атрибут `SalaryRule`, не задачи (design.md решение 2),
  * поэтому подзаголовок ("Разовая задача · дедлайн 24.09.2026" в тексте макета) не воспроизводит
  * "разовая задача" — этих данных здесь по конструкции нет.
+ *
+ * Реализует часть change delete-task-frontend (delete-task-frontend): кнопка «Удалить» (`Trash2`)
+ * в заголовке, доступная независимо от статуса задачи (в отличие от «Редактировать»), + wiring
+ * `useDeleteTask`/`useDeleteTaskDialog`/`DeleteTaskDialog` — на успешном удалении вызывает `onClose`.
+ * Пропсы компонента не меняются (architecture.md): `taskId` берётся из `task.id`, уже входящего в
+ * существующий проп `task`.
  */
 const DIRECTION_LABEL: Record<TaskDirection, string> = {
     service: 'Сервис',
@@ -128,6 +137,16 @@ export function TaskStatusCard({
     const assigneeLabel = assigneeName ?? `Сотрудник #${task.assigneeEmployeeId}`
     const terminalNote = TERMINAL_NOTE[task.status]
 
+    const deleteTask = useDeleteTask(task.id)
+    const deleteDialog = useDeleteTaskDialog()
+
+    function handleConfirmDelete() {
+        void deleteDialog.confirm(async () => {
+            await deleteTask.mutateAsync()
+            onClose?.()
+        })
+    }
+
     return (
         <div data-slot="task-status-card" className={cn('flex w-full flex-col bg-surface md:w-[552px]', className)}>
             <div className="sticky top-0 z-10 flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-surface px-5 py-4">
@@ -157,6 +176,14 @@ export function TaskStatusCard({
                             <Pencil />
                         </IconButton>
                     )}
+                    <IconButton
+                        aria-label="Удалить задачу"
+                        variant="danger"
+                        onClick={deleteDialog.open}
+                        className="shrink-0"
+                    >
+                        <Trash2 />
+                    </IconButton>
                     {onClose && (
                         <IconButton
                             aria-label="Закрыть карточку задачи"
@@ -254,6 +281,15 @@ export function TaskStatusCard({
             <div className="border-t border-hairline px-5 py-3.5">
                 <TaskCommentsSection comments={comments} />
             </div>
+
+            <DeleteTaskDialog
+                isOpen={deleteDialog.isOpen}
+                taskTitle={task.title}
+                isPending={deleteDialog.isPending}
+                error={deleteDialog.error}
+                onConfirm={handleConfirmDelete}
+                onCancel={deleteDialog.close}
+            />
         </div>
     )
 }

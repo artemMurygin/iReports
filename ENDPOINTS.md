@@ -123,7 +123,9 @@ read-only справочников (`deals.managers`, `shop.warehouse.catalog`).
   той же транзакции). `404`, если задачи нет. Не путать с мягкой отменой задачи при удалении уже
   сохранённого правила `TaskCompletion` (`CancelTaskForRuleDeletionService`, статус-переход, без
   удаления строки) — используется, когда пользователь отвязывает/удаляет ещё не сохранённую задачу
-  правила на странице зарплатного правила
+  правила на странице зарплатного правила. С фронта вызывается напрямую из карточки задачи
+  (`features/TaskStatusControl`, кнопка «Удалить», `openspec/changes/delete-task-frontend`), а не
+  только из потока удаления задачи зарплатного правила (`features/SalaryRuleForm`)
 
 ## modules/work-schedule (`/v1/work-schedule`)
 График работы сотрудников (Фаза 1, `docs/employee-work-schedule`) — общая на компанию модель
