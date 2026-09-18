@@ -12,6 +12,7 @@ import {
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 
 // Отмена начисления (PRD 2, Фаза 6): движения SALARY_ACCRUAL и
 // ACCRUAL_ADJUSTMENT строки удаляются с баланса без следа, строка
@@ -59,11 +60,21 @@ describe('UnaccrueSalaryAccrualLineHandler', () => {
         accrualRepo.store.set(accrual.id, accrual);
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
+        const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
+            insert: () => Promise.resolve(),
+            deleteByIds: () => Promise.resolve(),
+            findById: () => Promise.resolve(null),
+            update: () => Promise.resolve(),
+            findByTaskId: () => Promise.resolve(null),
+            findOneOffByAnyTaskId: () => Promise.resolve(null),
+            findMotivationSchemaId: () => Promise.resolve(null),
+        };
         const accrueHandler = new AccrueSalaryAccrualLineHandler(
             accrualRepo,
             transactionRepo,
             fakeDirectoryRepo,
             unitOfWork,
+            fakeSalaryRuleRepo,
         );
         const handler = new UnaccrueSalaryAccrualLineHandler(
             accrualRepo,

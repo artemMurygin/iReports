@@ -14,6 +14,9 @@ import { SalaryAccrualNotFoundException } from '@/domains/service/modules/accoun
 import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { resolveEmployees } from '../../services/salary-accrual/list-salary-accruals.service';
 import { AccrueSalaryAccrualLineCommand } from './accrue-salary-accrual-line.command';
+import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { TaskCompletionSalaryConfig } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 
 // Проведение строки документа начисления (PRD 2 docs/payroll-closing-and-
 // accrual, Фаза 6, tracer bullet): строка становится деньгами на балансе
@@ -51,6 +54,8 @@ export class AccrueSalaryAccrualLineHandler implements ICommandHandler<
         private readonly directoryRepo: DirectoryRepositoryPort,
         @Inject(UNIT_OF_WORK)
         private readonly unitOfWork: UnitOfWorkPort,
+        @Inject(SALARY_RULE_REPOSITORY)
+        private readonly salaryRuleRepo: SalaryRuleRepositoryPort,
     ) {}
 
     async execute(
@@ -75,6 +80,26 @@ export class AccrueSalaryAccrualLineHandler implements ICommandHandler<
             await this.transactionRepo.insertMany(transactions);
             await this.accrualRepo.save(accrual);
         });
+
+        // deactivate-one-off-task-completion-rule — деактивация разового
+        // правила «за выполнение задачи» не должна зависеть от того, каким
+        // путём строка попала в ACCRUED: и явный «Указать сумму»
+        // (SetTaskCompletionLineRewardHandler), и обычное «Начислить»/
+        // «Начислить всё» (эта команда, в т.ч. вызванная построчно из
+        // AccrueSalaryAccrualDocumentHandler/AccruePeriodSalaryAccrualsHandler)
+        // одинаково означают «деньги по этой задаче начислены». Идемпотентно
+        // и симметрично deactivate-логике в SetTaskCompletionLineRewardHandler —
+        // уже неактивное или регулярное правило не трогается.
+        if (line.type === 'TaskCompletion') {
+            const rule = await this.salaryRuleRepo.findById(line.ruleId);
+            if (rule && rule.type === 'TaskCompletion' && rule.isActive) {
+                const config = rule.config as TaskCompletionSalaryConfig;
+                if (config.isRecurring === false) {
+                    rule.deactivate();
+                    await this.salaryRuleRepo.update(rule);
+                }
+            }
+        }
 
         const employees = await resolveEmployees(this.directoryRepo);
         return this.mapper.toDetailResponse(

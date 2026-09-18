@@ -9,6 +9,7 @@ import {
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
+import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { AccrueSalaryAccrualLineHandler } from './accrue-salary-accrual-line.handler';
 import { AccrueSalaryAccrualDocumentHandler } from './accrue-salary-accrual-document.handler';
 import { AccrueSalaryAccrualDocumentCommand } from './accrue-salary-accrual-document.command';
@@ -75,11 +76,21 @@ describe('AccrueSalaryAccrualDocumentHandler', () => {
         accrualRepo.store.set(accrual.id, accrual);
         const transactionRepo = new InMemoryBalanceTransactionRepository();
         const unitOfWork: UnitOfWorkPort = { run: (work) => work() };
+        const fakeSalaryRuleRepo: SalaryRuleRepositoryPort = {
+            insert: () => Promise.resolve(),
+            deleteByIds: () => Promise.resolve(),
+            findById: () => Promise.resolve(null),
+            update: () => Promise.resolve(),
+            findByTaskId: () => Promise.resolve(null),
+            findOneOffByAnyTaskId: () => Promise.resolve(null),
+            findMotivationSchemaId: () => Promise.resolve(null),
+        };
         const lineHandler = new AccrueSalaryAccrualLineHandler(
             accrualRepo,
             transactionRepo,
             fakeDirectoryRepo,
             unitOfWork,
+            fakeSalaryRuleRepo,
         );
         // Реальный построчный хендлер за фасадом CommandBus — тот же путь,
         // что в приложении (общий CommandBus, повторное чтение документа и
