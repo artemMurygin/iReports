@@ -394,7 +394,9 @@ describe('CloseAccountingPeriodHandler', () => {
                 expect(accrual!.direction).toBe('service');
                 expect(accrual!.period).toBe('2026-07');
                 // Сумма документа = total снапшота, строки = lines снапшота
-                // один в один (правило, сумма, порядок).
+                // один в один (правило, сумма, порядок) — за вычетом строк с
+                // нулевой суммой правила, которые документ не материализует
+                // (FR1, skip-zero-salary-accruals).
                 expect(accrual!.total).toBe(row.total);
                 expect(
                     accrual!.lines.map((line) => ({
@@ -404,12 +406,14 @@ describe('CloseAccountingPeriodHandler', () => {
                         status: line.status,
                     })),
                 ).toEqual(
-                    row.lines.map((line) => ({
-                        ruleId: line.ruleId,
-                        amount: line.amount,
-                        originalAmount: line.amount,
-                        status: 'DRAFT',
-                    })),
+                    row.lines
+                        .filter((line) => line.amount !== 0)
+                        .map((line) => ({
+                            ruleId: line.ruleId,
+                            amount: line.amount,
+                            originalAmount: line.amount,
+                            status: 'DRAFT',
+                        })),
                 );
             }
 
@@ -420,7 +424,9 @@ describe('CloseAccountingPeriodHandler', () => {
             expect(byEmployee.get(42)!.isDismissed).toBe(false);
             expect(byEmployee.get(43)!.isDismissed).toBe(true);
             expect(byEmployee.get(44)!.total).toBe(0);
-            expect(byEmployee.get(44)!.lines).toHaveLength(1);
+            // FR1: сумма правила сотрудника 44 равна 0 — документ создаётся
+            // (см. total выше), но строка почасового правила не порождается.
+            expect(byEmployee.get(44)!.lines).toHaveLength(0);
         });
 
         it('публикует SalaryAccrualDocumentsCreatedDomainEvent с перечнем accrualId после закрытия', async () => {

@@ -378,16 +378,23 @@ describe('CloseShopAccountingPeriodHandler', () => {
                 expect(accrual?.status).toBe('DRAFT');
                 expect(accrual?.direction).toBe('shop');
                 expect(accrual?.total).toBe(row.total);
+                // FR3 of skip-zero-salary-accruals: строка снапшота с
+                // рассчитанной суммой 0 (сотрудник 44, почасовая ставка 0)
+                // фиксируется в снапшоте как обычно, но не материализуется в
+                // строку документа начисления — ожидание сравнивается с
+                // отфильтрованным списком строк снапшота, а не со всеми.
                 expect(
                     accrual?.lines.map((line) => ({
                         ruleId: line.ruleId,
                         amount: line.amount,
                     })),
                 ).toEqual(
-                    row.lines.map((line) => ({
-                        ruleId: line.ruleId,
-                        amount: line.amount,
-                    })),
+                    row.lines
+                        .filter((line) => line.amount !== 0)
+                        .map((line) => ({
+                            ruleId: line.ruleId,
+                            amount: line.amount,
+                        })),
                 );
             }
             const byEmployee = new Map(
@@ -397,7 +404,10 @@ describe('CloseShopAccountingPeriodHandler', () => {
             expect(byEmployee.get(42)?.isDismissed).toBe(false);
             expect(byEmployee.get(43)?.isDismissed).toBe(true);
             expect(byEmployee.get(44)?.total).toBe(0);
-            expect(byEmployee.get(44)?.lines).toHaveLength(1);
+            // FR3: у сотрудника 44 единственное правило дало 0 (почасовая
+            // ставка 0) — документ начисления создаётся (см. total === 0
+            // выше), но без единой строки.
+            expect(byEmployee.get(44)?.lines).toHaveLength(0);
         });
 
         it('публикует SalaryAccrualDocumentsCreatedDomainEvent направления shop', async () => {

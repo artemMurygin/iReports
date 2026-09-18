@@ -45,7 +45,10 @@ describe('SalaryAccrual', () => {
         });
     });
 
-    it('нулевой документ допустим (сотрудник с нулём по всем правилам)', () => {
+    // FR1: правило с рассчитанной суммой 0 не порождает SalaryAccrualLine в
+    // документе — документ при этом всё равно создаётся, пусть и без единой
+    // строки (skip-zero-salary-accruals).
+    it('документ создаётся, даже если у сотрудника все правила дали 0 (без единой строки)', () => {
         const accrual = withRequestContext(() =>
             SalaryAccrual.createFromSnapshot({
                 direction: 'shop',
@@ -57,7 +60,28 @@ describe('SalaryAccrual', () => {
             }),
         );
         expect(accrual.total).toBe(0);
+        expect(accrual.lines).toHaveLength(0);
+    });
+
+    // FR1: правило с нулевой суммой не создаёт строку, а соседнее правило
+    // того же сотрудника с ненулевой суммой — создаёт как прежде
+    // (skip-zero-salary-accruals).
+    it('пропускает строку правила с суммой 0, сохраняя строку правила с ненулевой суммой', () => {
+        const accrual = withRequestContext(() =>
+            SalaryAccrual.createFromSnapshot({
+                direction: 'service',
+                period: '2026-08',
+                employeeId: 42,
+                isDismissed: false,
+                total: 2000,
+                lines: [line('r1', 2000), line('r2', 0)],
+            }),
+        );
         expect(accrual.lines).toHaveLength(1);
+        expect(accrual.lines[0]).toMatchObject({ ruleId: 'r1', amount: 2000 });
+        expect(
+            accrual.lines.some((accrualLine) => accrualLine.ruleId === 'r2'),
+        ).toBe(false);
     });
 
     it('отклоняет документ, сумма которого не равна сумме строк снапшота', () => {
