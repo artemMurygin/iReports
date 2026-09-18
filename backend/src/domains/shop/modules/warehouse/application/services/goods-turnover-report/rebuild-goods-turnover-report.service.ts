@@ -6,6 +6,7 @@ import { GoodsTurnoverReportLine } from '@/domains/shop/modules/warehouse/domain
 import { Money } from '@/domains/shop/modules/warehouse/domain/value-objects/money.value-object';
 import { GOODS_TURNOVER_REPORT_REPOSITORY } from '@/domains/shop/modules/warehouse/application/ports/goods-turnover-report/goods-turnover-report.port';
 import type { GoodsTurnoverReportRepositoryPort } from '@/domains/shop/modules/warehouse/application/ports/goods-turnover-report/goods-turnover-report.port';
+import { GOODS_TURNOVER_EXCLUDED_CATEGORY_IDS } from '@/domains/shop/modules/warehouse/infrastructure/config/goods-turnover-report.config';
 
 interface Bucket {
     quantity: number;
@@ -87,15 +88,19 @@ export class RebuildGoodsTurnoverReportService {
         private readonly folderTree: ProductFolderTreeService,
         @Inject(GOODS_TURNOVER_REPORT_REPOSITORY)
         private readonly repository: GoodsTurnoverReportRepositoryPort,
+        @Inject(GOODS_TURNOVER_EXCLUDED_CATEGORY_IDS)
+        private readonly excludedCategoryIds: string[],
     ) {}
 
     async rebuild(period: Period): Promise<void> {
         const { to: periodEnd } = period.getBounds();
 
+        const excludedFolderIds = await this.resolveExcludedFolderIds();
+
         const [turnoverByCategory, stockByCategory, folders] =
             await Promise.all([
-                this.aggregateTurnover(period),
-                this.aggregateStock(periodEnd),
+                this.aggregateTurnover(period, excludedFolderIds),
+                this.aggregateStock(periodEnd, excludedFolderIds),
                 this.db.moySkladProductFolder.findMany({
                     select: { id: true },
                 }),
@@ -115,6 +120,8 @@ export class RebuildGoodsTurnoverReportService {
 
         const lines: GoodsTurnoverReportLine[] = [];
         for (const folder of folders) {
+            if (excludedFolderIds.has(folder.id)) continue;
+
             const descendantIds =
                 await this.folderTree.resolveDescendantFolderIds(folder.id);
 
@@ -159,8 +166,24 @@ export class RebuildGoodsTurnoverReportService {
         await this.repository.replaceForPeriod(period, lines);
     }
 
+    // Раскрывает сконфигурированные excludedCategoryIds до всех их потомков
+    // (см. goods-turnover-report.config.ts) — исключение категории должно
+    // убирать из расчёта и её вложенные подкатегории, не только саму себя.
+    private async resolveExcludedFolderIds(): Promise<Set<string>> {
+        const excluded = new Set<string>();
+        for (const categoryId of this.excludedCategoryIds) {
+            const descendantIds =
+                await this.folderTree.resolveDescendantFolderIds(categoryId);
+            for (const id of descendantIds) {
+                excluded.add(id);
+            }
+        }
+        return excluded;
+    }
+
     private async aggregateTurnover(
         period: Period,
+        excludedFolderIds: Set<string>,
     ): Promise<Map<string, Map<string, Bucket>>> {
         const { from, to } = period.getBounds();
 
@@ -185,6 +208,7 @@ export class RebuildGoodsTurnoverReportService {
             const folderId = position.product?.folderId;
             const warehouseId = position.demand.storeId;
             if (!folderId || !warehouseId) continue;
+            if (excludedFolderIds.has(folderId)) continue;
 
             // Рубли -> копейки (см. WHY в шапке файла).
             addToBucket(
@@ -200,6 +224,7 @@ export class RebuildGoodsTurnoverReportService {
 
     private async aggregateStock(
         periodEnd: Date,
+        excludedFolderIds: Set<string>,
     ): Promise<Map<string, Map<string, Bucket>>> {
         const latest = await this.db.moySkladStock.aggregate({
             _max: { snapshotAt: true },
@@ -237,6 +262,7 @@ export class RebuildGoodsTurnoverReportService {
         for (const row of stockRows) {
             const folderId = folderByProductId.get(row.productId);
             if (!folderId) continue;
+            if (excludedFolderIds.has(folderId)) continue;
 
             addToBucket(
                 byCategory,

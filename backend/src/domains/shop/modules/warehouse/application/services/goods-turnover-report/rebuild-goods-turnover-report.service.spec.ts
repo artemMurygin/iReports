@@ -39,6 +39,7 @@ function buildService(options: {
     stockRows?: StockRow[];
     products?: ProductRow[];
     descendantsByRoot?: Record<string, string[]>;
+    excludedCategoryIds?: string[];
 }) {
     const {
         folders = [],
@@ -47,6 +48,7 @@ function buildService(options: {
         stockRows = [],
         products = [],
         descendantsByRoot = {},
+        excludedCategoryIds = [],
     } = options;
 
     const findManyPositions = jest.fn().mockResolvedValue(positions);
@@ -82,6 +84,7 @@ function buildService(options: {
         db,
         folderTree,
         repository,
+        excludedCategoryIds,
     );
 
     return {
@@ -90,6 +93,7 @@ function buildService(options: {
         findManyPositions,
         findManyStock,
         aggregateStock,
+        resolveDescendantFolderIds,
     };
 }
 
@@ -163,6 +167,7 @@ describe('RebuildGoodsTurnoverReportService.rebuild', () => {
             db,
             folderTree,
             repository,
+            [],
         );
 
         await service.rebuild(Period.create('2026-08'));
@@ -340,6 +345,75 @@ describe('RebuildGoodsTurnoverReportService.rebuild', () => {
             2,
             period,
             expect.any(Array),
+        );
+    });
+
+    it('исключённая через конфиг категория не порождает собственной строки и не учитывается в обороте/остатке родителя', async () => {
+        const { service, replaceForPeriod } = buildService({
+            folders: [{ id: 'folder-root' }, { id: 'folder-excluded' }],
+            positions: [
+                {
+                    quantity: 1,
+                    sum: 100,
+                    product: { folderId: 'folder-excluded' },
+                    demand: { storeId: 'store-1' },
+                },
+                {
+                    quantity: 2,
+                    sum: 200,
+                    product: { folderId: 'folder-root' },
+                    demand: { storeId: 'store-1' },
+                },
+            ],
+            stockRows: [
+                {
+                    productId: 'product-excluded',
+                    warehouseId: 'store-1',
+                    quantity: 9,
+                    costSum: 9_000,
+                },
+            ],
+            products: [{ id: 'product-excluded', folderId: 'folder-excluded' }],
+            descendantsByRoot: {
+                'folder-root': ['folder-root', 'folder-excluded'],
+                'folder-excluded': ['folder-excluded'],
+            },
+            excludedCategoryIds: ['folder-excluded'],
+        });
+
+        await service.rebuild(Period.create('2026-08'));
+
+        const [, lines] = replaceForPeriod.mock.calls[0] as [
+            Period,
+            GoodsTurnoverReportLine[],
+        ];
+        const byKey = linesByCategoryWarehouse(lines);
+
+        expect(byKey['folder-excluded:store-1']).toBeUndefined();
+        expect(byKey['folder-root:store-1'].turnoverQuantity).toBe(2);
+        expect(byKey['folder-root:store-1'].turnoverSum.getValue()).toBe(
+            20_000,
+        );
+        expect(byKey['folder-root:store-1'].stockQuantity).toBe(0);
+        expect(byKey['folder-root:store-1'].stockSum.getValue()).toBe(0);
+    });
+
+    it('исключение по конфигу раскрывается до потомков категории через ProductFolderTreeService', async () => {
+        const { service, resolveDescendantFolderIds } = buildService({
+            folders: [{ id: 'folder-excluded-parent' }],
+            excludedCategoryIds: ['folder-excluded-parent'],
+            descendantsByRoot: {
+                'folder-excluded-parent': [
+                    'folder-excluded-parent',
+                    'folder-excluded-child',
+                ],
+            },
+        });
+
+        await service.rebuild(Period.create('2026-08'));
+
+        expect(resolveDescendantFolderIds).toHaveBeenCalledWith(
+            'folder-excluded-parent',
         );
     });
 });
