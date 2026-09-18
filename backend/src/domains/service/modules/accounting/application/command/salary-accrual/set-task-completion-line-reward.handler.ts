@@ -5,6 +5,9 @@ import { SALARY_ACCRUAL_REPOSITORY } from '@/domains/service/modules/accounting/
 import type { SalaryAccrualRepositoryPort } from '@/domains/service/modules/accounting/application/ports/salary-accrual/salary-accrual.port';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
+import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { TaskCompletionSalaryConfig } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 import { SalaryAccrualNotFoundException } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { SalaryAccrualMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
 import { resolveEmployees } from '../../services/salary-accrual/list-salary-accruals.service';
@@ -30,6 +33,8 @@ export class SetTaskCompletionLineRewardHandler implements ICommandHandler<
         private readonly accrualRepo: SalaryAccrualRepositoryPort,
         @Inject(DIRECTORY_REPOSITORY)
         private readonly directoryRepo: DirectoryRepositoryPort,
+        @Inject(SALARY_RULE_REPOSITORY)
+        private readonly salaryRuleRepo: SalaryRuleRepositoryPort,
     ) {}
 
     async execute(
@@ -43,7 +48,7 @@ export class SetTaskCompletionLineRewardHandler implements ICommandHandler<
             );
         }
 
-        accrual.setLineManualReward(
+        const line = accrual.setLineManualReward(
             command.lineId,
             command.amount,
             command.comment,
@@ -52,6 +57,25 @@ export class SetTaskCompletionLineRewardHandler implements ICommandHandler<
         // Один агрегат — транзакцию открывает сам репозиторий
         // (PrismaRepository.write), отдельный UnitOfWork не нужен.
         await this.accrualRepo.save(accrual);
+
+        // deactivate-one-off-task-completion-rule, design.md Decision 4 —
+        // spec: service/accounting#requirement-разовое-правило-«за-выполнение-задачи»-деактивируется-по-исходу-задачи
+        // (сценарий «Фиксация начисления деактивирует разовое правило»).
+        // Разовое (isRecurring === false) правило TaskCompletion
+        // деактивируется тем же вызовом, что сохраняет сумму — весь
+        // контекст (rule) уже загружен здесь, отдельная транзакция/событие
+        // не нужны (в отличие от неуспешного закрытия задачи, реагирующего
+        // на TaskClosedDomainEvent из модуля tasks). Уже неактивное правило
+        // и регулярное (isRecurring === true) не трогаются — идемпотентно и
+        // симметрично DeactivateSalaryRuleHandler.
+        const rule = await this.salaryRuleRepo.findById(line.ruleId);
+        if (rule && rule.type === 'TaskCompletion' && rule.isActive) {
+            const config = rule.config as TaskCompletionSalaryConfig;
+            if (config.isRecurring === false) {
+                rule.deactivate();
+                await this.salaryRuleRepo.update(rule);
+            }
+        }
 
         const employees = await resolveEmployees(this.directoryRepo);
         return this.mapper.toDetailResponse(

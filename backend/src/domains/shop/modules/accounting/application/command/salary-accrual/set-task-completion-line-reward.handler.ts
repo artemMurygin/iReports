@@ -7,6 +7,9 @@ import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/dire
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
 import { ShopSalaryAccrualNotFoundException } from '@/domains/shop/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { ShopSalaryAccrualMapper } from '@/domains/shop/modules/accounting/infrastructure/mappers/salary-accrual/salary-accrual.mapper';
+import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { ShopSalaryRuleRepositoryPort } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import type { TaskCompletionShopSalaryConfig } from '@/domains/shop/modules/accounting/domain/types/salary-rule.types';
 import { resolveShopEmployees } from '../../services/salary-accrual/list-salary-accruals.service';
 import { SetShopTaskCompletionLineRewardCommand } from './set-task-completion-line-reward.command';
 
@@ -21,6 +24,15 @@ import { SetShopTaskCompletionLineRewardCommand } from './set-task-completion-li
 // ShopSalaryAccrualLine.setManualReward); комментарий обязателен и на
 // границе HTTP (setTaskCompletionLineRewardRequestSchema), и в домене — 400
 // без него.
+//
+// Группа 7 tasks.md (deactivate-one-off-task-completion-rule), design.md
+// Decision 4 — зеркало domains/service'ного SetTaskCompletionLineRewardHandler:
+// фиксация фактической суммы начисления по РАЗОВОМУ (isRecurring: false)
+// правилу деактивирует его в этой же операции (не отдельная транзакция/
+// событие — правило уже загружается здесь же, по ruleId строки). Регулярное
+// правило и уже неактивное разовое правило не трогаются — см.
+// specs/shop/accounting/spec.md, Requirement «Разовое правило «за выполнение
+// задачи» деактивируется по исходу задачи».
 @CommandHandler(SetShopTaskCompletionLineRewardCommand)
 export class SetShopTaskCompletionLineRewardHandler implements ICommandHandler<
     SetShopTaskCompletionLineRewardCommand,
@@ -33,6 +45,8 @@ export class SetShopTaskCompletionLineRewardHandler implements ICommandHandler<
         private readonly accrualRepo: ShopSalaryAccrualRepositoryPort,
         @Inject(DIRECTORY_REPOSITORY)
         private readonly directoryRepo: DirectoryRepositoryPort,
+        @Inject(SHOP_SALARY_RULE_REPOSITORY)
+        private readonly salaryRuleRepo: ShopSalaryRuleRepositoryPort,
     ) {}
 
     async execute(
@@ -43,7 +57,7 @@ export class SetShopTaskCompletionLineRewardHandler implements ICommandHandler<
             throw new ShopSalaryAccrualNotFoundException(command.accrualId);
         }
 
-        accrual.setLineManualReward(
+        const line = accrual.setLineManualReward(
             command.lineId,
             command.amount,
             command.comment,
@@ -52,6 +66,27 @@ export class SetShopTaskCompletionLineRewardHandler implements ICommandHandler<
         // Один агрегат — транзакцию открывает сам репозиторий
         // (PrismaRepository.write), отдельный UnitOfWork не нужен.
         await this.accrualRepo.save(accrual);
+
+        // deactivate-one-off-task-completion-rule, design.md Decision 4 —
+        // spec: shop/accounting#requirement-разовое-правило-«за-выполнение-задачи»-деактивируется-по-исходу-задачи
+        // (сценарий «Фиксация начисления деактивирует разовое правило»).
+        // Разовое (isRecurring === false) правило TaskCompletion
+        // деактивируется тем же вызовом, что сохраняет сумму — весь
+        // контекст (rule) уже загружен здесь, отдельная транзакция/событие
+        // не нужны (в отличие от неуспешного закрытия задачи, реагирующего
+        // на TaskClosedDomainEvent из модуля tasks). Уже неактивное правило
+        // и регулярное (isRecurring === true) не трогаются — идемпотентно и
+        // симметрично DeactivateShopSalaryRuleHandler. Независимая
+        // реализация, зеркальная domains/service'ному
+        // SetTaskCompletionLineRewardHandler.
+        const rule = await this.salaryRuleRepo.findById(line.ruleId);
+        if (rule && rule.type === 'TaskCompletion' && rule.isActive) {
+            const config = rule.config as TaskCompletionShopSalaryConfig;
+            if (config.isRecurring === false) {
+                rule.deactivate();
+                await this.salaryRuleRepo.update(rule);
+            }
+        }
 
         const employees = await resolveShopEmployees(this.directoryRepo);
         return this.mapper.toDetailResponse(

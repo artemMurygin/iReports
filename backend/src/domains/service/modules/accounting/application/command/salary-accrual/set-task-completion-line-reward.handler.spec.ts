@@ -10,6 +10,9 @@ import {
 } from '@/domains/service/modules/accounting/domain/exceptions/salary-accrual.exception';
 import { ArgumentNotProvidedException } from '@/shared/exceptions';
 import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
+import type { SalaryRuleRepositoryPort } from '@/domains/service/modules/accounting/application/ports/motivation-schema/salary-rule.port';
+import { TaskCompletion } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completion.entity';
+import type { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
 
 // Раздел 13 tasks.md (add-task-based-salary-rule) — первичный ручной ввод
 // суммы+комментария строки TaskCompletion (design.md Decision 5), по образцу
@@ -54,14 +57,58 @@ describe('SetTaskCompletionLineRewardHandler', () => {
             }),
         );
 
-    const build = (accrual: SalaryAccrual) => {
+    // Правило TaskCompletion с id, совпадающим с ruleId строки из
+    // buildAccrual() — так SetTaskCompletionLineRewardHandler находит его
+    // через SALARY_RULE_REPOSITORY.findById(line.ruleId).
+    const buildTaskCompletionRule = (
+        isRecurring: boolean,
+        isActive: boolean,
+    ) => {
+        const rule = new TaskCompletion({
+            id: 'rule-task-1',
+            props: {
+                name: 'За выполнение задачи',
+                type: 'TaskCompletion',
+                targetRole: 'ENGINEER',
+                config: {
+                    taskIdByPeriod: { '2026-07': 'task-1' },
+                    taskTitleTemplate: 'Собрать отчёт',
+                    isRecurring,
+                    deadlineTemplate: '2026-07-10',
+                    defaultAmount: 5000,
+                    taskLinkTemplates: [],
+                    accountingPeriod: '2026-07',
+                },
+                isActive,
+            },
+        });
+        return rule;
+    };
+
+    const fakeSalaryRuleRepo = (
+        rule: SalaryRule | null = null,
+    ): SalaryRuleRepositoryPort & { update: jest.Mock } => ({
+        insert: jest.fn(),
+        deleteByIds: jest.fn(),
+        findById: jest.fn().mockResolvedValue(rule),
+        update: jest.fn().mockResolvedValue(undefined),
+        findByTaskId: jest.fn().mockResolvedValue(null),
+        findOneOffByAnyTaskId: jest.fn().mockResolvedValue(null),
+        findMotivationSchemaId: jest.fn().mockResolvedValue(null),
+    });
+
+    const build = (
+        accrual: SalaryAccrual,
+        salaryRuleRepo: SalaryRuleRepositoryPort = fakeSalaryRuleRepo(),
+    ) => {
         const accrualRepo = new InMemorySalaryAccrualRepository();
         accrualRepo.store.set(accrual.id, accrual);
         const handler = new SetTaskCompletionLineRewardHandler(
             accrualRepo,
             fakeDirectoryRepo,
+            salaryRuleRepo,
         );
-        return { handler, accrualRepo };
+        return { handler, accrualRepo, salaryRuleRepo };
     };
 
     const command = (
@@ -190,5 +237,58 @@ describe('SetTaskCompletionLineRewardHandler', () => {
                 ),
             ).rejects.toThrow(SalaryAccrualNotFoundException);
         });
+    });
+
+    // deactivate-one-off-task-completion-rule, design.md Decision 4 — spec:
+    // service/accounting#requirement-разовое-правило-«за-выполнение-задачи»-деактивируется-по-исходу-задачи
+    // (сценарий «Фиксация начисления деактивирует разовое правило»).
+    it('фиксация начисления деактивирует активное разовое правило TaskCompletion', async () => {
+        const accrual = buildAccrual();
+        const line = accrual.lines[0];
+        const rule = buildTaskCompletionRule(false, true);
+        const salaryRuleRepo = fakeSalaryRuleRepo(rule);
+        const { handler } = build(accrual, salaryRuleRepo);
+
+        await withRequestContext(() =>
+            handler.execute(
+                command(accrual, line.id, 5000, 'Задача выполнена, премия'),
+            ),
+        );
+
+        expect(rule.isActive).toBe(false);
+        expect(salaryRuleRepo.update).toHaveBeenCalledWith(rule);
+    });
+
+    // Сценарий «Регулярное правило не деактивируется…» — isRecurring: true
+    // не затрагивается фиксацией начисления.
+    it('фиксация начисления НЕ деактивирует регулярное правило TaskCompletion', async () => {
+        const accrual = buildAccrual();
+        const line = accrual.lines[0];
+        const rule = buildTaskCompletionRule(true, true);
+        const salaryRuleRepo = fakeSalaryRuleRepo(rule);
+        const { handler } = build(accrual, salaryRuleRepo);
+
+        await withRequestContext(() =>
+            handler.execute(command(accrual, line.id, 5000, 'Готово')),
+        );
+
+        expect(rule.isActive).toBe(true);
+        expect(salaryRuleRepo.update).not.toHaveBeenCalled();
+    });
+
+    // Сценарий «Уже неактивное правило повторно не деактивируется».
+    it('фиксация начисления НЕ трогает уже неактивное разовое правило', async () => {
+        const accrual = buildAccrual();
+        const line = accrual.lines[0];
+        const rule = buildTaskCompletionRule(false, false);
+        const salaryRuleRepo = fakeSalaryRuleRepo(rule);
+        const { handler } = build(accrual, salaryRuleRepo);
+
+        await withRequestContext(() =>
+            handler.execute(command(accrual, line.id, 5000, 'Готово')),
+        );
+
+        expect(rule.isActive).toBe(false);
+        expect(salaryRuleRepo.update).not.toHaveBeenCalled();
     });
 });

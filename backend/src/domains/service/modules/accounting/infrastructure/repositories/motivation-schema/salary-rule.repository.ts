@@ -87,6 +87,28 @@ export class SalaryRuleRepository
         return null;
     }
 
+    // deactivate-one-off-task-completion-rule, design.md решение 3 — см.
+    // WHY у SalaryRuleRepositoryPort.findOneOffByAnyTaskId. Тот же приём
+    // полного сканирования, что и у findByTaskId выше, но без ограничения
+    // по текущему периоду (Object.values, а не taskIdByPeriod[период]) и с
+    // дополнительным фильтром isRecurring === false.
+    async findOneOffByAnyTaskId(taskId: string): Promise<SalaryRule | null> {
+        const records = await this.client.salaryRule.findMany({
+            where: { type: 'TaskCompletion', direction: 'service' },
+        });
+        for (const record of records) {
+            const rule = this.mapper.toDomain(record);
+            const config = rule.config as TaskCompletionSalaryConfig;
+            if (
+                !config.isRecurring &&
+                Object.values(config.taskIdByPeriod).includes(taskId)
+            ) {
+                return rule;
+            }
+        }
+        return null;
+    }
+
     // Раздел 18 tasks.md — см. WHY у SalaryRuleRepositoryPort.findMotivationSchemaId.
     async findMotivationSchemaId(ruleId: string): Promise<string | null> {
         const record = await this.client.salaryRule.findFirst({
