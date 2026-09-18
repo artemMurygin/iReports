@@ -4,7 +4,6 @@ import { NavLink } from 'react-router-dom'
 
 import { cn } from '@/shared/lib/tw'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui-kit/atoms/Avatar'
-import { BellBadge } from '@/shared/ui-kit/atoms/BellBadge'
 import { Divider } from '@/shared/ui-kit/atoms/Divider'
 
 import { ProfileMenuPopover, type ProfileMenuData } from './ProfileMenu'
@@ -27,12 +26,12 @@ import type { NavItem } from './types'
  *   it would read as "this opens a menu" even though nothing does (see `navigation.tsx`'s
  *   `TOP_LEVEL_NAV_ITEMS` comment). The actual second level of navigation is the separate `SHMkH`
  *   Subnav row underneath (see `Subnav.tsx`), not a popover attached to these items.
- * - `X8G3zd` Nav Right (gap 10): `l5W7O9` Bell + `f4tNY` Divider + `WNVaX` User (rounded-8,
- *   gap 9, padding [3,6,3,4]: `Avatar` + name/role text block + `chevron-down` "more" icon).
+ * - `X8G3zd` Nav Right (gap 10): `WNVaX` User (rounded-8, gap 9, padding [3,6,3,4]: `Avatar` +
+ *   name/role text block + `chevron-down` "more" icon). The Pencil mockup also has an `l5W7O9`
+ *   Bell here, but it has no real notifications feature behind it yet, so it's hidden in this
+ *   build (`hasUnreadNotifications`/`onBellClick` stay on the props for when that feature lands).
  *
- * The bell trigger only flips a local open/closed visual state (`aria-expanded` + a `canvas`
- * highlight) — no bell menu content is implemented here (out of scope per the rollout plan, a
- * later phase). The user block, when `profileMenu` is supplied, opens the `ProfileMenuPopover`
+ * The user block, when `profileMenu` is supplied, opens the `ProfileMenuPopover`
  * (Pencil node `FjbRC`, `ERP/Organism/Menu Профиль`) anchored below it; without `profileMenu` it
  * keeps the old trigger-only behavior.
  */
@@ -65,17 +64,7 @@ export type HeaderDesktopProps = {
     className?: string
 }
 
-function HeaderDesktop({
-    navItems,
-    subnavTabs,
-    user,
-    hasUnreadNotifications = false,
-    onBellClick,
-    onUserClick,
-    profileMenu,
-    className,
-}: HeaderDesktopProps) {
-    const [notificationsOpen, setNotificationsOpen] = React.useState(false)
+function HeaderDesktop({ navItems, subnavTabs, user, onUserClick, profileMenu, className }: HeaderDesktopProps) {
     const [userMenuOpen, setUserMenuOpen] = React.useState(false)
 
     return (
@@ -126,17 +115,6 @@ function HeaderDesktop({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2.5">
-                    <BellBadge
-                        hasUnread={hasUnreadNotifications}
-                        aria-expanded={notificationsOpen}
-                        aria-label="Уведомления"
-                        className={cn(notificationsOpen && 'bg-canvas')}
-                        onClick={() => {
-                            setNotificationsOpen((open) => !open)
-                            onBellClick?.()
-                        }}
-                    />
-
                     {user ? (
                         <>
                             <Divider />

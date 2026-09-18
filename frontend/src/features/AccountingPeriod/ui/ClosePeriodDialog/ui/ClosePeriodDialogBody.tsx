@@ -109,7 +109,7 @@ function ClosePeriodDialogBody({
                     tone="info"
                     icon={<RefreshCw className="animate-spin" />}
                     title={`Синхронизируем данные ${DIRECTION_ERP_FROM[direction]}…`}
-                    description={`Дотягиваем ${direction === 'shop' ? 'отгрузки' : 'заказы'} за ${formatPeriodLabel(period)}, затем фиксируем снапшот и создаём документы. Не закрывайте окно.`}
+                    description={`Обновляем ${direction === 'shop' ? 'отгрузки' : 'заказы'} за ${formatPeriodLabel(period)}, затем фиксируем отчеты и создаём документы. Не закрывайте окно.`}
                 />
             )}
 
