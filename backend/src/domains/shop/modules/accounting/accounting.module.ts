@@ -67,6 +67,11 @@ import { AccrueShopSalaryAccrualDocumentHandler } from '@/domains/shop/modules/a
 import { AccruePeriodShopSalaryAccrualsHandler } from '@/domains/shop/modules/accounting/application/command/salary-accrual/accrue-period-salary-accruals.handler';
 import { ReopenShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/accounting-period/reopen-accounting-period.handler';
 import { RecalculateShopAccountingPeriodHandler } from '@/domains/shop/modules/accounting/application/command/accounting-period/recalculate-accounting-period.handler';
+// Группа 5 tasks.md (deactivate-one-off-task-completion-rule) — деактивация
+// разового правила TaskCompletion по неуспешному закрытию связанной задачи
+// (design.md Decision 2), зеркало domains/service/modules/accounting'ного
+// TaskClosedEventHandler.
+import { TaskClosedEventHandler } from '@/domains/shop/modules/accounting/application/events/task-completion/task-closed.event-handler';
 import { SHOP_MOTIVATION_SCHEMA_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/motivation-schema.port';
 import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/motivation-schema/salary-rule.port';
 import { SHOP_CALCULATION_DATA } from '@/domains/shop/modules/accounting/application/ports/calculation/calculation-data.port';
@@ -361,6 +366,9 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         // WHY, ранее зафиксированный здесь и в domains/shop/CLAUDE.md).
         ReopenShopAccountingPeriodHandler,
         RecalculateShopAccountingPeriodHandler,
+        // Группа 5 tasks.md (deactivate-one-off-task-completion-rule) — см.
+        // WHY у импорта выше.
+        TaskClosedEventHandler,
         GetShopEmployeeSalaryReportService,
         GetShopDepartmentSalaryReportService,
         {
