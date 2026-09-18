@@ -79,7 +79,15 @@ export class ShopSalaryRuleMapper implements Mapper<
             // accountingPeriod выше: строки, персистированные до этого
             // изменения, не содержат deadlinePeriodOffset — воспроизводим
             // точное прежнее поведение (дедлайн внутри месяца периода).
-            if (taskCompletionConfig.deadlinePeriodOffset === undefined) {
+            //
+            // split-task-completion-rule-form — deadlinePeriodOffset структурно существует только
+            // у регулярного правила (TaskCompletionShopSalaryConfig, discriminatedUnion по
+            // isRecurring): у разового его в конфиге вообще нет, а не undefined, деривировать
+            // нечего.
+            if (
+                taskCompletionConfig.isRecurring &&
+                taskCompletionConfig.deadlinePeriodOffset === undefined
+            ) {
                 taskCompletionConfig.deadlinePeriodOffset = 0;
             }
         }

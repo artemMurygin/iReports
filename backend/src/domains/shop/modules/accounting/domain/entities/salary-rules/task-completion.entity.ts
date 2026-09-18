@@ -65,14 +65,11 @@ export class TaskCompletionShop
         this.props.isActive = true;
     }
 
-    // design.md решение 4 — CreateShopSalaryRuleHandler больше не ходит в
-    // Bitrix/tasks вообще: taskId приходит в теле запроса как часть
-    // config (contracts: TaskCompletionShopSalaryConfigRequest,
-    // taskIdByPeriod не выставляется наружу как редактируемое поле формы) и
-    // здесь же, в фабрике правила, сохраняется как
-    // config.taskIdByPeriod[текущийПериод] — ОДИН, уже существующий
-    // локальный insert(rule), без похода в tasks/Bitrix и без отдельной
-    // транзакции (см. WHY у CreateShopSalaryRuleHandler).
+    // split-task-completion-rule-form — задача этим билдером НЕ создаётся: config.taskIdByPeriod
+    // строится пустым (или унаследованным от existingTaskIdByPeriod при restore()),
+    // CreateShopSalaryRuleHandler сам создаёт задачу через CommandBus и дописывает её id в уже
+    // построенный config.taskIdByPeriod ПОСЛЕ этого вызова (см. WHY у CreateShopSalaryRuleHandler)
+    // — buildConfig() остаётся чистой функцией без IO.
     static create(rule: CreateShopSalaryRuleProps): TaskCompletionShop {
         return new TaskCompletionShop({
             id: randomUUID(),
@@ -119,36 +116,51 @@ export class TaskCompletionShop
         });
     }
 
+    // split-task-completion-rule-form — зеркало buildTaskCompletionConfig направления service:
+    // rule.config приходит в форме wire-запроса (TaskCompletionShopSalaryConfigRequest,
+    // дискриминированной по isRecurring), НЕ создаёт задачу и не пишет taskId — CreateShopSalaryRuleHandler
+    // делает это отдельной мутацией результата ПОСЛЕ вызова create()/restore() (см. их WHY).
     private static buildConfig(
         requestConfig: unknown,
         existingTaskIdByPeriod: Record<string, string>,
     ): TaskCompletionShopSalaryConfig {
-        // rule.config приходит в форме wire-запроса
-        // (TaskCompletionShopSalaryConfigRequest из ireports-contracts:
-        // {taskId, taskTitleTemplate, taskDescriptionTemplate?, isRecurring,
-        // deadlineTemplate, defaultAmount, accountingPeriod}) — единственное
-        // место, где домен TaskCompletionShop транслирует её в
-        // персистентную/доменную форму (taskIdByPeriod вместо одиночного
-        // taskId).
-        const config = requestConfig as {
-            taskId: string;
-            taskTitleTemplate: string;
-            taskDescriptionTemplate?: string;
-            isRecurring: boolean;
-            deadlineTemplate: string;
-            // Опционально в этой транзитной wire-форме (в отличие от
-            // домена, где поле обязательное, см.
-            // TaskCompletionShopSalaryConfig) — зеркало обработки
-            // accountingPeriod чуть ниже: контракт (TaskCompletionShopSalaryConfigRequest)
-            // уже задаёт `.default(0)` на границе HTTP, но здесь, на границе
-            // самого домена, отсутствие поля тоже трактуется как 0, а не
-            // как ошибка — тот же дефолт, что и для легаси-строк БД (design.md
-            // решение 4, ShopSalaryRuleMapper.toDomain).
-            deadlinePeriodOffset?: number;
-            defaultAmount: number;
-            taskLinkTemplates?: { url: string; label?: string }[];
-            accountingPeriod: string;
-        };
+        const config = requestConfig as
+            | {
+                  isRecurring: false;
+                  defaultAmount: number;
+                  accountingPeriod: string;
+              }
+            | {
+                  isRecurring: true;
+                  taskTitleTemplate: string;
+                  taskDescriptionTemplate?: string;
+                  deadlineTemplate: string;
+                  // Опционально в этой транзитной wire-форме (в отличие от домена, где поле
+                  // обязательное) — контракт уже задаёт `.default(0)` на границе HTTP, но здесь, на
+                  // границе самого домена, отсутствие поля тоже трактуется как 0, а не как ошибка —
+                  // тот же дефолт, что и для легаси-строк БД (ShopSalaryRuleMapper.toDomain).
+                  deadlinePeriodOffset?: number;
+                  taskLinkTemplates?: { url: string; label?: string }[];
+                  defaultAmount: number;
+                  accountingPeriod: string;
+              };
+
+        // add-task-salary-rule-accounting-period, design.md решение 2 —
+        // зеркало buildTaskCompletionConfig направления service: период
+        // больше не вычисляется скрыто как Period.current(), а приходит из
+        // запроса (значение, выбранное руководителем в форме). Period.create(...)
+        // валидирует формат и бросает исключение домена при некорректном значении.
+        const period = Period.create(config.accountingPeriod).getValue();
+        const taskIdByPeriod = { ...existingTaskIdByPeriod };
+
+        if (!config.isRecurring) {
+            return {
+                taskIdByPeriod,
+                defaultAmount: config.defaultAmount,
+                accountingPeriod: period,
+                isRecurring: false,
+            };
+        }
 
         // recurring-task-deadline-offset, design.md решение 1/3 — валидация
         // транзитная (по образцу ProductSoldEntity.validate(), дёргающего
@@ -159,30 +171,16 @@ export class TaskCompletionShop
         const deadlinePeriodOffset = config.deadlinePeriodOffset ?? 0;
         DeadlinePeriodOffset.create(deadlinePeriodOffset);
 
-        // add-task-salary-rule-accounting-period, design.md решение 2 —
-        // зеркало buildTaskCompletionConfig направления service: период
-        // больше не вычисляется скрыто как Period.current(), а приходит из
-        // запроса (значение, выбранное руководителем в форме) и
-        // используется и как ключ taskIdByPeriod для этой задачи, и как
-        // значение config.accountingPeriod. Period.create(...) валидирует
-        // формат и бросает исключение домена при некорректном значении —
-        // та же ответственность, что и у остальных использований Period в
-        // проекте, не только у Zod-схемы контракта.
-        const period = Period.create(config.accountingPeriod).getValue();
-
         return {
-            taskIdByPeriod: {
-                ...existingTaskIdByPeriod,
-                [period]: config.taskId,
-            },
+            taskIdByPeriod,
+            defaultAmount: config.defaultAmount,
+            accountingPeriod: period,
+            isRecurring: true,
             taskTitleTemplate: config.taskTitleTemplate,
             taskDescriptionTemplate: config.taskDescriptionTemplate,
-            isRecurring: config.isRecurring,
             deadlineTemplate: config.deadlineTemplate,
             deadlinePeriodOffset,
-            defaultAmount: config.defaultAmount,
             taskLinkTemplates: config.taskLinkTemplates ?? [],
-            accountingPeriod: period,
         };
     }
 
@@ -226,10 +224,11 @@ export class TaskCompletionShop
 
     // spec: shop/accounting#requirement-детализация-строки-задача-и-ссылка-на-неё
     //
-    // label — config.taskTitleTemplate (единственный локально известный
-    // заголовок; сама первая задача создана с произвольным заголовком до
-    // появления правила, см. WHY у TaskCompletionShopSalaryConfig — этот же
-    // компромисс принят design.md решением 4 для авто-пересоздания).
+    // label — config.taskTitleTemplate, ТОЛЬКО у регулярного правила (единственный локально
+    // известный заголовок — шаблон авто-пересоздания). У разового правила config не хранит
+    // буквальный заголовок задачи вовсе (split-task-completion-rule-form — одноразовый вход, см.
+    // WHY у TaskCompletionShopSalaryConfig), поэтому label отсутствует — человекочитаемое название
+    // такой строки источника читается через саму задачу (link ниже), не через правило.
     // link — внутренняя страница задачи iReports (модуль tasks), не Bitrix24
     // (интеграция удалена целиком, design.md решение 1).
     private buildSources(taskId: string) {
@@ -237,7 +236,9 @@ export class TaskCompletionShop
             {
                 type: 'taskCompletion',
                 id: taskId,
-                label: this.props.config.taskTitleTemplate,
+                ...(this.props.config.isRecurring
+                    ? { label: this.props.config.taskTitleTemplate }
+                    : {}),
                 link: `/tasks/${taskId}`,
             },
         ];
@@ -252,6 +253,11 @@ export class TaskCompletionShop
     // (FloatPercentSchedule.create()) — невалидное значение в БД не должно
     // молча уходить в расчёт дедлайна.
     validate(): void {
-        DeadlinePeriodOffset.create(this.props.config.deadlinePeriodOffset);
+        // split-task-completion-rule-form — deadlinePeriodOffset существует только у регулярного
+        // правила (TaskCompletionShopSalaryConfig, discriminatedUnion по isRecurring); у разового
+        // проверять нечего, тот же narrowing, что и в buildSources() выше.
+        if (this.props.config.isRecurring) {
+            DeadlinePeriodOffset.create(this.props.config.deadlinePeriodOffset);
+        }
     }
 }

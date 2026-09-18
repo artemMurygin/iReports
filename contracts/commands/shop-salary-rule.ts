@@ -144,13 +144,14 @@ const usedProductSoldSalaryRuleSchema = z.object({
 // Независимая копия сервисной пары taskCompletionSalaryConfigRequestSchema/
 // ...ResponseSchema (contracts/commands/salary-rule.ts) — issue #57, тот же приём, что и у
 // остальных типов правил этого файла ("не смешивай контракты" направлений через общий
-// discriminatedUnion). Семантика полей идентична (replace-bitrix-task-integration, design.md
-// решение 2/4): taskId (только запрос) — id уже созданной отдельным запросом `POST /v1/tasks`
-// задачи, сохраняется как config.taskIdByPeriod[текущийПериод]; taskTitleTemplate/
-// taskDescriptionTemplate/deadlineTemplate — шаблон ТОЛЬКО для авто-пересоздания задачи регулярного
-// правила на новый период, не для самой первой задачи; isRecurring — разовая vs пересоздаваемая на
-// каждый период задача; taskIdByPeriod (только ответ) — карта "период → задача", читается, но не
-// редактируется формой.
+// discriminatedUnion).
+//
+// split-task-completion-rule-form — зеркало разделения сервисного контракта на два раздельных
+// сценария (design.md, решение 1), discriminatedUnion по `isRecurring`, а не общий плоский объект с
+// одним `taskId`: разовая задача теперь создаётся тем же запросом, что и правило (буквальные
+// title/deadline/description/links здесь же), регулярная — как раньше, шаблон для
+// авто-пересоздания, плюс новое поле createTaskForCurrentPeriod (галочка «Создать задачу в текущем
+// периоде»). См. WHY в salary-rule.ts — зеркало дословно, независимая копия (issue #57).
 // add-task-rule-task-lifecycle — зеркало taskLinkTemplateSchema в salary-rule.ts (независимая
 // копия, issue #57).
 const shopTaskLinkTemplateSchema = z.object({
@@ -160,42 +161,75 @@ const shopTaskLinkTemplateSchema = z.object({
 
 export type ShopTaskLinkTemplate = z.infer<typeof shopTaskLinkTemplateSchema>;
 
-const taskCompletionShopSalaryConfigRequestSchema = z.object({
-    taskId: z.string(),
+const shopAccountingPeriodFieldSchema = z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM');
+
+const shopDeadlinePeriodOffsetSchema = z.number().int().min(0).max(3).default(0);
+
+const shopDefaultAmountFieldSchema = z.number().int().nonnegative();
+
+// Зеркало taskCompletionOneOffConfigRequestSchema (salary-rule.ts) — `.optional()` по той же
+// причине: этот же контракт обслуживает и PATCH существующего разового правила, где задача уже
+// создана и её содержимое этой формой больше не трогается.
+const taskCompletionShopOneOffConfigRequestSchema = z.object({
+    isRecurring: z.literal(false),
+    taskTitle: z.string().min(1).optional(),
+    taskDescription: z.string().optional(),
+    taskDeadline: z.string().optional(),
+    taskLinks: z.array(shopTaskLinkTemplateSchema).optional(),
+    defaultAmount: shopDefaultAmountFieldSchema,
+    accountingPeriod: shopAccountingPeriodFieldSchema,
+});
+
+const taskCompletionShopRecurringConfigRequestSchema = z.object({
+    isRecurring: z.literal(true),
     taskTitleTemplate: z.string(),
     taskDescriptionTemplate: z.string().optional(),
-    isRecurring: z.boolean(),
     deadlineTemplate: z.string(),
-    // Смещение периода дедлайна регулярной задачи относительно расчётного периода — зеркало
-    // service (recurring-task-deadline-offset, независимая копия, issue #57).
-    deadlinePeriodOffset: z.number().int().min(0).max(3).default(0),
-    // Сумма начисления по умолчанию — зеркало service (см.
-    // taskCompletionSalaryConfigRequestSchema в salary-rule.ts), независимая копия (issue #57).
-    defaultAmount: z.number().int().nonnegative(),
+    deadlinePeriodOffset: shopDeadlinePeriodOffsetSchema,
     taskLinkTemplates: z.array(shopTaskLinkTemplateSchema).optional(),
-    // Расчётный период первой задачи правила, формат 'YYYY-MM' — зеркало service (см.
-    // taskCompletionSalaryConfigRequestSchema в salary-rule.ts), независимая копия (issue #57).
-    // Обязательное поле запроса (add-task-salary-rule-accounting-period, design.md Decision 1).
-    accountingPeriod: z
-        .string()
-        .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM'),
+    // Чекбокс «Создать задачу в текущем периоде» — зеркало salary-rule.ts, независимая копия.
+    createTaskForCurrentPeriod: z.boolean().default(true),
+    defaultAmount: shopDefaultAmountFieldSchema,
+    accountingPeriod: shopAccountingPeriodFieldSchema,
 });
+
+const taskCompletionShopSalaryConfigRequestSchema = z.discriminatedUnion('isRecurring', [
+    taskCompletionShopOneOffConfigRequestSchema,
+    taskCompletionShopRecurringConfigRequestSchema,
+]);
 
 export type TaskCompletionShopSalaryConfigRequest = z.infer<
     typeof taskCompletionShopSalaryConfigRequestSchema
 >;
 
-const taskCompletionShopSalaryConfigResponseSchema = taskCompletionShopSalaryConfigRequestSchema
-    .omit({ taskId: true, accountingPeriod: true })
-    .extend({
-        taskIdByPeriod: z.record(z.string(), z.string()),
-        // Опционально (в отличие от запроса) — зеркало service, обратная совместимость со старыми
-        // персистированными правилами без этого поля в props (design.md Decision 1).
-        accountingPeriod: z
-            .string()
-            .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Период должен быть в формате YYYY-MM')
-            .optional(),
-    });
+// Зеркало taskCompletion*ConfigResponseSchema (salary-rule.ts) — не эхом отдаёт буквальные поля
+// разовой задачи (одноразовый вход, как раньше был taskId); регулярный сценарий по-прежнему
+// возвращает шаблон целиком для предзаполнения формы редактирования (draftFromShopRule).
+const taskCompletionShopOneOffConfigResponseSchema = z.object({
+    isRecurring: z.literal(false),
+    defaultAmount: shopDefaultAmountFieldSchema,
+    taskIdByPeriod: z.record(z.string(), z.string()),
+    accountingPeriod: shopAccountingPeriodFieldSchema.optional(),
+});
+
+const taskCompletionShopRecurringConfigResponseSchema = z.object({
+    isRecurring: z.literal(true),
+    taskTitleTemplate: z.string(),
+    taskDescriptionTemplate: z.string().optional(),
+    deadlineTemplate: z.string(),
+    deadlinePeriodOffset: shopDeadlinePeriodOffsetSchema,
+    taskLinkTemplates: z.array(shopTaskLinkTemplateSchema).optional(),
+    defaultAmount: shopDefaultAmountFieldSchema,
+    taskIdByPeriod: z.record(z.string(), z.string()),
+    accountingPeriod: shopAccountingPeriodFieldSchema.optional(),
+});
+
+const taskCompletionShopSalaryConfigResponseSchema = z.discriminatedUnion('isRecurring', [
+    taskCompletionShopOneOffConfigResponseSchema,
+    taskCompletionShopRecurringConfigResponseSchema,
+]);
 
 export type TaskCompletionShopSalaryConfigResponse = z.infer<
     typeof taskCompletionShopSalaryConfigResponseSchema

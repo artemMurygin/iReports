@@ -40,12 +40,15 @@ export type RuleFieldErrors = Partial<
         | 'marginThreshold'
         | 'floorAmount'
         | 'lowMarginPercent'
-        // replace-bitrix-task-integration, раздел 14 tasks.md — `taskId` приходит от мастера
-        // (Шаг 1) и в норме уже заполнен к моменту, когда форма правила вообще видна; ошибка тут
-        // — защита от регрессии (см. `resolveRuleDraft`'s `case 'TaskCompletion'`), не то, что
-        // пользователь может исправить прямо в этом поле (оно readonly). `taskTitleTemplate` —
-        // обязателен только когда `isRecurring === true` (см. `TaskCompletionRuleFields.tsx`).
+        // split-task-completion-rule-form — `taskId` теперь readonly только когда задача УЖЕ
+        // существует (правило уже персистировано); ошибка тут — защита от регрессии, не то, что
+        // пользователь может исправить прямо в этом поле. `taskTitle`/`taskDeadline` — буквальные
+        // поля единственной задачи НОВОГО разового правила (`taskId === ''`), обязательны в этом
+        // состоянии. `taskTitleTemplate` — обязателен только когда `isRecurring === true` (см.
+        // `TaskCompletionRuleFields.tsx`).
         | 'taskId'
+        | 'taskTitle'
+        | 'taskDeadline'
         | 'taskTitleTemplate'
         // add-task-salary-rule-accounting-period — расчётный период первой/текущей задачи
         // правила, выбирается руководителем в `PeriodPicker` (`TaskCompletionRuleFields.tsx`).

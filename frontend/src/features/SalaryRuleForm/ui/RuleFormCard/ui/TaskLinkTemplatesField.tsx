@@ -11,6 +11,11 @@ export type TaskLinkTemplatesFieldProps = {
     links: LinkTemplate[]
     onAddLink: (url: string, label?: string) => void
     onRemoveLink: (index: number) => void
+    /** split-task-completion-rule-form — переопределяемый заголовок: разовое правило
+     * (`TaskCompletionRuleFields.tsx`) переиспользует этот же компонент над `draft.taskLinks`
+     * (ссылки конкретной, единственной задачи), а не над `draft.taskLinkTemplates` (шаблон на
+     * каждый период), поэтому подпись по умолчанию там не подходит. */
+    label?: string
 }
 
 /**
@@ -21,7 +26,12 @@ export type TaskLinkTemplatesFieldProps = {
  * импорт запрещён (frontend/CLAUDE.md), а сам компонент здесь работает над `draft.taskLinkTemplates`
  * через `onChange`, а не над отдельным `useState`-черновиком до создания задачи, как у `CreateTask`.
  */
-export function TaskLinkTemplatesField({ links, onAddLink, onRemoveLink }: TaskLinkTemplatesFieldProps) {
+export function TaskLinkTemplatesField({
+    links,
+    onAddLink,
+    onRemoveLink,
+    label: sectionLabel = 'Ссылки для новой задачи периода',
+}: TaskLinkTemplatesFieldProps) {
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [url, setUrl] = useState('')
     const [label, setLabel] = useState('')
@@ -48,7 +58,7 @@ export function TaskLinkTemplatesField({ links, onAddLink, onRemoveLink }: TaskL
     return (
         <div data-slot="task-link-templates-field" className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2.5">
-                <p className="font-ui text-xs font-medium text-ink-muted">Ссылки для новой задачи периода</p>
+                <p className="font-ui text-xs font-medium text-ink-muted">{sectionLabel}</p>
                 {!isFormOpen && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setIsFormOpen(true)}>
                         <Plus className="size-[13px]" />

@@ -11,9 +11,16 @@
   `accountingPeriod` всегда, независимо от `isRecurring`; поля шаблона — только при `isRecurring`.
 - Контракт `taskCompletionSalaryConfigRequestSchema` (`contracts/commands/salary-rule.ts`) объявляет
   `taskId` безусловно обязательным полем.
-- `EnsureRuleTaskForPeriodService` (service-домен) и его shop-аналог уже умеют идемпотентно создавать
-  задачу нового периода из шаблона регулярного правила — этот механизм сейчас запускается только при
-  наступлении нового расчётного периода, не при создании правила.
+- `EnsureRuleTaskForPeriodService.ensure(rule, period, assigneeEmployeeId)` (service-домен, возвращает
+  `Promise<string | null>`) и его shop-аналог `EnsureShopSalaryTaskForPeriodService.ensure(salaryRuleId, period, assigneeEmployeeId)`
+  уже умеют идемпотентно создавать задачу нового периода из шаблона регулярного правила (диспатчат
+  `CreateTaskCommand` в модуль `tasks`) — но сегодня этот механизм вызывается только лениво, из
+  `GetEmployeeSalaryReportService`/`GetDepartmentSalaryReportService` при формировании зарплатного
+  отчёта за период, а не при создании правила и не по расписанию.
+- `CreateSalaryRuleHandler` (`.../application/command/motivation-schema/create-salary-rule.handler.ts`,
+  и shop-аналог `CreateShopSalaryRuleHandler`) сейчас просто собирает entity через `SalaryRuleFactory.create()`
+  из уже готового payload (включая присланный `taskId`) и сохраняет её через `SalaryRuleRepositoryPort.insert()`
+  — никакой сервис создания задачи не вызывает.
 - `TaskCompletion.create()` — доменная фабрика, которая просто кладёт уже присланный `taskId` в
   `config.taskIdByPeriod[accountingPeriod]`; сама задачу не создаёт.
 
@@ -66,13 +73,15 @@
 union даёт то же дерево типов, что и разделение UI/domain-слоя.
 
 **4. Бэкенд: первая задача регулярного правила создаётся через тот же сервис, что и задачи новых периодов.**
-Command handler создания `TaskCompletion`-правила (service и shop домены) для `isRecurring: true`
-после сохранения конфигурации правила (без `taskId` на `accountingPeriod`) синхронно вызывает
-`EnsureRuleTaskForPeriodService.execute(rule, accountingPeriod)` (и shop-аналог) — тот же идемпотентный
-путь, которым сегодня пользуется переход периода. Для `isRecurring: false` этот вызов не выполняется —
-`taskId` уже пришёл из payload и кладётся в `taskIdByPeriod`, как сегодня. Alternative (отклонено):
-дублировать логику генерации первой задачи из шаблона прямо в `TaskCompletion.create()` — отклонено,
-чтобы не разводить два места, вычисляющие дедлайн/название из шаблона.
+`CreateSalaryRuleHandler` (service и shop домены) для `isRecurring: true` после сохранения правила
+через `SalaryRuleRepositoryPort.insert()` синхронно вызывает `EnsureRuleTaskForPeriodService.ensure(rule, accountingPeriod, assigneeEmployeeId)`
+(и `EnsureShopSalaryTaskForPeriodService.ensure(...)` в shop-домене) — тот же идемпотентный путь,
+которым сегодня лениво пользуется формирование зарплатного отчёта; разница только в моменте первого
+вызова (сразу при создании правила, а не при первом просмотре отчёта за период). Для `isRecurring: false`
+этот вызов не выполняется — `taskId` уже пришёл из payload и кладётся в `taskIdByPeriod`, как сегодня.
+Alternative (отклонено): дублировать логику генерации первой задачи из шаблона прямо в
+`TaskCompletion.create()` — отклонено, чтобы не разводить два места, вычисляющие дедлайн/название из
+шаблона.
 
 **5. Поле суммы начисления (`defaultAmount`) визуально привязывается к шагу «задача» только для разового правила.**
 Для регулярного правила сумма относится к правилу в целом (одинакова для всех будущих периодов) и
@@ -87,11 +96,11 @@ Command handler создания `TaskCompletion`-правила (service и sho
   что затронет весь код, деструктурирующий это поле без сужения по `isRecurring`] → найти все места
   через `tsc`/поиск использований на этапе tasks.md, обновить деструктуризацию до сужения по
   дискриминатору.
-- [Синхронный вызов `EnsureRuleTaskForPeriodService` внутри команды создания правила увеличивает
-  время ответа и связывает транзакцию создания правила с созданием задачи] → создание задачи уже
-  идемпотентно и дешёво (используется на каждый переход периода); если создание задачи упадёт,
-  откатывать создание самого правила в той же транзакции, чтобы не оставлять регулярное правило без
-  задачи первого периода.
+- [Синхронный вызов `EnsureRuleTaskForPeriodService`/`EnsureShopSalaryTaskForPeriodService` внутри
+  `CreateSalaryRuleHandler` увеличивает время ответа и связывает транзакцию создания правила с
+  созданием задачи] → сервис уже идемпотентен и сегодня используется в горячем пути формирования
+  отчёта; если создание задачи упадёт, откатывать создание самого правила в той же транзакции, чтобы
+  не оставлять регулярное правило без задачи первого периода.
 - [Старые клиенты, всё ещё присылающие `taskId` при `isRecurring: true`] → discriminated union по
   умолчанию отбрасывает лишние поля (zod strip), так что лишний `taskId` в payload регулярного правила
   просто игнорируется, а не падает с ошибкой валидации.

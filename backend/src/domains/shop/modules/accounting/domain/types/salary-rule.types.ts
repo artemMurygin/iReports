@@ -131,19 +131,17 @@ export type UsedProductSoldSalaryRule = {
 // описанием до появления правила, расхождение с шаблоном — осознанный
 // компромисс). deadlineTemplate — ISO-дата, для разового правила берётся
 // буквально, для регулярного используется только число месяца.
+// split-task-completion-rule-form — зеркало domain/types/salary-rule.types.ts направления service:
+// дискриминированный по isRecurring тип, а не плоский объект. Шаблонные поля
+// (taskTitleTemplate/taskDescriptionTemplate/deadlineTemplate/deadlinePeriodOffset/
+// taskLinkTemplates) существуют только у регулярного правила; у разового задача создаётся один раз
+// из буквальных полей запроса (TaskCompletionShopSalaryConfigRequest), которые в домене не
+// персистируются.
 export type TaskCompletionShopSalaryConfig = {
     taskIdByPeriod: Record<string, string>;
-    taskTitleTemplate: string;
-    taskDescriptionTemplate?: string;
-    isRecurring: boolean;
-    deadlineTemplate: string;
     // Сумма начисления по умолчанию — зеркало
-    // domain/types/salary-rule.types.ts направления service.
+    // domain/types/salary-rule.types.ts направления service. Общее поле для обоих сценариев.
     defaultAmount: number;
-    // Ссылки, прикрепляемые EnsureShopSalaryTaskForPeriodService к каждой
-    // АВТОСОЗДАННОЙ задаче регулярного правила. add-task-rule-task-lifecycle,
-    // зеркало service.
-    taskLinkTemplates: { url: string; label?: string }[];
     // Период (формат YYYY-MM), к которому относится последняя/текущая
     // задача правила — зеркало domain/types/salary-rule.types.ts направления
     // service (add-task-salary-rule-accounting-period, design.md решение 1).
@@ -152,18 +150,28 @@ export type TaskCompletionShopSalaryConfig = {
     // ShopSalaryRuleMapper.toDomain (design.md решение 1), дальше в домене и
     // в API-ответе поле всегда присутствует.
     accountingPeriod: string;
-    // recurring-task-deadline-offset, design.md решение 1/3 — смещение (в
-    // расчётных периодах, 0..3) месяца дедлайна регулярной задачи
-    // относительно месяца периода задачи. Хранится как обычное число (не
-    // как объект DeadlinePeriodOffset VO) — тот же паттерн, что и у
-    // ProductSoldSalaryConfig.award.percentBorders: конфиг остаётся plain
-    // data, а DeadlinePeriodOffset.create() используется ТРАНЗИТНО только
-    // для валидации инварианта диапазона (см. TaskCompletionShop.buildConfig()/
-    // validate()). Не опционально здесь по той же причине, что и
-    // accountingPeriod — деривация дефолта 0 для легаси-строк происходит
-    // один раз на границе ShopSalaryRuleMapper.toDomain.
-    deadlinePeriodOffset: number;
-};
+} & (
+    | { isRecurring: false }
+    | {
+          isRecurring: true;
+          taskTitleTemplate: string;
+          taskDescriptionTemplate?: string;
+          deadlineTemplate: string;
+          // recurring-task-deadline-offset, design.md решение 1/3 — смещение (в
+          // расчётных периодах, 0..3) месяца дедлайна регулярной задачи
+          // относительно месяца периода задачи. Хранится как обычное число (не
+          // как объект DeadlinePeriodOffset VO) — тот же паттерн, что и у
+          // ProductSoldSalaryConfig.award.percentBorders: конфиг остаётся plain
+          // data, а DeadlinePeriodOffset.create() используется ТРАНЗИТНО только
+          // для валидации инварианта диапазона (см. TaskCompletionShop.buildConfig()/
+          // validate()).
+          deadlinePeriodOffset: number;
+          // Ссылки, прикрепляемые EnsureShopSalaryTaskForPeriodService к каждой
+          // АВТОСОЗДАННОЙ задаче регулярного правила. add-task-rule-task-lifecycle,
+          // зеркало service.
+          taskLinkTemplates: { url: string; label?: string }[];
+      }
+);
 
 export type TaskCompletionShopSalaryRule = {
     type: 'TaskCompletion';

@@ -128,38 +128,58 @@ export function resolveShopRuleDraft(draft: RuleDraft): ResolveShopRuleDraftResu
         // контракт-форма (`taskCompletionShopSalaryConfigSchema`, issue #57 — независимая копия, не
         // общий объект с сервисной веткой).
         case 'TaskCompletion': {
-            // Зеркало сервисной ветки (`service/model/ruleFormSchema.ts`'s `case 'TaskCompletion'`)
-            // — `taskId` приходит от мастера (Шаг 1), `taskTitleTemplate`/`deadlineTemplate`
-            // required только при `isRecurring === true` (авто-пересоздание на новый период).
-            if (draft.taskId.trim() === '') errors.taskId = 'Задача ещё не создана — пройдите Шаг 1 мастера'
-            // Зеркало сервисной ветки (`service/model/ruleFormSchema.ts`) —
-            // add-task-salary-rule-accounting-period, та же обязательность, что и у `taskId` выше.
+            // Зеркало сервисной ветки (`service/model/ruleFormSchema.ts`'s `case 'TaskCompletion'`),
+            // split-task-completion-rule-form — та же обязательность.
             if (!isValidPeriod(draft.accountingPeriod)) errors.accountingPeriod = 'Выберите расчётный период'
             const defaultAmount = parseNumber(draft.price)
             if (defaultAmount === undefined) errors.price = 'Укажите сумму начисления по умолчанию'
+
             if (draft.isRecurring) {
                 if (draft.taskTitleTemplate.trim() === '') {
                     errors.taskTitleTemplate = 'Укажите шаблон заголовка для новой задачи периода'
                 }
                 if (draft.deadlineTemplate.trim() === '') errors.dueDate = 'Укажите шаблон дедлайна'
-            }
-            // Зеркало сервисной ветки (`service/model/ruleFormSchema.ts`) — recurring-task-deadline-offset, FR1.
-            if (!Number.isInteger(draft.deadlinePeriodOffset) || draft.deadlinePeriodOffset < 0 || draft.deadlinePeriodOffset > 3) {
-                errors.deadlinePeriodOffset = 'Смещение периода дедлайна должно быть от 0 до 3'
-            }
-            const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
-            config = {
-                taskId: draft.taskId.trim(),
-                accountingPeriod: draft.accountingPeriod,
-                taskTitleTemplate: draft.taskTitleTemplate.trim(),
-                ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
-                isRecurring: draft.isRecurring,
-                deadlineTemplate: draft.isRecurring
-                    ? normalizeDeadlineDayTemplate(draft.deadlineTemplate)
-                    : draft.deadlineTemplate,
-                deadlinePeriodOffset: draft.deadlinePeriodOffset,
-                defaultAmount: defaultAmount ?? Number.NaN,
-                taskLinkTemplates: draft.taskLinkTemplates,
+                if (
+                    !Number.isInteger(draft.deadlinePeriodOffset) ||
+                    draft.deadlinePeriodOffset < 0 ||
+                    draft.deadlinePeriodOffset > 3
+                ) {
+                    errors.deadlinePeriodOffset = 'Смещение периода дедлайна должно быть от 0 до 3'
+                }
+                const taskDescriptionTemplate = draft.taskDescriptionTemplate.trim()
+                config = {
+                    isRecurring: true,
+                    accountingPeriod: draft.accountingPeriod,
+                    taskTitleTemplate: draft.taskTitleTemplate.trim(),
+                    ...(taskDescriptionTemplate !== '' ? { taskDescriptionTemplate } : {}),
+                    deadlineTemplate: normalizeDeadlineDayTemplate(draft.deadlineTemplate),
+                    deadlinePeriodOffset: draft.deadlinePeriodOffset,
+                    taskLinkTemplates: draft.taskLinkTemplates,
+                    createTaskForCurrentPeriod: draft.createTaskForCurrentPeriod,
+                    defaultAmount: defaultAmount ?? Number.NaN,
+                }
+            } else {
+                // Зеркало сервисной ветки — буквальные поля задачи обязательны только пока задача
+                // ещё не создана (`draft.taskId === ''`).
+                const isNewTask = draft.taskId.trim() === ''
+                if (isNewTask) {
+                    if (draft.taskTitle.trim() === '') errors.taskTitle = 'Укажите название задачи'
+                    if (draft.taskDeadline.trim() === '') errors.taskDeadline = 'Укажите дедлайн задачи'
+                }
+                const taskDescription = draft.taskDescription.trim()
+                config = {
+                    isRecurring: false,
+                    accountingPeriod: draft.accountingPeriod,
+                    defaultAmount: defaultAmount ?? Number.NaN,
+                    ...(isNewTask
+                        ? {
+                              taskTitle: draft.taskTitle.trim(),
+                              ...(taskDescription !== '' ? { taskDescription } : {}),
+                              taskDeadline: draft.taskDeadline,
+                              taskLinks: draft.taskLinks,
+                          }
+                        : {}),
+                }
             }
             break
         }
@@ -253,6 +273,10 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         // `TaskCompletion`-поля (раздел 21) — дефолты, перезаписываются ниже веткой `case
         // 'TaskCompletion'` при редактировании существующего правила этого типа.
         taskId: '',
+        taskTitle: '',
+        taskDescription: '',
+        taskDeadline: '',
+        taskLinks: [],
         accountingPeriod: '',
         taskTitleTemplate: '',
         taskDescriptionTemplate: '',
@@ -260,6 +284,7 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
         deadlineTemplate: '',
         deadlinePeriodOffset: 0,
         taskLinkTemplates: [],
+        createTaskForCurrentPeriod: true,
         warehouseId: '',
         planTurnoverRatio: '',
         marginThreshold: '',
@@ -316,17 +341,24 @@ export function draftFromShopRule(rule: ShopSalaryRuleResponse): RuleDraft {
             return {
                 ...base,
                 price: String(rule.config.defaultAmount),
+                // Зеркало сервисной ветки — ответ API отдаёт только `taskIdByPeriod`, не буквальные
+                // поля задачи (одноразовый вход, split-task-completion-rule-form).
                 taskId: latestTaskId(rule.config.taskIdByPeriod),
                 // Зеркало сервисной ветки — add-task-salary-rule-accounting-period, design.md
                 // Decision 4, берётся из ответа API как есть, не пересчитывается на клиенте.
                 accountingPeriod: rule.config.accountingPeriod ?? '',
-                taskTitleTemplate: rule.config.taskTitleTemplate,
-                taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
                 isRecurring: rule.config.isRecurring,
-                deadlineTemplate: rule.config.deadlineTemplate,
-                // Зеркало сервисной ветки — recurring-task-deadline-offset, обратная совместимость.
-                deadlinePeriodOffset: rule.config.deadlinePeriodOffset ?? 0,
-                taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
+                // Шаблонные поля существуют только в ответе регулярного варианта — см. WHY в
+                // сервисной ветке.
+                ...(rule.config.isRecurring
+                    ? {
+                          taskTitleTemplate: rule.config.taskTitleTemplate,
+                          taskDescriptionTemplate: rule.config.taskDescriptionTemplate ?? '',
+                          deadlineTemplate: rule.config.deadlineTemplate,
+                          deadlinePeriodOffset: rule.config.deadlinePeriodOffset ?? 0,
+                          taskLinkTemplates: rule.config.taskLinkTemplates ?? [],
+                      }
+                    : {}),
             }
 
         // add-department-head-salary-rules, FR2-FR4 — зеркало `service/model/ruleFormSchema.ts`'s

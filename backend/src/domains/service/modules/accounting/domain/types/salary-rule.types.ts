@@ -84,25 +84,23 @@ export type OrderPayedSalaryRule = {
     isActive: boolean;
 };
 
-// За выполнение задачи модуля src/modules/tasks (replace-bitrix-task-integration,
-// design.md решение 2/4). taskIdByPeriod — карта «расчётный период → id уже
-// существующей задачи», единственное место, где хранится связь «правило ↔
-// задача» (tasks о правилах не знает вообще); заполняется точечно —
-// CreateSalaryRuleHandler сохраняет туда taskId текущего периода из тела
-// запроса (config.taskId, только вход, не персистируется как отдельное
-// поле), EnsureRuleTaskForPeriodService дописывает туда новые периоды при
-// авто-пересоздании регулярного правила. Правило без записи за период —
-// эквивалент прежнего «задача не заведена». taskTitleTemplate/
-// taskDescriptionTemplate/deadlineTemplate используются ТОЛЬКО для
-// авто-пересоздания задачи регулярного правила на новый период — не для
-// самой первой задачи (та создаётся вручную на шаге 1 мастера с
-// произвольными заголовком/описанием, см. design.md решение 4).
+// За выполнение задачи модуля src/modules/tasks. taskIdByPeriod — карта «расчётный период → id
+// задачи», единственное место, где хранится связь «правило ↔ задача» (tasks о правилах не знает
+// вообще); заполняется точечно — CreateSalaryRuleHandler дописывает туда taskId ТЕКУЩЕГО периода
+// сразу после того, как сама создаст задачу через CommandBus (см. WHY у этого хендлера),
+// EnsureRuleTaskForPeriodService — новые периоды при авто-пересоздании регулярного правила.
+// Правило без записи за период — эквивалент «задача не заведена».
+//
+// split-task-completion-rule-form — дискриминированный по isRecurring тип, а не плоский объект:
+// шаблонные поля (taskTitleTemplate/taskDescriptionTemplate/deadlineTemplate/deadlinePeriodOffset/
+// taskLinkTemplates) существуют ТОЛЬКО у регулярного правила (используются
+// EnsureRuleTaskForPeriodService для авто-пересоздания задачи на новый период) — у разового их
+// содержательно нет вовсе: единственная задача правила создаётся один раз, из буквальных полей
+// запроса (TaskCompletionSalaryConfigRequest — title/description/deadline/links), которые в домене
+// не персистируются (тот же принцип, что раньше был у taskId — одноразовый вход, не
+// самостоятельное персистентное поле).
 export type TaskCompletionSalaryConfig = {
     taskIdByPeriod: Record<string, string>;
-    taskTitleTemplate: string;
-    taskDescriptionTemplate?: string;
-    isRecurring: boolean;
-    deadlineTemplate: string;
     // Период (`YYYY-MM`), к которому относится последняя/текущая задача
     // правила — руководитель выбирает его явно в форме при создании, а не
     // сервер неявно как Period.current() (add-task-salary-rule-accounting-
@@ -114,26 +112,31 @@ export type TaskCompletionSalaryConfig = {
     // taskIdByPeriod, иначе Period.current()) — здесь, на границе домена,
     // поле уже всегда присутствует.
     accountingPeriod: string;
-    // Смещение (в расчётных периодах, 0..3) месяца дедлайна регулярной задачи относительно
-    // самого периода (recurring-task-deadline-offset, design.md решение 1/2): 0 — дедлайн внутри
-    // месяца периода (прежнее поведение), 1..3 — на 1..3 месяца вперёд. Для разового правила не
-    // используется (deadlineTemplate трактуется буквально как дата, задача не пересоздаётся).
-    // Обычное число, а не DeadlinePeriodOffset VO — тот же паттерн, что и percentBorders у
-    // ProductSoldEntity (shop, FloatPercentSchedule): VO валидирует значение транзитно в
-    // buildTaskCompletionConfig(), в config персистируется уже проверенный примитив.
-    deadlinePeriodOffset: number;
     // Сумма начисления по умолчанию — TaskCompletion.calculate() подставляет
     // её в CalculationLine.amount, когда задача переходит в «Закрыта
     // успешно»; руководитель может изменить сумму при проведении начисления
     // (см. SetTaskCompletionLineRewardHandler), но comment остаётся
-    // обязательным.
+    // обязательным. Общее поле для обоих сценариев.
     defaultAmount: number;
-    // Ссылки, прикрепляемые EnsureRuleTaskForPeriodService к каждой
-    // АВТОСОЗДАННОЙ задаче регулярного правила (не к самой первой — та
-    // заводится вручную, со своими произвольными ссылками, через POST
-    // /v1/tasks/:id/links). add-task-rule-task-lifecycle.
-    taskLinkTemplates: { url: string; label?: string }[];
-};
+} & (
+    | { isRecurring: false }
+    | {
+          isRecurring: true;
+          taskTitleTemplate: string;
+          taskDescriptionTemplate?: string;
+          deadlineTemplate: string;
+          // Смещение (в расчётных периодах, 0..3) месяца дедлайна регулярной задачи относительно
+          // самого периода (recurring-task-deadline-offset, design.md решение 1/2): 0 — дедлайн
+          // внутри месяца периода (прежнее поведение), 1..3 — на 1..3 месяца вперёд. Обычное
+          // число, а не DeadlinePeriodOffset VO — тот же паттерн, что и percentBorders у
+          // ProductSoldEntity (shop, FloatPercentSchedule): VO валидирует значение транзитно в
+          // buildTaskCompletionConfig(), в config персистируется уже проверенный примитив.
+          deadlinePeriodOffset: number;
+          // Ссылки, прикрепляемые EnsureRuleTaskForPeriodService к каждой
+          // АВТОСОЗДАННОЙ задаче регулярного правила. add-task-rule-task-lifecycle.
+          taskLinkTemplates: { url: string; label?: string }[];
+      }
+);
 
 export type TaskCompletionSalaryRule = {
     type: 'TaskCompletion';
