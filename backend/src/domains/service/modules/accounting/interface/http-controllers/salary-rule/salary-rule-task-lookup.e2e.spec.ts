@@ -9,6 +9,9 @@ import type {
     SalaryRuleSummary,
 } from 'ireports-contracts';
 import { DomainExceptionFilter } from '@/shared/exceptions';
+import { SessionModule } from '@/modules/session/session.module';
+import { SessionService } from '@/modules/session/infrastructure/session.service';
+import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
 import { GetSalaryRuleHttpController } from './get-salary-rule.http.controller';
 import { GetSalaryRuleByTaskHttpController } from './get-salary-rule-by-task.http.controller';
 import { GetSalaryAccrualLineByTaskHttpController } from '@/domains/service/modules/accounting/interface/http-controllers/salary-accrual/get-salary-accrual-line-by-task.http.controller';
@@ -76,8 +79,28 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
         execute: executeFindSalaryAccrualForTask,
     } as unknown as FindSalaryAccrualForTaskService;
 
+    // Контроллеры несут @UseGuards(SessionAuthGuard, CsrfGuard,
+    // PermissionsGuard) (service-accounting:view/view_accrual) — SessionModule
+    // импортирован ради этих guard'ов, SessionService подменена фейком, тем
+    // же приёмом, что и соседние *.e2e.spec.ts в этом модуле.
+    const validateSessionAndTouch = jest.fn().mockResolvedValue({
+        bitrixEmployeeId: 42,
+        permissions: [
+            'service-accounting:view',
+            'service-accounting:view_accrual',
+        ],
+    });
+    const fakeSessionService: Partial<SessionService> = {
+        validateSessionAndTouch,
+    };
+    const fakeApiKeyRepository: Partial<ApiKeyRepository> = {
+        findActiveEmployeeByApiKeyHash: jest.fn(),
+    };
+    const AUTH_HEADER = ['Authorization', 'Bearer test-session'] as const;
+
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({
+            imports: [SessionModule],
             controllers: [
                 GetSalaryRuleHttpController,
                 GetSalaryRuleByTaskHttpController,
@@ -94,7 +117,12 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
                     useValue: fakeFindSalaryAccrualForTask,
                 },
             ],
-        }).compile();
+        })
+            .overrideProvider(SessionService)
+            .useValue(fakeSessionService)
+            .overrideProvider(ApiKeyRepository)
+            .useValue(fakeApiKeyRepository)
+            .compile();
 
         app = moduleRef.createNestApplication();
         app.use((req: unknown, res: unknown, next: () => void) =>
@@ -111,6 +139,7 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
     it('GET /v1/service/accounting/salary-rules/:ruleId — 200 с SalaryRuleDetail для существующего правила', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary-rules/rule-1')
+            .set(...AUTH_HEADER)
             .expect(200);
         expect(response.body).toEqual(ruleDetail);
         expect(executeGetSalaryRule).toHaveBeenCalledWith('rule-1');
@@ -119,12 +148,14 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
     it('GET /v1/service/accounting/salary-rules/:ruleId — 404 для несуществующего правила', async () => {
         await request(app.getHttpServer())
             .get('/v1/service/accounting/salary-rules/missing')
+            .set(...AUTH_HEADER)
             .expect(404);
     });
 
     it('GET /v1/service/accounting/salary-rules/by-task/:taskId — 200 с SalaryRuleSummary, когда правило ссылается на задачу', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary-rules/by-task/task-1')
+            .set(...AUTH_HEADER)
             .expect(200);
         expect(response.body).toEqual(ruleSummary);
         expect(executeFindSalaryRuleForTask).toHaveBeenCalledWith('task-1');
@@ -135,6 +166,7 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
             .get(
                 '/v1/service/accounting/salary-rules/by-task/task-without-rule',
             )
+            .set(...AUTH_HEADER)
             .expect(200);
         expect(response.body).toBeNull();
     });
@@ -142,6 +174,7 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
     it('GET /v1/service/accounting/salary-accrual-lines/by-task/:taskId — 200 с SalaryAccrualLineSummary, когда строка отображается', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary-accrual-lines/by-task/task-1')
+            .set(...AUTH_HEADER)
             .expect(200);
         expect(response.body).toEqual(accrualLineSummary);
         expect(executeFindSalaryAccrualForTask).toHaveBeenCalledWith('task-1');
@@ -152,6 +185,7 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
             .get(
                 '/v1/service/accounting/salary-accrual-lines/by-task/task-without-line',
             )
+            .set(...AUTH_HEADER)
             .expect(200);
         expect(response.body).toBeNull();
     });

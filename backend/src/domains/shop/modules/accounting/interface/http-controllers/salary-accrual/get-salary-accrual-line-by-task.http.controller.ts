@@ -1,4 +1,8 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { SalaryAccrualLineSummary } from 'ireports-contracts';
@@ -9,6 +13,8 @@ import { FindSalaryAccrualForTaskService } from '@/domains/shop/modules/accounti
 // domains/service/.../salary-accrual/get-salary-accrual-line-by-task.http.controller.ts
 // (см. WHY там, включая @Res()).
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view_accrual')
 @Controller()
 export class GetShopSalaryAccrualLineByTaskHttpController {
     constructor(

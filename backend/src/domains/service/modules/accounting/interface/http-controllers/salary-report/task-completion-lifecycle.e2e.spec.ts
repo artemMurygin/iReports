@@ -199,6 +199,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
                     'tasks:change_status',
                     'tasks:comment',
                     'tasks:manage_links',
+                    'service-accounting:view_all_salary_report',
                 ],
             }),
         };
@@ -247,13 +248,6 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
         app.use((req: unknown, res: unknown, next: () => void) =>
             new RequestContextMiddleware().use(req, res, next),
         );
-        // Тестовая замена SessionAuthGuard — см. WHY в tasks.e2e.spec.ts
-        // (TasksModule не несёт @UseGuards, APP_GUARD не зарегистрирован в
-        // этом изолированном TestingModule).
-        app.use((req: { user?: unknown }, _res: unknown, next: () => void) => {
-            req.user = { employeeId, permissions: [] };
-            next();
-        });
         app.useGlobalPipes(new ZodValidationPipe());
         app.useGlobalFilters(new DomainExceptionFilter());
         await app.init();
@@ -322,6 +316,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
             .get(
                 `/v1/service/accounting/salary_report/employee/${employeeId}/${period}`,
             )
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         return response.body as EmployeeSalaryReportResponse;
     }

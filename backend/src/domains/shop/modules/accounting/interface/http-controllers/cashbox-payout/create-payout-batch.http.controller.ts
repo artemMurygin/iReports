@@ -1,4 +1,8 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { PayoutBatchResponse } from 'ireports-contracts';
@@ -7,6 +11,8 @@ import { CreateShopPayoutBatchCommand } from '@/domains/shop/modules/accounting/
 import { ShopPayoutBatchDto } from '../../dto/cashbox-payout/payout-batch.dto';
 
 @ApiTags('Бухгалтерия: выплата магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:manage_payout')
 @Controller()
 export class CreateShopPayoutBatchHttpController {
     constructor(private readonly commandBus: CommandBus) {}

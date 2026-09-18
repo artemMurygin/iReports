@@ -8,6 +8,7 @@ import { RoappModule } from '@/domains/service/integrations/roapp/roapp.module';
 import { RoappCashDocumentAdapter } from '@/domains/service/integrations/roapp/roapp-cash-document.adapter';
 import { EmployeeOperationLockModule } from '@/shared/infrastructure/sync-lock/employee-operation-lock.module';
 import { TasksModule } from '@/modules/tasks/tasks.module';
+import { SessionModule } from '@/modules/session/session.module';
 import { CreateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/create-motivation-schema.handler';
 import { UpdateMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/update-motivation-schema.handler';
 import { DeleteMotivationSchemaHandler } from '@/domains/service/modules/accounting/application/command/motivation-schema/delete-motivation-schema.handler';
@@ -196,6 +197,10 @@ import { TaskClosedEventHandler } from '@/domains/service/modules/accounting/app
         // диспатчится через общий CommandBus (EnsureRuleTaskForPeriodService)
         // без отдельного импорта — CqrsModule уже общий.
         TasksModule,
+        // SessionModule — ради SessionAuthGuard/CsrfGuard на @UseGuards
+        // контроллеров ниже (service-accounting:*), тот же приём, что
+        // TasksModule/WorkScheduleModule.
+        SessionModule,
     ],
     controllers: [
         CreateMotivationSchemaHttpController,

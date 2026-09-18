@@ -1,4 +1,8 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { SalaryRuleSummary } from 'ireports-contracts';
@@ -9,6 +13,8 @@ import { FindSalaryRuleForTaskService } from '@/domains/shop/modules/accounting/
 // domains/service/.../salary-rule/get-salary-rule-by-task.http.controller.ts
 // (см. WHY там, включая @Res()).
 @ApiTags('Бухгалтерия: зарплатные правила магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view')
 @Controller()
 export class GetShopSalaryRuleByTaskHttpController {
     constructor(

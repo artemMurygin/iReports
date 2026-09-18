@@ -1,4 +1,15 @@
-import { Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+    Controller,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Post,
+    UseGuards,
+} from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
@@ -12,6 +23,8 @@ import { RecalculateShopAccountingPeriodCommand } from '@/domains/shop/modules/a
 // ленивый (см. следующий запрос отчёта —
 // GetShopEmployeeSalaryReportService/GetShopDepartmentSalaryReportService).
 @ApiTags('Бухгалтерия: расчётный период магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:manage_period')
 @Controller()
 export class RecalculateShopAccountingPeriodHttpController {
     constructor(private readonly commandBus: CommandBus) {}

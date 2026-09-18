@@ -4,7 +4,12 @@ import {
     HttpCode,
     HttpStatus,
     Param,
+    UseGuards,
 } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
@@ -12,6 +17,8 @@ import { DeleteMotivationSchemaCommand } from '@/domains/service/modules/account
 
 // Implements FR1 of delete-motivation-schema.
 @ApiTags('Бухгалтерия: мотивационная схема')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:manage_schema')
 @Controller()
 export class DeleteMotivationSchemaHttpController {
     constructor(private readonly commandBus: CommandBus) {}

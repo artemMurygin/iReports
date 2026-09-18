@@ -216,6 +216,8 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
                     'tasks:change_status',
                     'tasks:comment',
                     'tasks:manage_links',
+
+                    'service-accounting:view_all_salary_report',
                 ],
             }),
         };
@@ -275,6 +277,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     it('возвращает итог и разбивку по правилам схемы сотрудника', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_report/employee/42/2026-08')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const body = response.body as EmployeeSalaryReportResponse;
 
@@ -300,6 +303,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     it('возвращает пустой отчёт для сотрудника без мотивационной схемы', async () => {
         const response = await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_report/employee/999/2026-08')
+            .set('Authorization', 'Bearer test-session')
             .expect(200);
         const body = response.body as EmployeeSalaryReportResponse;
 
@@ -314,6 +318,7 @@ describe('GET /v1/service/accounting/salary_report/employee/:id/:period (e2e)', 
     it('отклоняет период не в формате YYYY-MM', async () => {
         await request(app.getHttpServer())
             .get('/v1/service/accounting/salary_report/employee/42/2026')
+            .set('Authorization', 'Bearer test-session')
             .expect(400);
     });
 });

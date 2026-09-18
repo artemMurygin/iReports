@@ -1,4 +1,15 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Param,
+    ParseIntPipe,
+    Query,
+    UseGuards,
+} from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { EmployeeBalanceResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -6,6 +17,8 @@ import { GetEmployeeBalanceService } from '@/modules/employee-balance/applicatio
 import { GetEmployeeBalanceQueryDto } from '../dto/get-employee-balance-query.dto';
 
 @ApiTags('Бухгалтерия: баланс сотрудника')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('employee-balance:view_all')
 @Controller()
 export class GetEmployeeBalanceHttpController {
     constructor(

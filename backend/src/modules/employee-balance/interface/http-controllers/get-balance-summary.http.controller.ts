@@ -1,4 +1,8 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { BalanceSummaryResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -6,6 +10,8 @@ import { GetBalanceSummaryService } from '@/modules/employee-balance/application
 import { GetBalanceSummaryQueryDto } from '@/modules/employee-balance/interface/dto/get-balance-summary-query.dto';
 
 @ApiTags('Бухгалтерия: баланс сотрудника')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('employee-balance:view_all')
 @Controller()
 export class GetBalanceSummaryHttpController {
     constructor(private readonly getBalanceSummary: GetBalanceSummaryService) {}

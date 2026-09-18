@@ -1,4 +1,15 @@
-import { Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+    Controller,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Post,
+    UseGuards,
+} from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { routesV1 } from '@/config/app.routes';
@@ -7,6 +18,8 @@ import { ReactivateSalaryRuleCommand } from '@/domains/service/modules/accountin
 // Обратная операция к DeactivateSalaryRuleHttpController — возвращает ранее
 // деактивированное правило направления service в активное состояние.
 @ApiTags('Бухгалтерия: зарплатные правила')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:manage_schema')
 @Controller()
 export class ReactivateSalaryRuleHttpController {
     constructor(private readonly commandBus: CommandBus) {}

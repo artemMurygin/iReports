@@ -1,4 +1,8 @@
-import { Body, Controller, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualResponse } from 'ireports-contracts';
@@ -10,6 +14,8 @@ import { SetShopTaskCompletionLineRewardDto } from '../../dto/salary-accrual/set
 // SetTaskCompletionLineRewardHttpController сервиса: тонкий HTTP-слой поверх
 // собственной, независимой SetShopTaskCompletionLineRewardCommand.
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:edit_accrual')
 @Controller()
 export class SetShopTaskCompletionLineRewardHttpController {
     constructor(private readonly commandBus: CommandBus) {}

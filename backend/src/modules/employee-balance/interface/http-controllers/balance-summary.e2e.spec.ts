@@ -213,6 +213,8 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
                     'tasks:change_status',
                     'tasks:comment',
                     'tasks:manage_links',
+
+                    'employee-balance:view_all',
                 ],
             }),
         };
@@ -305,6 +307,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 
@@ -342,6 +345,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07?departmentId=5')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 
@@ -357,6 +361,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const allDepartments = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07?search=КУЗНЕЦ')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
         expect(allDepartments.employees.map((row) => row.employeeId)).toEqual([
@@ -368,6 +373,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
                 .get(
                     '/v1/accounting/balance/summary/2026-07?departmentId=5&search=кузнец',
                 )
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
         expect(withinOtherDepartment.employees).toEqual([]);
@@ -377,6 +383,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 
@@ -391,6 +398,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
         const response = (
             await request(app.getHttpServer())
                 .get('/v1/accounting/balance/summary/2026-07?departmentId=5')
+                .set('Authorization', 'Bearer test-session')
                 .expect(200)
         ).body as BalanceSummaryResponse;
 

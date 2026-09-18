@@ -254,15 +254,20 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
             .useValue(fakeSalesPlanRepo)
             .overrideProvider(DIRECTORY_REPOSITORY)
             .useValue(fakeDirectoryRepo)
-            // WorkScheduleModule теперь импортирует SessionModule (ради
-            // SessionAuthGuard/PermissionsGuard на своих HTTP-контроллерах,
-            // см. WHY в work-schedule.module.ts) — SessionService реальна
-            // только в проде (Redis), здесь подменяется фейком, тем же
-            // приёмом, что work-schedule.e2e.spec.ts; этот тест не бьёт по
-            // HTTP work-schedule вовсе, фейк нужен только чтобы граф DI
-            // WorkScheduleModule вообще собрался при compile().
+            // WorkScheduleModule/ShopAccountingModule теперь импортируют
+            // SessionModule (ради SessionAuthGuard/PermissionsGuard на своих
+            // HTTP-контроллерах, см. WHY в work-schedule.module.ts/
+            // accounting.module.ts) — SessionService реальна только в
+            // проде (Redis), здесь подменяется фейком, тем же приёмом, что
+            // work-schedule.e2e.spec.ts; POST .../period/close ниже требует
+            // shop-accounting:manage_period.
             .overrideProvider(SessionService)
-            .useValue({ validateSessionAndTouch: jest.fn() })
+            .useValue({
+                validateSessionAndTouch: jest.fn().mockResolvedValue({
+                    bitrixEmployeeId: 42,
+                    permissions: ['shop-accounting:manage_period'],
+                }),
+            })
             .compile();
 
         app = moduleRef.createNestApplication();
@@ -284,6 +289,7 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
 
         const response = await request(app.getHttpServer())
             .post('/v1/shop/accounting/period/2026-07/close')
+            .set('Authorization', 'Bearer test-session')
             .send({ closedBy: 1 })
             .expect(201);
 

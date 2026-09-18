@@ -1,4 +1,8 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ClosePeriodPreviewResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -9,6 +13,8 @@ import { GetShopClosePeriodPreviewService } from '@/domains/shop/modules/account
 // docs/service-shop-boundary-violations-fix); калькулятор строк под
 // SHOP_SNAPSHOT_ROWS_CALCULATOR — свой, shop-овский (см. ShopAccountingModule).
 @ApiTags('Бухгалтерия: расчётный период магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view')
 @Controller()
 export class GetShopClosePeriodPreviewHttpController {
     constructor(

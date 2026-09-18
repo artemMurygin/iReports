@@ -1,4 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ListMotivationSchemasResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -6,6 +10,8 @@ import { ListMotivationSchemasQueryDto } from '../../dto/motivation-schema/list-
 import { ListMotivationSchemasService } from '@/domains/service/modules/accounting/application/services/motivation-schema/list-motivation-schemas.service';
 
 @ApiTags('Бухгалтерия: мотивационная схема')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('service-accounting:view')
 @Controller()
 export class ListMotivationSchemasHttpController {
     constructor(

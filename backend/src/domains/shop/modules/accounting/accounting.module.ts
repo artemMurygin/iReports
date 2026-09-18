@@ -17,6 +17,7 @@ import { DirectoryModule } from '@/modules/directory/directory.module';
 // через RoappModule/MoyskladModule напрямую, не через бизнес-модули доменов)
 // — цикла нет.
 import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balance.module';
+import { SessionModule } from '@/modules/session/session.module';
 import { ListShopSalaryRuleTypesService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/list-salary-rule-types.service';
 import { ListShopMotivationSchemasService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/list-motivation-schemas.service';
 import { GetShopMotivationSchemaService } from '@/domains/shop/modules/accounting/application/services/motivation-schema/get-motivation-schema.service';
@@ -236,6 +237,10 @@ import { GetShopSalaryAccrualLineByTaskHttpController } from '@/domains/shop/mod
         // AccountingModule направления service (issue #57: общая
         // инфраструктура задачи не дублируется, см. design.md решение 1).
         TasksModule,
+        // SessionModule — ради SessionAuthGuard/CsrfGuard на @UseGuards
+        // контроллеров ниже (shop-accounting:*), тот же приём, что
+        // TasksModule/WorkScheduleModule.
+        SessionModule,
     ],
     controllers: [
         ListShopSalaryRuleTypesHttpController,

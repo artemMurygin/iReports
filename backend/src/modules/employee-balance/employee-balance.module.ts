@@ -12,6 +12,7 @@ import { RoappModule } from '@/domains/service/integrations/roapp/roapp.module';
 import { RoappCashDocumentAdapter } from '@/domains/service/integrations/roapp/roapp-cash-document.adapter';
 import { MoyskladModule } from '@/domains/shop/integrations/moySklad/moysklad.module';
 import { MoyskladCashDocumentAdapter } from '@/domains/shop/integrations/moySklad/moysklad-cash-document.adapter';
+import { SessionModule } from '@/modules/session/session.module';
 import { CreateBalanceTransactionHandler } from '@/modules/employee-balance/application/command/create-balance-transaction.handler';
 import { DeleteBalanceTransactionHandler } from '@/modules/employee-balance/application/command/delete-balance-transaction.handler';
 import { GetEmployeeBalanceService } from '@/modules/employee-balance/application/services/get-employee-balance.service';
@@ -107,6 +108,10 @@ import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infras
         EmployeeOperationLockModule,
         RoappModule,
         MoyskladModule,
+        // SessionModule — ради SessionAuthGuard/CsrfGuard на @UseGuards
+        // контроллеров ниже (employee-balance:*), тот же приём, что
+        // TasksModule/WorkScheduleModule.
+        SessionModule,
     ],
     controllers: [
         CreateBalanceTransactionHttpController,

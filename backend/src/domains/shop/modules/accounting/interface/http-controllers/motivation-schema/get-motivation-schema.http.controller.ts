@@ -1,4 +1,8 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { routesV1 } from '@/config/app.routes';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ShopMotivationSchemaDetailResponse } from 'ireports-contracts';
@@ -10,6 +14,8 @@ import { GetShopMotivationSchemaService } from '@/domains/shop/modules/accountin
 // routesV1.shop.accounting (см. app.routes.ts). 404, если строки нет ИЛИ у
 // неё 0 правил direction='shop' (см. GetShopMotivationSchemaService).
 @ApiTags('Бухгалтерия: мотивационная схема')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view')
 @Controller()
 export class GetShopMotivationSchemaHttpController {
     constructor(

@@ -1,4 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
+import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
+import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
+import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { SalaryAccrualListResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
@@ -10,6 +14,8 @@ import { ListShopSalaryAccrualsQueryDto } from '../../dto/salary-accrual/list-sa
 // ListShopSalaryAccrualsService (Фаза 6 docs/service-shop-boundary-violations-fix)
 // вместо generic-по-direction сервиса сервиса.
 @ApiTags('Бухгалтерия: начисления зарплаты магазина')
+@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
+@RequirePermissions('shop-accounting:view_accrual')
 @Controller()
 export class ListShopSalaryAccrualsHttpController {
     constructor(
