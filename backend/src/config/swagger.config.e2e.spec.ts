@@ -108,6 +108,7 @@ describe('setupSwagger — serviceDocument (смоук-тест генераци
         findById: () => Promise.resolve(null),
         update: () => Promise.resolve(),
         findByTaskId: () => Promise.resolve(null),
+        findOneOffByAnyTaskId: () => Promise.resolve(null),
         findMotivationSchemaId: () => Promise.resolve(null),
     };
     const fakeAccountingPeriodRepo: AccountingPeriodRepositoryPort = {

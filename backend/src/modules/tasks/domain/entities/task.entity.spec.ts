@@ -6,6 +6,7 @@ import {
     InvalidTaskTransitionException,
     TaskAlreadyClosedException,
 } from '../exceptions/task.exception';
+import { TaskClosedDomainEvent } from '../events/task-closed.domain-event';
 
 // specs/tasks/spec.md — Task.create/transitionTo/cancelForRuleDeletion.
 describe('Task entity', () => {
@@ -93,6 +94,55 @@ describe('Task entity', () => {
             });
             expect(task.closedSuccessfullyAt).toBeNull();
         });
+
+        // openspec/changes/deactivate-one-off-task-completion-rule/specs/tasks/spec.md,
+        // Requirement: «Задача уведомляет о переходе в терминальный
+        // статус» — design.md Decision 1.
+        it('переход в CLOSED_UNSUCCESSFULLY добавляет ровно один TaskClosedDomainEvent с taskId/status', () => {
+            const task = buildTask();
+            withRequestContext(() => {
+                task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42);
+                task.transitionTo(TaskStatus.fromCode('DONE'), 42);
+                task.transitionTo(
+                    TaskStatus.fromCode('CLOSED_UNSUCCESSFULLY'),
+                    7,
+                );
+            });
+            expect(task.domainEvents).toHaveLength(1);
+            const event = task.domainEvents[0];
+            expect(event).toBeInstanceOf(TaskClosedDomainEvent);
+            expect((event as TaskClosedDomainEvent).taskId).toBe(task.id);
+            expect((event as TaskClosedDomainEvent).status).toBe(
+                'CLOSED_UNSUCCESSFULLY',
+            );
+        });
+
+        it('переход в CLOSED_SUCCESSFULLY добавляет ровно один TaskClosedDomainEvent с taskId/status', () => {
+            const task = buildTask();
+            withRequestContext(() => {
+                task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42);
+                task.transitionTo(TaskStatus.fromCode('DONE'), 42);
+                task.transitionTo(
+                    TaskStatus.fromCode('CLOSED_SUCCESSFULLY'),
+                    7,
+                );
+            });
+            expect(task.domainEvents).toHaveLength(1);
+            const event = task.domainEvents[0];
+            expect(event).toBeInstanceOf(TaskClosedDomainEvent);
+            expect((event as TaskClosedDomainEvent).taskId).toBe(task.id);
+            expect((event as TaskClosedDomainEvent).status).toBe(
+                'CLOSED_SUCCESSFULLY',
+            );
+        });
+
+        it('нетерминальный переход не добавляет доменных событий', () => {
+            const task = buildTask();
+            withRequestContext(() =>
+                task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42),
+            );
+            expect(task.domainEvents).toHaveLength(0);
+        });
     });
 
     describe('cancelForRuleDeletion', () => {
@@ -147,6 +197,15 @@ describe('Task entity', () => {
                 task.cancelForRuleDeletion();
             });
             expect(task.status.code).toBe('CLOSED_UNSUCCESSFULLY');
+        });
+
+        // openspec/changes/deactivate-one-off-task-completion-rule/specs/tasks/spec.md,
+        // Scenario: «Отмена задачи при удалении правила не порождает
+        // уведомления» — design.md Non-Goals.
+        it('НЕ добавляет TaskClosedDomainEvent', () => {
+            const task = buildTask();
+            withRequestContext(() => task.cancelForRuleDeletion());
+            expect(task.domainEvents).toHaveLength(0);
         });
     });
 

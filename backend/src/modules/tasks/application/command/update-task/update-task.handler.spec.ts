@@ -67,9 +67,11 @@ describe('UpdateTaskHandler', () => {
     it('задача в терминальном статусе — TaskAlreadyClosedException пробрасывается, taskRepo.update не вызывается', async () => {
         const { handler, taskRepo } = build();
         const task = seedTask(taskRepo);
-        task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42);
-        task.transitionTo(TaskStatus.fromCode('DONE'), 42);
-        task.transitionTo(TaskStatus.fromCode('CLOSED_SUCCESSFULLY'), 42);
+        withRequestContext(() => {
+            task.transitionTo(TaskStatus.fromCode('IN_PROGRESS'), 42);
+            task.transitionTo(TaskStatus.fromCode('DONE'), 42);
+            task.transitionTo(TaskStatus.fromCode('CLOSED_SUCCESSFULLY'), 42);
+        });
         taskRepo.store.set(task.id, task);
         const updateSpy = jest.spyOn(taskRepo, 'update');
 

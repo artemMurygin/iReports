@@ -113,6 +113,11 @@ import { RoappErpPeriodSyncAdapter } from '@/domains/service/modules/accounting/
 import { MotivationSchemaCreatedEventHandler } from '@/domains/service/modules/accounting/application/events/motivation-schema/motivation-schema-created.event-handler';
 import { AccountingPeriodClosedEventHandler } from '@/domains/service/modules/accounting/application/events/accounting-period/accounting-period-closed.event-handler';
 import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/events/salary-accrual-documents-created.event-handler';
+// Группа 4 tasks.md (deactivate-one-off-task-completion-rule) — деактивация
+// разового правила TaskCompletion по неуспешному закрытию связанной задачи
+// (design.md Decision 2), зеркало domains/shop/modules/accounting'ного
+// TaskClosedEventHandler.
+import { TaskClosedEventHandler } from '@/domains/service/modules/accounting/application/events/task-completion/task-closed.event-handler';
 
 // SalesModule — вход SALES_PLAN_REPOSITORY: закрытие периода читает
 // неутверждённые строки плана (CloseAccountingPeriodHandler), а ленивый
@@ -320,6 +325,9 @@ import { SalaryAccrualDocumentsCreatedEventHandler } from '@/shared/application/
         MotivationSchemaCreatedEventHandler,
         AccountingPeriodClosedEventHandler,
         SalaryAccrualDocumentsCreatedEventHandler,
+        // Группа 4 tasks.md (deactivate-one-off-task-completion-rule) — см.
+        // WHY у импорта выше.
+        TaskClosedEventHandler,
         {
             provide: MOTIVATION_SCHEMA_REPOSITORY,
             useClass: MotivationSchemaRepository,

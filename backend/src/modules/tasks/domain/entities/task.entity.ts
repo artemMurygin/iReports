@@ -1,9 +1,6 @@
 import { randomUUID } from 'crypto';
-import {
-    AggregateID,
-    CreateEntityProps,
-    Entity,
-} from '@/shared/domain/entity.base';
+import { AggregateID, CreateEntityProps } from '@/shared/domain/entity.base';
+import { AggregateRoot } from '@/shared/domain/aggregate-root.base';
 import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { TaskStatus } from '../value-objects/task-status.value-object';
@@ -11,6 +8,7 @@ import {
     InvalidTaskTransitionException,
     TaskAlreadyClosedException,
 } from '../exceptions/task.exception';
+import { TaskClosedDomainEvent } from '../events/task-closed.domain-event';
 
 // specs/tasks/spec.md, Requirement: «Задача — полностью самостоятельная
 // сущность, не знающая о зарплатных правилах» — design.md Decision 2:
@@ -41,7 +39,11 @@ export interface TaskCreateProps {
     direction?: AccountingDirection | null;
 }
 
-export class Task extends Entity<TaskProps> {
+// openspec/changes/deactivate-one-off-task-completion-rule/design.md,
+// Decision 1: AggregateRoot<TaskProps> вместо Entity<TaskProps> — публичный
+// контракт Task не меняется (AggregateRoot сам наследует Entity), добавляется
+// только способность публиковать доменные события (transitionTo() ниже).
+export class Task extends AggregateRoot<TaskProps> {
     declare protected readonly _id: AggregateID;
 
     static create(props: TaskCreateProps): Task {
@@ -114,6 +116,20 @@ export class Task extends Entity<TaskProps> {
         // фиксирует именно этот момент, любой другой переход его не трогает.
         if (next.code === 'CLOSED_SUCCESSFULLY') {
             this.props.closedSuccessfullyAt = new Date();
+        }
+        // openspec/changes/deactivate-one-off-task-completion-rule/specs/tasks/spec.md,
+        // Requirement: «Задача уведомляет о переходе в терминальный статус» —
+        // design.md Decision 1: ЛЮБОЙ терминальный переход публикует
+        // TaskClosedDomainEvent (не только CLOSED_SUCCESSFULLY, в отличие от
+        // closedSuccessfullyAt выше) — потребитель фильтрует по status сам.
+        if (next.isTerminal()) {
+            this.addEvent(
+                new TaskClosedDomainEvent({
+                    aggregateId: this.id,
+                    taskId: this.id,
+                    status: next.code,
+                }),
+            );
         }
     }
 
