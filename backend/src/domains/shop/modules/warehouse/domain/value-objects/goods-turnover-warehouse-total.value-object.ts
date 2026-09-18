@@ -61,7 +61,9 @@ export class GoodsTurnoverWarehouseTotal extends ValueObject<GoodsTurnoverWareho
 
         const ratio = TurnoverCoefficient.calculate(
             Money.ofKopecks(turnoverSum),
-            previousStockSum === null ? null : Money.ofKopecks(previousStockSum),
+            previousStockSum === null
+                ? null
+                : Money.ofKopecks(previousStockSum),
             Money.ofKopecks(stockSum),
         );
 
