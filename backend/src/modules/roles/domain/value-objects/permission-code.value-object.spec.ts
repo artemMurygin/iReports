@@ -17,6 +17,12 @@ describe('PermissionCode', () => {
         expect(code.unpack()).toBe('sales-plan:soft-delete');
     });
 
+    it('принимает action с подчёркиванием', () => {
+        const code = PermissionCode.create('employee-balance:view_own');
+
+        expect(code.unpack()).toBe('employee-balance:view_own');
+    });
+
     it('два VO с одинаковым значением равны', () => {
         expect(
             PermissionCode.create('roles:manage').equals(
@@ -32,6 +38,9 @@ describe('PermissionCode', () => {
         'reports:view:extra',
         'Reports:View',
         'reports view',
+        'reports:_view',
+        'reports:view_',
+        'reports:view__own',
         '',
     ])('отклоняет невалидный формат "%s"', (value) => {
         withRequestContext(() => {
