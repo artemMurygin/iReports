@@ -12,7 +12,7 @@ export const ROLE_LABELS: Record<TargetRole, string> = {
     ENGINEER: 'Инженер',
     ONLINE_MANAGER: 'Онлайн-менеджер',
     OFFLINE_MANAGER: 'Офлайн-менеджер',
-    ORDER_MANAGER: 'Менеджер заказов',
+    ORDER_MANAGER: 'Менеджер',
     ONLINE_PURCHASER: 'Онлайн-закупщик',
     OFFLINE_PURCHASER: 'Офлайн-закупщик',
     // OFFICE (Фаза 2 плана "График работы сотрудников") — роль офисного
@@ -29,5 +29,5 @@ export const ROLE_LABELS: Record<TargetRole, string> = {
     // (ALL_SERVICE_ROLES/ALL_SHOP_ROLES) как опция для 3 новых видов правил уровня отдела/
     // направления (DepartmentPercent/DepartmentPlanBonus/DepartmentTurnoverBonus, FR2-FR4). Точное
     // имя литерала — открытый вопрос архитектуры (design.md Q1), не влияющий на русский текст.
-    DEPARTMENT_HEAD: 'Руководитель направления',
+    DEPARTMENT_HEAD: 'Руководитель',
 }
