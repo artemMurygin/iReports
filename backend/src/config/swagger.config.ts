@@ -15,6 +15,7 @@ import { EmployeeBalanceModule } from '@/modules/employee-balance/employee-balan
 import { TasksModule } from '@/modules/tasks/tasks.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { RolesModule } from '@/modules/roles/roles.module';
+import { AiAgentModule } from '@/modules/ai-agent/ai-agent.module';
 import { SessionModule } from '@/modules/session/session.module';
 import { PricingModule } from '@/domains/service/modules/marketing/pricing/pricing.module';
 import { ShopPricingModule } from '@/domains/shop/modules/marketing/pricing/pricing.module';
@@ -84,6 +85,7 @@ export function setupSwagger(app: INestApplication): void {
                 TasksModule,
                 AuthModule,
                 RolesModule,
+                AiAgentModule,
                 // add-employee-api-key-auth (раздел 6 tasks.md):
                 // RegenerateApiKeyHttpController (POST
                 // /v1/auth/api-key/regenerate) — первый собственный HTTP-

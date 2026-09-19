@@ -30,6 +30,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SessionModule } from './modules/session/session.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { AiAgentModule } from './modules/ai-agent/ai-agent.module';
 import { SessionAuthGuard } from './modules/session/interface/session-auth.guard';
 import { CsrfGuard } from './modules/session/interface/csrf.guard';
 import { PermissionsGuard } from './modules/roles/interface/permissions.guard';
@@ -65,6 +66,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
         AuthModule,
         SessionModule,
         RolesModule,
+        AiAgentModule,
         ReportsModule,
         PricingModule,
         ShopPricingModule,
