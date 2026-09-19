@@ -3,13 +3,14 @@ import { z } from 'zod';
 // Модель данных Role-Permission (add-bitrix24-auth-and-rbac,
 // openspec/changes/add-bitrix24-auth-and-rbac/specs/roles/spec.md) —
 // связана с существующим BitrixEmployee (design.md, Decision 2), не с новой
-// сущностью User. permissionCode — формат "resource:action", та же
+// сущностью User. permissionCode — формат "resource:action" (строчные буквы/цифры,
+// разделители "-" и "_" внутри сегментов), та же
 // регулярка, что и у доменного PermissionCode
 // (backend/src/modules/roles/domain/value-objects/permission-code.value-object.ts),
 // продублирована здесь намеренно: контракт валидирует форму запроса
 // независимо от backend (nestjs-zod), backend всё равно самовалидирует через
 // VO при создании/обновлении Role.
-const permissionCodePattern = /^[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(-[a-z0-9]+)*$/;
+const permissionCodePattern = /^[a-z0-9]+([-_][a-z0-9]+)*:[a-z0-9]+([-_][a-z0-9]+)*$/;
 const permissionCodeSchema = z
     .string()
     .regex(
