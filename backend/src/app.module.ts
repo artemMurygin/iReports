@@ -3,7 +3,9 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RequestContextMiddleware } from 'nestjs-request-context';
-import { LoggerMiddleware } from './shared/logger.middleware';
+import { LoggerModule } from 'nestjs-pino';
+import { buildPinoHttpOptions } from './shared/logger/pino.config';
+import { MetricsModule } from './shared/metrics/metrics.module';
 import { ContextInterceptor } from './shared/application/context/ContextInterceptor';
 import { DatabaseModule } from './infrustructure/database/database.module';
 import { RedisModule } from './infrustructure/redis/redis.module';
@@ -42,6 +44,8 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
 
 @Module({
     imports: [
+        LoggerModule.forRoot({ pinoHttp: buildPinoHttpOptions() }),
+        MetricsModule,
         DatabaseModule,
         RedisModule,
         BitrixModule,
@@ -114,9 +118,9 @@ export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
         // RequestContextMiddleware должен отработать первым, чтобы
         // AsyncLocalStorage-контекст был доступен во всех последующих
-        // middleware/interceptors/controllers этого запроса.
-        consumer
-            .apply(RequestContextMiddleware, LoggerMiddleware)
-            .forRoutes('*');
+        // middleware/interceptors/контроллерах этого запроса. HTTP-логирование
+        // теперь делает pino-http (см. LoggerModule.forRoot выше) — отдельный
+        // LoggerMiddleware больше не нужен.
+        consumer.apply(RequestContextMiddleware).forRoutes('*');
     }
 }

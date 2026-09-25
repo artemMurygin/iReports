@@ -59,11 +59,15 @@ services:
       SECRET_ACCESS: ${SECRET_ACCESS}
       SECRET_REFRESH: ${SECRET_REFRESH}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOKI_HOST: ${LOKI_HOST:-http://loki:3100}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      loki:
+        condition: service_started
     ports:
       # dev-стенд слушает другие хостовые порты, чтобы не конфликтовать с прод-стеком на том же
       # сервере (прод — 3000/3001, см. ветку main) — наружу их отдаёт host nginx на
@@ -90,6 +94,75 @@ services:
     depends_on:
       - backend
 
+  loki:
+    image: grafana/loki:3.0.0
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Порт наружу не публикуется — доступ только из внутренней docker-сети (backend, grafana),
+    # как и в проде (см. ветку main).
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      # 9091, не 9090 — прод-стенд на том же сервере уже держит 127.0.0.1:9090 (см. ветку main),
+      # оба docker-compose-проекта (ireports / ireports-dev) поднимаются на одном хосте.
+      - "127.0.0.1:9091:9090"
+    depends_on:
+      backend:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      # dev-стенд слушает другой хостовый порт, чтобы не конфликтовать с прод-Grafana (3003,
+      # см. ветку main) на том же сервере.
+      - "3012:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+
 volumes:
   postgres_data:
   redis_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:

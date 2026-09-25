@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { DomainExceptionFilter } from '@/shared/exceptions';
@@ -15,7 +16,11 @@ async function bootstrap() {
         );
     }
 
-    const app = await NestFactory.create(AppModule, { bodyParser: false });
+    const app = await NestFactory.create(AppModule, {
+        bodyParser: false,
+        bufferLogs: true,
+    });
+    app.useLogger(app.get(Logger));
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
     // Нужен для доставки session_id через cookie на standalone-сайте/iOS
