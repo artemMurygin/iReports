@@ -24,6 +24,15 @@ export type NavItem = {
     end?: boolean
     /** Renders a non-interactive, muted placeholder instead of a link — for pages not shipped yet. */
     disabled?: boolean
+    /**
+     * Permission code(s) that must be satisfied for this item to be visible at all — plain data,
+     * same treatment as `disabled` above (no business logic here in `shared`). `string[]` means
+     * "any one of these" (OR), matching `RouteHandle.requiredPermission` in
+     * `app/route-guard/model/useRouteGuardState.ts`. Not read by any component in this file: the
+     * actual filtering is a caller concern (`app/navigation.tsx`'s `filterNavItemsByPermission`,
+     * applied by `app/Header.tsx` — add-frontend-page-access-guard, раздел 3/6 tasks.md).
+     */
+    requiredPermission?: string | string[]
     /** Called in addition to navigating — the mobile drawer uses this to close itself on tap. */
     onClick?: () => void
     /**

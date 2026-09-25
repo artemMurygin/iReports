@@ -9,7 +9,16 @@ const isAuthBypassed = import.meta.env.DEV && import.meta.env.VITE_AUTH_DISABLED
  * `useHasPermission`: "state-хук (читает Zustand-стор)" -> `boolean`.
  * Синхронный селектор без собственного запроса — permissions в сторе
  * наполняет `useCurrentUser` (см. её WHY-комментарий).
+ *
+ * add-frontend-page-access-guard, раздел 1 tasks.md; design.md "useHasPermission
+ * расширяется на массив, а не дублируется" — `permission` может быть массивом
+ * кодов, тогда действует OR-семантика (`.some()`): достаточно одного совпадения
+ * с правами пользователя. Единственная сигнатура переиспользуется и `RouteGuard`
+ * (задача 2), и `Header` (задача 6), и точечными проверками `RequirePermission`,
+ * которые продолжают передавать одиночную строку без изменений.
  */
-export function useHasPermission(permission: string): boolean {
-    return useAuthStore((state) => isAuthBypassed || state.permissions.includes(permission))
+export function useHasPermission(permission: string | string[]): boolean {
+    return useAuthStore(
+        (state) => isAuthBypassed || [permission].flat().some((code) => state.permissions.includes(code)),
+    )
 }

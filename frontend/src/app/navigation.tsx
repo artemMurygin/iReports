@@ -88,6 +88,9 @@ export const TASKS_STANDALONE_ITEM: NavItem = {
     label: 'Задачи',
     to: '/tasks',
     icon: <ListChecks />,
+    // add-frontend-page-access-guard, раздел 5 tasks.md — тот же код, что у
+    // `handle.requiredPermission` роута `tasks` в `app/router.tsx` (раздел 4).
+    requiredPermission: 'tasks:view',
 }
 
 /**
@@ -127,12 +130,29 @@ const NAV_ENTRIES: NavEntry[] = [
                 // `wVa5g`/`z5BwMk`) — исходный дизайн этой страницы (`pages/SalaryReport`, отдельный
                 // роут `/salaries-v2` рядом со старым для сравнения) удалён, это единственная страница
                 // отчёта по зарплате.
-                { label: 'Отчёт по зарплате', to: '/salaries', icon: <Receipt /> },
+                // add-frontend-page-access-guard, раздел 5 tasks.md — тот же код, что у
+                // `handle.requiredPermission` роута `salaries` в `app/router.tsx` (раздел 4).
+                {
+                    label: 'Отчёт по зарплате',
+                    to: '/salaries',
+                    icon: <Receipt />,
+                    requiredPermission: [
+                        'service-accounting:view_all_salary_report',
+                        'shop-accounting:view_all_salary_report',
+                    ],
+                },
                 // Фаза 5 плана "Закрытие месяца и начисления" (docs/payroll-closing-and-accrual):
                 // список документов начисления закрытого месяца (`pages/SalaryAccruals`). Через
                 // `NAV_ENTRIES` пункт автоматически попадает в Subnav десктопа (app/Header.tsx) и в
                 // мобильную шторку (`DRAWER_SECTIONS`).
-                { label: 'Начисления', to: '/salary-accruals', icon: <Banknote /> },
+                // add-frontend-page-access-guard, раздел 5 tasks.md — тот же код, что у
+                // `handle.requiredPermission` роута `salary-accruals` в `app/router.tsx` (раздел 4).
+                {
+                    label: 'Начисления',
+                    to: '/salary-accruals',
+                    icon: <Banknote />,
+                    requiredPermission: ['service-accounting:view_accrual', 'shop-accounting:view_accrual'],
+                },
                 // docs/employee-settlements-page-redesign, Фаза 3 (PRD «Критерии готовности»:
                 // "Пункт меню «Зарплата» ведёт на новую страницу «Взаиморасчёты с сотрудниками»
                 // вместо «Выплата»") — заменяет прежние два пункта: «Балансы» (`/balance/department`,
@@ -142,8 +162,22 @@ const NAV_ENTRIES: NavEntry[] = [
                 // баланса сотрудника, `features/EmployeeBalance`). Новая страница
                 // `pages/EmployeeSettlements` покрывает обе роли: сквозной список балансов всех
                 // сотрудников с точкой входа на баланс одного (`/balance/employee/:id`).
-                { label: 'Взаиморасчёты', to: '/balance', icon: <HandCoins /> },
-                { label: 'Правила начисления', to: '/salaries/rules', icon: <Percent /> },
+                // add-frontend-page-access-guard, раздел 5 tasks.md — тот же код, что у
+                // `handle.requiredPermission` роута `balance` в `app/router.tsx` (раздел 4).
+                {
+                    label: 'Взаиморасчёты',
+                    to: '/balance',
+                    icon: <HandCoins />,
+                    requiredPermission: 'employee-balance:view_all',
+                },
+                // add-frontend-page-access-guard, раздел 5 tasks.md — тот же код, что у
+                // `handle.requiredPermission` роута `salaries/rules` в `app/router.tsx` (раздел 4).
+                {
+                    label: 'Правила начисления',
+                    to: '/salaries/rules',
+                    icon: <Percent />,
+                    requiredPermission: ['service-accounting:view', 'shop-accounting:view'],
+                },
                 { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
             ],
         },
@@ -185,6 +219,25 @@ const NAV_ENTRIES: NavEntry[] = [
         },
     },
 ]
+
+/**
+ * add-frontend-page-access-guard, раздел 3 tasks.md; design.md "NavItem/TopLevelNavItem:
+ * requiredPermission?: string | string[] как данные, фильтрация — в Header.tsx" — чистая функция,
+ * не хук: `NAV_ENTRIES`/`TOP_LEVEL_NAV_ITEMS`/`SECTIONS`/`DRAWER_SECTIONS`/`ALL_LEAVES` выше
+ * остаются нефильтрованными module-level константами (существующие `navigation.test.ts`/
+ * `navOrder.test.ts`/`drawerActiveItem.test.ts`/`subnavActiveTab.test.ts` читают их напрямую и не
+ * должны знать про permissions) — фильтрация применяется поверх них отдельным шагом, только в
+ * рантайм-потребителе, у которого есть доступ к хуку (`app/Header.tsx`, раздел 6 tasks.md), через
+ * `filterNavItemsByPermission(items, useHasPermission)`. Пункт без `requiredPermission` проходит
+ * всегда, без обращения к `hasPermission` (та же экономия, что уже применена для `disabled` —
+ * данных без permission нечего проверять); порядок оставшихся пунктов не меняется (`.filter`).
+ */
+export function filterNavItemsByPermission<T extends { requiredPermission?: string | string[] }>(
+    items: T[],
+    hasPermission: (permission: string | string[]) => boolean,
+): T[] {
+    return items.filter((item) => item.requiredPermission === undefined || hasPermission(item.requiredPermission))
+}
 
 export const SECTIONS: NavSection[] = NAV_ENTRIES.filter(
     (entry): entry is Extract<NavEntry, { kind: 'section' }> => entry.kind === 'section',

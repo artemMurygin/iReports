@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import type { AuthMeResponse } from 'ireports-contracts'
 
 import { api as axiosInstance } from '@/shared/api/axios.instance.ts'
+import { useAuthStore } from '@/features/Auth'
 
 import { RouteGuard } from './RouteGuard.tsx'
 
@@ -18,6 +19,13 @@ vi.mock('@/shared/api/axios.instance.ts', () => ({
     api: { get: vi.fn(), post: vi.fn() },
 }))
 
+// add-frontend-page-access-guard, раздел 2 tasks.md — `useRouteGuardState`
+// теперь делегирует `hasRequiredPermission` в `useHasPermission`, который читает
+// permissions из `authStore`, а не из локального результата этого запроса
+// напрямую. В реальном приложении стор наполняет `useCurrentUser` — но она
+// вызывается только из `app/Header.tsx`, дочернего по отношению к `RouteGuard`
+// компонента, который здесь не рендерится, поэтому стор наполняется напрямую
+// (тот же приём, что `features/Auth/ui/RequirePermission.spec.tsx`).
 function mockSession(response: AuthMeResponse | 'unauthenticated') {
     vi.mocked(axiosInstance.get).mockImplementation(() => {
         if (response === 'unauthenticated') {
@@ -25,6 +33,12 @@ function mockSession(response: AuthMeResponse | 'unauthenticated') {
         }
         return Promise.resolve({ data: response })
     })
+
+    if (response === 'unauthenticated') {
+        useAuthStore.getState().setUnauthenticated()
+    } else {
+        useAuthStore.getState().setAuthenticated(response)
+    }
 }
 
 function enterIframeContext() {
@@ -39,7 +53,7 @@ const AUTHENTICATED: AuthMeResponse = {
     permissions: ['reports:view'],
 }
 
-function renderGuardedRoute(options: { requiredPermission?: string; initialEntry?: string } = {}) {
+function renderGuardedRoute(options: { requiredPermission?: string | string[]; initialEntry?: string } = {}) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const router = createMemoryRouter(
         [
@@ -70,6 +84,7 @@ describe('RouteGuard', () => {
         window.top = window
         delete window.BX24
         vi.mocked(axiosInstance.get).mockReset()
+        useAuthStore.setState({ employee: null, permissions: [], status: 'idle' })
     })
 
     it('рендерит pages/Login в standalone-контексте без валидной сессии', async () => {
@@ -134,5 +149,22 @@ describe('RouteGuard', () => {
         renderGuardedRoute({ requiredPermission: 'roles:manage' })
 
         expect(await screen.findByRole('alert')).toBeInTheDocument()
+    })
+
+    it('рендерит защищённый контент, когда requiredPermission — массив и у пользователя есть хотя бы один код из него (OR-семантика)', async () => {
+        mockSession(AUTHENTICATED)
+
+        renderGuardedRoute({ requiredPermission: ['a', 'reports:view'] })
+
+        expect(await screen.findByText('Protected content')).toBeInTheDocument()
+    })
+
+    it('рендерит pages/AccessDenied, когда requiredPermission — массив и у пользователя нет ни одного кода из него', async () => {
+        mockSession(AUTHENTICATED)
+
+        renderGuardedRoute({ requiredPermission: ['a', 'b'] })
+
+        expect(await screen.findByRole('alert')).toBeInTheDocument()
+        expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
     })
 })

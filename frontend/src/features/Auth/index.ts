@@ -4,6 +4,13 @@
 // импортировать фичу следует исключительно отсюда (frontend/CLAUDE.md).
 export { useHasPermission } from './model/useHasPermission.ts'
 export { useCurrentUser, type CurrentUserState } from './model/useCurrentUser.ts'
+// add-frontend-page-access-guard, раздел 2 tasks.md — `useAuthStore` нужен тестам
+// потребителей `useHasPermission` вне самой фичи (`app/route-guard/ui/RouteGuard.spec.tsx`),
+// чтобы напрямую наполнить стор правами, не полагаясь на монтирование `app/Header.tsx`
+// (единственное место, которое сегодня вызывает `useCurrentUser` и тем самым синхронизирует
+// стор как побочный эффект) — тот же приём, что уже применяет `ui/RequirePermission.spec.tsx`
+// внутри самой фичи.
+export { useAuthStore, type AuthenticatedSession } from './model/authStore.ts'
 export { useLogout } from './model/useLogout.ts'
 export { useBitrixLogin } from './model/useBitrixLogin.ts'
 export { RequirePermission } from './ui/RequirePermission.tsx'

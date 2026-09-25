@@ -84,6 +84,18 @@ export const router = createBrowserRouter([
                 // сравнения). По умолчанию показывает отчёт отдела.
                 path: 'salaries',
                 element: <SalaryReportV2Page />,
+                // add-frontend-page-access-guard, раздел 4 tasks.md — отчёт объединяет service +
+                // shop, backend закрывает каждое направление отдельным кодом
+                // (`domains/service/modules/accounting/salary-report.controller.ts`,
+                // `domains/shop/modules/accounting/salary-report.controller.ts`, оба
+                // `@RequirePermissions('...-accounting:view_all_salary_report')`) — OR-семантика
+                // массива (задача 2).
+                handle: {
+                    requiredPermission: [
+                        'service-accounting:view_all_salary_report',
+                        'shop-accounting:view_all_salary_report',
+                    ],
+                },
             },
             {
                 // Отчёт сотрудника — свой URL (тот же приём, что `balance/employee/:id` у баланса,
@@ -93,6 +105,14 @@ export const router = createBrowserRouter([
                 // `:employeeId` в `useSalaryReportPage` (см. её комментарий).
                 path: 'salaries/employee/:employeeId',
                 element: <SalaryReportV2Page />,
+                // Тот же код, что у `salaries` выше — отчёт сотрудника доступен тому же кругу
+                // пользователей, что и отчёт отдела, из которого на него переходят.
+                handle: {
+                    requiredPermission: [
+                        'service-accounting:view_all_salary_report',
+                        'shop-accounting:view_all_salary_report',
+                    ],
+                },
             },
             {
                 // Фаза 6 плана "График работы сотрудников" (docs/employee-work-schedule) — путь
@@ -122,6 +142,14 @@ export const router = createBrowserRouter([
                 // «Начисления за {месяц}» на странице плана продаж (Фаза 4, useSalesPlanPage).
                 path: 'salary-accruals',
                 element: <SalaryAccrualsPage />,
+                // add-frontend-page-access-guard, раздел 4 tasks.md — список объединяет
+                // начисления service + shop, backend закрывает каждый источник отдельным кодом
+                // (`domains/service/modules/accounting/*.controller.ts`, `domains/shop/modules/
+                // accounting/*.controller.ts`, оба `@RequirePermissions('...-accounting:view_accrual')`);
+                // OR-семантика массива (задача 2) — достаточно доступа хотя бы к одному направлению.
+                handle: {
+                    requiredPermission: ['service-accounting:view_accrual', 'shop-accounting:view_accrual'],
+                },
             },
             {
                 // Карточка документа начисления. Направление — query-параметр `?direction=`
@@ -129,6 +157,11 @@ export const router = createBrowserRouter([
                 // Фазы 5 буквально как '/salary-accruals/:id'.
                 path: 'salary-accruals/:id',
                 element: <SalaryAccrualDocumentPage />,
+                // Тот же код, что у списка `salary-accruals` выше — карточка документа доступна тому
+                // же кругу пользователей, что и список, из которого на неё переходят.
+                handle: {
+                    requiredPermission: ['service-accounting:view_accrual', 'shop-accounting:view_accrual'],
+                },
             },
             {
                 // «Взаиморасчёты с сотрудниками» (пункт меню «Зарплата», ранее «Выплата»,
@@ -139,6 +172,10 @@ export const router = createBrowserRouter([
                 // = «Все отделы»), тот же приём, что у прежнего роута.
                 path: 'balance',
                 element: <EmployeeSettlementsPage />,
+                // add-frontend-page-access-guard, раздел 4 tasks.md — сквозной список по всем
+                // отделам защищён на backend `@RequirePermissions('employee-balance:view_all')`
+                // (`domains/service/modules/accounting/employee-balance.controller.ts`).
+                handle: { requiredPermission: 'employee-balance:view_all' },
             },
             {
                 // Баланс сотрудника — общий, без направления в пути (Фаза 8b: баланс живёт
@@ -147,6 +184,9 @@ export const router = createBrowserRouter([
                 // документа начисления.
                 path: 'balance/employee/:id',
                 element: <EmployeeBalancePage />,
+                // Тот же код, что у `balance` выше — карточка баланса сотрудника доступна тому же
+                // кругу пользователей, что и список, из которого на неё переходят.
+                handle: { requiredPermission: 'employee-balance:view_all' },
             },
             {
                 // replace-bitrix-task-integration, раздел 13 tasks.md; ui-design.md `iZrrX`/`cHCoj`/
@@ -154,14 +194,27 @@ export const router = createBrowserRouter([
                 // `TASKS_STANDALONE_ITEM`), список всех задач независимо от зарплатных правил.
                 path: 'tasks',
                 element: <TasksPage />,
+                // add-frontend-page-access-guard, раздел 4 tasks.md — список задач защищён на
+                // backend `@RequirePermissions('tasks:view')` (`domains/service/modules/tasks/
+                // tasks.controller.ts`).
+                handle: { requiredPermission: 'tasks:view' },
             },
             {
                 path: 'salaries/rules',
                 element: <SalaryRuleListPage />,
+                // add-frontend-page-access-guard, раздел 4 tasks.md — список схем начисления
+                // объединяет service + shop, backend закрывает каждое направление отдельным кодом
+                // (`domains/service/modules/accounting/motivation-schema.controller.ts`,
+                // `domains/shop/modules/accounting/motivation-schema.controller.ts`, оба
+                // `@RequirePermissions('...-accounting:view')`) — OR-семантика массива (задача 2).
+                handle: { requiredPermission: ['service-accounting:view', 'shop-accounting:view'] },
             },
             {
                 path: 'salaries/rules/new',
                 element: <SalaryRulesPage />,
+                // Тот же код, что у `salaries/rules` выше — создание схемы доступно тому же кругу
+                // пользователей, что и список.
+                handle: { requiredPermission: ['service-accounting:view', 'shop-accounting:view'] },
             },
             {
                 // Схема-редактирование (см. `pages/SalaryRuleDetail`) — `:direction` часть пути, а
@@ -172,6 +225,9 @@ export const router = createBrowserRouter([
                 // уже собирают этот путь с направлением схемы.
                 path: 'salaries/rules/:direction/:id',
                 element: <SalaryRuleDetailPage />,
+                // Тот же код, что у `salaries/rules` выше — редактирование конкретной схемы
+                // доступно тому же кругу пользователей, что и список.
+                handle: { requiredPermission: ['service-accounting:view', 'shop-accounting:view'] },
             },
             // Раздел «Настройки» (см. `app/navigation.tsx`, секция «Настройки»). Вложенные пути
             // задаются отдельными строками без ведущего слэша — отдельный layout-роут для

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { detectRuntimeContext } from '@/shared/lib/runtime-context.ts'
+import { useHasPermission } from '@/features/Auth/model/useHasPermission.ts'
 
 import { routeGuardApi } from './session.api.ts'
 
@@ -10,8 +11,14 @@ import { routeGuardApi } from './session.api.ts'
 // `pages/RolesManagement` с `requiredPermission: 'roles:manage'`
 // появляется в разделе 20 tasks.md) — RouteGuard уже поддерживает
 // механизм, чтобы раздел 20 подключил его без изменений в самом guard'е.
+//
+// add-frontend-page-access-guard, раздел 2 tasks.md; design.md
+// "RouteHandle.requiredPermission: string -> string | string[], OR-семантика" —
+// массив означает "достаточно любого одного" (страницы, объединяющие
+// `service`+`shop`, см. таблицу в design.md), проверка делегирована
+// `useHasPermission` (раздел 1 tasks.md).
 export type RouteHandle = {
-    requiredPermission?: string
+    requiredPermission?: string | string[]
 }
 
 // Dev-only байпас авторизации (тестирование функциональности без Bitrix24
@@ -21,15 +28,18 @@ export type RouteHandle = {
 // симметричным backend-байпасом.
 const isAuthBypassed = import.meta.env.DEV && import.meta.env.VITE_AUTH_DISABLED === 'true'
 
-export function useRouteGuardState(requiredPermission?: string) {
+export function useRouteGuardState(requiredPermission?: string | string[]) {
     const context = detectRuntimeContext()
     const { data: session, isLoading } = useQuery(routeGuardApi.getCurrentSession())
 
     const hasSession = isAuthBypassed || session != null
-    const hasRequiredPermission =
-        isAuthBypassed ||
-        requiredPermission === undefined ||
-        (session?.permissions.includes(requiredPermission) ?? false)
+    // useHasPermission должен вызываться безусловно на каждый рендер (Rules of Hooks),
+    // поэтому короткое замыкание по `requiredPermission === undefined`/dev-байпасу
+    // применяется только к итоговому `hasRequiredPermission`, а не к самому вызову хука;
+    // пустой массив в этом случае — no-op (`.some()` по пустому массиву -> false, что не
+    // влияет на результат, т.к. requiredPermission === undefined уже отдаёт true раньше).
+    const hasPermission = useHasPermission(requiredPermission ?? [])
+    const hasRequiredPermission = isAuthBypassed || requiredPermission === undefined || hasPermission
 
     return {
         context,

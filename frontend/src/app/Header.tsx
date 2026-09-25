@@ -1,12 +1,27 @@
 import { Receipt, Wallet } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
-import { useCurrentUser, useLogout } from '@/features/Auth'
+import { useAuthStore, useCurrentUser, useLogout } from '@/features/Auth'
 import { findMostSpecificNavMatch } from '@/shared/lib/nav.ts'
 import { getEmployeeInitials } from '@/shared/lib/employeeInitials.ts'
 import { Header as UiKitHeader, type ProfileMenuData } from '@/shared/ui-kit/organisms/Header'
 
-import { ALL_LEAVES, DRAWER_SECTIONS, isTopLevelNavItemActive, SECTIONS, TOP_LEVEL_NAV_ITEMS } from './navigation.tsx'
+import {
+    ALL_LEAVES,
+    DRAWER_SECTIONS,
+    filterNavItemsByPermission,
+    isTopLevelNavItemActive,
+    SECTIONS,
+    TOP_LEVEL_NAV_ITEMS,
+} from './navigation.tsx'
+
+// Dev-only байпас авторизации — то же условие и тот же смысл, что и в
+// `features/Auth/model/useHasPermission.ts`/`app/route-guard/model/useRouteGuardState.ts`
+// (`import.meta.env.DEV` инертен в `vite build`). Дублируется здесь (а не переиспользуется хук
+// `useHasPermission` напрямую), потому что `filterNavItemsByPermission` (раздел 3 tasks.md) —
+// чистая функция, которой нужен обычный колбэк `(permission) => boolean`, а не хук, вызываемый
+// один раз на каждый пункт меню (переменное число пунктов на рендер нарушило бы Rules of Hooks).
+const isAuthBypassed = import.meta.env.DEV && import.meta.env.VITE_AUTH_DISABLED === 'true'
 
 export function Header() {
     const location = useLocation()
@@ -15,6 +30,11 @@ export function Header() {
     // Header (Layout монтируется только внутри RouteGuard, после подтверждения сессии).
     const { employee } = useCurrentUser()
     const { logout } = useLogout()
+    // add-frontend-page-access-guard, раздел 6 tasks.md — тот же стор, что читает `useHasPermission`
+    // (`features/Auth/model/authStore.ts`), наполняется `useCurrentUser` выше как побочный эффект.
+    const permissions = useAuthStore((state) => state.permissions)
+    const hasPermission = (permission: string | string[]): boolean =>
+        isAuthBypassed || [permission].flat().some((code) => permissions.includes(code))
     const user = employee
         ? {
               name: `${employee.firstName} ${employee.lastName}`.trim(),
@@ -51,10 +71,15 @@ export function Header() {
     // (`/salaries`, prefix match) and "Правила начисления" (`/salaries/rules`) would both light up
     // on `/salaries/rules`.
     const activeSection = SECTIONS.find((section) => section.label === activeLeaf.section)
-    const activeSubnavTab = activeSection ? findMostSpecificNavMatch(activeSection.items, location.pathname) : null
+    // add-frontend-page-access-guard, раздел 6 tasks.md — фильтрация по permission применяется к
+    // источнику (`activeSection.items`) ДО вычисления `active`/до проверки "больше одной вкладки":
+    // пункт без доступа (например, «Правила начисления» без `service-accounting:view`/
+    // `shop-accounting:view`) не должен попасть ни в счётчик вкладок, ни тем более в сам Subnav.
+    const visibleSectionItems = activeSection ? filterNavItemsByPermission(activeSection.items, hasPermission) : []
+    const activeSubnavTab = findMostSpecificNavMatch(visibleSectionItems, location.pathname)
     const subnavTabs =
-        activeSection && activeSection.items.length > 1
-            ? activeSection.items.map(({ label, to, end, disabled }) => ({
+        visibleSectionItems.length > 1
+            ? visibleSectionItems.map(({ label, to, end, disabled }) => ({
                   label,
                   to,
                   end,
@@ -69,7 +94,12 @@ export function Header() {
     // sibling page in the same section (e.g. "Зарплата" on `/salary-accruals`, "Продажи" on
     // `/sales-plan`). Computed per render (depends on `location.pathname`), unlike the
     // pathname-independent `TOP_LEVEL_NAV_ITEMS` constant it's derived from.
-    const navItems = TOP_LEVEL_NAV_ITEMS.map((item) => ({
+    // add-frontend-page-access-guard, раздел 6 tasks.md — фильтрация по permission применяется к
+    // источнику (`TOP_LEVEL_NAV_ITEMS`) ДО вычисления `active`: сегодня `requiredPermission` несёт
+    // только standalone-пункт «Задачи» (у пилюль-разделов вроде «Зарплата» своего
+    // `requiredPermission` нет — фильтрация их дочерних пунктов происходит отдельно, для Subnav/
+    // Drawer, ниже).
+    const navItems = filterNavItemsByPermission(TOP_LEVEL_NAV_ITEMS, hasPermission).map((item) => ({
         ...item,
         active: isTopLevelNavItemActive(item, location.pathname),
     }))
@@ -81,10 +111,18 @@ export function Header() {
     // app (not just the current section, unlike Subnav's tabs), so the *single* most specific
     // match across all of them is exactly `activeLeaf` computed above — an item is active only
     // when it's that same leaf (`to` is unique across `ALL_LEAVES`, so comparing it is enough).
+    // add-frontend-page-access-guard, раздел 6 tasks.md — тот же `filterNavItemsByPermission`
+    // применяется к каждой секции ДО вычисления `active`; секция, из которой фильтрация убрала все
+    // пункты (например, «Зарплата» целиком для пользователя без единого permission её страниц),
+    // целиком пропадает из Drawer, а не рендерится пустым заголовком без пунктов под ним (design.md
+    // Decision "NavItem/TopLevelNavItem" — то же правило, что уже действует для `disabled`).
     const drawerSections = DRAWER_SECTIONS.map((section) => ({
         ...section,
-        items: section.items.map((item) => ({ ...item, active: item.to === activeLeaf.to })),
-    }))
+        items: filterNavItemsByPermission(section.items, hasPermission).map((item) => ({
+            ...item,
+            active: item.to === activeLeaf.to,
+        })),
+    })).filter((section) => section.items.length > 0)
 
     return (
         <UiKitHeader
