@@ -3,28 +3,18 @@ import { ChatOpenAI } from '@langchain/openai';
 import { createDeepAgent } from 'deepagents';
 import { AIMessage } from '@langchain/core/messages';
 
-const DEFAULT_MODEL = process.env.OMNIROUTE_BASE_MODEL ?? 'cx/gpt-5.5-medium';
+const 
 
-// Тот же OmniRoute-гейтвей, что использует AiHttpService
-// (src/integrations/ai/ai.instance.ts), но как LangChain chat-model для
-// deepagents.createDeepAgent, который принимает готовый инстанс модели,
-// а не голое имя провайдера.
-function createAgentModel(): ChatOpenAI {
-    return new ChatOpenAI({
-        apiKey: process.env.OMNIROTE_TOKEN,
-        model: DEFAULT_MODEL,
-        configuration: { baseURL: process.env.OMNIROTE_URL },
-    });
-}
 
 @Injectable()
 export class DeepAgentService {
     private agent?: ReturnType<typeof createDeepAgent>;
-
+    private readonly DEFAULT_MODEL = process.env.OMNIROUTE_BASE_MODEL ?? 'cx/gpt-5.5-medium';
+    
     private getAgent(): ReturnType<typeof createDeepAgent> {
         if (!this.agent) {
             this.agent = createDeepAgent({
-                model: createAgentModel(),
+                model: this.createAgentModel(),
                 systemPrompt: 'Ты — ассистент внутренней платформы iReports.',
             });
         }
@@ -48,5 +38,18 @@ export class DeepAgentService {
             ? lastMessage.text
             : // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               String(lastMessage?.content ?? '');
+    }
+
+
+    // Тот же OmniRoute-гейтвей, что использует AiHttpService
+    // (src/integrations/ai/ai.instance.ts), но как LangChain chat-model для
+    // deepagents.createDeepAgent, который принимает готовый инстанс модели,
+    // а не голое имя провайдера.
+    createAgentModel(): ChatOpenAI {
+        return new ChatOpenAI({
+            apiKey: process.env.OMNIROTE_TOKEN,
+            model: DEFAULT_MODEL,
+            configuration: { baseURL: process.env.OMNIROTE_URL },
+        });
     }
 }
