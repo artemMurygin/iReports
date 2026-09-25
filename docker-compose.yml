@@ -14,7 +14,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5433:5432"
+      - "5432:5432"
 
   redis:
     image: redis:7-alpine
@@ -49,7 +49,7 @@ services:
       NODE_ENV: production
       # dev-стенд (ветка `dev`, деплой через .github/workflows/deploy-dev.yml) — отдельный домен от
       # прода (ireports.murygin.tech/api.murygin.tech, см. ветку main), не мержить это значение назад.
-      CORS_ORIGIN: https://test.ireports.murygin.tech
+      CORS_ORIGIN: https://ireports.murygin.tech
       # Родительский домен для session_id/csrf_token cookies — без него cookie scope'ится только на
       # test.api.murygin.tech, и фронтенд (test.ireports.murygin.tech) не может прочитать csrf_token
       # через document.cookie (CsrfGuard отклонял все мутирующие запросы). Оба поддомена (frontend/
@@ -69,10 +69,7 @@ services:
       loki:
         condition: service_started
     ports:
-      # dev-стенд слушает другие хостовые порты, чтобы не конфликтовать с прод-стеком на том же
-      # сервере (прод — 3000/3001, см. ветку main) — наружу их отдаёт host nginx на
-      # test.ireports.murygin.tech/test.api.murygin.tech.
-      - "3010:3000"
+      - "3000:3000"
 
   frontend:
     build:
@@ -84,13 +81,13 @@ services:
       context: .
       dockerfile: frontend/docker/Dockerfile
       args:
-        VITE_API_URL: https://test.api.murygin.tech
+        VITE_API_URL: https://api.murygin.tech
         # Переиспользуем BITRIX24_CLIENT_ID из корневого .env — client_id не секрет и совпадает
         # с backend'ным, отдельную переменную в .env заводить не нужно.
         VITE_BITRIX24_CLIENT_ID: ${BITRIX24_CLIENT_ID}
     restart: unless-stopped
     ports:
-      - "3011:80"
+      - "3001:80"
     depends_on:
       - backend
 
@@ -127,9 +124,7 @@ services:
       retries: 5
       start_period: 10s
     ports:
-      # 9091, не 9090 — прод-стенд на том же сервере уже держит 127.0.0.1:9090 (см. ветку main),
-      # оба docker-compose-проекта (ireports / ireports-dev) поднимаются на одном хосте.
-      - "127.0.0.1:9091:9090"
+      - "127.0.0.1:9090:9090"
     depends_on:
       backend:
         condition: service_started
@@ -151,9 +146,7 @@ services:
       retries: 5
       start_period: 10s
     ports:
-      # dev-стенд слушает другой хостовый порт, чтобы не конфликтовать с прод-Grafana (3003,
-      # см. ветку main) на том же сервере.
-      - "3012:3000"
+      - "3003:3000"
     depends_on:
       prometheus:
         condition: service_started
