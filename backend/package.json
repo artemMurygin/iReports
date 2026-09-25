@@ -25,7 +25,8 @@
         "price:monitoring:prod": "node dist/src/utils/runPriceMonitoring.js",
         "seed:export": "nest build -c nest-cli.json && node dist/src/scripts/seed/export-from-live-db.js",
         "db:seed": "prisma db seed --config prisma.config.ts",
-        "transfer:config-to-prod": "nest build -c nest-cli.json && node dist/src/scripts/transfer-config-to-prod.js"
+        "transfer:config-to-prod": "nest build -c nest-cli.json && node dist/src/scripts/transfer-config-to-prod.js",
+        "transfer:sales-plans-to-prod": "nest build -c nest-cli.json && node dist/src/scripts/transfer-sales-plans-to-prod.js"
     },
     "dependencies": {
         "@nestjs/common": "^11.0.1",
