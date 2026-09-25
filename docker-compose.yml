@@ -14,8 +14,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      # 5432/5433 заняты на сервере (5433 — dev-стенд, см. ветку dev); прод слушает 5434 снаружи.
-      - "5434:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
 
   redis:
     image: redis:7-alpine
@@ -48,14 +47,13 @@ services:
       # на любом docker-compose-развёртывании этого файла (и прод, и dev-стенд),
       # даже если AUTH_DISABLED случайно попадёт в серверный .env.
       NODE_ENV: production
-      # dev-стенд (ветка `dev`, деплой через .github/workflows/deploy-dev.yml) — отдельный домен от
-      # прода (ireports.murygin.tech/api.murygin.tech, см. ветку main), не мержить это значение назад.
-      CORS_ORIGIN: https://ireports.murygin.tech
-      # Родительский домен для session_id/csrf_token cookies — без него cookie scope'ится только на
-      # test.api.murygin.tech, и фронтенд (test.ireports.murygin.tech) не может прочитать csrf_token
-      # через document.cookie (CsrfGuard отклонял все мутирующие запросы). Оба поддомена (frontend/
-      # backend) dev-стенда — под .murygin.tech, как и прод; не мержить это значение назад в main.
-      COOKIE_DOMAIN: .murygin.tech
+      # Домен фронтенда, разрешённый CORS-политикой — разный на каждом сервере (прод/dev-стенд/
+      # локально), поэтому берётся из .env этого сервера, а не хардкодится здесь (см. .env.example).
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      # Родительский домен для session_id/csrf_token cookies — нужен, только если frontend и backend
+      # на разных поддоменах (иначе csrf_token, выставленный backend'ом, не читается фронтендом
+      # через document.cookie). Тоже из .env — см. .env.example.
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       BITRIX24_WEBHOOK_URL: ${BITRIX24_WEBHOOK_URL}
       SECRET_ACCESS: ${SECRET_ACCESS}
       SECRET_REFRESH: ${SECRET_REFRESH}
@@ -70,7 +68,7 @@ services:
       loki:
         condition: service_started
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
 
   frontend:
     build:
@@ -82,13 +80,15 @@ services:
       context: .
       dockerfile: frontend/docker/Dockerfile
       args:
-        VITE_API_URL: https://api.murygin.tech
+        # URL backend'а, на который ходит собранный фронтенд — разный на каждом сервере, из .env
+        # этого сервера (см. .env.example), не хардкодится здесь.
+        VITE_API_URL: ${VITE_API_URL}
         # Переиспользуем BITRIX24_CLIENT_ID из корневого .env — client_id не секрет и совпадает
         # с backend'ным, отдельную переменную в .env заводить не нужно.
         VITE_BITRIX24_CLIENT_ID: ${BITRIX24_CLIENT_ID}
     restart: unless-stopped
     ports:
-      - "3001:80"
+      - "${FRONTEND_PORT:-3001}:80"
     depends_on:
       - backend
 
@@ -125,7 +125,7 @@ services:
       retries: 5
       start_period: 10s
     ports:
-      - "127.0.0.1:9090:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
     depends_on:
       backend:
         condition: service_started
@@ -147,7 +147,7 @@ services:
       retries: 5
       start_period: 10s
     ports:
-      - "3003:3000"
+      - "${GRAFANA_PORT:-3003}:3000"
     depends_on:
       prometheus:
         condition: service_started
