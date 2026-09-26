@@ -241,14 +241,21 @@ export const router = createBrowserRouter([
             // задаются отдельными строками без ведущего слэша — отдельный layout-роут для
             // `/settings` не заведён, оба пункта раздела регистрируются рядом друг с другом.
             {
+                // add-settings-section-view-permission — `settings:view` решает, виден ли
+                // пользователю раздел «Настройки» целиком (нав-пилюля/Subnav/Drawer,
+                // `app/navigation.tsx`); backend эту страницу не защищает (см. WHY-комментарий в
+                // `settings.permissions.ts`), это чисто frontend-скрытие через `RouteGuard`.
                 path: 'settings/employee-identity',
                 element: <EmployeeIdentityPage />,
+                handle: { requiredPermission: 'settings:view' },
             },
             {
                 // Переключатель «служебный аккаунт» (docs/employee-ordering-and-salary-filter,
-                // Фаза 4) — второй пункт раздела «Настройки».
+                // Фаза 4) — второй пункт раздела «Настройки». `requiredPermission` — см. комментарий
+                // у `settings/employee-identity` выше (add-settings-section-view-permission).
                 path: 'settings/service-accounts',
                 element: <ServiceAccountsPage />,
+                handle: { requiredPermission: 'settings:view' },
             },
             {
                 // add-bitrix24-auth-and-rbac, раздел 20.8 tasks.md; ui-design.md `s5nMLx`/`F6d3a`
@@ -258,12 +265,13 @@ export const router = createBrowserRouter([
                 // не `admin/`. `handle.requiredPermission` — механизм раздела 15
                 // (`app/route-guard/ui/RouteGuard.tsx`), уже готовый и покрытый тестами до этой
                 // задачи; без `roles:manage` у текущего сотрудника `RouteGuard` рендерит
-                // `pages/AccessDenied` вместо этого роута (вкладка при этом всё равно видна в
-                // Subnav — сам список пунктов «Настройки» permission не фильтрует, как и два
-                // других пункта раздела).
+                // `pages/AccessDenied` вместо этого роута.
+                // add-settings-section-view-permission: `requireAllPermissions: ['settings:view']`
+                // добавляет ВТОРОЕ, независимое условие (AND, не замена `requiredPermission`) —
+                // видимость раздела «Настройки» вообще, отдельно от прав именно на страницу ролей.
                 path: 'settings/roles',
                 element: <RolesManagementPage />,
-                handle: { requiredPermission: 'roles:manage' },
+                handle: { requiredPermission: 'roles:manage', requireAllPermissions: ['settings:view'] },
             },
         ],
     },

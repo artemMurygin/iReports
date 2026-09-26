@@ -48,3 +48,17 @@ describe('router.tsx requiredPermission (add-frontend-page-access-guard, раз�
         expect(findRouteHandle('work-schedule/today')?.requiredPermission).toEqual('work-schedule:view')
     })
 })
+
+describe('router.tsx requiredPermission раздела «Настройки» (add-settings-section-view-permission)', () => {
+    it.each([
+        ['settings/employee-identity', 'settings:view'],
+        ['settings/service-accounts', 'settings:view'],
+    ] as const)('%s -> requiredPermission %j', (path, expected) => {
+        expect(findRouteHandle(path)?.requiredPermission).toEqual(expected)
+    })
+
+    it('settings/roles требует roles:manage И (requireAllPermissions) settings:view одновременно', () => {
+        expect(findRouteHandle('settings/roles')?.requiredPermission).toEqual('roles:manage')
+        expect(findRouteHandle('settings/roles')?.requireAllPermissions).toEqual(['settings:view'])
+    })
+})

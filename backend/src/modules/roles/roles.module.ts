@@ -20,6 +20,7 @@ import { TASKS_PERMISSIONS } from '@/modules/tasks/tasks.permissions';
 import { SERVICE_ACCOUNTING_PERMISSIONS } from '@/domains/service/modules/accounting/accounting.permissions';
 import { SHOP_ACCOUNTING_PERMISSIONS } from '@/domains/shop/modules/accounting/accounting.permissions';
 import { EMPLOYEE_BALANCE_PERMISSIONS } from '@/modules/employee-balance/employee-balance.permissions';
+import { SETTINGS_PERMISSIONS } from '@/modules/settings/settings.permissions';
 import { ListRolesHttpController } from './interface/http-controllers/list-roles.http.controller';
 import { ListRoleAssignmentsHttpController } from './interface/http-controllers/list-role-assignments.http.controller';
 import { CreateRoleHttpController } from './interface/http-controllers/create-role.http.controller';
@@ -69,6 +70,7 @@ import { RevokeRoleFromEmployeeHttpController } from './interface/http-controlle
                 SERVICE_ACCOUNTING_PERMISSIONS,
                 SHOP_ACCOUNTING_PERMISSIONS,
                 EMPLOYEE_BALANCE_PERMISSIONS,
+                SETTINGS_PERMISSIONS,
             ],
         },
         PermissionsResolverAdapter,

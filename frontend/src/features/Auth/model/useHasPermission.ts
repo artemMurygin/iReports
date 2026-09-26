@@ -22,3 +22,14 @@ export function useHasPermission(permission: string | string[]): boolean {
         (state) => isAuthBypassed || [permission].flat().some((code) => state.permissions.includes(code)),
     )
 }
+
+/**
+ * AND-семантика (в отличие от OR-семантики `useHasPermission` с массивом) — нужны ВСЕ
+ * перечисленные коды сразу, а не любой один. Единственный сегодняшний потребитель —
+ * `RouteHandle.requireAllPermissions` (`app/route-guard/model/useRouteGuardState.ts`), для роутов,
+ * которым мало одного permission (например `settings/roles`: нужен и `settings:view`, видит ли
+ * пользователь раздел «Настройки» вообще, и отдельно `roles:manage` на саму страницу).
+ */
+export function useHasAllPermissions(permissions: string[]): boolean {
+    return useAuthStore((state) => isAuthBypassed || permissions.every((code) => state.permissions.includes(code)))
+}

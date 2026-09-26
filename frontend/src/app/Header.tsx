@@ -95,10 +95,11 @@ export function Header() {
     // `/sales-plan`). Computed per render (depends on `location.pathname`), unlike the
     // pathname-independent `TOP_LEVEL_NAV_ITEMS` constant it's derived from.
     // add-frontend-page-access-guard, раздел 6 tasks.md — фильтрация по permission применяется к
-    // источнику (`TOP_LEVEL_NAV_ITEMS`) ДО вычисления `active`: сегодня `requiredPermission` несёт
-    // только standalone-пункт «Задачи» (у пилюль-разделов вроде «Зарплата» своего
-    // `requiredPermission` нет — фильтрация их дочерних пунктов происходит отдельно, для Subnav/
-    // Drawer, ниже).
+    // источнику (`TOP_LEVEL_NAV_ITEMS`) ДО вычисления `active`: `requiredPermission` несёт
+    // standalone-пункт «Задачи» и (add-settings-section-view-permission) пилюля-раздел
+    // «Настройки» целиком (`settings:view`) — у остальных пилюль-разделов вроде «Зарплата»
+    // своего `requiredPermission` нет, фильтрация их дочерних пунктов происходит отдельно, для
+    // Subnav/Drawer, ниже.
     const navItems = filterNavItemsByPermission(TOP_LEVEL_NAV_ITEMS, hasPermission).map((item) => ({
         ...item,
         active: isTopLevelNavItemActive(item, location.pathname),

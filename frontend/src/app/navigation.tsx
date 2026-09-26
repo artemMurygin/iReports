@@ -1,6 +1,5 @@
 import {
     Banknote,
-    CalendarCheck,
     CalendarClock,
     ChartNoAxesColumn,
     FileText,
@@ -27,6 +26,12 @@ export type NavSection = {
     label: string
     icon: ReactNode
     items: NavItem[]
+    /** add-settings-section-view-permission — тот же смысл, что `NavItem.requiredPermission`
+     * (OR-семантика), но для секции целиком: гейтит нав-пилюлю раздела в `TOP_LEVEL_NAV_ITEMS`
+     * (десктоп), а не отдельный пункт. Пока есть только у «Настройки» — у остальных секций
+     * («Продажи», «Зарплата», «Аналитика») своей секционной проверки нет, видимость их пилюли
+     * зависит только от того, есть ли хоть один незаблокированный (`disabled`) пункт. */
+    requiredPermission?: string | string[]
 }
 
 /**
@@ -178,7 +183,6 @@ const NAV_ENTRIES: NavEntry[] = [
                     icon: <Percent />,
                     requiredPermission: ['service-accounting:view', 'shop-accounting:view'],
                 },
-                { label: 'Отчётный период', to: '/salaries/period', icon: <CalendarCheck />, disabled: true },
             ],
         },
     },
@@ -203,18 +207,40 @@ const NAV_ENTRIES: NavEntry[] = [
     // Третий пункт, «Роли и права» (`/settings/roles`, `pages/RolesManagement`,
     // add-bitrix24-auth-and-rbac), переехал сюда с отдельного роута `/admin/roles` — та же
     // вкладка Subnav, что и два других пункта раздела; `requiredPermission: 'roles:manage'`
-    // на самом роуте (app/router.tsx) не даёт открыть страницу без прав через RouteGuard, но
-    // список пунктов «Настройки» permission не фильтрует (как и оба других пункта раздела) —
-    // вкладка видна всем, доступ проверяется при переходе.
+    // на самом роуте (app/router.tsx) не даёт открыть страницу без прав через RouteGuard.
+    //
+    // add-settings-section-view-permission: раздел целиком гейтится `settings:view` — и на уровне
+    // секции (`section.requiredPermission`, гейтит нав-пилюлю в `TOP_LEVEL_NAV_ITEMS`), и на
+    // уровне каждого пункта (гейтит Subnav/Drawer через `filterNavItemsByPermission`, тот же приём,
+    // что у пунктов «Зарплата» выше). У «Роли и права» это ДОПОЛНИТЕЛЬНО к отдельному
+    // `roles:manage`, который остаётся только на роуте (`app/router.tsx`,
+    // `requireAllPermissions`) — сам пункт меню виден по `settings:view`, как и два других, а
+    // `roles:manage` по-прежнему проверяется лишь при переходе на страницу (RouteGuard).
     {
         kind: 'section',
         section: {
             label: 'Настройки',
             icon: <Settings />,
+            requiredPermission: 'settings:view',
             items: [
-                { label: 'Связи сотрудников', to: '/settings/employee-identity', icon: <Link2 /> },
-                { label: 'Служебные аккаунты', to: '/settings/service-accounts', icon: <UserCog /> },
-                { label: 'Роли и права', to: '/settings/roles', icon: <ShieldCheck /> },
+                {
+                    label: 'Связи сотрудников',
+                    to: '/settings/employee-identity',
+                    icon: <Link2 />,
+                    requiredPermission: 'settings:view',
+                },
+                {
+                    label: 'Служебные аккаунты',
+                    to: '/settings/service-accounts',
+                    icon: <UserCog />,
+                    requiredPermission: 'settings:view',
+                },
+                {
+                    label: 'Роли и права',
+                    to: '/settings/roles',
+                    icon: <ShieldCheck />,
+                    requiredPermission: 'settings:view',
+                },
             ],
         },
     },
@@ -272,6 +298,12 @@ export type TopLevelNavItem = NavItem & {
 // chevron on desktop — it read as a dropdown affordance even though nothing opens, so it's off
 // for every item. Pure function of `NAV_ENTRIES` above (no props/hooks involved), so it's a
 // module-level constant rather than recomputed per render.
+//
+// add-settings-section-view-permission: `requiredPermission` — новое поле здесь, раньше пилюля
+// секции его никогда не несла (только standalone-пункты вроде «Задачи» через `entry.item`); теперь
+// пробрасывается из `section.requiredPermission`, если он задан (сегодня — только у «Настройки»),
+// иначе `undefined`, как и было. `Header.tsx` фильтрует этот массив через тот же
+// `filterNavItemsByPermission`, что и раньше — изменений там не потребовалось.
 export const TOP_LEVEL_NAV_ITEMS: TopLevelNavItem[] = NAV_ENTRIES.map((entry) => {
     if (entry.kind === 'standalone') {
         return { ...entry.item, matchPaths: [entry.item] }
@@ -284,6 +316,7 @@ export const TOP_LEVEL_NAV_ITEMS: TopLevelNavItem[] = NAV_ENTRIES.map((entry) =>
         to: primary?.to ?? section.items[0].to,
         end: primary?.end,
         disabled: !primary,
+        requiredPermission: section.requiredPermission,
         matchPaths: section.items,
     }
 })

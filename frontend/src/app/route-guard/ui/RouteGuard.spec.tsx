@@ -56,6 +56,7 @@ const AUTHENTICATED: AuthMeResponse = {
 function renderGuardedRoute(
     options: {
         requiredPermission?: string | string[]
+        requireAllPermissions?: string[]
         initialEntry?: string
         path?: string
         ownResourcePermission?: string
@@ -65,10 +66,12 @@ function renderGuardedRoute(
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const handle =
         options.requiredPermission !== undefined ||
+        options.requireAllPermissions !== undefined ||
         options.ownResourcePermission !== undefined ||
         options.ownResourceParam !== undefined
             ? {
                   requiredPermission: options.requiredPermission,
+                  requireAllPermissions: options.requireAllPermissions,
                   ownResourcePermission: options.ownResourcePermission,
                   ownResourceParam: options.ownResourceParam,
               }
@@ -226,6 +229,42 @@ describe('RouteGuard', () => {
             ownResourceParam: 'id',
             path: '/balance/employee/:id',
             initialEntry: '/balance/employee/1',
+        })
+
+        expect(await screen.findByRole('alert')).toBeInTheDocument()
+    })
+
+    // add-settings-section-view-permission — requireAllPermissions: AND поверх requiredPermission,
+    // нужны ОБА кода одновременно (см. settings/roles в app/router.tsx).
+    it('рендерит защищённый контент, когда есть и requiredPermission, и все коды requireAllPermissions', async () => {
+        mockSession({ ...AUTHENTICATED, permissions: ['roles:manage', 'settings:view'] })
+
+        renderGuardedRoute({
+            requiredPermission: 'roles:manage',
+            requireAllPermissions: ['settings:view'],
+        })
+
+        expect(await screen.findByText('Protected content')).toBeInTheDocument()
+    })
+
+    it('рендерит pages/AccessDenied, когда requiredPermission есть, но не хватает кода из requireAllPermissions', async () => {
+        mockSession({ ...AUTHENTICATED, permissions: ['roles:manage'] })
+
+        renderGuardedRoute({
+            requiredPermission: 'roles:manage',
+            requireAllPermissions: ['settings:view'],
+        })
+
+        expect(await screen.findByRole('alert')).toBeInTheDocument()
+        expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
+    })
+
+    it('рендерит pages/AccessDenied, когда все коды requireAllPermissions есть, но нет requiredPermission', async () => {
+        mockSession({ ...AUTHENTICATED, permissions: ['settings:view'] })
+
+        renderGuardedRoute({
+            requiredPermission: 'roles:manage',
+            requireAllPermissions: ['settings:view'],
         })
 
         expect(await screen.findByRole('alert')).toBeInTheDocument()

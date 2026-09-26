@@ -31,12 +31,16 @@ type Props = {
 //    `useMatches()`) без нужного permission у текущего пользователя ->
 //    `pages/AccessDenied` — независимо от контекста запуска. `/settings/roles`
 //    (раздел 20 tasks.md, ранее `/admin/roles`) объявляет `requiredPermission:
-//    'roles:manage'` — это правило реально срабатывает на нём.
+//    'roles:manage'` — это правило реально срабатывает на нём. Тот же роут
+//    дополнительно объявляет `handle.requireAllPermissions: ['settings:view']`
+//    (add-settings-section-view-permission) — AND поверх `requiredPermission`:
+//    нужны оба кода одновременно, а не любой один из них.
 export function RouteGuard({ children }: Props) {
     const matches = useMatches()
     const lastMatch = matches.at(-1)
     const handle = lastMatch?.handle as RouteHandle | undefined
     const requiredPermission = handle?.requiredPermission
+    const requireAllPermissions = handle?.requireAllPermissions
     const [searchParams] = useSearchParams()
 
     // add-employee-balance-own-view — own-resource fallback (см. WHY в RouteHandle,
@@ -50,10 +54,11 @@ export function RouteGuard({ children }: Props) {
         currentEmployeeId !== null &&
         lastMatch?.params[ownResourceParam] === String(currentEmployeeId)
 
-    const { context, isLoading, hasSession, hasRequiredPermission } = useRouteGuardState(
+    const { context, isLoading, hasSession, hasRequiredPermission, hasAllRequiredPermissions } = useRouteGuardState(
         requiredPermission,
         handle?.ownResourcePermission,
         isOwnResource,
+        requireAllPermissions,
     )
 
     if (searchParams.has('code')) {
@@ -69,6 +74,10 @@ export function RouteGuard({ children }: Props) {
     }
 
     if (requiredPermission !== undefined && !hasRequiredPermission) {
+        return <AccessDeniedPage />
+    }
+
+    if (requireAllPermissions !== undefined && !hasAllRequiredPermissions) {
         return <AccessDeniedPage />
     }
 

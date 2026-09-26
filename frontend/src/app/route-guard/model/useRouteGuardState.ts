@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { detectRuntimeContext } from '@/shared/lib/runtime-context.ts'
-import { useHasPermission } from '@/features/Auth/model/useHasPermission.ts'
+import { useHasAllPermissions, useHasPermission } from '@/features/Auth/model/useHasPermission.ts'
 
 import { routeGuardApi } from './session.api.ts'
 
@@ -26,6 +26,12 @@ export type RouteHandle = {
      * `employee-balance:view_all` (любой сотрудник) ИЛИ по `employee-balance:view_own` + `:id` — свой. */
     ownResourcePermission?: string
     ownResourceParam?: string
+    /** AND-семантика (в отличие от OR-семантики массива в `requiredPermission`): роут доступен,
+     * только если у пользователя есть ВСЕ перечисленные коды — в дополнение к `requiredPermission`,
+     * а не вместо него. Единственный сегодняшний случай — `settings/roles` (`app/router.tsx`):
+     * `requiredPermission: 'roles:manage'` (сама страница) + `requireAllPermissions: ['settings:view']`
+     * (виден ли пользователю раздел «Настройки» вообще) — оба условия обязательны одновременно. */
+    requireAllPermissions?: string[]
 }
 
 // Dev-only байпас авторизации (тестирование функциональности без Bitrix24
@@ -39,6 +45,7 @@ export function useRouteGuardState(
     requiredPermission?: string | string[],
     ownResourcePermission?: string,
     isOwnResource?: boolean,
+    requireAllPermissions?: string[],
 ) {
     const context = detectRuntimeContext()
     const { data: session, isLoading } = useQuery(routeGuardApi.getCurrentSession())
@@ -58,10 +65,15 @@ export function useRouteGuardState(
     const hasRequiredPermission =
         isAuthBypassed || requiredPermission === undefined || hasPermission || hasOwnResourceAccess
 
+    // `requireAllPermissions` (AND, см. RouteHandle) — та же экономия, что у `requiredPermission`
+    // выше: пустой массив по умолчанию делает `.every()` тождественно `true`, не влияя на итог.
+    const hasAllRequiredPermissions = useHasAllPermissions(requireAllPermissions ?? [])
+
     return {
         context,
         isLoading,
         hasSession,
         hasRequiredPermission,
+        hasAllRequiredPermissions,
     }
 }

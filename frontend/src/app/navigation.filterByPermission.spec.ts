@@ -101,11 +101,27 @@ describe('NAV_ENTRIES requiredPermission синхронизирован с route
         ['/tasks', 'tasks'],
         ['/salaries', 'salaries'],
         ['/salaries/rules', 'salaries/rules'],
+        ['/settings/employee-identity', 'settings/employee-identity'],
+        ['/settings/service-accounts', 'settings/service-accounts'],
     ] as const)('%s: requiredPermission пункта меню совпадает с handle.requiredPermission роута', (navTo, routerPath) => {
         const navItem = ALL_LEAVES.find((item) => item.to === navTo)
         const routeHandle = findRouteHandle(routerPath)
 
         expect(navItem).toBeDefined()
         expect(normalizePermission(navItem?.requiredPermission)).toEqual(normalizePermission(routeHandle?.requiredPermission))
+    })
+
+    // add-settings-section-view-permission: «Роли и права» — единственное исключение из проверки
+    // выше. Пункт меню виден по `settings:view` (видимость раздела «Настройки»), а сам роут
+    // дополнительно требует `roles:manage` (`requiredPermission`) — два разных кода, поэтому
+    // `requiredPermission` пункта и роута здесь НЕ совпадают; вместо этого пункт меню должен
+    // совпадать с AND-набором роута (`requiredPermission` + `requireAllPermissions`).
+    it('/settings/roles: requiredPermission пункта меню («Роли и права») входит в AND-набор роута (requiredPermission + requireAllPermissions)', () => {
+        const navItem = ALL_LEAVES.find((item) => item.to === '/settings/roles')
+        const routeHandle = findRouteHandle('settings/roles')
+
+        expect(navItem?.requiredPermission).toEqual('settings:view')
+        expect(normalizePermission(routeHandle?.requiredPermission)).toEqual(['roles:manage'])
+        expect(routeHandle?.requireAllPermissions).toEqual(['settings:view'])
     })
 })
