@@ -2,7 +2,6 @@ import { PageHeader } from '@/shared/ui-kit/organisms/PageHeader'
 
 import { useSalaryReportPage } from '../model/useSalaryReportPage.ts'
 
-import { DepartmentReportHeaderActions } from './DepartmentReportHeaderActions.tsx'
 import { EmployeeReportHeaderActions } from './EmployeeReportHeaderActions.tsx'
 import { Layout } from './Layout.tsx'
 import { SalaryReportBodyV2 } from './SalaryReportBodyV2.tsx'
@@ -76,16 +75,7 @@ export function SalaryReportV2Page() {
                             />
                         }
                         actions={
-                            <>
-                                <EmployeeReportHeaderActions
-                                    scope={scope}
-                                    period={period}
-                                    onPeriodChange={setPeriod}
-                                    report={employeeReport}
-                                    employeeName={employeeName}
-                                />
-                                <DepartmentReportHeaderActions scope={scope} report={departmentReport} />
-                            </>
+                            <EmployeeReportHeaderActions scope={scope} period={period} onPeriodChange={setPeriod} />
                         }
                     />
 

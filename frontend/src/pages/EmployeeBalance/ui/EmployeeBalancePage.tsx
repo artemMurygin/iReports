@@ -19,7 +19,7 @@ export type EmployeeBalancePageProps = {
  * `ps9b4` (десктоп-личный кабинет) / `JTc29`, `lQM7O`, `b6g6Z` (мобильные), Фаза 5
  * docs/employee-settlements-page-redesign — баланс сотрудника ОБЩИЙ: без Direction Tabs
  * и KPI-карточек по направлениям, одна крупная цифра «Баланс» в шапке (Фаза 8b), панель
- * действий («Добавить приход/расход», «Выгрузить ленту») — отдельной строкой под ней
+ * действий («Добавить приход/расход») — отдельной строкой под ней
  * (`BalanceActions`). Строки ленты не раскрываются (см. `TransactionsLedger`); удаление
  * ручного движения — confirm-модалка без комментария (не «сторно»), `w3wDY`/`dypv7`.
  *
@@ -51,7 +51,6 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
         clearTypes,
         commentSearch,
         setCommentSearch,
-        exportLedger,
         isDrawerOpen,
         drawerKind,
         openIncomeDrawer,
@@ -84,7 +83,6 @@ export function EmployeeBalancePage({ readOnly = false }: EmployeeBalancePagePro
                         onAddOutcome={openOutcomeDrawer}
                         period={period}
                         onPeriodChange={setPeriod}
-                        onExport={exportLedger}
                         readOnly={readOnly}
                     />
 

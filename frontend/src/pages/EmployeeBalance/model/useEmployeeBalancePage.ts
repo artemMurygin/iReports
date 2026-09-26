@@ -10,7 +10,6 @@ import { useDepartments, useEmployees } from '@/features/TargetDirectory'
 import { api as identityApi } from './api.ts'
 import { matchesCommentSearch } from './commentSearch.ts'
 import { buildErpLinkageLabel, buildHeaderSubtitle } from './headerInfo.ts'
-import { downloadEmployeeBalanceLedgerCsv } from './exportLedgerCsv.ts'
 import { periodToDateRange } from './periodRange.ts'
 
 /** Направление drawer'а «Добавить движение», открываемого одной из двух кнопок шапки —
@@ -189,12 +188,6 @@ export function useEmployeeBalancePage() {
     const isInitialLoad = balanceQuery.isFetching && !isFetchingNextPage && balanceQuery.data === undefined
     const isRefreshing = balanceQuery.isFetching && !isFetchingNextPage && !isInitialLoad
 
-    // ── «Выгрузить ленту» (шапка/панель действий, Фаза 5) — CSV уже отфильтрованной (тип +
-    // комментарий) выборки `transactions`, см. `exportLedgerCsv.ts`. ──────────────────────────
-    function exportLedger() {
-        downloadEmployeeBalanceLedgerCsv(employeeId, transactions, employeeNameById)
-    }
-
     return {
         employeeId,
         employeeName,
@@ -216,7 +209,6 @@ export function useEmployeeBalancePage() {
         clearTypes,
         commentSearch,
         setCommentSearch,
-        exportLedger,
 
         isDrawerOpen,
         drawerKind,

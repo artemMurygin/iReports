@@ -1,4 +1,3 @@
-import { downloadEmployeeSettlementsCsv } from '../model/exportSettlementsCsv.ts'
 import { useEmployeeSettlementsPage } from '../model/useEmployeeSettlementsPage.ts'
 import { EmployeeSettlementsBody } from './EmployeeSettlementsBody.tsx'
 import { Layout } from './Layout.tsx'
@@ -13,11 +12,7 @@ import { PageHeader } from './PageHeader.tsx'
  *
  * Чистый медиатор (frontend/CLAUDE.md): всё состояние — в `useEmployeeSettlementsPage`,
  * десктоп/мобайл-переключение (`hidden md:block`/`md:hidden`) и группировка по отделам —
- * внутри `EmployeeSettlementsBody`. `downloadEmployeeSettlementsCsv` («Выгрузить таблицу»,
- * Фаза 4) вызывается прямо здесь, а не в `PageHeader`, — это не условный рендер (нет
- * `&&`/тернарника, решающего ЧТО показать), а построение обработчика клика из уже
- * загруженных `employees`/`totals`, тем же приёмом, что `DepartmentReportHeaderActions` у
- * `/salaries`.
+ * внутри `EmployeeSettlementsBody`.
  */
 export function EmployeeSettlementsPage() {
     const {
@@ -48,11 +43,9 @@ export function EmployeeSettlementsPage() {
                     isDepartmentsLoading={isDepartmentsLoading}
                     departmentId={departmentId}
                     onDepartmentIdChange={setDepartmentId}
-                    employeesCount={employees.length}
                     search={search}
                     onSearchChange={setSearch}
                     dataAsOfLabel={dataAsOfLabel}
-                    onExport={() => downloadEmployeeSettlementsCsv(employees, totals)}
                 />
             }
             body={<EmployeeSettlementsBody employees={employees} totals={totals} departmentId={departmentId} />}

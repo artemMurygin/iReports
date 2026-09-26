@@ -1,4 +1,4 @@
-import { Calendar, Download, Minus, Plus, X } from 'lucide-react'
+import { Calendar, Minus, Plus, X } from 'lucide-react'
 
 import { useHasPermission } from '@/features/Auth'
 import { PeriodPicker } from '@/features/SalesPlan'
@@ -18,18 +18,16 @@ export type BalanceActionsProps = {
     period: string | null
     /** `null` — сбросить сужение обратно на «за всё время»; `YYYY-MM` — сузить/сдвинуть месяц. */
     onPeriodChange: (period: string | null) => void
-    onExport: () => void
-    /** Личный кабинет сотрудника (будущий readOnly-маршрут) скрывает «Добавить приход/расход» и
-     * «Выплатить» — «Выгрузить ленту» остаётся доступной (просмотр собственной ленты). */
+    /** Личный кабинет сотрудника (будущий readOnly-маршрут) скрывает «Добавить приход/расход». */
     readOnly?: boolean
     className?: string
 }
 
 /**
  * Панель действий (Pencil `L73YCK`/`JTc29`, docs/employee-settlements-page-redesign, Фаза 5) —
- * отдельная строка под шапкой баланса: «Добавить приход»/«Добавить расход» слева, «Выгрузить
- * ленту» (+ фильтр периода) справа. Раньше эти три кнопки жили внутри `BalanceHeader` — вынесены
- * в свой компонент, чтобы шапка осталась чистым «имя + баланс» блоком, как в макете.
+ * отдельная строка под шапкой баланса: «Добавить приход»/«Добавить расход» слева, фильтр периода
+ * справа. Раньше эти кнопки жили внутри `BalanceHeader` — вынесены в свой компонент, чтобы шапка
+ * осталась чистым «имя + баланс» блоком, как в макете.
  *
  * Отдельной кнопки «Выплатить» здесь больше нет (была раньше — открывала свой `PayoutDrawer` из
  * бывшей `features/Payout`): Фаза 6 docs/employee-settlements-page-redesign переносит создание
@@ -41,7 +39,6 @@ export function BalanceActions({
     onAddOutcome,
     period,
     onPeriodChange,
-    onExport,
     readOnly = false,
     className,
 }: BalanceActionsProps) {
@@ -91,10 +88,6 @@ export function BalanceActions({
                         </IconButton>
                     </>
                 )}
-                <Button type="button" variant="secondary" onClick={onExport}>
-                    <Download />
-                    Выгрузить ленту
-                </Button>
             </div>
         </div>
     )
