@@ -5,11 +5,12 @@ import type { PermissionCatalogEntry } from '@/modules/roles/application/ports/p
 // Decision 12). Баланс сквозной (не разбит по direction), поэтому один
 // набор кодов на оба домена, а не service-/shop- префикс, как у accounting.
 //
-// view_own/view_department в каталоге есть, но не проверяются ни одним
-// guard'ом — ни один из контроллеров сейчас не сравнивает request.user с
-// запрошенным :id/отделом (тот же приём и то же ограничение, что
-// tasks:view_own в tasks.permissions.ts). Реальный гейт GET-эндпоинтов —
-// view_all.
+// view_own проверяется EmployeeBalanceOwnershipGuard (interface/guards) —
+// GET .../balance/employee/:id пускает по нему, только если :id совпадает
+// с request.user.employeeId. view_department в каталоге есть, но пока не
+// проверяется ни одним guard'ом (тот же приём и то же ограничение, что
+// tasks:view_own в tasks.permissions.ts). Реальный гейт остальных
+// GET-эндпоинтов (сводка отдела/компании) — по-прежнему view_all.
 export const EMPLOYEE_BALANCE_PERMISSIONS: PermissionCatalogEntry[] = [
     {
         code: 'employee-balance:view_own',

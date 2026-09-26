@@ -185,8 +185,16 @@ export const router = createBrowserRouter([
                 path: 'balance/employee/:id',
                 element: <EmployeeBalancePage />,
                 // Тот же код, что у `balance` выше — карточка баланса сотрудника доступна тому же
-                // кругу пользователей, что и список, из которого на неё переходят.
-                handle: { requiredPermission: 'employee-balance:view_all' },
+                // кругу пользователей, что и список, из которого на неё переходят. Own-resource
+                // fallback (add-employee-balance-own-view, backend —
+                // EmployeeBalanceOwnershipGuard): без `employee-balance:view_all` роут остаётся
+                // доступен, если у пользователя есть `employee-balance:view_own` И `:id` — его
+                // собственный (см. WHY в RouteHandle, app/route-guard/model/useRouteGuardState.ts).
+                handle: {
+                    requiredPermission: 'employee-balance:view_all',
+                    ownResourcePermission: 'employee-balance:view_own',
+                    ownResourceParam: 'id',
+                },
             },
             {
                 // replace-bitrix-task-integration, раздел 13 tasks.md; ui-design.md `iZrrX`/`cHCoj`/

@@ -1,5 +1,6 @@
 import { Calendar, Download, Minus, Plus, X } from 'lucide-react'
 
+import { useHasPermission } from '@/features/Auth'
 import { PeriodPicker } from '@/features/SalesPlan'
 import { cn } from '@/shared/lib/tw'
 import { Button } from '@/shared/ui-kit/atoms/Button'
@@ -44,12 +45,14 @@ export function BalanceActions({
     readOnly = false,
     className,
 }: BalanceActionsProps) {
+    const canEdit = useHasPermission('employee-balance:edit')
+
     return (
         <div
             data-slot="employee-balance-actions"
             className={cn('flex flex-wrap items-center justify-between gap-2', className)}
         >
-            {!readOnly ? (
+            {!readOnly && canEdit ? (
                 <div className="flex flex-wrap items-center gap-2">
                     <Button type="button" onClick={onAddIncome}>
                         <Plus />

@@ -53,18 +53,36 @@ const AUTHENTICATED: AuthMeResponse = {
     permissions: ['reports:view'],
 }
 
-function renderGuardedRoute(options: { requiredPermission?: string | string[]; initialEntry?: string } = {}) {
+function renderGuardedRoute(
+    options: {
+        requiredPermission?: string | string[]
+        initialEntry?: string
+        path?: string
+        ownResourcePermission?: string
+        ownResourceParam?: string
+    } = {},
+) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const handle =
+        options.requiredPermission !== undefined ||
+        options.ownResourcePermission !== undefined ||
+        options.ownResourceParam !== undefined
+            ? {
+                  requiredPermission: options.requiredPermission,
+                  ownResourcePermission: options.ownResourcePermission,
+                  ownResourceParam: options.ownResourceParam,
+              }
+            : undefined
     const router = createMemoryRouter(
         [
             {
-                path: '/',
+                path: options.path ?? '/',
                 element: (
                     <RouteGuard>
                         <div>Protected content</div>
                     </RouteGuard>
                 ),
-                handle: options.requiredPermission ? { requiredPermission: options.requiredPermission } : undefined,
+                handle,
             },
         ],
         { initialEntries: [options.initialEntry ?? '/'] },
@@ -166,5 +184,50 @@ describe('RouteGuard', () => {
 
         expect(await screen.findByRole('alert')).toBeInTheDocument()
         expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
+    })
+
+    // add-employee-balance-own-view — own-resource fallback: у AUTHENTICATED нет
+    // `employee-balance:view_all`, но есть view_own и route-param `:id` совпадает с её id (1).
+    it('рендерит защищённый контент по own-resource fallback (нет requiredPermission, но :id — свой)', async () => {
+        mockSession({ ...AUTHENTICATED, permissions: ['employee-balance:view_own'] })
+
+        renderGuardedRoute({
+            requiredPermission: 'employee-balance:view_all',
+            ownResourcePermission: 'employee-balance:view_own',
+            ownResourceParam: 'id',
+            path: '/balance/employee/:id',
+            initialEntry: '/balance/employee/1',
+        })
+
+        expect(await screen.findByText('Protected content')).toBeInTheDocument()
+    })
+
+    it('рендерит pages/AccessDenied по own-resource fallback, когда :id — ЧУЖОЙ', async () => {
+        mockSession({ ...AUTHENTICATED, permissions: ['employee-balance:view_own'] })
+
+        renderGuardedRoute({
+            requiredPermission: 'employee-balance:view_all',
+            ownResourcePermission: 'employee-balance:view_own',
+            ownResourceParam: 'id',
+            path: '/balance/employee/:id',
+            initialEntry: '/balance/employee/999',
+        })
+
+        expect(await screen.findByRole('alert')).toBeInTheDocument()
+        expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
+    })
+
+    it('рендерит pages/AccessDenied по own-resource fallback, когда :id — свой, но нет ownResourcePermission', async () => {
+        mockSession({ ...AUTHENTICATED, permissions: [] })
+
+        renderGuardedRoute({
+            requiredPermission: 'employee-balance:view_all',
+            ownResourcePermission: 'employee-balance:view_own',
+            ownResourceParam: 'id',
+            path: '/balance/employee/:id',
+            initialEntry: '/balance/employee/1',
+        })
+
+        expect(await screen.findByRole('alert')).toBeInTheDocument()
     })
 })

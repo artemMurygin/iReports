@@ -9,16 +9,26 @@ import {
 import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
 import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
 import { PermissionsGuard } from '@/modules/roles/interface/permissions.guard';
-import { RequirePermissions } from '@/shared/decorators/require-permissions.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { EmployeeBalanceResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
 import { GetEmployeeBalanceService } from '@/modules/employee-balance/application/services/get-employee-balance.service';
 import { GetEmployeeBalanceQueryDto } from '../dto/get-employee-balance-query.dto';
+import { EmployeeBalanceOwnershipGuard } from '../guards/employee-balance-ownership.guard';
 
+// Без @RequirePermissions('employee-balance:view_all') — PermissionsGuard
+// требует ВСЕХ перечисленных прав (AND), что исключило бы доступ по
+// `employee-balance:view_own` к собственному балансу. Реальная проверка
+// (view_all ИЛИ view_own+свой id) — в EmployeeBalanceOwnershipGuard ниже;
+// PermissionsGuard здесь лишь требует валидную сессию (роут без
+// @RequirePermissions открыт любому аутентифицированному).
 @ApiTags('Бухгалтерия: баланс сотрудника')
-@UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
-@RequirePermissions('employee-balance:view_all')
+@UseGuards(
+    SessionAuthGuard,
+    CsrfGuard,
+    PermissionsGuard,
+    EmployeeBalanceOwnershipGuard,
+)
 @Controller()
 export class GetEmployeeBalanceHttpController {
     constructor(

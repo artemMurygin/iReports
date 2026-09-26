@@ -19,6 +19,13 @@ import { routeGuardApi } from './session.api.ts'
 // `useHasPermission` (раздел 1 tasks.md).
 export type RouteHandle = {
     requiredPermission?: string | string[]
+    /** Own-resource fallback (add-employee-balance-own-view): роут остаётся доступен и БЕЗ
+     * `requiredPermission`, если у пользователя есть `ownResourcePermission` И значение route-param
+     * `ownResourceParam` (например `:id`) совпадает с id текущего сотрудника — см. `RouteGuard.tsx`,
+     * которая делает само сравнение. Пример: `balance/employee/:id` (`app/router.tsx`) пускает по
+     * `employee-balance:view_all` (любой сотрудник) ИЛИ по `employee-balance:view_own` + `:id` — свой. */
+    ownResourcePermission?: string
+    ownResourceParam?: string
 }
 
 // Dev-only байпас авторизации (тестирование функциональности без Bitrix24
@@ -28,7 +35,11 @@ export type RouteHandle = {
 // симметричным backend-байпасом.
 const isAuthBypassed = import.meta.env.DEV && import.meta.env.VITE_AUTH_DISABLED === 'true'
 
-export function useRouteGuardState(requiredPermission?: string | string[]) {
+export function useRouteGuardState(
+    requiredPermission?: string | string[],
+    ownResourcePermission?: string,
+    isOwnResource?: boolean,
+) {
     const context = detectRuntimeContext()
     const { data: session, isLoading } = useQuery(routeGuardApi.getCurrentSession())
 
@@ -39,7 +50,13 @@ export function useRouteGuardState(requiredPermission?: string | string[]) {
     // пустой массив в этом случае — no-op (`.some()` по пустому массиву -> false, что не
     // влияет на результат, т.к. requiredPermission === undefined уже отдаёт true раньше).
     const hasPermission = useHasPermission(requiredPermission ?? [])
-    const hasRequiredPermission = isAuthBypassed || requiredPermission === undefined || hasPermission
+    // Own-resource fallback (см. RouteHandle) — тот же приём безусловного вызова хука;
+    // `isOwnResource` (сравнение route-param с id текущего сотрудника) вычисляет вызывающая
+    // сторона (RouteGuard.tsx), этот хук только комбинирует его с самим permission.
+    const hasOwnResourcePermission = useHasPermission(ownResourcePermission ?? [])
+    const hasOwnResourceAccess = Boolean(isOwnResource) && hasOwnResourcePermission
+    const hasRequiredPermission =
+        isAuthBypassed || requiredPermission === undefined || hasPermission || hasOwnResourceAccess
 
     return {
         context,

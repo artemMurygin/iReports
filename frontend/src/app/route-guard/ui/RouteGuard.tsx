@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useMatches, useSearchParams } from 'react-router-dom'
 
+import { useAuthStore } from '@/features/Auth'
 import { LoginPage } from '@/pages/Login'
 import { AccessDeniedPage } from '@/pages/AccessDenied'
 import { OAuthCallbackPage } from '@/pages/OAuthCallback'
@@ -33,10 +34,27 @@ type Props = {
 //    'roles:manage'` — это правило реально срабатывает на нём.
 export function RouteGuard({ children }: Props) {
     const matches = useMatches()
-    const requiredPermission = (matches.at(-1)?.handle as RouteHandle | undefined)?.requiredPermission
+    const lastMatch = matches.at(-1)
+    const handle = lastMatch?.handle as RouteHandle | undefined
+    const requiredPermission = handle?.requiredPermission
     const [searchParams] = useSearchParams()
 
-    const { context, isLoading, hasSession, hasRequiredPermission } = useRouteGuardState(requiredPermission)
+    // add-employee-balance-own-view — own-resource fallback (см. WHY в RouteHandle,
+    // useRouteGuardState.ts): route-param, объявленный `handle.ownResourceParam` (например `:id`
+    // у `balance/employee/:id`), сравнивается со своим id из authStore.
+    const currentEmployeeId = useAuthStore((state) => state.employee?.id)
+    const ownResourceParam = handle?.ownResourceParam
+    const isOwnResource =
+        ownResourceParam !== undefined &&
+        currentEmployeeId !== undefined &&
+        currentEmployeeId !== null &&
+        lastMatch?.params[ownResourceParam] === String(currentEmployeeId)
+
+    const { context, isLoading, hasSession, hasRequiredPermission } = useRouteGuardState(
+        requiredPermission,
+        handle?.ownResourcePermission,
+        isOwnResource,
+    )
 
     if (searchParams.has('code')) {
         return <OAuthCallbackPage />

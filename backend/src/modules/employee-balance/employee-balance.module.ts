@@ -23,6 +23,7 @@ import { DeleteBalanceTransactionHttpController } from '@/modules/employee-balan
 import { GetEmployeeBalanceHttpController } from '@/modules/employee-balance/interface/http-controllers/get-employee-balance.http.controller';
 import { GetDepartmentBalancesHttpController } from '@/modules/employee-balance/interface/http-controllers/get-department-balances.http.controller';
 import { GetBalanceSummaryHttpController } from '@/modules/employee-balance/interface/http-controllers/get-balance-summary.http.controller';
+import { EmployeeBalanceOwnershipGuard } from '@/modules/employee-balance/interface/guards/employee-balance-ownership.guard';
 import { BALANCE_TRANSACTION_REPOSITORY } from '@/modules/employee-balance/application/ports/balance-transaction.port';
 import { BalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/balance-transaction.repository';
 // Порты/репозитории ниже — direction-агностичная инфраструктура учёта,
@@ -124,6 +125,7 @@ import { EmployeeDismissalRepository } from '@/modules/employee-dismissal/infras
         CreateBalanceTransactionHandler,
         DeleteBalanceTransactionHandler,
         GetEmployeeBalanceService,
+        EmployeeBalanceOwnershipGuard,
         GetDepartmentBalancesService,
         GetBalanceSummaryService,
         {
