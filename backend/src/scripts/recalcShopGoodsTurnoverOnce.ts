@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DatabaseModule } from '../infrustructure/database/database.module';
+import { RedisModule } from '../infrustructure/redis/redis.module';
 import { ShopWarehouseModule } from '../domains/shop/modules/warehouse/warehouse.module';
 import { MoySkladSyncService } from '../domains/shop/sync/moySklad/moysklad-sync.service';
 import { RebuildGoodsTurnoverReportService } from '../domains/shop/modules/warehouse/application/services/goods-turnover-report/rebuild-goods-turnover-report.service';
@@ -28,6 +29,7 @@ import { runInSystemRequestContext } from '../shared/application/context/run-in-
     imports: [
         EventEmitterModule.forRoot(),
         DatabaseModule,
+        RedisModule,
         ShopWarehouseModule,
     ],
 })

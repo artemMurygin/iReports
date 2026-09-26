@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DatabaseModule } from '../infrustructure/database/database.module';
+import { RedisModule } from '../infrustructure/redis/redis.module';
 import { WarehouseModule } from '../domains/service/modules/warehouse/warehouse.module';
 import { runInSystemRequestContext } from '../shared/application/context/run-in-system-context';
 import { BuildGoodsTurnoverReportService } from '../domains/service/modules/warehouse/application/services/build-goods-turnover-report.service';
@@ -23,7 +24,12 @@ import {
 //
 // Запуск: npm run build && node dist/src/scripts/recalcGoodsTurnoverOnce.js <период, например 2026-07>
 @Module({
-    imports: [EventEmitterModule.forRoot(), DatabaseModule, WarehouseModule],
+    imports: [
+        EventEmitterModule.forRoot(),
+        DatabaseModule,
+        RedisModule,
+        WarehouseModule,
+    ],
 })
 class RecalcOnceModule {}
 
