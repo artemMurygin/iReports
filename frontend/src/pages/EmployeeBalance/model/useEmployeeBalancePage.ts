@@ -7,9 +7,8 @@ import { api } from '@/features/EmployeeBalance'
 import { DEFAULT_PERIOD, formatPeriodLabel } from '@/features/SalesPlan'
 import { useDepartments, useEmployees } from '@/features/TargetDirectory'
 
-import { api as identityApi } from './api.ts'
 import { matchesCommentSearch } from './commentSearch.ts'
-import { buildErpLinkageLabel, buildHeaderSubtitle } from './headerInfo.ts'
+import { buildHeaderSubtitle } from './headerInfo.ts'
 import { periodToDateRange } from './periodRange.ts'
 
 /** Направление drawer'а «Добавить движение», открываемого одной из двух кнопок шапки —
@@ -137,11 +136,7 @@ export function useEmployeeBalancePage() {
     const summaryQuery = useQuery(api.getBalanceSummary(DEFAULT_PERIOD, {}))
     const position = summaryQuery.data?.employees.find((item) => item.employeeId === employeeId)?.position ?? null
 
-    // ── Связь с ERP-системами (шапка, Фаза 5) — «связан с RemOnline и МойСкладом», см.
-    // `headerInfo.ts`. ────────────────────────────────────────────────────────────────────
-    const identitiesQuery = useQuery(identityApi.getEmployeeIdentities(employeeId))
-    const erpLinkageLabel = buildErpLinkageLabel(identitiesQuery.data ?? [])
-    const headerSubtitle = buildHeaderSubtitle([departmentName, position, erpLinkageLabel])
+    const headerSubtitle = buildHeaderSubtitle([departmentName, position])
 
     // «Всё время» (period === null, дефолт Фазы 8) — своя подпись, formatPeriodLabel ожидает
     // валидный `YYYY-MM` и не умеет null.

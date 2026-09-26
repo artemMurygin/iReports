@@ -6,8 +6,8 @@ import { Breadcrumbs } from '@/shared/ui-kit/atoms/Breadcrumbs'
 
 export type BalanceHeaderProps = {
     employeeName: string
-    /** «Отдел · Должность · связан с <ERP-системами>» — уже собранная строка (см.
-     * `model/headerInfo.ts`'s `buildHeaderSubtitle`), `null` если сегментов нет вовсе. Не
+    /** «Отдел · Должность» — уже собранная строка (см. `model/headerInfo.ts`'s
+     * `buildHeaderSubtitle`), `null` если сегментов нет вовсе. Не
      * `departmentName` напрямую (Фаза 5 docs/employee-settlements-page-redesign, Pencil
      * `L73YCK`/`JTc29`) — шапка больше не решает, что показывать, только рендерит готовую
      * строку (чистый медиатор, frontend/CLAUDE.md). */
