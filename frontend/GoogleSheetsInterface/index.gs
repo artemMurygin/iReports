@@ -49,8 +49,8 @@ const ACCRUALS_SHEET_GID = 1714253184
 const ACCRUALS_ID_COLUMN = 5 // E
 const ACCRUALS_SUM_COLUMN = 72 // BS
 const ACCRUALS_FIRST_ROW = 5
-const RO_NEW_PRICE_COLUMN = 61 // BH
-const RO_OLD_PRICE_COLUMN = 50 // AW
+const RO_NEW_PRICE_COLUMN = 62 // BJ
+const RO_OLD_PRICE_COLUMN = 51 // AY
 
 function uploadPricesToRO() {
     const sheet = getAccrualsSheet_()
