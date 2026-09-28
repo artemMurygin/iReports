@@ -48,7 +48,7 @@ describe('TransactionsCardList — direction sub-label per row', () => {
 
     it('renders "Магазин" under the type for a shop-direction transaction', () => {
         renderCardList([makeTransaction({ id: 'tx-1', direction: 'shop', type: 'PENALTY', amount: -3200 })])
-        const card = screen.getByText('Штраф').closest('[data-slot="transaction-card"]') as HTMLElement
+        const card = screen.getByText('Вычет').closest('[data-slot="transaction-card"]') as HTMLElement
         expect(within(card).getByText('Магазин')).toBeInTheDocument()
     })
 

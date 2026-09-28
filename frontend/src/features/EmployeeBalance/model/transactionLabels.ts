@@ -14,7 +14,7 @@ export const transactionTypeLabel: Record<BalanceTransactionType, string> = {
     BONUS: 'Премия',
     SICK_LEAVE: 'Больничный',
     VACATION_PAY: 'Отпускные',
-    PENALTY: 'Штраф',
+    PENALTY: 'Вычет',
     ADJUSTMENT: 'Корректировка вручную',
     PAYOUT: 'Выплата',
 }

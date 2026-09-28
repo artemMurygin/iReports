@@ -50,7 +50,7 @@ describe('BalanceFilters — type chip filtering', () => {
             'Премия',
             'Больничный',
             'Отпускные',
-            'Штраф',
+            'Вычет',
             'Корректировка вручную',
             'Выплата',
         ]) {
@@ -61,7 +61,7 @@ describe('BalanceFilters — type chip filtering', () => {
     it('calls onToggleType with the clicked type', async () => {
         const user = userEvent.setup()
         const { desktop, onToggleType } = renderFilters()
-        await user.click(desktop.getByRole('button', { name: 'Штраф' }))
+        await user.click(desktop.getByRole('button', { name: 'Вычет' }))
         expect(onToggleType).toHaveBeenCalledWith('PENALTY')
     })
 
@@ -86,7 +86,7 @@ describe('BalanceFilters — mobile "Ещё N" overflow', () => {
         expect(mobile.getByRole('button', { name: 'Начисление' })).toBeInTheDocument()
         expect(mobile.getByRole('button', { name: 'Премия' })).toBeInTheDocument()
         expect(mobile.getByRole('button', { name: 'Ещё 5' })).toBeInTheDocument()
-        expect(mobile.queryByRole('button', { name: 'Штраф' })).not.toBeInTheDocument()
+        expect(mobile.queryByRole('button', { name: 'Вычет' })).not.toBeInTheDocument()
         expect(mobile.queryByRole('button', { name: 'Выплата' })).not.toBeInTheDocument()
     })
 
@@ -94,7 +94,7 @@ describe('BalanceFilters — mobile "Ещё N" overflow', () => {
         const user = userEvent.setup()
         const { mobile } = renderFilters()
         await user.click(mobile.getByRole('button', { name: 'Ещё 5' }))
-        expect(mobile.getByRole('button', { name: 'Штраф' })).toBeInTheDocument()
+        expect(mobile.getByRole('button', { name: 'Вычет' })).toBeInTheDocument()
         expect(mobile.getByRole('button', { name: 'Выплата' })).toBeInTheDocument()
         expect(mobile.queryByRole('button', { name: 'Ещё 5' })).not.toBeInTheDocument()
     })
