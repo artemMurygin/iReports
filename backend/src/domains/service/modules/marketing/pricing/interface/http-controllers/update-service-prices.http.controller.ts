@@ -3,6 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { UpdateServicePricesResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { Public } from '@/shared/decorators/public.decorator';
 import { UpdateServicePricesDto } from '../dto/update-service-prices.dto';
 import { UpdateServicePricesCommand } from '../../application/command/update-service-prices.command';
 
@@ -17,6 +18,9 @@ import { UpdateServicePricesCommand } from '../../application/command/update-ser
 export class UpdateServicePricesHttpController {
     constructor(private readonly commandBus: CommandBus) {}
 
+    // Public: вызывается из Google Apps Script (GoogleSheetsInterface),
+    // у которого нет Bitrix-сессии — см. add-bitrix24-auth-and-rbac.
+    @Public()
     @Post(routesV1.service.marketing.pricing.updateServicePrices)
     @ApiOperation({
         summary: 'Обновить цены и себестоимость услуг в RemOnline',

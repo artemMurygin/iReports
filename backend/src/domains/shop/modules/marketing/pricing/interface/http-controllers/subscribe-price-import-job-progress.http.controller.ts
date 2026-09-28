@@ -10,6 +10,7 @@ import {
     takeUntil,
 } from 'rxjs';
 import { routesV1 } from '@/config/app.routes';
+import { Public } from '@/shared/decorators/public.decorator';
 import { SubscribePriceImportJobProgressService } from '../../application/services/subscribe-price-import-job-progress.service';
 
 // Heartbeat каждые 20с — то же значение и то же назначение, что у легаси
@@ -36,6 +37,9 @@ export class SubscribePriceImportJobProgressHttpController {
         private readonly subscribeProgress: SubscribePriceImportJobProgressService,
     ) {}
 
+    // Public: вызывается из Google Apps Script (GoogleSheetsInterface),
+    // у которого нет Bitrix-сессии — см. add-bitrix24-auth-and-rbac.
+    @Public()
     @Sse(routesV1.shop.marketing.pricing.importCostsProgress)
     @ApiOperation({
         summary: 'SSE-поток прогресса джобы импорта цен (heartbeat 20с)',

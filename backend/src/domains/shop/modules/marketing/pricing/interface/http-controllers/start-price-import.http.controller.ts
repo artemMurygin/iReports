@@ -3,6 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { StartPriceImportResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { Public } from '@/shared/decorators/public.decorator';
 import { StartPriceImportDto } from '../dto/start-price-import.dto';
 import { StartPriceImportCommand } from '../../application/command/start-price-import.command';
 
@@ -26,6 +27,9 @@ import { StartPriceImportCommand } from '../../application/command/start-price-i
 export class StartPriceImportHttpController {
     constructor(private readonly commandBus: CommandBus) {}
 
+    // Public: вызывается из Google Apps Script (GoogleSheetsInterface),
+    // у которого нет Bitrix-сессии — см. add-bitrix24-auth-and-rbac.
+    @Public()
     @Post(routesV1.shop.marketing.pricing.importCosts)
     @ApiOperation({
         summary: 'Запустить импорт закупочных цен магазина из XLSX-прайса',
