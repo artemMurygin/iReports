@@ -1,4 +1,4 @@
-import { LineChart, Percent, Target, TrendingUp } from 'lucide-react'
+import { LineChart, Percent, PiggyBank, Target, TrendingUp } from 'lucide-react'
 
 import { KpiCard } from '@/shared/ui-kit/molecules/KpiCard'
 import type { SalesPlanTotals } from '@/features/SalesPlan/model/useSalesPlan.ts'
@@ -17,17 +17,26 @@ import {
  * sum of `plan`/`fact`/`prognose` `turnover`/`margin` across the filtered rows (see
  * `useSalesPlan`'s `totals`) — the design's Selection Bar / row-count language is
  * mutation-scoped and out of this view-only page, so the notes below are derived purely
- * from the totals instead.
+ * from the totals instead. Шестая карточка «Маржа · прогноз» — вне исходного дизайна Pencil,
+ * добавлена по запросу пользователя: на вкладке «Все» её note расшифровывает вклад каждого
+ * направления (`prognoseMarginByDirection`), а не только суммарное число.
  */
 export type KpiRowProps = {
     totals: SalesPlanTotals
     periodLabel: string
+    /** Разбивка «Маржа · прогноз» по направлениям — только на вкладке «Все» (см.
+     * `useSalesPlanPage`), иначе `null` и карточка показывает только суммарное число. */
+    prognoseMarginByDirection: { service: number; shop: number } | null
     className?: string
 }
 
-function KpiRow({ totals, periodLabel, className }: KpiRowProps) {
-    const { categoriesCount, planTurnover, factTurnover, prognoseTurnover, planMargin, factMargin } = totals
+function KpiRow({ totals, periodLabel, prognoseMarginByDirection, className }: KpiRowProps) {
+    const { categoriesCount, planTurnover, factTurnover, prognoseTurnover, planMargin, factMargin, prognoseMargin } =
+        totals
     const forecastGap = prognoseTurnover - planTurnover
+    const prognoseMarginNote = prognoseMarginByDirection
+        ? `Сервис ${formatCurrency(prognoseMarginByDirection.service)} · Магазин ${formatCurrency(prognoseMarginByDirection.shop)}`
+        : `${formatPercentPrecise(prognoseMargin, prognoseTurnover)} от прогнозной выручки`
 
     return (
         <div data-slot="kpi-row" className={className}>
@@ -63,6 +72,13 @@ function KpiRow({ totals, periodLabel, className }: KpiRowProps) {
                     value={formatCurrency(factMargin)}
                     note={`${formatPercent(factMargin, planMargin)} от плана · ${formatPercentPrecise(factMargin, factTurnover)} от выручки`}
                     icon={<Percent />}
+                />
+                <KpiCard
+                    label="Маржа · прогноз"
+                    value={formatCurrency(prognoseMargin)}
+                    note={prognoseMarginNote}
+                    icon={<PiggyBank />}
+                    tone={prognoseMargin >= planMargin ? 'positive' : 'warning'}
                 />
             </div>
         </div>

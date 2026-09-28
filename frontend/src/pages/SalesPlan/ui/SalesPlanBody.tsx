@@ -23,6 +23,9 @@ type Props = {
     serviceRows: SalesPlanRow[]
     shopRows: SalesPlanRow[]
     totals: SalesPlanTotals
+    /** Только для вкладки «Все» — разбивка прогнозной маржи по направлениям для карточки
+     * «Маржа · прогноз» (см. `useSalesPlanPage`). */
+    prognoseMarginByDirection: { service: number; shop: number } | null
     periodLabel: string
     hasData: boolean
     error: string | null
@@ -45,6 +48,7 @@ export function SalesPlanBody({
     serviceRows,
     shopRows,
     totals,
+    prognoseMarginByDirection,
     periodLabel,
     hasData,
     error,
@@ -65,8 +69,18 @@ export function SalesPlanBody({
 
             {(!error || hasData) && (
                 <>
-                    <KpiRow totals={totals} periodLabel={periodLabel} className="hidden md:block" />
-                    <KpiGridMobile totals={totals} periodLabel={periodLabel} className="md:hidden" />
+                    <KpiRow
+                        totals={totals}
+                        periodLabel={periodLabel}
+                        prognoseMarginByDirection={prognoseMarginByDirection}
+                        className="hidden md:block"
+                    />
+                    <KpiGridMobile
+                        totals={totals}
+                        periodLabel={periodLabel}
+                        prognoseMarginByDirection={prognoseMarginByDirection}
+                        className="md:hidden"
+                    />
 
                     {direction === 'all' ? (
                         // "Все" — ни выбор строк, ни "Утвердить"/"Изменить план" не привязаны к

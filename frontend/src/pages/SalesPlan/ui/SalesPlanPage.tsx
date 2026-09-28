@@ -33,6 +33,7 @@ export function SalesPlanPage() {
         serviceRows,
         shopRows,
         totals,
+        prognoseMarginByDirection,
         isInitialLoad,
         isRefreshing,
         error,
@@ -122,6 +123,7 @@ export function SalesPlanPage() {
                     serviceRows={serviceRows}
                     shopRows={shopRows}
                     totals={totals}
+                    prognoseMarginByDirection={prognoseMarginByDirection}
                     periodLabel={periodLabel}
                     hasData={hasData}
                     error={error}

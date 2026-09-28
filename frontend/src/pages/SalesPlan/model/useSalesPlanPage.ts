@@ -36,6 +36,7 @@ function sumTotals(a: SalesPlanTotals, b: SalesPlanTotals): SalesPlanTotals {
         prognoseTurnover: a.prognoseTurnover + b.prognoseTurnover,
         planMargin: a.planMargin + b.planMargin,
         factMargin: a.factMargin + b.factMargin,
+        prognoseMargin: a.prognoseMargin + b.prognoseMargin,
     }
 }
 
@@ -84,6 +85,11 @@ export function useSalesPlanPage() {
 
     const rows = singleDirectionData.rows
     const totals = isAllDirections ? sumTotals(service.totals, shop.totals) : singleDirectionData.totals
+    // Только для карточки «Маржа · прогноз» на вкладке «Все» — по направлениям, а не только
+    // суммарно (service.totals/shop.totals уже посчитаны выше независимо от вкладки).
+    const prognoseMarginByDirection = isAllDirections
+        ? { service: service.totals.prognoseMargin, shop: shop.totals.prognoseMargin }
+        : null
     const isInitialLoad = isAllDirections
         ? service.isInitialLoad || shop.isInitialLoad
         : singleDirectionData.isInitialLoad
@@ -212,6 +218,7 @@ export function useSalesPlanPage() {
         serviceRows: service.rows,
         shopRows: shop.rows,
         totals,
+        prognoseMarginByDirection,
         isInitialLoad,
         isRefreshing,
         error,

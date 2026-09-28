@@ -41,6 +41,7 @@ export type SalesPlanTotals = {
     prognoseTurnover: number
     planMargin: number
     factMargin: number
+    prognoseMargin: number
 }
 
 const NO_CATEGORY_LABEL = 'Все направление'
@@ -52,6 +53,7 @@ const EMPTY_TOTALS: SalesPlanTotals = {
     prognoseTurnover: 0,
     planMargin: 0,
     factMargin: 0,
+    prognoseMargin: 0,
 }
 
 // Дерево warehouse/catalog (CatalogResponse) разворачивается в плоскую map id -> полный путь
@@ -182,6 +184,7 @@ export function useSalesPlan(
                 prognoseTurnover: acc.prognoseTurnover + row.prognose.turnover,
                 planMargin: acc.planMargin + row.plan.margin,
                 factMargin: acc.factMargin + row.fact.margin,
+                prognoseMargin: acc.prognoseMargin + row.prognose.margin,
             }),
             EMPTY_TOTALS,
         )
