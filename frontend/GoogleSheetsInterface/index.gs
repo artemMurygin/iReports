@@ -47,7 +47,7 @@ function uploadSalePricesToMS() {
 
 const ACCRUALS_SHEET_GID = 1714253184
 const ACCRUALS_ID_COLUMN = 5 // E
-const ACCRUALS_SUM_COLUMN = 72 // BS
+const ACCRUALS_SUM_COLUMN = 73 // BU
 const ACCRUALS_FIRST_ROW = 5
 const RO_NEW_PRICE_COLUMN = 62 // BJ
 const RO_OLD_PRICE_COLUMN = 51 // AY
@@ -106,7 +106,7 @@ function uploadPricesToRO() {
     const response = UrlFetchApp.fetch(BASE_URL + '/v1/service/marketing/pricing/update-service-prices', {
         method: 'POST',
         contentType: 'application/json',
-        payload: JSON.stringify(items),
+        payload: JSON.stringify({ items: items }),
         muteHttpExceptions: true,
     })
     console.log('uploadPricesToRO: response code=%s, body=%s', response.getResponseCode(), response.getContentText())
@@ -270,16 +270,24 @@ function getCreateServiceRows() {
 }
 
 function createServiceInRoapp(payload) {
+    console.log('createServiceInRoapp: payload=%s', JSON.stringify(payload))
+
     const response = UrlFetchApp.fetch(BASE_URL + '/custom-api-roapp/create-service', {
         method: 'POST',
         contentType: 'application/json',
         payload: JSON.stringify(payload),
         muteHttpExceptions: true,
     })
+    console.log(
+        'createServiceInRoapp: response code=%s, body=%s',
+        response.getResponseCode(),
+        response.getContentText(),
+    )
 
     const code = response.getResponseCode()
     const body = JSON.parse(response.getContentText())
     if (code >= 400) {
+        console.log('createServiceInRoapp: request failed, code=%s', code)
         throw new Error(body && body.message ? body.message : 'Ошибка создания услуги в Ремонлайн')
     }
 

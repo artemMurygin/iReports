@@ -1,6 +1,8 @@
 import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import * as XLSX from 'xlsx';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import type { UpdateServicePricesResponse } from 'ireports-contracts';
 import { ROAPP_GATEWAY } from '@/domains/service/integrations/roapp-gateway/roapp-gateway.port';
 import type { RoappGateway } from '@/domains/service/integrations/roapp-gateway/roapp-gateway.port';
@@ -28,6 +30,10 @@ const SERVICE_PRICE_HEADERS = [
     'Расчет процента от',
     'Стандартная цена',
 ];
+
+// Имя операции для файлов, сохраняемых по флагу isSaving (см.
+// saveGeneratedFile) — совпадает с сегментом маршрута этого эндпоинта.
+const OPERATION_NAME = 'update-service-prices';
 
 // Обновление цен услуг RoApp (Фаза 7,
 // docs/todo-modules-ddd-refactoring/plan-todo-modules-ddd-refactoring.md) —
@@ -102,7 +108,22 @@ export class UpdateServicePricesHandler implements ICommandHandler<
             bookType: 'xlsx',
         }) as Buffer;
 
+        if (command.isSaving) {
+            await this.saveGeneratedFile(buffer);
+        }
+
         return this.roappGateway.updateServicesFromFile(buffer);
+    }
+
+    private async saveGeneratedFile(buffer: Buffer): Promise<void> {
+        const dir = path.join(process.cwd(), 'files');
+        await fs.mkdir(dir, { recursive: true });
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filePath = path.join(dir, `${OPERATION_NAME}_${timestamp}.xlsx`);
+
+        await fs.writeFile(filePath, buffer);
+        this.logger.log(`Saved generated price file to ${filePath}`);
     }
 
     private async buildServiceCategoryPaths(): Promise<Map<number, string>> {

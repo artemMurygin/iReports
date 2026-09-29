@@ -20,9 +20,12 @@ export type UpdateServicePricesItem = z.infer<
     typeof updateServicePricesItemSchema
 >;
 
-const updateServicePricesRequestSchema = z.array(
-    updateServicePricesItemSchema,
-);
+const updateServicePricesRequestSchema = z.object({
+    items: z.array(updateServicePricesItemSchema),
+    // Если true — сгенерированный XLSX дополнительно сохраняется на бекенде
+    // в backend/files (см. UpdateServicePricesHandler.saveGeneratedFile).
+    isSaving: z.boolean().optional(),
+});
 export type UpdateServicePricesRequest = z.infer<
     typeof updateServicePricesRequestSchema
 >;

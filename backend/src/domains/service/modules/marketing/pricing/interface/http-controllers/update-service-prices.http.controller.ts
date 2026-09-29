@@ -28,7 +28,10 @@ export class UpdateServicePricesHttpController {
     async update(
         @Body() body: UpdateServicePricesDto,
     ): Promise<UpdateServicePricesResponse> {
-        const command = new UpdateServicePricesCommand({ items: body });
+        const command = new UpdateServicePricesCommand({
+            items: body.items,
+            isSaving: body.isSaving,
+        });
         return this.commandBus.execute(command);
     }
 }

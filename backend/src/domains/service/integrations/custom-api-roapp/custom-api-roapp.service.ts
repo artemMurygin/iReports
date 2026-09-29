@@ -3,6 +3,7 @@ import {
     BadRequestException,
     Injectable,
 } from '@nestjs/common';
+import axios from 'axios';
 import {
     ServiceBonusForEngeneer,
     ServiceBonusForEngeneerSchema,
@@ -86,7 +87,10 @@ export class CustomApiRoappService {
             return UpdateServicesResponseSchema.parse(data);
         } catch (error) {
             throw new BadGatewayException(
-                `Failed to update services in CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
+                this.extractRemoteErrorMessage(
+                    error,
+                    'Failed to update services in CustomApiRoapp',
+                ),
             );
         }
     }
@@ -134,5 +138,21 @@ export class CustomApiRoappService {
                 `Failed to fetch goods flow report from CustomApiRoapp: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
+    }
+
+    // При ошибке ответа CustomApiRoapp (не сетевой сбой, а тело с
+    // { message }) фронт должен увидеть именно это сообщение, а не общий
+    // текст ошибки axios — см. BadGatewayException выше.
+    private extractRemoteErrorMessage(
+        error: unknown,
+        fallbackPrefix: string,
+    ): string {
+        if (axios.isAxiosError(error)) {
+            const body = error.response?.data as
+                | CustomApiRoappErrorEnvelope
+                | undefined;
+            if (body?.message) return body.message;
+        }
+        return `${fallbackPrefix}: ${error instanceof Error ? error.message : String(error)}`;
     }
 }

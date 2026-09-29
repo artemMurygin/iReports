@@ -65,3 +65,6 @@ src/domains/shop/integrations/moySklad/error.json
 # То же самое для MoyskladCashDocumentAdapter (Фаза 11 PRD 3) — отдельный файл,
 # чтобы не перезаписывать дамп чтения поверх дампа кассовой мутации и наоборот.
 src/domains/shop/integrations/moySklad/cash-document-error.json
+
+# Файлы, сохранённые по флагу isSaving (update-service-prices и т.п.)
+/files

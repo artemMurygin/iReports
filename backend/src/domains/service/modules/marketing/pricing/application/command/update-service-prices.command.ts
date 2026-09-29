@@ -6,9 +6,11 @@ import type { UpdateServicePricesItem } from 'ireports-contracts';
 // ServicePriceChange перед сборкой XLSX (см. update-service-prices.handler.ts).
 export class UpdateServicePricesCommand extends Command {
     readonly items: UpdateServicePricesItem[];
+    readonly isSaving?: boolean;
 
     constructor(props: CommandProps<UpdateServicePricesCommand>) {
         super(props);
         this.items = props.items;
+        this.isSaving = props.isSaving;
     }
 }
