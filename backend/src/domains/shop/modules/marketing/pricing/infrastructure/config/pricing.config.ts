@@ -70,6 +70,7 @@ export const CATEGORY_MS_FILTER: Record<CategoryKey, string> = {
     iPhone: folders(
         '7dc681c5-767e-11ef-0a80-143f001341be',
         'dfabd620-992a-11f0-0a80-085200099667',
+        '4fc9e552-b1b4-11f1-0a80-115a0034edf6',
     ),
     MacBook: folders(
         '713fc4ef-1600-11f1-0a80-0935002fef59',
@@ -84,6 +85,9 @@ export const CATEGORY_MS_FILTER: Record<CategoryKey, string> = {
     ),
     Watch: folders(
         '3558b0ed-127e-11f1-0a80-093000012470',
+        '6d4f9f8c-b696-11f1-0a80-081a0017b02f',
+        '47ef2e0c-6efe-11f1-0a80-1d560049029f',
+        '6dcaa28e-b696-11f1-0a80-081a0017b120',
         'dbc96962-127f-11f1-0a80-0fd100017323',
         '267c0bdf-127f-11f1-0a80-169000014358',
     ),
