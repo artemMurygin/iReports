@@ -29,9 +29,15 @@ import {
     GoodsFlowReportResponseSchema,
 } from './schemas/goodsFlowReport.schema';
 
-/** TODO: заменить на Zod-схему конверта ошибки CustomApiRoapp */
+/**
+ * TODO: заменить на Zod-схему конверта ошибки CustomApiRoapp.
+ * Поле сообщения непоследовательно между эндпоинтами: /getServicesBonuses/:id
+ * отдаёт { message }, а /updateServices — { error } (см.
+ * extractRemoteErrorMessage), поэтому оба варианта опциональны.
+ */
 interface CustomApiRoappErrorEnvelope {
     message?: string;
+    error?: string;
 }
 
 @Injectable()
@@ -141,8 +147,8 @@ export class CustomApiRoappService {
     }
 
     // При ошибке ответа CustomApiRoapp (не сетевой сбой, а тело с
-    // { message }) фронт должен увидеть именно это сообщение, а не общий
-    // текст ошибки axios — см. BadGatewayException выше.
+    // { message } или { error }) фронт должен увидеть именно это сообщение,
+    // а не общий текст ошибки axios — см. BadGatewayException выше.
     private extractRemoteErrorMessage(
         error: unknown,
         fallbackPrefix: string,
@@ -151,7 +157,8 @@ export class CustomApiRoappService {
             const body = error.response?.data as
                 | CustomApiRoappErrorEnvelope
                 | undefined;
-            if (body?.message) return body.message;
+            const remoteMessage = body?.message ?? body?.error;
+            if (remoteMessage) return remoteMessage;
         }
         return `${fallbackPrefix}: ${error instanceof Error ? error.message : String(error)}`;
     }
