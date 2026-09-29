@@ -42,6 +42,9 @@ export class AiProductMatcherAdapter implements ProductMatcher {
         catalogItems: CatalogItem[],
     ): Promise<ProductMatch[]> {
         const prompt = buildMatchingPrompt(category, priceRows, catalogItems);
+        this.logger.log(
+            `[${category}] Запрос AI-сопоставления: прайс ${priceRows.length} строк, номенклатура ${catalogItems.length} товаров, длина промпта ${prompt.length} символов`,
+        );
 
         const raw = await this.ai.ask(prompt, {
             temperature: 0,
@@ -49,11 +52,29 @@ export class AiProductMatcherAdapter implements ProductMatcher {
             stream: true,
             headers: { 'X-OmniRoute-No-Cache': 'true' },
         });
+        this.logger.log(
+            `[${category}] Ответ AI получен: ${raw.length} символов`,
+        );
 
         const items = parseMatchingResponse(raw);
         if (items === null) {
+            this.logger.error(
+                `[${category}] Не удалось распарсить ответ AI-сопоставления как JSON-массив, первые 500 символов ответа: ${raw.slice(0, 500)}`,
+            );
             throw new Error(
                 `[${category}] Не удалось распарсить ответ AI-сопоставления`,
+            );
+        }
+
+        const dropped = items.filter(
+            (item) =>
+                !item.system_id?.trim() ||
+                !item.system_name?.trim() ||
+                !item.price_name?.trim(),
+        );
+        if (dropped.length > 0) {
+            this.logger.warn(
+                `[${category}] AI вернул ${dropped.length} позиций без полной пары (не попадут ни в CostChange, ни в результат — эффективно нет сопоставления): ${JSON.stringify(dropped)}`,
             );
         }
 
@@ -83,6 +104,37 @@ export class AiProductMatcherAdapter implements ProductMatcher {
                     confidence: 1,
                 }),
             );
+
+        // Строки прайса/номенклатуры, которых нет ни в одном ProductMatch — AI либо вообще не
+        // упомянул их в ответе, либо упомянул без полной пары (см. `dropped` выше). Диагностика для
+        // "товар есть и в прайсе, и в МойСклад, но цена не проставляется".
+        const matchedSourceNames = new Set(
+            matches.map((m) => m.getSourceRowName().trim().toLowerCase()),
+        );
+        const missingFromPriceList = priceRows.filter(
+            (row) => !matchedSourceNames.has(row.name.trim().toLowerCase()),
+        );
+        if (missingFromPriceList.length > 0) {
+            this.logger.warn(
+                `[${category}] Строки прайса без сопоставления в ответе AI (${missingFromPriceList.length}): ${missingFromPriceList
+                    .map((r) => `"${r.name}"`)
+                    .join(', ')}`,
+            );
+        }
+
+        const matchedProductIds = new Set(
+            matches.map((m) => m.getMatchedProductId()),
+        );
+        const missingFromCatalog = catalogItems.filter(
+            (item) => !matchedProductIds.has(item.id),
+        );
+        if (missingFromCatalog.length > 0) {
+            this.logger.warn(
+                `[${category}] Товары номенклатуры МойСклад без сопоставления в ответе AI (${missingFromCatalog.length}): ${missingFromCatalog
+                    .map((i) => `[${i.id}] "${i.name}"`)
+                    .join(', ')}`,
+            );
+        }
 
         this.logger.log(
             `[${category}] Сопоставлено: ${matches.length} позиций из ${items.length} в ответе AI`,

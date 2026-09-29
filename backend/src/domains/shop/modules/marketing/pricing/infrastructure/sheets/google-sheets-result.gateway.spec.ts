@@ -24,7 +24,7 @@ describe('GoogleSheetsResultGateway', () => {
     it('пишет новую цену только для товаров, которым таблица сопоставила строку (по колонке A)', async () => {
         const { sheets, updateRows } = buildFakeSheets({
             'Товары!A5:A': [['ms-1'], ['ms-2']],
-            'Товары!A3:AN': [
+            'Товары!A3:AO': [
                 [], // строка 3 (заголовок)
                 [], // строка 4
                 ['ms-1'], // строка 5
@@ -53,8 +53,8 @@ describe('GoogleSheetsResultGateway', () => {
         // Первый вызов — сброс "Закуп" до 0, второй — запись новых цен.
         expect(updateRows).toHaveBeenCalledTimes(2);
         expect(updateRows).toHaveBeenNthCalledWith(1, SPREADSHEET_ID, [
-            { range: 'Товары!AN5', values: [['0']] },
-            { range: 'Товары!AN6', values: [['0']] },
+            { range: 'Товары!AO5', values: [['0']] },
+            { range: 'Товары!AO6', values: [['0']] },
         ]);
         expect(updateRows).toHaveBeenNthCalledWith(2, SPREADSHEET_ID, [
             { range: 'Товары!AO5', values: [['1000']] },

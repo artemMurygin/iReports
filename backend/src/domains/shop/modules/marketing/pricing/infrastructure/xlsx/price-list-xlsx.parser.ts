@@ -69,7 +69,7 @@ export class PriceListXlsxParser {
             .slice(3)
             .map((row) => ({
                 name: row[1] as string,
-                price: row[3] as string | number | null,
+                price: row[2] as string | number | null,
             }))
             .filter((r) => r.name != null && r.name !== '');
     }

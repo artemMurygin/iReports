@@ -7,8 +7,8 @@ import { SHEET_GID, SPREADSHEET_ID } from '../config/pricing.config';
 // Реализация RESULT_SHEET_GATEWAY поверх существующего GoogleSheetsService (Фаза 9) — перенос
 // легаси `PriceMonitoringService.writeResultsToSheet`/`resetCostsToNull`
 // (src/TODO/priceMonitoring/priceMonitoring.service.ts) без изменения layout таблицы: колонка A —
-// externalId товара МойСклад начиная со строки 5, AN — сбрасываемая колонка "Закуп", AO — колонка,
-// в которую пишется новая закупочная цена.
+// externalId товара МойСклад начиная со строки 5, AO — колонка "Закуп": сбрасывается в 0 и в неё же
+// пишется новая закупочная цена.
 @Injectable()
 export class GoogleSheetsResultGateway implements ResultSheetGateway {
     private readonly logger = new Logger(GoogleSheetsResultGateway.name);
@@ -56,7 +56,7 @@ export class GoogleSheetsResultGateway implements ResultSheetGateway {
 
     private async resetCostsToNull(sheetName: string): Promise<void> {
         const rows = await this.sheets.getRows(SPREADSHEET_ID, {
-            range: `${sheetName}!A3:AN`,
+            range: `${sheetName}!A3:AO`,
         });
 
         // rows[0] = строка 3 (заголовок), rows[1] = строка 4, rows[2..] = данные с 5-й строки
@@ -69,7 +69,7 @@ export class GoogleSheetsResultGateway implements ResultSheetGateway {
         if (rowsWithId.length === 0) return;
 
         const updates = rowsWithId.map(({ sheetRow }) => ({
-            range: `${sheetName}!AN${sheetRow}`,
+            range: `${sheetName}!AO${sheetRow}`,
             values: [['0']],
         }));
 

@@ -25,7 +25,7 @@ function buildWorkbookBase64(sheets: Record<string, unknown[][]>): string {
 describe('PriceListXlsxParser', () => {
     const parser = new PriceListXlsxParser();
 
-    it('парсит iPhone/Watch с 4-й строки (колонка B — имя, D — цена)', () => {
+    it('парсит iPhone/Watch с 4-й строки (колонка B — имя, C — цена)', () => {
         // Первые 3 строки — непустые "заполнители" (шапка), иначе XLSX схлопывает лист до первой
         // строки с данными и `.slice(3)` в парсере съедает не то — см. комментарий в
         // buildWorkbookBase64.
@@ -34,8 +34,8 @@ describe('PriceListXlsxParser', () => {
                 ['—'],
                 ['—'],
                 ['—'],
-                ['', 'Apple iPhone 16 128GB', '', 65000],
-                ['', '', '', null], // пустое имя — отфильтровывается
+                ['', 'Apple iPhone 16 128GB', 65000],
+                ['', '', null], // пустое имя — отфильтровывается
             ],
             'Apple (iPad, Macbook)': [['—'], ['—'], ['—'], ['—']],
         });

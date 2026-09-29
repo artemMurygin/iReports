@@ -119,6 +119,9 @@ export class StartPriceImportHandler implements ICommandHandler<
 
         const { iphoneWatchRows, ipadMacbookRawRows } =
             this.xlsxParser.parse(fileBase64);
+        this.logger.log(
+            `[${job.id}] Прайс распарсен: iPhone/Watch ${iphoneWatchRows.length} строк, iPad/MacBook ${ipadMacbookRawRows.length} строк (до AI-форматирования)`,
+        );
 
         const formattedNames = await this.productMatcher.formatProductNames(
             ipadMacbookRawRows.map((row) => row.name),
@@ -127,6 +130,13 @@ export class StartPriceImportHandler implements ICommandHandler<
             ...row,
             name: formattedNames[i] ?? row.name,
         }));
+        ipadMacbookRawRows.forEach((row, i) => {
+            const formatted = formattedNames[i];
+            if (!formatted || formatted === row.name) return;
+            this.logger.log(
+                `[${job.id}] AI-форматирование имени: "${row.name}" -> "${formatted}"`,
+            );
+        });
 
         const groups = this.categorizer.categorize([
             ...iphoneWatchRows,
@@ -175,6 +185,14 @@ export class StartPriceImportHandler implements ICommandHandler<
             }
             await delay(350);
             result.set(group.category, items);
+            this.logger.log(
+                `[${job.id}] МойСклад [${group.category}]: загружено ${items.length} товаров, фильтр: ${filter}`,
+            );
+            if (items.length === 0) {
+                this.logger.warn(
+                    `[${job.id}] МойСклад [${group.category}]: каталог пуст — проверь CATEGORY_MS_FILTER (productFolder), новый товар может лежать в папке, которой нет в фильтре`,
+                );
+            }
 
             processed += 1;
             job.updateProgress(
@@ -211,6 +229,9 @@ export class StartPriceImportHandler implements ICommandHandler<
         let processed = 0;
         for (const group of groups) {
             const catalogItems = catalogByCategory.get(group.category) ?? [];
+            this.logger.log(
+                `[${job.id}] [${group.category}] Сопоставление: прайс ${group.rows.length} строк × каталог ${catalogItems.length} товаров`,
+            );
             const matches = await this.productMatcher.match(
                 group.category,
                 group.rows,
@@ -239,6 +260,22 @@ export class StartPriceImportHandler implements ICommandHandler<
     // (`item.price != null && item.externalId != null`), но выраженный явно через доменные методы
     // ProductMatch, а не через ad-hoc проверку на null.
     private buildCostChanges(matches: ProductMatch[]): CostChange[] {
+        const excluded = matches.filter(
+            (match) => !match.isMatched() || match.getSourcePrice() == null,
+        );
+        if (excluded.length > 0) {
+            this.logger.warn(
+                `Исключены из списка изменений цены (${excluded.length}): ${excluded
+                    .map((match) => {
+                        const reason = !match.isMatched()
+                            ? 'не сопоставлено (method=none)'
+                            : 'нет цены в ответе AI (sourcePrice=null)';
+                        return `"${match.getSourceRowName()}" -> ${match.getMatchedProductName() ?? 'нет'} [${reason}]`;
+                    })
+                    .join('; ')}`,
+            );
+        }
+
         return matches
             .filter(
                 (match) => match.isMatched() && match.getSourcePrice() != null,
