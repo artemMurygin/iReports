@@ -8,8 +8,7 @@
  * ../README.md), so referencing it from another file needs no import — same as the reference.
  */
 
-// const BASE_URL = 'https://api.murygin.tech'
-const BASE_URL = 'https://36cd-45-145-40-211.ngrok-free.app'
+const BASE_URL = 'https://api.murygin.tech'
 
 function onOpen(): void {
     SpreadsheetApp.getUi().createMenu('Таблица → МС / РЕМ').addItem('Запустить', 'showUploadForm').addToUi()

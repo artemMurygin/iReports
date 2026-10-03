@@ -110,16 +110,24 @@ interface CreateServiceInRoappResult {
 
 /** Creates a service in RemOnline from `payload`. */
 function createServiceInRoapp(payload: unknown): CreateServiceInRoappResult {
+    console.log('createServiceInRoapp: payload=%s', JSON.stringify(payload))
+
     const response = UrlFetchApp.fetch(BASE_URL + '/custom-api-roapp/create-service', {
         method: 'post',
         contentType: 'application/json',
         payload: JSON.stringify(payload),
         muteHttpExceptions: true,
     })
+    console.log(
+        'createServiceInRoapp: response code=%s, body=%s',
+        response.getResponseCode(),
+        response.getContentText(),
+    )
 
     const code = response.getResponseCode()
     const body = JSON.parse(response.getContentText())
     if (code >= 400) {
+        console.log('createServiceInRoapp: request failed, code=%s', code)
         throw new Error(body && body.message ? body.message : 'Ошибка создания услуги в Ремонлайн')
     }
 

@@ -106,7 +106,7 @@ function uploadPricesToRO() {
     const response = UrlFetchApp.fetch(BASE_URL + '/v1/service/marketing/pricing/update-service-prices', {
         method: 'POST',
         contentType: 'application/json',
-        payload: JSON.stringify({ items: items }),
+        payload: JSON.stringify({ items: items, isSaving: true }),
         muteHttpExceptions: true,
     })
     console.log('uploadPricesToRO: response code=%s, body=%s', response.getResponseCode(), response.getContentText())

@@ -11,10 +11,10 @@
 
 const ACCRUALS_SHEET_GID = 1714253184
 const ACCRUALS_ID_COLUMN = 5 // E
-const ACCRUALS_SUM_COLUMN = 72 // BS
+const ACCRUALS_SUM_COLUMN = 73 // BU
 const ACCRUALS_FIRST_ROW = 5
-const RO_NEW_PRICE_COLUMN = 61 // BH
-const RO_OLD_PRICE_COLUMN = 50 // AW
+const RO_NEW_PRICE_COLUMN = 62 // BJ
+const RO_OLD_PRICE_COLUMN = 51 // AY
 
 interface UploadPricesToRoCount {
     total: number
@@ -86,7 +86,7 @@ function uploadPricesToRO(): UploadPricesToRoResult {
     const response = UrlFetchApp.fetch(BASE_URL + '/v1/service/marketing/pricing/update-service-prices', {
         method: 'post',
         contentType: 'application/json',
-        payload: JSON.stringify(items),
+        payload: JSON.stringify({ items: items, isSaving: true }),
         muteHttpExceptions: true,
     })
     console.log('uploadPricesToRO: response code=%s, body=%s', response.getResponseCode(), response.getContentText())

@@ -4,4 +4,4 @@
  * client-side use of it, needed to build the SSE progress-stream URL in the browser
  * (see `./progressStream.ts`).
  */
-export const BASE_URL = 'https://36cd-45-145-40-211.ngrok-free.app'
+export const BASE_URL = 'https://api.murygin.tech'
