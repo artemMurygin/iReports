@@ -7,6 +7,7 @@ import type { UpdateServicePricesResponse } from 'ireports-contracts';
 import { ROAPP_GATEWAY } from '@/domains/service/integrations/roapp-gateway/roapp-gateway.port';
 import type { RoappGateway } from '@/domains/service/integrations/roapp-gateway/roapp-gateway.port';
 import type { Service } from '@/domains/service/integrations/roapp/schemas/services.schema';
+import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { Category } from '@/domains/service/integrations/roapp/schemas/serviceCatalog.schema';
 import { UpdateServicePricesCommand } from './update-service-prices.command';
 import { ServicePriceChange } from '../../domain/value-objects/service-price-change.value-object';
@@ -69,6 +70,13 @@ export class UpdateServicePricesHandler implements ICommandHandler<
             for (const service of batch) servicesById.set(service.id, service);
         }
 
+        // До сборки XLSX: RoApp считает дублем строки с одинаковым названием, а
+        // название берётся из RoApp по id — значит один serviceId дважды даёт
+        // «Дублирующиеся строки» на стороне CustomApiRoapp. Молча не
+        // дедуплицируем (какую цену выбрать — решает пользователь), а отклоняем
+        // запрос с перечнем конфликтов.
+        this.assertNoDuplicateServiceIds(changes, servicesById);
+
         const categoryPathById = await this.buildServiceCategoryPaths();
 
         const rows = changes.flatMap((change) => {
@@ -113,6 +121,37 @@ export class UpdateServicePricesHandler implements ICommandHandler<
         }
 
         return this.roappGateway.updateServicesFromFile(buffer);
+    }
+
+    private assertNoDuplicateServiceIds(
+        changes: ServicePriceChange[],
+        servicesById: Map<number, Service>,
+    ): void {
+        const pricesByServiceId = new Map<number, number[]>();
+        for (const change of changes) {
+            const prices = pricesByServiceId.get(change.getServiceId()) ?? [];
+            prices.push(change.getPrice());
+            pricesByServiceId.set(change.getServiceId(), prices);
+        }
+
+        const duplicates = [...pricesByServiceId.entries()]
+            .filter(([, prices]) => prices.length > 1)
+            .map(([serviceId, prices]) => ({
+                serviceId,
+                name: servicesById.get(serviceId)?.name ?? null,
+                prices,
+            }));
+        if (duplicates.length === 0) return;
+
+        const lines = duplicates.map(
+            (d) =>
+                `• id ${d.serviceId}${d.name ? ` «${d.name}»` : ''}: цены ${d.prices.join(', ')}`,
+        );
+        throw new ArgumentInvalidException(
+            `Одна услуга передана несколько раз (${duplicates.length} шт.), оставьте в таблице одну строку на услугу:\n${lines.join('\n')}`,
+            undefined,
+            { duplicates },
+        );
     }
 
     private async saveGeneratedFile(buffer: Buffer): Promise<void> {

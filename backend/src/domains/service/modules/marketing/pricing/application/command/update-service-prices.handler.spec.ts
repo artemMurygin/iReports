@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { withRequestContext } from '@/shared/testing/with-request-context';
+import { ArgumentInvalidException } from '@/shared/exceptions';
 import type { RoappGateway } from '@/domains/service/integrations/roapp-gateway/roapp-gateway.port';
 import type { UpdateServicesResponse } from '@/domains/service/integrations/custom-api-roapp/schemas/updateServices.schema';
 import { UpdateServicePricesHandler } from './update-service-prices.handler';
@@ -170,6 +171,63 @@ describe('UpdateServicePricesHandler', () => {
 
             await expect(handler.execute(command)).rejects.toThrow();
             expect(updateServicesFromFile).not.toHaveBeenCalled();
+        });
+    });
+
+    it('отклоняет дубли serviceId ещё до отправки в RoApp, называя id, услугу и цены', async () => {
+        await withRequestContext(async () => {
+            const { gateway, updateServicesFromFile } = buildGateway();
+            const handler = new UpdateServicePricesHandler(gateway);
+            const command = new UpdateServicePricesCommand({
+                items: [
+                    { id: 42, price: 49990, serviceCost: 1200 },
+                    { id: 42, price: 36000, serviceCost: 1200 },
+                ],
+            });
+
+            const error: unknown = await handler
+                .execute(command)
+                .catch((e: unknown) => e);
+
+            expect(error).toBeInstanceOf(ArgumentInvalidException);
+            const message = (error as Error).message;
+            expect(message).toContain('id 42');
+            expect(message).toContain('Замена экрана');
+            expect(message).toContain('49990, 36000');
+            expect(updateServicesFromFile).not.toHaveBeenCalled();
+        });
+    });
+
+    it('считает дублем и одинаковые цены, и услугу, которой нет в RoApp', async () => {
+        await withRequestContext(async () => {
+            const { gateway } = buildGateway();
+            const handler = new UpdateServicePricesHandler(gateway);
+            const command = new UpdateServicePricesCommand({
+                items: [
+                    { id: 999, price: 100, serviceCost: 10 },
+                    { id: 999, price: 100, serviceCost: 10 },
+                ],
+            });
+
+            await expect(handler.execute(command)).rejects.toThrow(
+                /id 999: цены 100, 100/,
+            );
+        });
+    });
+
+    it('разные serviceId с разными ценами — поведение прежнее, ошибки нет', async () => {
+        await withRequestContext(async () => {
+            const { gateway, updateServicesFromFile } = buildGateway();
+            const handler = new UpdateServicePricesHandler(gateway);
+            const command = new UpdateServicePricesCommand({
+                items: [
+                    { id: 42, price: 6000, serviceCost: 1200 },
+                    { id: 999, price: 100, serviceCost: 10 },
+                ],
+            });
+
+            await expect(handler.execute(command)).resolves.toBeDefined();
+            expect(updateServicesFromFile).toHaveBeenCalledTimes(1);
         });
     });
 });
