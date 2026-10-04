@@ -53,7 +53,7 @@ function uploadPricesToRO(): UploadPricesToRoResult {
     const accruals = sheet.getRange(ACCRUALS_FIRST_ROW, ACCRUALS_SUM_COLUMN, numRows, 1).getValues()
     console.log('uploadPricesToRO: numRows=%s', numRows)
 
-    const items: { id: number; price: number; serviceCost: unknown }[] = []
+    const items: { id: number; price: number; serviceCost: number }[] = []
     const sentRows: { row: number; price: number }[] = []
     for (let i = 0; i < numRows; i++) {
         const row = ACCRUALS_FIRST_ROW + i
@@ -63,17 +63,20 @@ function uploadPricesToRO(): UploadPricesToRoResult {
 
         const id = toNumber_(rawId)
         const price = toNumber_(rawPrice)
-        if (id === null || price === null) {
+        const rawServiceCost = accruals[i][0]
+        const serviceCost = toNumber_(rawServiceCost)
+        if (id === null || price === null || serviceCost === null) {
             console.log(
-                'uploadPricesToRO: skipping row %s, non-numeric id=%s price=%s',
+                'uploadPricesToRO: skipping row %s, non-numeric id=%s price=%s serviceCost=%s',
                 row,
                 JSON.stringify(rawId),
                 JSON.stringify(rawPrice),
+                JSON.stringify(rawServiceCost),
             )
             continue
         }
 
-        items.push({ id: id, price: price, serviceCost: accruals[i][0] })
+        items.push({ id: id, price: price, serviceCost: serviceCost })
         sentRows.push({ row: row, price: price })
     }
     console.log('uploadPricesToRO: items.length=%s, items=%s', items.length, JSON.stringify(items))
@@ -90,6 +93,8 @@ function uploadPricesToRO(): UploadPricesToRoResult {
         muteHttpExceptions: true,
     })
     console.log('uploadPricesToRO: response code=%s, body=%s', response.getResponseCode(), response.getContentText())
+
+    throwIfHttpError_(response, 'Ошибка выгрузки цен в Ремонлайн')
 
     const result: UploadPricesToRoResult = JSON.parse(response.getContentText())
 
@@ -113,6 +118,9 @@ interface AccrualsSheetEntry {
     value: unknown
 }
 
+/** Временная отладка: логи пишутся только для этой позиции (ID из столбца E / objectId в RemOnline). */
+const DEBUG_ACCRUALS_ID = '60709694'
+
 /** Reads the accruals sheet range and returns its entries. */
 function getAccrualsSheetEntries(): AccrualsSheetEntry[] {
     const sheet = getAccrualsSheet_()!
@@ -132,24 +140,89 @@ function getAccrualsSheetEntries(): AccrualsSheetEntry[] {
             row: ACCRUALS_FIRST_ROW + i,
             value: oldSums[i][0],
         })
+        if (String(id).trim() === DEBUG_ACCRUALS_ID) {
+            console.log(
+                'getAccrualsSheetEntries[%s]: row=%s, rawId=%s (%s), sum=%s (%s)',
+                DEBUG_ACCRUALS_ID,
+                ACCRUALS_FIRST_ROW + i,
+                JSON.stringify(id),
+                typeof id,
+                JSON.stringify(oldSums[i][0]),
+                typeof oldSums[i][0],
+            )
+        }
     })
+    if (!entries.some((e) => e.id.trim() === DEBUG_ACCRUALS_ID)) {
+        console.log(
+            'getAccrualsSheetEntries[%s]: NOT FOUND in column E (total entries=%s)',
+            DEBUG_ACCRUALS_ID,
+            entries.length,
+        )
+    }
 
     return entries
 }
 
-/** Fetches a map of objectId -> earningsSum from the external service bonuses endpoint. */
+/** Fetches a map of entityId -> fixedAmount from the external service bonuses endpoint. */
 function fetchServiceBonusesMap(): Record<string, number> {
     const response = UrlFetchApp.fetch('http://rm.murygin.tech/getServicesBonuses', {
         method: 'get',
         contentType: 'application/json',
         muteHttpExceptions: true,
     })
-    const bonuses: { objectId: unknown; earningsSum: number }[] = JSON.parse(response.getContentText())
+    const body = response.getContentText()
+    const parsed: unknown = JSON.parse(body)
+
+    // Диагностика формата ответа: массив ли это, какие у элементов поля, есть ли DEBUG-ID где-либо в теле.
+    const isArray = Array.isArray(parsed)
+    const first: unknown = isArray ? (parsed as unknown[])[0] : undefined
+    console.log(
+        'fetchServiceBonusesMap[format]: code=%s, bodyLength=%s, isArray=%s, topLevelType=%s, topLevelKeys=%s',
+        response.getResponseCode(),
+        body.length,
+        isArray,
+        typeof parsed,
+        !isArray && parsed && typeof parsed === 'object' ? JSON.stringify(Object.keys(parsed)) : 'n/a',
+    )
+    console.log(
+        'fetchServiceBonusesMap[format]: length=%s, firstElement=%s, firstElementKeys=%s',
+        isArray ? (parsed as unknown[]).length : 'n/a',
+        JSON.stringify(first),
+        first && typeof first === 'object' ? JSON.stringify(Object.keys(first)) : 'n/a',
+    )
+    const idIndex = body.indexOf(DEBUG_ACCRUALS_ID)
+    console.log(
+        'fetchServiceBonusesMap[%s]: id occurs in raw body=%s, context=%s',
+        DEBUG_ACCRUALS_ID,
+        idIndex !== -1,
+        idIndex !== -1 ? body.slice(Math.max(0, idIndex - 150), idIndex + 150) : 'n/a',
+    )
+
+    if (!isArray) {
+        throw new Error('getServicesBonuses: ожидался массив, получено ' + body.slice(0, 200))
+    }
+    const bonuses = parsed as { entityId: unknown; fixedAmount: number }[]
 
     const earningsById: Record<string, number> = {}
     bonuses.forEach(function (bonus) {
-        earningsById[String(bonus.objectId)] = bonus.earningsSum
+        earningsById[String(bonus.entityId)] = bonus.fixedAmount
     })
+    console.log(
+        'fetchServiceBonusesMap[format]: mapSize=%s, undefinedKeys=%s, undefinedValues=%s',
+        Object.keys(earningsById).length,
+        'undefined' in earningsById,
+        Object.keys(earningsById).filter((k) => earningsById[k] === undefined).length,
+    )
+
+    const debugBonuses = bonuses.filter((b) => String(b.entityId).trim() === DEBUG_ACCRUALS_ID)
+    console.log(
+        'fetchServiceBonusesMap[%s]: response code=%s, total=%s, matches=%s, raw=%s',
+        DEBUG_ACCRUALS_ID,
+        response.getResponseCode(),
+        bonuses.length,
+        debugBonuses.length,
+        JSON.stringify(debugBonuses),
+    )
 
     return earningsById
 }
@@ -163,11 +236,47 @@ function applyAccrualsUpdates(entries: AccrualsSheetEntry[], earningsById: Recor
 
     const updatedIds: string[] = []
     entries.forEach(function (entry) {
-        if (!(entry.id in earningsById)) return
+        const isDebug = entry.id.trim() === DEBUG_ACCRUALS_ID
+
+        if (!(entry.id in earningsById)) {
+            if (isDebug) {
+                console.log(
+                    'applyAccrualsUpdates[%s]: row=%s id=%s NOT in bonuses map (map has trimmed key=%s)',
+                    DEBUG_ACCRUALS_ID,
+                    entry.row,
+                    JSON.stringify(entry.id),
+                    DEBUG_ACCRUALS_ID in earningsById,
+                )
+            }
+            return
+        }
 
         const newValue = earningsById[entry.id]
-        if (newValue === entry.value) return
+        if (newValue === entry.value) {
+            if (isDebug) {
+                console.log(
+                    'applyAccrualsUpdates[%s]: row=%s unchanged, value=%s (%s)',
+                    DEBUG_ACCRUALS_ID,
+                    entry.row,
+                    JSON.stringify(entry.value),
+                    typeof entry.value,
+                )
+            }
+            return
+        }
 
+        if (isDebug) {
+            console.log(
+                'applyAccrualsUpdates[%s]: row=%s writing %s (%s) over %s (%s) into column %s',
+                DEBUG_ACCRUALS_ID,
+                entry.row,
+                JSON.stringify(newValue),
+                typeof newValue,
+                JSON.stringify(entry.value),
+                typeof entry.value,
+                ACCRUALS_SUM_COLUMN,
+            )
+        }
         sheet.getRange(entry.row, ACCRUALS_SUM_COLUMN).setValue(newValue)
         updatedIds.push(entry.id)
     })

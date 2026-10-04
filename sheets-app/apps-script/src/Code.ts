@@ -19,6 +19,34 @@ function showUploadForm(): void {
     SpreadsheetApp.getUi().showSidebar(html)
 }
 
+/**
+ * Бросает Error с текстом `message` из тела ответа бэкенда, если код ответа >= 400 — `google.script.run`
+ * доставит его в `withFailureHandler`, и сайдбар покажет этот текст. Для ошибок валидации к `message`
+ * добавляется перечень `errors[].path: message`.
+ */
+function throwIfHttpError_(response: GoogleAppsScript.URL_Fetch.HTTPResponse, fallback: string): void {
+    const code = response.getResponseCode()
+    if (code < 400) return
+
+    const text = response.getContentText()
+    let message = fallback + ' (HTTP ' + code + ')'
+    try {
+        const body = JSON.parse(text)
+        if (body && body.message) {
+            message = String(body.message)
+            if (Array.isArray(body.errors) && body.errors.length > 0) {
+                const details = body.errors.map(function (e: { path?: unknown[]; message?: string }) {
+                    return (e.path ? e.path.join('.') + ': ' : '') + (e.message || '')
+                })
+                message += ' — ' + details.join('; ')
+            }
+        }
+    } catch (e) {
+        message += ': ' + text.slice(0, 200)
+    }
+    throw new Error(message)
+}
+
 /** Uploads a base64-encoded price file, returns a job UUID used for a (separate) SSE progress stream. */
 function processFile(base64Data: string): string {
     const response = UrlFetchApp.fetch(BASE_URL + '/v1/shop/marketing/pricing/import-costs', {
@@ -28,6 +56,7 @@ function processFile(base64Data: string): string {
         muteHttpExceptions: true,
     })
 
+    throwIfHttpError_(response, 'Ошибка загрузки файла')
     const { id } = JSON.parse(response.getContentText())
     return id
 }
