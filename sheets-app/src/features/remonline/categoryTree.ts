@@ -9,24 +9,20 @@ export interface CategoryTree {
     /** Children grouped by parentId — `null` is the key for root categories. */
     byParent: Map<number | null, ServiceCategory[]>
     byId: Map<number, ServiceCategory>
-    /** Trimmed category name -> id, used to resolve a category path's last segment. */
-    byName: Map<string, number>
 }
 
 export function buildCategoryTree(categories: ServiceCategory[]): CategoryTree {
     const byParent = new Map<number | null, ServiceCategory[]>()
     const byId = new Map<number, ServiceCategory>()
-    const byName = new Map<string, number>()
 
     categories.forEach((category) => {
         byId.set(category.id, category)
-        byName.set(category.name.trim(), category.id)
         const parentKey = category.parentId ?? null
         if (!byParent.has(parentKey)) byParent.set(parentKey, [])
         byParent.get(parentKey)?.push(category)
     })
 
-    return { byParent, byId, byName }
+    return { byParent, byId }
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { CategoryTree } from '../categoryTree'
-import type { CreateServiceRow } from '@/shared/gas/types'
+import type { CreateServiceRow, ServiceCategory } from '@/shared/gas/types'
 
 /**
  * Pure port of the reference sidebar's bulk-create-services validation/payload-building logic
@@ -52,13 +52,32 @@ export function parseWarrantyPeriod(value: unknown): number | null {
     return null
 }
 
+/**
+ * Resolves a "A > B > C" category path to an id by walking it from the root, level by level
+ * (each segment must be a direct child of the previous one). Matching only the last segment's
+ * name is NOT enough: RemOnline has same-named categories in different branches (e.g. "Дисплеи"
+ * under both iPhone and iPad), so a flat name lookup lands the service in the wrong branch.
+ *
+ * Returns `null` when the path is empty or some segment doesn't exist under its parent; throws
+ * when a level has several same-named siblings (the path itself is ambiguous — nothing to guess).
+ */
 export function resolveCategoryId(categoryPath: unknown, tree: CategoryTree): number | null {
     const segments = String(categoryPath)
         .split('>')
         .map((s) => s.trim())
         .filter(Boolean)
     if (segments.length === 0) return null
-    return tree.byName.get(segments[segments.length - 1]) ?? null
+
+    let parentId: number | null = null
+    for (const segment of segments) {
+        const matches: ServiceCategory[] = (tree.byParent.get(parentId) ?? []).filter((c) => c.name.trim() === segment)
+        if (matches.length === 0) return null
+        if (matches.length > 1) {
+            throw new Error('Категория указана неоднозначно (одинаковые названия на одном уровне): ' + segment)
+        }
+        parentId = matches[0].id
+    }
+    return parentId
 }
 
 export function buildServiceTitle(row: CreateServiceRow): string {

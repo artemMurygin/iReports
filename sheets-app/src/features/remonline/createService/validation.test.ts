@@ -86,9 +86,26 @@ describe('parseWarrantyPeriod', () => {
 })
 
 describe('resolveCategoryId', () => {
-    it('resolves via the last ">"-separated, trimmed segment', () => {
+    it('resolves the full path from the root, trimming segments', () => {
         expect(resolveCategoryId('Ремонт > iPhone > Замена экрана', TREE)).toBe(100)
-        expect(resolveCategoryId('  Замена экрана  ', TREE)).toBe(100)
+        expect(resolveCategoryId('  Ремонт >  iPhone > Замена экрана  ', TREE)).toBe(100)
+    })
+
+    it('resolves intermediate levels too', () => {
+        expect(resolveCategoryId('Ремонт > iPhone', TREE)).toBe(10)
+    })
+
+    it('picks the category from the right branch when the same name exists in several branches', () => {
+        const tree = buildCategoryTree([
+            { id: 1, name: 'Ремонт', parentId: null },
+            { id: 10, name: 'iPhone', parentId: 1 },
+            { id: 11, name: 'iPad', parentId: 1 },
+            { id: 100, name: 'Дисплеи', parentId: 10 },
+            { id: 110, name: 'Дисплеи', parentId: 11 },
+        ])
+
+        expect(resolveCategoryId('Ремонт > iPhone > Дисплеи', tree)).toBe(100)
+        expect(resolveCategoryId('Ремонт > iPad > Дисплеи', tree)).toBe(110)
     })
 
     it('returns null when the path has no non-empty segments', () => {
@@ -96,8 +113,21 @@ describe('resolveCategoryId', () => {
         expect(resolveCategoryId('>>', TREE)).toBeNull()
     })
 
-    it('returns null when the last segment is not a known category name', () => {
+    it('returns null when a segment does not exist under its parent', () => {
         expect(resolveCategoryId('Ремонт > Неизвестная категория', TREE)).toBeNull()
+        // exists, but not directly under the root — a bare/partial name must not match
+        expect(resolveCategoryId('Замена экрана', TREE)).toBeNull()
+        expect(resolveCategoryId('Ремонт > Замена экрана', TREE)).toBeNull()
+    })
+
+    it('throws when same-named siblings make the path ambiguous', () => {
+        const tree = buildCategoryTree([
+            { id: 1, name: 'Ремонт', parentId: null },
+            { id: 10, name: 'iPhone', parentId: 1 },
+            { id: 11, name: 'iPhone ', parentId: 1 },
+        ])
+
+        expect(() => resolveCategoryId('Ремонт > iPhone', tree)).toThrow('неоднозначно')
     })
 })
 

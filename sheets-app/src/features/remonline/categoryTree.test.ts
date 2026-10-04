@@ -7,7 +7,7 @@ const CATEGORIES: ServiceCategory[] = [
     { id: 2, name: 'Диагностика', parentId: null },
     { id: 10, name: 'iPhone', parentId: 1 },
     { id: 11, name: 'iPad', parentId: 1 },
-    { id: 100, name: 'Замена экрана ', parentId: 10 }, // trailing space, exercises byName trim
+    { id: 100, name: 'Замена экрана ', parentId: 10 }, // trailing space, trimmed when matching paths
 ]
 
 describe('buildCategoryTree', () => {
@@ -20,12 +20,11 @@ describe('buildCategoryTree', () => {
         expect(tree.byParent.get(11)).toBeUndefined()
     })
 
-    it('indexes byId and byName (trimmed) for every category', () => {
+    it('indexes byId for every category', () => {
         const tree = buildCategoryTree(CATEGORIES)
 
         expect(tree.byId.get(100)?.name).toBe('Замена экрана ')
-        expect(tree.byName.get('Замена экрана')).toBe(100)
-        expect(tree.byName.get('iPhone')).toBe(10)
+        expect(tree.byId.get(10)?.name).toBe('iPhone')
     })
 })
 
