@@ -15,6 +15,7 @@ import type { ProgressStreamHandlers } from '@/shared/gas/progressStream'
 vi.mock('@/shared/gas', () => ({
     gas: {
         processFile: vi.fn(),
+        cancelImport: vi.fn(),
         loadPricesFromMS: vi.fn(),
         uploadPricesToMS: vi.fn(),
         uploadSalePricesToMS: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock('@/shared/gas', () => ({
 
 vi.mock('@/shared/gas/progressStream', () => ({
     openImportProgressStream: vi.fn(),
+    fetchActiveImportId: vi.fn().mockResolvedValue(null),
 }))
 
 function Harness({ initialFile = null }: { initialFile?: File | null }) {
@@ -153,7 +155,7 @@ describe('MoySkladPanel', () => {
 
         expect(gas.loadPricesFromMS).toHaveBeenCalledOnce()
         await waitFor(() => expect(screen.getByTestId('ms.load')).toHaveAttribute('data-status', 'success'))
-        expect(within(screen.getByTestId('ms.load')).getByTestId('func-status')).toHaveTextContent(/^\d{2}:\d{2}$/)
+        expect(within(screen.getByTestId('ms.load')).getByTestId('func-status')).toHaveTextContent(/^\d{1,2} \S+ \d{4} г\. в \d{2}:\d{2}$/)
         expect(screen.getByTestId('ms.uploadRc')).toHaveAttribute('data-status', 'idle')
         expect(runButton('ms.load')).not.toBeDisabled()
     })
@@ -227,6 +229,8 @@ describe('MoySkladPanel', () => {
         await user.click(within(modal).getByRole('button', { name: 'Отмена' }))
 
         expect(close).toHaveBeenCalledOnce()
+        // cancel also stops the job on the server (aborts its LLM requests)
+        expect(gas.cancelImport).toHaveBeenCalledWith('uuid-1')
         await waitFor(() => expect(screen.queryByTestId('progress-modal')).not.toBeInTheDocument())
         expect(screen.queryByTestId('ms-error')).not.toBeInTheDocument()
         expect(screen.queryByTestId('ms-import-status')).not.toBeInTheDocument()

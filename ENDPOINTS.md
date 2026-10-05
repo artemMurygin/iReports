@@ -494,7 +494,7 @@ create по `(targetType, targetId)` в `CreateShopMotivationSchemaHandler` — 
 ## domains/shop/modules/marketing/pricing (`/v1/shop/marketing/pricing`)
 Импорт закупочных цен магазина из XLSX-прайса поставщика (Фазы 8–10, docs/todo-modules-ddd-refactoring)
 — новый дом легаси `/price-monitoring/*` (легаси-модуль `TODO/priceMonitoring` удалён вместе с этой
-фазой). Доменное ядро — агрегат `PriceImportJob` со статусами `CREATED → RUNNING → COMPLETED/FAILED`
+фазой). Доменное ядро — агрегат `PriceImportJob` со статусами `CREATED → RUNNING → COMPLETED/FAILED/CANCELLED`
 (инварианты переходов, доменные события); пайплайн: парсинг XLSX → AI-форматирование названий iPad/
 MacBook → категоризация строк → загрузка каталога МойСклад по категории → AI-сопоставление строка ×
 товар → обновление закупочных цен в МойСклад → запись результата в Google Sheets. Состояние джобы между
@@ -509,3 +509,8 @@ HTTP-запросами (поллинг/SSE) доступно только че�
 - `GET /v1/shop/marketing/pricing/import-costs/:id` — SSE-поток тех же снапшотов джобы; heartbeat
   каждые 20с против таймаута Nginx (сохранён из легаси-SSE-эндпоинта без изменений); `404`, если `id`
   не найден
+- `GET /v1/shop/marketing/pricing/active-import-costs` — `{ id: string | null }`: id выполняющейся
+  джобы (по нему сайдбар Google Sheets возвращается к прогрессу после повторного открытия окна)
+- `POST /v1/shop/marketing/pricing/import-costs/:id/cancel` — отменить джобу: статус `CANCELLED`,
+  абортятся все запросы к LLM; `404` — `id` не найден, `409` — джоба уже завершена или дошла до
+  записи в МойСклад/таблицу (необратимые этапы)

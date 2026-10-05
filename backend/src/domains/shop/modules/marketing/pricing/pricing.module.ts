@@ -6,6 +6,12 @@ import { MoyskladModule } from '@/domains/shop/integrations/moySklad/moysklad.mo
 import { StartPriceImportHandler } from './application/command/start-price-import.handler';
 import { GetPriceImportJobStatusService } from './application/services/get-price-import-job-status.service';
 import { SubscribePriceImportJobProgressService } from './application/services/subscribe-price-import-job-progress.service';
+import { GetActivePriceImportJobService } from './application/services/get-active-price-import-job.service';
+import { CancelPriceImportJobService } from './application/services/cancel-price-import-job.service';
+import { PRICE_IMPORT_ABORT_REGISTRY } from './application/ports/price-import-abort-registry.port';
+import { InMemoryPriceImportAbortRegistry } from './infrastructure/abort/in-memory-price-import-abort.registry';
+import { GetActivePriceImportJobHttpController } from './interface/http-controllers/get-active-price-import-job.http.controller';
+import { CancelPriceImportJobHttpController } from './interface/http-controllers/cancel-price-import-job.http.controller';
 import { PRICE_IMPORT_JOB_STORE } from './application/ports/price-import-job-store.port';
 import { PRODUCT_MATCHER } from './application/ports/product-matcher.port';
 import { RESULT_SHEET_GATEWAY } from './application/ports/result-sheet-gateway.port';
@@ -32,12 +38,20 @@ import { SubscribePriceImportJobProgressHttpController } from './interface/http-
         StartPriceImportHttpController,
         GetPriceImportJobStatusHttpController,
         SubscribePriceImportJobProgressHttpController,
+        GetActivePriceImportJobHttpController,
+        CancelPriceImportJobHttpController,
     ],
     providers: [
         StartPriceImportHandler,
         GetPriceImportJobStatusService,
         SubscribePriceImportJobProgressService,
+        GetActivePriceImportJobService,
+        CancelPriceImportJobService,
         PriceListXlsxParser,
+        {
+            provide: PRICE_IMPORT_ABORT_REGISTRY,
+            useClass: InMemoryPriceImportAbortRegistry,
+        },
         {
             provide: PRICE_IMPORT_JOB_STORE,
             useClass: InMemoryPriceImportJobStore,

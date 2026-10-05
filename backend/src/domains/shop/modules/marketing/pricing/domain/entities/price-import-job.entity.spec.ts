@@ -1,6 +1,7 @@
 import { PriceImportJob } from './price-import-job.entity';
 import {
     PriceImportJobAlreadyStartedException,
+    PriceImportJobNotCancellableException,
     PriceImportJobNotRunningException,
 } from '../exceptions/price-import-job.exception';
 import { PriceImportJobCompletedDomainEvent } from '../events/price-import-job-completed.domain-event';
@@ -261,6 +262,41 @@ describe('PriceImportJob', () => {
                 job.start();
 
                 expect(() => job.fail('   ')).toThrow(ArgumentInvalidException);
+            });
+        });
+    });
+
+    describe('cancel', () => {
+        it('RUNNING -> CANCELLED с событием и finishedAt', () => {
+            withRequestContext(() => {
+                const job = PriceImportJob.create();
+                job.start();
+                job.cancel();
+                expect(job.isCancelled()).toBe(true);
+                expect(job.finishedAt).not.toBeNull();
+                expect(job.domainEvents).toHaveLength(1);
+            });
+        });
+
+        it('после markPointOfNoReturn отмена отклоняется', () => {
+            withRequestContext(() => {
+                const job = PriceImportJob.create();
+                job.start();
+                job.markPointOfNoReturn();
+                expect(() => job.cancel()).toThrow(
+                    PriceImportJobNotCancellableException,
+                );
+            });
+        });
+
+        it('завершённую джобу отменить нельзя', () => {
+            withRequestContext(() => {
+                const job = PriceImportJob.create();
+                job.start();
+                job.complete({ matches: [], costChanges: [] });
+                expect(() => job.cancel()).toThrow(
+                    PriceImportJobNotCancellableException,
+                );
             });
         });
     });

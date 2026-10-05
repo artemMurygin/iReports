@@ -86,6 +86,11 @@ export const mockGasClient: GasApi = {
         return crypto.randomUUID()
     },
 
+    async cancelImport() {
+        await delay()
+        return 'OK'
+    },
+
     async loadPricesFromMS() {
         await delay()
         throwIfMoySkladFails()

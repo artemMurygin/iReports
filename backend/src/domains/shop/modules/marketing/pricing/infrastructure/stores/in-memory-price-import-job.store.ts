@@ -35,13 +35,20 @@ export class InMemoryPriceImportJobStore implements PriceImportJobStore {
         }
 
         entry.subject.next(job);
-        if (job.isCompleted() || job.isFailed()) {
+        if (job.isCompleted() || job.isFailed() || job.isCancelled()) {
             entry.subject.complete();
         }
     }
 
     findById(id: string): PriceImportJob | undefined {
         return this.jobs.get(id)?.job;
+    }
+
+    findActive(): PriceImportJob | undefined {
+        for (const { job } of this.jobs.values()) {
+            if (job.isCreated() || job.isRunning()) return job;
+        }
+        return undefined;
     }
 
     subscribe(id: string): Observable<PriceImportJob> | undefined {

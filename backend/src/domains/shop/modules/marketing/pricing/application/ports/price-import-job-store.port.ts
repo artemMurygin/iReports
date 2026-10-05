@@ -15,6 +15,9 @@ export interface PriceImportJobStore {
 
     findById(id: string): PriceImportJob | undefined;
 
+    /** Выполняющаяся (CREATED/RUNNING) джоба — для возврата сайдбара к прогрессу после переоткрытия. */
+    findActive(): PriceImportJob | undefined;
+
     /**
      * Поток снапшотов джобы — на каждый `save(job)` эмитится текущее состояние. Источник для
      * будущего SSE-эндпоинта (Фаза 10); завершается сам, когда джоба переходит в терминальный

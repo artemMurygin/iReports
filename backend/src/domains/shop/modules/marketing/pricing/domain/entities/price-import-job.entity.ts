@@ -8,12 +8,14 @@ import { CostChange } from '../value-objects/cost-change.value-object';
 import {
     PriceImportJobAlreadyStartedException,
     PriceImportJobNotRunningException,
+    PriceImportJobNotCancellableException,
 } from '../exceptions/price-import-job.exception';
 import { PriceImportJobCompletedDomainEvent } from '../events/price-import-job-completed.domain-event';
 import { PriceImportJobFailedDomainEvent } from '../events/price-import-job-failed.domain-event';
+import { PriceImportJobCancelledDomainEvent } from '../events/price-import-job-cancelled.domain-event';
 
 export type PriceImportJobStatus =
-    'CREATED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+    'CREATED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 export interface PriceImportJobResult {
     readonly matches: ProductMatch[];
@@ -27,6 +29,8 @@ export interface PriceImportJobProps {
     errorMessage: string | null;
     startedAt: Date | null;
     finishedAt: Date | null;
+    // true после перехода к необратимым записям (МойСклад/Sheets) — дальше отмена невозможна.
+    pointOfNoReturn: boolean;
 }
 
 // Единственный настоящий агрегат всего рефакторинга TODO/priceMonitoring (см. PRD, раздел 3а) —
@@ -58,6 +62,7 @@ export class PriceImportJob extends AggregateRoot<PriceImportJobProps> {
                 errorMessage: null,
                 startedAt: null,
                 finishedAt: null,
+                pointOfNoReturn: false,
             },
         });
     }
@@ -100,6 +105,10 @@ export class PriceImportJob extends AggregateRoot<PriceImportJobProps> {
 
     isFailed(): boolean {
         return this.props.status === 'FAILED';
+    }
+
+    isCancelled(): boolean {
+        return this.props.status === 'CANCELLED';
     }
 
     // spec: shop/marketing#requirement-импорт-цен-джоба-с-явными-статусами-без-повторного-запуска
@@ -165,6 +174,36 @@ export class PriceImportJob extends AggregateRoot<PriceImportJobProps> {
         );
     }
 
+    // Этапы, после которых отмена бессмысленна/опасна: запись в МойСклад и Sheets необратима и
+    // может оказаться записанной наполовину, поэтому после отметки джоба доезжает до конца.
+    markPointOfNoReturn(): void {
+        if (!this.isRunning()) {
+            throw new PriceImportJobNotRunningException(this.id, this.status);
+        }
+        this.props.pointOfNoReturn = true;
+    }
+
+    // CREATED|RUNNING -> CANCELLED. Недоступно для завершённых джоб и после точки невозврата.
+    cancel(): void {
+        if (!(this.isCreated() || this.isRunning())) {
+            throw new PriceImportJobNotCancellableException(
+                this.id,
+                `статус ${this.status}`,
+            );
+        }
+        if (this.props.pointOfNoReturn) {
+            throw new PriceImportJobNotCancellableException(
+                this.id,
+                'идёт запись в МойСклад/таблицу',
+            );
+        }
+        this.props.status = 'CANCELLED';
+        this.props.finishedAt = new Date();
+        this.addEvent(
+            new PriceImportJobCancelledDomainEvent({ aggregateId: this.id }),
+        );
+    }
+
     validate(): void {
         // status типизирован через `string`, а не напрямую props.status — после исчерпывающей
         // проверки TS сужает literal-union до `never`, и eslint (restrict-template-expressions)
@@ -175,7 +214,8 @@ export class PriceImportJob extends AggregateRoot<PriceImportJobProps> {
             status !== 'CREATED' &&
             status !== 'RUNNING' &&
             status !== 'COMPLETED' &&
-            status !== 'FAILED'
+            status !== 'FAILED' &&
+            status !== 'CANCELLED'
         ) {
             throw new ArgumentInvalidException(
                 `Недопустимый статус джобы импорта цен: "${status}"`,

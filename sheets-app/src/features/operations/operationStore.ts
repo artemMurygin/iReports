@@ -38,6 +38,7 @@ export function stateFromReport(report: OperationReport): OperationState {
         status: report.status,
         finishedAt: report.finishedAt,
         result: report.counters,
+        restored: true,
         error:
             report.status === 'error'
                 ? {

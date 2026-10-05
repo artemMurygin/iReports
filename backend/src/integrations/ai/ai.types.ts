@@ -10,6 +10,8 @@ export type ChatOptions = {
     systemPrompt?: string;
     stream?: boolean;
     headers?: Record<string, string>;
+    /** Отмена запроса: абортит HTTP/стрим к LLM и прерывает backoff повторов. */
+    signal?: AbortSignal;
 };
 
 export type EmbeddingOptions = {

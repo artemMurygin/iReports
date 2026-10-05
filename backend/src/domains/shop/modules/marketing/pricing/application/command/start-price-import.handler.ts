@@ -16,6 +16,8 @@ import {
 import { PriceListXlsxParser } from '../../infrastructure/xlsx/price-list-xlsx.parser';
 import { CATEGORY_MS_FILTER } from '../../infrastructure/config/pricing.config';
 import { buildMoySkladProductUpdates } from '../../infrastructure/moysklad/moysklad-cost-update.mapper';
+import { PRICE_IMPORT_ABORT_REGISTRY } from '../ports/price-import-abort-registry.port';
+import type { PriceImportAbortRegistry } from '../ports/price-import-abort-registry.port';
 import { PRICE_IMPORT_JOB_STORE } from '../ports/price-import-job-store.port';
 import type { PriceImportJobStore } from '../ports/price-import-job-store.port';
 import { PRODUCT_MATCHER } from '../ports/product-matcher.port';
@@ -57,6 +59,8 @@ export class StartPriceImportHandler implements ICommandHandler<
         private readonly productMatcher: ProductMatcher,
         @Inject(RESULT_SHEET_GATEWAY)
         private readonly resultSheetGateway: ResultSheetGateway,
+        @Inject(PRICE_IMPORT_ABORT_REGISTRY)
+        private readonly abortRegistry: PriceImportAbortRegistry,
         private readonly xlsxParser: PriceListXlsxParser,
         private readonly moysklad: MoyskladService,
     ) {}
@@ -70,6 +74,8 @@ export class StartPriceImportHandler implements ICommandHandler<
         // (fire-and-forget), поэтому id должен быть известен ДО создания агрегата, а не
         // сгенерирован заново внутри него.
         const job = PriceImportJob.create(command.id);
+        // Сигнал регистрируется до первого save(): отмена возможна с момента появления джобы.
+        const signal = this.abortRegistry.register(job.id);
         this.jobStore.save(job);
 
         try {
@@ -79,14 +85,24 @@ export class StartPriceImportHandler implements ICommandHandler<
             const groups = await this.buildCategoryGroups(
                 job,
                 command.fileBase64,
+                signal,
             );
-            const catalogByCategory = await this.loadCatalog(job, groups);
+            const catalogByCategory = await this.loadCatalog(
+                job,
+                groups,
+                signal,
+            );
             const matches = await this.matchCategories(
                 job,
                 groups,
                 catalogByCategory,
+                signal,
             );
             const costChanges = this.buildCostChanges(matches);
+
+            // Дальше — необратимые записи в МойСклад/Sheets: отмена после этой точки отклоняется.
+            signal.throwIfAborted();
+            job.markPointOfNoReturn();
 
             await this.updateMoySklad(job, costChanges);
             await this.writeResults(job, costChanges);
@@ -94,10 +110,17 @@ export class StartPriceImportHandler implements ICommandHandler<
             job.complete({ matches, costChanges });
             this.jobStore.save(job);
         } catch (error) {
+            if (job.isCancelled() || signal.aborted) {
+                // Отмена: статус CANCELLED уже выставлен сервисом отмены и сохранён в сторе.
+                this.logger.log(`[${job.id}] Импорт цен отменён пользователем`);
+                return { id: job.id };
+            }
             const message = getErrorMessage(error);
             this.logger.error(`[${job.id}] Ошибка импорта цен: ${message}`);
             job.fail(message);
             this.jobStore.save(job);
+        } finally {
+            this.abortRegistry.release(job.id);
         }
 
         return { id: job.id };
@@ -106,6 +129,7 @@ export class StartPriceImportHandler implements ICommandHandler<
     private async buildCategoryGroups(
         job: PriceImportJob,
         fileBase64: string,
+        signal: AbortSignal,
     ): Promise<CategoryGroup[]> {
         job.updateProgress(
             JobProgress.create({
@@ -123,8 +147,10 @@ export class StartPriceImportHandler implements ICommandHandler<
             `[${job.id}] Прайс распарсен: iPhone/Watch ${iphoneWatchRows.length} строк, iPad/MacBook ${ipadMacbookRawRows.length} строк (до AI-форматирования)`,
         );
 
+        signal.throwIfAborted();
         const formattedNames = await this.productMatcher.formatProductNames(
             ipadMacbookRawRows.map((row) => row.name),
+            signal,
         );
         const ipadMacbookRows = ipadMacbookRawRows.map((row, i) => ({
             ...row,
@@ -161,6 +187,7 @@ export class StartPriceImportHandler implements ICommandHandler<
     private async loadCatalog(
         job: PriceImportJob,
         groups: CategoryGroup[],
+        signal: AbortSignal,
     ): Promise<Map<CategoryKey, CatalogItem[]>> {
         const result = new Map<CategoryKey, CatalogItem[]>();
 
@@ -176,12 +203,14 @@ export class StartPriceImportHandler implements ICommandHandler<
 
         let processed = 0;
         for (const group of groups) {
+            signal.throwIfAborted();
             // Только product — variant/bundle ведут на чужой entity-эндпоинт и валят batch-
             // обновление 404-кой (тот же комментарий, что был у легаси loadMoySkladCatalog).
             const filter = `${CATEGORY_MS_FILTER[group.category]};type=product`;
             const items: CatalogItem[] = [];
             for await (const page of this.moysklad.fetchAssortment(filter)) {
                 items.push(...page);
+                signal.throwIfAborted();
             }
             await delay(350);
             result.set(group.category, items);
@@ -213,6 +242,7 @@ export class StartPriceImportHandler implements ICommandHandler<
         job: PriceImportJob,
         groups: CategoryGroup[],
         catalogByCategory: Map<CategoryKey, CatalogItem[]>,
+        signal: AbortSignal,
     ): Promise<ProductMatch[]> {
         const allMatches: ProductMatch[] = [];
 
@@ -228,6 +258,7 @@ export class StartPriceImportHandler implements ICommandHandler<
 
         let processed = 0;
         for (const group of groups) {
+            signal.throwIfAborted();
             const catalogItems = catalogByCategory.get(group.category) ?? [];
             this.logger.log(
                 `[${job.id}] [${group.category}] Сопоставление: прайс ${group.rows.length} строк × каталог ${catalogItems.length} товаров`,
@@ -236,6 +267,7 @@ export class StartPriceImportHandler implements ICommandHandler<
                 group.category,
                 group.rows,
                 catalogItems,
+                signal,
             );
             allMatches.push(...matches);
 

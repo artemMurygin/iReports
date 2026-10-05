@@ -7,6 +7,7 @@ import type { FuncCardStatus } from '@/shared/gsheets-ui/FuncCard'
 import { GroupLabel } from '@/shared/gsheets-ui/GroupLabel'
 import { SectionHeader } from '@/shared/gsheets-ui/SectionHeader'
 import { StatusBanner } from '@/shared/gsheets-ui/StatusBanner'
+import { formatDateTime } from '@/shared/lib/formatDateTime'
 import { useOperationStore } from '@/features/operations/operationContext'
 import type { OperationState } from '@/features/operations/operationContext'
 import { useMoySkladActions } from './useMoySkladActions'
@@ -21,14 +22,9 @@ interface MoySkladPanelProps {
     onFileChange: (file: File | null) => void
 }
 
-function formatTime(epoch: number): string {
-    const d = new Date(epoch)
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
 /** МойСклад functions report only the run time, never a row count (Q10). */
 function cardStatus(state: OperationState): FuncCardStatus {
-    const time = state.finishedAt ? formatTime(state.finishedAt) : ''
+    const time = state.finishedAt ? formatDateTime(state.finishedAt) : ''
     if (state.status === 'success') return { state: 'success', time }
     if (state.status === 'error') return { state: 'error', time, errorCode: state.error?.code }
     return { state: 'idle' }
@@ -99,7 +95,7 @@ export function MoySkladPanel({ file, onFileChange }: MoySkladPanelProps) {
                     </Button>
                     {importOp.state.status === 'success' && importOp.state.finishedAt && (
                         <p data-testid="ms-import-status" role="status" className="font-mono text-xs text-ok-ink">
-                            Прайс загружен · {formatTime(importOp.state.finishedAt)}
+                            Прайс загружен · {formatDateTime(importOp.state.finishedAt)}
                         </p>
                     )}
                 </>

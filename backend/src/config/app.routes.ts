@@ -613,6 +613,9 @@ export const routesV1 = {
                 importCosts: `${shopMarketingPricingRoot}/import-costs`,
                 importCostsStatus: `${shopMarketingPricingRoot}/import-costs/:id/status`,
                 importCostsProgress: `${shopMarketingPricingRoot}/import-costs/:id`,
+                importCostsCancel: `${shopMarketingPricingRoot}/import-costs/:id/cancel`,
+                // Отдельный сегмент, а не `import-costs/active`: иначе `active` попадает под `:id`.
+                activeImportCosts: `${shopMarketingPricingRoot}/active-import-costs`,
             },
         },
     },

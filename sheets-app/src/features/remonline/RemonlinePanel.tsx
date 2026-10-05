@@ -4,6 +4,7 @@ import { GroupLabel } from '@/shared/gsheets-ui/GroupLabel'
 import { ResultCard } from '@/shared/gsheets-ui/ResultCard'
 import { SectionHeader } from '@/shared/gsheets-ui/SectionHeader'
 import { StatusBanner } from '@/shared/gsheets-ui/StatusBanner'
+import { formatDateTime } from '@/shared/lib/formatDateTime'
 import { useOperationStore } from '@/features/operations/operationContext'
 import type { OperationState } from '@/features/operations/operationContext'
 import { CategoryWriterCard } from './CategoryWriterCard'
@@ -12,11 +13,6 @@ import type { RemonlineFunction, RemonlineFunctionId } from './remonlineFunction
 import { useRemonlineActions } from './useRemonlineActions'
 import type { AccrualsResult, CreateServicesSummary } from './useRemonlineActions'
 import type { UploadPricesToRoCount } from '@/shared/gas/types'
-
-function formatTime(epoch: number): string {
-    const d = new Date(epoch)
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
 
 /** The number shown in the success footer, when the result has one. */
 function resultCount(id: RemonlineFunctionId, result: unknown): number | undefined {
@@ -27,7 +23,7 @@ function resultCount(id: RemonlineFunctionId, result: unknown): number | undefin
 }
 
 function cardStatus(id: RemonlineFunctionId, state: OperationState): FuncCardStatus {
-    const time = state.finishedAt ? formatTime(state.finishedAt) : ''
+    const time = state.finishedAt ? formatDateTime(state.finishedAt) : ''
     if (state.status === 'success') return { state: 'success', time, count: resultCount(id, state.result) }
     if (state.status === 'error') return { state: 'error', time }
     return { state: 'idle' }
@@ -48,7 +44,7 @@ export function RemonlinePanel() {
 
     function renderResult(id: RemonlineFunctionId) {
         const { state } = operations[id]
-        if (state.result === undefined || state.result === null) return null
+        if (state.restored || state.result === undefined || state.result === null) return null
         if (state.status !== 'success' && state.status !== 'error') return null
 
         if (id === 'ro.uploadPrices') {

@@ -54,6 +54,7 @@ export function callGas<T>(fnName: string, ...args: unknown[]): Promise<T> {
 /** GasApi implementation that delegates every method to the real `google.script.run` bridge. */
 export const realGasClient: GasApi = {
     processFile: (base64Data) => callGas('processFile', base64Data),
+    cancelImport: (uuid) => callGas('cancelImport', uuid),
     loadPricesFromMS: () => callGas('loadPricesFromMS'),
     uploadPricesToMS: () => callGas('uploadPricesToMS'),
     uploadSalePricesToMS: () => callGas('uploadSalePricesToMS'),

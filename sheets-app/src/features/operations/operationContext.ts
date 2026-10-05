@@ -17,6 +17,8 @@ export interface OperationState {
     error?: OperationError
     /** Value returned by the last successful run (or carried by an `OperationFailure`); feeds the result block. */
     result?: unknown
+    /** Restored from a previous session: the footer status is shown, the result block is not. */
+    restored?: boolean
     /** The banner can be closed without clearing the card's own error (FR6). */
     bannerOpen: boolean
 }

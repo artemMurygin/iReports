@@ -26,3 +26,9 @@ export class PriceImportJobNotFoundException extends NotFoundException {
         super(`Джоба импорта цен ${jobId} не найдена`);
     }
 }
+
+export class PriceImportJobNotCancellableException extends ConflictException {
+    constructor(jobId: string, reason: string) {
+        super(`Джобу импорта цен ${jobId} нельзя отменить: ${reason}`);
+    }
+}

@@ -40,6 +40,7 @@ export class AiProductMatcherAdapter implements ProductMatcher {
         category: CategoryKey,
         priceRows: PriceListRow[],
         catalogItems: CatalogItem[],
+        signal?: AbortSignal,
     ): Promise<ProductMatch[]> {
         const prompt = buildMatchingPrompt(category, priceRows, catalogItems);
         this.logger.log(
@@ -51,6 +52,7 @@ export class AiProductMatcherAdapter implements ProductMatcher {
             maxTokens: 30000,
             stream: true,
             headers: { 'X-OmniRoute-No-Cache': 'true' },
+            signal,
         });
         this.logger.log(
             `[${category}] Ответ AI получен: ${raw.length} символов`,
@@ -142,11 +144,17 @@ export class AiProductMatcherAdapter implements ProductMatcher {
         return matches;
     }
 
-    async formatProductNames(names: string[]): Promise<string[]> {
+    async formatProductNames(
+        names: string[],
+        signal?: AbortSignal,
+    ): Promise<string[]> {
         if (names.length === 0) return [];
 
         const prompt = buildFormatNamesPrompt(names);
-        const response = await this.ai.ask(prompt, { temperature: 0 });
+        const response = await this.ai.ask(prompt, {
+            temperature: 0,
+            signal,
+        });
         return parseFormatNamesResponse(response, names);
     }
 }

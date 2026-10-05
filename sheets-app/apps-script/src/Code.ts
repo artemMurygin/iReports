@@ -88,6 +88,19 @@ function processFile(base64Data: string): string {
     return id
 }
 
+/**
+ * Cancels a running price import on the backend (aborts its LLM requests). Goes through UrlFetchApp rather than a
+ * browser fetch, so it does not depend on CORS preflight. Throws on 404/409 (unknown job / already writing).
+ */
+function cancelImport(uuid: string): string {
+    const response = UrlFetchApp.fetch(
+        BASE_URL + '/v1/shop/marketing/pricing/import-costs/' + encodeURIComponent(uuid) + '/cancel',
+        { method: 'post', muteHttpExceptions: true },
+    )
+    throwIfHttpError_(response, 'Не удалось отменить импорт')
+    return 'OK'
+}
+
 /** Triggers a GET webhook that pulls prices from МойСклад. Always resolves to 'OK'. */
 function loadPricesFromMS(): string {
     return fetchWebhook_('https://n8n.murygin.tech/webhook/pricesFromMs', 'get')

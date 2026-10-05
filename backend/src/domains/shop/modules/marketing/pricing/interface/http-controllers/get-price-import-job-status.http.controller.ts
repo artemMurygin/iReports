@@ -2,6 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import type { PriceImportJobStatusResponse } from 'ireports-contracts';
 import { routesV1 } from '@/config/app.routes';
+import { Public } from '@/shared/decorators/public.decorator';
 import { GetPriceImportJobStatusService } from '../../application/services/get-price-import-job-status.service';
 
 // Новый дом GET /price-monitoring/:uuid/status из
@@ -17,6 +18,8 @@ import { GetPriceImportJobStatusService } from '../../application/services/get-p
 export class GetPriceImportJobStatusHttpController {
     constructor(private readonly getStatus: GetPriceImportJobStatusService) {}
 
+    // Public: поллинг-фолбэк сайдбара Google Sheets (нет Bitrix-сессии), как и SSE-эндпоинт.
+    @Public()
     @Get(routesV1.shop.marketing.pricing.importCostsStatus)
     @ApiOperation({ summary: 'Снапшот статуса и прогресса джобы импорта цен' })
     @ApiParam({

@@ -6,6 +6,7 @@ import { StartPriceImportCommand } from './start-price-import.command';
 import { PriceListXlsxParser } from '../../infrastructure/xlsx/price-list-xlsx.parser';
 import { PriceImportJob } from '../../domain/entities/price-import-job.entity';
 import { ProductMatch } from '../../domain/value-objects/product-match.value-object';
+import { InMemoryPriceImportAbortRegistry } from '../../infrastructure/abort/in-memory-price-import-abort.registry';
 import type { PriceImportJobStore } from '../ports/price-import-job-store.port';
 import type {
     CatalogItem,
@@ -71,6 +72,7 @@ function buildFakeJobStore(): {
             statusHistory.push(job.status);
         },
         findById: (id) => jobs.get(id),
+        findActive: () => undefined,
         subscribe: () => undefined,
         delete: (id) => {
             jobs.delete(id);
@@ -150,6 +152,7 @@ describe('StartPriceImportHandler', () => {
                 store,
                 matcher,
                 gateway,
+                new InMemoryPriceImportAbortRegistry(),
                 new PriceListXlsxParser(),
                 moysklad,
             );
@@ -193,6 +196,7 @@ describe('StartPriceImportHandler', () => {
                 store,
                 matcher,
                 gateway,
+                new InMemoryPriceImportAbortRegistry(),
                 new PriceListXlsxParser(),
                 moysklad,
             );
@@ -215,6 +219,67 @@ describe('StartPriceImportHandler', () => {
             // Пайплайн остановился до записи результата — ни МойСклад, ни таблица не тронуты.
             expect(writeCostChanges).not.toHaveBeenCalled();
             expect(batchUpdateProducts).not.toHaveBeenCalled();
+        });
+    });
+    it('отмена во время LLM-сопоставления: signal абортится, джоба остаётся CANCELLED, запись не выполняется', async () => {
+        await withRequestContext(async () => {
+            const { store } = buildFakeJobStore();
+            const registry = new InMemoryPriceImportAbortRegistry();
+            let seenSignal: AbortSignal | undefined;
+            let onMatchStarted: () => void = () => undefined;
+            const matchStarted = new Promise<void>((resolve) => {
+                onMatchStarted = resolve;
+            });
+            const matcher: ProductMatcher = {
+                formatProductNames: jest
+                    .fn()
+                    .mockImplementation((names: string[]) =>
+                        Promise.resolve(names),
+                    ),
+                // Висит, пока signal не будет аборчен — как оборванный HTTP-запрос к LLM.
+                match: jest.fn().mockImplementation(
+                    (
+                        _c: CategoryKey,
+                        _r: unknown,
+                        _i: unknown,
+                        signal?: AbortSignal,
+                    ) =>
+                        new Promise((_resolve, reject) => {
+                            seenSignal = signal;
+                            onMatchStarted();
+                            signal?.addEventListener('abort', () =>
+                                reject(new Error('aborted')),
+                            );
+                        }),
+                ),
+            };
+            const { gateway, writeCostChanges } = buildFakeResultSheetGateway();
+            const { moysklad, batchUpdateProducts } = buildFakeMoysklad();
+            const handler = new StartPriceImportHandler(
+                store,
+                matcher,
+                gateway,
+                registry,
+                new PriceListXlsxParser(),
+                moysklad,
+            );
+            const command = new StartPriceImportCommand({
+                fileBase64: buildPriceListFileBase64(),
+            });
+
+            const run = handler.execute(command);
+            await matchStarted;
+            const job = store.findById(command.id)!;
+            job.cancel();
+            store.save(job);
+            registry.abort(command.id);
+            await run;
+
+            expect(seenSignal?.aborted).toBe(true);
+            expect(job.isCancelled()).toBe(true);
+            expect(job.errorMessage).toBeNull();
+            expect(batchUpdateProducts).not.toHaveBeenCalled();
+            expect(writeCostChanges).not.toHaveBeenCalled();
         });
     });
 });

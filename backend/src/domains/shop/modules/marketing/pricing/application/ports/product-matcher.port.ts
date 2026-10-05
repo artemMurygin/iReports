@@ -27,6 +27,7 @@ export interface ProductMatcher {
         category: CategoryKey,
         priceRows: PriceListRow[],
         catalogItems: CatalogItem[],
+        signal?: AbortSignal,
     ): Promise<ProductMatch[]>;
 
     /**
@@ -35,7 +36,10 @@ export interface ProductMatcher {
      * не отдельный порт: тот же AI-транспорт, та же ответственность "текстовые AI-операции над
      * прайсом поставщика перед сопоставлением с каталогом".
      */
-    formatProductNames(names: string[]): Promise<string[]>;
+    formatProductNames(
+        names: string[],
+        signal?: AbortSignal,
+    ): Promise<string[]>;
 }
 
 export const PRODUCT_MATCHER = Symbol('PRODUCT_MATCHER');

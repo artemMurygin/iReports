@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { gas } from '@/shared/gas'
-import { openImportProgressStream } from '@/shared/gas/progressStream'
 import { useOperationStore } from '@/features/operations/operationContext'
-import type { ProgressApi } from '@/features/operations/operationContext'
 import { OperationSkipped, useOperation } from '@/features/operations/useOperation'
+import { cancelImportOnServer, waitForImport } from './importFlow'
 import { parseMoySkladError } from './moySkladErrors'
 import { MOY_SKLAD_FUNCTIONS, MS_IMPORT_ID, MS_IMPORT_PROGRESS_TITLE } from './moySkladFunctions'
 
@@ -23,25 +22,6 @@ function readAsBase64(file: File): Promise<string> {
         reader.onload = () => resolve(((reader.result as string) ?? '').split(',')[1] ?? '')
         reader.onerror = () => reject(new Error('Не удалось прочитать файл'))
         reader.readAsDataURL(file)
-    })
-}
-
-/**
- * Resolves when the SSE import stream completes, rejects on a FAILED event or a broken connection. Cancel closes
- * the stream and skips the operation (FR13). The stage text comes from the stream.
- */
-function waitForImport(uuid: string, progress: ProgressApi): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const close = openImportProgressStream(uuid, {
-            onMessage: (message) => progress.setMessage(message),
-            onCompleted: () => resolve(),
-            onFailed: (message) => reject(new Error(message)),
-            onConnectionError: () => reject(new Error('Соединение прервано')),
-        })
-        progress.setCancelHandler(() => {
-            close?.()
-            reject(new OperationSkipped())
-        })
     })
 }
 
@@ -86,7 +66,10 @@ export function useMoySkladActions({ file }: UseMoySkladActionsParams) {
                 MS_IMPORT_PROGRESS_TITLE,
                 async () => {
                     const uuid = await gas.processFile(await readAsBase64(file))
-                    if (progress.isCancelled()) throw new OperationSkipped()
+                    if (progress.isCancelled()) {
+                        await cancelImportOnServer(uuid)
+                        throw new OperationSkipped()
+                    }
                     await waitForImport(uuid, progress)
                 },
                 true,

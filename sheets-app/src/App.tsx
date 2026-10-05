@@ -5,6 +5,7 @@ import { AppTabs, AppTabsContent } from '@/shared/gsheets-ui/AppTabs'
 import { OperationProvider } from '@/features/operations/OperationProvider'
 import { MoySkladPanel } from '@/features/moySklad/MoySkladPanel'
 import { RemonlinePanel } from '@/features/remonline/RemonlinePanel'
+import { useResumeActiveImport } from '@/features/moySklad/useResumeActiveImport'
 
 /**
  * Implements FR1, UX1, NFR-R1, NFR-A1 of sheets-app-redesign: shell with header, tabs and progress modal
@@ -12,6 +13,12 @@ import { RemonlinePanel } from '@/features/remonline/RemonlinePanel'
  * foreground tokens with at least 4.5:1 contrast and every control is keyboard-reachable (NFR-A1).
  * Each tab reports errors through its own StatusBanner.
  */
+
+/** Child of OperationProvider (needs its store): returns the sidebar to a still-running price import. */
+function ResumeActiveImport() {
+    useResumeActiveImport()
+    return null
+}
 
 function App() {
     const [activeTab, setActiveTab] = useState('ms')
@@ -24,6 +31,7 @@ function App() {
     return (
         <TooltipProvider>
             <OperationProvider>
+                <ResumeActiveImport />
                 <div>
                     <AppHeader />
 

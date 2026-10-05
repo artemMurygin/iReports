@@ -16,7 +16,10 @@ export class AiService {
      * Повторяет fn при 504 Gateway Timeout с экспоненциальным бэкоффом.
      * Все остальные ошибки пробрасываются немедленно.
      */
-    private async withRetry<T>(fn: () => Promise<T>): Promise<T> {
+    private async withRetry<T>(
+        fn: () => Promise<T>,
+        signal?: AbortSignal,
+    ): Promise<T> {
         let delayMs = RETRY_INITIAL_DELAY_MS;
 
         for (let attempt = 1; attempt <= RETRY_ATTEMPTS + 1; attempt++) {
@@ -26,20 +29,33 @@ export class AiService {
                 const status = (error as { status?: number })?.status;
                 const is504 = status === 504;
 
-                if (!is504 || attempt > RETRY_ATTEMPTS) {
+                if (signal?.aborted || !is504 || attempt > RETRY_ATTEMPTS) {
                     throw error;
                 }
 
                 this.logger.warn(
                     `504 Gateway Timeout — попытка ${attempt}/${RETRY_ATTEMPTS}, повтор через ${delayMs} мс...`,
                 );
-                await new Promise((resolve) => setTimeout(resolve, delayMs));
+                await this.sleep(delayMs, signal);
                 delayMs *= 2;
             }
         }
 
         // Недостижимо, нужно для вывода типов TypeScript
         throw new Error('withRetry: unreachable');
+    }
+
+    /** Пауза, прерываемая signal'ом (после abort следующий вызов fn увидит aborted и бросит). */
+    private sleep(ms: number, signal?: AbortSignal): Promise<void> {
+        return new Promise((resolve) => {
+            const timer = setTimeout(done, ms);
+            function done() {
+                clearTimeout(timer);
+                signal?.removeEventListener('abort', done);
+                resolve();
+            }
+            signal?.addEventListener('abort', done, { once: true });
+        });
     }
 
     /**
@@ -108,25 +124,28 @@ export class AiService {
                   ]
                 : messages;
 
-            const requestOptions = options.headers
-                ? { headers: options.headers }
-                : undefined;
+            const requestOptions =
+                options.headers || options.signal
+                    ? { headers: options.headers, signal: options.signal }
+                    : undefined;
 
             if (options.stream) {
-                const stream = await this.withRetry(() =>
-                    this.ai.client.chat.completions.create(
-                        {
-                            model:
-                                options.model ??
-                                process.env.OMNIROUTE_BASE_MODEL ??
-                                'cx/gpt-5.5-medium',
-                            messages: allMessages,
-                            temperature: options.temperature ?? 0.7,
-                            max_tokens: options.maxTokens,
-                            stream: true,
-                        },
-                        requestOptions,
-                    ),
+                const stream = await this.withRetry(
+                    () =>
+                        this.ai.client.chat.completions.create(
+                            {
+                                model:
+                                    options.model ??
+                                    process.env.OMNIROUTE_BASE_MODEL ??
+                                    'cx/gpt-5.5-medium',
+                                messages: allMessages,
+                                temperature: options.temperature ?? 0.7,
+                                max_tokens: options.maxTokens,
+                                stream: true,
+                            },
+                            requestOptions,
+                        ),
+                    options.signal,
                 );
 
                 let result = '';
@@ -136,23 +155,27 @@ export class AiService {
                 return result;
             }
 
-            const response = await this.withRetry(() =>
-                this.ai.client.chat.completions.create(
-                    {
-                        model:
-                            options.model ??
-                            process.env.OMNIROUTE_BASE_MODEL ??
-                            'cx/gpt-5.5-medium',
-                        messages: allMessages,
-                        temperature: options.temperature ?? 0.7,
-                        max_tokens: options.maxTokens,
-                    },
-                    requestOptions,
-                ),
+            const response = await this.withRetry(
+                () =>
+                    this.ai.client.chat.completions.create(
+                        {
+                            model:
+                                options.model ??
+                                process.env.OMNIROUTE_BASE_MODEL ??
+                                'cx/gpt-5.5-medium',
+                            messages: allMessages,
+                            temperature: options.temperature ?? 0.7,
+                            max_tokens: options.maxTokens,
+                        },
+                        requestOptions,
+                    ),
+                options.signal,
             );
 
             return response.choices[0].message.content ?? '';
         } catch (error) {
+            // Отмена — не сбой шлюза: пробрасываем как есть, чтобы вызывающий отличил её от ошибки.
+            if (options.signal?.aborted) throw error;
             throw new BadGatewayException(
                 `Failed to get chat completion: ${getErrorMessage(error)}`,
             );

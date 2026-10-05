@@ -51,7 +51,7 @@ export type JobProgress = z.infer<typeof jobProgressSchema>;
 
 const priceImportJobStatusResponseSchema = z.object({
     id: z.string(),
-    status: z.enum(['CREATED', 'RUNNING', 'COMPLETED', 'FAILED']),
+    status: z.enum(['CREATED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
     progress: jobProgressSchema.nullable(),
     errorMessage: z.string().nullable(),
 });
@@ -59,7 +59,27 @@ export type PriceImportJobStatusResponse = z.infer<
     typeof priceImportJobStatusResponseSchema
 >;
 
+// GET .../active-import-costs: id выполняющейся сейчас джобы импорта (или null) — по нему
+// сайдбар Google Sheets после повторного открытия окна возвращается к прогрессу.
+const activePriceImportJobResponseSchema = z.object({
+    id: z.string().nullable(),
+});
+export type ActivePriceImportJobResponse = z.infer<
+    typeof activePriceImportJobResponseSchema
+>;
+
+// POST .../import-costs/:id/cancel
+const cancelPriceImportResponseSchema = z.object({
+    id: z.string(),
+    status: z.literal('CANCELLED'),
+});
+export type CancelPriceImportResponse = z.infer<
+    typeof cancelPriceImportResponseSchema
+>;
+
 export {
+    activePriceImportJobResponseSchema,
+    cancelPriceImportResponseSchema,
     startPriceImportRequestSchema,
     startPriceImportResponseSchema,
     jobProgressSchema,

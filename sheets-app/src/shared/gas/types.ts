@@ -94,6 +94,9 @@ export interface GasApi {
     /** Uploads a base64-encoded price file, returns a job UUID used for a (separate) SSE progress stream. */
     processFile(base64Data: string): Promise<string>
 
+    /** Asks the backend to cancel a running price import: aborts its LLM requests. Rejects (409) once it is writing to МойСклад. */
+    cancelImport(uuid: string): Promise<string>
+
     /** Triggers a GET webhook that pulls prices from МойСклад. Always resolves to 'OK'. */
     loadPricesFromMS(): Promise<string>
 
