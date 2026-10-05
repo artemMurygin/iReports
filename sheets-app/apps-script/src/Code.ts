@@ -47,6 +47,33 @@ function throwIfHttpError_(response: GoogleAppsScript.URL_Fetch.HTTPResponse, fa
     throw new Error(message)
 }
 
+/**
+ * Calls an n8n webhook with `muteHttpExceptions` and, on a code >= 400, throws an Error whose message is
+ * `GAS_HTTP_ERROR:` + JSON `{code, message}` (message = `message` of the JSON body or the raw body start).
+ * `google.script.run` only delivers the message text, so the sidebar's gas client decodes this marker back into
+ * a structured error (FR12 of sheets-app-redesign). Network failures keep their native text.
+ */
+function fetchWebhook_(url: string, method: GoogleAppsScript.URL_Fetch.HttpMethod): string {
+    const response = UrlFetchApp.fetch(url, {
+        method: method,
+        contentType: 'application/json',
+        muteHttpExceptions: true,
+    })
+    const code = response.getResponseCode()
+    if (code >= 400) {
+        const text = response.getContentText()
+        let message = text.slice(0, 200)
+        try {
+            const body = JSON.parse(text)
+            if (body && body.message) message = String(body.message).slice(0, 200)
+        } catch (e) {
+            // not JSON: keep the raw body start
+        }
+        throw new Error('GAS_HTTP_ERROR:' + JSON.stringify({ code: code, message: message }))
+    }
+    return 'OK'
+}
+
 /** Uploads a base64-encoded price file, returns a job UUID used for a (separate) SSE progress stream. */
 function processFile(base64Data: string): string {
     const response = UrlFetchApp.fetch(BASE_URL + '/v1/shop/marketing/pricing/import-costs', {
@@ -63,29 +90,17 @@ function processFile(base64Data: string): string {
 
 /** Triggers a GET webhook that pulls prices from МойСклад. Always resolves to 'OK'. */
 function loadPricesFromMS(): string {
-    UrlFetchApp.fetch('https://n8n.murygin.tech/webhook/pricesFromMs', {
-        method: 'get',
-        contentType: 'application/json',
-    })
-    return 'OK'
+    return fetchWebhook_('https://n8n.murygin.tech/webhook/pricesFromMs', 'get')
 }
 
 /** Triggers a PATCH webhook that pushes prices to МойСклад. Always resolves to 'OK'. */
 function uploadPricesToMS(): string {
-    UrlFetchApp.fetch('https://n8n.murygin.tech/webhook/updatePricesInMS', {
-        method: 'patch',
-        contentType: 'application/json',
-    })
-    return 'OK'
+    return fetchWebhook_('https://n8n.murygin.tech/webhook/updatePricesInMS', 'patch')
 }
 
 /** Triggers a PATCH webhook that pushes sale prices to МойСклад. Always resolves to 'OK'. */
 function uploadSalePricesToMS(): string {
-    UrlFetchApp.fetch('https://n8n.murygin.tech/webhook/updateSalePricesInMS', {
-        method: 'patch',
-        contentType: 'application/json',
-    })
-    return 'OK'
+    return fetchWebhook_('https://n8n.murygin.tech/webhook/updateSalePricesInMS', 'patch')
 }
 
 /** Finds the "accruals" sheet by its stable gid (survives renames/reordering). */

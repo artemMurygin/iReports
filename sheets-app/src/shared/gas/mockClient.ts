@@ -1,8 +1,10 @@
+import { GasHttpError } from './types'
 import type {
     AccrualsSheetEntry,
     CreateServiceInRoappResult,
     CreateServiceRow,
     GasApi,
+    OperationReport,
     ServiceCategory,
     UploadPricesToRoResult,
 } from './types'
@@ -56,6 +58,27 @@ const MOCK_SERVICE_CATEGORIES: ServiceCategory[] = [
     { id: 8, name: 'Замена клавиатуры', parentId: 5 },
 ]
 
+/** In-memory last-run store (FR11); `resetMockLastRuns` clears it for tests. */
+const lastRuns = new Map<string, OperationReport>()
+
+export function resetMockLastRuns(): void {
+    lastRuns.clear()
+}
+
+/** Next МойСклад webhook call fails with this HTTP code (FR12); local dev and tests only. */
+let nextMoySkladFailure: number | null = null
+
+export function failNextMoySkladCall(code: number | null = 429): void {
+    nextMoySkladFailure = code
+}
+
+function throwIfMoySkladFails(): void {
+    if (nextMoySkladFailure === null) return
+    const code = nextMoySkladFailure
+    nextMoySkladFailure = null
+    throw new GasHttpError(code, 'Mock failure')
+}
+
 /** GasApi implementation backed by realistic fake data, for local development outside Apps Script. */
 export const mockGasClient: GasApi = {
     async processFile() {
@@ -65,16 +88,19 @@ export const mockGasClient: GasApi = {
 
     async loadPricesFromMS() {
         await delay()
+        throwIfMoySkladFails()
         return 'OK'
     },
 
     async uploadPricesToMS() {
         await delay()
+        throwIfMoySkladFails()
         return 'OK'
     },
 
     async uploadSalePricesToMS() {
         await delay()
+        throwIfMoySkladFails()
         return 'OK'
     },
 
@@ -135,5 +161,22 @@ export const mockGasClient: GasApi = {
     async writeCreateServiceResult() {
         await delay()
         return 'OK'
+    },
+
+    async getLastRun(operation) {
+        await delay()
+        const report = lastRuns.get(operation)
+        return report ? structuredClone(report) : null
+    },
+
+    async saveLastRun(report) {
+        await delay()
+        lastRuns.set(report.operation, structuredClone(report))
+        return 'OK'
+    },
+
+    async getAllLastRuns() {
+        await delay()
+        return Object.fromEntries([...lastRuns].map(([op, report]) => [op, structuredClone(report)]))
     },
 }

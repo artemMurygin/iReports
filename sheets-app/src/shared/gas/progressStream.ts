@@ -18,9 +18,14 @@ interface ImportProgressEvent {
     /** Present (truthy) only on heartbeat events, which carry no status/progress and are skipped. */
     type?: string
     status?: 'COMPLETED' | 'FAILED' | string
-    progress?: { message?: string | null } | null
+    progress?: {
+        message?: string | null
+    } | null
     errorMessage?: string | null
 }
+
+/** Interval between status polls that back up the SSE stream. */
+const STATUS_POLL_INTERVAL_MS = 1500
 
 /** A cleanup function that tears down an open progress stream (closes the connection / clears timers). */
 export type CloseProgressStream = () => void
@@ -36,9 +41,16 @@ export type CloseProgressStream = () => void
 export function realOpenImportProgressStream(uuid: string, handlers: ProgressStreamHandlers): CloseProgressStream {
     const es = new EventSource(`${BASE_URL}/v1/shop/marketing/pricing/import-costs/${uuid}`)
     let finished = false
+    let lastMessage: string | null = null
+    const finish = () => {
+        finished = true
+        clearInterval(poll)
+        es.close()
+    }
 
-    es.onmessage = (event) => {
-        const data = JSON.parse(event.data) as ImportProgressEvent
+    // The same snapshot handler serves both the SSE `message` events and the status polling below.
+    const handle = (data: ImportProgressEvent) => {
+        if (finished) return
 
         // Heartbeat events (every 20s, see SubscribePriceImportJobProgressHttpController) carry
         // no status/progress fields — skip them.
@@ -46,30 +58,39 @@ export function realOpenImportProgressStream(uuid: string, handlers: ProgressStr
 
         const { status, progress, errorMessage } = data
         const message = progress?.message ?? null
-        if (message) handlers.onMessage(message)
-
+        if (message && message !== lastMessage) {
+            lastMessage = message
+            handlers.onMessage(message)
+        }
         if (status === 'COMPLETED') {
-            finished = true
-            es.close()
+            finish()
             handlers.onCompleted()
         } else if (status === 'FAILED') {
-            finished = true
-            es.close()
+            finish()
             handlers.onFailed(errorMessage || message || 'Ошибка импорта')
         }
     }
 
+    es.onmessage = (event) => handle(JSON.parse(event.data) as ImportProgressEvent)
+
+    // Fallback: a reverse proxy may buffer SSE until the stream closes, so the status is also polled.
+    // Failed polls are ignored, the SSE stream stays the source of terminal errors.
+    const poll = setInterval(() => {
+        fetch(`${BASE_URL}/v1/shop/marketing/pricing/import-costs/${uuid}/status`)
+            .then((response) => (response.ok ? (response.json() as Promise<ImportProgressEvent>) : null))
+            .then((data) => {
+                if (data) handle(data)
+            })
+            .catch(() => {})
+    }, STATUS_POLL_INTERVAL_MS)
+
     es.onerror = () => {
-        es.close()
         if (finished) return
-        finished = true
+        finish()
         handlers.onConnectionError()
     }
 
-    return () => {
-        finished = true
-        es.close()
-    }
+    return finish
 }
 
 /** Plausible progress messages synthesized by the mock stream, in emission order. */

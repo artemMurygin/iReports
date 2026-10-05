@@ -5,7 +5,7 @@ import { Slot } from 'radix-ui'
 import { cn } from '@/shared/lib/tw'
 
 const buttonVariants = cva(
-    "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-semibold whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
     {
         variants: {
             variant: {
@@ -17,29 +17,43 @@ const buttonVariants = cva(
                 secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
                 ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
                 link: 'text-primary underline-offset-4 hover:underline',
+                ink: 'bg-foreground text-background hover:bg-foreground/90',
+                'destructive-outline':
+                    'border border-danger-border bg-background text-danger hover:bg-danger-soft focus-visible:ring-destructive/20',
             },
             size: {
                 default: 'h-9 px-4 py-2 has-[>svg]:px-3',
                 xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
                 sm: 'h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5',
                 lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
+                run: "h-8 gap-1.5 rounded-lg px-3 text-xs font-semibold [&_svg:not([class*='size-'])]:size-3.5",
                 icon: 'size-9',
                 'icon-xs': "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
                 'icon-sm': 'size-8',
                 'icon-lg': 'size-10',
             },
+            block: {
+                true: 'w-full',
+                false: '',
+            },
         },
         defaultVariants: {
             variant: 'default',
             size: 'default',
+            block: false,
         },
     },
 )
 
+/**
+ * Implements FR2, FR4, FR8 of sheets-app-redesign: `ink` (black), `destructive-outline` (retry after an error),
+ * size `run` (FuncCard footer) and `block` (full width).
+ */
 function Button({
     className,
     variant = 'default',
     size = 'default',
+    block = false,
     asChild = false,
     ...props
 }: React.ComponentProps<'button'> &
@@ -53,7 +67,7 @@ function Button({
             data-slot="button"
             data-variant={variant}
             data-size={size}
-            className={cn(buttonVariants({ variant, size, className }))}
+            className={cn(buttonVariants({ variant, size, block, className }))}
             {...props}
         />
     )

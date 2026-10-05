@@ -1,240 +1,162 @@
-import { useRef, useState } from 'react'
-import type { DragEvent } from 'react'
-import { Upload } from 'lucide-react'
+import { ListChecks } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/shared/lib/tw'
-import { gas } from '@/shared/gas'
-import { openImportProgressStream } from '@/shared/gas/progressStream'
-import type { GlassLoaderController } from '@/shared/gsheets-ui/useGlassLoaderController'
-import type { StatusColor } from '@/shared/gsheets-ui/StatusLine'
+import { Dropzone } from '@/shared/gsheets-ui/Dropzone'
+import { FileCard } from '@/shared/gsheets-ui/FileCard'
+import { FuncCard } from '@/shared/gsheets-ui/FuncCard'
+import type { FuncCardStatus } from '@/shared/gsheets-ui/FuncCard'
+import { GroupLabel } from '@/shared/gsheets-ui/GroupLabel'
+import { SectionHeader } from '@/shared/gsheets-ui/SectionHeader'
+import { StatusBanner } from '@/shared/gsheets-ui/StatusBanner'
+import { useOperationStore } from '@/features/operations/operationContext'
+import type { OperationState } from '@/features/operations/operationContext'
+import { useMoySkladActions } from './useMoySkladActions'
+import { MOY_SKLAD_FUNCTIONS, MS_DROPZONE_HINT, MS_DROPZONE_TITLE, MS_REQUIREMENTS_TEXT } from './moySkladFunctions'
+import type { MoySkladFunction } from './moySkladFunctions'
 
-const H4_CLASS = 'my-[1.33em] text-base font-bold'
-
-const UPLOAD_LABEL = 'Загрузить прайс'
-const UPLOAD_LABEL_BUSY = 'Загрузка...'
-const UPLOAD_RC_LABEL = '⬆ Обновить РЦ в МС'
-const UPLOAD_SALE_LABEL = '⬆ Обновить акционную РЦ в МС'
-const LOAD_LABEL = '⬇ Получить цены из МС'
-const SYNC_LABEL_BUSY = 'Выгрузка...'
-const LOAD_LABEL_BUSY = 'Загрузка...'
+const ACCEPT = ['.xlsx', '.xls']
 
 interface MoySkladPanelProps {
-    /** Shared glass-loader controller (see `useGlassLoaderController`), owned by `App`. */
-    loader: GlassLoaderController
-    /** Reports a status-line message + color up to `App`'s bottom `StatusLine`. */
-    onStatus: (message: string, color: StatusColor) => void
+    /** Selected price file, lifted to `App` so it survives tab switches. */
+    file: File | null
+    onFileChange: (file: File | null) => void
 }
 
-function errorMessage(err: unknown): string {
-    return err instanceof Error ? err.message : String(err)
+function formatTime(epoch: number): string {
+    const d = new Date(epoch)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-// Reproduces the reference sidebar's "Мой склад" tab (frontend/GoogleSheetsInterface/index.html
-// uploadFile/startProgressStream/loadPrices/uploadPrices/uploadSalePrices, lines ~639-772):
-// price-file upload + SSE import progress, plus the three one-shot МойСклад sync buttons.
-export function MoySkladPanel({ loader, onStatus }: MoySkladPanelProps) {
-    const fileInputRef = useRef<HTMLInputElement>(null)
-    const [file, setFile] = useState<File | null>(null)
-    const [isDragActive, setIsDragActive] = useState(false)
+/** МойСклад functions report only the run time, never a row count (Q10). */
+function cardStatus(state: OperationState): FuncCardStatus {
+    const time = state.finishedAt ? formatTime(state.finishedAt) : ''
+    if (state.status === 'success') return { state: 'success', time }
+    if (state.status === 'error') return { state: 'error', time, errorCode: state.error?.code }
+    return { state: 'idle' }
+}
 
-    const [uploadBusy, setUploadBusy] = useState(false)
-    const [uploadRcBusy, setUploadRcBusy] = useState(false)
-    const [uploadSaleBusy, setUploadSaleBusy] = useState(false)
-    const [loadBusy, setLoadBusy] = useState(false)
+/**
+ * Implements FR2, FR3, FR4, FR6, UX2 of sheets-app-redesign: the "Мой склад" tab. Source block (Dropzone +
+ * «Требования», or FileCard + «Загрузить прайс»), then three FuncCards grouped by direction and an error banner.
+ * Reproduces the reference sidebar's behaviour (frontend/GoogleSheetsInterface/index.html, lines ~639-772).
+ */
+export function MoySkladPanel({ file, onFileChange }: MoySkladPanelProps) {
+    const { anyRunning } = useOperationStore()
+    const { warning, setWarning, importOp, operations, handlers, handleUploadFile } = useMoySkladActions({ file })
 
-    const dropZoneHighlighted = isDragActive || file !== null
+    const failed = [importOp, ...Object.values(operations)]
+        .filter((op) => op.state.status === 'error' && op.state.bannerOpen && op.state.error)
+        .sort((a, b) => (b.state.finishedAt ?? 0) - (a.state.finishedAt ?? 0))[0]
 
-    function handleDragOver(event: DragEvent<HTMLDivElement>) {
-        event.preventDefault()
-        setIsDragActive(true)
-    }
-
-    function handleDragLeave() {
-        setIsDragActive(false)
-    }
-
-    function handleDrop(event: DragEvent<HTMLDivElement>) {
-        event.preventDefault()
-        setIsDragActive(false)
-        const dropped = event.dataTransfer.files[0]
-        if (dropped) setFile(dropped)
-    }
-
-    function handleUploadFile() {
-        if (!file) {
-            onStatus('⚠️ Выберите файл', 'warning')
-            return
-        }
-
-        loader.show('Загрузка файла на сервер...')
-        setUploadBusy(true)
-        onStatus('', 'neutral')
-
-        const reader = new FileReader()
-        reader.onload = () => {
-            const result = reader.result as string
-            const base64 = result.split(',')[1] ?? ''
-
-            gas.processFile(base64).then(
-                (uuid) => {
-                    loader.update('Подключение к потоку...')
-                    openImportProgressStream(uuid, {
-                        onMessage: (message) => {
-                            loader.update(message)
-                            loader.addLog(message)
-                        },
-                        onCompleted: () => {
-                            loader.hide()
-                            onStatus('✅ Готово!', 'success')
-                            setUploadBusy(false)
-                        },
-                        onFailed: (message) => {
-                            loader.hide()
-                            onStatus('❌ ' + message, 'error')
-                            setUploadBusy(false)
-                        },
-                        onConnectionError: () => {
-                            loader.hide()
-                            onStatus('❌ Соединение прервано', 'error')
-                            setUploadBusy(false)
-                        },
-                    })
-                },
-                (err: unknown) => {
-                    loader.hide()
-                    onStatus('❌ ' + errorMessage(err), 'error')
-                    setUploadBusy(false)
-                },
-            )
-        }
-        reader.readAsDataURL(file)
-    }
-
-    async function handleLoadPrices() {
-        loader.show('Получаем цены из МойСклад')
-        setLoadBusy(true)
-        onStatus('', 'neutral')
-        try {
-            await gas.loadPricesFromMS()
-            loader.hide()
-            onStatus('✅ РЦ загружена из МойСклад!', 'success')
-        } catch (err) {
-            loader.hide()
-            onStatus('❌ ' + errorMessage(err), 'error')
-        } finally {
-            setLoadBusy(false)
-        }
-    }
-
-    async function handleUploadPrices() {
-        loader.show('Выгружаем РЦ в МойСклад')
-        setUploadRcBusy(true)
-        onStatus('', 'neutral')
-        try {
-            await gas.uploadPricesToMS()
-            loader.hide()
-            onStatus('✅ РЦ выгружена в МойСклад!', 'success')
-        } catch (err) {
-            loader.hide()
-            onStatus('❌ ' + errorMessage(err), 'error')
-        } finally {
-            setUploadRcBusy(false)
-        }
-    }
-
-    async function handleUploadSalePrices() {
-        loader.show('Выгружаем акционную цену в МойСклад')
-        setUploadSaleBusy(true)
-        onStatus('', 'neutral')
-        try {
-            await gas.uploadSalePricesToMS()
-            loader.hide()
-            onStatus('✅ Акционная РЦ выгружена в МойСклад!', 'success')
-        } catch (err) {
-            loader.hide()
-            onStatus('❌ ' + errorMessage(err), 'error')
-        } finally {
-            setUploadSaleBusy(false)
-        }
+    function renderGroup(group: MoySkladFunction['group'], label: string, direction: 'up' | 'down') {
+        return (
+            <>
+                <GroupLabel direction={direction}>{label}</GroupLabel>
+                {MOY_SKLAD_FUNCTIONS.filter((fn) => fn.group === group).map((fn) => {
+                    const { state } = operations[fn.id]
+                    const run = () => void handlers[fn.id]()
+                    return (
+                        <FuncCard
+                            key={fn.id}
+                            data-testid={fn.id}
+                            title={fn.title}
+                            description={fn.description}
+                            tile={fn.tile}
+                            tooltip={fn.tooltip}
+                            status={cardStatus(state)}
+                            disabled={anyRunning}
+                            onRun={run}
+                            onRetry={run}
+                        />
+                    )
+                })}
+            </>
+        )
     }
 
     return (
-        <>
-            <h4 className={H4_CLASS}>Загрузите прайс Trade-mi</h4>
+        <div className="flex flex-col gap-3">
+            <SectionHeader>Источник данных</SectionHeader>
 
-            <div
-                role="button"
-                tabIndex={0}
-                onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') fileInputRef.current?.click()
-                }}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={cn(
-                    'mb-3 cursor-pointer rounded-[10px] border-[1.5px] border-dashed p-[20px_12px] text-center transition-all duration-200',
-                    dropZoneHighlighted ? 'border-brand-green bg-[#f0f9f5]' : 'border-[#ccc] bg-[#fafafa]',
-                )}
-            >
-                <Upload strokeWidth={2} className="mx-auto mb-2 h-7 w-7 text-brand-green" />
-                <p className="m-0 text-[13px] leading-[1.4] text-[#555]">
-                    {file?.name ?? 'Нажмите или перетащите файл'}
-                </p>
-            </div>
+            {file ? (
+                <>
+                    <FileCard
+                        data-testid="ms-file-card"
+                        name={file.name}
+                        disabled={importOp.running}
+                        onRemove={() => {
+                            onFileChange(null)
+                            setWarning(null)
+                        }}
+                    />
+                    <Button
+                        data-testid="ms-upload-file"
+                        variant="ink"
+                        block
+                        disabled={anyRunning}
+                        onClick={() => void handleUploadFile()}
+                    >
+                        {importOp.running ? 'Загрузка...' : 'Загрузить прайс'}
+                    </Button>
+                    {importOp.state.status === 'success' && importOp.state.finishedAt && (
+                        <p data-testid="ms-import-status" role="status" className="font-mono text-xs text-ok-ink">
+                            Прайс загружен · {formatTime(importOp.state.finishedAt)}
+                        </p>
+                    )}
+                </>
+            ) : (
+                <>
+                    <h3 className="text-sm font-bold text-foreground">Прайс Trade-mi</h3>
+                    <Dropzone
+                        data-testid="ms-dropzone"
+                        data-input-testid="ms-file-input"
+                        title={MS_DROPZONE_TITLE}
+                        hint={MS_DROPZONE_HINT}
+                        accept={ACCEPT}
+                        invalid={warning !== null}
+                        disabled={anyRunning}
+                        onFile={(picked) => {
+                            setWarning(null)
+                            onFileChange(picked)
+                        }}
+                        onReject={() =>
+                            setWarning({
+                                title: 'Неподдерживаемый формат файла',
+                                detail: 'Выберите файл .xlsx или .xls',
+                            })
+                        }
+                    />
+                    <section
+                        aria-label="Требования"
+                        data-testid="ms-requirements"
+                        className="flex items-start gap-3 rounded-xl border bg-muted px-3.5 py-3"
+                    >
+                        <ListChecks aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <p className="text-[11.5px] leading-snug text-muted-foreground">{MS_REQUIREMENTS_TEXT}</p>
+                    </section>
+                </>
+            )}
 
-            <p className="mt-1 mb-[14px] text-[13px] leading-[1.5] text-[#888]">
-                В таблице обязательно должны быть страницы &laquo;Apple(iPhone, Watch)&raquo; и &laquo;Apple (iPad,
-                Macbook)&raquo;. Формат: .xlsx, .xls.
-            </p>
+            {warning && (
+                <StatusBanner
+                    data-testid="ms-warning"
+                    variant="warning"
+                    title={warning.title}
+                    detail={warning.detail}
+                    onClose={() => setWarning(null)}
+                />
+            )}
 
-            <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={(event) => {
-                    const selected = event.target.files?.[0]
-                    if (selected) setFile(selected)
-                }}
-            />
+            {renderGroup('send', 'Отправить в МойСклад', 'up')}
+            {renderGroup('receive', 'Получить из МойСклад', 'down')}
 
-            <Button
-                onClick={handleUploadFile}
-                disabled={uploadBusy}
-                className="mb-2 h-auto w-full rounded-lg bg-brand-green p-[11px] text-sm font-semibold text-white hover:bg-brand-green/90"
-            >
-                {uploadBusy ? UPLOAD_LABEL_BUSY : UPLOAD_LABEL}
-            </Button>
-
-            <h4 className={H4_CLASS}>Синхронизация с Мой Склад</h4>
-
-            <div className="mb-1 flex flex-col gap-2">
-                <Button
-                    variant="outline"
-                    onClick={handleUploadPrices}
-                    disabled={uploadRcBusy}
-                    className="h-auto justify-center rounded-lg border-[1.5px] border-brand-green bg-white p-[10px] text-[13px] font-semibold text-brand-green shadow-none hover:bg-brand-green/5 hover:text-brand-green"
-                >
-                    {uploadRcBusy ? SYNC_LABEL_BUSY : UPLOAD_RC_LABEL}
-                </Button>
-                <Button
-                    variant="outline"
-                    onClick={handleUploadSalePrices}
-                    disabled={uploadSaleBusy}
-                    className="h-auto justify-center rounded-lg border-[1.5px] border-brand-green bg-white p-[10px] text-[13px] font-semibold text-brand-green shadow-none hover:bg-brand-green/5 hover:text-brand-green"
-                >
-                    {uploadSaleBusy ? SYNC_LABEL_BUSY : UPLOAD_SALE_LABEL}
-                </Button>
-                <Button
-                    variant="outline"
-                    onClick={handleLoadPrices}
-                    disabled={loadBusy}
-                    className="h-auto justify-center rounded-lg border-[1.5px] border-brand-blue bg-white p-[10px] text-[13px] font-semibold text-brand-blue shadow-none hover:bg-brand-blue/5 hover:text-brand-blue"
-                >
-                    {loadBusy ? LOAD_LABEL_BUSY : LOAD_LABEL}
-                </Button>
-            </div>
-        </>
+            {failed?.state.error && (
+                <StatusBanner
+                    data-testid="ms-error"
+                    title={failed.state.error.title}
+                    detail={failed.state.error.detail}
+                    onClose={failed.closeBanner}
+                />
+            )}
+        </div>
     )
 }

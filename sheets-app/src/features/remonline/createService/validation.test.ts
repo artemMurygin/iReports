@@ -132,12 +132,12 @@ describe('resolveCategoryId', () => {
 })
 
 describe('buildServiceTitle', () => {
-    it('joins name/deviceType/deviceModel/partQuality with spaces, dropping empty parts', () => {
+    it('joins name/deviceType/deviceModel with spaces, dropping empty parts', () => {
         const row = validRow({ name: 'Замена', deviceType: 'Смартфон', deviceModel: 'iPhone 13', partQuality: '' })
         expect(buildServiceTitle(row)).toBe('Замена Смартфон iPhone 13')
     })
 
-    it('appends " (modelNumber)" when modelNumber is non-empty', () => {
+    it('appends " (modelNumber)" and " | partQuality" when they are non-empty', () => {
         const row = validRow({
             name: 'Замена',
             deviceType: 'Смартфон',
@@ -145,7 +145,7 @@ describe('buildServiceTitle', () => {
             partQuality: 'Оригинал',
             modelNumber: ' A2482 ',
         })
-        expect(buildServiceTitle(row)).toBe('Замена Смартфон iPhone 13 Оригинал (A2482)')
+        expect(buildServiceTitle(row)).toBe('Замена Смартфон iPhone 13 (A2482) | Оригинал')
     })
 })
 
@@ -182,7 +182,7 @@ describe('buildCreateServicePayload', () => {
             category_id: 100,
             earnings_sum: 500,
             prices: { [RO_PRICE_KEY]: 1500.5 },
-            title: 'Замена экрана Смартфон iPhone 13 Оригинал',
+            title: 'Замена экрана Смартфон iPhone 13 | Оригинал',
             warranty: 12,
             warranty_period: 1,
         })

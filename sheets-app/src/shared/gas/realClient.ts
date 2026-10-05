@@ -1,5 +1,29 @@
+import { GAS_HTTP_ERROR_MARKER, GasHttpError } from './types'
 import type { GasApi } from './types'
 import './googleScriptRun.d'
+
+/**
+ * Apps Script webhooks throw `GAS_HTTP_ERROR:{"code":429,"message":"..."}` on an HTTP failure (FR12); anything else
+ * is passed through unchanged.
+ */
+export function decodeGasError(error: unknown): unknown {
+    const text = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+    const at = text.indexOf(GAS_HTTP_ERROR_MARKER)
+    if (at < 0) return error
+    try {
+        // `JSON.stringify` never emits a raw newline, so the payload ends at the first one; Apps Script appends
+        // a stack («at fetchWebhook_(Code:71:15)») after it.
+        const payload = text.slice(at + GAS_HTTP_ERROR_MARKER.length).split('\n')[0]
+        const { code, message } = JSON.parse(payload) as {
+            code: number
+            message?: string
+        }
+        if (typeof code === 'number') return new GasHttpError(code, message ?? '')
+    } catch {
+        // malformed marker: fall through
+    }
+    return error
+}
 
 /**
  * Wraps a call to a server-side Apps Script function (`google.script.run.<fnName>(...args)`)
@@ -15,7 +39,7 @@ export function callGas<T>(fnName: string, ...args: unknown[]): Promise<T> {
 
         const handlers = run
             .withSuccessHandler((value: unknown) => resolve(value as T))
-            .withFailureHandler((error: unknown) => reject(error))
+            .withFailureHandler((error: unknown) => reject(decodeGasError(error)))
 
         const fn = handlers[fnName]
         if (typeof fn !== 'function') {
@@ -42,4 +66,7 @@ export const realGasClient: GasApi = {
     getCreateServiceRows: () => callGas('getCreateServiceRows'),
     createServiceInRoapp: (payload) => callGas('createServiceInRoapp', payload),
     writeCreateServiceResult: (row, value) => callGas('writeCreateServiceResult', row, value),
+    getLastRun: (operation) => callGas('getLastRun', operation),
+    saveLastRun: (report) => callGas('saveLastRun', report),
+    getAllLastRuns: () => callGas('getAllLastRuns'),
 }

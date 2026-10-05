@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { mockGasClient } from './mockClient'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { failNextMoySkladCall, mockGasClient, resetMockLastRuns } from './mockClient'
 import type { AccrualsSheetEntry } from './types'
 
 describe('mockGasClient.applyAccrualsUpdates', () => {
@@ -76,5 +76,24 @@ describe('mockGasClient.getServiceCategories', () => {
         })
 
         expect(hasThreeLevelChain).toBe(true)
+    })
+})
+
+// FR11, FR12: last-run storage and the simulated МойСклад failure.
+describe('mockGasClient last runs', () => {
+    beforeEach(() => resetMockLastRuns())
+
+    it('FR11: stores and returns reports by operation', async () => {
+        const report = { operation: 'ms.load', status: 'success' as const, finishedAt: 1 }
+        expect(await mockGasClient.getLastRun('ms.load')).toBeNull()
+        await mockGasClient.saveLastRun(report)
+        expect(await mockGasClient.getLastRun('ms.load')).toEqual(report)
+        expect(await mockGasClient.getAllLastRuns()).toEqual({ 'ms.load': report })
+    })
+
+    it('FR12: failNextMoySkladCall(429) rejects exactly one webhook call with a GasHttpError', async () => {
+        failNextMoySkladCall(429)
+        await expect(mockGasClient.loadPricesFromMS()).rejects.toMatchObject({ code: 429 })
+        await expect(mockGasClient.loadPricesFromMS()).resolves.toBe('OK')
     })
 })

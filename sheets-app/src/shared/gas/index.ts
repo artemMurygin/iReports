@@ -3,10 +3,12 @@ import { realGasClient } from './realClient'
 import { mockGasClient } from './mockClient'
 
 export type { GasApi } from './types'
+export { GasHttpError } from './types'
 export type {
     AccrualsSheetEntry,
     CreateServiceInRoappResult,
     CreateServiceRow,
+    OperationReport,
     ServiceCategory,
     UploadPricesToRoCount,
     UploadPricesToRoResult,

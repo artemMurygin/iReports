@@ -11,3 +11,14 @@ import { cleanup } from '@testing-library/react'
 afterEach(() => {
     cleanup()
 })
+
+// jsdom lacks these DOM APIs, which Radix Select/Popper rely on.
+Element.prototype.scrollIntoView ??= () => {}
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.setPointerCapture ??= () => {}
+Element.prototype.releasePointerCapture ??= () => {}
+globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}

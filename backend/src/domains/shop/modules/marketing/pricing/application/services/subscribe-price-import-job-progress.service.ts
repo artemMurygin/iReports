@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { map, Observable } from 'rxjs';
+import { map, Observable, startWith } from 'rxjs';
 import type { PriceImportJobStatusResponse } from 'ireports-contracts';
 import { PRICE_IMPORT_JOB_STORE } from '../ports/price-import-job-store.port';
 import type { PriceImportJobStore } from '../ports/price-import-job-store.port';
@@ -29,6 +29,13 @@ export class SubscribePriceImportJobProgressService {
         if (!stream) {
             throw new PriceImportJobNotFoundException(id);
         }
-        return stream.pipe(map((job) => toPriceImportJobStatusResponse(job)));
+        // Subject стора не переигрывает прошлые события, а клиент (Google Apps Script) подписывается
+        // только после ответа POST — поэтому первым событием отдаём текущий снапшот джобы, иначе
+        // уже прошедшие этапы (и даже завершение) теряются.
+        const current = this.jobStore.findById(id);
+        const snapshots = current ? stream.pipe(startWith(current)) : stream;
+        return snapshots.pipe(
+            map((job) => toPriceImportJobStatusResponse(job)),
+        );
     }
 }

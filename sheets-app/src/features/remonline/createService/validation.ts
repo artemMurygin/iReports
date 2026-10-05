@@ -81,11 +81,10 @@ export function resolveCategoryId(categoryPath: unknown, tree: CategoryTree): nu
 }
 
 export function buildServiceTitle(row: CreateServiceRow): string {
-    const parts = [row.name, row.deviceType, row.deviceModel, row.partQuality]
-        .map((p) => String(p).trim())
-        .filter(Boolean)
+    const parts = [row.name, row.deviceType, row.deviceModel].map((p) => String(p).trim()).filter(Boolean)
     let title = parts.join(' ')
     if (!isEmptyCell(row.modelNumber)) title += ` (${String(row.modelNumber).trim()})`
+    if (!isEmptyCell(row.partQuality)) title += ` | ${String(row.partQuality).trim()}`
     return title
 }
 

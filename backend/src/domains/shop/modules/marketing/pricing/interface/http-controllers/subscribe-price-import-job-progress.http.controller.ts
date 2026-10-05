@@ -1,4 +1,4 @@
-import { Controller, MessageEvent, Param, Sse } from '@nestjs/common';
+import { Controller, Header, MessageEvent, Param, Sse } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
     finalize,
@@ -41,6 +41,8 @@ export class SubscribePriceImportJobProgressHttpController {
     // у которого нет Bitrix-сессии — см. add-bitrix24-auth-and-rbac.
     @Public()
     @Sse(routesV1.shop.marketing.pricing.importCostsProgress)
+    // Без этого nginx/openresty буферизует SSE, и клиент не видит события до закрытия потока.
+    @Header('X-Accel-Buffering', 'no')
     @ApiOperation({
         summary: 'SSE-поток прогресса джобы импорта цен (heartbeat 20с)',
     })

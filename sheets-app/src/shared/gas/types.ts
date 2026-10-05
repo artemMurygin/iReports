@@ -55,6 +55,41 @@ export interface CreateServiceRow {
     price: unknown
 }
 
+/**
+ * Implements FR11, FR12 of sheets-app-redesign: compact record of the last run of one sidebar function, stored in
+ * `PropertiesService.getDocumentProperties()` (9 KB per value, so only counters, a clamped message and a few row
+ * errors are kept, not the full report).
+ */
+export interface OperationReport {
+    /** Operation id, e.g. `ms.load`, `ro.uploadPrices` (letters, digits, `_.-`, up to 40 chars). */
+    operation: string
+    status: 'success' | 'error'
+    /** Epoch ms. */
+    finishedAt: number
+    counters?: Record<string, number>
+    /** Error banner title (error only). */
+    title?: string
+    /** Error detail (error only). */
+    message?: string
+    /** HTTP code or `'сети'` (error only). */
+    errorCode?: string
+    /** Up to 5 per-row error texts. */
+    errors?: string[]
+}
+
+/** Structured failure of a server call: the HTTP code and message of the upstream response (FR12). */
+export class GasHttpError extends Error {
+    code: number
+    constructor(code: number, message: string) {
+        super(message)
+        this.name = 'GasHttpError'
+        this.code = code
+    }
+}
+
+/** Prefix the Apps Script webhooks put before the JSON `{code, message}` of a failed response. */
+export const GAS_HTTP_ERROR_MARKER = 'GAS_HTTP_ERROR:'
+
 export interface GasApi {
     /** Uploads a base64-encoded price file, returns a job UUID used for a (separate) SSE progress stream. */
     processFile(base64Data: string): Promise<string>
@@ -97,4 +132,13 @@ export interface GasApi {
 
     /** Writes `value` into the accruals sheet at `row`. Always resolves to 'OK'. */
     writeCreateServiceResult(row: number, value: string | number): Promise<string>
+
+    /** Reads the stored report of `operation`, or `null` when it never ran. */
+    getLastRun(operation: string): Promise<OperationReport | null>
+
+    /** Stores the report of a finished run (overwrites the previous one of the same operation). */
+    saveLastRun(report: OperationReport): Promise<string>
+
+    /** Reads every stored report keyed by operation id; one call on sidebar open. */
+    getAllLastRuns(): Promise<Record<string, OperationReport>>
 }
