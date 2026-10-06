@@ -17,6 +17,10 @@ import {
     parseMatchingResponse,
 } from './pricing-ai-prompts';
 
+function normalizeName(name: string): string {
+    return name.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function toNumberOrNull(value: string | number | null): number | null {
     if (value == null) return null;
     const n = typeof value === 'number' ? value : parseFloat(value);
@@ -80,25 +84,64 @@ export class AiProductMatcherAdapter implements ProductMatcher {
             );
         }
 
-        const matches = items
-            .filter(
-                (
-                    item,
-                ): item is AiMatchItem & {
-                    system_id: string;
-                    system_name: string;
-                    price_name: string;
-                } =>
-                    !!item.system_id?.trim() &&
-                    !!item.system_name?.trim() &&
-                    !!item.price_name?.trim(),
-            )
-            .map((item) =>
+        const fullPairs = items.filter(
+            (
+                item,
+            ): item is AiMatchItem & {
+                system_id: string;
+                system_name: string;
+                price_name: string;
+            } =>
+                !!item.system_id?.trim() &&
+                !!item.system_name?.trim() &&
+                !!item.price_name?.trim(),
+        );
+
+        // LLM иногда искажает UUID товара (подставляет сегмент из соседнего id в промпте) — такой
+        // id в МойСклад не существует, и один он роняет весь атомарный батч обновления
+        // (`POST /entity/product` -> 404 "Объект с типом 'product' ... не найден", 06.10.2026).
+        // Поэтому id из ответа принимается только если он есть в переданном каталоге; иначе товар
+        // ищется по точному названию (его модель копирует без искажений), а при неудаче позиция
+        // отбрасывается с предупреждением в лог.
+        const catalogIds = new Set(catalogItems.map((item) => item.id));
+        const catalogByName = new Map<string, CatalogItem>();
+        for (const item of catalogItems) {
+            const key = normalizeName(item.name);
+            if (!catalogByName.has(key)) catalogByName.set(key, item);
+        }
+
+        const matches: ProductMatch[] = [];
+        const recoveredByName: string[] = [];
+        const rejected: string[] = [];
+        for (const item of fullPairs) {
+            const aiId = item.system_id.trim();
+            let productId: string;
+            let productName: string;
+            if (catalogIds.has(aiId)) {
+                productId = aiId;
+                productName = item.system_name;
+            } else {
+                const byName = catalogByName.get(
+                    normalizeName(item.system_name),
+                );
+                if (!byName) {
+                    rejected.push(
+                        `"${item.price_name}" -> [${aiId}] "${item.system_name}"`,
+                    );
+                    continue;
+                }
+                productId = byName.id;
+                productName = byName.name;
+                recoveredByName.push(
+                    `"${item.price_name}" -> [${aiId} => ${byName.id}] "${byName.name}"`,
+                );
+            }
+            matches.push(
                 ProductMatch.create({
                     sourceRowName: item.price_name,
                     sourcePrice: toNumberOrNull(item.price),
-                    matchedProductId: item.system_id,
-                    matchedProductName: item.system_name,
+                    matchedProductId: productId,
+                    matchedProductName: productName,
                     method: 'llm',
                     // Уверенность модель не возвращает — единственный уровень доверия у
                     // LLM-сопоставления в этой реализации: "AI вернул полную пару", см. комментарий
@@ -106,6 +149,17 @@ export class AiProductMatcherAdapter implements ProductMatcher {
                     confidence: 1,
                 }),
             );
+        }
+        if (recoveredByName.length > 0) {
+            this.logger.warn(
+                `[${category}] AI вернул несуществующий id товара, товар восстановлен по точному названию (${recoveredByName.length}): ${recoveredByName.join('; ')}`,
+            );
+        }
+        if (rejected.length > 0) {
+            this.logger.warn(
+                `[${category}] Отброшены позиции с несуществующим id товара, которые не удалось найти в каталоге и по названию — цена для них не обновится (${rejected.length}): ${rejected.join('; ')}`,
+            );
+        }
 
         // Строки прайса/номенклатуры, которых нет ни в одном ProductMatch — AI либо вообще не
         // упомянул их в ответе, либо упомянул без полной пары (см. `dropped` выше). Диагностика для

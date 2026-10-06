@@ -381,10 +381,45 @@ export class MoyskladService {
             }
         } catch (error) {
             await this.dumpError(error);
+            // Массовое обновление атомарно: один неверный элемент откатывает весь батч, а в
+            // статусе ответа нет ничего кроме 4xx. Сами ошибки МойСклад кладёт в элементы массива
+            // ответа (`{ errors: [...] }`) — вытаскиваем их в лог и в сообщение исключения.
+            const itemErrors = this.extractBatchItemErrors(error);
+            if (itemErrors.length > 0) {
+                this.logger.error(
+                    `Массовое обновление товаров отклонено МойСклад (${itemErrors.length}): ${itemErrors.join('; ')}`,
+                );
+            }
+            const details =
+                itemErrors.length > 0 ? ` (${itemErrors.join('; ')})` : '';
             throw new BadGatewayException(
-                `Failed to batch update products in MoySklad: ${error instanceof Error ? error.message : String(error)}`,
+                `Failed to batch update products in MoySklad: ${error instanceof Error ? error.message : String(error)}${details}`,
             );
         }
+    }
+
+    private extractBatchItemErrors(error: unknown): string[] {
+        if (!axios.isAxiosError(error)) return [];
+        const data: unknown = error.response?.data;
+        if (!Array.isArray(data)) return [];
+        const result: string[] = [];
+        data.forEach((item: unknown, index) => {
+            if (typeof item !== 'object' || item === null) return;
+            const errors = (item as { errors?: unknown }).errors;
+            if (!Array.isArray(errors)) return;
+            for (const e of errors) {
+                const message: unknown =
+                    typeof e === 'object' && e !== null
+                        ? (e as { error?: unknown }).error
+                        : e;
+                const text =
+                    typeof message === 'string'
+                        ? message
+                        : JSON.stringify(message);
+                result.push(`#${index}: ${text}`);
+            }
+        });
+        return result;
     }
 
     // МойСклад ожидает даты в формате "YYYY-MM-DD HH:mm:ss", а не ISO 8601

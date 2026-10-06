@@ -55,6 +55,92 @@ describe('AiProductMatcherAdapter', () => {
             expect(matches).toEqual([]);
         });
 
+        it('несуществующий id из ответа AI заменяется на id товара каталога с тем же названием', async () => {
+            const { ai } = buildFakeAi(
+                JSON.stringify([
+                    {
+                        // Искажённый сегмент UUID (127e вместо b696) — реальный случай 06.10.2026
+                        system_id: '6d677979-127e-11f1-0a80-081a0017b05c',
+                        system_name:
+                            'Apple Watch Series 12 GPS 46mm Space Gray',
+                        price_name: 'Apple Watch S12 46mm Space Gray',
+                        price: 40500,
+                    },
+                ]),
+            );
+            const adapter = new AiProductMatcherAdapter(ai);
+            const warn = jest
+                .spyOn(adapter['logger'], 'warn')
+                .mockImplementation(() => undefined);
+
+            const matches = await adapter.match(
+                'Watch',
+                [{ name: 'Apple Watch S12 46mm Space Gray', price: 40500 }],
+                [
+                    { id: 'other', name: 'Apple Watch Series 11 GPS 42mm' },
+                    {
+                        id: '6d677979-b696-11f1-0a80-081a0017b05c',
+                        name: 'Apple Watch Series 12 GPS 46mm  Space Gray ',
+                    },
+                ],
+            );
+
+            expect(matches).toHaveLength(1);
+            expect(matches[0].getMatchedProductId()).toBe(
+                '6d677979-b696-11f1-0a80-081a0017b05c',
+            );
+            expect(matches[0].getMatchedProductName()).toBe(
+                'Apple Watch Series 12 GPS 46mm  Space Gray ',
+            );
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringContaining('восстановлен по точному названию'),
+            );
+        });
+
+        it('позиция с несуществующим id, не найденная и по названию, отбрасывается с предупреждением', async () => {
+            const { ai } = buildFakeAi(
+                JSON.stringify([
+                    {
+                        system_id: 'ms-1',
+                        system_name: 'MacBook Air 13 Midnight',
+                        price_name: 'MacBook Air 13" Midnight',
+                        price: 120000,
+                    },
+                    {
+                        system_id: 'ghost-id',
+                        system_name: 'Выдуманный товар',
+                        price_name: 'MacBook Pro 14',
+                        price: 200000,
+                    },
+                ]),
+            );
+            const adapter = new AiProductMatcherAdapter(ai);
+            const warn = jest
+                .spyOn(adapter['logger'], 'warn')
+                .mockImplementation(() => undefined);
+
+            const matches = await adapter.match(
+                'MacBook',
+                [
+                    { name: 'MacBook Air 13" Midnight', price: 120000 },
+                    { name: 'MacBook Pro 14', price: 200000 },
+                ],
+                [{ id: 'ms-1', name: 'MacBook Air 13 Midnight' }],
+            );
+
+            expect(matches.map((m) => m.getMatchedProductId())).toEqual([
+                'ms-1',
+            ]);
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'Отброшены позиции с несуществующим id товара',
+                ),
+            );
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringContaining('"MacBook Pro 14" -> [ghost-id]'),
+            );
+        });
+
         it('бросает исключение, если ответ AI не распарсился как JSON-массив', async () => {
             const { ai } = buildFakeAi('не JSON');
             const adapter = new AiProductMatcherAdapter(ai);
