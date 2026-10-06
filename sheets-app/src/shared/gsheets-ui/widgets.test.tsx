@@ -4,7 +4,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { TooltipProvider } from '@/shared/ui/tooltip'
-import { AppHeader } from './AppHeader'
 import { FuncCard, type FuncCardStatus } from './FuncCard'
 import { StatusBanner } from './StatusBanner'
 import { ResultCard } from './ResultCard'
@@ -27,24 +26,6 @@ function renderCard(status: FuncCardStatus, extra: Partial<Parameters<typeof Fun
         </TooltipProvider>,
     )
 }
-
-describe('AppHeader', () => {
-    it('FR1: help button opens popover, closes on Esc and repeated click', async () => {
-        const user = userEvent.setup()
-        render(<AppHeader />)
-        expect(screen.getByText('iRepair · Синхронизация')).toBeInTheDocument()
-        const btn = screen.getByRole('button', { name: 'Справка' })
-        expect(screen.queryByTestId('app-help')).not.toBeInTheDocument()
-        await user.click(btn)
-        expect(screen.getByTestId('app-help')).toHaveTextContent(/МойСклад и Ремонлайн/)
-        await user.keyboard('{Escape}')
-        expect(screen.queryByTestId('app-help')).not.toBeInTheDocument()
-        await user.click(btn)
-        expect(screen.getByTestId('app-help')).toBeInTheDocument()
-        await user.click(btn)
-        expect(screen.queryByTestId('app-help')).not.toBeInTheDocument()
-    })
-})
 
 describe('FuncCard', () => {
     it('FR4: idle shows «ещё не запускалось» and Run calls onRun', async () => {

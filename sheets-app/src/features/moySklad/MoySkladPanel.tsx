@@ -93,11 +93,6 @@ export function MoySkladPanel({ file, onFileChange }: MoySkladPanelProps) {
                     >
                         {importOp.running ? 'Загрузка...' : 'Загрузить прайс'}
                     </Button>
-                    {importOp.state.status === 'success' && importOp.state.finishedAt && (
-                        <p data-testid="ms-import-status" role="status" className="font-mono text-xs text-ok-ink">
-                            Прайс загружен · {formatDateTime(importOp.state.finishedAt)}
-                        </p>
-                    )}
                 </>
             ) : (
                 <>
@@ -130,6 +125,20 @@ export function MoySkladPanel({ file, onFileChange }: MoySkladPanelProps) {
                         <p className="text-[11.5px] leading-snug text-muted-foreground">{MS_REQUIREMENTS_TEXT}</p>
                     </section>
                 </>
+            )}
+
+            {importOp.state.finishedAt && importOp.state.status === 'success' ? (
+                <p data-testid="ms-import-status" role="status" className="font-mono text-xs text-ok-ink">
+                    Прайс загружен · {formatDateTime(importOp.state.finishedAt)}
+                </p>
+            ) : (
+                importOp.state.status !== 'running' && (
+                    <p data-testid="ms-import-status" role="status" className="font-mono text-xs text-ink-faint">
+                        {importOp.state.finishedAt && importOp.state.status === 'error'
+                            ? `Загрузка прайса не удалась · ${formatDateTime(importOp.state.finishedAt)}`
+                            : 'Прайс ещё не загружался'}
+                    </p>
+                )
             )}
 
             {warning && (

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ProgressModal } from '@/shared/gsheets-ui/ProgressModal'
-import { IDLE_OPERATION, OperationContext } from './operationContext'
+import { DEFAULT_PROGRESS_HINT, IDLE_OPERATION, OperationContext } from './operationContext'
 import { loadOperationRuns } from './operationStore'
 import type { OperationState, OperationStore, ProgressApi, ProgressState } from './operationContext'
 
@@ -41,6 +41,7 @@ export function OperationProvider({ children }: { children: ReactNode }) {
                     title,
                     message: null,
                     cancellable: options?.cancellable ?? false,
+                    hint: options?.hint ?? DEFAULT_PROGRESS_HINT,
                 })
             },
             setMessage: (message) => {
@@ -79,6 +80,7 @@ export function OperationProvider({ children }: { children: ReactNode }) {
                 open={progressState !== null}
                 title={progressState?.title ?? ''}
                 message={progressState?.message ?? null}
+                hint={progressState?.hint}
                 onCancel={progressState?.cancellable ? progress.cancel : undefined}
             />
         </OperationContext.Provider>

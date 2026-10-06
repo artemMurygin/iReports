@@ -48,8 +48,6 @@ export class GoogleSheetsResultGateway implements ResultSheetGateway {
             return;
         }
 
-        // Сброс происходит только если есть что записывать — старые цены не затираются зря
-        await this.resetCostsToNull(sheetName);
         await this.sheets.updateRows(SPREADSHEET_ID, updates);
         this.logger.log(`Обновлено в таблице: ${updates.length} строк`);
     }

@@ -61,7 +61,8 @@ export const MOY_SKLAD_FUNCTIONS: MoySkladFunction[] = [
 ]
 
 /** Title of the progress modal while the price file is imported (SSE). */
-export const MS_IMPORT_PROGRESS_TITLE = 'Загружаем прайс в МойСклад'
+export const MS_IMPORT_HINT = 'Расширение можно закрыть — прогресс сохранится'
+export const MS_IMPORT_PROGRESS_TITLE = 'Загружаем прайс'
 
 /** Q8: hardcoded text of the «Требования» block. */
 export const MS_REQUIREMENTS_TEXT = 'Нужны листы «Apple (iPhone, Watch)» и «Apple (iPad, Macbook)».'

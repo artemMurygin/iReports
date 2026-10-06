@@ -23,6 +23,8 @@ export interface OperationState {
     bannerOpen: boolean
 }
 
+export const DEFAULT_PROGRESS_HINT = 'Не закрывайте таблицу'
+
 export const IDLE_OPERATION: OperationState = { status: 'idle', bannerOpen: false }
 
 /** What the progress modal shows: a title and the current status text (no percent or ETA, they cannot be computed). */
@@ -32,10 +34,13 @@ export interface ProgressState {
     message: string | null
     /** Cancel is offered only for client loops and the SSE import. */
     cancellable: boolean
+    /** Footer hint; the price import overrides the default because it keeps running on the server. */
+    hint: string
 }
 
 export interface ProgressBeginOptions {
     cancellable?: boolean
+    hint?: string
 }
 
 /** Implements FR9, FR13 of sheets-app-redesign: the handle an operation uses to drive the progress modal. */

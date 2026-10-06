@@ -10,6 +10,8 @@ interface ProgressModalProps {
     title: string
     /** Current stage text (SSE import); the line is omitted when empty. */
     message?: string | null
+    /** Footer hint text. */
+    hint?: string
     /** Omit when cancel is unavailable: the button is hidden and `Esc` does nothing. */
     onCancel?: () => void
 }
@@ -43,7 +45,7 @@ function Ring() {
  * The optional status line under the title shows the SSE stage text. Focus is trapped by Radix; outside click never closes it; `Esc` equals «Отмена» and works
  * only when `onCancel` is given.
  */
-export function ProgressModal({ open, title, message = null, onCancel }: ProgressModalProps) {
+export function ProgressModal({ open, title, message = null, hint = 'Не закрывайте таблицу', onCancel }: ProgressModalProps) {
     return (
         <Dialog open={open}>
             <DialogContent
@@ -75,9 +77,7 @@ export function ProgressModal({ open, title, message = null, onCancel }: Progres
                     <Progress aria-label={title} />
                 </div>
                 <div className="flex items-center justify-between gap-3 bg-muted px-4 py-3">
-                    <DialogDescription className="text-xs text-muted-foreground">
-                        Не закрывайте таблицу
-                    </DialogDescription>
+                    <DialogDescription className="text-xs text-muted-foreground">{hint}</DialogDescription>
                     {onCancel && (
                         <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                             Отмена

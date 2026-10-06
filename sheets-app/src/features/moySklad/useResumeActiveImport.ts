@@ -4,7 +4,7 @@ import { useOperationStore } from '@/features/operations/operationContext'
 import { useOperation } from '@/features/operations/useOperation'
 import { waitForImport } from './importFlow'
 import { parseMoySkladError } from './moySkladErrors'
-import { MS_IMPORT_ID, MS_IMPORT_PROGRESS_TITLE } from './moySkladFunctions'
+import { MS_IMPORT_HINT, MS_IMPORT_ID, MS_IMPORT_PROGRESS_TITLE } from './moySkladFunctions'
 
 /**
  * Reattaches to a price import that is still running on the backend: after the sidebar was closed and reopened it
@@ -24,7 +24,7 @@ export function useResumeActiveImport() {
         void fetchActiveImportId().then((uuid) => {
             if (!uuid) return
             void importOp.run(async () => {
-                progress.begin(MS_IMPORT_PROGRESS_TITLE, { cancellable: true })
+                progress.begin(MS_IMPORT_PROGRESS_TITLE, { cancellable: true, hint: MS_IMPORT_HINT })
                 try {
                     await waitForImport(uuid, progress)
                 } finally {

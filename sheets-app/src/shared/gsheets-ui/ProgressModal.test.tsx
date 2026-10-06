@@ -16,6 +16,12 @@ describe('ProgressModal', () => {
         expect(screen.getByText('Не закрывайте таблицу')).toBeInTheDocument()
     })
 
+    it('shows a custom hint instead of the default one', () => {
+        render(<ProgressModal open title="Загружаем прайс" hint="Расширение можно закрыть — прогресс сохранится" />)
+        expect(screen.getByText('Расширение можно закрыть — прогресс сохранится')).toBeInTheDocument()
+        expect(screen.queryByText('Не закрывайте таблицу')).not.toBeInTheDocument()
+    })
+
     it('FR9: omits the status line when there is no message, and the cancel button when it is unavailable', () => {
         render(<ProgressModal open title="Выгружаем РЦ" />)
 

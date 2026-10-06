@@ -4,7 +4,7 @@ import { useOperationStore } from '@/features/operations/operationContext'
 import { OperationSkipped, useOperation } from '@/features/operations/useOperation'
 import { cancelImportOnServer, waitForImport } from './importFlow'
 import { parseMoySkladError } from './moySkladErrors'
-import { MOY_SKLAD_FUNCTIONS, MS_IMPORT_ID, MS_IMPORT_PROGRESS_TITLE } from './moySkladFunctions'
+import { MOY_SKLAD_FUNCTIONS, MS_IMPORT_HINT, MS_IMPORT_ID, MS_IMPORT_PROGRESS_TITLE } from './moySkladFunctions'
 
 export interface UseMoySkladActionsParams {
     /** Selected price file; owned by `App` so it survives tab switches. */
@@ -47,7 +47,7 @@ export function useMoySkladActions({ file }: UseMoySkladActionsParams) {
 
     /** Opens the progress modal for the task and always closes it (blocking calls: no status text, no cancel). */
     async function withProgress(title: string, task: () => Promise<unknown>, cancellable = false) {
-        progress.begin(title, { cancellable })
+        progress.begin(title, { cancellable, hint: title === MS_IMPORT_PROGRESS_TITLE ? MS_IMPORT_HINT : undefined })
         try {
             return await task()
         } finally {

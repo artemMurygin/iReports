@@ -155,7 +155,7 @@ describe('MoySkladPanel', () => {
 
         expect(gas.loadPricesFromMS).toHaveBeenCalledOnce()
         await waitFor(() => expect(screen.getByTestId('ms.load')).toHaveAttribute('data-status', 'success'))
-        expect(within(screen.getByTestId('ms.load')).getByTestId('func-status')).toHaveTextContent(/^\d{1,2} \S+ \d{4} г\. в \d{2}:\d{2}$/)
+        expect(within(screen.getByTestId('ms.load')).getByTestId('func-status')).toHaveTextContent(/^\d{1,2} \S+ в \d{2}:\d{2}$/)
         expect(screen.getByTestId('ms.uploadRc')).toHaveAttribute('data-status', 'idle')
         expect(runButton('ms.load')).not.toBeDisabled()
     })
@@ -233,7 +233,7 @@ describe('MoySkladPanel', () => {
         expect(gas.cancelImport).toHaveBeenCalledWith('uuid-1')
         await waitFor(() => expect(screen.queryByTestId('progress-modal')).not.toBeInTheDocument())
         expect(screen.queryByTestId('ms-error')).not.toBeInTheDocument()
-        expect(screen.queryByTestId('ms-import-status')).not.toBeInTheDocument()
+        expect(screen.getByTestId('ms-import-status')).toHaveTextContent('Прайс ещё не загружался')
     })
 
     it('FR9: a blocking webhook shows an indeterminate modal without status and cancel', async () => {

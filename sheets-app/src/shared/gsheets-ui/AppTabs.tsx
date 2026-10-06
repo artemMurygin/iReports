@@ -13,7 +13,7 @@ interface AppTabsProps extends ComponentProps<typeof Tabs> {
 export function AppTabs({ tabs, className, children, ...props }: AppTabsProps) {
     return (
         <Tabs className={cn('gap-0', className)} {...props}>
-            <div className="border-b px-3.5 pb-3.5">
+            <div className="border-b px-3.5 pt-3.5 pb-3.5">
                 <TabsList variant="segment">
                     {tabs.map((tab) => (
                         <TabsTrigger key={tab.value} value={tab.value}>
