@@ -389,7 +389,7 @@
             "uid": "loki"
           },
           "queryType": "range",
-          "expr": "{app=\"ireports-backend\", level=~\"${level:regex}\", context=~\"${context:regex}\"} |= \"$search\" | json | requestId=~\"$requestId\" | employeeId=~\"$employeeId\" | route=~\"$route\" | line_format \"{{if .context}}[{{.context}}]{{end}} {{.msg}}{{if and .err_message (ne .context \"HTTP\")}} — {{.err_message}}{{end}}{{if .requestId}}  rid={{.requestId}}{{end}}\""
+          "expr": "{app=\"ireports-backend\", level=~\"${level:regex}\", context=~\"${context:regex}\"} |= \"$search\" | json | requestId=~\"$requestId\" | employeeId=~\"$employeeId\" | route=~\"$route\" | line_format `{{if .context}}[{{.context}}]{{end}} {{.msg}}{{if and .err_message (ne .context \"HTTP\")}} — {{.err_message}}{{end}}{{if .requestId}}  rid={{.requestId}}{{end}}`"
         }
       ],
       "options": {
