@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { google, sheets_v4 } from 'googleapis';
+import { getGoogleServiceAccountCredentials } from './google-service-account-credentials';
 
 @Injectable()
 export class GoogleSheetsHttpService {
@@ -7,14 +8,7 @@ export class GoogleSheetsHttpService {
 
     constructor() {
         const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-                // env хранит \n как литерал — восстанавливаем реальные переносы
-                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(
-                    /\\n/g,
-                    '\n',
-                ),
-            },
+            credentials: getGoogleServiceAccountCredentials(),
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
 

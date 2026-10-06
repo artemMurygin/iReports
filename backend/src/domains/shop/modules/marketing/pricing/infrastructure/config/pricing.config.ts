@@ -93,3 +93,23 @@ export const CATEGORY_MS_FILTER: Record<CategoryKey, string> = {
     ),
     AirPods: folders('9c05f947-af95-11ee-0a80-14a100098fef'),
 };
+
+// id Telegram-группы для уведомлений об автовыгрузке прайса. Обычная (не супер) группа — id без
+// префикса -100. Если группу преобразуют в супергруппу, id изменится на -100<число>.
+export const TELEGRAM_CHAT_ID = '-1002802918475';
+
+// ─── Google Drive: папка с прайс-листом ───────────────────────────────────
+
+/** ID папки Google Drive, в которой лежит единственный файл прайс-листа */
+export const PRICE_LIST_DRIVE_FOLDER_ID = '1lum1VoyWmlIDevHw4Qox5jnlUHrID5Z4';
+
+// ─── n8n: обновление цен в МойСклад после выгрузки в таблицу переоценки ────
+
+/** Вебхуки n8n (PATCH), вызываются по порядку после успешной автовыгрузки прайса */
+export const N8N_PRICE_UPDATE_WEBHOOK_URLS = [
+    'https://n8n.murygin.tech/webhook/updateSalePricesInMS',
+    'https://n8n.murygin.tech/webhook/updatePricesInMS',
+];
+
+/** Таймаут одного запроса к n8n: workflow обновления цен может выполняться долго */
+export const N8N_PRICE_UPDATE_TIMEOUT_MS = 5 * 60 * 1000;

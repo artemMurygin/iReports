@@ -9,6 +9,7 @@ import type {
     PriceImportJobStatusResponse,
     StartPriceImportResponse,
 } from 'ireports-contracts';
+import { PRICE_LIST_VERSION_STORE } from '@/domains/shop/modules/marketing/pricing/application/ports/price-list-version-store.port';
 import { ShopPricingModule } from '@/domains/shop/modules/marketing/pricing/pricing.module';
 import { MoyskladService } from '@/domains/shop/integrations/moySklad/moysklad.service';
 import { PRODUCT_MATCHER } from '@/domains/shop/modules/marketing/pricing/application/ports/product-matcher.port';
@@ -118,6 +119,13 @@ describe('POST /v1/shop/marketing/pricing/import-costs (e2e)', () => {
             .useValue(fakeMatcher)
             .overrideProvider(RESULT_SHEET_GATEWAY)
             .useValue(fakeResultSheetGateway)
+            // Автовыгрузка по расписанию (PRICE_LIST_VERSION_STORE поверх глобального
+            // RedisModule, который в проде приходит из AppModule) к этим тестам не относится.
+            .overrideProvider(PRICE_LIST_VERSION_STORE)
+            .useValue({
+                getLastUploadedName: () => Promise.resolve(null),
+                saveUploadedName: () => Promise.resolve(),
+            })
             .overrideProvider(MoyskladService)
             .useValue(fakeMoysklad)
             .compile();

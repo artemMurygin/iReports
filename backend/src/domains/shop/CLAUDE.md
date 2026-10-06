@@ -188,6 +188,12 @@ domains/shop/
 Остальная часть маркетинга (источники обращений, кампании и их эффективность) в этом модуле пока не
 покрыта.
 
+Автоматическая выгрузка прайса: крон `ScheduledPriceImportCron` (будни 12:30 МСК, `ENABLE_CRON=true`) берёт
+XLSX с Google Drive, запускает тот же `StartPriceImportCommand`, если название файла изменилось
+(последнее выгруженное имя — в Redis), и шлёт итог в Telegram (`TELEGRAM_BOT_TOKEN`). Описание —
+[`openspec/changes/schedule-daily-price-import`](../../../../openspec/changes/schedule-daily-price-import)
+(после архивации — `openspec/specs/shop/price-import-schedule`).
+
 Именование модулей — короткое существительное на английском, без домена в названии (не
 `shop-warehouse`): домен и так задаёт контекст через путь `domains/shop/modules/*`. Для "склада"
 используем `warehouse`, а не `store` — `store` в этом проекте легко спутать с самим доменом `shop`
