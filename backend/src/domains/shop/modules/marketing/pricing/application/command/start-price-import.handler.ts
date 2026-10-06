@@ -18,6 +18,8 @@ import { CATEGORY_MS_FILTER } from '../../infrastructure/config/pricing.config';
 import { buildMoySkladProductUpdates } from '../../infrastructure/moysklad/moysklad-cost-update.mapper';
 import { PRICE_IMPORT_ABORT_REGISTRY } from '../ports/price-import-abort-registry.port';
 import type { PriceImportAbortRegistry } from '../ports/price-import-abort-registry.port';
+import { PRICE_IMPORT_NOTIFIER } from '../ports/price-import-notifier.port';
+import type { PriceImportNotifier } from '../ports/price-import-notifier.port';
 import { PRICE_IMPORT_JOB_STORE } from '../ports/price-import-job-store.port';
 import type { PriceImportJobStore } from '../ports/price-import-job-store.port';
 import { PRODUCT_MATCHER } from '../ports/product-matcher.port';
@@ -63,6 +65,8 @@ export class StartPriceImportHandler implements ICommandHandler<
         private readonly abortRegistry: PriceImportAbortRegistry,
         private readonly xlsxParser: PriceListXlsxParser,
         private readonly moysklad: MoyskladService,
+        @Inject(PRICE_IMPORT_NOTIFIER)
+        private readonly notifier: PriceImportNotifier,
     ) {}
 
     async execute(
@@ -109,6 +113,9 @@ export class StartPriceImportHandler implements ICommandHandler<
 
             job.complete({ matches, costChanges });
             this.jobStore.save(job);
+            if (command.notifyResult) {
+                await this.safeNotify(() => this.notifier.notifyManualUploaded());
+            }
         } catch (error) {
             if (job.isCancelled() || signal.aborted) {
                 // Отмена: статус CANCELLED уже выставлен сервисом отмены и сохранён в сторе.
@@ -119,11 +126,26 @@ export class StartPriceImportHandler implements ICommandHandler<
             this.logger.error(`[${job.id}] Ошибка импорта цен: ${message}`);
             job.fail(message);
             this.jobStore.save(job);
+            if (command.notifyResult) {
+                await this.safeNotify(() => this.notifier.notifyManualFailed());
+            }
         } finally {
             this.abortRegistry.release(job.id);
         }
 
         return { id: job.id };
+    }
+
+    // Сбой доставки уведомления не должен влиять на результат уже выполненной выгрузки.
+    // spec: shop/price-import-schedule#уведомления-о-ручной-выгрузке
+    private async safeNotify(send: () => Promise<void>): Promise<void> {
+        try {
+            await send();
+        } catch (error) {
+            this.logger.error(
+                `Не удалось отправить уведомление: ${getErrorMessage(error)}`,
+            );
+        }
     }
 
     private async buildCategoryGroups(

@@ -7,6 +7,7 @@ import { PriceListXlsxParser } from '../../infrastructure/xlsx/price-list-xlsx.p
 import { PriceImportJob } from '../../domain/entities/price-import-job.entity';
 import { ProductMatch } from '../../domain/value-objects/product-match.value-object';
 import { InMemoryPriceImportAbortRegistry } from '../../infrastructure/abort/in-memory-price-import-abort.registry';
+import type { PriceImportNotifier } from '../ports/price-import-notifier.port';
 import type { PriceImportJobStore } from '../ports/price-import-job-store.port';
 import type {
     CatalogItem,
@@ -140,6 +141,17 @@ function buildFakeResultSheetGateway(): {
     return { gateway: { writeCostChanges }, writeCostChanges };
 }
 
+function buildFakeNotifier(): jest.Mocked<PriceImportNotifier> {
+    return {
+        notifyUploaded: jest.fn().mockResolvedValue(undefined),
+        notifyUnchanged: jest.fn().mockResolvedValue(undefined),
+        notifyFailed: jest.fn().mockResolvedValue(undefined),
+        notifyPriceUpdateFailed: jest.fn().mockResolvedValue(undefined),
+        notifyManualUploaded: jest.fn().mockResolvedValue(undefined),
+        notifyManualFailed: jest.fn().mockResolvedValue(undefined),
+    };
+}
+
 describe('StartPriceImportHandler', () => {
     it('happy path: проводит джобу CREATED -> RUNNING -> COMPLETED и пишет изменения цен', async () => {
         await withRequestContext(async () => {
@@ -155,6 +167,7 @@ describe('StartPriceImportHandler', () => {
                 new InMemoryPriceImportAbortRegistry(),
                 new PriceListXlsxParser(),
                 moysklad,
+                buildFakeNotifier(),
             );
 
             const command = new StartPriceImportCommand({
@@ -199,6 +212,7 @@ describe('StartPriceImportHandler', () => {
                 new InMemoryPriceImportAbortRegistry(),
                 new PriceListXlsxParser(),
                 moysklad,
+                buildFakeNotifier(),
             );
 
             const command = new StartPriceImportCommand({
@@ -262,6 +276,7 @@ describe('StartPriceImportHandler', () => {
                 registry,
                 new PriceListXlsxParser(),
                 moysklad,
+                buildFakeNotifier(),
             );
             const command = new StartPriceImportCommand({
                 fileBase64: buildPriceListFileBase64(),
@@ -280,6 +295,98 @@ describe('StartPriceImportHandler', () => {
             expect(job.errorMessage).toBeNull();
             expect(batchUpdateProducts).not.toHaveBeenCalled();
             expect(writeCostChanges).not.toHaveBeenCalled();
+        });
+    });
+
+    // spec: shop/price-import-schedule#уведомления-о-ручной-выгрузке
+    describe('уведомления о ручной выгрузке (notifyResult)', () => {
+        function build(matcher: ProductMatcher) {
+            const { store } = buildFakeJobStore();
+            const { gateway } = buildFakeResultSheetGateway();
+            const { moysklad } = buildFakeMoysklad();
+            const notifier = buildFakeNotifier();
+            const handler = new StartPriceImportHandler(
+                store,
+                matcher,
+                gateway,
+                new InMemoryPriceImportAbortRegistry(),
+                new PriceListXlsxParser(),
+                moysklad,
+                notifier,
+            );
+            return { handler, notifier };
+        }
+
+        const failingMatcher = (): ProductMatcher => ({
+            formatProductNames: jest
+                .fn()
+                .mockImplementation((n: string[]) => Promise.resolve(n)),
+            match: jest.fn().mockRejectedValue(new Error('AI недоступен')),
+        });
+
+        it('успех при notifyResult: уведомление о выгрузке в переоценку', async () => {
+            await withRequestContext(async () => {
+                const { handler, notifier } = build(buildHappyPathMatcher());
+                await handler.execute(
+                    new StartPriceImportCommand({
+                        fileBase64: buildPriceListFileBase64(),
+                        notifyResult: true,
+                    }),
+                );
+                expect(notifier.notifyManualUploaded).toHaveBeenCalledTimes(1);
+                expect(notifier.notifyManualFailed).not.toHaveBeenCalled();
+            });
+        });
+
+        it('ошибка при notifyResult: уведомление об ошибке', async () => {
+            await withRequestContext(async () => {
+                const { handler, notifier } = build(failingMatcher());
+                await handler.execute(
+                    new StartPriceImportCommand({
+                        fileBase64: buildPriceListFileBase64(),
+                        notifyResult: true,
+                    }),
+                );
+                expect(notifier.notifyManualFailed).toHaveBeenCalledTimes(1);
+                expect(notifier.notifyManualUploaded).not.toHaveBeenCalled();
+            });
+        });
+
+        it('без notifyResult (автовыгрузка шлёт свои уведомления) — ничего не отправляется', async () => {
+            await withRequestContext(async () => {
+                const ok = build(buildHappyPathMatcher());
+                await ok.handler.execute(
+                    new StartPriceImportCommand({
+                        fileBase64: buildPriceListFileBase64(),
+                    }),
+                );
+                const bad = build(failingMatcher());
+                await bad.handler.execute(
+                    new StartPriceImportCommand({
+                        fileBase64: buildPriceListFileBase64(),
+                    }),
+                );
+                for (const { notifier } of [ok, bad]) {
+                    expect(notifier.notifyManualUploaded).not.toHaveBeenCalled();
+                    expect(notifier.notifyManualFailed).not.toHaveBeenCalled();
+                }
+            });
+        });
+
+        it('сбой отправки уведомления не меняет результат выгрузки', async () => {
+            await withRequestContext(async () => {
+                const { handler, notifier } = build(buildHappyPathMatcher());
+                notifier.notifyManualUploaded.mockRejectedValue(
+                    new Error('telegram'),
+                );
+                const command = new StartPriceImportCommand({
+                    fileBase64: buildPriceListFileBase64(),
+                    notifyResult: true,
+                });
+                await expect(handler.execute(command)).resolves.toEqual({
+                    id: command.id,
+                });
+            });
         });
     });
 });

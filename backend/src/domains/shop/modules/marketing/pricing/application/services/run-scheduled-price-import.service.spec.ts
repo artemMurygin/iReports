@@ -59,6 +59,8 @@ function build(opts: { lastName?: string | null; jobStatus?: JobStatus | null } 
         notifyUnchanged: jest.fn().mockResolvedValue(undefined),
         notifyFailed: jest.fn().mockResolvedValue(undefined),
         notifyPriceUpdateFailed: jest.fn().mockResolvedValue(undefined),
+        notifyManualUploaded: jest.fn().mockResolvedValue(undefined),
+        notifyManualFailed: jest.fn().mockResolvedValue(undefined),
     };
     const trigger: jest.Mocked<MoySkladPriceUpdateTrigger> = {
         triggerPriceUpdate: jest.fn().mockResolvedValue(undefined),

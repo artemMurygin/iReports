@@ -2,6 +2,8 @@ import { TelegramService } from '@/integrations/telegram/telegram.service';
 import { TELEGRAM_CHAT_ID } from '../config/pricing.config';
 import {
     FAILED_TEXT,
+    MANUAL_FAILED_TEXT,
+    MANUAL_UPLOADED_TEXT,
     PRICE_UPDATE_FAILED_TEXT,
     TelegramPriceImportNotifier,
     UNCHANGED_TEXT,
@@ -51,8 +53,23 @@ describe('TelegramPriceImportNotifier', () => {
         expect(PRICE_UPDATE_FAILED_TEXT).toMatch(/вручную|ручн/i);
     });
 
+    // spec: shop/price-import-schedule#уведомления-о-ручной-выгрузке
+    it('notifyManualUploaded сообщает, что прайс выгружен в переоценку', async () => {
+        await notifier.notifyManualUploaded();
+        expect(send).toHaveBeenCalledWith(TELEGRAM_CHAT_ID, MANUAL_UPLOADED_TEXT);
+        expect(MANUAL_UPLOADED_TEXT).toMatch(/переоценк/i);
+    });
+
+    it('notifyManualFailed сообщает об ошибке выгрузки без технических деталей', async () => {
+        await notifier.notifyManualFailed();
+        expect(send).toHaveBeenCalledWith(TELEGRAM_CHAT_ID, MANUAL_FAILED_TEXT);
+        expect(MANUAL_FAILED_TEXT).toMatch(/не удалось/i);
+    });
+
     it('тексты не содержат стек и токен', () => {
         for (const t of [
+            MANUAL_UPLOADED_TEXT,
+            MANUAL_FAILED_TEXT,
             UPLOADED_TEXT,
             UNCHANGED_TEXT,
             FAILED_TEXT,
@@ -67,6 +84,8 @@ describe('TelegramPriceImportNotifier', () => {
         'notifyUnchanged',
         'notifyFailed',
         'notifyPriceUpdateFailed',
+        'notifyManualUploaded',
+        'notifyManualFailed',
     ] as const)(
         '%s: сбой sendMessage не пробрасывается',
         async (method) => {

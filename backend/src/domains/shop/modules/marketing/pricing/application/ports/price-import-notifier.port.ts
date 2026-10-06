@@ -17,6 +17,15 @@ export interface PriceImportNotifier {
      * spec: shop/price-import-schedule#обновление-цен-в-моём-складе-через-n8n
      */
     notifyPriceUpdateFailed(): Promise<void>;
+
+    /**
+     * Ручная выгрузка (из сайдбара) завершилась: прайс выгружен в переоценку.
+     * spec: shop/price-import-schedule#уведомления-о-ручной-выгрузке
+     */
+    notifyManualUploaded(): Promise<void>;
+
+    /** Ручная выгрузка завершилась ошибкой. spec: shop/price-import-schedule#уведомления-о-ручной-выгрузке */
+    notifyManualFailed(): Promise<void>;
 }
 
 export const PRICE_IMPORT_NOTIFIER = Symbol('PRICE_IMPORT_NOTIFIER');

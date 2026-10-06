@@ -35,7 +35,11 @@ export class StartPriceImportHttpController {
         summary: 'Запустить импорт закупочных цен магазина из XLSX-прайса',
     })
     start(@Body() body: StartPriceImportDto): StartPriceImportResponse {
-        const command = new StartPriceImportCommand({ fileBase64: body.file });
+        const command = new StartPriceImportCommand({
+            fileBase64: body.file,
+            // Ручная выгрузка из сайдбара: итог уходит в Telegram-группу.
+            notifyResult: true,
+        });
         void this.commandBus.execute(command);
         return { id: command.id };
     }

@@ -6,11 +6,14 @@ import { TELEGRAM_CHAT_ID } from '../config/pricing.config';
 // Тексты без технических деталей — spec: shop/price-import-schedule#уведомление-об-ошибке
 export const UPLOADED_TEXT = 'Прайс-лист выгружен в таблицу переоценки. Обновлённые цены отправлены в Мой склад 👌';
 export const UNCHANGED_TEXT =
-    'Прайс-лист не изменился с прошлой выгрузки. Следите за обновлением прайс-листа и после обновления повторите выгрузку в ручном режиме.';
+    '❌ Прайс-лист не изменился. Дождитесь обновления и повторите выгрузку вручную.';
 export const FAILED_TEXT =
-    'Не удалось выгрузить прайс-лист. Проверьте выгрузку и при необходимости загрузите прайс вручную.';
+    '❌ Не удалось выгрузить прайс-лист. Проверьте выгрузку и при необходимости загрузите прайс вручную.';
 export const PRICE_UPDATE_FAILED_TEXT =
-    'Цены записаны в таблицу переоценки, но при выгрузке цен в Мой склад возникла ошибка. Повторите выгрузку цен в Мой склад в ручном режиме.';
+    '❌ Цены записаны в таблицу переоценки, но при выгрузке цен в Мой склад возникла ошибка. Повторите выгрузку цен в Мой склад в ручном режиме.';
+export const MANUAL_UPLOADED_TEXT = 'Прайс-лист выгружен в таблицу переоценки. 👌';
+export const MANUAL_FAILED_TEXT =
+    '❌ Не удалось выгрузить прайс-лист в переоценку';
 
 // Реализация PRICE_IMPORT_NOTIFIER поверх TelegramService.
 // spec: shop/price-import-schedule#отказоустойчивость-уведомлений — сбой доставки логируем и глотаем.
@@ -34,6 +37,14 @@ export class TelegramPriceImportNotifier implements PriceImportNotifier {
 
     notifyPriceUpdateFailed(): Promise<void> {
         return this.send(PRICE_UPDATE_FAILED_TEXT);
+    }
+
+    notifyManualUploaded(): Promise<void> {
+        return this.send(MANUAL_UPLOADED_TEXT);
+    }
+
+    notifyManualFailed(): Promise<void> {
+        return this.send(MANUAL_FAILED_TEXT);
     }
 
     private async send(text: string): Promise<void> {

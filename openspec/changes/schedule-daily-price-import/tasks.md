@@ -57,8 +57,15 @@
 - [x] 8.3 Реализовать контракт `LastScheduledPriceImportResponse`, порт и Redis-хранилище, сервис и `GET /v1/shop/marketing/pricing/last-scheduled-import`, запись итога в сервисе автовыгрузки, `fetchLastScheduledImport` и слияние в `sheets-app`
 - [x] 8.4 Прогнать тесты: backend 234, sheets-app 133 — green; `tsc` и eslint чистые
 
-## 9. Деплой-чеклист (ручные шаги, вне кода)
+## 9. Уведомления о ручной выгрузке (добавлено после реализации групп 1-8)
 
-- [ ] 9.1 Включить Drive API в проекте Google Cloud и расшарить папку на сервисный аккаунт (read-only)
-- [ ] 9.2 Создать бота, добавить в группу, прописать `TELEGRAM_BOT_TOKEN` в env продакшена и реальные `chat_id`/id папки в конфиге
-- [ ] 9.3 Пересобрать и задеплоить сайдбар `sheets-app` в Apps Script (без этого время автовыгрузки не появится); активировать в n8n продовые workflow `updateSalePricesInMS` и `updatePricesInMS` (метод PATCH); после деплоя проверить уведомление в первый будний день после 12:10
+- [x] 9.1 Написать тесты: обработчик `StartPriceImportHandler` (флаг `notifyResult`: успех, ошибка, без флага ничего, сбой отправки не влияет), тексты и методы `notifyManualUploaded`/`notifyManualFailed`
+- [x] 9.2 Прогнать тесты из 9.1: red
+- [x] 9.3 Реализовать флаг в `StartPriceImportCommand`, вызовы уведомлений в обработчике, методы порта и Telegram-нотификатора, `notifyResult: true` в HTTP-контроллере ручного запуска
+- [x] 9.4 Прогнать тесты: backend 242 — green, `tsc` чистый
+
+## 10. Деплой-чеклист (ручные шаги, вне кода)
+
+- [ ] 10.1 Включить Drive API в проекте Google Cloud и расшарить папку на сервисный аккаунт (read-only)
+- [ ] 10.2 Создать бота, добавить в группу, прописать `TELEGRAM_BOT_TOKEN` в env продакшена и реальные `chat_id`/id папки в конфиге
+- [ ] 10.3 Пересобрать и задеплоить сайдбар `sheets-app` в Apps Script (без этого время автовыгрузки не появится); активировать в n8n продовые workflow `updateSalePricesInMS` и `updatePricesInMS` (метод PATCH); после деплоя проверить уведомление в первый будний день после 12:10
