@@ -191,6 +191,77 @@ describe('StartPriceImportHandler', () => {
         });
     });
 
+    it('категории сопоставляются параллельно: второй AI-запрос стартует до ответа на первый', async () => {
+        await withRequestContext(async () => {
+            const { store } = buildFakeJobStore();
+            const { gateway } = buildFakeResultSheetGateway();
+            const { moysklad } = buildFakeMoysklad();
+
+            // Матчер отвечает только когда вызваны обе категории (iPhone и MacBook из файла):
+            // при последовательном обходе первый вызов никогда бы не дождался второго.
+            let inFlight = 0;
+            let maxInFlight = 0;
+            let releaseAll: () => void = () => undefined;
+            const allCalled = new Promise<void>((resolve) => {
+                releaseAll = resolve;
+            });
+            const matcher: ProductMatcher = {
+                formatProductNames: jest
+                    .fn()
+                    .mockImplementation((names: string[]) =>
+                        Promise.resolve(names),
+                    ),
+                match: jest.fn().mockImplementation(
+                    async (
+                        _category: CategoryKey,
+                        priceRows: {
+                            name: string;
+                            price: string | number | null;
+                        }[],
+                        catalogItems: CatalogItem[],
+                    ) => {
+                        inFlight += 1;
+                        maxInFlight = Math.max(maxInFlight, inFlight);
+                        if (inFlight === 2) releaseAll();
+                        await allCalled;
+                        inFlight -= 1;
+                        return [
+                            ProductMatch.create({
+                                sourceRowName: priceRows[0].name,
+                                sourcePrice: Number(priceRows[0].price),
+                                matchedProductId: catalogItems[0].id,
+                                matchedProductName: catalogItems[0].name,
+                                method: 'llm',
+                                confidence: 1,
+                            }),
+                        ];
+                    },
+                ),
+            };
+
+            const handler = new StartPriceImportHandler(
+                store,
+                matcher,
+                gateway,
+                new InMemoryPriceImportAbortRegistry(),
+                new PriceListXlsxParser(),
+                moysklad,
+                buildFakeNotifier(),
+            );
+
+            const result = await handler.execute(
+                new StartPriceImportCommand({
+                    fileBase64: buildPriceListFileBase64(),
+                }),
+            );
+
+            const job = store.findById(result.id);
+            expect(job!.isCompleted()).toBe(true);
+            expect(maxInFlight).toBe(2);
+            expect(job!.result?.matches).toHaveLength(2);
+        });
+    });
+
     it('матчер падает -> джоба переходит в FAILED с захваченным сообщением об ошибке', async () => {
         await withRequestContext(async () => {
             const { store, statusHistory } = buildFakeJobStore();

@@ -266,8 +266,6 @@ export class StartPriceImportHandler implements ICommandHandler<
         catalogByCategory: Map<CategoryKey, CatalogItem[]>,
         signal: AbortSignal,
     ): Promise<ProductMatch[]> {
-        const allMatches: ProductMatch[] = [];
-
         job.updateProgress(
             JobProgress.create({
                 stage: 'matchCategories',
@@ -278,34 +276,44 @@ export class StartPriceImportHandler implements ICommandHandler<
         );
         this.jobStore.save(job);
 
+        // Категории сопоставляются параллельно: каждая — отдельный AI-запрос на несколько минут,
+        // и последовательный обход (iPhone → Watch → AirPods → iPad → MacBook) занимал ~14 минут
+        // против ~4 у самой долгой категории. Результаты складываются в порядке категорий,
+        // прогресс обновляется по мере завершения каждой.
         let processed = 0;
-        for (const group of groups) {
-            signal.throwIfAborted();
-            const catalogItems = catalogByCategory.get(group.category) ?? [];
-            this.logger.log(
-                `[${job.id}] [${group.category}] Сопоставление: прайс ${group.rows.length} строк × каталог ${catalogItems.length} товаров`,
-            );
-            const matches = await this.productMatcher.match(
-                group.category,
-                group.rows,
-                catalogItems,
-                signal,
-            );
-            allMatches.push(...matches);
+        const perCategory = await Promise.all(
+            groups.map(async (group) => {
+                signal.throwIfAborted();
+                const catalogItems =
+                    catalogByCategory.get(group.category) ?? [];
+                this.logger.log(
+                    `[${job.id}] [${group.category}] Сопоставление: прайс ${group.rows.length} строк × каталог ${catalogItems.length} товаров`,
+                );
+                const matches = await this.productMatcher.match(
+                    group.category,
+                    group.rows,
+                    catalogItems,
+                    signal,
+                );
 
-            processed += 1;
-            job.updateProgress(
-                JobProgress.create({
-                    stage: 'matchCategories',
-                    processed,
-                    total: groups.length,
-                    message: `[${group.category}] сопоставлено: ${matches.length} позиций`,
-                }),
-            );
-            this.jobStore.save(job);
-        }
-
-        return allMatches;
+                processed += 1;
+                // Соседняя категория могла уже уронить/отменить джобу — у не-RUNNING джобы
+                // прогресс не обновляется (иначе updateProgress бросит из «висящего» промиса).
+                if (job.isRunning() && !signal.aborted) {
+                    job.updateProgress(
+                        JobProgress.create({
+                            stage: 'matchCategories',
+                            processed,
+                            total: groups.length,
+                            message: `[${group.category}] сопоставлено: ${matches.length} позиций`,
+                        }),
+                    );
+                    this.jobStore.save(job);
+                }
+                return matches;
+            }),
+        );
+        return perCategory.flat();
     }
 
     // spec: shop/marketing#requirement-изменение-цены-принимается-только-для-сопоставленных-позиций-с-известной-ценой
