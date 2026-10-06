@@ -5,6 +5,13 @@ on:
     branches:
       - main
 
+# Деплои идут строго по очереди: два одновременных `docker compose down/build/up` на одном сервере
+# мешают друг другу (общий buildkit, нехватка памяти). cancel-in-progress выключен — запущенный
+# деплой нельзя обрывать посередине (стек уже остановлен), новый ждёт в очереди.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
