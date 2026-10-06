@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../../../shared/cron/prod-cron.decorator';
-import { logCronError } from '../../../../shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { runInSystemRequestContext } from '@/shared/application/context/run-in-system-context';
 import { MoySkladSyncService } from './moysklad-sync.service';
 
@@ -18,16 +18,20 @@ export class MoySkladStockSyncCron {
 
     @ProdCron(CronExpression.EVERY_HOUR)
     async run(): Promise<void> {
+        const startedAt = Date.now();
         try {
             await runInSystemRequestContext(() =>
                 this.syncService.uploadStockSnapshot(),
             );
-            this.logger.log('Successfully synced stock snapshot from MoySklad');
+            this.logger.log(
+                { durationMs: Date.now() - startedAt },
+                'Successfully synced stock snapshot from MoySklad',
+            );
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : String(error);
-            this.logger.error(`Failed to sync stock snapshot: ${message}`);
-            logCronError('MoySkladStockSyncCron.run', error);
+            this.logger.error(
+                { err: toError(error), durationMs: Date.now() - startedAt },
+                'Failed to sync stock snapshot',
+            );
         }
     }
 }

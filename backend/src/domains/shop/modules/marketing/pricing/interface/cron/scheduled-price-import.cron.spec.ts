@@ -4,7 +4,9 @@ import { ScheduledImportOutcome } from '../../domain/value-objects/scheduled-imp
 
 describe('ScheduledPriceImportCron', () => {
     it('запускает RunScheduledPriceImportService.run()', async () => {
-        const service = { run: jest.fn().mockResolvedValue(ScheduledImportOutcome.uploaded()) };
+        const service = {
+            run: jest.fn().mockResolvedValue(ScheduledImportOutcome.uploaded()),
+        };
         const cron = new ScheduledPriceImportCron(service as never);
 
         await cron.run();

@@ -1,9 +1,4 @@
-// logCronError пишет в файл на диске (см. cron-file-logger.ts) — мокаем,
-// чтобы юнит-тест не оставлял побочных файлов в репозитории.
-jest.mock('@/shared/cron/cron-file-logger', () => ({
-    logCronError: jest.fn(),
-}));
-
+import { Logger } from '@nestjs/common';
 import { RecalculateOpenGoodsTurnoverPeriodCron } from './recalculate-open-goods-turnover-period.cron';
 import type { AccountingPeriodRepositoryPort } from '@/domains/service/modules/accounting/application/ports/accounting-period/accounting-period.port';
 import type { GoodsTurnoverReportLineRepositoryPort } from '../../application/ports/goods-turnover-report/goods-turnover-report-line.port';
@@ -12,7 +7,6 @@ import { GoodsTurnoverReport } from '../../domain/entities/goods-turnover-report
 import { GoodsTurnoverReportLine } from '../../domain/entities/goods-turnover-report/goods-turnover-report-line.entity';
 import { GoodsFlowMetric } from '../../domain/value-objects/goods-flow-metric.value-object';
 import { AccountingPeriod } from '@/domains/service/modules/accounting/domain/entities/accounting-period/accounting-period.entity';
-import { logCronError } from '@/shared/cron/cron-file-logger';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 function buildLine(): GoodsTurnoverReportLine {
@@ -28,6 +22,14 @@ function buildLine(): GoodsTurnoverReportLine {
 }
 
 describe('RecalculateOpenGoodsTurnoverPeriodCron', () => {
+    // Ошибки крона уходят в структурный logger.error — подслушиваем
+    // прототип, т.к. Logger создаётся внутри самого крона.
+    let errorSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    });
+
     const buildCron = (
         findByDirectionAndPeriod: jest.Mock,
         build: jest.Mock,
@@ -44,6 +46,7 @@ describe('RecalculateOpenGoodsTurnoverPeriodCron', () => {
     afterEach(() => {
         jest.useRealTimers();
         jest.clearAllMocks();
+        errorSpy.mockRestore();
     });
 
     it('нет записи AccountingPeriod для периода — пересчитывает (трактуется как OPEN)', async () => {
@@ -143,7 +146,7 @@ describe('RecalculateOpenGoodsTurnoverPeriodCron', () => {
 
         await expect(cron.run()).resolves.toBeUndefined();
         expect(replaceAll).toHaveBeenCalledWith('2026-09', [line]);
-        expect(logCronError).not.toHaveBeenCalled();
+        expect(errorSpy).not.toHaveBeenCalled();
     });
 
     it('не выбрасывает исключение при ошибке пересчёта целиком — только логирует', async () => {
@@ -158,12 +161,12 @@ describe('RecalculateOpenGoodsTurnoverPeriodCron', () => {
         const cron = buildCron(findByDirectionAndPeriod, build, replaceAll);
 
         await expect(cron.run()).resolves.toBeUndefined();
-        expect(logCronError).toHaveBeenCalledWith(
-            'RecalculateOpenGoodsTurnoverPeriodCron.run',
-            expect.any(Error),
-            expect.objectContaining<{ period: string }>({
+        expect(errorSpy).toHaveBeenCalledWith(
+            expect.objectContaining({
+                err: expect.any(Error) as Error,
                 period: expect.any(String) as string,
             }),
+            expect.any(String),
         );
     });
 });

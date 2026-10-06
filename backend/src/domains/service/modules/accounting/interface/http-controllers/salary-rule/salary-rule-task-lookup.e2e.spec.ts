@@ -8,7 +8,7 @@ import type {
     SalaryRuleDetail,
     SalaryRuleSummary,
 } from 'ireports-contracts';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { SessionModule } from '@/modules/session/session.module';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
@@ -128,7 +128,7 @@ describe('Salary rule / accrual line — HTTP lookup by id / by taskId (service,
         app.use((req: unknown, res: unknown, next: () => void) =>
             new RequestContextMiddleware().use(req, res, next),
         );
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

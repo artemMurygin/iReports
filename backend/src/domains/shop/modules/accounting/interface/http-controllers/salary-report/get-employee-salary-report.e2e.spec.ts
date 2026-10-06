@@ -32,7 +32,7 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { ShopMotivationSchema } from '@/domains/shop/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/pay-per-hour.entity';
 import { ProductSoldEntity } from '@/domains/shop/modules/accounting/domain/entities/salary-rules/product-sold.entity';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
@@ -423,7 +423,7 @@ describe('GET /v1/shop/accounting/salary_report/employee/:id/:period (e2e)', () 
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

@@ -7,7 +7,10 @@ import { SALARY_RULE_REPOSITORY } from '../../ports/motivation-schema/salary-rul
 import type { MotivationSchemaRepositoryPort } from '../../ports/motivation-schema/motivation-schema.port';
 import { MOTIVATION_SCHEMA_REPOSITORY } from '../../ports/motivation-schema/motivation-schema.port';
 import { SalaryRuleFactory } from '@/domains/service/modules/accounting/domain/factories/salary-rule.factory';
-import { NotFoundException, ArgumentInvalidException } from '@/shared/exceptions';
+import {
+    NotFoundException,
+    ArgumentInvalidException,
+} from '@/shared/exceptions';
 import { TaskCompletionRequiresPersonalSchemaException } from '@/domains/service/modules/accounting/domain/exceptions/motivation-schema.exception';
 import type { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import type { TaskCompletionSalaryConfig } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';

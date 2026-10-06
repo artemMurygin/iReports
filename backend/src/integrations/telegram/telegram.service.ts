@@ -14,10 +14,13 @@ export class TelegramService {
         }
 
         try {
-            await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-                chat_id: chatId,
-                text,
-            });
+            await axios.post(
+                `https://api.telegram.org/bot${token}/sendMessage`,
+                {
+                    chat_id: chatId,
+                    text,
+                },
+            );
         } catch (error) {
             // Только статус ответа, без url/config/cause исходной ошибки (там токен)
             const status = axios.isAxiosError?.(error)

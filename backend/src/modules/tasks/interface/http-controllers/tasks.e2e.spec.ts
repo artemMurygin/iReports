@@ -14,7 +14,7 @@ import { InMemoryTaskCommentRepository } from '@/modules/tasks/infrastructure/re
 import { InMemoryTaskLinkRepository } from '@/modules/tasks/infrastructure/repositories/in-memory-task-link.repository';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // specs/tasks/spec.md — сквозной сценарий HTTP-слоя src/modules/tasks:
 // create → get → list с фильтром → transition через полный граф статусов
@@ -79,7 +79,7 @@ describe('Tasks HTTP (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

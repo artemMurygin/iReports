@@ -42,7 +42,7 @@ import { InMemorySalaryAccrualRepository } from '@/domains/service/modules/accou
 import { InMemoryBalanceTransactionRepository } from '@/modules/employee-balance/infrastructure/repositories/in-memory-balance-transaction.repository';
 import { InMemoryPayoutCashboxRecordRepository } from '@/domains/service/modules/accounting/infrastructure/repositories/erp-cash/in-memory-payout-cashbox-record.repository';
 import { BalanceTransaction } from '@/modules/employee-balance/domain/entities/balance-transaction.entity';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
@@ -272,7 +272,7 @@ describe('Фаза 1 docs/employee-settlements-page-redesign: сквозной �
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
 
         // Лента до всех сценариев: 42 — приход-приход (последнее движение

@@ -25,6 +25,7 @@ import {
 import { toBalanceTransactionResponse } from '@/modules/employee-balance/application/mappers/to-balance-transaction-response';
 import { PayoutCashboxRecordMapper } from '@/domains/service/modules/accounting/infrastructure/mappers/erp-cash/payout-cashbox-record.mapper';
 import { CreatePayoutCommand } from './create-payout.command';
+import { toError } from '@/shared/logger/to-error';
 
 // Выплата направления service (PRD 3
 // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
@@ -169,12 +170,13 @@ export class CreatePayoutHandler implements ICommandHandler<
                 });
             } catch (compensationError) {
                 this.logger.error(
-                    `Компенсация не удалась: документ ERP ${erpDocument.externalId} ` +
-                        `(выплата, направление "service", движение ${transaction.id}) ` +
-                        'не удалён после сбоя записи в БД — требуется ручная сверка',
-                    compensationError instanceof Error
-                        ? compensationError.stack
-                        : String(compensationError),
+                    {
+                        err: toError(compensationError),
+                        externalId: erpDocument.externalId,
+                        direction: 'service',
+                        transactionId: transaction.id,
+                    },
+                    'Компенсация не удалась: документ ERP (выплата) не удалён после сбоя записи в БД — требуется ручная сверка',
                 );
             }
             throw dbError;

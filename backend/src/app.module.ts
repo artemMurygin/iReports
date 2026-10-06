@@ -4,7 +4,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import { LoggerModule } from 'nestjs-pino';
-import { buildPinoHttpOptions } from './shared/logger/pino.config';
+import { buildLoggerModuleParams } from './shared/logger/pino.config';
+import { RequestIdBridgeMiddleware } from './shared/logger/request-id-bridge.middleware';
+import { HttpMetricsMiddleware } from './shared/metrics/http-metrics.middleware';
 import { MetricsModule } from './shared/metrics/metrics.module';
 import { ContextInterceptor } from './shared/application/context/ContextInterceptor';
 import { DatabaseModule } from './infrustructure/database/database.module';
@@ -44,7 +46,7 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
 
 @Module({
     imports: [
-        LoggerModule.forRoot({ pinoHttp: buildPinoHttpOptions() }),
+        LoggerModule.forRoot(buildLoggerModuleParams()),
         MetricsModule,
         DatabaseModule,
         RedisModule,
@@ -116,11 +118,16 @@ import { ShopPricingModule } from './domains/shop/modules/marketing/pricing/pric
 })
 export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
-        // RequestContextMiddleware должен отработать первым, чтобы
-        // AsyncLocalStorage-контекст был доступен во всех последующих
-        // middleware/interceptors/контроллерах этого запроса. HTTP-логирование
-        // теперь делает pino-http (см. LoggerModule.forRoot выше) — отдельный
-        // LoggerMiddleware больше не нужен.
-        consumer.apply(RequestContextMiddleware).forRoutes('*');
+        // Порядок важен. pino-http (LoggerModule) выполняется раньше и уже
+        // выставил req.id; RequestContextMiddleware создаёт AsyncLocalStorage-
+        // контекст, RequestIdBridgeMiddleware переносит в него req.id, а
+        // HttpMetricsMiddleware считает метрики на 'finish'.
+        consumer
+            .apply(
+                RequestContextMiddleware,
+                RequestIdBridgeMiddleware,
+                HttpMetricsMiddleware,
+            )
+            .forRoutes('*');
     }
 }

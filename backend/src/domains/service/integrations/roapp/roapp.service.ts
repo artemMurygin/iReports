@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import { RoappHttpService } from './roapp.instace';
 import { EmployeesShortSchema } from './schemas/employees.schema';
@@ -14,6 +14,7 @@ import {
     RoappWarehousesApiResponseSchema,
     WarehouseSchema,
 } from './schemas/warehouses.schema';
+import { toError } from '../../../../shared/logger/to-error';
 import { delay } from '../../../../shared/delay';
 import {
     Params,
@@ -36,6 +37,8 @@ export function toRoappIsoDate(date: Date): string {
 
 @Injectable()
 export class RoappService {
+    private readonly logger = new Logger(RoappService.name);
+
     constructor(private roApp: RoappHttpService) {}
 
     async *fetchCreatedOrders(fromDate: Date | undefined) {
@@ -87,7 +90,10 @@ export class RoappService {
                 params.page++;
                 await delay(500);
             } catch (error) {
-                console.log(error);
+                this.logger.error(
+                    { err: toError(error), page: params.page },
+                    'Ошибка запроса страницы заказов RemOnline',
+                );
                 throw new BadGatewayException(
                     `Failed to fetch sources from Roapp: ${toErrorMessage(error)}`,
                 );

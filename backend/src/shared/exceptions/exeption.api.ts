@@ -3,7 +3,7 @@ export class ApiErrorResponse {
     readonly message: string;
     readonly error: string;
     readonly correlationId: string;
-    readonly subErrors?: string[];
+    readonly subErrors?: Array<string | { path: string; message: string }>;
     // Структурированные данные ошибки (ExceptionBase.metadata) — например,
     // перечень неутверждённых строк плана (metadata.rows) или документов
     // начисления не в DRAFT (metadata.accruals), которые фронтенд показывает

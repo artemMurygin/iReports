@@ -10,7 +10,7 @@ import { GoodsTurnoverReportQueryDto } from '../dto/goods-turnover-report-query.
 // shop-turnover-report, design.md D10) — оборот/остаток/коэффициент по
 // категориям и складам за месяц. `:period` парсится в Period прямо в
 // контроллере (Period.create бросает ArgumentInvalidException на
-// невалидный формат → 400 через DomainExceptionFilter), т.к.
+// невалидный формат → 400 через AllExceptionsFilter), т.к.
 // GetGoodsTurnoverReportService.getReport принимает уже готовый VO
 // (architecture.md Method Signatures), а не сырую строку.
 @ApiTags('Магазин: склад')

@@ -28,7 +28,7 @@ import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { SalesPlan } from '@/domains/service/modules/sales/domain/entities/sales-plan.entity';
 import { SalesPlanTemplate } from '@/domains/service/modules/sales/domain/entities/sales-plan-template.entity';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Как и get-employee-salary-report.e2e.spec.ts (см. соседний accounting-
@@ -189,7 +189,7 @@ describe('SalesPlan/SalesPlanTemplate/SalesPerformance HTTP (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

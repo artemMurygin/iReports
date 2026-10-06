@@ -38,7 +38,7 @@ export class UpsertWorkScheduleEntryHandler implements ICommandHandler<
         );
 
         // Инвариант «hours/role только у WORKING» проверяет WorkDay.create —
-        // ArgumentInvalidException → 400 через DomainExceptionFilter, здесь
+        // ArgumentInvalidException → 400 через AllExceptionsFilter, здесь
         // он не дублируется (см. комментарий в contracts/commands/work-schedule.ts).
         const day = WorkDay.create({
             status: command.status,

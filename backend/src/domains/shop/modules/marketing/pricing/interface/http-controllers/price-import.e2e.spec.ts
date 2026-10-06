@@ -23,7 +23,7 @@ import { RESULT_SHEET_GATEWAY } from '@/domains/shop/modules/marketing/pricing/a
 import type { ResultSheetGateway } from '@/domains/shop/modules/marketing/pricing/application/ports/result-sheet-gateway.port';
 import { ProductMatch } from '@/domains/shop/modules/marketing/pricing/domain/value-objects/product-match.value-object';
 import type { CategoryKey } from '@/domains/shop/modules/marketing/pricing/domain/services/row-categorization.service';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Мини-XLSX с одной строкой iPhone — тот же layout, что в
 // start-price-import.handler.spec.ts (см. комментарий там про непустые
@@ -151,7 +151,7 @@ describe('POST /v1/shop/marketing/pricing/import-costs (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

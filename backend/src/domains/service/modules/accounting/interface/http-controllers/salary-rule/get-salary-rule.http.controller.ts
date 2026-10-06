@@ -12,7 +12,7 @@ import { GetSalaryRuleService } from '@/domains/service/modules/accounting/appli
 // боковая панель зарплатного правила (features/SalaryRuleDetailsPanel,
 // useSalaryRule(ruleId, direction)). GetSalaryRuleService бросает
 // SalaryRuleNotFoundException, если правила с таким id нет (или оно
-// принадлежит направлению shop) — DomainExceptionFilter переводит её в
+// принадлежит направлению shop) — AllExceptionsFilter переводит её в
 // HTTP 404 (см. SALARY_RULE_NOT_FOUND в domain-exception.filter.ts).
 @ApiTags('Бухгалтерия: зарплатные правила')
 @UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)

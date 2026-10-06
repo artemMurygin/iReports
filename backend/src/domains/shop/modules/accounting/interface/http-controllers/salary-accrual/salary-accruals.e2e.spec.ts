@@ -45,7 +45,7 @@ import { PayPerHourShopEntity } from '@/domains/shop/modules/accounting/domain/e
 import { ShopSalaryAccrual } from '@/domains/shop/modules/accounting/domain/entities/salary-accrual/salary-accrual.entity';
 import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
 import { Period } from '@/shared/domain/period.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
@@ -302,7 +302,7 @@ describe('Документы начисления магазина: close → sa
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

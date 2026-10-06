@@ -101,7 +101,9 @@ export class ShopSalaryRuleRepository
     // findByTaskId, но без ограничения по текущему периоду
     // (Object.values(taskIdByPeriod) вместо taskIdByPeriod[currentPeriod])
     // и с дополнительным фильтром config.isRecurring === false.
-    async findOneOffByAnyTaskId(taskId: string): Promise<ShopSalaryRule | null> {
+    async findOneOffByAnyTaskId(
+        taskId: string,
+    ): Promise<ShopSalaryRule | null> {
         const records = await this.client.salaryRule.findMany({
             where: { type: 'TaskCompletion', direction: 'shop' },
         });

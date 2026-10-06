@@ -16,7 +16,7 @@ import { RolesCommandHandlers } from '../../application/command/roles-command-ha
 
 // spec: roles#model-role-permission — системную роль Administrator удалить
 // нельзя (SystemRoleCannotBeDeletedException → 409 через
-// DomainExceptionFilter, design.md Decision 9).
+// AllExceptionsFilter, design.md Decision 9).
 @ApiTags('Роли и доступ: управление ролями')
 @UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)
 @RequirePermissions('roles:manage')

@@ -18,6 +18,7 @@ import { PRICE_LIST_VERSION_STORE } from '../ports/price-list-version-store.port
 import type { PriceListVersionStore } from '../ports/price-list-version-store.port';
 import { PriceImportAlreadyRunningException } from '../../domain/exceptions/scheduled-price-import.exception';
 import { ScheduledImportOutcome } from '../../domain/value-objects/scheduled-import-outcome.value-object';
+import { toError } from '@/shared/logger/to-error';
 
 // Оркестрация автоматической выгрузки прайса по расписанию (spec: shop/price-import-schedule).
 // run() никогда не бросает: любая ошибка превращается в failed-итог + уведомление, подробности —
@@ -51,7 +52,9 @@ export class RunScheduledPriceImportService {
     // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
     // Сайдбар Google Sheets не знает о запусках по крону — запоминаем итог, чтобы он показал время.
     // «Не изменился» — не выгрузка, время не трогаем.
-    private async recordLastRun(outcome: ScheduledImportOutcome): Promise<void> {
+    private async recordLastRun(
+        outcome: ScheduledImportOutcome,
+    ): Promise<void> {
         const kind = outcome.getKind();
         if (kind === 'unchanged') return;
         try {
@@ -70,10 +73,11 @@ export class RunScheduledPriceImportService {
         try {
             return await this.execute();
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+            const message =
+                error instanceof Error ? error.message : String(error);
             this.logger.error(
-                `Автоматическая выгрузка прайса завершилась ошибкой: ${message}`,
-                error instanceof Error ? error.stack : undefined,
+                { err: toError(error) },
+                'Автоматическая выгрузка прайса завершилась ошибкой',
             );
             await this.safeNotify(() => this.notifier.notifyFailed());
             return ScheduledImportOutcome.failed(message);
@@ -104,10 +108,14 @@ export class RunScheduledPriceImportService {
 
         const job = this.jobStore.findById(command.id);
         if (!job) {
-            throw new Error(`Джоба импорта ${command.id} не найдена после выполнения`);
+            throw new Error(
+                `Джоба импорта ${command.id} не найдена после выполнения`,
+            );
         }
         if (job.status !== 'COMPLETED') {
-            throw new Error(`Выгрузка цен завершилась со статусом ${job.status}`);
+            throw new Error(
+                `Выгрузка цен завершилась со статусом ${job.status}`,
+            );
         }
 
         // Название запоминаем до уведомления и независимо от его доставки.
@@ -119,7 +127,9 @@ export class RunScheduledPriceImportService {
         const priceUpdate = await this.triggerPriceUpdate();
         await this.recordPriceUpdate(priceUpdate);
         if (!priceUpdate.uploadSale || !priceUpdate.uploadRc) {
-            await this.safeNotify(() => this.notifier.notifyPriceUpdateFailed());
+            await this.safeNotify(() =>
+                this.notifier.notifyPriceUpdateFailed(),
+            );
             return ScheduledImportOutcome.uploaded();
         }
 
@@ -140,7 +150,9 @@ export class RunScheduledPriceImportService {
 
     // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
     // Сайдбар показывает время обновления цен в МойСклад (РЦ и акционная РЦ) по этим записям.
-    private async recordPriceUpdate(result: MoySkladPriceUpdateResult): Promise<void> {
+    private async recordPriceUpdate(
+        result: MoySkladPriceUpdateResult,
+    ): Promise<void> {
         const finishedAt = Date.now();
         for (const target of ['uploadSale', 'uploadRc'] as const) {
             try {

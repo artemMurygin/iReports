@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../shared/cron/prod-cron.decorator';
-import { logCronError } from '../../shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { BitrixSyncService } from './bitrix-sync.service';
 
 // Почасовая синхронизация справочников Bitrix24 (сотрудники, отделы,
@@ -15,6 +15,7 @@ export class BitrixCatalogsSyncCron {
 
     @ProdCron(CronExpression.EVERY_HOUR)
     async run(): Promise<void> {
+        const startedAt = Date.now();
         try {
             await this.syncService.uploadDepartments();
             await this.syncService.uploadEmployees();
@@ -23,12 +24,15 @@ export class BitrixCatalogsSyncCron {
             await this.syncService.uploadDeviceTypes();
             await this.syncService.uploadLeadSources();
             await this.syncService.uploadEnums();
-            this.logger.log('Successfully synced Bitrix24 catalogs');
+            this.logger.log(
+                { durationMs: Date.now() - startedAt },
+                'Successfully synced Bitrix24 catalogs',
+            );
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : String(error);
-            this.logger.error(`Failed to sync Bitrix24 catalogs: ${message}`);
-            logCronError('BitrixCatalogsSyncCron.run', error);
+            this.logger.error(
+                { err: toError(error), durationMs: Date.now() - startedAt },
+                'Failed to sync Bitrix24 catalogs',
+            );
         }
     }
 }

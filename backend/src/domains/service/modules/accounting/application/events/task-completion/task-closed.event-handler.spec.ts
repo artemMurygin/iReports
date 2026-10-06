@@ -136,7 +136,9 @@ describe('TaskClosedEventHandler (service)', () => {
     });
 
     it('ошибка репозитория логируется, не выбрасывается', async () => {
-        const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        const errorSpy = jest
+            .spyOn(Logger.prototype, 'error')
+            .mockImplementation();
         const salaryRuleRepo: SalaryRuleRepositoryPort = {
             insert: jest.fn(),
             deleteByIds: jest.fn(),

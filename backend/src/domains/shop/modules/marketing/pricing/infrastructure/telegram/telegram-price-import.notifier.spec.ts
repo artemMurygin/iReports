@@ -18,7 +18,7 @@ describe('TelegramPriceImportNotifier', () => {
         send = jest.fn().mockResolvedValue(undefined);
         notifier = new TelegramPriceImportNotifier({
             sendMessage: send,
-        } as unknown as TelegramService);
+        });
     });
 
     it('notifyUploaded шлёт текст об успешной выгрузке в группу', async () => {
@@ -54,7 +54,10 @@ describe('TelegramPriceImportNotifier', () => {
     // spec: shop/price-import-schedule#уведомления-о-ручной-выгрузке
     it('notifyManualUploaded сообщает, что прайс выгружен в переоценку', async () => {
         await notifier.notifyManualUploaded();
-        expect(send).toHaveBeenCalledWith(TELEGRAM_CHAT_ID, MANUAL_UPLOADED_TEXT);
+        expect(send).toHaveBeenCalledWith(
+            TELEGRAM_CHAT_ID,
+            MANUAL_UPLOADED_TEXT,
+        );
         expect(MANUAL_UPLOADED_TEXT).toMatch(/переоценк/i);
     });
 
@@ -84,11 +87,8 @@ describe('TelegramPriceImportNotifier', () => {
         'notifyPriceUpdateFailed',
         'notifyManualUploaded',
         'notifyManualFailed',
-    ] as const)(
-        '%s: сбой sendMessage не пробрасывается',
-        async (method) => {
-            send.mockRejectedValue(new Error('boom'));
-            await expect(notifier[method]()).resolves.toBeUndefined();
-        },
-    );
+    ] as const)('%s: сбой sendMessage не пробрасывается', async (method) => {
+        send.mockRejectedValue(new Error('boom'));
+        await expect(notifier[method]()).resolves.toBeUndefined();
+    });
 });

@@ -12,7 +12,9 @@ const SHEET_MIME = 'application/vnd.google-apps.spreadsheet';
 const XLSX_MIME =
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-function buildFakeDrive(files: Array<{ id: string; name: string; mimeType: string }>) {
+function buildFakeDrive(
+    files: Array<{ id: string; name: string; mimeType: string }>,
+) {
     const list = jest.fn().mockResolvedValue({ data: { files } });
     const exportFn = jest
         .fn()
@@ -46,7 +48,9 @@ describe('GoogleDrivePriceListSource', () => {
         const { drive } = buildFakeDrive([
             { id: 'f1', name: 'price', mimeType: SHEET_MIME },
         ]);
-        const file = await new GoogleDrivePriceListSource(drive).findPriceListFile();
+        const file = await new GoogleDrivePriceListSource(
+            drive,
+        ).findPriceListFile();
         expect(file.getId()).toBe('f1');
         expect(file.getName()).toBe('price');
         expect(file.isGoogleSpreadsheet()).toBe(true);
@@ -75,7 +79,11 @@ describe('GoogleDrivePriceListSource', () => {
 
     it('Google-таблицу экспортирует в XLSX', async () => {
         const { drive, exportFn, get } = buildFakeDrive([]);
-        const file = PriceListFile.create({ id: 'f1', name: 'p', mimeType: SHEET_MIME });
+        const file = PriceListFile.create({
+            id: 'f1',
+            name: 'p',
+            mimeType: SHEET_MIME,
+        });
         const buf = await new GoogleDrivePriceListSource(drive).download(file);
         expect(exportFn).toHaveBeenCalledWith(
             { fileId: 'f1', mimeType: XLSX_MIME },
@@ -87,7 +95,11 @@ describe('GoogleDrivePriceListSource', () => {
 
     it('обычный файл скачивает как media', async () => {
         const { drive, exportFn, get } = buildFakeDrive([]);
-        const file = PriceListFile.create({ id: 'f2', name: 'p.xlsx', mimeType: XLSX_MIME });
+        const file = PriceListFile.create({
+            id: 'f2',
+            name: 'p.xlsx',
+            mimeType: XLSX_MIME,
+        });
         const buf = await new GoogleDrivePriceListSource(drive).download(file);
         expect(get).toHaveBeenCalledWith(
             { fileId: 'f2', alt: 'media' },

@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '@/shared/cron/prod-cron.decorator';
-import { logCronError } from '@/shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { runInSystemRequestContext } from '@/shared/application/context/run-in-system-context';
 import { Period } from '@/shared/domain/period.value-object';
 import { SHOP_ACCOUNTING_PERIOD_REPOSITORY } from '@/domains/shop/modules/accounting/application/ports/accounting-period/accounting-period.port';
@@ -48,14 +48,10 @@ export class GoodsTurnoverReportCron {
                 );
             });
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : String(error);
             this.logger.error(
-                `Не удалось пересчитать отчёт по оборачиваемости за ${period.getValue()}: ${message}`,
+                { err: toError(error), period: period.getValue() },
+                'Не удалось пересчитать отчёт по оборачиваемости',
             );
-            logCronError('GoodsTurnoverReportCron.run', error, {
-                period: period.getValue(),
-            });
         }
     }
 }

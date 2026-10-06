@@ -26,6 +26,7 @@ import {
 } from '../services/erp-cash-sync.helper';
 import { toBalanceTransactionResponse } from '../mappers/to-balance-transaction-response';
 import { CreateBalanceTransactionCommand } from './create-balance-transaction.command';
+import { toError } from '@/shared/logger/to-error';
 
 // Ручное движение руководителя (PRD 2, Фаза 7; касса ERP — PRD 3, Фаза 12
 // docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md):
@@ -227,12 +228,13 @@ export class CreateBalanceTransactionHandler implements ICommandHandler<
                 });
             } catch (compensationError) {
                 this.logger.error(
-                    `Компенсация не удалась: документ ERP ${erpDocument.externalId} ` +
-                        `(направление "${command.direction}", движение ${transaction.id}) ` +
-                        'не удалён после сбоя записи в БД — требуется ручная сверка',
-                    compensationError instanceof Error
-                        ? compensationError.stack
-                        : String(compensationError),
+                    {
+                        err: toError(compensationError),
+                        externalId: erpDocument.externalId,
+                        direction: command.direction,
+                        transactionId: transaction.id,
+                    },
+                    'Компенсация не удалась: документ ERP не удалён после сбоя записи в БД — требуется ручная сверка',
                 );
             }
             throw dbError;

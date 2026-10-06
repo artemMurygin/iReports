@@ -259,7 +259,9 @@ describe('SetShopTaskCompletionLineRewardHandler', () => {
         const { handler, salaryRuleRepo, update } = build(accrual, rule);
 
         await withRequestContext(() =>
-            handler.execute(command(accrual, line.id, 5000, 'Задача выполнена')),
+            handler.execute(
+                command(accrual, line.id, 5000, 'Задача выполнена'),
+            ),
         );
 
         expect(rule.deactivate).toHaveBeenCalledTimes(1);
@@ -288,7 +290,9 @@ describe('SetShopTaskCompletionLineRewardHandler', () => {
         const { handler, update } = build(accrual, rule);
 
         await withRequestContext(() =>
-            handler.execute(command(accrual, line.id, 5000, 'Задача выполнена')),
+            handler.execute(
+                command(accrual, line.id, 5000, 'Задача выполнена'),
+            ),
         );
 
         expect(rule.deactivate).not.toHaveBeenCalled();
@@ -303,7 +307,9 @@ describe('SetShopTaskCompletionLineRewardHandler', () => {
         const { handler, update } = build(accrual, rule);
 
         await withRequestContext(() =>
-            handler.execute(command(accrual, line.id, 5000, 'Задача выполнена')),
+            handler.execute(
+                command(accrual, line.id, 5000, 'Задача выполнена'),
+            ),
         );
 
         expect(rule.deactivate).not.toHaveBeenCalled();
@@ -318,12 +324,14 @@ describe('SetShopTaskCompletionLineRewardHandler', () => {
         const { handler, update } = build(accrual, null);
 
         const response = await withRequestContext(() =>
-            handler.execute(command(accrual, line.id, 5000, 'Задача выполнена')),
+            handler.execute(
+                command(accrual, line.id, 5000, 'Задача выполнена'),
+            ),
         );
 
-        expect(response.lines.find((item) => item.id === line.id)).toMatchObject(
-            { amount: 5000 },
-        );
+        expect(
+            response.lines.find((item) => item.id === line.id),
+        ).toMatchObject({ amount: 5000 });
         expect(update).not.toHaveBeenCalled();
     });
 });

@@ -43,8 +43,14 @@ describe('TelegramService', () => {
     it('ошибка axios оборачивается без url и токена', async () => {
         mockedPost.mockRejectedValue(
             Object.assign(
-                new Error(`Request failed for https://api.telegram.org/bot${TOKEN}/sendMessage`),
-                { config: { url: `https://api.telegram.org/bot${TOKEN}/sendMessage` } },
+                new Error(
+                    `Request failed for https://api.telegram.org/bot${TOKEN}/sendMessage`,
+                ),
+                {
+                    config: {
+                        url: `https://api.telegram.org/bot${TOKEN}/sendMessage`,
+                    },
+                },
             ),
         );
 

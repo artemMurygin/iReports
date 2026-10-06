@@ -1,0 +1,480 @@
+{
+  "uid": "ireports-logs",
+  "title": "iReports · Логи",
+  "description": "Фильтруй по уровню/контексту сверху; requestId связывает строку HTTP-запроса и логи бизнес-логики; клик по полю в деталях строки — фильтр по значению",
+  "tags": [
+    "ireports"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "editable": true,
+  "templating": {
+    "list": [
+      {
+        "name": "level",
+        "label": "Уровень",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "query": {
+          "label": "level",
+          "stream": "",
+          "type": 1
+        },
+        "definition": "label_values(level)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "context",
+        "label": "Контекст",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "query": {
+          "label": "context",
+          "stream": "",
+          "type": 1
+        },
+        "definition": "label_values(context)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "search",
+        "label": "Поиск по тексту",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "hide": 0
+      },
+      {
+        "name": "requestId",
+        "label": "requestId",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "hide": 0,
+        "description": "Регулярное выражение с точным совпадением: 123 — только сотрудник 123; .* — все; /v1/service.* — префикс"
+      },
+      {
+        "name": "employeeId",
+        "label": "employeeId",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "hide": 0,
+        "description": "Регулярное выражение с точным совпадением: 123 — только сотрудник 123; .* — все; /v1/service.* — префикс"
+      },
+      {
+        "name": "route",
+        "label": "Маршрут (префикс)",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "hide": 0,
+        "description": "Регулярное выражение с точным совпадением: 123 — только сотрудник 123; .* — все; /v1/service.* — префикс"
+      },
+      {
+        "name": "status",
+        "label": "Мин. HTTP-статус",
+        "type": "custom",
+        "query": "0,400,500",
+        "current": {
+          "text": "все (0)",
+          "value": "0"
+        },
+        "options": [
+          {
+            "text": "все (0)",
+            "value": "0",
+            "selected": true
+          },
+          {
+            "text": "≥ 400",
+            "value": "400",
+            "selected": false
+          },
+          {
+            "text": "≥ 500",
+            "value": "500",
+            "selected": false
+          }
+        ],
+        "description": "Минимальный HTTP-статус для панели «HTTP-запросы»"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Объём логов по уровню",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "queryType": "range",
+          "expr": "sum by (level)(count_over_time({app=\"ireports-backend\", level=~\"${level:regex}\", context=~\"${context:regex}\"} |= \"$search\" [$__interval]))",
+          "legendFormat": "{{level}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "lineWidth": 1
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "warning"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "info"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "debug"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "gray"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "critical"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Топ контекстов",
+      "type": "bargauge",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "queryType": "instant",
+          "expr": "topk(10, sum by (context)(count_over_time({app=\"ireports-backend\", level=~\"${level:regex}\"}[$__range])))",
+          "legendFormat": "{{context}}",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "continuous-BlPu"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300
+      }
+    },
+    {
+      "id": 3,
+      "title": "Логи",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 20,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "queryType": "range",
+          "expr": "{app=\"ireports-backend\", level=~\"${level:regex}\", context=~\"${context:regex}\"} |= \"$search\" | json | requestId=~\"$requestId\" | employeeId=~\"$employeeId\" | route=~\"$route\" | line_format \"{{if .context}}[{{.context}}]{{end}} {{.msg}}{{if and .err_message (ne .context \"HTTP\")}} — {{.err_message}}{{end}}{{if .requestId}}  rid={{.requestId}}{{end}}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending",
+        "showLabels": false,
+        "showCommonLabels": false
+      }
+    },
+    {
+      "id": 4,
+      "title": "HTTP-запросы",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "description": "Только строки HTTP-лога. Фильтры: минимальный статус, маршрут, requestId, employeeId.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "queryType": "range",
+          "expr": "{app=\"ireports-backend\", context=\"HTTP\"} | json | status >= $status | route=~\"$route\" | requestId=~\"$requestId\" | employeeId=~\"$employeeId\" | line_format \"{{.status}} {{.method}} {{.path}} {{.durationMs}}ms{{if .employeeId}} emp={{.employeeId}}{{end}} rid={{.requestId}}{{if .errorCode}} [{{.errorCode}}] {{.err_message}}{{end}}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending",
+        "showLabels": false,
+        "showCommonLabels": false
+      }
+    },
+    {
+      "id": 5,
+      "title": "Запуски cron и синхронизаций",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "queryType": "range",
+          "expr": "{app=\"ireports-backend\", level=~\"${level:regex}\", context=~\".*(Cron|Sync).*\"} | json | line_format \"{{.context}}: {{.msg}}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending",
+        "showLabels": false,
+        "showCommonLabels": false
+      }
+    }
+  ]
+}

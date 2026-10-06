@@ -59,6 +59,7 @@ import {
 } from '@/domains/shop/modules/accounting/application/services/calculation/task-completion-statuses.builder';
 import { SHOP_TURNOVER_PERFORMANCE_READER } from '@/domains/shop/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
 import type { ShopTurnoverPerformanceReaderPort } from '@/domains/shop/modules/accounting/application/ports/turnover-performance/turnover-performance.port';
+import { toError } from '@/shared/logger/to-error';
 
 interface EmployeeCalculationResult {
     factLines: (CalculationLine | null)[];
@@ -500,21 +501,27 @@ export class GetShopDepartmentSalaryReportService {
             }
         }
 
+        // Одна warn-строка на запрос вместо error на каждое правило: сбой
+        // создания задачи не должен ронять отчёт и засорять логи.
+        const failed: Array<{ ruleId: string; message: string }> = [];
         await Promise.all(
             [...employeeIdByRuleId].map(([salaryRuleId, employeeId]) =>
                 this.ensureSalaryTask
                     .ensure(salaryRuleId, period, employeeId)
                     .catch((error: unknown) => {
-                        const message =
-                            error instanceof Error
-                                ? error.message
-                                : String(error);
-                        this.logger.error(
-                            `Не удалось обеспечить задачу для правила ${salaryRuleId}: ${message}`,
-                        );
+                        failed.push({
+                            ruleId: String(salaryRuleId),
+                            message: toError(error).message,
+                        });
                     }),
             ),
         );
+        if (failed.length > 0) {
+            this.logger.warn(
+                { failed: failed.slice(0, 20), count: failed.length },
+                'Не удалось обеспечить задачи для части правил',
+            );
+        }
     }
 
     private collectProductCategoryIds(

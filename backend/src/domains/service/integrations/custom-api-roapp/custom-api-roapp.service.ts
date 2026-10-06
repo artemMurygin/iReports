@@ -155,8 +155,7 @@ export class CustomApiRoappService {
     ): string {
         if (axios.isAxiosError(error)) {
             const body = error.response?.data as
-                | CustomApiRoappErrorEnvelope
-                | undefined;
+                CustomApiRoappErrorEnvelope | undefined;
             const remoteMessage = body?.message ?? body?.error;
             if (remoteMessage) return remoteMessage;
         }

@@ -8,9 +8,7 @@ import { GetLastScheduledPriceImportService } from '../../application/services/g
 @ApiTags('Маркетинг: импорт цен магазина')
 @Controller()
 export class GetLastScheduledPriceImportHttpController {
-    constructor(
-        private readonly getLast: GetLastScheduledPriceImportService,
-    ) {}
+    constructor(private readonly getLast: GetLastScheduledPriceImportService) {}
 
     // Public: вызывается из сайдбара Google Sheets, у которого нет Bitrix-сессии.
     @Public()

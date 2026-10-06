@@ -59,9 +59,12 @@ export class RowCategorizationService {
         );
         if (uncategorized.length > 0) {
             this.logger.warn(
-                `Строки не подошли ни под одно правило категоризации (исключены из импорта): ${uncategorized
-                    .map((r) => `"${r.name}"`)
-                    .join(', ')}`,
+                {
+                    names: uncategorized.slice(0, 20).map((r) => r.name),
+                    count: uncategorized.length,
+                    truncated: uncategorized.length > 20,
+                },
+                'Строки не подошли ни под одно правило категоризации (исключены из импорта)',
             );
         }
 

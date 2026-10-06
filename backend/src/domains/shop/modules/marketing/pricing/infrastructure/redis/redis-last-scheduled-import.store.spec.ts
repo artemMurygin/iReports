@@ -43,8 +43,14 @@ describe('RedisLastScheduledImportStore', () => {
 
     // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
     it('savePriceUpdate пишет JSON по своему ключу для каждой цели', async () => {
-        await store.savePriceUpdate('uploadRc', { status: 'success', finishedAt: 1 });
-        await store.savePriceUpdate('uploadSale', { status: 'error', finishedAt: 2 });
+        await store.savePriceUpdate('uploadRc', {
+            status: 'success',
+            finishedAt: 1,
+        });
+        await store.savePriceUpdate('uploadSale', {
+            status: 'error',
+            finishedAt: 2,
+        });
 
         expect(client.set).toHaveBeenCalledWith(
             PRICE_UPDATE_KEYS.uploadRc,
@@ -54,7 +60,9 @@ describe('RedisLastScheduledImportStore', () => {
             PRICE_UPDATE_KEYS.uploadSale,
             JSON.stringify({ status: 'error', finishedAt: 2 }),
         );
-        expect(PRICE_UPDATE_KEYS.uploadRc).not.toBe(PRICE_UPDATE_KEYS.uploadSale);
+        expect(PRICE_UPDATE_KEYS.uploadRc).not.toBe(
+            PRICE_UPDATE_KEYS.uploadSale,
+        );
     });
 
     it('getPriceUpdates читает оба значения, пустые и битые — null', async () => {

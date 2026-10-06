@@ -38,7 +38,7 @@ import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.por
 import { MotivationSchema } from '@/domains/service/modules/accounting/domain/entities/motivation-schema/motivation-schema.entity';
 import { TaskCompletion } from '@/domains/service/modules/accounting/domain/entities/salary-rules/task-completion.entity';
 import { Period } from '@/shared/domain/period.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
@@ -249,7 +249,7 @@ describe('Жизненный цикл задачи TaskCompletion и её вид
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
 
         // Шаг 1 мастера: задача создаётся ОТДЕЛЬНЫМ, предшествующим

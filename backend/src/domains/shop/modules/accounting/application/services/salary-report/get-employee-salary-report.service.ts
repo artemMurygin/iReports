@@ -38,6 +38,7 @@ import {
     findTaskCompletionTasks,
     taskCompletionFreshnessStamp,
 } from '@/domains/shop/modules/accounting/application/services/calculation/task-completion-statuses.builder';
+import { toError } from '@/shared/logger/to-error';
 
 // Отчёт по зарплате сотрудника магазина (Фаза 13.5, см.
 // docs/payroll/phase-13.5-shop-report-integration.md) — зеркало
@@ -314,21 +315,27 @@ export class GetShopEmployeeSalaryReportService {
         const recurringTaskRules =
             filterRecurringTaskCompletionShopRules(rules);
 
+        // Одна warn-строка на запрос вместо error на каждое правило: сбой
+        // создания задачи не должен ронять отчёт и засорять логи.
+        const failed: Array<{ ruleId: string; message: string }> = [];
         await Promise.all(
             recurringTaskRules.map((rule) =>
                 this.ensureSalaryTask
                     .ensure(rule.id, period, employeeId)
                     .catch((error: unknown) => {
-                        const message =
-                            error instanceof Error
-                                ? error.message
-                                : String(error);
-                        this.logger.error(
-                            `Не удалось обеспечить задачу для правила ${rule.id}: ${message}`,
-                        );
+                        failed.push({
+                            ruleId: String(rule.id),
+                            message: toError(error).message,
+                        });
                     }),
             ),
         );
+        if (failed.length > 0) {
+            this.logger.warn(
+                { failed: failed.slice(0, 20), count: failed.length },
+                'Не удалось обеспечить задачи для части правил',
+            );
+        }
     }
 
     private buildDirectionResponse(

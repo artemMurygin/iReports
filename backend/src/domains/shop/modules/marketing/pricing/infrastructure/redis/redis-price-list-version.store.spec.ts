@@ -42,6 +42,9 @@ describe('RedisPriceListVersionStore', () => {
         await store.saveUploadedName('price.xlsx');
 
         expect(client.set).toHaveBeenCalledTimes(1);
-        expect(client.set).toHaveBeenCalledWith(LAST_FILE_NAME_KEY, 'price.xlsx');
+        expect(client.set).toHaveBeenCalledWith(
+            LAST_FILE_NAME_KEY,
+            'price.xlsx',
+        );
     });
 });

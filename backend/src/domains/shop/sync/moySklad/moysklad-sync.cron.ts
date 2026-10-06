@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../../../shared/cron/prod-cron.decorator';
-import { logCronError } from '../../../../shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { DirectionSyncLock } from '@/shared/infrastructure/sync-lock/direction-sync-lock';
 import { MoySkladSyncService } from './moysklad-sync.service';
 
@@ -18,7 +18,8 @@ export class MoySkladSyncCron {
     // spec: shop/moysklad-sync#requirement-синхронизации-одного-направления-не-выполняются-параллельно
     @ProdCron(CronExpression.EVERY_5_MINUTES)
     async run() {
-        const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
+        const startedAt = Date.now();
+        const since = this.failedSince ?? new Date(startedAt - 60 * 5 * 1000);
 
         try {
             // uploadStores() перед демандами: MoySkladDemand.storeId — реальный
@@ -30,6 +31,7 @@ export class MoySkladSyncCron {
                 await this.syncService.uploadUpdatedDemands(since);
             });
             this.logger.log(
+                { durationMs: Date.now() - startedAt },
                 'Successfully synced stores and updated demands from MoySklad',
             );
             this.failedSince = null;
@@ -38,14 +40,15 @@ export class MoySkladSyncCron {
             if (!this.failedSince) {
                 this.failedSince = since;
             }
-            const message =
-                error instanceof Error ? error.message : String(error);
             this.logger.error(
-                `Failed to sync updated demands: ${message}. Will retry next tick from ${this.failedSince.toISOString()}`,
+                {
+                    err: toError(error),
+                    since: since.toISOString(),
+                    retryFrom: this.failedSince.toISOString(),
+                    durationMs: Date.now() - startedAt,
+                },
+                'Failed to sync updated demands, will retry next tick',
             );
-            logCronError('MoySkladSyncCron.run', error, {
-                since: since.toISOString(),
-            });
         }
     }
 }

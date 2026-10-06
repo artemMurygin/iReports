@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../../../shared/cron/prod-cron.decorator';
-import { logCronError } from '../../../../shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { DOMAIN_SYNC_STATUS } from '@/shared/application/ports/domain-sync-status.port';
 import type { DomainSyncStatusPort } from '@/shared/application/ports/domain-sync-status.port';
 import { DirectionSyncLock } from '@/shared/infrastructure/sync-lock/direction-sync-lock';
@@ -24,7 +24,8 @@ export class RoappSyncCron {
     // spec: service/roapp-sync#scenario-точечная-синхронизация-ждёт-завершения-идущей-регулярной
     @ProdCron(CronExpression.EVERY_5_MINUTES)
     async run() {
-        const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
+        const startedAt = Date.now();
+        const since = this.failedSince ?? new Date(startedAt - 60 * 5 * 1000);
 
         try {
             await this.lock.runExclusive('service', async () => {
@@ -32,7 +33,10 @@ export class RoappSyncCron {
                     await this.syncService.uploadUpdatedOrders(since);
                 await this.syncService.uploadOrderItems(orderIds);
             });
-            this.logger.log('Successfully synced updated orders from Roapp');
+            this.logger.log(
+                { durationMs: Date.now() - startedAt },
+                'Successfully synced updated orders from Roapp',
+            );
             this.failedSince = null;
             // Штамп для ленивого кэша расчёта зарплаты (Фаза 6, см.
             // docs/payroll/plan-payroll-calculation.md). DomainSyncStatusRepository
@@ -45,14 +49,15 @@ export class RoappSyncCron {
             if (!this.failedSince) {
                 this.failedSince = since;
             }
-            const message =
-                error instanceof Error ? error.message : String(error);
             this.logger.error(
-                `Failed to sync updated orders: ${message}. Will retry next tick from ${this.failedSince.toISOString()}`,
+                {
+                    err: toError(error),
+                    since: since.toISOString(),
+                    retryFrom: this.failedSince.toISOString(),
+                    durationMs: Date.now() - startedAt,
+                },
+                'Failed to sync updated orders, will retry next tick',
             );
-            logCronError('RoappSyncCron.run', error, {
-                since: since.toISOString(),
-            });
         }
     }
 }

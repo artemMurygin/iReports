@@ -26,7 +26,7 @@ import { SHOP_SALARY_RULE_REPOSITORY } from '@/domains/shop/modules/accounting/a
 // CloseGoodsTurnoverPeriod в domains/service/modules/warehouse).
 @Injectable()
 export class TaskClosedEventHandler {
-    private readonly logger = new Logger(TaskClosedEventHandler.name);
+    private readonly logger = new Logger('ShopTaskClosedEventHandler');
 
     constructor(
         @Inject(SHOP_SALARY_RULE_REPOSITORY)

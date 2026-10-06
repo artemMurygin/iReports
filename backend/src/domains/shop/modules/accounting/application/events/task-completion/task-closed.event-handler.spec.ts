@@ -15,7 +15,9 @@ describe('TaskClosedEventHandler (shop)', () => {
     // Минимально необходимый config для этого сценария — остальные поля
     // TaskCompletionShopSalaryConfig не важны (тот же приём, что в
     // set-task-completion-line-reward.handler.spec.ts).
-    const buildRule = (overrides: Partial<ShopSalaryRule> = {}): ShopSalaryRule => {
+    const buildRule = (
+        overrides: Partial<ShopSalaryRule> = {},
+    ): ShopSalaryRule => {
         const deactivateMock = jest.fn(function (this: { isActive: boolean }) {
             this.isActive = false;
         });
@@ -134,7 +136,9 @@ describe('TaskClosedEventHandler (shop)', () => {
     });
 
     it('ошибка репозитория логируется, не выбрасывается', async () => {
-        const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        const errorSpy = jest
+            .spyOn(Logger.prototype, 'error')
+            .mockImplementation();
         const salaryRuleRepo: ShopSalaryRuleRepositoryPort = {
             insert: jest.fn(),
             deleteByIds: jest.fn(),

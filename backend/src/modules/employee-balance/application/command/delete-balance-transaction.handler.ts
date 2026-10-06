@@ -15,6 +15,7 @@ import { BalanceTransactionNotFoundException } from '@/modules/employee-balance/
 import { PayoutCashboxRecordMissingForTransactionException } from '@/domains/service/modules/accounting/domain/exceptions/erp-cash.exception';
 import type { AccountingDirection } from '@/shared/domain/calculation-context';
 import { DeleteBalanceTransactionCommand } from './delete-balance-transaction.command';
+import { toError } from '@/shared/logger/to-error';
 
 // Удаление ошибочного ручного движения (PRD 2, Фаза 8b; касса ERP — PRD 3,
 // Фаза 12 docs/payroll-closing-and-accrual/prd-salary-payout-and-erp-cash-documents.md,
@@ -116,10 +117,13 @@ export class DeleteBalanceTransactionHandler implements ICommandHandler<
             // НОВЫЙ externalId, а не восстановил старый): состояние логируется
             // для ручной сверки, исходная ошибка пробрасывается как есть.
             this.logger.error(
-                `Документ ERP ${payoutCashboxRecord.externalId} (направление ` +
-                    `"${direction}", движение ${transactionId}) удалён в ERP, ` +
-                    'но запись об удалении в нашей БД не удалась — требуется ручная сверка',
-                dbError instanceof Error ? dbError.stack : String(dbError),
+                {
+                    err: toError(dbError),
+                    externalId: payoutCashboxRecord.externalId,
+                    direction,
+                    transactionId,
+                },
+                'Документ ERP удалён в ERP, но запись об удалении в нашей БД не удалась — требуется ручная сверка',
             );
             throw dbError;
         }

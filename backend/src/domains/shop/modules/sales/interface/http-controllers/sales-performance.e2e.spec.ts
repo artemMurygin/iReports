@@ -16,7 +16,7 @@ import { ShopSalesPlan } from '@/domains/shop/modules/sales/domain/entities/sale
 import { ShopSalesPlanTemplate } from '@/domains/shop/modules/sales/domain/entities/sales-plan-template.entity';
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Зеркало sales-plan.e2e.spec.ts направления service (сценарий
@@ -131,7 +131,7 @@ describe('Shop SalesPerformance HTTP (e2e)', () => {
         app.use((req: unknown, res: unknown, next: () => void) =>
             new RequestContextMiddleware().use(req, res, next),
         );
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

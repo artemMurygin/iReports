@@ -1,14 +1,16 @@
-// logCronError пишет в файл на диске (см. cron-file-logger.ts) — мокаем,
-// чтобы юнит-тест не оставлял побочных файлов в репозитории.
-jest.mock('@/shared/cron/cron-file-logger', () => ({
-    logCronError: jest.fn(),
-}));
-
+import { Logger } from '@nestjs/common';
 import { ShopSalesPlanAutoCreationCron } from './sales-plan-auto-creation.cron';
 import type { EnsureShopSalesPlansForPeriodService } from '@/domains/shop/modules/sales/application/services/ensure-sales-plans-for-period.service';
-import { logCronError } from '@/shared/cron/cron-file-logger';
 
 describe('ShopSalesPlanAutoCreationCron', () => {
+    // Ошибки крона уходят в структурный logger.error — подслушиваем
+    // прототип, т.к. Logger создаётся внутри самого крона.
+    let errorSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    });
+
     const buildCron = (ensure: jest.Mock) =>
         new ShopSalesPlanAutoCreationCron({
             ensure,
@@ -17,6 +19,7 @@ describe('ShopSalesPlanAutoCreationCron', () => {
     afterEach(() => {
         jest.useRealTimers();
         jest.clearAllMocks();
+        errorSpy.mockRestore();
     });
 
     it('достраивает план текущего периода (UTC) для направления shop', async () => {
@@ -56,12 +59,12 @@ describe('ShopSalesPlanAutoCreationCron', () => {
         const cron = buildCron(ensure);
 
         await expect(cron.run()).resolves.toBeUndefined();
-        expect(logCronError).toHaveBeenCalledWith(
-            'ShopSalesPlanAutoCreationCron.run',
-            expect.any(Error),
-            expect.objectContaining<{ period: string }>({
+        expect(errorSpy).toHaveBeenCalledWith(
+            expect.objectContaining({
+                err: expect.any(Error) as Error,
                 period: expect.any(String) as string,
             }),
+            expect.any(String),
         );
     });
 });

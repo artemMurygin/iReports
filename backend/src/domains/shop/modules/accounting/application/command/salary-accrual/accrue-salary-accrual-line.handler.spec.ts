@@ -37,7 +37,10 @@ describe('AccrueShopSalaryAccrualLineHandler', () => {
                     {
                         ruleId: 'rule-1',
                         type,
-                        name: type === 'PayPerHour' ? 'Почасовая ставка' : 'За выполнение задачи',
+                        name:
+                            type === 'PayPerHour'
+                                ? 'Почасовая ставка'
+                                : 'За выполнение задачи',
                         targetRole: 'ONLINE_MANAGER',
                         amount: 2000,
                         sources: [],
@@ -79,7 +82,10 @@ describe('AccrueShopSalaryAccrualLineHandler', () => {
 
     const fakeSalaryRuleRepo = (
         rule: ShopSalaryRule | null = null,
-    ): ShopSalaryRuleRepositoryPort & { update: jest.Mock; findById: jest.Mock } => ({
+    ): ShopSalaryRuleRepositoryPort & {
+        update: jest.Mock;
+        findById: jest.Mock;
+    } => ({
         insert: jest.fn(),
         deleteByIds: jest.fn(),
         findById: jest.fn().mockResolvedValue(rule),
@@ -124,9 +130,9 @@ describe('AccrueShopSalaryAccrualLineHandler', () => {
         );
 
         expect([...transactionRepo.store.values()]).toHaveLength(1);
-        expect(
-            response.lines.find((item) => item.id === line.id)?.status,
-        ).toBe('ACCRUED');
+        expect(response.lines.find((item) => item.id === line.id)?.status).toBe(
+            'ACCRUED',
+        );
     });
 
     describe('деактивация разового правила TaskCompletion при обычном начислении', () => {

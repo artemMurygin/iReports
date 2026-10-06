@@ -13,7 +13,7 @@ import type {
 import { DirectoryModule } from '@/modules/directory/directory.module';
 import { DIRECTORY_REPOSITORY } from '@/modules/directory/application/ports/directory.port';
 import type { DirectoryRepositoryPort } from '@/modules/directory/application/ports/directory.port';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Как и catalog.e2e.spec.ts (domains/shop/modules/warehouse) — поднимает
 // DirectoryModule целиком через Nest TestingModule (реальные Controller →
@@ -160,7 +160,7 @@ describe('Directory HTTP (e2e)', () => {
         // PATCH .../employees/:id/service-account) — без фильтра долетают
         // до клиента как 500, а не 404/400 (тот же приём, что и в
         // work-schedule.e2e.spec.ts).
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

@@ -48,7 +48,13 @@ import { SubscribePriceImportJobProgressHttpController } from './interface/http-
 // module-scoped singleton) — то же требование "одно состояние джобы на процесс", что и у легаси
 // PriceMonitoringProgressService.
 @Module({
-    imports: [CqrsModule, AiModule, GoogleSheetsModule, MoyskladModule, TelegramModule],
+    imports: [
+        CqrsModule,
+        AiModule,
+        GoogleSheetsModule,
+        MoyskladModule,
+        TelegramModule,
+    ],
     controllers: [
         StartPriceImportHttpController,
         GetPriceImportJobStatusHttpController,
@@ -73,8 +79,14 @@ import { SubscribePriceImportJobProgressHttpController } from './interface/http-
         RunScheduledPriceImportService,
         ScheduledPriceImportCron,
         { provide: PRICE_LIST_SOURCE, useClass: GoogleDrivePriceListSource },
-        { provide: PRICE_LIST_VERSION_STORE, useClass: RedisPriceListVersionStore },
-        { provide: PRICE_IMPORT_NOTIFIER, useClass: TelegramPriceImportNotifier },
+        {
+            provide: PRICE_LIST_VERSION_STORE,
+            useClass: RedisPriceListVersionStore,
+        },
+        {
+            provide: PRICE_IMPORT_NOTIFIER,
+            useClass: TelegramPriceImportNotifier,
+        },
         {
             provide: MOYSKLAD_PRICE_UPDATE_TRIGGER,
             useClass: N8nMoySkladPriceUpdateTrigger,

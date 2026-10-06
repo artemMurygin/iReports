@@ -71,7 +71,10 @@ describe('AccrueSalaryAccrualLineHandler', () => {
 
     const fakeSalaryRuleRepo = (
         rule: SalaryRule | null = null,
-    ): SalaryRuleRepositoryPort & { update: jest.Mock; findById: jest.Mock } => ({
+    ): SalaryRuleRepositoryPort & {
+        update: jest.Mock;
+        findById: jest.Mock;
+    } => ({
         insert: jest.fn(),
         deleteByIds: jest.fn(),
         findById: jest.fn().mockResolvedValue(rule),

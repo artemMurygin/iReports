@@ -18,6 +18,7 @@ import type {
     SalaryRule,
     TaskCompletionSalaryConfig,
 } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
+import { toError } from '@/shared/logger/to-error';
 
 @CommandHandler(UpdateMotivationSchemaCommand)
 export class UpdateMotivationSchemaHandler implements ICommandHandler<
@@ -209,9 +210,12 @@ export class UpdateMotivationSchemaHandler implements ICommandHandler<
                     await this.cancelTaskForRuleDeletion.cancel(taskId);
                 } catch (error) {
                     this.logger.error(
-                        `Не удалось отменить задачу ${taskId} (правило ` +
-                            `TaskCompletion ${rule.id}) при удалении правила`,
-                        error instanceof Error ? error.stack : String(error),
+                        {
+                            err: toError(error),
+                            taskId,
+                            ruleId: rule.id,
+                        },
+                        'Не удалось отменить задачу правила TaskCompletion при удалении правила',
                     );
                 }
             }

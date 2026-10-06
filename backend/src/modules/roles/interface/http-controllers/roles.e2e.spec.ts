@@ -6,7 +6,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { RequestContextMiddleware } from 'nestjs-request-context';
 import request from 'supertest';
 import type { RoleResponse } from 'ireports-contracts';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
 import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
@@ -121,7 +121,7 @@ describe('Roles HTTP (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

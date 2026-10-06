@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext } from 'nestjs-request-context';
 import { ProdCron } from '@/shared/cron/prod-cron.decorator';
+import { toError } from '@/shared/logger/to-error';
 import { RunScheduledPriceImportService } from '../../application/services/run-scheduled-price-import.service';
 
 // Будни в 12:00 по Москве (spec: shop/price-import-schedule#расписание-запуска).
@@ -15,13 +16,14 @@ export class ScheduledPriceImportCron {
     @ProdCron('0 12 * * 1-5', { timeZone: 'Europe/Moscow' })
     async run(): Promise<void> {
         try {
-            await RequestContext.cls.run(new RequestContext({ body: {} } as never, {} as never), () =>
-                this.service.run(),
+            await RequestContext.cls.run(
+                new RequestContext({ body: {} } as never, {} as never),
+                () => this.service.run(),
             );
         } catch (error) {
             this.logger.error(
-                `Крон автоматической выгрузки прайса упал: ${error instanceof Error ? error.message : String(error)}`,
-                error instanceof Error ? error.stack : undefined,
+                { err: toError(error) },
+                'Крон автоматической выгрузки прайса упал',
             );
         }
     }

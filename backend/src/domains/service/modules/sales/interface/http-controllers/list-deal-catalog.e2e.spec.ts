@@ -33,7 +33,7 @@ import { DealAssignee } from '@/domains/service/modules/sales/domain/value-objec
 import { DealLeadSource } from '@/domains/service/modules/sales/domain/value-objects/deal-lead-source.value-object';
 import { DealDeviceType } from '@/domains/service/modules/sales/domain/value-objects/deal-device-type.value-object';
 import { DealStageGroup } from '@/domains/service/modules/sales/domain/value-objects/deal-stage-group.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Тот же приём, что list-deals.e2e.spec.ts (см. комментарий там): поднимает
 // SalesModule целиком через Nest TestingModule (реальные Controller →
@@ -128,7 +128,7 @@ describe('GET /v1/service/sales/deals/{stages,managers,sources,stage-groups,mode
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

@@ -221,8 +221,11 @@ External systems live under `src/integrations/` (Bitrix24, AI/OpenAI-compatible,
 ### Errors
 
 Domain-level exceptions extend the base in `src/shared/exceptions/exception.base.ts` with codes from
-`exception.codes.ts`; `DomainExceptionFilter` (`src/shared/exceptions/domain-exception.filter.ts`)
-maps them to HTTP responses.
+`exception.codes.ts`; the single global `AllExceptionsFilter`
+(`src/shared/exceptions/all-exceptions.filter.ts`) maps them (and Nest `HttpException`s, nestjs-zod
+validation errors and unknown errors) to a uniform `ApiErrorResponse`, hands the error to pino-http
+for the one-line HTTP log (`res.err`, `res.locals.errorCode`) and increments
+`http_request_errors_total`. Status codes for domain codes live in `exception-status.map.ts`.
 
 ### Endpoints
 
@@ -259,3 +262,13 @@ See [`../ENDPOINTS.md`](../ENDPOINTS.md) for the current list of routes (no glob
 заводится. Модули из `src/TODO/*` в Swagger сознательно не документируются (см. комментарий над
 `setupSwagger` в `swagger.config.ts`) — это осознанное исключение для устаревшего кода, ждущего
 переноса в домен, а не образец для новых модулей.
+## Логирование
+
+Логгер — pino (`nestjs-pino`), логи уходят в Loki. Подробности и дашборды — в [`../monitoring/README.md`](../monitoring/README.md).
+
+- Контекст логгера = имя класса: `new Logger(MyService.name)`. Имена контекстов должны быть уникальны (для одноимённых классов в разных доменах — с префиксом, например `ShopTaskClosedEventHandler`).
+- Ошибки пишем только так: `this.logger.error({ err: toError(e), ...идентификаторы }, 'Сообщение')` (`toError` из `@/shared/logger/to-error`). Детали и идентификаторы — в поля объекта, не в строку `msg`; message ошибки в `msg` не интерполируем.
+- Запрещено: `console.*`, `process.stdout.write`, `logger.error(msg, err.stack)`, `JSON.stringify(...)` внутри строки сообщения.
+- Не пишем в лог: заголовки, токены, секреты, тела запросов и ответов целиком. Большие массивы обрезаем (до 20 элементов) и ставим `truncated: true`.
+- `requestId` добавляется автоматически из mixin (контекст запроса или cron) — руками его в сообщения не вставляем.
+- HTTP-строку на каждый запрос пишет pino-http; в контроллерах запросы не логируем.

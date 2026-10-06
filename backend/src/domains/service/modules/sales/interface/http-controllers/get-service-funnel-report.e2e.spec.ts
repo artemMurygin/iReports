@@ -27,7 +27,7 @@ import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { DealListItemEntity } from '@/domains/service/modules/sales/domain/entities/deal-list-item.entity';
 import { DealListStage } from '@/domains/service/modules/sales/domain/value-objects/deal-list-stage.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Тот же приём, что list-deals.e2e.spec.ts (см. комментарий там): поднимает
 // SalesModule целиком через Nest TestingModule (реальные Controller →
@@ -122,7 +122,7 @@ describe('GET /v1/service/sales/funnel-report (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

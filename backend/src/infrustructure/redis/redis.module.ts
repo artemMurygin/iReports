@@ -23,12 +23,30 @@ export { REDIS_CLIENT } from './redis-client.token';
                         Math.min(times * 200, 2_000),
                     lazyConnect: false,
                 });
+                // Не чаще одного warn в 30 с: при реконнектах ioredis шлёт
+                // 'error' на каждую попытку и засоряет логи.
+                const warnIntervalMs = 30_000;
+                let lastWarnAt = 0;
+                let degraded = false;
                 client.on('connect', () =>
-                    logger.log(`Подключение к Redis установлено (${url})`),
+                    logger.log('Подключение к Redis установлено'),
                 );
-                client.on('error', (err) =>
-                    logger.warn(`Ошибка соединения с Redis: ${err.message}`),
-                );
+                client.on('error', (err) => {
+                    degraded = true;
+                    const now = Date.now();
+                    if (now - lastWarnAt < warnIntervalMs) {
+                        return;
+                    }
+                    lastWarnAt = now;
+                    logger.warn({ err }, 'Ошибка соединения с Redis');
+                });
+                client.on('ready', () => {
+                    if (!degraded) {
+                        return;
+                    }
+                    degraded = false;
+                    logger.log('Соединение с Redis восстановлено');
+                });
                 return client;
             },
         },

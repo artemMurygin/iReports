@@ -15,7 +15,7 @@ import { UpdateTaskDto } from '../dto/update-task.dto';
 // «Редактирование полей активной задачи» — частичное обновление
 // title/description/deadline/assigneeEmployeeId уже существующей задачи.
 // Недоступно для задачи в терминальном статусе (TaskAlreadyClosedException,
-// маппится DomainExceptionFilter'ом в 409, см. exception.codes.ts). Тот же
+// маппится AllExceptionsFilter'ом в 409, см. exception.codes.ts). Тот же
 // приём, что ChangeTaskStatusHttpController: команда через CommandBus,
 // ответ — актуальная задача через GetTaskService.
 @ApiTags('Задачи')

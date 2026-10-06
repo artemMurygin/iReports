@@ -80,7 +80,13 @@ export class AiProductMatcherAdapter implements ProductMatcher {
         );
         if (dropped.length > 0) {
             this.logger.warn(
-                `[${category}] AI вернул ${dropped.length} позиций без полной пары (не попадут ни в CostChange, ни в результат — эффективно нет сопоставления): ${JSON.stringify(dropped)}`,
+                {
+                    category,
+                    dropped: dropped.slice(0, 20),
+                    count: dropped.length,
+                    truncated: dropped.length > 20,
+                },
+                'AI вернул позиции без полной пары (не попадут ни в CostChange, ни в результат — эффективно нет сопоставления)',
             );
         }
 
@@ -152,12 +158,24 @@ export class AiProductMatcherAdapter implements ProductMatcher {
         }
         if (recoveredByName.length > 0) {
             this.logger.warn(
-                `[${category}] AI вернул несуществующий id товара, товар восстановлен по точному названию (${recoveredByName.length}): ${recoveredByName.join('; ')}`,
+                {
+                    category,
+                    recovered: recoveredByName.slice(0, 20),
+                    count: recoveredByName.length,
+                    truncated: recoveredByName.length > 20,
+                },
+                'AI вернул несуществующий id товара, товар восстановлен по точному названию',
             );
         }
         if (rejected.length > 0) {
             this.logger.warn(
-                `[${category}] Отброшены позиции с несуществующим id товара, которые не удалось найти в каталоге и по названию — цена для них не обновится (${rejected.length}): ${rejected.join('; ')}`,
+                {
+                    category,
+                    rejected: rejected.slice(0, 20),
+                    count: rejected.length,
+                    truncated: rejected.length > 20,
+                },
+                'Отброшены позиции с несуществующим id товара, которые не удалось найти в каталоге и по названию — цена для них не обновится',
             );
         }
 
@@ -172,9 +190,13 @@ export class AiProductMatcherAdapter implements ProductMatcher {
         );
         if (missingFromPriceList.length > 0) {
             this.logger.warn(
-                `[${category}] Строки прайса без сопоставления в ответе AI (${missingFromPriceList.length}): ${missingFromPriceList
-                    .map((r) => `"${r.name}"`)
-                    .join(', ')}`,
+                {
+                    category,
+                    names: missingFromPriceList.slice(0, 20).map((r) => r.name),
+                    count: missingFromPriceList.length,
+                    truncated: missingFromPriceList.length > 20,
+                },
+                'Строки прайса без сопоставления в ответе AI',
             );
         }
 
@@ -186,9 +208,15 @@ export class AiProductMatcherAdapter implements ProductMatcher {
         );
         if (missingFromCatalog.length > 0) {
             this.logger.warn(
-                `[${category}] Товары номенклатуры МойСклад без сопоставления в ответе AI (${missingFromCatalog.length}): ${missingFromCatalog
-                    .map((i) => `[${i.id}] "${i.name}"`)
-                    .join(', ')}`,
+                {
+                    category,
+                    items: missingFromCatalog
+                        .slice(0, 20)
+                        .map((i) => ({ id: i.id, name: i.name })),
+                    count: missingFromCatalog.length,
+                    truncated: missingFromCatalog.length > 20,
+                },
+                'Товары номенклатуры МойСклад без сопоставления в ответе AI',
             );
         }
 

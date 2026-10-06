@@ -30,7 +30,7 @@ import { DealPointOfContact } from '@/domains/service/modules/sales/domain/value
 import { DealLeadSource } from '@/domains/service/modules/sales/domain/value-objects/deal-lead-source.value-object';
 import { DealBrand } from '@/domains/service/modules/sales/domain/value-objects/deal-brand.value-object';
 import { DealDeviceType } from '@/domains/service/modules/sales/domain/value-objects/deal-device-type.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Тот же приём, что sales-plan.e2e.spec.ts (см. комментарий там): поднимает
 // SalesModule целиком через Nest TestingModule (реальные Controller →
@@ -138,7 +138,7 @@ describe('GET /v1/service/sales/deals (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 
@@ -337,7 +337,7 @@ describe('GET /v1/service/sales/deals (e2e)', () => {
     // DealsController.getDeals (src/TODO/deals/deals.controller.ts), хотя
     // внутренний механизм другой: там — ручные BadRequestException в
     // контроллере, здесь — ZodValidationPipe (отсутствие/пустая строка
-    // from/to) или DateRange.create + DomainExceptionFilter (невалидный
+    // from/to) или DateRange.create + AllExceptionsFilter (невалидный
     // формат/порядок дат).
     it('400 когда query-параметр from отсутствует', async () => {
         await request(app.getHttpServer())

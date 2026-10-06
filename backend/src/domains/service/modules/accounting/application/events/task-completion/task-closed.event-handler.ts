@@ -26,7 +26,7 @@ import { SALARY_RULE_REPOSITORY } from '@/domains/service/modules/accounting/app
 // зеркального обработчика shop).
 @Injectable()
 export class TaskClosedEventHandler {
-    private readonly logger = new Logger(TaskClosedEventHandler.name);
+    private readonly logger = new Logger('ServiceTaskClosedEventHandler');
 
     constructor(
         @Inject(SALARY_RULE_REPOSITORY)

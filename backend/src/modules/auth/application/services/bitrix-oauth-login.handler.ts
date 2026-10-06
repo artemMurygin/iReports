@@ -16,6 +16,7 @@ import {
 } from '../ports/bitrix-employee-credentials.port';
 import { BitrixEmployeeCredentials } from '../../domain/entities/bitrix-employee-credentials.entity';
 import { BitrixCredentials } from '../../domain/value-objects/bitrix-credentials.value-object';
+import { toError } from '@/shared/logger/to-error';
 
 // Тот же актуальный OAuth-эндпоинт Bitrix24, что и BitrixTokenRefreshService
 // (design.md, Decision 3) — не legacy oauth.bitrix.info install-flow'а.
@@ -129,11 +130,10 @@ export class BitrixOAuthLoginHandler {
             );
             return data;
         } catch (error) {
-            const details = axios.isAxiosError(error)
-                ? { status: error.response?.status, data: error.response?.data }
-                : error;
+            // status/data axios-ответа сериализатор err вынесет сам (data ≤1КБ).
             this.logger.error(
-                `Обмен code на токены Bitrix24 не удался (redirect_uri=${redirectUri}): ${JSON.stringify(details)}`,
+                { err: toError(error), redirectUri },
+                'Обмен code на токены Bitrix24 не удался',
             );
             throw new UnauthorizedException(
                 'Не удалось обменять code на токены Bitrix24',

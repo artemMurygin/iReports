@@ -11,7 +11,7 @@ import { GetSalaryRuleService } from '@/domains/shop/modules/accounting/applicat
 // Раздел 19 tasks.md (add-task-salary-rule-links-comments) — зеркало
 // domains/service/.../salary-rule/get-salary-rule.http.controller.ts (см.
 // WHY там). ShopSalaryRuleNotFoundException переводится
-// DomainExceptionFilter в HTTP 404 через тот же общий код
+// AllExceptionsFilter в HTTP 404 через тот же общий код
 // SALARY_RULE_NOT_FOUND.
 @ApiTags('Бухгалтерия: зарплатные правила магазина')
 @UseGuards(SessionAuthGuard, CsrfGuard, PermissionsGuard)

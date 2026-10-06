@@ -16,7 +16,7 @@ import type {
 } from '@/modules/employee-identity/application/ports/employee-identity.port';
 import { EmployeeIdentity } from '@/modules/employee-identity/domain/entities/employee-identity.entity';
 import { BitrixPortalAdminCheckService } from '@/integrations/bitrix/auth/portal-admin-check.service';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Как и get-employee-salary-report.e2e.spec.ts (см. соседний accounting-модуль):
@@ -95,7 +95,7 @@ describe('EmployeeIdentity HTTP (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

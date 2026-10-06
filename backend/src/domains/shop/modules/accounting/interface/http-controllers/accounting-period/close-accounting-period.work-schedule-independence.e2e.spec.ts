@@ -44,7 +44,7 @@ import type { DirectoryRepositoryPort } from '@/modules/directory/application/po
 import { UNIT_OF_WORK } from '@/shared/application/ports/unit-of-work.port';
 import type { UnitOfWorkPort } from '@/shared/application/ports/unit-of-work.port';
 import { InMemoryShopSalaryAccrualRepository } from '@/domains/shop/modules/accounting/infrastructure/repositories/salary-accrual/in-memory-salary-accrual.repository';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Регрессионный тест Фазы 5 docs/service-shop-boundary-violations-fix
 // (пункт 4 плана): PRD фиксирует "Не в скоупе" — связь
@@ -275,7 +275,7 @@ describe('CloseShopAccountingPeriodHandler не задевает work-schedule (
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

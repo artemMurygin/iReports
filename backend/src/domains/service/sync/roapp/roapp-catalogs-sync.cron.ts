@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../../../shared/cron/prod-cron.decorator';
-import { logCronError } from '../../../../shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { DirectionSyncLock } from '@/shared/infrastructure/sync-lock/direction-sync-lock';
 import { RoappSyncService } from './roapp-sync.service';
 
@@ -21,6 +21,7 @@ export class RoappCatalogsSyncCron {
 
     @ProdCron(CronExpression.EVERY_HOUR)
     async run(): Promise<void> {
+        const startedAt = Date.now();
         try {
             await this.lock.runExclusive('service', async () => {
                 await this.syncService.uploadEmployees();
@@ -34,12 +35,15 @@ export class RoappCatalogsSyncCron {
                 await this.syncService.uploadProducts();
                 await this.syncService.uploadServiceBonuses();
             });
-            this.logger.log('Successfully synced RemOnline catalogs');
+            this.logger.log(
+                { durationMs: Date.now() - startedAt },
+                'Successfully synced RemOnline catalogs',
+            );
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : String(error);
-            this.logger.error(`Failed to sync RemOnline catalogs: ${message}`);
-            logCronError('RoappCatalogsSyncCron.run', error);
+            this.logger.error(
+                { err: toError(error), durationMs: Date.now() - startedAt },
+                'Failed to sync RemOnline catalogs',
+            );
         }
     }
 }

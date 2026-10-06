@@ -49,6 +49,12 @@ export class RequestContextService {
         ctx.requestId = id;
     }
 
+    // undefined вне запроса/cron-контекста — используется mixin логгера,
+    // которому requestId нужен лишь «если есть».
+    static tryGetRequestId(): string | undefined {
+        return this.tryGetContext()?.requestId;
+    }
+
     static getRequestId(): string {
         return this.getContext().requestId;
     }

@@ -93,6 +93,7 @@ describe('AiProductMatcherAdapter', () => {
                 'Apple Watch Series 12 GPS 46mm  Space Gray ',
             );
             expect(warn).toHaveBeenCalledWith(
+                expect.objectContaining({ count: 1 }),
                 expect.stringContaining('восстановлен по точному названию'),
             );
         });
@@ -132,12 +133,17 @@ describe('AiProductMatcherAdapter', () => {
                 'ms-1',
             ]);
             expect(warn).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    count: 1,
+                    rejected: [
+                        expect.stringContaining(
+                            '"MacBook Pro 14" -> [ghost-id]',
+                        ),
+                    ],
+                }),
                 expect.stringContaining(
                     'Отброшены позиции с несуществующим id товара',
                 ),
-            );
-            expect(warn).toHaveBeenCalledWith(
-                expect.stringContaining('"MacBook Pro 14" -> [ghost-id]'),
             );
         });
 

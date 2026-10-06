@@ -59,6 +59,9 @@ export class RedisLastScheduledImportStore implements LastScheduledImportStore {
             this.client.get(PRICE_UPDATE_KEYS.uploadRc),
             this.client.get(PRICE_UPDATE_KEYS.uploadSale),
         ]);
-        return { uploadRc: parseRun(uploadRc), uploadSale: parseRun(uploadSale) };
+        return {
+            uploadRc: parseRun(uploadRc),
+            uploadSale: parseRun(uploadSale),
+        };
     }
 }

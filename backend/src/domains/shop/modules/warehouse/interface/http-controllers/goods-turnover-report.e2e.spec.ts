@@ -13,7 +13,7 @@ import type { ProductCategoryRepositoryPort } from '@/domains/shop/modules/wareh
 import { GoodsTurnoverReportLine } from '@/domains/shop/modules/warehouse/domain/entities/goods-turnover-report-line/goods-turnover-report-line.entity';
 import { Period } from '@/shared/domain/period.value-object';
 import { Money } from '@/domains/shop/modules/warehouse/domain/value-objects/money.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { withRequestContext } from '@/shared/testing/with-request-context';
 
 // Настоящей инфраструктуры для test:e2e (jest-e2e.json + отдельная БД) в
@@ -94,7 +94,7 @@ describe('GET /v1/shop/warehouse/goods-turnover-report/:period (e2e)', () => {
         app.use((req: unknown, res: unknown, next: () => void) =>
             new RequestContextMiddleware().use(req, res, next),
         );
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

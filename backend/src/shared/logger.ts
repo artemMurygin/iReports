@@ -1,8 +1,9 @@
+import { Logger } from '@nestjs/common';
+import { toError } from './logger/to-error';
+
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
-const GREEN = '\x1b[32m';
 const CYAN = '\x1b[36m';
-const RED = '\x1b[31m';
 const DIM = '\x1b[2m';
 
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -13,13 +14,24 @@ export class UploadLogger {
     private frame = 0;
     private interval: ReturnType<typeof setInterval> | null = null;
     private label: string;
+    private readonly logger = new Logger('Sync');
 
     constructor(label: string) {
         this.label = label;
     }
 
+    // Спиннер рисуется \r-перерисовкой и годится только для живого терминала:
+    // в проде (Docker/Loki) он засорил бы stdout мусором из управляющих символов.
+    private get spinnerEnabled(): boolean {
+        return (
+            Boolean(process.stdout.isTTY) &&
+            process.env.NODE_ENV !== 'production'
+        );
+    }
+
     start() {
         this.startTime = Date.now();
+        if (!this.spinnerEnabled) return;
         this.interval = setInterval(() => this.render(), 100);
         this.render();
     }
@@ -30,16 +42,26 @@ export class UploadLogger {
 
     done() {
         this.stop();
-        const elapsed = ((Date.now() - this.startTime) / 1000).toFixed(1);
-        process.stdout.write(
-            `\r${GREEN}${BOLD}✔${RESET} ${BOLD}${this.label}${RESET} — сохранено ${BOLD}${this.total}${RESET} записей ${DIM}за ${elapsed}с${RESET}\n`,
+        const durationMs = Date.now() - this.startTime;
+        const sec = (durationMs / 1000).toFixed(1);
+        if (this.spinnerEnabled) {
+            // Затираем строку спиннера, чтобы итог не склеился с ним.
+            process.stdout.write('\r' + ' '.repeat(80) + '\r');
+        }
+        this.logger.log(
+            { label: this.label, saved: this.total, durationMs },
+            `${this.label}: сохранено ${this.total} за ${sec}с`,
         );
     }
 
     error(err: Error) {
         this.stop();
-        process.stdout.write(
-            `\r${RED}${BOLD}✖${RESET} ${BOLD}${this.label}${RESET} — ошибка: ${RED}${err.message}${RESET}\n`,
+        if (this.spinnerEnabled) {
+            process.stdout.write('\r' + ' '.repeat(80) + '\r');
+        }
+        this.logger.error(
+            { err: toError(err), label: this.label },
+            `${this.label}: ошибка`,
         );
     }
 

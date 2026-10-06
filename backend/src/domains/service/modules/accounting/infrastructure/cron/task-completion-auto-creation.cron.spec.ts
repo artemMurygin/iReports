@@ -1,15 +1,9 @@
-// logCronError пишет в файл на диске (см. cron-file-logger.ts) — мокаем,
-// чтобы юнит-тест не оставлял побочных файлов в репозитории.
-jest.mock('@/shared/cron/cron-file-logger', () => ({
-    logCronError: jest.fn(),
-}));
-
+import { Logger } from '@nestjs/common';
 import { TaskCompletionAutoCreationCron } from './task-completion-auto-creation.cron';
 import type { EnsureRuleTaskForPeriodService } from '@/domains/service/modules/accounting/application/services/task-completion/ensure-rule-task-for-period.service';
 import type { ResolvedEmployeeSalaryRules } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
 import type { ResolveEmployeeSalaryRulesService } from '@/domains/service/modules/accounting/application/services/calculation/resolve-employee-salary-rules.service';
 import type { SalaryRule } from '@/domains/service/modules/accounting/domain/types/salary-rule.types';
-import { logCronError } from '@/shared/cron/cron-file-logger';
 
 function recurringTaskCompletionRule(id: string): SalaryRule {
     return {
@@ -28,6 +22,14 @@ function oneTimeTaskCompletionRule(id: string): SalaryRule {
 }
 
 describe('TaskCompletionAutoCreationCron', () => {
+    // Ошибки крона уходят в структурный logger.error — подслушиваем
+    // прототип, т.к. Logger создаётся внутри самого крона.
+    let errorSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    });
+
     const buildCron = (ensure: jest.Mock, forAllTargets: jest.Mock) =>
         new TaskCompletionAutoCreationCron(
             { ensure } as unknown as EnsureRuleTaskForPeriodService,
@@ -39,6 +41,7 @@ describe('TaskCompletionAutoCreationCron', () => {
     afterEach(() => {
         jest.useRealTimers();
         jest.clearAllMocks();
+        errorSpy.mockRestore();
     });
 
     it('заводит задачу текущего периода (UTC) только для регулярных TaskCompletion-правил каждого сотрудника', async () => {
@@ -85,12 +88,12 @@ describe('TaskCompletionAutoCreationCron', () => {
         const cron = buildCron(ensure, forAllTargets);
 
         await expect(cron.run()).resolves.toBeUndefined();
-        expect(logCronError).toHaveBeenCalledWith(
-            'TaskCompletionAutoCreationCron.run',
-            expect.any(Error),
-            expect.objectContaining<{ period: string }>({
+        expect(errorSpy).toHaveBeenCalledWith(
+            expect.objectContaining({
+                err: expect.any(Error) as Error,
                 period: expect.any(String) as string,
             }),
+            expect.any(String),
         );
     });
 });

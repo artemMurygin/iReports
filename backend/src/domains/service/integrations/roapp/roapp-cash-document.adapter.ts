@@ -33,7 +33,7 @@ const ROAPP_CASH_REQUEST_TIMEOUT_MS = 15_000;
 // 400" без причины — тело ответа RemOnline (обычно там и есть конкретное
 // поле/правило, которое не устроило ERP) подмешиваем в само сообщение
 // исключения, чтобы оно долетало до фронта (BadGatewayException →
-// DomainExceptionFilter → ERP-error alert) без обращения к серверным логам.
+// AllExceptionsFilter → ERP-error alert) без обращения к серверным логам.
 function describeError(error: unknown): string {
     if (axios.isAxiosError(error)) {
         const data = error.response?.data as unknown;

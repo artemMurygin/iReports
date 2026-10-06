@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ProdCron } from '@/shared/cron/prod-cron.decorator';
-import { logCronError } from '@/shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { runInSystemRequestContext } from '@/shared/application/context/run-in-system-context';
 import { Period } from '@/shared/domain/period.value-object';
 import {
@@ -45,14 +45,10 @@ export class TaskCompletionAutoCreationCron {
                 `TaskCompletion tasks ensured for period ${period}`,
             );
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : String(error);
             this.logger.error(
-                `Failed to auto-create TaskCompletion tasks for ${period}: ${message}`,
+                { err: toError(error), period },
+                'Failed to auto-create TaskCompletion tasks',
             );
-            logCronError('TaskCompletionAutoCreationCron.run', error, {
-                period,
-            });
         }
     }
 

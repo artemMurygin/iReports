@@ -16,7 +16,7 @@ import type {
 } from '@/domains/service/modules/reports/application/ports/service-sales.port';
 import { ServiceSaleEntity } from '@/domains/service/modules/reports/domain/entities/service-sale.entity';
 import { ServiceCategory } from '@/domains/service/modules/reports/domain/value-objects/service-category.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Поднимает ReportsModule целиком через Nest TestingModule (реальные
 // Controller → Service → ServiceSalesSourcePort), подменяя только границу с
@@ -55,7 +55,7 @@ describe('domains/service/modules/reports (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

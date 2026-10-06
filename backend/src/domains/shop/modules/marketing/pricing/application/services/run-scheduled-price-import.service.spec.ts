@@ -45,7 +45,9 @@ interface Fakes {
     service: RunScheduledPriceImportService;
 }
 
-function build(opts: { lastName?: string | null; jobStatus?: JobStatus | null } = {}): Fakes {
+function build(
+    opts: { lastName?: string | null; jobStatus?: JobStatus | null } = {},
+): Fakes {
     const source: jest.Mocked<PriceListSource> = {
         findPriceListFile: jest.fn().mockResolvedValue(buildFile()),
         download: jest.fn().mockResolvedValue(FILE_CONTENT),
@@ -75,7 +77,8 @@ function build(opts: { lastName?: string | null; jobStatus?: JobStatus | null } 
             .fn()
             .mockResolvedValue({ uploadRc: null, uploadSale: null }),
     };
-    const jobStatus = opts.jobStatus === undefined ? 'COMPLETED' : opts.jobStatus;
+    const jobStatus =
+        opts.jobStatus === undefined ? 'COMPLETED' : opts.jobStatus;
     const jobStore = {
         findActive: jest.fn().mockReturnValue(undefined),
         findById: jest
@@ -92,7 +95,16 @@ function build(opts: { lastName?: string | null; jobStatus?: JobStatus | null } 
         trigger,
         lastRunStore,
     );
-    return { source, versionStore, notifier, trigger, lastRunStore, jobStore, commandBus, service };
+    return {
+        source,
+        versionStore,
+        notifier,
+        trigger,
+        lastRunStore,
+        jobStore,
+        commandBus,
+        service,
+    };
 }
 
 describe('RunScheduledPriceImportService', () => {
@@ -283,7 +295,9 @@ describe('RunScheduledPriceImportService', () => {
 
     it('notifier бросил при unchanged: outcome unchanged', async () => {
         const f = build({ lastName: FILE_NAME });
-        f.notifier.notifyUnchanged.mockRejectedValue(new Error('telegram down'));
+        f.notifier.notifyUnchanged.mockRejectedValue(
+            new Error('telegram down'),
+        );
 
         const outcome = await withRequestContext(() => f.service.run());
 
@@ -305,7 +319,9 @@ describe('RunScheduledPriceImportService', () => {
     it('после ошибки название не сохранено — следующий запуск выгружает тот же файл', async () => {
         const f = build({ jobStatus: 'FAILED' });
         let stored: string | null = null;
-        f.versionStore.getLastUploadedName.mockImplementation(async () => stored);
+        f.versionStore.getLastUploadedName.mockImplementation(
+            async () => stored,
+        );
         f.versionStore.saveUploadedName.mockImplementation(async (n) => {
             stored = n;
         });
@@ -458,7 +474,10 @@ describe('RunScheduledPriceImportService', () => {
         expect(outcome.getKind()).toBe('uploaded');
         expect(f.notifier.notifyPriceUpdateFailed).toHaveBeenCalledTimes(1);
         expect(
-            f.lastRunStore.savePriceUpdate.mock.calls.map(([t, r]) => [t, r.status]),
+            f.lastRunStore.savePriceUpdate.mock.calls.map(([t, r]) => [
+                t,
+                r.status,
+            ]),
         ).toEqual(
             expect.arrayContaining([
                 ['uploadSale', 'error'],

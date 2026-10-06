@@ -131,9 +131,7 @@ async function transferSalesPlans() {
             where: { id: row.departmentId },
         });
         if (!prodDepartment) {
-            summary.salesPlans.skippedMissingDepartment.push(
-                row.departmentId,
-            );
+            summary.salesPlans.skippedMissingDepartment.push(row.departmentId);
             continue;
         }
 

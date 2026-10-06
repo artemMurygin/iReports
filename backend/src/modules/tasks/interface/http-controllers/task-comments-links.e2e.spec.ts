@@ -14,7 +14,7 @@ import { InMemoryTaskCommentRepository } from '@/modules/tasks/infrastructure/re
 import { InMemoryTaskLinkRepository } from '@/modules/tasks/infrastructure/repositories/in-memory-task-link.repository';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
 import { ApiKeyRepository } from '@/modules/session/infrastructure/api-key.repository';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // tasks.md, группы 13-14 — e2e/controller-тесты HTTP-слоя комментариев/
 // ссылок задачи. Реальные Controller → CommandBus/Service → Entity/VO,
@@ -65,7 +65,7 @@ describe('Task comments/links HTTP (e2e)', () => {
             new RequestContextMiddleware().use(req, res, next),
         );
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

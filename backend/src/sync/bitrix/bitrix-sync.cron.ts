@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../shared/cron/prod-cron.decorator';
-import { logCronError } from '../../shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { BitrixSyncService } from './bitrix-sync.service';
 
 @Injectable()
@@ -13,24 +13,29 @@ export class BitrixSyncCron {
 
     @ProdCron(CronExpression.EVERY_5_MINUTES)
     async run() {
-        const since = this.failedSince ?? new Date(Date.now() - 60 * 5 * 1000);
+        const startedAt = Date.now();
+        const since = this.failedSince ?? new Date(startedAt - 60 * 5 * 1000);
 
         try {
             await this.syncService.uploadModifiedDeals(since);
-            this.logger.log('Successfully synced updated deals from Bitrix24');
+            this.logger.log(
+                { durationMs: Date.now() - startedAt },
+                'Successfully synced updated deals from Bitrix24',
+            );
             this.failedSince = null;
         } catch (error) {
             if (!this.failedSince) {
                 this.failedSince = since;
             }
-            const message =
-                error instanceof Error ? error.message : String(error);
             this.logger.error(
-                `Failed to sync updated deals: ${message}. Will retry next tick from ${this.failedSince.toISOString()}`,
+                {
+                    err: toError(error),
+                    since: since.toISOString(),
+                    retryFrom: this.failedSince.toISOString(),
+                    durationMs: Date.now() - startedAt,
+                },
+                'Failed to sync updated deals, will retry next tick',
             );
-            logCronError('BitrixSyncCron.run', error, {
-                since: since.toISOString(),
-            });
         }
     }
 }

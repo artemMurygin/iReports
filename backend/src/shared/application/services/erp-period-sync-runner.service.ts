@@ -55,7 +55,12 @@ export class ErpPeriodSyncRunner {
             const cause =
                 error instanceof Error ? error : new Error(String(error));
             this.logger.error(
-                `Синхронизация ERP направления "${direction}" за ${period.getValue()} не удалась: ${cause.message}`,
+                {
+                    err: cause,
+                    direction,
+                    period: period.getValue(),
+                },
+                'Синхронизация ERP не удалась',
             );
             throw new ErpSyncFailedException(
                 direction,

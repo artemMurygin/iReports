@@ -10,7 +10,7 @@ import type {
     AuthMeResponse,
     BitrixEmbeddedLoginResponse,
 } from 'ireports-contracts';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { SessionAuthGuard } from '@/modules/session/interface/session-auth.guard';
 import { CsrfGuard } from '@/modules/session/interface/csrf.guard';
 import { SessionService } from '@/modules/session/infrastructure/session.service';
@@ -115,7 +115,7 @@ describe('Auth HTTP (e2e)', () => {
         // (см. main.ts) — без него req.cookies всегда undefined.
         app.use(cookieParser());
         app.useGlobalPipes(new ZodValidationPipe());
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

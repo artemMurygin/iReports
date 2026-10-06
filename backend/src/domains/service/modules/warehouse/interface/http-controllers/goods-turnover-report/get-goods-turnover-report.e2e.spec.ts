@@ -16,7 +16,7 @@ import { GoodsTurnoverReportLine } from '@/domains/service/modules/warehouse/dom
 import { GoodsFlowMetric } from '@/domains/service/modules/warehouse/domain/value-objects/goods-flow-metric.value-object';
 import { ProductCategory } from '@/domains/service/modules/warehouse/domain/value-objects/product-category.value-object';
 import { Warehouse } from '@/domains/service/modules/warehouse/domain/value-objects/warehouse.value-object';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 
 // Задача 10.7 — по образцу modules/reports/interface/http-controllers/
 // reports.e2e.spec.ts: поднимает реальный Controller → Service поверх Nest
@@ -68,7 +68,7 @@ describe('GET /v1/service/warehouse/goods-turnover-report/:period (e2e)', () => 
         app.use((req: unknown, res: unknown, next: () => void) =>
             new RequestContextMiddleware().use(req, res, next),
         );
-        app.useGlobalFilters(new DomainExceptionFilter());
+        app.useGlobalFilters(new AllExceptionsFilter());
         await app.init();
     });
 

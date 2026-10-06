@@ -5,7 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { ZodValidationPipe } from 'nestjs-zod';
-import { DomainExceptionFilter } from '@/shared/exceptions';
+import { AllExceptionsFilter } from '@/shared/exceptions';
 import { setupSwagger } from '@/config/swagger.config';
 import { isDevAuthBypassEnabled } from '@/shared/config/dev-auth-bypass';
 
@@ -34,7 +34,7 @@ async function bootstrap() {
         credentials: true,
     });
     app.useGlobalPipes(new ZodValidationPipe());
-    app.useGlobalFilters(new DomainExceptionFilter());
+    app.useGlobalFilters(app.get(AllExceptionsFilter));
 
     if (process.env.NODE_ENV !== 'production') {
         setupSwagger(app);

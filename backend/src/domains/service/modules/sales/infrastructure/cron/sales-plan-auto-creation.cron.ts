@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '@/shared/cron/prod-cron.decorator';
-import { logCronError } from '@/shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { runInSystemRequestContext } from '@/shared/application/context/run-in-system-context';
 import { Period } from '@/shared/domain/period.value-object';
 import { EnsureSalesPlansForPeriodService } from '../../application/services/ensure-sales-plans-for-period.service';
@@ -39,12 +39,10 @@ export class SalesPlanAutoCreationCron {
             );
             this.logger.log(`Sales plans ensured for period ${period}`);
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : String(error);
             this.logger.error(
-                `Failed to auto-create sales plans for ${period}: ${message}`,
+                { err: toError(error), period },
+                'Failed to auto-create sales plans',
             );
-            logCronError('SalesPlanAutoCreationCron.run', error, { period });
         }
     }
 }

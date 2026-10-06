@@ -438,7 +438,9 @@ describe('StartPriceImportHandler', () => {
                     }),
                 );
                 for (const { notifier } of [ok, bad]) {
-                    expect(notifier.notifyManualUploaded).not.toHaveBeenCalled();
+                    expect(
+                        notifier.notifyManualUploaded,
+                    ).not.toHaveBeenCalled();
                     expect(notifier.notifyManualFailed).not.toHaveBeenCalled();
                 }
             });

@@ -30,6 +30,7 @@ import type {
 import { RESULT_SHEET_GATEWAY } from '../ports/result-sheet-gateway.port';
 import type { ResultSheetGateway } from '../ports/result-sheet-gateway.port';
 import { StartPriceImportCommand } from './start-price-import.command';
+import { toError } from '@/shared/logger/to-error';
 
 // Пайплайн импорта закупочных цен магазина (Фаза 9, см. PRD раздел 3а: "парсинг XLSX → каталог
 // МойСклад → AI-сопоставление → обновление цен → запись результата в Sheets") — перенос легаси
@@ -114,7 +115,9 @@ export class StartPriceImportHandler implements ICommandHandler<
             job.complete({ matches, costChanges });
             this.jobStore.save(job);
             if (command.notifyResult) {
-                await this.safeNotify(() => this.notifier.notifyManualUploaded());
+                await this.safeNotify(() =>
+                    this.notifier.notifyManualUploaded(),
+                );
             }
         } catch (error) {
             if (job.isCancelled() || signal.aborted) {
@@ -123,7 +126,10 @@ export class StartPriceImportHandler implements ICommandHandler<
                 return { id: job.id };
             }
             const message = getErrorMessage(error);
-            this.logger.error(`[${job.id}] Ошибка импорта цен: ${message}`);
+            this.logger.error(
+                { err: toError(error), jobId: job.id },
+                'Ошибка импорта цен',
+            );
             job.fail(message);
             this.jobStore.save(job);
             if (command.notifyResult) {
@@ -143,7 +149,8 @@ export class StartPriceImportHandler implements ICommandHandler<
             await send();
         } catch (error) {
             this.logger.error(
-                `Не удалось отправить уведомление: ${getErrorMessage(error)}`,
+                { err: toError(error) },
+                'Не удалось отправить уведомление',
             );
         }
     }
@@ -327,14 +334,18 @@ export class StartPriceImportHandler implements ICommandHandler<
         );
         if (excluded.length > 0) {
             this.logger.warn(
-                `Исключены из списка изменений цены (${excluded.length}): ${excluded
-                    .map((match) => {
-                        const reason = !match.isMatched()
+                {
+                    excluded: excluded.slice(0, 20).map((match) => ({
+                        sourceRowName: match.getSourceRowName(),
+                        matchedProductName: match.getMatchedProductName(),
+                        reason: !match.isMatched()
                             ? 'не сопоставлено (method=none)'
-                            : 'нет цены в ответе AI (sourcePrice=null)';
-                        return `"${match.getSourceRowName()}" -> ${match.getMatchedProductName() ?? 'нет'} [${reason}]`;
-                    })
-                    .join('; ')}`,
+                            : 'нет цены в ответе AI (sourcePrice=null)',
+                    })),
+                    count: excluded.length,
+                    truncated: excluded.length > 20,
+                },
+                'Исключены из списка изменений цены',
             );
         }
 

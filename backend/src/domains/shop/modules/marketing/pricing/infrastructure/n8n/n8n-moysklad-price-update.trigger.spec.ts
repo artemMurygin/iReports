@@ -12,7 +12,8 @@ describe('N8nMoySkladPriceUpdateTrigger', () => {
     it('шлёт PATCH на оба вебхука по порядку: сначала акционная РЦ, потом РЦ', async () => {
         patch.mockResolvedValue({ status: 200 });
 
-        const result = await new N8nMoySkladPriceUpdateTrigger().triggerPriceUpdate();
+        const result =
+            await new N8nMoySkladPriceUpdateTrigger().triggerPriceUpdate();
 
         expect(patch.mock.calls.map((c) => c[0])).toEqual([
             'https://n8n.murygin.tech/webhook/updateSalePricesInMS',
@@ -28,7 +29,8 @@ describe('N8nMoySkladPriceUpdateTrigger', () => {
     it('сбой первого вебхука не мешает второму; результат — по каждому отдельно', async () => {
         patch.mockRejectedValueOnce(new Error('500')).mockResolvedValueOnce({});
 
-        const result = await new N8nMoySkladPriceUpdateTrigger().triggerPriceUpdate();
+        const result =
+            await new N8nMoySkladPriceUpdateTrigger().triggerPriceUpdate();
 
         expect(patch).toHaveBeenCalledTimes(2);
         expect(result).toEqual({ uploadSale: false, uploadRc: true });
@@ -37,7 +39,8 @@ describe('N8nMoySkladPriceUpdateTrigger', () => {
     it('сбой второго вебхука отражается только на нём', async () => {
         patch.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('404'));
 
-        const result = await new N8nMoySkladPriceUpdateTrigger().triggerPriceUpdate();
+        const result =
+            await new N8nMoySkladPriceUpdateTrigger().triggerPriceUpdate();
 
         expect(result).toEqual({ uploadSale: true, uploadRc: false });
     });

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { ProdCron } from '../../../../shared/cron/prod-cron.decorator';
-import { logCronError } from '../../../../shared/cron/cron-file-logger';
+import { toError } from '@/shared/logger/to-error';
 import { DirectionSyncLock } from '@/shared/infrastructure/sync-lock/direction-sync-lock';
 import { MoySkladSyncService } from './moysklad-sync.service';
 
@@ -21,6 +21,7 @@ export class MoySkladCatalogsSyncCron {
 
     @ProdCron(CronExpression.EVERY_HOUR)
     async run(): Promise<void> {
+        const startedAt = Date.now();
         try {
             await this.lock.runExclusive('shop', async () => {
                 await this.syncService.uploadEmployees();
@@ -29,12 +30,15 @@ export class MoySkladCatalogsSyncCron {
                 await this.syncService.uploadServices();
                 await this.syncService.uploadStores();
             });
-            this.logger.log('Successfully synced MoySklad catalogs');
+            this.logger.log(
+                { durationMs: Date.now() - startedAt },
+                'Successfully synced MoySklad catalogs',
+            );
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : String(error);
-            this.logger.error(`Failed to sync MoySklad catalogs: ${message}`);
-            logCronError('MoySkladCatalogsSyncCron.run', error);
+            this.logger.error(
+                { err: toError(error), durationMs: Date.now() - startedAt },
+                'Failed to sync MoySklad catalogs',
+            );
         }
     }
 }
