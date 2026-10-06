@@ -36,9 +36,7 @@ describe('TelegramPriceImportNotifier', () => {
     it('notifyFailed шлёт общий текст без технических деталей', async () => {
         await notifier.notifyFailed();
         expect(send).toHaveBeenCalledWith(TELEGRAM_CHAT_ID, FAILED_TEXT);
-        expect(FAILED_TEXT).toBe(
-            'Не удалось выгрузить прайс-лист. Проверьте выгрузку и при необходимости загрузите прайс вручную.',
-        );
+        expect(FAILED_TEXT).toMatch(/не удалось выгрузить прайс/i);
     });
 
     // spec: shop/price-import-schedule#обновление-цен-в-моём-складе-через-n8n

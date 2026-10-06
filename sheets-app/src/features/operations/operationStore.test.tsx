@@ -19,6 +19,15 @@ vi.mock('@/shared/gas/progressStream', () => ({
 const mocked = vi.mocked(gas)
 const mockedScheduled = vi.mocked(fetchLastScheduledImport)
 
+type Run = { status: 'success' | 'error'; finishedAt: number }
+/** Backend response of the last cron run; every part is absent unless given. */
+function scheduled(parts: { run?: Run; uploadRc?: Run; uploadSale?: Run }) {
+    return {
+        run: parts.run ?? null,
+        priceUpdates: { uploadRc: parts.uploadRc ?? null, uploadSale: parts.uploadSale ?? null },
+    }
+}
+
 beforeEach(() => {
     vi.clearAllMocks()
     mocked.getAllLastRuns.mockResolvedValue({})
@@ -75,7 +84,7 @@ describe('operationStore', () => {
         mocked.getAllLastRuns.mockResolvedValue({
             'ms.import': { operation: 'ms.import', status: 'success', finishedAt: 100 },
         })
-        mockedScheduled.mockResolvedValue({ status: 'success', finishedAt: 500 })
+        mockedScheduled.mockResolvedValue(scheduled({ run: { status: 'success', finishedAt: 500 } }))
         const runs = await loadOperationRuns()
         expect(runs['ms.import']).toMatchObject({ status: 'success', finishedAt: 500, restored: true })
     })
@@ -84,15 +93,48 @@ describe('operationStore', () => {
         mocked.getAllLastRuns.mockResolvedValue({
             'ms.import': { operation: 'ms.import', status: 'success', finishedAt: 900 },
         })
-        mockedScheduled.mockResolvedValue({ status: 'error', finishedAt: 500 })
+        mockedScheduled.mockResolvedValue(scheduled({ run: { status: 'error', finishedAt: 500 } }))
         const runs = await loadOperationRuns()
         expect(runs['ms.import']).toMatchObject({ status: 'success', finishedAt: 900 })
     })
 
     it('uses the cron run when nothing is stored in the spreadsheet', async () => {
-        mockedScheduled.mockResolvedValue({ status: 'error', finishedAt: 500 })
+        mockedScheduled.mockResolvedValue(scheduled({ run: { status: 'error', finishedAt: 500 } }))
         const runs = await loadOperationRuns()
         expect(runs['ms.import']).toMatchObject({ status: 'error', finishedAt: 500 })
+    })
+
+    // The cron also pushes prices to МойСклад through the same n8n webhooks as the sidebar buttons.
+    it('shows the cron time on «Обновить РЦ» and «Обновить акционную РЦ» when it is newer', async () => {
+        mocked.getAllLastRuns.mockResolvedValue({
+            'ms.uploadRc': { operation: 'ms.uploadRc', status: 'success', finishedAt: 100 },
+        })
+        mockedScheduled.mockResolvedValue(
+            scheduled({
+                uploadRc: { status: 'success', finishedAt: 500 },
+                uploadSale: { status: 'error', finishedAt: 400 },
+            }),
+        )
+        const runs = await loadOperationRuns()
+        expect(runs['ms.uploadRc']).toMatchObject({ status: 'success', finishedAt: 500, restored: true })
+        expect(runs['ms.uploadSale']).toMatchObject({ status: 'error', finishedAt: 400 })
+        expect(runs['ms.import']).toBeUndefined()
+    })
+
+    it('keeps a manual МойСклад upload that is newer than the cron one', async () => {
+        mocked.getAllLastRuns.mockResolvedValue({
+            'ms.uploadSale': { operation: 'ms.uploadSale', status: 'success', finishedAt: 900 },
+        })
+        mockedScheduled.mockResolvedValue(scheduled({ uploadSale: { status: 'error', finishedAt: 400 } }))
+        const runs = await loadOperationRuns()
+        expect(runs['ms.uploadSale']).toMatchObject({ status: 'success', finishedAt: 900 })
+    })
+
+    it('an older backend without price updates in the response still works', async () => {
+        mockedScheduled.mockResolvedValue({ run: { status: 'success', finishedAt: 500 } } as never)
+        const runs = await loadOperationRuns()
+        expect(runs['ms.import']).toMatchObject({ finishedAt: 500 })
+        expect(runs['ms.uploadRc']).toBeUndefined()
     })
 
     it('a failing cron lookup never breaks loading the stored runs', async () => {
@@ -107,7 +149,7 @@ describe('operationStore', () => {
 
     it('a failing spreadsheet storage still shows the cron run', async () => {
         mocked.getAllLastRuns.mockRejectedValue(new Error('quota'))
-        mockedScheduled.mockResolvedValue({ status: 'success', finishedAt: 500 })
+        mockedScheduled.mockResolvedValue(scheduled({ run: { status: 'success', finishedAt: 500 } }))
         const runs = await loadOperationRuns()
         expect(runs['ms.import']).toMatchObject({ status: 'success', finishedAt: 500 })
     })

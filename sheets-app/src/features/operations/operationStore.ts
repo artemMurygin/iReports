@@ -1,5 +1,6 @@
 import { gas } from '@/shared/gas'
 import { fetchLastScheduledImport } from '@/shared/gas/progressStream'
+import type { ScheduledRun } from '@/shared/gas/progressStream'
 import type { OperationReport } from '@/shared/gas'
 import { IDLE_OPERATION } from './operationContext'
 import type { OperationState } from './operationContext'
@@ -62,9 +63,6 @@ export async function saveOperationRun(id: string, state: OperationState): Promi
     }
 }
 
-/** Operation id of the price-file import; the cron run is shown as its last run (see `moySkladFunctions`). */
-const PRICE_IMPORT_ID = 'ms.import'
-
 /** Reads every stored report on sidebar open; resolves to an empty map when the storage is unavailable. */
 async function loadStoredRuns(): Promise<Record<string, OperationState>> {
     try {
@@ -87,14 +85,25 @@ async function loadScheduledImport() {
 }
 
 /**
- * Reads every stored report on sidebar open. The price import also runs from the backend cron, which cannot write
- * the spreadsheet's properties, so its result is taken from the backend and wins when it is newer than the stored run.
+ * Reads every stored report on sidebar open. The backend cron also runs the price import and the two МойСклад price
+ * updates, but it cannot write the spreadsheet's properties, so its results are taken from the backend and win over
+ * the stored run of the same operation when they are newer.
  */
 export async function loadOperationRuns(): Promise<Record<string, OperationState>> {
     const [states, scheduled] = await Promise.all([loadStoredRuns(), loadScheduledImport()])
-    const stored = states[PRICE_IMPORT_ID]
-    if (scheduled && (stored?.finishedAt === undefined || scheduled.finishedAt > stored.finishedAt)) {
-        states[PRICE_IMPORT_ID] = stateFromReport({ operation: PRICE_IMPORT_ID, ...scheduled })
+    if (!scheduled) return states
+
+    const cronRuns: Record<string, ScheduledRun | null | undefined> = {
+        'ms.import': scheduled.run,
+        'ms.uploadRc': scheduled.priceUpdates?.uploadRc,
+        'ms.uploadSale': scheduled.priceUpdates?.uploadSale,
+    }
+    for (const [id, cron] of Object.entries(cronRuns)) {
+        if (!cron) continue
+        const stored = states[id]
+        if (stored?.finishedAt === undefined || cron.finishedAt > stored.finishedAt) {
+            states[id] = stateFromReport({ operation: id, ...cron })
+        }
     }
     return states
 }

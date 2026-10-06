@@ -4,7 +4,10 @@ import { StartPriceImportCommand } from '../command/start-price-import.command';
 import { LAST_SCHEDULED_IMPORT_STORE } from '../ports/last-scheduled-import-store.port';
 import type { LastScheduledImportStore } from '../ports/last-scheduled-import-store.port';
 import { MOYSKLAD_PRICE_UPDATE_TRIGGER } from '../ports/moysklad-price-update-trigger.port';
-import type { MoySkladPriceUpdateTrigger } from '../ports/moysklad-price-update-trigger.port';
+import type {
+    MoySkladPriceUpdateResult,
+    MoySkladPriceUpdateTrigger,
+} from '../ports/moysklad-price-update-trigger.port';
 import { PRICE_IMPORT_JOB_STORE } from '../ports/price-import-job-store.port';
 import type { PriceImportJobStore } from '../ports/price-import-job-store.port';
 import { PRICE_IMPORT_NOTIFIER } from '../ports/price-import-notifier.port';
@@ -113,18 +116,44 @@ export class RunScheduledPriceImportService {
         // spec: shop/price-import-schedule#обновление-цен-в-моём-складе-через-n8n
         // Сбой n8n не делает выгрузку неуспешной (прайс уже в таблице и МойСклад) — вместо
         // «выгружено» уходит отдельное уведомление с просьбой повторить обновление вручную.
-        try {
-            await this.priceUpdateTrigger.triggerPriceUpdate();
-        } catch (error) {
-            this.logger.error(
-                `Обновление цен в МойСклад через n8n не выполнено: ${error instanceof Error ? error.message : String(error)}`,
-            );
+        const priceUpdate = await this.triggerPriceUpdate();
+        await this.recordPriceUpdate(priceUpdate);
+        if (!priceUpdate.uploadSale || !priceUpdate.uploadRc) {
             await this.safeNotify(() => this.notifier.notifyPriceUpdateFailed());
             return ScheduledImportOutcome.uploaded();
         }
 
         await this.safeNotify(() => this.notifier.notifyUploaded());
         return ScheduledImportOutcome.uploaded();
+    }
+
+    private async triggerPriceUpdate(): Promise<MoySkladPriceUpdateResult> {
+        try {
+            return await this.priceUpdateTrigger.triggerPriceUpdate();
+        } catch (error) {
+            this.logger.error(
+                `Обновление цен в МойСклад через n8n не выполнено: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            return { uploadSale: false, uploadRc: false };
+        }
+    }
+
+    // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
+    // Сайдбар показывает время обновления цен в МойСклад (РЦ и акционная РЦ) по этим записям.
+    private async recordPriceUpdate(result: MoySkladPriceUpdateResult): Promise<void> {
+        const finishedAt = Date.now();
+        for (const target of ['uploadSale', 'uploadRc'] as const) {
+            try {
+                await this.lastRunStore.savePriceUpdate(target, {
+                    status: result[target] ? 'success' : 'error',
+                    finishedAt,
+                });
+            } catch (error) {
+                this.logger.error(
+                    `Не удалось запомнить время обновления цен (${target}): ${error instanceof Error ? error.message : String(error)}`,
+                );
+            }
+        }
     }
 
     // spec: shop/price-import-schedule#отказоустойчивость-уведомлений

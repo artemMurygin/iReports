@@ -3,7 +3,7 @@ import { RequestContext } from 'nestjs-request-context';
 import { ProdCron } from '@/shared/cron/prod-cron.decorator';
 import { RunScheduledPriceImportService } from '../../application/services/run-scheduled-price-import.service';
 
-// Будни в 12:10 по Москве (spec: shop/price-import-schedule#расписание-запуска).
+// Будни в 12:00 по Москве (spec: shop/price-import-schedule#расписание-запуска).
 // Крон выполняется вне HTTP-запроса, а ExceptionBase/Command в конструкторе читают
 // request context — поэтому запускаем сервис внутри собственного RequestContext.
 @Injectable()
@@ -12,7 +12,7 @@ export class ScheduledPriceImportCron {
 
     constructor(private readonly service: RunScheduledPriceImportService) {}
 
-    @ProdCron('10 12 * * 1-5', { timeZone: 'Europe/Moscow' })
+    @ProdCron('0 12 * * 1-5', { timeZone: 'Europe/Moscow' })
     async run(): Promise<void> {
         try {
             await RequestContext.cls.run(new RequestContext({ body: {} } as never, {} as never), () =>

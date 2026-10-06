@@ -14,6 +14,10 @@ export class GetLastScheduledPriceImportService {
     ) {}
 
     async execute(): Promise<LastScheduledPriceImportResponse> {
-        return { run: await this.store.get() };
+        const [run, priceUpdates] = await Promise.all([
+            this.store.get(),
+            this.store.getPriceUpdates(),
+        ]);
+        return { run, priceUpdates };
     }
 }

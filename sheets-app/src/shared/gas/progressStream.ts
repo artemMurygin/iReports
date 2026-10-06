@@ -169,11 +169,20 @@ export const fetchActiveImportId: () => Promise<string | null> = isGasEnvironmen
     ? realFetchActiveImportId
     : () => Promise.resolve(null)
 
-/** Result of the last scheduled (cron) price import remembered by the backend. */
-export interface LastScheduledImport {
+/** One run remembered by the backend. */
+export interface ScheduledRun {
     status: 'success' | 'error'
     /** Epoch ms. */
     finishedAt: number
+}
+
+/**
+ * Last backend cron run: the price-file import itself and the two МойСклад updates it triggers through the same n8n
+ * webhooks as the sidebar buttons (`uploadRc` = «Обновить РЦ в МойСклад», `uploadSale` = «Обновить акционную РЦ»).
+ */
+export interface LastScheduledImport {
+    run: ScheduledRun | null
+    priceUpdates?: { uploadRc: ScheduledRun | null; uploadSale: ScheduledRun | null }
 }
 
 /** Real lookup: null when the backend has no cron run on record, or when the request fails. */
@@ -181,8 +190,7 @@ async function realFetchLastScheduledImport(): Promise<LastScheduledImport | nul
     try {
         const response = await fetch(`${BASE_URL}/v1/shop/marketing/pricing/last-scheduled-import`)
         if (!response.ok) return null
-        const { run } = (await response.json()) as { run: LastScheduledImport | null }
-        return run ?? null
+        return (await response.json()) as LastScheduledImport
     } catch {
         return null
     }

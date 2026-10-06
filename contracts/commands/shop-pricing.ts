@@ -70,14 +70,22 @@ export type ActivePriceImportJobResponse = z.infer<
 
 // GET .../last-scheduled-import — итог последней автоматической (по крону) выгрузки прайса;
 // сайдбар Google Sheets показывает по нему время последней выгрузки, если крон был позже ручной.
+const scheduledRunSchema = z.object({
+    status: z.enum(['success', 'error']),
+    /** Epoch ms завершения запуска. */
+    finishedAt: z.number(),
+});
 const lastScheduledPriceImportResponseSchema = z.object({
-    run: z
-        .object({
-            status: z.enum(['success', 'error']),
-            /** Epoch ms завершения запуска. */
-            finishedAt: z.number(),
-        })
-        .nullable(),
+    /** Сама выгрузка прайса. */
+    run: scheduledRunSchema.nullable(),
+    /**
+     * Обновление цен в МойСклад через n8n после выгрузки (те же вебхуки, что у кнопок сайдбара):
+     * `uploadRc` — «Обновить РЦ в МойСклад», `uploadSale` — «Обновить акционную РЦ».
+     */
+    priceUpdates: z.object({
+        uploadRc: scheduledRunSchema.nullable(),
+        uploadSale: scheduledRunSchema.nullable(),
+    }),
 });
 export type LastScheduledPriceImportResponse = z.infer<
     typeof lastScheduledPriceImportResponseSchema

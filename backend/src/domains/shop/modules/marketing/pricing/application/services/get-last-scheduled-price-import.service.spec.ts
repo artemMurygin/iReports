@@ -1,21 +1,41 @@
+import type { LastScheduledImportStore } from '../ports/last-scheduled-import-store.port';
 import { GetLastScheduledPriceImportService } from './get-last-scheduled-price-import.service';
+
+function fakeStore(
+    run: { status: 'success' | 'error'; finishedAt: number } | null,
+    priceUpdates = { uploadRc: null, uploadSale: null } as {
+        uploadRc: { status: 'success' | 'error'; finishedAt: number } | null;
+        uploadSale: { status: 'success' | 'error'; finishedAt: number } | null;
+    },
+): LastScheduledImportStore {
+    return {
+        save: jest.fn(),
+        get: jest.fn().mockResolvedValue(run),
+        savePriceUpdate: jest.fn(),
+        getPriceUpdates: jest.fn().mockResolvedValue(priceUpdates),
+    };
+}
 
 describe('GetLastScheduledPriceImportService', () => {
     // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
-    it('возвращает { run: null }, если автовыгрузок ещё не было', async () => {
-        const service = new GetLastScheduledPriceImportService({
-            save: jest.fn(),
-            get: jest.fn().mockResolvedValue(null),
+    it('возвращает пустой ответ, если автовыгрузок ещё не было', async () => {
+        const service = new GetLastScheduledPriceImportService(fakeStore(null));
+        await expect(service.execute()).resolves.toEqual({
+            run: null,
+            priceUpdates: { uploadRc: null, uploadSale: null },
         });
-        await expect(service.execute()).resolves.toEqual({ run: null });
     });
 
-    it('возвращает сохранённый запуск', async () => {
+    it('возвращает выгрузку прайса и результаты обновления цен в МойСклад', async () => {
         const run = { status: 'success' as const, finishedAt: 123 };
-        const service = new GetLastScheduledPriceImportService({
-            save: jest.fn(),
-            get: jest.fn().mockResolvedValue(run),
+        const uploadRc = { status: 'success' as const, finishedAt: 130 };
+        const uploadSale = { status: 'error' as const, finishedAt: 125 };
+        const service = new GetLastScheduledPriceImportService(
+            fakeStore(run, { uploadRc, uploadSale }),
+        );
+        await expect(service.execute()).resolves.toEqual({
+            run,
+            priceUpdates: { uploadRc, uploadSale },
         });
-        await expect(service.execute()).resolves.toEqual({ run });
     });
 });

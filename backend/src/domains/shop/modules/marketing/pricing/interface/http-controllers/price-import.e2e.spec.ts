@@ -130,7 +130,13 @@ describe('POST /v1/shop/marketing/pricing/import-costs (e2e)', () => {
                 notifyManualFailed: () => Promise.resolve(),
             })
             .overrideProvider(LAST_SCHEDULED_IMPORT_STORE)
-            .useValue({ save: () => Promise.resolve(), get: () => Promise.resolve(null) })
+            .useValue({
+                save: () => Promise.resolve(),
+                get: () => Promise.resolve(null),
+                savePriceUpdate: () => Promise.resolve(),
+                getPriceUpdates: () =>
+                    Promise.resolve({ uploadRc: null, uploadSale: null }),
+            })
             .overrideProvider(PRICE_LIST_VERSION_STORE)
             .useValue({
                 getLastUploadedName: () => Promise.resolve(null),

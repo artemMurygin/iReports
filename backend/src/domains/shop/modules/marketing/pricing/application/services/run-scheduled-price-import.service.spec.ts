@@ -63,11 +63,17 @@ function build(opts: { lastName?: string | null; jobStatus?: JobStatus | null } 
         notifyManualFailed: jest.fn().mockResolvedValue(undefined),
     };
     const trigger: jest.Mocked<MoySkladPriceUpdateTrigger> = {
-        triggerPriceUpdate: jest.fn().mockResolvedValue(undefined),
+        triggerPriceUpdate: jest
+            .fn()
+            .mockResolvedValue({ uploadSale: true, uploadRc: true }),
     };
     const lastRunStore: jest.Mocked<LastScheduledImportStore> = {
         save: jest.fn().mockResolvedValue(undefined),
         get: jest.fn().mockResolvedValue(null),
+        savePriceUpdate: jest.fn().mockResolvedValue(undefined),
+        getPriceUpdates: jest
+            .fn()
+            .mockResolvedValue({ uploadRc: null, uploadSale: null }),
     };
     const jobStatus = opts.jobStatus === undefined ? 'COMPLETED' : opts.jobStatus;
     const jobStore = {
@@ -322,6 +328,7 @@ describe('RunScheduledPriceImportService', () => {
         const order: string[] = [];
         f.trigger.triggerPriceUpdate.mockImplementation(async () => {
             order.push('trigger');
+            return { uploadSale: true, uploadRc: true };
         });
         f.notifier.notifyUploaded.mockImplementation(async () => {
             order.push('notify');
@@ -346,7 +353,10 @@ describe('RunScheduledPriceImportService', () => {
 
     it('сбой n8n: выгрузка считается выполненной (название сохранено), уходит отдельное уведомление вместо «выгружено»', async () => {
         const f = build();
-        f.trigger.triggerPriceUpdate.mockRejectedValue(new Error('n8n'));
+        f.trigger.triggerPriceUpdate.mockResolvedValue({
+            uploadSale: false,
+            uploadRc: true,
+        });
 
         const outcome = await withRequestContext(() => f.service.run());
 
@@ -402,5 +412,78 @@ describe('RunScheduledPriceImportService', () => {
 
         expect(outcome.getKind()).toBe('uploaded');
         expect(f.notifier.notifyUploaded).toHaveBeenCalledTimes(1);
+    });
+
+    // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
+    it('запоминает результат каждого обновления цен в МойСклад отдельно', async () => {
+        const f = build();
+        f.trigger.triggerPriceUpdate.mockResolvedValue({
+            uploadSale: false,
+            uploadRc: true,
+        });
+
+        await withRequestContext(() => f.service.run());
+
+        const saved = Object.fromEntries(
+            f.lastRunStore.savePriceUpdate.mock.calls.map(([target, run]) => [
+                target,
+                run.status,
+            ]),
+        );
+        expect(saved).toEqual({ uploadSale: 'error', uploadRc: 'success' });
+        for (const [, run] of f.lastRunStore.savePriceUpdate.mock.calls) {
+            expect(Math.abs(run.finishedAt - Date.now())).toBeLessThan(5000);
+        }
+    });
+
+    it('при полном успехе оба обновления сохраняются как success', async () => {
+        const f = build();
+
+        await withRequestContext(() => f.service.run());
+
+        expect(f.lastRunStore.savePriceUpdate).toHaveBeenCalledTimes(2);
+        expect(
+            f.lastRunStore.savePriceUpdate.mock.calls.every(
+                ([, run]) => run.status === 'success',
+            ),
+        ).toBe(true);
+    });
+
+    it('неожиданное исключение триггера: оба обновления помечаются error, уведомление об ошибке цен', async () => {
+        const f = build();
+        f.trigger.triggerPriceUpdate.mockRejectedValue(new Error('boom'));
+
+        const outcome = await withRequestContext(() => f.service.run());
+
+        expect(outcome.getKind()).toBe('uploaded');
+        expect(f.notifier.notifyPriceUpdateFailed).toHaveBeenCalledTimes(1);
+        expect(
+            f.lastRunStore.savePriceUpdate.mock.calls.map(([t, r]) => [t, r.status]),
+        ).toEqual(
+            expect.arrayContaining([
+                ['uploadSale', 'error'],
+                ['uploadRc', 'error'],
+            ]),
+        );
+    });
+
+    it('сбой записи времени обновления цен не ломает выгрузку', async () => {
+        const f = build();
+        f.lastRunStore.savePriceUpdate.mockRejectedValue(new Error('redis'));
+
+        const outcome = await withRequestContext(() => f.service.run());
+
+        expect(outcome.getKind()).toBe('uploaded');
+        expect(f.notifier.notifyUploaded).toHaveBeenCalledTimes(1);
+    });
+
+    it('прайс не изменился или импорт упал: результаты обновления цен не трогаются', async () => {
+        const unchanged = build({ lastName: FILE_NAME });
+        await withRequestContext(() => unchanged.service.run());
+        const failed = build({ jobStatus: 'FAILED' });
+        await withRequestContext(() => failed.service.run());
+
+        expect(unchanged.lastRunStore.savePriceUpdate).not.toHaveBeenCalled();
+        expect(failed.lastRunStore.savePriceUpdate).not.toHaveBeenCalled();
     });
 });

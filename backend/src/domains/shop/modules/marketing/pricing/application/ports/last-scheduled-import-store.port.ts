@@ -1,3 +1,5 @@
+import type { PriceUpdateTarget } from '../../infrastructure/config/pricing.config';
+
 export interface LastScheduledImportRun {
     status: 'success' | 'error';
     /** Epoch ms завершения запуска. */
@@ -13,6 +15,16 @@ export interface LastScheduledImportStore {
 
     /** `null`, если автоматических выгрузок ещё не было. */
     get(): Promise<LastScheduledImportRun | null>;
+
+    /** Итог обновления цен в МойСклад через n8n (по вебхуку): время и статус. */
+    savePriceUpdate(
+        target: PriceUpdateTarget,
+        run: LastScheduledImportRun,
+    ): Promise<void>;
+
+    getPriceUpdates(): Promise<
+        Record<PriceUpdateTarget, LastScheduledImportRun | null>
+    >;
 }
 
 export const LAST_SCHEDULED_IMPORT_STORE = Symbol(

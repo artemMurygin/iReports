@@ -45,7 +45,7 @@ Backend-only: новый планировщик в модуле `domains/shop/mo
 | Service | Слой | Ответственность |
 |---|---|---|
 | `RunScheduledPriceImportService` (new) | application/services | Оркестрация одного запуска: найти файл → сравнить название → скачать → выполнить `StartPriceImportCommand` → прочитать итог джобы → уведомить → сохранить название при успехе. Перехватывает любое исключение и превращает его в `failed` |
-| `ScheduledPriceImportCron` (new) | interface/cron | `@ProdCron('10 12 * * 1-5', { timeZone: 'Europe/Moscow' })`, только вызывает сервис |
+| `ScheduledPriceImportCron` (new) | interface/cron | `@ProdCron('0 12 * * 1-5', { timeZone: 'Europe/Moscow' })`, только вызывает сервис |
 | `GoogleDrivePriceListSource` (new) | infrastructure/drive | `files.list` по папке; скачивание: `files.export` (Google-таблица → XLSX) либо `files.get alt=media` (загруженный `.xlsx`) |
 | `RedisPriceListVersionStore` (new) | infrastructure/redis | ключ `price-import:schedule:last-file-name` через `REDIS_CLIENT`, без TTL |
 | `TelegramPriceImportNotifier` (new) | infrastructure/telegram | тексты сообщений (константы), `chatId` из `pricing.config.ts`; ошибки отправки логирует и глотает |

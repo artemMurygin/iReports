@@ -105,10 +105,25 @@ export const PRICE_LIST_DRIVE_FOLDER_ID = '1lum1VoyWmlIDevHw4Qox5jnlUHrID5Z4';
 
 // ─── n8n: обновление цен в МойСклад после выгрузки в таблицу переоценки ────
 
-/** Вебхуки n8n (PATCH), вызываются по порядку после успешной автовыгрузки прайса */
-export const N8N_PRICE_UPDATE_WEBHOOK_URLS = [
-    'https://n8n.murygin.tech/webhook/updateSalePricesInMS',
-    'https://n8n.murygin.tech/webhook/updatePricesInMS',
+/** Что обновляет вебхук: те же операции, что у кнопок сайдбара Google Sheets */
+export type PriceUpdateTarget = 'uploadSale' | 'uploadRc';
+
+/**
+ * Вебхуки n8n (PATCH), вызываются по порядку после успешной автовыгрузки прайса:
+ * `uploadSale` — «Обновить акционную РЦ», `uploadRc` — «Обновить РЦ в МойСклад».
+ */
+export const N8N_PRICE_UPDATE_WEBHOOKS: {
+    target: PriceUpdateTarget;
+    url: string;
+}[] = [
+    {
+        target: 'uploadSale',
+        url: 'https://n8n.murygin.tech/webhook/updateSalePricesInMS',
+    },
+    {
+        target: 'uploadRc',
+        url: 'https://n8n.murygin.tech/webhook/updatePricesInMS',
+    },
 ];
 
 /** Таймаут одного запроса к n8n: workflow обновления цен может выполняться долго */
