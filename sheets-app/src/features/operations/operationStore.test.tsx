@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { gas } from '@/shared/gas'
+import { fetchLastScheduledImport } from '@/shared/gas/progressStream'
 import { OperationProvider } from './OperationProvider'
 import { useOperationStore } from './operationContext'
 import { useOperation } from './useOperation'
@@ -11,12 +12,18 @@ vi.mock('@/shared/gas', () => ({
     gas: { getAllLastRuns: vi.fn(), saveLastRun: vi.fn() },
 }))
 
+vi.mock('@/shared/gas/progressStream', () => ({
+    fetchLastScheduledImport: vi.fn(),
+}))
+
 const mocked = vi.mocked(gas)
+const mockedScheduled = vi.mocked(fetchLastScheduledImport)
 
 beforeEach(() => {
     vi.clearAllMocks()
     mocked.getAllLastRuns.mockResolvedValue({})
     mocked.saveLastRun.mockResolvedValue('OK')
+    mockedScheduled.mockResolvedValue(null)
 })
 
 describe('operationStore', () => {
@@ -61,6 +68,48 @@ describe('operationStore', () => {
         mocked.getAllLastRuns.mockRejectedValue(new Error('quota'))
         await expect(saveOperationRun('ms.load', { status: 'success', bannerOpen: false })).resolves.toBeUndefined()
         await expect(loadOperationRuns()).resolves.toEqual({})
+    })
+
+    // Scheduled (cron) price import: the backend remembers its result, the sidebar shows the newer of the two.
+    it('shows the cron import time when the backend ran later than the stored manual run', async () => {
+        mocked.getAllLastRuns.mockResolvedValue({
+            'ms.import': { operation: 'ms.import', status: 'success', finishedAt: 100 },
+        })
+        mockedScheduled.mockResolvedValue({ status: 'success', finishedAt: 500 })
+        const runs = await loadOperationRuns()
+        expect(runs['ms.import']).toMatchObject({ status: 'success', finishedAt: 500, restored: true })
+    })
+
+    it('keeps the manual run when it is newer than the cron one', async () => {
+        mocked.getAllLastRuns.mockResolvedValue({
+            'ms.import': { operation: 'ms.import', status: 'success', finishedAt: 900 },
+        })
+        mockedScheduled.mockResolvedValue({ status: 'error', finishedAt: 500 })
+        const runs = await loadOperationRuns()
+        expect(runs['ms.import']).toMatchObject({ status: 'success', finishedAt: 900 })
+    })
+
+    it('uses the cron run when nothing is stored in the spreadsheet', async () => {
+        mockedScheduled.mockResolvedValue({ status: 'error', finishedAt: 500 })
+        const runs = await loadOperationRuns()
+        expect(runs['ms.import']).toMatchObject({ status: 'error', finishedAt: 500 })
+    })
+
+    it('a failing cron lookup never breaks loading the stored runs', async () => {
+        mocked.getAllLastRuns.mockResolvedValue({
+            'ms.load': { operation: 'ms.load', status: 'success', finishedAt: 5 },
+        })
+        mockedScheduled.mockRejectedValue(new Error('network'))
+        const runs = await loadOperationRuns()
+        expect(runs['ms.load']).toMatchObject({ status: 'success', finishedAt: 5 })
+        expect(runs['ms.import']).toBeUndefined()
+    })
+
+    it('a failing spreadsheet storage still shows the cron run', async () => {
+        mocked.getAllLastRuns.mockRejectedValue(new Error('quota'))
+        mockedScheduled.mockResolvedValue({ status: 'success', finishedAt: 500 })
+        const runs = await loadOperationRuns()
+        expect(runs['ms.import']).toMatchObject({ status: 'success', finishedAt: 500 })
     })
 })
 

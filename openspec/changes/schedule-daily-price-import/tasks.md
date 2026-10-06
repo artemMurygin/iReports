@@ -39,7 +39,7 @@
 
 - [x] 6.1 Написать тест `ProdCron` на необязательный второй аргумент (опции `timeZone` передаются в `Cron`, вызовы без опций работают как раньше) и тест `ScheduledPriceImportCron` (вызывает `RunScheduledPriceImportService.run`, не бросает)
 - [x] 6.2 Прогнать тесты из 6.1: red
-- [x] 6.3 Расширить `ProdCron` опциями; реализовать `ScheduledPriceImportCron` (`30 12 * * 1-5`, `Europe/Moscow`); добавить конфиг (`PRICE_LIST_DRIVE_FOLDER_ID`, `TELEGRAM_CHAT_ID` в `pricing.config.ts`); зарегистрировать провайдеры/импорты в `ShopPricingModule`
+- [x] 6.3 Расширить `ProdCron` опциями; реализовать `ScheduledPriceImportCron` (`10 12 * * 1-5`, `Europe/Moscow`); добавить конфиг (`PRICE_LIST_DRIVE_FOLDER_ID`, `TELEGRAM_CHAT_ID` в `pricing.config.ts`); зарегистрировать провайдеры/импорты в `ShopPricingModule`
 - [x] 6.4 Прогнать тесты из 6.1, `npm run build` и весь набор тестов модуля `pricing`: green; сборка проверена через `tsc --noEmit -p tsconfig.build.json` (локальный `npm run build` падает на отсутствующем `lodash/toArray`, это окружение)
 - [x] 6.5 (без теста: декларативная конфигурация) Задокументировать `TELEGRAM_BOT_TOKEN` в `.env.example` (если файл есть) и обновить `backend/src/domains/shop/CLAUDE.md`/`ENDPOINTS.md` при необходимости; проверить `git diff`
 
@@ -50,8 +50,15 @@
 - [x] 7.3 Реализовать порт `MoySkladPriceUpdateTrigger`, `N8nMoySkladPriceUpdateTrigger`, конфиг URL/таймаута, `notifyPriceUpdateFailed`, шаг в сервисе и провайдер в `ShopPricingModule`
 - [x] 7.4 Прогнать тесты из 7.1 и весь набор `marketing/pricing`, `prod-cron`, `integrations`: green (224 теста), `npm run build` проходит
 
-## 8. Деплой-чеклист (ручные шаги, вне кода)
+## 8. Время последней автовыгрузки в сайдбаре (добавлено после реализации групп 1-7)
 
-- [ ] 8.1 Включить Drive API в проекте Google Cloud и расшарить папку на сервисный аккаунт (read-only)
-- [ ] 8.2 Создать бота, добавить в группу, прописать `TELEGRAM_BOT_TOKEN` в env продакшена и реальные `chat_id`/id папки в конфиге
-- [ ] 8.3 Активировать в n8n продовые workflow `updateSalePricesInMS` и `updatePricesInMS` (метод PATCH); после деплоя проверить уведомление в первый будний день после 12:30
+- [x] 8.1 Написать тесты: `RedisLastScheduledImportStore`, `GetLastScheduledPriceImportService`, запись итога в `RunScheduledPriceImportService` (success/error, не при unchanged, сбой записи не ломает итог), слияние в `loadOperationRuns` сайдбара (cron новее/старее, сбой любого из источников)
+- [x] 8.2 Прогнать тесты из 8.1: red
+- [x] 8.3 Реализовать контракт `LastScheduledPriceImportResponse`, порт и Redis-хранилище, сервис и `GET /v1/shop/marketing/pricing/last-scheduled-import`, запись итога в сервисе автовыгрузки, `fetchLastScheduledImport` и слияние в `sheets-app`
+- [x] 8.4 Прогнать тесты: backend 234, sheets-app 133 — green; `tsc` и eslint чистые
+
+## 9. Деплой-чеклист (ручные шаги, вне кода)
+
+- [ ] 9.1 Включить Drive API в проекте Google Cloud и расшарить папку на сервисный аккаунт (read-only)
+- [ ] 9.2 Создать бота, добавить в группу, прописать `TELEGRAM_BOT_TOKEN` в env продакшена и реальные `chat_id`/id папки в конфиге
+- [ ] 9.3 Пересобрать и задеплоить сайдбар `sheets-app` в Apps Script (без этого время автовыгрузки не появится); активировать в n8n продовые workflow `updateSalePricesInMS` и `updatePricesInMS` (метод PATCH); после деплоя проверить уведомление в первый будний день после 12:10

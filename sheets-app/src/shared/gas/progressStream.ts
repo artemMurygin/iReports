@@ -168,3 +168,30 @@ async function realFetchActiveImportId(): Promise<string | null> {
 export const fetchActiveImportId: () => Promise<string | null> = isGasEnvironment
     ? realFetchActiveImportId
     : () => Promise.resolve(null)
+
+/** Result of the last scheduled (cron) price import remembered by the backend. */
+export interface LastScheduledImport {
+    status: 'success' | 'error'
+    /** Epoch ms. */
+    finishedAt: number
+}
+
+/** Real lookup: null when the backend has no cron run on record, or when the request fails. */
+async function realFetchLastScheduledImport(): Promise<LastScheduledImport | null> {
+    try {
+        const response = await fetch(`${BASE_URL}/v1/shop/marketing/pricing/last-scheduled-import`)
+        if (!response.ok) return null
+        const { run } = (await response.json()) as { run: LastScheduledImport | null }
+        return run ?? null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Result of the last price import run by the backend cron. It never touches the spreadsheet, so the sidebar asks
+ * for it on open and shows the newer of this and its own stored run. The mock has no backend cron.
+ */
+export const fetchLastScheduledImport: () => Promise<LastScheduledImport | null> = isGasEnvironment
+    ? realFetchLastScheduledImport
+    : () => Promise.resolve(null)

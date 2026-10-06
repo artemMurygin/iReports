@@ -616,6 +616,8 @@ export const routesV1 = {
                 importCostsCancel: `${shopMarketingPricingRoot}/import-costs/:id/cancel`,
                 // Отдельный сегмент, а не `import-costs/active`: иначе `active` попадает под `:id`.
                 activeImportCosts: `${shopMarketingPricingRoot}/active-import-costs`,
+                // Итог последней автовыгрузки по крону (для времени последней выгрузки в сайдбаре).
+                lastScheduledImport: `${shopMarketingPricingRoot}/last-scheduled-import`,
             },
         },
     },

@@ -12,6 +12,7 @@ import type { PriceImportJobStore } from '../ports/price-import-job-store.port';
 import type { PriceImportNotifier } from '../ports/price-import-notifier.port';
 import type { PriceListSource } from '../ports/price-list-source.port';
 import type { PriceListVersionStore } from '../ports/price-list-version-store.port';
+import type { LastScheduledImportStore } from '../ports/last-scheduled-import-store.port';
 import type { MoySkladPriceUpdateTrigger } from '../ports/moysklad-price-update-trigger.port';
 
 const FILE_NAME = 'Прайс 06.10.xlsx';
@@ -38,6 +39,7 @@ interface Fakes {
     versionStore: jest.Mocked<PriceListVersionStore>;
     notifier: jest.Mocked<PriceImportNotifier>;
     trigger: jest.Mocked<MoySkladPriceUpdateTrigger>;
+    lastRunStore: jest.Mocked<LastScheduledImportStore>;
     jobStore: { findActive: jest.Mock; findById: jest.Mock };
     commandBus: { execute: jest.Mock };
     service: RunScheduledPriceImportService;
@@ -61,6 +63,10 @@ function build(opts: { lastName?: string | null; jobStatus?: JobStatus | null } 
     const trigger: jest.Mocked<MoySkladPriceUpdateTrigger> = {
         triggerPriceUpdate: jest.fn().mockResolvedValue(undefined),
     };
+    const lastRunStore: jest.Mocked<LastScheduledImportStore> = {
+        save: jest.fn().mockResolvedValue(undefined),
+        get: jest.fn().mockResolvedValue(null),
+    };
     const jobStatus = opts.jobStatus === undefined ? 'COMPLETED' : opts.jobStatus;
     const jobStore = {
         findActive: jest.fn().mockReturnValue(undefined),
@@ -76,8 +82,9 @@ function build(opts: { lastName?: string | null; jobStatus?: JobStatus | null } 
         jobStore as unknown as PriceImportJobStore,
         commandBus as unknown as CommandBus,
         trigger,
+        lastRunStore,
     );
-    return { source, versionStore, notifier, trigger, jobStore, commandBus, service };
+    return { source, versionStore, notifier, trigger, lastRunStore, jobStore, commandBus, service };
 }
 
 describe('RunScheduledPriceImportService', () => {
@@ -346,5 +353,52 @@ describe('RunScheduledPriceImportService', () => {
         expect(f.notifier.notifyPriceUpdateFailed).toHaveBeenCalledTimes(1);
         expect(f.notifier.notifyUploaded).not.toHaveBeenCalled();
         expect(f.notifier.notifyFailed).not.toHaveBeenCalled();
+    });
+
+    // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
+    it('успешная выгрузка запоминает время завершения со статусом success', async () => {
+        const f = build();
+
+        await withRequestContext(() => f.service.run());
+
+        expect(f.lastRunStore.save).toHaveBeenCalledTimes(1);
+        const run = f.lastRunStore.save.mock.calls[0][0];
+        expect(run.status).toBe('success');
+        expect(Math.abs(run.finishedAt - Date.now())).toBeLessThan(5000);
+    });
+
+    it('сбой n8n не меняет статус: выгрузка прайса всё равно success', async () => {
+        const f = build();
+        f.trigger.triggerPriceUpdate.mockRejectedValue(new Error('n8n'));
+
+        await withRequestContext(() => f.service.run());
+
+        expect(f.lastRunStore.save.mock.calls[0][0].status).toBe('success');
+    });
+
+    it('неудачная выгрузка запоминается со статусом error', async () => {
+        const f = build({ jobStatus: 'FAILED' });
+
+        await withRequestContext(() => f.service.run());
+
+        expect(f.lastRunStore.save.mock.calls[0][0].status).toBe('error');
+    });
+
+    it('прайс не изменился: время последней выгрузки не трогается', async () => {
+        const f = build({ lastName: FILE_NAME });
+
+        await withRequestContext(() => f.service.run());
+
+        expect(f.lastRunStore.save).not.toHaveBeenCalled();
+    });
+
+    it('сбой записи времени не ломает итог выгрузки', async () => {
+        const f = build();
+        f.lastRunStore.save.mockRejectedValue(new Error('redis'));
+
+        const outcome = await withRequestContext(() => f.service.run());
+
+        expect(outcome.getKind()).toBe('uploaded');
+        expect(f.notifier.notifyUploaded).toHaveBeenCalledTimes(1);
     });
 });

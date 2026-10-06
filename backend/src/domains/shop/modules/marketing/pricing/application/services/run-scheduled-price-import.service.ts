@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { StartPriceImportCommand } from '../command/start-price-import.command';
+import { LAST_SCHEDULED_IMPORT_STORE } from '../ports/last-scheduled-import-store.port';
+import type { LastScheduledImportStore } from '../ports/last-scheduled-import-store.port';
 import { MOYSKLAD_PRICE_UPDATE_TRIGGER } from '../ports/moysklad-price-update-trigger.port';
 import type { MoySkladPriceUpdateTrigger } from '../ports/moysklad-price-update-trigger.port';
 import { PRICE_IMPORT_JOB_STORE } from '../ports/price-import-job-store.port';
@@ -33,9 +35,35 @@ export class RunScheduledPriceImportService {
         private readonly commandBus: CommandBus,
         @Inject(MOYSKLAD_PRICE_UPDATE_TRIGGER)
         private readonly priceUpdateTrigger: MoySkladPriceUpdateTrigger,
+        @Inject(LAST_SCHEDULED_IMPORT_STORE)
+        private readonly lastRunStore: LastScheduledImportStore,
     ) {}
 
     async run(): Promise<ScheduledImportOutcome> {
+        const outcome = await this.runAndNotify();
+        await this.recordLastRun(outcome);
+        return outcome;
+    }
+
+    // spec: shop/price-import-schedule#время-последней-автоматической-выгрузки
+    // Сайдбар Google Sheets не знает о запусках по крону — запоминаем итог, чтобы он показал время.
+    // «Не изменился» — не выгрузка, время не трогаем.
+    private async recordLastRun(outcome: ScheduledImportOutcome): Promise<void> {
+        const kind = outcome.getKind();
+        if (kind === 'unchanged') return;
+        try {
+            await this.lastRunStore.save({
+                status: kind === 'uploaded' ? 'success' : 'error',
+                finishedAt: Date.now(),
+            });
+        } catch (error) {
+            this.logger.error(
+                `Не удалось запомнить время последней автовыгрузки: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+    }
+
+    private async runAndNotify(): Promise<ScheduledImportOutcome> {
         try {
             return await this.execute();
         } catch (error) {

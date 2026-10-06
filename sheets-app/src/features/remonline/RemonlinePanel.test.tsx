@@ -9,6 +9,11 @@ import { TooltipProvider } from '@/shared/ui/tooltip'
 
 // RemonlinePanel talks to the server only through `gas` — mocking that boundary keeps these
 // tests off the network. Same pattern as MoySkladPanel.test.tsx.
+// OperationProvider asks the backend for the last cron price import on open; this panel has no use for it.
+vi.mock('@/shared/gas/progressStream', () => ({
+    fetchLastScheduledImport: () => Promise.resolve(null),
+}))
+
 vi.mock('@/shared/gas', () => ({
     gas: {
         uploadPricesToRO: vi.fn(),

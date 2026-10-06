@@ -188,7 +188,7 @@ domains/shop/
 Остальная часть маркетинга (источники обращений, кампании и их эффективность) в этом модуле пока не
 покрыта.
 
-Автоматическая выгрузка прайса: крон `ScheduledPriceImportCron` (будни 12:30 МСК, `ENABLE_CRON=true`) берёт
+Автоматическая выгрузка прайса: крон `ScheduledPriceImportCron` (будни 12:10 МСК, `ENABLE_CRON=true`) берёт
 XLSX с Google Drive, запускает тот же `StartPriceImportCommand`, если название файла изменилось
 (последнее выгруженное имя — в Redis), и шлёт итог в Telegram (`TELEGRAM_BOT_TOKEN`). Описание —
 [`openspec/changes/schedule-daily-price-import`](../../../../openspec/changes/schedule-daily-price-import)

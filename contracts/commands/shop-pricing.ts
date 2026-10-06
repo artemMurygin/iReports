@@ -68,6 +68,21 @@ export type ActivePriceImportJobResponse = z.infer<
     typeof activePriceImportJobResponseSchema
 >;
 
+// GET .../last-scheduled-import — итог последней автоматической (по крону) выгрузки прайса;
+// сайдбар Google Sheets показывает по нему время последней выгрузки, если крон был позже ручной.
+const lastScheduledPriceImportResponseSchema = z.object({
+    run: z
+        .object({
+            status: z.enum(['success', 'error']),
+            /** Epoch ms завершения запуска. */
+            finishedAt: z.number(),
+        })
+        .nullable(),
+});
+export type LastScheduledPriceImportResponse = z.infer<
+    typeof lastScheduledPriceImportResponseSchema
+>;
+
 // POST .../import-costs/:id/cancel
 const cancelPriceImportResponseSchema = z.object({
     id: z.string(),
@@ -79,6 +94,7 @@ export type CancelPriceImportResponse = z.infer<
 
 export {
     activePriceImportJobResponseSchema,
+    lastScheduledPriceImportResponseSchema,
     cancelPriceImportResponseSchema,
     startPriceImportRequestSchema,
     startPriceImportResponseSchema,

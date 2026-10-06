@@ -511,6 +511,9 @@ HTTP-запросами (поллинг/SSE) доступно только че�
   не найден
 - `GET /v1/shop/marketing/pricing/active-import-costs` — `{ id: string | null }`: id выполняющейся
   джобы (по нему сайдбар Google Sheets возвращается к прогрессу после повторного открытия окна)
+- `GET /v1/shop/marketing/pricing/last-scheduled-import` — `{ run: { status: 'success' | 'error', finishedAt: number } | null }`:
+  итог последней автоматической (по крону) выгрузки прайса; сайдбар Google Sheets показывает по нему время
+  последней выгрузки, если крон отработал позже запуска из сайдбара. «Прайс не изменился» итог не меняет
 - `POST /v1/shop/marketing/pricing/import-costs/:id/cancel` — отменить джобу: статус `CANCELLED`,
   абортятся все запросы к LLM; `404` — `id` не найден, `409` — джоба уже завершена или дошла до
   записи в МойСклад/таблицу (необратимые этапы)

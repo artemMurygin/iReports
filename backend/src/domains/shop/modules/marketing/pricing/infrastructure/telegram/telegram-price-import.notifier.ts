@@ -4,9 +4,9 @@ import type { PriceImportNotifier } from '../../application/ports/price-import-n
 import { TELEGRAM_CHAT_ID } from '../config/pricing.config';
 
 // Тексты без технических деталей — spec: shop/price-import-schedule#уведомление-об-ошибке
-export const UPLOADED_TEXT = 'Прайс-лист выгружен в таблицу переоценки. Обновленный цены отправлены в мой склад 👌';
+export const UPLOADED_TEXT = 'Прайс-лист выгружен в таблицу переоценки. Обновлённые цены отправлены в Мой склад 👌';
 export const UNCHANGED_TEXT =
-    'Прайс-лист не изменился с прошлой выгрузки. Следите за обновлением прайс листа и повторите выгрузку после обновления в ручном формате';
+    'Прайс-лист не изменился с прошлой выгрузки. Следите за обновлением прайс-листа и после обновления повторите выгрузку в ручном режиме.';
 export const FAILED_TEXT =
     'Не удалось выгрузить прайс-лист. Проверьте выгрузку и при необходимости загрузите прайс вручную.';
 export const PRICE_UPDATE_FAILED_TEXT =

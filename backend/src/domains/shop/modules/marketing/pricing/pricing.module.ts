@@ -28,6 +28,10 @@ import { PRICE_IMPORT_NOTIFIER } from './application/ports/price-import-notifier
 import { GoogleDrivePriceListSource } from './infrastructure/drive/google-drive-price-list.source';
 import { MOYSKLAD_PRICE_UPDATE_TRIGGER } from './application/ports/moysklad-price-update-trigger.port';
 import { N8nMoySkladPriceUpdateTrigger } from './infrastructure/n8n/n8n-moysklad-price-update.trigger';
+import { LAST_SCHEDULED_IMPORT_STORE } from './application/ports/last-scheduled-import-store.port';
+import { RedisLastScheduledImportStore } from './infrastructure/redis/redis-last-scheduled-import.store';
+import { GetLastScheduledPriceImportService } from './application/services/get-last-scheduled-price-import.service';
+import { GetLastScheduledPriceImportHttpController } from './interface/http-controllers/get-last-scheduled-price-import.http.controller';
 import { RedisPriceListVersionStore } from './infrastructure/redis/redis-price-list-version.store';
 import { TelegramPriceImportNotifier } from './infrastructure/telegram/telegram-price-import.notifier';
 import { StartPriceImportHttpController } from './interface/http-controllers/start-price-import.http.controller';
@@ -51,6 +55,7 @@ import { SubscribePriceImportJobProgressHttpController } from './interface/http-
         SubscribePriceImportJobProgressHttpController,
         GetActivePriceImportJobHttpController,
         CancelPriceImportJobHttpController,
+        GetLastScheduledPriceImportHttpController,
     ],
     providers: [
         StartPriceImportHandler,
@@ -58,6 +63,11 @@ import { SubscribePriceImportJobProgressHttpController } from './interface/http-
         SubscribePriceImportJobProgressService,
         GetActivePriceImportJobService,
         CancelPriceImportJobService,
+        GetLastScheduledPriceImportService,
+        {
+            provide: LAST_SCHEDULED_IMPORT_STORE,
+            useClass: RedisLastScheduledImportStore,
+        },
         PriceListXlsxParser,
         // Автовыгрузка по расписанию (spec: shop/price-import-schedule). RedisModule глобальный.
         RunScheduledPriceImportService,

@@ -8,7 +8,7 @@ import { RunScheduledPriceImportService } from '../domains/shop/modules/marketin
 import { runInSystemRequestContext } from '../shared/application/context/run-in-system-context';
 
 // Разовый ручной запуск автоматической выгрузки прайса магазина (то же, что делает
-// ScheduledPriceImportCron в будни в 12:30), чтобы не ждать крон при проверке.
+// ScheduledPriceImportCron в будни в 12:10), чтобы не ждать крон при проверке.
 // ВНИМАНИЕ: запуск РЕАЛЬНЫЙ — он обновляет закупочные цены в МойСклад и таблице Sheets и шлёт
 // уведомление в Telegram. Если название файла в папке Drive не изменилось с прошлой успешной
 // выгрузки (ключ Redis `price-import:schedule:last-file-name`), импорт не запустится — придёт

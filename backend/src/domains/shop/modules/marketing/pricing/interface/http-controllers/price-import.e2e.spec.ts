@@ -9,6 +9,7 @@ import type {
     PriceImportJobStatusResponse,
     StartPriceImportResponse,
 } from 'ireports-contracts';
+import { LAST_SCHEDULED_IMPORT_STORE } from '@/domains/shop/modules/marketing/pricing/application/ports/last-scheduled-import-store.port';
 import { PRICE_LIST_VERSION_STORE } from '@/domains/shop/modules/marketing/pricing/application/ports/price-list-version-store.port';
 import { ShopPricingModule } from '@/domains/shop/modules/marketing/pricing/pricing.module';
 import { MoyskladService } from '@/domains/shop/integrations/moySklad/moysklad.service';
@@ -121,6 +122,8 @@ describe('POST /v1/shop/marketing/pricing/import-costs (e2e)', () => {
             .useValue(fakeResultSheetGateway)
             // Автовыгрузка по расписанию (PRICE_LIST_VERSION_STORE поверх глобального
             // RedisModule, который в проде приходит из AppModule) к этим тестам не относится.
+            .overrideProvider(LAST_SCHEDULED_IMPORT_STORE)
+            .useValue({ save: () => Promise.resolve(), get: () => Promise.resolve(null) })
             .overrideProvider(PRICE_LIST_VERSION_STORE)
             .useValue({
                 getLastUploadedName: () => Promise.resolve(null),
